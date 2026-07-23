@@ -2,6 +2,8 @@
 
 A single-file, local-only tracker for League of Legends smurf accounts: rank, W/L, login, notes, skins, tags, status. No backend, no account, no build step — open the HTML file (or host it) and it just works.
 
+**[Try it live](https://marvinpanvan.github.io/league-smurf-tracker/)** — runs entirely in your browser, nothing you enter there ever reaches a server.
+
 ## Features
 
 - **Rank tracking**: current tier/division/LP, W/L, level, sparkline history, peak rank, climbing streak badge, tier-up celebration (toast, browser notification, optional Discord webhook).
@@ -17,7 +19,7 @@ Everything lives in this browser's `localStorage`, on your device only — nothi
 
 ## Getting started
 
-Just open `index.html` in a browser. Or host it (e.g. GitHub Pages — it's already named `index.html` so it'll just work at the repo root) and bookmark it — your data still only lives in *your* browser, hosting just saves you from double-clicking a local file.
+Just open `index.html` in a browser, or use the [live version](https://marvinpanvan.github.io/league-smurf-tracker/) and bookmark it — your data still only lives in *your* browser either way, hosting just saves you from double-clicking a local file. Want your own copy instead of sharing the one above? Fork the repo, GitHub Pages picks it up automatically since it's already named `index.html` at the repo root.
 
 Empty vault? Hit **Load demo data** to preview the layout with example accounts — it's a preview only, nothing is saved, and there's a one-click **Exit preview** banner the whole time. If you ever end up with real example/test accounts saved by mistake, **⋯ → Delete all accounts** clears the vault in one shot.
 
