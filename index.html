@@ -640,19 +640,19 @@ async function fetchViaProxy(acc){
   const r=REGIONS[acc.region]||REGIONS.EUW;
   const target="https://op.gg/lol/summoners/"+r.opgg+"/"+encodeURIComponent(acc.gameName)+"-"+encodeURIComponent(acc.tagLine);
   const proxies=[
-    u=>"https://corsproxy.io/?url="+encodeURIComponent(u),
-    u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u),
-    u=>"https://r.jina.ai/"+u
+    {name:"corsproxy",make:u=>"https://corsproxy.io/?url="+encodeURIComponent(u)},
+    {name:"allorigins",make:u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u)},
+    {name:"jina reader",make:u=>"https://r.jina.ai/"+u} // reader-mode text extraction — may strip the <img> the profile icon needs
   ];
   let lastErr="no proxy reachable";
   for(let k=0;k<proxies.length;k++){
     const idx=(lastGoodProxy+k)%proxies.length;
     try{
-      const text=await fetchWithTimeout(proxies[idx](target),10000);
+      const text=await fetchWithTimeout(proxies[idx].make(target),10000);
       const parsed=parseRankText(text);
       if(parsed){
         lastGoodProxy=idx; // start here next time — skips dead proxies on bulk checks
-        return {found:true,tier:parsed.tier||"UNRANKED",division:parsed.division||null,lp:parsed.lp,wins:parsed.wins,losses:parsed.losses,level:parsed.level,icon:parseProfileIcon(text),mmr:null,avgRecent:null,asOf:"auto-fetch (op.gg)",note:null,updatedAt:Date.now()};
+        return {found:true,tier:parsed.tier||"UNRANKED",division:parsed.division||null,lp:parsed.lp,wins:parsed.wins,losses:parsed.losses,level:parsed.level,icon:parseProfileIcon(text),mmr:null,avgRecent:null,asOf:"auto-fetch (op.gg via "+proxies[idx].name+")",note:null,updatedAt:Date.now()};
       }
       lastErr="page loaded but no rank found — name/tag/region correct?";
     }catch(e){lastErr=e.name==="AbortError"?"timeout":(e.message||"fetch blocked")}
