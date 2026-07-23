@@ -1,0 +1,11 @@
+{
+  "name": "smurf-tracker-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-force-exit"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0"
+  }
+}

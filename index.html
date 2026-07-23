@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#050c14">
+<title>Smurf Tracker — Summoner Vault</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050c14'/%3E%3Crect x='9.5' y='9.5' width='13' height='13' fill='%23c8aa6e' transform='rotate(45 16 16)'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050c14'/%3E%3Crect x='9.5' y='9.5' width='13' height='13' fill='%23c8aa6e' transform='rotate(45 16 16)'/%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap');
+
+  :root{
+    --bg:#050c14; --panel:#0b1723; --panel2:#0e1e2e; --line:#1e3448;
+    --gold:#c8aa6e; --gold-dim:#785a28; --gold-mid:#b0925a; --text:#f0e6d2; --muted:#7a94ab;
+    --teal:#0ac8b9; --danger:#d06060; --star:#f4d688;
+    --notch:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  *{scrollbar-width:thin;scrollbar-color:var(--line) var(--bg)}
+  ::-webkit-scrollbar{width:12px;height:12px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:20px;border:3px solid var(--bg)}
+  ::-webkit-scrollbar-thumb:hover{background:var(--gold-dim)}
+  ::-webkit-scrollbar-corner{background:var(--bg)}
+  ::selection{background:var(--gold-dim);color:var(--text)}
+  body{margin:0;color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:15px;
+    background:
+      radial-gradient(ellipse 900px 480px at 12% -8%,#123047 0%,transparent 60%),
+      radial-gradient(ellipse 800px 520px at 105% 8%,#12332766 0%,transparent 58%),
+      repeating-linear-gradient(120deg,#ffffff06 0 1px,transparent 1px 64px),
+      repeating-linear-gradient(60deg,#ffffff06 0 1px,transparent 1px 64px),
+      var(--bg);
+    background-attachment:fixed}
+  .wrap{max-width:1080px;margin:0 auto;padding:40px 20px 60px}
+  .hex-display{font-family:'Cinzel',Georgia,serif;letter-spacing:.12em}
+
+  /* notched panels */
+  .hx{clip-path:var(--notch);background:var(--line);padding:1px}
+  .hx.gold{background:var(--gold-dim)}
+  .hx.teal{background:var(--teal)}
+  .hx-in{clip-path:var(--notch);background:var(--panel);height:100%}
+
+  /* header */
+  .top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:14px}
+  .eyebrow{font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--gold-mid);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .eyebrow::before{content:"";width:5px;height:5px;background:var(--gold-mid);transform:rotate(45deg);display:inline-block}
+  h1{margin:0;font-size:28px;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:12px;
+    background:linear-gradient(120deg,var(--gold) 20%,var(--star) 50%,var(--gold) 80%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+    filter:drop-shadow(0 0 18px var(--gold-dim))}
+  .title-gem{width:15px;height:15px;flex-shrink:0;transform:rotate(45deg);background:radial-gradient(circle at 32% 28%,#fff9,var(--gold) 55%,var(--gold-dim));box-shadow:0 0 14px var(--gold-dim);animation:gemGlow 3.2s ease-in-out infinite}
+  .sub{font-size:12px;color:var(--muted);margin:10px 0 24px;max-width:720px;line-height:1.5}
+  .header-divider{height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim),transparent);margin:0 0 24px;opacity:.7}
+
+  /* buttons */
+  button,.btn{font:inherit;font-size:13px;cursor:pointer;border:1px solid var(--line);border-radius:7px;background:linear-gradient(180deg,#132536,#0c1a26);color:var(--muted);padding:7px 12px;box-shadow:inset 0 1px 0 #ffffff0a;display:inline-flex;align-items:center;gap:6px}
+  button:hover{border-color:var(--gold-dim);color:var(--text);box-shadow:inset 0 1px 0 #ffffff0f,0 2px 10px #00000055}
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+  .b-gold{background:linear-gradient(180deg,#8a6a35,#5f4620);border-color:var(--gold);color:var(--text);font-weight:600}
+  .b-gold:hover{box-shadow:inset 0 1px 0 #ffffff1a,0 0 16px #c8aa6e4d}
+  .b-teal{color:var(--teal)}
+  .b-teal:hover{box-shadow:inset 0 1px 0 #ffffff0f,0 0 12px #0ac8b944}
+  .b-danger{color:var(--danger)}
+  button:disabled{opacity:.45;cursor:default}
+  .bar{display:flex;gap:8px;flex-wrap:wrap}
+
+  /* banner */
+  .banner{display:none;border:1px solid var(--danger);color:var(--danger);background:var(--panel);padding:10px 14px;font-size:13px;margin-bottom:16px}
+  .banner.show{display:block}
+
+  /* dashboard */
+  .dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .stat{padding:12px 18px;border-right:1px solid var(--line)}
+  .stat:last-child{border-right:none}
+  .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-bottom:4px}
+  .stat .v{font-size:17px;font-weight:600;color:var(--text);line-height:1.3}
+  .stat .v small{font-size:12px;color:var(--muted);font-weight:400}
+  .dist{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 14px}
+  .dist .k{font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-right:4px}
+  .gem{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text)}
+  .gem i{width:10px;height:10px;transform:rotate(45deg);display:inline-block}
+
+  /* toolbar */
+  .tools{position:sticky;top:0;z-index:10;background:var(--bg);display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:14px 0;margin-bottom:16px;border-bottom:1px solid var(--line)}
+  input,select,textarea{font:inherit;font-size:13px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:7px 10px}
+  select{appearance:none;-webkit-appearance:none;padding-right:30px;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237a94ab' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;background-size:13px}
+  select:hover,select:focus{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c8aa6e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")}
+  input::placeholder,textarea::placeholder{color:#7a94ab77}
+  .tools input[type=search]{flex:1;min-width:160px}
+  .tagbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+  .chip{font-size:12px;padding:4px 10px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--muted);cursor:pointer}
+  .chip.on{background:#c8aa6e26;border-color:var(--gold);color:var(--gold)}
+  .chip:hover{color:var(--text)}
+
+  /* grid + cards */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+  .card{position:relative;padding:15px;display:flex;flex-direction:column;gap:10px}
+  .c-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .c-name{font-weight:600;font-size:15px;display:flex;align-items:center;gap:7px;min-width:0}
+  .c-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ico{width:1em;height:1em;display:inline-block;vertical-align:-.15em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+  .eye-btn{position:absolute;right:2px;top:50%;transform:translateY(-50%);background:none;border:none;box-shadow:none;padding:6px;color:var(--muted);display:inline-flex}
+  .eye-btn:hover{color:var(--text);border:none;box-shadow:none}
+  .panel-close{position:absolute;top:10px;right:10px;background:none;border:none;box-shadow:none;padding:6px;color:var(--muted);z-index:2}
+  .panel-close:hover{color:var(--danger);border:none;box-shadow:none}
+  .bulkchk{width:15px;height:15px;flex-shrink:0;accent-color:var(--teal);cursor:pointer;margin:0}
+  .star{background:none;border:none;padding:0;font-size:16px;color:var(--line);line-height:1;display:inline-flex}
+  .star svg{fill:none;stroke:currentColor;stroke-width:1.6}
+  .star.on{color:var(--star)}
+  .star.on svg{fill:currentColor}
+  .rid{background:none;border:none;padding:0;font-size:13px;color:var(--gold);cursor:pointer;text-align:left}
+  .rid b{color:var(--muted);font-weight:400}
+  .regiontag{font-size:11px;letter-spacing:.15em;padding:3px 8px;border-radius:4px;background:#0ac8b91f;color:var(--teal);flex-shrink:0}
+  .rankrow{display:flex;align-items:center;gap:12px}
+  .rgem{width:34px;height:34px;transform:rotate(45deg);border:1px solid var(--line);flex-shrink:0}
+  .rk{font-size:14px;font-weight:600}
+  .wl{font-size:12px;color:var(--muted)}
+  .wrbar{height:3px;background:var(--panel2)}
+  .wrbar i{display:block;height:3px}
+  .delta{font-size:11px;padding:1px 6px;border-radius:4px;font-weight:500;vertical-align:middle;margin-left:6px}
+  .d-up{color:#3ddc84;background:#3ddc841a}
+  .d-down{color:var(--danger);background:#d060601a}
+  .spark{display:block;width:100%;color:var(--gold-dim)}
+  .stale{color:var(--danger)}
+  .sdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+  #toast button{margin-left:10px;font-size:12px;padding:2px 8px;color:var(--teal)}
+  .meta{font-size:12px;color:var(--muted);line-height:1.6}
+  .meta b{color:var(--text);font-weight:500}
+  .meta .g{color:var(--gold)}
+  .ctags{display:flex;gap:5px;flex-wrap:wrap}
+  .ctags span{font-size:11px;padding:2px 7px;border-radius:4px;background:#ffffff0d;color:var(--muted)}
+  .login{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:10px;font-size:13px;display:flex;flex-direction:column;gap:8px}
+  .lrow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .lrow .val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lrow .mono{font-family:ui-monospace,Consolas,monospace}
+  .lrow .none{color:var(--muted)}
+  .lbtns{display:flex;gap:4px;flex-shrink:0}
+  .lbtns button{font-size:11px;padding:3px 8px}
+  .c-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:9px;margin-top:auto}
+  .upd{font-size:11px;color:var(--muted)}
+  .acts{display:flex;gap:4px;flex-wrap:wrap}
+  .acts button,.acts a{font-size:11px;padding:4px 8px;text-decoration:none;display:inline-block}
+  .a-dpm{background:var(--gold-dim);border:1px solid var(--gold-dim);border-radius:5px;color:var(--text);font-weight:600}
+  .a-login{background:var(--teal);border:1px solid var(--teal);border-radius:5px;color:#04211f;font-weight:700}
+  .a-login:hover{box-shadow:inset 0 1px 0 #ffffff33,0 0 14px #0ac8b988;border-color:var(--teal);color:#04211f}
+
+  /* form + settings */
+  .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}
+  .fw{grid-column:1/-1}
+  .fld{display:flex;flex-direction:column;gap:4px}
+  .fld label{font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted)}
+  .hidden{display:none!important}
+  .empty{padding:44px;text-align:center;color:var(--muted);font-size:14px}
+  .empty .d{font-size:30px;color:var(--gold-dim);margin-bottom:8px}
+  .empty-gem{width:48px;height:48px;display:inline-block;border:2px solid var(--gold-dim);background:radial-gradient(circle at 32% 28%,#3a2c12,#0b1723);transform:rotate(45deg);box-shadow:0 0 22px #c8aa6e33}
+  .count{margin-top:26px;text-align:center;font-size:12px;color:var(--muted)}
+
+  /* toast */
+  #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--gold);color:var(--text);padding:9px 16px;font-size:13px;display:none;z-index:50}
+
+  .spin{display:inline-block;animation:sp 1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* motion & juice */
+  .grid>.hx{transition:transform .18s ease}
+  .grid>.hx:hover{transform:translateY(-2px);filter:drop-shadow(0 10px 20px #00000066)}
+  button{transition:border-color .15s,color .15s}
+  button:active{transform:translateY(1px)}
+  .rgem{animation:gemGlow 3.2s ease-in-out infinite}
+  @keyframes gemGlow{50%{filter:brightness(1.3)}}
+  @keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .grid.boot>.hx{animation:cardIn .45s ease-out both;animation-delay:var(--d,0ms)}
+  @keyframes drawIn{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
+  .spark polyline{stroke-dasharray:100 100}
+  .grid.boot .spark polyline,.hx.flash .spark polyline{animation:drawIn .9s ease-out both}
+  @keyframes borderPulse{0%{background:var(--teal)}100%{background:var(--gold-dim)}}
+  .hx.flash{animation:borderPulse .9s ease-out}
+  @keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+  #toast{animation:toastIn .25s ease-out}
+  .confetti{position:fixed;pointer-events:none;z-index:60}
+  .confetti i{position:absolute;left:50%;top:40%;width:6px;height:10px;animation:pop 1.1s ease-out forwards}
+  @keyframes pop{from{transform:translate(0,0) rotate(0)}to{transform:translate(var(--tx),var(--ty)) rotate(var(--rz));opacity:0}}
+  @media (prefers-reduced-motion:reduce){.spin,.rgem,.title-gem,.grid.boot>.hx,.spark polyline,.hx.flash,#toast,.confetti i{animation:none!important}.grid>.hx{transition:none}}
+  @media (pointer:coarse){
+    .acts button,.acts a,.lbtns button{font-size:13px;padding:8px 12px}
+    .star{font-size:20px;padding:2px 6px 2px 0}
+    button,.btn{padding:9px 14px}
+    input,select,textarea{font-size:16px}
+  }
+  @media (max-width:560px){.formgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="lock" class="hx teal hidden" style="max-width:420px;margin:80px auto"><div class="hx-in" style="padding:20px">
+    <div class="hex-display" style="color:var(--gold);font-size:14px;text-transform:uppercase;margin-bottom:10px">Vault locked</div>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.5">This vault is protected with a master password. Enter it to unlock.</p>
+    <input type="password" id="lockPass" placeholder="Master password" autocomplete="current-password" style="width:100%">
+    <div id="lockErr" style="color:var(--danger);font-size:12px;margin-top:6px;display:none">Wrong password — try again.</div>
+    <div class="bar" style="margin-top:12px"><button id="lockBtn" class="b-gold">Unlock</button></div>
+  </div></div>
+
+  <div id="appRoot" class="hidden">
+  <div class="top">
+    <div>
+      <div class="eyebrow">Summoner Vault · local</div>
+      <h1 class="hex-display"><span class="title-gem"></span>Smurf Tracker</h1>
+    </div>
+    <div class="bar">
+      <button id="bCheckAll" class="b-gold"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg> Check all ranks</button>
+      <button id="bAdd" class="b-teal">+ Add account</button>
+      <div style="position:relative">
+        <button id="bMore" title="Export, import, settings">⋯</button>
+        <div id="moreMenu" class="hx teal hidden" style="position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:180px"><div class="hx-in" style="padding:6px;display:flex;flex-direction:column;gap:2px">
+          <button id="bExport" style="justify-content:flex-start;width:100%">Export backup (JSON)</button>
+          <button id="bExportCsv" style="justify-content:flex-start;width:100%">Export as CSV</button>
+          <button id="bImport" style="justify-content:flex-start;width:100%">Import backup</button>
+          <button id="bImportCsv" style="justify-content:flex-start;width:100%">Import CSV</button>
+          <div style="border-top:1px solid var(--line);margin:2px 0"></div>
+          <button id="bBulkAdd" style="justify-content:flex-start;width:100%">Bulk add accounts…</button>
+          <div style="border-top:1px solid var(--line);margin:2px 0"></div>
+          <button id="bDeleteAll" class="b-danger" style="justify-content:flex-start;width:100%" title="Wipe every account — useful for clearing out demo/test data">Delete all accounts</button>
+          <div style="border-top:1px solid var(--line);margin:2px 0"></div>
+          <button id="bSettings" style="justify-content:flex-start;width:100%"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</button>
+        </div></div>
+      </div>
+      <button id="bHelp" title="How this works">?</button>
+    </div>
+  </div>
+  <p class="sub">Everything is stored locally in this browser on this PC (localStorage). Export a backup now and then — clearing browser data wipes the vault. Rank checks are free and automatic (pulled from op.gg) — no account, no key needed.</p>
+  <div class="header-divider"></div>
+
+  <div id="banner" class="banner">Persistent storage is not available in this environment — data will be lost when you close the page. Download the file and open it locally on your PC.</div>
+
+  <div id="previewBanner" class="hidden" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border:1px solid var(--gold);background:#c8aa6e14;color:var(--text);padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:16px">
+    <span>👁 <b>Preview mode</b> — this is example data to show you the layout. Nothing here is saved.</span>
+    <button id="bExitPreview" class="b-gold">Exit preview</button>
+  </div>
+
+  <!-- help -->
+  <div id="help" class="hx hidden" style="margin-bottom:16px"><div class="hx-in" style="padding:16px;font-size:13px;color:var(--muted);line-height:1.7;position:relative">
+    <button class="panel-close" data-close-panel title="Close">✕</button>
+    <div class="hex-display" style="color:var(--gold);font-size:14px;text-transform:uppercase;margin-bottom:8px">How this works</div>
+    <b style="color:var(--text)">Your data stays here.</b> Accounts are saved in this browser on this device — nothing gets uploaded. Clearing browser data wipes the vault, so use <b style="color:var(--text)">Export</b> for backups and <b style="color:var(--text)">Import</b> to restore or merge them.<br>
+    <b style="color:var(--text)">Rank checks are free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b style="color:var(--text)">Paste</b> (copy the profile page in) or <b style="color:var(--text)">Rank</b> to enter it by hand — history, sparklines and stats work the same either way.<br>
+    <b style="color:var(--text)">Tips:</b> the star pins favorites on top · search matches names, tags, even ranks (try "gold") · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
+    <b style="color:var(--text)">Extra privacy:</b> set a master password in <b style="color:var(--text)">Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.<br>
+    <b style="color:var(--text)">More:</b> <b style="color:var(--text)">⋯</b> menu has bulk add (paste a list of Name#TAG) and CSV import · archive an account to hide it without deleting (toggle <b style="color:var(--text)">Archived</b> in the toolbar) · shift-click a card's checkbox to select a range · <b style="color:var(--text)">n</b> for a new account · pick your own accent color in Settings.
+    <div style="margin-top:10px"><button id="bHelpClose">Got it</button></div>
+  </div></div>
+
+  <!-- settings -->
+  <div id="settings" class="hx teal hidden" style="margin-bottom:16px"><div class="hx-in" style="position:relative">
+    <button class="panel-close" data-close-panel title="Close">✕</button>
+    <div class="formgrid">
+      <div class="fld fw">
+        <label>Backend URL (optional — your own rank server, e.g. Cloudflare Worker)</label>
+        <input id="sBackend" placeholder="https://... — leave empty to use the free auto-fetch" autocomplete="off">
+      </div>
+      <div class="fld fw">
+        <label>Advanced: Anthropic API key (optional, stored only in this browser)</label>
+        <input type="password" id="sKey" placeholder="sk-ant-..." autocomplete="off">
+      </div>
+      <div class="fld">
+        <label>Model for rank checks</label>
+        <select id="sModel">
+          <option value="claude-sonnet-4-6">Sonnet — more reliable (~1–2 ct/check)</option>
+          <option value="claude-haiku-4-5">Haiku — cheaper, may miss data</option>
+        </select>
+      </div>
+      <div class="fld fw" style="flex-direction:row;align-items:center;gap:8px">
+        <input type="checkbox" id="sAuto" style="width:auto">
+        <label for="sAuto" style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)">Auto-check accounts older than 3 days when opening the app</label>
+      </div>
+      <div class="fld fw" style="flex-direction:row;align-items:center;gap:8px">
+        <input type="checkbox" id="sNotify" style="width:auto">
+        <label for="sNotify" style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)">Browser notifications for tier-ups and finished "Check all" runs</label>
+      </div>
+      <div class="fld fw">
+        <label>Discord webhook URL (optional — posts tier-ups to a channel)</label>
+        <input id="sDiscord" placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
+      </div>
+      <div class="fld fw" style="border-top:1px solid var(--line);padding-top:12px;margin-top:2px">
+        <label>Master password (optional — encrypts the vault, AES-256. Lost password = lost vault, there is no recovery)</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <input type="password" id="sVaultPass" placeholder="New master password" autocomplete="new-password" style="flex:1;min-width:160px">
+          <button id="sVaultSet">Set / change</button>
+          <button id="sVaultRemove" class="b-danger">Remove protection</button>
+        </div>
+        <div id="sVaultStatus" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+          <label style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)">Auto-lock after</label>
+          <input type="number" id="sAutoLock" min="0" max="180" style="width:80px">
+          <label style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)">minutes idle (0 = never)</label>
+        </div>
+      </div>
+      <div class="fld">
+        <label>Accent color</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="color" id="sAccent" style="width:44px;padding:2px;height:32px">
+          <button id="sAccentReset" type="button">Reset to gold</button>
+        </div>
+      </div>
+      <div class="fw" style="font-size:12px;color:var(--muted);line-height:1.5">
+        Check order: backend URL → API key → free op.gg auto-fetch. Everything here is optional — with all fields empty, checks use the free auto-fetch. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable option but only worth it for power users.
+      </div>
+      <div class="fw bar" style="justify-content:center;margin-top:4px">
+        <button id="sSave" class="b-gold">Save settings</button>
+        <button id="sClose">Close</button>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- bulk add -->
+  <div id="bulkAdd" class="hx teal hidden" style="margin-bottom:16px"><div class="hx-in" style="position:relative">
+    <button class="panel-close" data-close-panel title="Close">✕</button>
+    <div class="formgrid">
+      <div class="fw" style="font-size:13px;color:var(--muted)">One account per line, format <code>Name#TAG</code>. All get the region below — edit individually afterward for logins/notes.</div>
+      <div class="fld"><label>Region for all</label><select id="baRegion"></select></div>
+      <div class="fld fw"><label>Accounts</label><textarea id="baList" rows="6" placeholder="Hide on Bush#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
+      <div class="fw bar">
+        <button id="baSave" class="b-gold">Add all</button>
+        <button id="baCancel">Cancel</button>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- add/edit form -->
+  <div id="form" class="hx teal hidden" style="margin-bottom:16px"><div class="hx-in" style="position:relative">
+    <button class="panel-close" data-close-panel title="Close">✕</button>
+    <div class="formgrid">
+      <div class="fld"><label>Label (optional)</label><input id="fLabel" placeholder="e.g. ADC smurf"></div>
+      <div class="fld"><label>Region</label>
+        <select id="fRegion"></select>
+      </div>
+      <div class="fld"><label>Riot name *</label><input id="fName" placeholder="Game name (before the #)"></div>
+      <div class="fld"><label>Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234 (no #)"></div>
+      <div class="fld"><label>Login username</label><input id="fLogin" placeholder="Riot client login" autocomplete="off"></div>
+      <div class="fld"><label>Password</label><div style="display:flex;gap:6px">
+        <div style="position:relative;flex:1;display:flex">
+          <input type="password" id="fPass" placeholder="Stored unencrypted, locally" autocomplete="new-password" style="width:100%;padding-right:34px">
+          <button id="fTogglePass" class="eye-btn" type="button" title="Show password" aria-label="Show password"><svg id="fToggleIco" class="ico" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+        <button id="fGen" type="button" title="Generate a new safe password (asks first if there's already one)"><svg class="ico" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg> Gen</button>
+      </div>
+      <div id="pwMeter" style="height:4px;display:flex;gap:3px;margin-top:6px"></div>
+      <div id="pwMeterLabel" style="font-size:11px;color:var(--muted);margin-top:2px"></div>
+      </div>
+      <div class="fld"><label>Email on the account</label><input id="fEmail" placeholder="mail the account is registered to" autocomplete="off"></div>
+      <div class="fld"><label>Tags (comma-separated)</label><input id="fTags" placeholder="e.g. ranked-ready, jungle, honor3"></div>
+      <div class="fld"><label>Status</label>
+        <select id="fStatus">
+          <option value="active">Active</option>
+          <option value="resting">Resting / unused</option>
+          <option value="restricted">Chat/ranked restricted</option>
+          <option value="banned">Banned</option>
+        </select>
+      </div>
+      <div class="fld fw"><label>Notes / skins</label><textarea id="fNotes" rows="2" placeholder="e.g. Elementalist Lux, Spirit Blossom Yasuo"></textarea></div>
+      <div class="fw bar">
+        <button id="fSave" class="b-gold">Add account</button>
+        <button id="fCancel">Cancel</button>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- dashboard -->
+  <div id="dash"></div>
+
+  <!-- toolbar -->
+  <div class="tools">
+    <input type="search" id="tSearch" placeholder="Search name, label, tag, email…">
+    <select id="tRegion">
+      <option value="">All regions</option>
+    </select>
+    <select id="tSort">
+      <option value="rank">Sort: Rank</option>
+      <option value="name">Sort: Name</option>
+      <option value="updated">Sort: Last updated</option>
+    </select>
+    <select id="tStatus">
+      <option value="">All statuses</option>
+    </select>
+    <button id="tFav"><svg class="ico" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Favorites</button>
+    <button id="tArchived" title="Show archived accounts instead of active ones">Archived</button>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;padding:0 4px">
+      <input type="checkbox" id="tSelectAll" style="width:auto">Select all shown
+    </label>
+  </div>
+  <div id="bulkbar" class="hidden" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:-6px 0 16px;padding:10px 12px;border:1px solid var(--teal);border-radius:6px;background:var(--panel2)">
+    <span id="bulkCount" style="font-size:12px;color:var(--text);font-weight:600"></span>
+    <select id="bulkStatus">
+      <option value="">Set status…</option>
+      <option value="active">Active</option>
+      <option value="resting">Resting / unused</option>
+      <option value="restricted">Chat/ranked restricted</option>
+      <option value="banned">Banned</option>
+    </select>
+    <input id="bulkTag" placeholder="Add tag…" style="width:130px">
+    <button id="bulkTagBtn">Add tag</button>
+    <button id="bulkDelete" class="b-danger">Delete selected</button>
+    <button id="bulkClear">Clear selection</button>
+  </div>
+  <div id="tagbar" class="tagbar"></div>
+
+  <!-- cards -->
+  <div id="grid" class="grid"></div>
+  <div id="count" class="count"></div>
+
+  <div class="count" style="margin-top:8px">© 2026 MarvinPanVan · Smurf Tracker — not affiliated with Riot Games · Discord: marvinpanvan</div>
+
+  <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
+  <input type="file" id="fileInCsv" accept=".csv,text/csv" class="hidden">
+  </div>
+  <div id="toast"></div>
+</div>
+
+<script>
+"use strict";
+// ---------- constants ----------
+const DB_KEY="smurf-tracker", CFG_KEY="smurf-tracker-cfg";
+const REGIONS={
+  NA:{opgg:"na",full:"North America"},ME:{opgg:"me",full:"Middle East"},
+  EUW:{opgg:"euw",full:"Europe West"},EUNE:{opgg:"eune",full:"Europe Nordic & East"},
+  OCE:{opgg:"oce",full:"Oceania"},KR:{opgg:"kr",full:"Korea"},JP:{opgg:"jp",full:"Japan"},
+  BR:{opgg:"br",full:"Brazil"},LAS:{opgg:"las",full:"Latin America South"},LAN:{opgg:"lan",full:"Latin America North"},
+  RU:{opgg:"ru",full:"Russia"},TR:{opgg:"tr",full:"Türkiye"},
+  SG:{opgg:"sg",full:"Southeast Asia"},TW:{opgg:"tw",full:"Taiwan"},VN:{opgg:"vn",full:"Vietnam"}
+};
+const TIER_ORDER=["IRON","BRONZE","SILVER","GOLD","PLATINUM","EMERALD","DIAMOND","MASTER","GRANDMASTER","CHALLENGER"];
+const TIER_COLORS={IRON:"#8a8a8a",BRONZE:"#b0765a",SILVER:"#a8bdd0",GOLD:"#e6c15a",PLATINUM:"#4fd1c5",EMERALD:"#3ddc84",DIAMOND:"#7ea6f0",MASTER:"#b16ce8",GRANDMASTER:"#e05656",CHALLENGER:"#f4d688",UNRANKED:"#5b7a99"};
+const DIV_ORDER={IV:0,III:1,II:2,I:3};
+const STALE_MS=3*24*3600*1000;
+const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / unused",color:"#7a94ab"},restricted:{label:"Chat/ranked restricted",color:"#f4d688"},banned:{label:"Banned",color:"#d06060"}};
+
+// ---------- state ----------
+let accounts=[];
+let cfg={apiKey:"",model:"claude-sonnet-4-6",autoCheck:false,backendUrl:""};
+let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArchived:false};
+let checking=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), openPaste=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
+let hasStorage=true;
+let vaultPassword=null;
+let previewMode=false;
+let lastSelectedIdx=null;
+let lastActivity=Date.now();
+let currentEnvelope=null;
+
+// ---------- storage ----------
+function storageOK(){try{localStorage.setItem("__t","1");localStorage.removeItem("__t");return true}catch(e){return false}}
+async function saveDB(){
+  if(!hasStorage||previewMode)return;
+  try{
+    if(vaultPassword){
+      const envelope=await encryptData(vaultPassword,accounts);
+      localStorage.setItem(DB_KEY,JSON.stringify(envelope));
+    }else{
+      localStorage.setItem(DB_KEY,JSON.stringify(accounts));
+    }
+  }catch(e){toast("Saving failed — storage error")}
+}
+function saveCfg(){if(!hasStorage)return;try{localStorage.setItem(CFG_KEY,JSON.stringify(cfg))}catch(e){}}
+
+// ---------- vault encryption (Web Crypto, AES-256-GCM) ----------
+function b64(bytes){let s="";bytes.forEach(b=>s+=String.fromCharCode(b));return btoa(s)}
+function unb64(str){return Uint8Array.from(atob(str),c=>c.charCodeAt(0))}
+async function deriveKey(password,salt){
+  const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:150000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+}
+async function encryptData(password,obj){
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await deriveKey(password,salt);
+  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(JSON.stringify(obj)));
+  return {__enc:true,salt:b64(salt),iv:b64(iv),data:b64(new Uint8Array(ct))};
+}
+async function decryptData(password,envelope){
+  const salt=unb64(envelope.salt),iv=unb64(envelope.iv),data=unb64(envelope.data);
+  const key=await deriveKey(password,salt);
+  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,data);
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+// ---------- helpers ----------
+const $=id=>document.getElementById(id);
+const ICON={
+  refresh:'<path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/>',
+  pencil:'<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
+  clipboard:'<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
+  star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  eye:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:'<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M1 1l22 22"/><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>',
+  login:'<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>'
+};
+function icon(name,cls){return `<svg class="ico${cls?" "+cls:""}" viewBox="0 0 24 24">${ICON[name]}</svg>`}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function toast(msg,action,fn){const t=$("toast");t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");if(action)document.getElementById("toastBtn").onclick=()=>{t.style.display="none";fn()};t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",action?6000:2200)}
+function timeAgo(ts){if(!ts)return null;const s=Math.floor((Date.now()-ts)/1000);if(s<60)return"just now";const m=Math.floor(s/60);if(m<60)return m+" min ago";const h=Math.floor(m/60);if(h<24)return h+" h ago";const d=Math.floor(h/24);return d+(d===1?" day ago":" days ago")}
+function tierColor(t){return TIER_COLORS[(t||"UNRANKED").toUpperCase()]||TIER_COLORS.UNRANKED}
+function rankValue(s){ // sortable number, higher = better
+  if(!s||!s.tier||s.found===false)return -1;
+  const t=TIER_ORDER.indexOf((s.tier||"").toUpperCase());
+  if(t<0)return -1;
+  if(t>=TIER_ORDER.indexOf("MASTER"))return t*10000+(Number(s.lp)||0);
+  const d=DIV_ORDER[(s.division||"").toUpperCase()]??0;
+  return t*10000+d*1000+(Number(s.lp)||0);
+}
+function shortRank(s){
+  if(!s||!s.tier)return null;
+  const t=s.tier.toUpperCase();
+  if(t==="UNRANKED")return"Unranked";
+  const nice=t.charAt(0)+t.slice(1).toLowerCase();
+  return nice+(s.division?" "+s.division:"")+((s.lp!==null&&s.lp!==undefined)?" · "+s.lp+" LP":"");
+}
+function ladderLP(s){ // absolute position on the ladder, in LP
+  if(!s||!s.tier)return null;
+  const t=TIER_ORDER.indexOf((s.tier||"").toUpperCase());
+  if(t<0)return null;
+  const m=TIER_ORDER.indexOf("MASTER");
+  if(t>=m)return m*400+(Number(s.lp)||0);
+  const d=DIV_ORDER[(s.division||"").toUpperCase()]??0;
+  return t*400+d*100+(Number(s.lp)||0);
+}
+function sparkline(hist){
+  const vals=(hist||[]).map(h=>ladderLP(h)).filter(v=>v!==null);
+  if(vals.length<2)return"";
+  const min=Math.min(...vals),max=Math.max(...vals),range=(max-min)||1;
+  const w=200,h=26,step=w/(vals.length-1);
+  const pts=vals.map((v,i)=>(i*step).toFixed(1)+","+(h-2-((v-min)/range)*(h-4)).toFixed(1)).join(" ");
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" height="${h}" preserveAspectRatio="none"><title>LP over the last ${vals.length} checks</title><polyline points="${pts}" pathLength="100" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>`;
+}
+function postDiscord(content){
+  if(!cfg.discordWebhook)return;
+  fetch(cfg.discordWebhook,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({content})}).catch(()=>{});
+}
+function celebrate(id,acc){
+  const prev=acc.history[acc.history.length-2]||{};
+  toast("Tier up: "+(prev.tier||"?")+" → "+acc.stats.tier);
+  notify("Tier up — "+(acc.label||acc.gameName),(prev.tier||"?")+" → "+acc.stats.tier);
+  postDiscord("🎉 **"+(acc.label||acc.gameName)+"** tiered up: "+(prev.tier||"?")+" → "+acc.stats.tier);
+  if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  const card=document.querySelector('.card[data-id="'+id+'"]');if(!card)return;
+  const r=card.getBoundingClientRect();
+  const c=document.createElement("div");c.className="confetti";
+  c.style.left=r.left+"px";c.style.top=r.top+"px";c.style.width=r.width+"px";c.style.height=r.height+"px";
+  const cols=["#c8aa6e","#f4d688","#0ac8b9","#f0e6d2","#3ddc84"];
+  for(let k=0;k<26;k++){
+    const p=document.createElement("i");
+    p.style.background=cols[k%cols.length];
+    p.style.setProperty("--tx",(Math.random()*260-130).toFixed(0)+"px");
+    p.style.setProperty("--ty",(Math.random()*-180-30).toFixed(0)+"px");
+    p.style.setProperty("--rz",(Math.random()*720-360).toFixed(0)+"deg");
+    p.style.animationDelay=(Math.random()*120).toFixed(0)+"ms";
+    c.appendChild(p);
+  }
+  document.body.appendChild(c);
+  setTimeout(()=>c.remove(),1400);
+}
+async function copyText(v,label,sensitive){
+  let ok=false;
+  try{await navigator.clipboard.writeText(v);ok=true}
+  catch(e){try{const ta=document.createElement("textarea");ta.value=v;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);ok=true}catch(e2){}}
+  toast(ok?label+" copied"+(sensitive?" — clears from clipboard in 30s":""):"Copy failed — copy manually");
+  if(ok&&sensitive){
+    setTimeout(async()=>{
+      try{if((await navigator.clipboard.readText())===v)await navigator.clipboard.writeText("")}catch(e){}
+    },30000);
+  }
+}
+function uid(){return Date.now()+"-"+Math.random().toString(36).slice(2,7)}
+function cryptoInt(max){const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%max}
+function genPassword(len){
+  // guarantees at least one upper/lower/digit/symbol so it can never come out as "just letters" by chance,
+  // then fills the rest and shuffles — still fully crypto-random, just never in a weak shape
+  const groups=["ABCDEFGHJKLMNPQRSTUVWXYZ","abcdefghjkmnpqrstuvwxyz","23456789","!#%+@$&*"];
+  const all=groups.join("");
+  const chars=groups.map(g=>g[cryptoInt(g.length)]);
+  while(chars.length<len)chars.push(all[cryptoInt(all.length)]);
+  for(let i=chars.length-1;i>0;i--){const j=cryptoInt(i+1);[chars[i],chars[j]]=[chars[j],chars[i]]}
+  return chars.join("");
+}
+function parseTags(str){return String(str||"").split(",").map(t=>t.trim()).filter(Boolean)}
+function isClimbing(hist){
+  if(!hist||hist.length<3)return false;
+  const last3=hist.slice(-3).map(ladderLP);
+  return last3.every(v=>v!==null)&&last3[0]<last3[1]&&last3[1]<last3[2];
+}
+function passwordStrength(p){
+  if(!p)return{score:0,label:""};
+  let score=0;
+  if(p.length>=8)score++;
+  if(p.length>=12)score++;
+  if(/[A-Z]/.test(p)&&/[a-z]/.test(p))score++;
+  if(/[0-9]/.test(p))score++;
+  if(/[^A-Za-z0-9]/.test(p))score++;
+  const labels=["Very weak","Weak","Fair","Good","Strong"];
+  return{score,label:labels[Math.min(score,5)-1]||"Very weak"};
+}
+
+// ---------- rank data: parser + fetch cascade ----------
+function parseRankText(raw){
+  if(!raw)return null;
+  const text=String(raw).replace(/\s+/g," ");
+  const strict=/\b(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)\b[^\dA-Za-z]{0,6}([1-4]|IV|III|II|I)?(?!\d)(?:\s\2(?!\d))?[^\d]{0,6}(\d{1,4})\s*LP\b/i;
+  const m=text.match(strict);
+  const out={tier:null,division:null,lp:null,wins:null,losses:null,level:null};
+  if(m){
+    out.tier=m[1].toUpperCase();
+    if(m[2]){const map={"1":"I","2":"II","3":"III","4":"IV"};out.division=map[m[2]]||m[2].toUpperCase()}
+    out.lp=+m[3];
+    const after=text.slice(m.index);
+    const wl=after.match(/(\d{1,4})\s*W(?:in)?s?\b\s*[,\/]?\s*(\d{1,4})\s*L(?:ose|oss(?:es)?)?\b/i);
+    if(wl){out.wins=+wl[1];out.losses=+wl[2]}
+  }
+  const lv=text.match(/\bLv(?:l)?\.?\s*(\d{1,4})\b/i)||text.match(/\bLevel\s*(\d{1,4})\b/i);
+  if(lv)out.level=+lv[1];
+  if(!out.tier&&out.level==null)return null;
+  return out;
+}
+async function fetchWithTimeout(url,ms){
+  const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);
+  try{const r=await fetch(url,{signal:c.signal});if(!r.ok)throw new Error("HTTP "+r.status);return await r.text()}
+  finally{clearTimeout(t)}
+}
+let lastGoodProxy=0;
+async function fetchViaProxy(acc){
+  const r=REGIONS[acc.region]||REGIONS.EUW;
+  const target="https://op.gg/lol/summoners/"+r.opgg+"/"+encodeURIComponent(acc.gameName)+"-"+encodeURIComponent(acc.tagLine);
+  const proxies=[
+    u=>"https://corsproxy.io/?url="+encodeURIComponent(u),
+    u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u),
+    u=>"https://r.jina.ai/"+u
+  ];
+  let lastErr="no proxy reachable";
+  for(let k=0;k<proxies.length;k++){
+    const idx=(lastGoodProxy+k)%proxies.length;
+    try{
+      const text=await fetchWithTimeout(proxies[idx](target),10000);
+      const parsed=parseRankText(text);
+      if(parsed){
+        lastGoodProxy=idx; // start here next time — skips dead proxies on bulk checks
+        return {found:true,tier:parsed.tier||"UNRANKED",division:parsed.division||null,lp:parsed.lp,wins:parsed.wins,losses:parsed.losses,level:parsed.level,mmr:null,avgRecent:null,asOf:"auto-fetch (op.gg)",note:null,updatedAt:Date.now()};
+      }
+      lastErr="page loaded but no rank found — name/tag/region correct?";
+    }catch(e){lastErr=e.name==="AbortError"?"timeout":(e.message||"fetch blocked")}
+  }
+  throw new Error(lastErr);
+}
+async function fetchViaBackend(acc){
+  const r=REGIONS[acc.region]||REGIONS.EUW;
+  const url=cfg.backendUrl.replace(/\/+$/,"")+"?name="+encodeURIComponent(acc.gameName)+"&tag="+encodeURIComponent(acc.tagLine)+"&region="+encodeURIComponent(r.opgg);
+  const text=await fetchWithTimeout(url,12000);
+  const d=JSON.parse(text);
+  if(d.found===false)return {found:false,updatedAt:Date.now()};
+  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,updatedAt:Date.now()};
+}
+async function fetchViaClaude(acc){
+  if(!cfg.apiKey)throw new Error("No API key — add one in Settings");
+  const r=REGIONS[acc.region]||REGIONS.EUW;
+  const prompt=`Search the web for the current League of Legends ranked Solo/Duo stats of the player "${acc.gameName}#${acc.tagLine}" on the ${r.full} (${acc.region}) server.
+Preferred sources: dpm.lol first, then op.gg, leagueofgraphs, u.gg. Try queries like: dpm.lol ${acc.gameName} ${acc.tagLine} | op.gg ${acc.gameName} ${acc.tagLine} ${r.opgg}.
+Find: current tier, division and LP; this season's wins and losses; the summoner level; an estimated MMR if any site shows one (dpm.lol often does); and the average rank/tier of the last ~5 games if visible.
+Respond with ONLY a raw JSON object, no markdown fences, no explanation, exactly this shape:
+{"found":true,"tier":"GOLD","division":"II","lp":45,"wins":30,"losses":25,"level":247,"mmr":"~2100","avgRecent":"Gold I","asOf":"how fresh the data looks","note":"one short remark only if something is off"}
+Rules: use null for any value you cannot find. If unranked this season, tier "UNRANKED" and division null. If you cannot find the player at all, found=false. Numbers must be plain numbers, not strings.`;
+  const res=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "x-api-key":cfg.apiKey,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    },
+    body:JSON.stringify({model:cfg.model,max_tokens:1000,messages:[{role:"user",content:prompt}],tools:[{type:"web_search_20250305",name:"web_search"}]})
+  });
+  const data=await res.json();
+  if(data.error)throw new Error(data.error.message||"API error");
+  const text=(data.content||[]).map(b=>b.type==="text"?b.text:"").filter(Boolean).join("\n");
+  const a=text.indexOf("{"),b=text.lastIndexOf("}");
+  if(a===-1||b===-1)throw new Error("No JSON in response");
+  const parsed=JSON.parse(text.slice(a,b+1));
+  parsed.updatedAt=Date.now();
+  return parsed;
+}
+function applyStats(acc,s){
+  acc.stats=s;
+  let rankedUp=false;
+  if(s.found!==false&&ladderLP(s)!==null){
+    const hist=acc.history=(acc.history||[]).slice(-59);
+    const prev=hist[hist.length-1];
+    if(prev&&prev.tier===s.tier&&prev.division===s.division&&prev.lp===s.lp){
+      prev.t=s.updatedAt; // nothing changed — refresh timestamp, don't spam history
+    }else{
+      hist.push({t:s.updatedAt,tier:s.tier,division:s.division,lp:s.lp});
+      if(prev&&TIER_ORDER.indexOf((s.tier||"").toUpperCase())>TIER_ORDER.indexOf((prev.tier||"").toUpperCase()))rankedUp=true;
+    }
+  }
+  return rankedUp;
+}
+function commitStats(id,acc,s){
+  const up=applyStats(acc,s);
+  openRank.delete(id);openPaste.delete(id);
+  flashId=id;saveDB();render();
+  if(up)celebrate(id,acc);
+  setTimeout(()=>{if(flashId===id){flashId=null;renderGrid()}},1500);
+}
+async function check(id){
+  const acc=accounts.find(a=>a.id===id);if(!acc)return;
+  checking.add(id);render();
+  let s=null,err="";
+  if(cfg.backendUrl){try{s=await fetchViaBackend(acc)}catch(e){err="backend: "+(e.message||"failed")}}
+  if(!s&&cfg.apiKey){try{s=await fetchViaClaude(acc)}catch(e){err=err||("api: "+(e.message||"failed"))}}
+  if(!s){try{s=await fetchViaProxy(acc)}catch(e){err=err||e.message||"auto-fetch failed"}}
+  checking.delete(id);
+  if(s){commitStats(id,acc,s);return true}
+  else{
+    acc.stats=Object.assign({},acc.stats||{},{note:"Auto-fetch failed ("+err+") — use 📋 Paste or ✎ Rank"});
+    saveDB();render();return false;
+  }
+}
+async function checkAll(){
+  const list=filtered().filter(a=>a.status!=="banned");
+  let ok=0,bad=0;
+  for(const acc of list){(await check(acc.id))?ok++:bad++;await new Promise(r=>setTimeout(r,800))}
+  const msg=bad===0?"Refreshed "+ok+" account"+(ok===1?"":"s"):ok+" refreshed, "+bad+" failed — see the cards";
+  toast(msg);
+  notify("Check all ranks finished",msg);
+}
+
+// ---------- filtering / sorting ----------
+function filtered(){
+  const q=ui.search.toLowerCase();
+  let list=accounts.filter(a=>{
+    if(a.archived&&!ui.showArchived)return false;
+    if(ui.showArchived&&!a.archived)return false;
+    if(ui.favOnly&&!a.fav)return false;
+    if(ui.region&&a.region!==ui.region)return false;
+    if(ui.status&&(a.status||"active")!==ui.status)return false;
+    if(ui.tag&&!(a.tags||[]).includes(ui.tag))return false;
+    if(q){
+      const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,(a.tags||[]).join(" "),a.stats?(a.stats.tier||"")+" "+(shortRank(a.stats)||""):"",(STATUS[a.status]||STATUS.active).label].join(" ").toLowerCase();
+      if(!hay.includes(q))return false;
+    }
+    return true;
+  });
+  const by={
+    rank:(x,y)=>rankValue(y.stats)-rankValue(x.stats),
+    name:(x,y)=>(x.label||x.gameName).localeCompare(y.label||y.gameName),
+    updated:(x,y)=>((y.stats&&y.stats.updatedAt)||0)-((x.stats&&x.stats.updatedAt)||0)
+  }[ui.sort];
+  list.sort((x,y)=>(y.fav?1:0)-(x.fav?1:0)||by(x,y));
+  return list;
+}
+
+// ---------- render ----------
+function render(){
+  for(const id of [...selected])if(!accounts.some(a=>a.id===id))selected.delete(id);
+  $("previewBanner").classList.toggle("hidden",!previewMode);
+  $("bDeleteAll").disabled=accounts.length===0;
+  renderDash();renderTagbar();renderFilterOptions();renderGrid();renderBulkBar();
+}
+function renderBulkBar(){
+  const n=selected.size;
+  $("bulkbar").classList.toggle("hidden",n===0);
+  $("bulkCount").textContent=n+" selected";
+}
+
+function renderFilterOptions(){
+  const regions=[...new Set(accounts.map(a=>a.region))].sort((a,b)=>a.localeCompare(b));
+  if(ui.region&&!regions.includes(ui.region))ui.region="";
+  $("tRegion").innerHTML=`<option value="">All regions</option>`+regions.map(r=>`<option value="${esc(r)}" ${ui.region===r?"selected":""}>${esc(r)}</option>`).join("");
+
+  const order=["active","resting","restricted","banned"];
+  const statuses=[...new Set(accounts.map(a=>a.status||"active"))].sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+  if(ui.status&&!statuses.includes(ui.status))ui.status="";
+  $("tStatus").innerHTML=`<option value="">All statuses</option>`+statuses.map(s=>`<option value="${s}" ${ui.status===s?"selected":""}>${esc((STATUS[s]||STATUS.active).label)}</option>`).join("");
+}
+
+function renderDash(){
+  const el=$("dash");
+  const accounts0=accounts.filter(a=>!a.archived);
+  if(accounts0.length===0){el.innerHTML="";return}
+  if(cfg.dashCollapsed){
+    el.innerHTML=`<div class="hx" style="margin-bottom:16px"><div class="hx-in" style="display:flex;justify-content:flex-end;padding:6px 8px"><button id="bDashToggle" style="font-size:11px;padding:3px 8px">Show stats</button></div></div>`;
+    return;
+  }
+  const ranked=accounts0.filter(a=>a.stats&&a.stats.found!==false&&a.stats.tier&&a.stats.tier.toUpperCase()!=="UNRANKED");
+  let W=0,L=0;
+  ranked.forEach(a=>{W+=Number(a.stats.wins)||0;L+=Number(a.stats.losses)||0});
+  const wr=(W+L)>0?Math.round(W/(W+L)*100)+"%":"—";
+  let best=null;
+  accounts0.forEach(a=>{if(rankValue(a.stats)>rankValue(best&&best.stats))best=a});
+  const bestTxt=best&&rankValue(best.stats)>=0?esc(best.label||best.gameName)+" <small>"+esc(shortRank(best.stats)||"")+"</small>":"—";
+  const regCount={};accounts0.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
+  const regTxt=Object.entries(regCount).map(([r,n])=>r+" "+n).join(" · ");
+  const dist={};ranked.forEach(a=>{const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1});
+  const un=accounts0.length-ranked.length;
+  const staleN=accounts0.filter(a=>a.status!=="banned"&&(!a.stats||!a.stats.updatedAt||Date.now()-a.stats.updatedAt>STALE_MS)).length;
+  const veryStaleN=accounts0.filter(a=>a.status!=="banned"&&(!a.stats||!a.stats.updatedAt||Date.now()-a.stats.updatedAt>30*24*3600*1000)).length;
+  const bannedN=accounts0.filter(a=>a.status==="banned").length;
+  const archivedN=accounts.length-accounts0.length;
+  let bk="";
+  if(hasStorage){
+    if(!cfg.lastExport)bk="No backup yet — hit Export once your accounts are in.";
+    else if(Date.now()-cfg.lastExport>30*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago — consider exporting.";
+  }
+  const gems=TIER_ORDER.filter(t=>dist[t]).map(t=>`<span class="gem"><i style="background:${TIER_COLORS[t]}"></i>${t.charAt(0)+t.slice(1).toLowerCase()} ×${dist[t]}</span>`).join("")
+    +(un>0?`<span class="gem"><i style="background:${TIER_COLORS.UNRANKED}"></i>Unranked/unchecked ×${un}</span>`:"");
+  el.innerHTML=`
+  <div class="hx" style="margin-bottom:16px"><div class="hx-in">
+  <div style="display:flex;justify-content:flex-end;padding:4px 8px 0"><button id="bDashToggle" style="font-size:11px;padding:3px 8px">Hide stats</button></div>
+  <div class="dash">
+    <div class="stat"><div class="k">Accounts</div><div class="v">${accounts0.length} <small>· ${accounts0.filter(a=>a.fav).length} ★${bannedN?" · "+bannedN+" banned":""}${archivedN?" · "+archivedN+" archived":""}</small></div></div>
+    <div class="stat"><div class="k">Best account</div><div class="v" style="font-size:14px">${bestTxt}</div></div>
+    <div class="stat"><div class="k">Season W/L (checked)</div><div class="v">${W}W ${L}L <small>· ${wr} WR</small></div></div>
+    <div class="stat"><div class="k">Regions</div><div class="v" style="font-size:14px">${esc(regTxt)||"—"}</div></div>
+    <div class="stat"><div class="k">Needs refresh</div><div class="v"${staleN?' style="color:var(--danger)"':""}>${staleN}<small> · older than 3 days${veryStaleN?" ("+veryStaleN+" over 30d)":""}</small></div></div>
+  </div>
+  ${gems?`<div class="dist" style="border-top:1px solid var(--line)"><span class="k">Rank spread</span>${gems}</div>`:""}
+  </div></div>
+  ${bk?`<div style="font-size:12px;color:var(--muted);margin:-4px 0 16px">${bk}</div>`:""}`;
+}
+
+function renderTagbar(){
+  const all=[...new Set(accounts.flatMap(a=>a.tags||[]))].sort((a,b)=>a.localeCompare(b));
+  $("tagbar").innerHTML=all.map(t=>`<span class="chip ${ui.tag===t?"on":""}" data-tag="${esc(t)}">${esc(t)}</span>`).join("");
+}
+
+function cardHTML(a,i){
+  const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
+  const stale=!!(s&&s.updatedAt&&Date.now()-s.updatedAt>STALE_MS);
+  const hist=a.history||[];
+  const st=STATUS[a.status]||STATUS.active;
+  let peak=null;
+  {let bestE=null,bestV=-1;
+   for(const h of hist){const v=ladderLP(h);if(v!==null&&v>bestV){bestV=v;bestE=h}}
+   const cur=ladderLP(s);
+   if(bestE&&(cur===null||bestV>cur))peak=shortRank(bestE);}
+  let deltaChip="";
+  if(hist.length>=2){
+    const dv=(ladderLP(hist[hist.length-1])||0)-(ladderLP(hist[hist.length-2])||0);
+    if(dv)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
+  }
+  if(isClimbing(hist))deltaChip+='<span class="delta d-up" title="LP has gone up 3 checks in a row">🔥 Climbing</span>';
+  const total=s?(Number(s.wins)||0)+(Number(s.losses)||0):0;
+  const wr=total>0?Math.round((Number(s.wins)||0)/total*100):null;
+  const dpm="https://dpm.lol/"+encodeURIComponent(a.gameName)+"-"+encodeURIComponent(a.tagLine);
+  const opgg="https://op.gg/lol/summoners/"+(REGIONS[a.region]||REGIONS.EUW).opgg+"/"+encodeURIComponent(a.gameName)+"-"+encodeURIComponent(a.tagLine);
+  let rankBlock;
+  if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
+  else if(!s)rankBlock=`<div class="wl">Never checked</div>`;
+  else if(s.found===false)rankBlock=`<div class="wl" style="color:var(--danger)">Not found — check name/tag/region</div>`;
+  else rankBlock=`<div class="rk" style="color:${col}">${esc(shortRank(s)||"Unranked")}${deltaChip}</div>
+    <div class="wl">${total>0?esc(s.wins+"W "+s.losses+"L · "+wr+"% WR"):"No ranked games found"}</div>`;
+  const loginOpen=openLogin.has(a.id), pw=shownPw.has(a.id);
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" style="--d:${(i||0)*40}ms"><div class="hx-in card" data-id="${a.id}">
+    <div class="c-top">
+      <div style="min-width:0">
+        <div class="c-name"><input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select for bulk actions"><button class="star ${a.fav?"on":""}" data-act="fav" title="Favorite">${icon("star")}</button><span><i class="sdot" style="background:${st.color}" title="${st.label}"></i>${esc(a.label||a.gameName)}${a.status&&a.status!=="active"?' <small style="color:var(--muted);font-weight:400">· '+esc(st.label)+"</small>":""}</span></div>
+        <button class="rid" data-act="copyid" title="Copy Riot ID">${esc(a.gameName)}<b>#${esc(a.tagLine)}</b></button>
+      </div>
+      <span class="regiontag">${esc(a.region)}</span>
+    </div>
+    <div class="rankrow">
+      <div class="rgem" style="background:${s&&s.found!==false?`radial-gradient(circle at 32% 28%,#fff5,${col} 55%,${col}bb)`:"var(--panel2)"};box-shadow:${s&&s.found!==false?"0 0 14px "+col+"55":"none"}"></div>
+      <div style="min-width:0">${rankBlock}</div>
+    </div>
+    ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
+    ${sparkline(hist)}
+    ${s&&s.found!==false&&(s.level||s.mmr||s.avgRecent||peak)?`<div class="meta">${s.level?`Lvl <b>${esc(s.level)}</b>&nbsp;&nbsp;`:""}${s.mmr?`MMR est. <b>${esc(s.mmr)}</b>&nbsp;&nbsp;`:""}${s.avgRecent?`Last games avg <b>${esc(s.avgRecent)}</b>&nbsp;&nbsp;`:""}${peak?`Peak <b>${esc(peak)}</b>`:""}</div>`:""}
+    ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
+    ${(a.tags||[]).length?`<div class="ctags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""}
+    ${loginOpen?`<div class="login">
+      <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
+      <div class="lrow"><span class="val mono ${a.password?"":"none"}" style="font-family:${a.password?"":"inherit"}">${a.password?(pw?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${pw?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
+      ${a.email?`<div class="lrow"><span class="val">${esc(a.email)}</span><span class="lbtns"><button data-act="copymail">Copy</button></span></div>`:""}
+    </div>`:""}
+    ${openRank.has(a.id)?`<div class="login"><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <select data-f="tier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${s&&(s.tier||"").toUpperCase()===t?"selected":""}>${t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
+      <select data-f="div">${["I","II","III","IV"].map(d=>`<option ${s&&s.division===d?"selected":""}>${d}</option>`).join("")}</select>
+      <input data-f="lp" type="number" min="0" max="2000" placeholder="LP" value="${s&&s.lp!=null?s.lp:""}" style="width:72px">
+      <input data-f="w" type="number" min="0" placeholder="W" value="${s&&s.wins!=null?s.wins:""}" style="width:64px">
+      <input data-f="l" type="number" min="0" placeholder="L" value="${s&&s.losses!=null?s.losses:""}" style="width:64px">
+      <button data-act="rankapply" style="color:var(--teal)">Save</button>
+    </div></div>`:""}
+    ${openPaste.has(a.id)?`<div class="login"><textarea data-f="pastetext" rows="3" placeholder="Open the OP.GG/DPM profile, select all (Ctrl+A), copy, paste here — I'll extract the rank" style="width:100%"></textarea><div style="margin-top:6px"><button data-act="pasteapply" style="color:var(--teal)">Parse &amp; save</button></div></div>`:""}
+    ${a.notes?`<div class="meta"><span class="g">Notes/Skins:</span> ${esc(a.notes)}</div>`:""}
+    <div class="c-foot">
+      <span class="upd${stale?" stale":""}">${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"—"}${s&&s.asOf?" · "+esc(s.asOf):""}</span>
+      <div class="acts">
+        <button data-act="login" class="a-login" title="Show saved login">${icon("login")} ${loginOpen?"Hide login":"Login"}</button>
+        <a class="a-dpm" href="${dpm}" target="_blank" rel="noreferrer">DPM ↗</a>
+        <a class="btn" href="${opgg}" target="_blank" rel="noreferrer">OP.GG ↗</a>
+        <button data-act="check" ${isChecking?"disabled":""} style="color:var(--teal)">${isChecking?"…":icon("refresh")+" Refresh"}</button>
+        <button data-act="more" title="More actions" aria-label="More actions">⋯</button>
+      </div>
+      ${openMore.has(a.id)?`<div class="acts">
+        <button data-act="rank" title="Enter rank manually">${icon("pencil")} Rank</button>
+        <button data-act="paste" title="Paste profile page text">${icon("clipboard")} Paste</button>
+        <button data-act="edit">Edit</button>
+        ${a.archived?'<button data-act="unarchive">Unarchive</button>':'<button data-act="archive">Archive</button>'}
+        <button data-act="del" class="b-danger" ${armedDelete===a.id?'style="border-color:var(--danger)"':""}>${armedDelete===a.id?"Sure?":"Delete"}</button>
+      </div>`:""}
+    </div>
+  </div></div>`;
+}
+
+function renderGrid(){
+  const list=filtered();
+  const grid=$("grid");
+  if(accounts.length===0){
+    grid.innerHTML=`<div class="hx" style="grid-column:1/-1"><div class="hx-in empty"><div class="d"><span class="empty-gem"></span></div>No accounts yet. Hit <span style="color:var(--teal)">+ Add account</span> to store your first smurf.<div style="margin-top:12px"><button id="bDemo">👁 Preview with example data</button></div></div></div>`;
+  }else if(list.length===0){
+    grid.innerHTML=`<div class="hx" style="grid-column:1/-1"><div class="hx-in empty">No accounts match the current filters.</div></div>`;
+  }else{
+    grid.innerHTML=list.map((a,i)=>cardHTML(a,i)).join("");
+  }
+  document.title=accounts.length?"Smurf Tracker ("+accounts.length+")":"Smurf Tracker — Summoner Vault";
+  $("count").textContent=accounts.length?list.length+" of "+accounts.length+" account"+(accounts.length===1?"":"s")+" shown":"";
+  $("bCheckAll").disabled=accounts.length===0||checking.size>0;
+  $("bCheckAll").innerHTML=checking.size>0?"Checking…":icon("refresh")+" Check all ranks";
+}
+
+// ---------- form ----------
+function closeAllPanels(){
+  $("form").classList.add("hidden");
+  $("settings").classList.add("hidden");
+  $("help").classList.add("hidden");
+  $("bulkAdd").classList.add("hidden");
+  $("moreMenu").classList.add("hidden");
+}
+function openForm(acc){
+  if(!acc&&previewMode){previewMode=false;accounts=[];render()}
+  closeAllPanels();
+  editingId=acc?acc.id:null;
+  $("fLabel").value=acc?acc.label||"":"";
+  $("fRegion").value=acc?acc.region:"EUW";
+  $("fName").value=acc?acc.gameName:"";
+  $("fTag").value=acc?acc.tagLine:"";
+  $("fLogin").value=acc?acc.login||"":"";
+  $("fPass").value=acc?acc.password||"":"";
+  $("fEmail").value=acc?acc.email||"":"";
+  $("fStatus").value=acc?(acc.status||"active"):"active";
+  $("fPass").type="password";
+  $("fToggleIco").outerHTML=`<svg id="fToggleIco" class="ico" viewBox="0 0 24 24">${ICON.eye}</svg>`;
+  $("fTogglePass").title="Show password";
+  $("fPass").placeholder=vaultPassword?"Encrypted at rest with your master password":"Stored unencrypted, locally";
+  renderPwMeter();
+  $("fTags").value=acc?(acc.tags||[]).join(", "):"";
+  $("fNotes").value=acc?acc.notes||"":"";
+  $("fSave").textContent=acc?"Save changes":"Add account";
+  $("form").classList.remove("hidden");
+  $("settings").classList.add("hidden");
+  $("fName").focus();
+}
+function closeForm(){$("form").classList.add("hidden");editingId=null}
+function submitForm(){
+  const gameName=$("fName").value.trim(), tagLine=$("fTag").value.trim().replace(/^#/,"");
+  if(!gameName||!tagLine){toast("Riot name and tag are required");return}
+  if(!editingId){
+    const dup=accounts.find(a=>a.gameName.toLowerCase()===gameName.toLowerCase()&&a.tagLine.toLowerCase()===tagLine.toLowerCase()&&a.region===$("fRegion").value);
+    if(dup){toast("Already in the vault: "+(dup.label||dup.gameName));return}
+  }
+  const data={label:$("fLabel").value.trim(),region:$("fRegion").value,gameName,tagLine,status:$("fStatus").value,
+    login:$("fLogin").value,password:$("fPass").value,email:$("fEmail").value.trim(),
+    tags:parseTags($("fTags").value),notes:$("fNotes").value.trim()};
+  if(editingId){
+    const a=accounts.find(x=>x.id===editingId);if(a)Object.assign(a,data);
+  }else{
+    accounts.push(Object.assign({id:uid(),fav:false,stats:null},data));
+  }
+  saveDB();closeForm();render();
+}
+
+// ---------- settings ----------
+function openSettings(){closeAllPanels();$("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";$("sAutoLock").value=cfg.autoLockMin||0;$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sVaultPass").value="";updateVaultStatus();$("settings").classList.remove("hidden")}
+function renderPwMeter(){
+  const p=$("fPass").value;
+  const {score,label}=passwordStrength(p);
+  const colors=["#d06060","#d06060","#e6c15a","#e6c15a","#3ddc84"];
+  $("pwMeter").innerHTML=p?Array.from({length:5},(_,i)=>`<span style="flex:1;height:100%;border-radius:2px;background:${i<score?colors[score-1]:"var(--line)"}"></span>`).join(""):"";
+  $("pwMeterLabel").textContent=p?label:"";
+}
+function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted."}
+const DEFAULT_ACCENT="#c8aa6e";
+function hexToHsl(hex){
+  const r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;
+  const max=Math.max(r,g,b),min=Math.min(r,g,b);let h,s,l=(max+min)/2;
+  if(max===min){h=0;s=0}else{
+    const d=max-min;s=l>0.5?d/(2-max-min):d/(max+min);
+    if(max===r)h=(g-b)/d+(g<b?6:0);else if(max===g)h=(b-r)/d+2;else h=(r-g)/d+4;
+    h/=6;
+  }
+  return[h*360,s*100,l*100];
+}
+function hslToHex(h,s,l){
+  s/=100;l/=100;
+  const k=n=>(n+h/30)%12;
+  const a=s*Math.min(l,1-l);
+  const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+  const toHex=x=>Math.round(255*Math.max(0,Math.min(1,x))).toString(16).padStart(2,"0");
+  return"#"+toHex(f(0))+toHex(f(8))+toHex(f(4));
+}
+function applyAccent(hex){
+  const[h,s,l]=hexToHsl(hex);
+  const root=document.documentElement.style;
+  root.setProperty("--gold",hex);
+  root.setProperty("--gold-dim",hslToHex(h,Math.max(s-10,0),Math.max(l-25,10)));
+  root.setProperty("--gold-mid",hslToHex(h,Math.max(s-10,0),Math.min(Math.max(l-5,30),65)));
+  root.setProperty("--star",hslToHex(h,Math.min(s+10,100),Math.min(l+20,88)));
+}
+function notify(title,body){
+  if(!cfg.notify||!("Notification"in window)||Notification.permission!=="granted")return;
+  try{new Notification(title,{body,icon:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050c14'/%3E%3Crect x='9.5' y='9.5' width='13' height='13' fill='%23c8aa6e' transform='rotate(45 16 16)'/%3E%3C/svg%3E"})}catch(e){}
+}
+
+// ---------- export / import ----------
+function doExport(){
+  const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),accounts};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="smurf-backup-"+new Date().toISOString().slice(0,10)+".json";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  cfg.lastExport=Date.now();saveCfg();
+  toast("Backup exported");
+}
+function csvCell(v){
+  const s=String(v==null?"":v);
+  return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+}
+function doExportCSV(){
+  const cols=["label","gameName","tagLine","region","status","tier","division","lp","wins","losses","level","login","password","email","tags","notes","favorite","lastUpdated"];
+  const rows=accounts.map(a=>{
+    const s=a.stats||{};
+    return [
+      a.label||"",a.gameName,a.tagLine,a.region,a.status||"active",
+      s.tier||"",s.division||"",s.lp??"",s.wins??"",s.losses??"",s.level??"",
+      a.login||"",a.password||"",a.email||"",(a.tags||[]).join("|"),a.notes||"",
+      a.fav?"yes":"no",s.updatedAt?new Date(s.updatedAt).toISOString():""
+    ].map(csvCell).join(",");
+  });
+  const csv=[cols.join(","),...rows].join("\r\n");
+  const blob=new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="smurf-export-"+new Date().toISOString().slice(0,10)+".csv";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  toast("CSV exported");
+}
+function doImport(file){
+  if(previewMode){previewMode=false;accounts=[]}
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const p=JSON.parse(rd.result);
+      const list=Array.isArray(p)?p:p.accounts;
+      if(!Array.isArray(list))throw new Error("no accounts array");
+      const cleaned=list.filter(a=>a&&a.gameName&&a.tagLine).map(a=>Object.assign({id:uid(),fav:false,stats:null,tags:[],history:[],status:"active",label:"",login:"",password:"",email:"",notes:"",region:"EUW"},a));
+      const merge=accounts.length>0&&confirm("OK = MERGE backup into current vault (adds only new accounts)\nCancel = replace everything instead");
+      if(merge){
+        const key=a=>(a.gameName+"#"+a.tagLine+"@"+a.region).toLowerCase();
+        const seen=new Set(accounts.map(key));
+        const add=cleaned.filter(a=>!seen.has(key(a)));
+        accounts=accounts.concat(add);saveDB();render();
+        toast(add.length+" added, "+(cleaned.length-add.length)+" duplicates skipped");
+      }else{
+        if(accounts.length>0&&!confirm("REPLACE the whole vault ("+accounts.length+" → "+cleaned.length+" accounts)?"))return;
+        accounts=cleaned;saveDB();render();toast("Backup imported ("+cleaned.length+" accounts)");
+      }
+    }catch(e){toast("Import failed: not a valid backup file")}
+  };
+  rd.readAsText(file);
+}
+
+function parseCSV(text){
+  const rows=[];let row=[],field="",inQuotes=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQuotes){
+      if(c==='"'){if(text[i+1]==='"'){field+='"';i++}else inQuotes=false}
+      else field+=c;
+    }else{
+      if(c==='"')inQuotes=true;
+      else if(c===','){row.push(field);field=""}
+      else if(c==='\r'){}
+      else if(c==='\n'){row.push(field);rows.push(row);row=[];field=""}
+      else field+=c;
+    }
+  }
+  if(field.length||row.length){row.push(field);rows.push(row)}
+  return rows.filter(r=>r.length>1||r[0]);
+}
+function doImportCSV(file){
+  if(previewMode){previewMode=false;accounts=[]}
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const rows=parseCSV(rd.result);
+      if(rows.length<2)throw new Error("empty");
+      const header=rows[0];
+      const list=rows.slice(1).map(r=>{
+        const get=name=>{const i=header.indexOf(name);return i>=0?(r[i]||""):""};
+        const gameName=get("gameName"),tagLine=get("tagLine");
+        if(!gameName||!tagLine)return null;
+        const tier=get("tier");
+        return{
+          id:uid(),tags:get("tags")?get("tags").split("|").filter(Boolean):[],history:[],
+          label:get("label"),region:get("region")||"EUW",gameName,tagLine,status:get("status")||"active",
+          login:get("login"),password:get("password"),email:get("email"),notes:get("notes"),
+          fav:get("favorite")==="yes",
+          stats:tier?{found:true,tier,division:get("division")||null,lp:get("lp")?+get("lp"):null,wins:get("wins")?+get("wins"):null,losses:get("losses")?+get("losses"):null,level:get("level")?+get("level"):null,mmr:null,avgRecent:null,asOf:"CSV import",note:null,updatedAt:get("lastUpdated")?new Date(get("lastUpdated")).getTime()||null:null}:null
+        };
+      }).filter(Boolean);
+      if(!list.length)throw new Error("no rows");
+      const merge=accounts.length>0&&confirm("OK = MERGE CSV into current vault (adds only new accounts)\nCancel = replace everything instead");
+      if(merge){
+        const key=a=>(a.gameName+"#"+a.tagLine+"@"+a.region).toLowerCase();
+        const seen=new Set(accounts.map(key));
+        const add=list.filter(a=>!seen.has(key(a)));
+        accounts=accounts.concat(add);saveDB();render();
+        toast(add.length+" added, "+(list.length-add.length)+" duplicates skipped");
+      }else{
+        if(accounts.length>0&&!confirm("REPLACE the whole vault ("+accounts.length+" → "+list.length+" accounts)?"))return;
+        accounts=list;saveDB();render();toast("CSV imported ("+list.length+" accounts)");
+      }
+    }catch(e){toast("CSV import failed: not a valid export file")}
+  };
+  rd.readAsText(file);
+}
+
+// ---------- demo data ----------
+function loadDemo(){
+  const now=Date.now(),D=86400000;
+  const mk=o=>Object.assign({id:uid(),fav:false,status:"active",tags:[],history:[],login:"",password:"",email:"",notes:"",label:"",demo:true},o);
+  accounts=[
+    mk({label:"Main smurf",gameName:"Hide on Bush",tagLine:"0001",region:"EUW",fav:true,tags:["mid","ranked-ready"],login:"demo_user1",password:"demo-pass-1",email:"smurf1@mail.gg",notes:"Elementalist Lux, honor 3",
+      stats:{found:true,tier:"PLATINUM",division:"II",lp:61,wins:38,losses:29,level:214,mmr:"~2140",avgRecent:"Platinum II",asOf:"updated today",updatedAt:now-2*3600000},
+      history:[
+        {t:now-24*D,tier:"GOLD",division:"II",lp:40},{t:now-20*D,tier:"GOLD",division:"I",lp:15},{t:now-16*D,tier:"GOLD",division:"I",lp:78},
+        {t:now-12*D,tier:"PLATINUM",division:"IV",lp:12},{t:now-9*D,tier:"PLATINUM",division:"IV",lp:55},{t:now-6*D,tier:"PLATINUM",division:"III",lp:31},
+        {t:now-3*D,tier:"PLATINUM",division:"III",lp:74},{t:now-2*3600000,tier:"PLATINUM",division:"II",lp:61}]}),
+    mk({label:"ADC acc",gameName:"Bot Diff",tagLine:"EUW",region:"EUW",tags:["adc"],login:"demo_user2",password:"demo-pass-2",email:"smurf2@mail.gg",notes:"Spirit Blossom Yasuo",
+      stats:{found:true,tier:"GOLD",division:"III",lp:22,wins:21,losses:24,level:167,mmr:"~1650",avgRecent:"Gold III",asOf:"updated 4 days ago",updatedAt:now-4*D},
+      history:[{t:now-14*D,tier:"GOLD",division:"II",lp:35},{t:now-10*D,tier:"GOLD",division:"II",lp:8},{t:now-7*D,tier:"GOLD",division:"III",lp:71},{t:now-4*D,tier:"GOLD",division:"III",lp:22}]}),
+    mk({label:"EUNE fill acc",gameName:"Coinflip Queue",tagLine:"EUNE",region:"EUNE",tags:["fill"],login:"demo_user3",password:"demo-pass-3",
+      stats:{found:true,tier:"SILVER",division:"I",lp:89,wins:15,losses:11,level:98,mmr:"~1420",avgRecent:"Silver I",asOf:"updated yesterday",updatedAt:now-1*D},
+      history:[{t:now-8*D,tier:"SILVER",division:"II",lp:60},{t:now-5*D,tier:"SILVER",division:"II",lp:95},{t:now-1*D,tier:"SILVER",division:"I",lp:89}]}),
+    mk({label:"Fresh leveling acc",gameName:"NewSmurf",tagLine:"2026",region:"EUW",status:"resting",tags:["leveling"],login:"demo_user4",password:"demo-pass-4",
+      stats:{found:true,tier:"UNRANKED",division:null,lp:null,wins:null,losses:null,level:23,mmr:null,avgRecent:null,asOf:"updated 6 days ago",note:"Not level 30 yet",updatedAt:now-6*D}}),
+    mk({label:"RIP acc",gameName:"Chat Restricted",tagLine:"4444",region:"EUNE",status:"banned",tags:["dead"],notes:"perma for chat, had Prestige K/DA Akali",
+      stats:{found:true,tier:"BRONZE",division:"I",lp:12,wins:40,losses:52,level:301,asOf:"before the ban",updatedAt:now-40*D},
+      history:[{t:now-50*D,tier:"BRONZE",division:"II",lp:30},{t:now-40*D,tier:"BRONZE",division:"I",lp:12}]})
+  ];
+  previewMode=true;render();
+  toast("Previewing example data — nothing is saved until you exit preview and add real accounts");
+}
+
+// ---------- events ----------
+$("bAdd").addEventListener("click",()=>$("form").classList.contains("hidden")?openForm(null):closeForm());
+$("fSave").addEventListener("click",submitForm);
+$("fCancel").addEventListener("click",closeForm);
+$("fGen").addEventListener("click",()=>{
+  if($("fPass").value&&!confirm("This overwrites the password already in this field — there's no undo. Continue?"))return;
+  $("fPass").value=genPassword(16);$("fPass").type="text";
+  $("fToggleIco").outerHTML=`<svg id="fToggleIco" class="ico" viewBox="0 0 24 24">${ICON.eyeOff}</svg>`;
+  $("fTogglePass").title="Hide password";
+  renderPwMeter();
+  toast("Password generated — shown in clear so you can note it");
+});
+$("fPass").addEventListener("input",renderPwMeter);
+$("fTogglePass").addEventListener("click",()=>{
+  const show=$("fPass").type==="password";
+  $("fPass").type=show?"text":"password";
+  $("fToggleIco").outerHTML=`<svg id="fToggleIco" class="ico" viewBox="0 0 24 24">${show?ICON.eyeOff:ICON.eye}</svg>`;
+  $("fTogglePass").title=show?"Hide password":"Show password";
+});
+document.addEventListener("keydown",e=>{
+  const tag=document.activeElement?document.activeElement.tagName:"";
+  const typing=tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT";
+  if(e.key==="/"&&!typing){e.preventDefault();$("tSearch").focus()}
+  if(e.key==="n"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();openForm(null)}
+  if(e.key==="f"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$("tFav").click()}
+  if(e.key==="Escape"){closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}}
+});
+["mousemove","keydown","click","scroll","touchstart"].forEach(evt=>document.addEventListener(evt,()=>{lastActivity=Date.now()},{passive:true}));
+{
+  const lockTimer=setInterval(()=>{
+    if(vaultPassword&&cfg.autoLockMin>0&&Date.now()-lastActivity>cfg.autoLockMin*60000)relock();
+  },15000);
+  if(lockTimer&&lockTimer.unref)lockTimer.unref(); // don't keep a Node/test process alive just for this
+}
+document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListener("click",closeAllPanels));
+$("bMore").addEventListener("click",()=>$("moreMenu").classList.toggle("hidden"));
+$("moreMenu").addEventListener("click",e=>{if(e.target.closest("button"))$("moreMenu").classList.add("hidden")});
+document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.target.closest("#bMore"))$("moreMenu").classList.add("hidden")});
+$("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():$("settings").classList.add("hidden"));
+$("sSave").addEventListener("click",async()=>{
+  cfg.apiKey=$("sKey").value.trim();cfg.model=$("sModel").value;cfg.autoCheck=$("sAuto").checked;cfg.backendUrl=$("sBackend").value.trim();
+  cfg.notify=$("sNotify").checked;
+  cfg.discordWebhook=$("sDiscord").value.trim();
+  cfg.autoLockMin=Math.max(0,+$("sAutoLock").value||0);
+  cfg.accent=$("sAccent").value;applyAccent(cfg.accent);
+  if(cfg.notify&&"Notification"in window&&Notification.permission==="default"){
+    const perm=await Notification.requestPermission();
+    if(perm!=="granted"){cfg.notify=false;$("sNotify").checked=false;toast("Notifications blocked by the browser")}
+  }else if(cfg.notify&&"Notification"in window&&Notification.permission==="denied"){
+    cfg.notify=false;$("sNotify").checked=false;toast("Notifications are blocked — allow them in your browser's site settings first");
+  }
+  saveCfg();$("settings").classList.add("hidden");toast("Settings saved")
+});
+$("sClose").addEventListener("click",()=>$("settings").classList.add("hidden"));
+$("sAccentReset").addEventListener("click",()=>{$("sAccent").value=DEFAULT_ACCENT;applyAccent(DEFAULT_ACCENT);cfg.accent=null;saveCfg();toast("Accent reset")});
+$("sVaultSet").addEventListener("click",async()=>{
+  const pass=$("sVaultPass").value;
+  if(!pass||pass.length<4){toast("Choose a password with at least 4 characters");return}
+  if(previewMode){previewMode=false;accounts=[]}
+  vaultPassword=pass;
+  await saveDB();
+  $("sVaultPass").value="";
+  updateVaultStatus();
+  toast("Vault password set — remember it, there's no way to recover it if lost");
+});
+$("sVaultRemove").addEventListener("click",async()=>{
+  if(!vaultPassword){toast("No password is set");return}
+  if(!confirm("Remove password protection? Your vault will be saved unencrypted again."))return;
+  vaultPassword=null;
+  await saveDB();
+  updateVaultStatus();
+  toast("Password protection removed");
+});
+$("bHelp").addEventListener("click",()=>{const willShow=$("help").classList.contains("hidden");closeAllPanels();if(willShow)$("help").classList.remove("hidden")});
+$("bHelpClose").addEventListener("click",()=>{$("help").classList.add("hidden");cfg.seenHelp=true;saveCfg()});
+$("bExport").addEventListener("click",doExport);
+$("bExportCsv").addEventListener("click",doExportCSV);
+$("bImport").addEventListener("click",()=>$("fileIn").click());
+$("bDeleteAll").addEventListener("click",()=>{
+  if(accounts.length===0)return;
+  if(!confirm("Delete all "+accounts.length+" account"+(accounts.length===1?"":"s")+" in this vault? This can't be undone — export a backup first if you're not sure."))return;
+  accounts=[];selected.clear();saveDB();render();
+  toast("Vault cleared");
+});
+$("bExitPreview").addEventListener("click",()=>{previewMode=false;accounts=[];render()});
+$("fileIn").addEventListener("change",e=>{if(e.target.files[0])doImport(e.target.files[0]);e.target.value=""});
+$("bImportCsv").addEventListener("click",()=>$("fileInCsv").click());
+$("fileInCsv").addEventListener("change",e=>{if(e.target.files[0])doImportCSV(e.target.files[0]);e.target.value=""});
+$("bBulkAdd").addEventListener("click",()=>{
+  if(previewMode){previewMode=false;accounts=[];render()}
+  closeAllPanels();
+  $("baList").value="";
+  $("bulkAdd").classList.remove("hidden");
+});
+$("baCancel").addEventListener("click",()=>$("bulkAdd").classList.add("hidden"));
+$("baSave").addEventListener("click",()=>{
+  const region=$("baRegion").value;
+  const lines=$("baList").value.split("\n").map(l=>l.trim()).filter(Boolean);
+  if(!lines.length){toast("Paste at least one Name#TAG line");return}
+  let added=0,skipped=0,bad=0;
+  for(const line of lines){
+    const m=line.match(/^(.+)#(\S+)$/);
+    if(!m){bad++;continue}
+    const gameName=m[1].trim(),tagLine=m[2].trim();
+    if(!gameName||!tagLine){bad++;continue}
+    const dup=accounts.find(a=>a.gameName.toLowerCase()===gameName.toLowerCase()&&a.tagLine.toLowerCase()===tagLine.toLowerCase()&&a.region===region);
+    if(dup){skipped++;continue}
+    accounts.push({id:uid(),fav:false,stats:null,label:"",region,gameName,tagLine,status:"active",login:"",password:"",email:"",tags:[],notes:"",history:[]});
+    added++;
+  }
+  saveDB();render();$("bulkAdd").classList.add("hidden");
+  toast(added+" added"+(skipped?", "+skipped+" duplicate"+(skipped===1?"":"s")+" skipped":"")+(bad?", "+bad+" line"+(bad===1?"":"s")+" couldn't be parsed":""));
+});
+$("bCheckAll").addEventListener("click",checkAll);
+let searchT;
+$("tSearch").addEventListener("input",e=>{ui.search=e.target.value;clearTimeout(searchT);searchT=setTimeout(renderGrid,120)});
+$("tRegion").addEventListener("change",e=>{ui.region=e.target.value;renderGrid()});
+$("tSort").addEventListener("change",e=>{ui.sort=e.target.value;renderGrid()});
+$("tStatus").addEventListener("change",e=>{ui.status=e.target.value;renderGrid()});
+$("tFav").addEventListener("click",()=>{ui.favOnly=!ui.favOnly;$("tFav").style.color=ui.favOnly?"var(--star)":"";$("tFav").style.borderColor=ui.favOnly?"var(--star)":"";renderGrid()});
+$("tArchived").addEventListener("click",()=>{ui.showArchived=!ui.showArchived;$("tArchived").style.color=ui.showArchived?"var(--star)":"";$("tArchived").style.borderColor=ui.showArchived?"var(--star)":"";renderGrid()});
+$("dash").addEventListener("click",e=>{if(e.target.id==="bDashToggle"){cfg.dashCollapsed=!cfg.dashCollapsed;saveCfg();renderDash()}});
+$("tagbar").addEventListener("click",e=>{const t=e.target.closest("[data-tag]");if(!t)return;ui.tag=ui.tag===t.dataset.tag?null:t.dataset.tag;render()});
+$("tSelectAll").addEventListener("change",e=>{
+  const list=filtered();
+  if(e.target.checked)list.forEach(a=>selected.add(a.id));else list.forEach(a=>selected.delete(a.id));
+  renderGrid();renderBulkBar();
+});
+$("bulkStatus").addEventListener("change",e=>{
+  const v=e.target.value;if(!v)return;
+  const n=selected.size;
+  accounts.forEach(a=>{if(selected.has(a.id))a.status=v});
+  saveDB();render();
+  toast("Status set to "+(STATUS[v]||STATUS.active).label+" for "+n+" account"+(n===1?"":"s"));
+  e.target.value="";
+});
+$("bulkTagBtn").addEventListener("click",()=>{
+  const t=$("bulkTag").value.trim();if(!t)return;
+  const n=selected.size;
+  accounts.forEach(a=>{if(selected.has(a.id)){a.tags=a.tags||[];if(!a.tags.includes(t))a.tags.push(t)}});
+  saveDB();render();$("bulkTag").value="";
+  toast('Tag "'+t+'" added to '+n+" account"+(n===1?"":"s"));
+});
+$("bulkTag").addEventListener("keydown",e=>{if(e.key==="Enter")$("bulkTagBtn").click()});
+$("bulkDelete").addEventListener("click",()=>{
+  const n=selected.size;
+  if(!confirm("Delete "+n+" selected account"+(n===1?"":"s")+"? This can't be undone."))return;
+  accounts=accounts.filter(a=>!selected.has(a.id));
+  selected.clear();saveDB();render();
+  toast(n+" account"+(n===1?"":"s")+" deleted");
+});
+$("bulkClear").addEventListener("click",()=>{selected.clear();render()});
+
+$("grid").addEventListener("click",async e=>{
+  if(e.target.id==="bDemo"){loadDemo();return}
+  const btn=e.target.closest("[data-act]");if(!btn)return;
+  const card=e.target.closest("[data-id]");if(!card)return;
+  const id=card.dataset.id, acc=accounts.find(a=>a.id===id);if(!acc)return;
+  const act=btn.dataset.act;
+  if(act==="select"){
+    const list=filtered();
+    const idx=list.findIndex(x=>x.id===id);
+    if(e.shiftKey&&lastSelectedIdx!==null){
+      const[from,to]=[lastSelectedIdx,idx].sort((x,y)=>x-y);
+      for(let k=from;k<=to;k++)selected.add(list[k].id);
+      renderGrid();
+    }else{
+      btn.checked?selected.add(id):selected.delete(id);
+    }
+    lastSelectedIdx=idx;
+    renderBulkBar();
+  }
+  else if(act==="more"){openMore.has(id)?openMore.delete(id):openMore.add(id);renderGrid()}
+  else if(act==="fav"){acc.fav=!acc.fav;saveDB();render()}
+  else if(act==="copyid")copyText(acc.gameName+"#"+acc.tagLine,"Riot ID");
+  else if(act==="copylogin")copyText(acc.login,"Username");
+  else if(act==="copypw")copyText(acc.password,"Password",true);
+  else if(act==="copymail")copyText(acc.email,"Email");
+  else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderGrid()}
+  else if(act==="login"){openLogin.has(id)?openLogin.delete(id):openLogin.add(id);shownPw.delete(id);renderGrid()}
+  else if(act==="edit")openForm(acc);
+  else if(act==="archive"){acc.archived=true;saveDB();render();toast("Archived — toggle \"Archived\" in the toolbar to see it again")}
+  else if(act==="unarchive"){acc.archived=false;saveDB();render();toast("Restored to active accounts")}
+  else if(act==="rank"){openPaste.delete(id);openRank.has(id)?openRank.delete(id):openRank.add(id);renderGrid()}
+  else if(act==="paste"){openRank.delete(id);openPaste.has(id)?openPaste.delete(id):openPaste.add(id);renderGrid()}
+  else if(act==="rankapply"){
+    const g=f=>card.querySelector('[data-f="'+f+'"]');
+    const tier=g("tier").value, isU=tier==="UNRANKED", mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
+    const old=acc.stats||{};
+    const s={found:true,tier,division:(isU||mPlus)?null:g("div").value,lp:isU?null:(+g("lp").value||0),
+      wins:g("w").value===""?null:+g("w").value,losses:g("l").value===""?null:+g("l").value,
+      level:old.level!=null?old.level:null,mmr:old.mmr||null,avgRecent:null,asOf:"manual entry",note:null,updatedAt:Date.now()};
+    commitStats(id,acc,s);toast("Rank saved");
+  }
+  else if(act==="pasteapply"){
+    const p=parseRankText(card.querySelector('[data-f="pastetext"]').value);
+    if(!p){toast("Couldn't find a rank in that text — paste the whole profile page");return}
+    const old=acc.stats||{};
+    const s={found:true,tier:p.tier||"UNRANKED",division:p.division,lp:p.lp,wins:p.wins,losses:p.losses,
+      level:p.level!=null?p.level:(old.level!=null?old.level:null),mmr:null,avgRecent:null,asOf:"pasted from profile",note:null,updatedAt:Date.now()};
+    commitStats(id,acc,s);toast("Parsed: "+(p.tier?p.tier+(p.division?" "+p.division:"")+(p.lp!=null?" · "+p.lp+" LP":""):"Unranked, level "+p.level));
+  }
+  else if(act==="check")check(id);
+  else if(act==="del"){
+    if(armedDelete===id){const idx=accounts.findIndex(a=>a.id===id);const removed=accounts[idx];accounts=accounts.filter(a=>a.id!==id);armedDelete=null;saveDB();render();toast("Account deleted","Undo",()=>{accounts.splice(Math.min(idx,accounts.length),0,removed);saveDB();render()})}
+    else{armedDelete=id;renderGrid();setTimeout(()=>{if(armedDelete===id){armedDelete=null;renderGrid()}},3000)}
+  }
+});
+
+// ---------- boot ----------
+function startApp(){
+  $("appRoot").classList.remove("hidden");
+  $("grid").classList.add("boot");
+  render();
+  setTimeout(()=>$("grid").classList.remove("boot"),1200);
+  if(!cfg.seenHelp&&accounts.length===0)$("help").classList.remove("hidden");
+  if(cfg.autoCheck){
+    const staleAccs=accounts.filter(a=>a.status!=="banned"&&(!a.stats||!a.stats.updatedAt||Date.now()-a.stats.updatedAt>STALE_MS));
+    if(staleAccs.length){
+      toast("Auto-checking "+staleAccs.length+" stale account"+(staleAccs.length===1?"":"s")+"…");
+      (async()=>{for(const a of staleAccs){await check(a.id);await new Promise(r=>setTimeout(r,800))}})();
+    }
+  }
+  if("serviceWorker"in navigator&&location.protocol.startsWith("http")){
+    window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})});
+  }
+}
+async function tryUnlock(){
+  if(!currentEnvelope)return;
+  const pass=$("lockPass").value;
+  if(!pass)return;
+  try{
+    const data=await decryptData(pass,currentEnvelope);
+    accounts=Array.isArray(data)?data:[];
+    vaultPassword=pass;
+    $("lockErr").style.display="none";
+    $("lock").classList.add("hidden");
+    lastActivity=Date.now();
+    startApp();
+  }catch(e){
+    $("lockErr").style.display="block";
+    $("lockPass").value="";$("lockPass").focus();
+  }
+}
+$("lockBtn").addEventListener("click",tryUnlock);
+$("lockPass").addEventListener("keydown",e=>{if(e.key==="Enter")tryUnlock()});
+function showLockScreen(envelope){
+  currentEnvelope=envelope;
+  $("lockErr").style.display="none";
+  $("lockPass").value="";
+  $("lock").classList.remove("hidden");
+  setTimeout(()=>$("lockPass").focus(),50);
+}
+function relock(){
+  let envelope=null;
+  try{
+    const raw=hasStorage?localStorage.getItem(DB_KEY):null;
+    const parsed=raw?JSON.parse(raw):null;
+    if(parsed&&parsed.__enc)envelope=parsed;
+  }catch(e){}
+  if(!envelope)return;
+  vaultPassword=null;accounts=[];
+  closeAllPanels();
+  $("appRoot").classList.add("hidden");
+  showLockScreen(envelope);
+}
+function boot(){
+  $("fRegion").innerHTML=Object.keys(REGIONS).map(r=>`<option value="${r}">${esc(r)} — ${esc(REGIONS[r].full)}</option>`).join("");
+  $("baRegion").innerHTML=$("fRegion").innerHTML;
+  hasStorage=storageOK();
+  if(!hasStorage){$("banner").classList.add("show")}
+  try{const c=hasStorage?localStorage.getItem(CFG_KEY):null;if(c)cfg=Object.assign(cfg,JSON.parse(c))}catch(e){}
+  if(cfg.accent)applyAccent(cfg.accent);
+  let envelope=null;
+  try{
+    const raw=hasStorage?localStorage.getItem(DB_KEY):null;
+    const parsed=raw?JSON.parse(raw):null;
+    if(parsed&&parsed.__enc)envelope=parsed;
+    else if(Array.isArray(parsed))accounts=parsed;
+  }catch(e){}
+  if(envelope)showLockScreen(envelope);
+  else startApp();
+}
+boot();
+</script>
+</body>
+</html>
