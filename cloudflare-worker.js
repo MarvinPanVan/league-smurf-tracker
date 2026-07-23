@@ -1,7 +1,7 @@
 // Smurf Tracker — Cloudflare Worker backend
 // Deploy this, paste the worker's URL into the app's Settings > "Backend URL".
 // GET /?name=<gameName>&tag=<tagLine>&region=<euw|eune|na|kr>
-// -> {"found":true,"tier":"GOLD","division":"II","lp":45,"wins":30,"losses":25,"level":247,"mmr":null,"avgRecent":null}
+// -> {"found":true,"tier":"GOLD","division":"II","lp":45,"wins":30,"losses":25,"level":247,"icon":"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon123.jpg","mmr":null,"avgRecent":null}
 // -> {"found":false}  (summoner genuinely doesn't exist)
 // -> HTTP 4xx/5xx on transient failures (missing params, op.gg unreachable, page didn't parse) —
 //    the app falls back to the free proxy chain / paste / manual entry on any non-2xx response.
@@ -52,6 +52,7 @@ export default {
       wins: parsed.wins,
       losses: parsed.losses,
       level: parsed.level,
+      icon: parseProfileIcon(html), // needs the raw HTML — htmlToText() already stripped the <img> tags out
       mmr: null,
       avgRecent: null,
     }, 200);
@@ -102,4 +103,11 @@ function parseRankText(raw) {
   if (lv) out.level = +lv[1];
   if (!out.tier && out.level == null) return null;
   return out;
+}
+
+// Ported 1:1 from the app's client-side parseProfileIcon.
+function parseProfileIcon(raw) {
+  if (!raw) return null;
+  const m = String(raw).match(/profile_icons?\/profileicon(\d+)/i);
+  return m ? `https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon${m[1]}.jpg` : null;
 }

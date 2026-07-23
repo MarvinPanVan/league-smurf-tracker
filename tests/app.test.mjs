@@ -124,6 +124,14 @@ test("parseRankText: garbage input returns null instead of a bogus match", () =>
   assert.equal(win.parseRankText(null), null);
 });
 
+test("parseProfileIcon extracts a stable icon URL from op.gg's CDN image path, ignores unrelated text", () => {
+  const win = bootApp();
+  const html = '<img src="https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon6.jpg?image=q_auto:good,f_png,w_200&v=1784743313" alt="icon">';
+  assert.equal(win.parseProfileIcon(html), "https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon6.jpg");
+  assert.equal(win.parseProfileIcon("no icon here"), null);
+  assert.equal(win.parseProfileIcon(""), null);
+});
+
 test("rankValue/ladderLP: Master+/GM/Challenger sort purely by LP, division text is ignored", () => {
   const win = bootApp();
   const gmLowLP = { tier: "GRANDMASTER", division: "I", lp: 100 };

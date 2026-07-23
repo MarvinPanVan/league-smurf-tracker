@@ -110,6 +110,7 @@
   .panel-close{position:absolute;top:10px;right:10px;background:none;border:none;box-shadow:none;padding:6px;color:var(--muted);z-index:2}
   .panel-close:hover{color:var(--danger);border:none;box-shadow:none}
   .bulkchk{width:15px;height:15px;flex-shrink:0;accent-color:var(--teal);cursor:pointer;margin:0}
+  .c-avatar{width:22px;height:22px;border-radius:50%;object-fit:cover;border:1px solid var(--line);flex-shrink:0;vertical-align:middle}
   .star{background:none;border:none;padding:0;font-size:16px;color:var(--line);line-height:1;display:inline-flex}
   .star svg{fill:none;stroke:currentColor;stroke-width:1.6}
   .star.on{color:var(--star)}
@@ -624,6 +625,11 @@ function parseRankText(raw){
   if(!out.tier&&out.level==null)return null;
   return out;
 }
+function parseProfileIcon(raw){
+  if(!raw)return null;
+  const m=String(raw).match(/profile_icons?\/profileicon(\d+)/i);
+  return m?`https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon${m[1]}.jpg`:null;
+}
 async function fetchWithTimeout(url,ms){
   const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);
   try{const r=await fetch(url,{signal:c.signal});if(!r.ok)throw new Error("HTTP "+r.status);return await r.text()}
@@ -646,7 +652,7 @@ async function fetchViaProxy(acc){
       const parsed=parseRankText(text);
       if(parsed){
         lastGoodProxy=idx; // start here next time — skips dead proxies on bulk checks
-        return {found:true,tier:parsed.tier||"UNRANKED",division:parsed.division||null,lp:parsed.lp,wins:parsed.wins,losses:parsed.losses,level:parsed.level,mmr:null,avgRecent:null,asOf:"auto-fetch (op.gg)",note:null,updatedAt:Date.now()};
+        return {found:true,tier:parsed.tier||"UNRANKED",division:parsed.division||null,lp:parsed.lp,wins:parsed.wins,losses:parsed.losses,level:parsed.level,icon:parseProfileIcon(text),mmr:null,avgRecent:null,asOf:"auto-fetch (op.gg)",note:null,updatedAt:Date.now()};
       }
       lastErr="page loaded but no rank found — name/tag/region correct?";
     }catch(e){lastErr=e.name==="AbortError"?"timeout":(e.message||"fetch blocked")}
@@ -659,16 +665,16 @@ async function fetchViaBackend(acc){
   const text=await fetchWithTimeout(url,12000);
   const d=JSON.parse(text);
   if(d.found===false)return {found:false,updatedAt:Date.now()};
-  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,updatedAt:Date.now()};
+  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,icon:d.icon||null,mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,updatedAt:Date.now()};
 }
 async function fetchViaClaude(acc){
   if(!cfg.apiKey)throw new Error("No API key — add one in Settings");
   const r=REGIONS[acc.region]||REGIONS.EUW;
   const prompt=`Search the web for the current League of Legends ranked Solo/Duo stats of the player "${acc.gameName}#${acc.tagLine}" on the ${r.full} (${acc.region}) server.
 Preferred sources: dpm.lol first, then op.gg, leagueofgraphs, u.gg. Try queries like: dpm.lol ${acc.gameName} ${acc.tagLine} | op.gg ${acc.gameName} ${acc.tagLine} ${r.opgg}.
-Find: current tier, division and LP; this season's wins and losses; the summoner level; an estimated MMR if any site shows one (dpm.lol often does); and the average rank/tier of the last ~5 games if visible.
+Find: current tier, division and LP; this season's wins and losses; the summoner level; the profile icon image URL if visible (op.gg shows it as opgg-static.akamaized.net/.../profileIcon<number>.jpg); an estimated MMR if any site shows one (dpm.lol often does); and the average rank/tier of the last ~5 games if visible.
 Respond with ONLY a raw JSON object, no markdown fences, no explanation, exactly this shape:
-{"found":true,"tier":"GOLD","division":"II","lp":45,"wins":30,"losses":25,"level":247,"mmr":"~2100","avgRecent":"Gold I","asOf":"how fresh the data looks","note":"one short remark only if something is off"}
+{"found":true,"tier":"GOLD","division":"II","lp":45,"wins":30,"losses":25,"level":247,"icon":"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon123.jpg","mmr":"~2100","avgRecent":"Gold I","asOf":"how fresh the data looks","note":"one short remark only if something is off"}
 Rules: use null for any value you cannot find. If unranked this season, tier "UNRANKED" and division null. If you cannot find the player at all, found=false. Numbers must be plain numbers, not strings.`;
   const res=await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",
@@ -863,7 +869,7 @@ function cardHTML(a,i){
   return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" style="--d:${(i||0)*40}ms"><div class="hx-in card" data-id="${a.id}">
     <div class="c-top">
       <div style="min-width:0">
-        <div class="c-name"><input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select for bulk actions"><button class="star ${a.fav?"on":""}" data-act="fav" title="Favorite">${icon("star")}</button><span><i class="sdot" style="background:${st.color}" title="${st.label}"></i>${esc(a.label||a.gameName)}${a.status&&a.status!=="active"?' <small style="color:var(--muted);font-weight:400">· '+esc(st.label)+"</small>":""}</span></div>
+        <div class="c-name"><input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select for bulk actions"><button class="star ${a.fav?"on":""}" data-act="fav" title="Favorite">${icon("star")}</button>${s&&s.icon?`<img class="c-avatar" src="${esc(s.icon)}" alt="" loading="lazy" onerror="this.remove()">`:""}<span><i class="sdot" style="background:${st.color}" title="${st.label}"></i>${esc(a.label||a.gameName)}${a.status&&a.status!=="active"?' <small style="color:var(--muted);font-weight:400">· '+esc(st.label)+"</small>":""}</span></div>
         <button class="rid" data-act="copyid" title="Copy Riot ID">${esc(a.gameName)}<b>#${esc(a.tagLine)}</b></button>
       </div>
       <span class="regiontag">${esc(a.region)}</span>
@@ -1144,7 +1150,7 @@ function loadDemo(){
   const mk=o=>Object.assign({id:uid(),fav:false,status:"active",tags:[],history:[],login:"",password:"",email:"",notes:"",label:"",demo:true},o);
   accounts=[
     mk({label:"Main smurf",gameName:"Hide on Bush",tagLine:"0001",region:"EUW",fav:true,tags:["mid","ranked-ready"],login:"demo_user1",password:"demo-pass-1",email:"smurf1@mail.gg",notes:"Elementalist Lux, honor 3",
-      stats:{found:true,tier:"PLATINUM",division:"II",lp:61,wins:38,losses:29,level:214,mmr:"~2140",avgRecent:"Platinum II",asOf:"updated today",updatedAt:now-2*3600000},
+      stats:{found:true,tier:"PLATINUM",division:"II",lp:61,wins:38,losses:29,level:214,icon:"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",mmr:"~2140",avgRecent:"Platinum II",asOf:"updated today",updatedAt:now-2*3600000},
       history:[
         {t:now-24*D,tier:"GOLD",division:"II",lp:40},{t:now-20*D,tier:"GOLD",division:"I",lp:15},{t:now-16*D,tier:"GOLD",division:"I",lp:78},
         {t:now-12*D,tier:"PLATINUM",division:"IV",lp:12},{t:now-9*D,tier:"PLATINUM",division:"IV",lp:55},{t:now-6*D,tier:"PLATINUM",division:"III",lp:31},
@@ -1356,15 +1362,16 @@ $("grid").addEventListener("click",async e=>{
     const old=acc.stats||{};
     const s={found:true,tier,division:(isU||mPlus)?null:g("div").value,lp:isU?null:(+g("lp").value||0),
       wins:g("w").value===""?null:+g("w").value,losses:g("l").value===""?null:+g("l").value,
-      level:old.level!=null?old.level:null,mmr:old.mmr||null,avgRecent:null,asOf:"manual entry",note:null,updatedAt:Date.now()};
+      level:old.level!=null?old.level:null,icon:old.icon||null,mmr:old.mmr||null,avgRecent:null,asOf:"manual entry",note:null,updatedAt:Date.now()};
     commitStats(id,acc,s);toast("Rank saved");
   }
   else if(act==="pasteapply"){
-    const p=parseRankText(card.querySelector('[data-f="pastetext"]').value);
+    const pastedText=card.querySelector('[data-f="pastetext"]').value;
+    const p=parseRankText(pastedText);
     if(!p){toast("Couldn't find a rank in that text — paste the whole profile page");return}
     const old=acc.stats||{};
     const s={found:true,tier:p.tier||"UNRANKED",division:p.division,lp:p.lp,wins:p.wins,losses:p.losses,
-      level:p.level!=null?p.level:(old.level!=null?old.level:null),mmr:null,avgRecent:null,asOf:"pasted from profile",note:null,updatedAt:Date.now()};
+      level:p.level!=null?p.level:(old.level!=null?old.level:null),icon:parseProfileIcon(pastedText)||old.icon||null,mmr:null,avgRecent:null,asOf:"pasted from profile",note:null,updatedAt:Date.now()};
     commitStats(id,acc,s);toast("Parsed: "+(p.tier?p.tier+(p.division?" "+p.division:"")+(p.lp!=null?" · "+p.lp+" LP":""):"Unranked, level "+p.level));
   }
   else if(act==="check")check(id);
