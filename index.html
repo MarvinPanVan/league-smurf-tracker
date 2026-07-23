@@ -693,6 +693,8 @@ Rules: use null for any value you cannot find. If unranked this season, tier "UN
   if(a===-1||b===-1)throw new Error("No JSON in response");
   const parsed=JSON.parse(text.slice(a,b+1));
   parsed.updatedAt=Date.now();
+  const modelName=cfg.model.includes("haiku")?"Haiku":"Sonnet";
+  parsed.asOf=(parsed.asOf?parsed.asOf+" · ":"")+"AI ("+modelName+")";
   return parsed;
 }
 function applyStats(acc,s){
