@@ -727,23 +727,55 @@ test("the line spans the full chart, with no pathLength for a dash pattern to di
   assert.ok(coords[coords.length - 1].startsWith("200.0,"), "reaches the right edge: " + coords[coords.length - 1]);
 });
 
-test("the scale step grows with the range instead of drowning the chart in 100 LP lines", () => {
+test("the two halves of the ladder get their own scale", () => {
   const win = bootApp();
   const marks = h => [...chartDom(win, h).querySelectorAll(".lpc-sub")].map(n => n.textContent);
 
-  // one tier in view: every division named
+  // below Master the unit of interest is the division, which is always 100 LP
   assert.deepEqual(marks(hist(["PLATINUM", "IV", 5], ["PLATINUM", "I", 88])), ["III", "II", "I"]);
 
-  // a Master account decaying 1600 -> 800 would be dozens of lines at 100 LP
-  const decay = marks(hist(["MASTER", null, 1600], ["MASTER", null, 800]));
-  assert.deepEqual(decay, ["800 LP", "1000 LP", "1200 LP", "1400 LP", "1600 LP"]);
+  // above it a fixed 100 is far too fine — a Master account decaying 1600 -> 800
+  // would be dozens of lines, so that step grows with the range
+  assert.deepEqual(marks(hist(["MASTER", null, 1600], ["MASTER", null, 800])), ["800 LP", "1200 LP", "1600 LP"]);
+  assert.deepEqual(marks(hist(["MASTER", null, 2400], ["MASTER", null, 300])), ["400 LP", "1200 LP", "2000 LP"]);
 
-  // wider still, and the step grows again rather than the marks getting closer
-  const wide = marks(hist(["MASTER", null, 2400], ["MASTER", null, 300]));
-  assert.deepEqual(wide, ["400 LP", "1200 LP", "2000 LP"]);
+  // both at once, each on its own scale
+  assert.deepEqual(marks(hist(["MASTER", null, 393], ["MASTER", null, 196], ["DIAMOND", "I", 52])),
+    ["I", "200 LP", "400 LP"]);
 
-  // several tiers in view: the coloured bands carry it, no half-labelled divisions
+  // too much ladder in view for a 100 LP line to be readable: the bands carry it
   assert.deepEqual(marks(hist(["SILVER", "II", 20], ["PLATINUM", "IV", 8])), []);
+});
+
+test("the chart's x axis is real time, so a gap in the record shows as a gap", () => {
+  const win = bootApp();
+  const day = 86400000, now = Date.now();
+  // two checks a day apart, then a three-week silence, then one more
+  const h = [
+    { t: now - 22 * day, tier: "GOLD", division: "II", lp: 10 },
+    { t: now - 21 * day, tier: "GOLD", division: "II", lp: 40 },
+    { t: now, tier: "GOLD", division: "I", lp: 20 },
+  ];
+  const xs = chartDom(win, h).querySelector(".lpc-line").getAttribute("points")
+    .split(" ").map(c => parseFloat(c.split(",")[0]));
+  assert.equal(xs[0], 0);
+  assert.equal(xs[2], 200);
+  // evenly spaced would put the middle point at 100; by time it belongs near the left
+  assert.ok(xs[1] < 20, "the long silence must take up most of the width, got x=" + xs[1]);
+
+  const ticks = [...chartDom(win, h).querySelectorAll(".lpc-tick")].map(n => n.textContent);
+  assert.ok(ticks.length >= 2, "the axis must be labelled: " + ticks);
+  assert.ok(ticks.every(t => /^\d{1,2} [A-Z][a-z]{2}$/.test(t)), "unambiguous dates: " + ticks);
+});
+
+test("a history with no usable timestamps still plots, evenly spaced", () => {
+  const win = bootApp();
+  const h = [{ tier: "GOLD", division: "II", lp: 10 }, { tier: "GOLD", division: "II", lp: 40 },
+             { tier: "GOLD", division: "I", lp: 20 }];
+  const el = chartDom(win, h);
+  const xs = el.querySelector(".lpc-line").getAttribute("points").split(" ").map(c => parseFloat(c.split(",")[0]));
+  assert.deepEqual(xs, [0, 100, 200]);
+  assert.equal(el.querySelectorAll(".lpc-tick").length, 0, "no timestamps, no date axis");
 });
 
 test("division numerals only appear when all four are marked, so no chart shows two IIs", () => {

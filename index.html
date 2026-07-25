@@ -20,6 +20,12 @@
     --line:#232733; --line2:#343b4c;
     /* accent — live-overridden by the accent picker in Settings */
     --gold:#d8b874; --gold-dim:#8a6a2e; --gold-mid:#c2a45f; --star:#f2d489;
+    /* The accent as *text*. A raw accent is picked to look good as a fill, and at
+       full chroma on a near-black panel it vibrates and reads as glare rather than
+       as a label — a deep one goes the other way and disappears. These two are the
+       same hue held inside a band that stays legible either way, and every place
+       the accent is used for type reads from them instead of the raw colour. */
+    --gold-txt:#e3c98f; --teal-txt:#63ecd3;
     --text:#e9edf5; --muted:#8b93a6; --faint:#5d6577;
     /* secondary accent — also live-overridden from Settings. --teal-ink is the
        text colour for anything filled with --teal; applyAccent2 flips it between
@@ -64,7 +70,7 @@
      Absolute rather than fixed so it travels with the page; a backdrop that
      stays nailed to the viewport while everything slides over it feels off. */
   body::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
-    background-image:radial-gradient(circle at 1px 1px,#ffffff16 1px,transparent 0);
+    background-image:radial-gradient(circle at 1px 1px,#ffffff0d 1px,transparent 0);
     background-size:28px 28px;
     -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000000d4 28%,#00000066 68%,#0000002b 100%);
     mask-image:linear-gradient(to bottom,#000 0%,#000000d4 28%,#00000066 68%,#0000002b 100%)}
@@ -112,29 +118,45 @@
   .top .bar:hover{border-color:#ffffff1c;box-shadow:var(--sh-2),inset 0 1px 0 #ffffff14}
   .tray-sep{width:1px;align-self:stretch;margin:2px 3px;flex-shrink:0;
     background:linear-gradient(180deg,transparent,var(--line2),transparent)}
-  .eyebrow{display:inline-flex;align-items:center;gap:9px;margin-bottom:14px;
-    font-size:10.5px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);
-    padding:5px 12px 5px 10px;border:1px solid var(--line);border-radius:999px;background:#ffffff06}
-  .eyebrow::before{content:"";width:6px;height:6px;border-radius:2px;transform:rotate(45deg);background:var(--gold);
-    box-shadow:0 0 10px color-mix(in srgb,var(--gold) 75%,transparent)}
+  /* The old header stacked a pill, then the title, then a rule — three full-width
+     bands of decreasing importance, all left-aligned, which is what made it read
+     as flat and pasted into the corner. This is a lockup instead: a mark the
+     wordmark sits against, with the descriptor tucked under it. */
+  .brand{display:flex;align-items:center;gap:16px;min-width:0}
+  .brand-mark{position:relative;width:54px;height:54px;flex-shrink:0;border-radius:17px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 26%,transparent),#10131ae6);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 32%,transparent),
+      inset 0 1px 0 #ffffff21,
+      0 10px 30px -14px color-mix(in srgb,var(--gold) 80%,transparent)}
+  .brand-mark::before{content:"";width:18px;height:18px;border-radius:5px;transform:rotate(45deg);
+    background:linear-gradient(145deg,var(--star),var(--gold) 55%,var(--gold-mid));
+    box-shadow:0 0 20px color-mix(in srgb,var(--gold) 78%,transparent),inset 0 0 0 1px #ffffff45;
+    animation:gemGlow 3.6s ease-in-out infinite}
+  .brand-sub{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;
+    font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+  .brand-sub b{font-weight:600;letter-spacing:.14em;color:var(--gold-txt);padding:3px 9px;border-radius:999px;
+    background:color-mix(in srgb,var(--gold) 11%,transparent);
+    border:1px solid color-mix(in srgb,var(--gold) 24%,transparent)}
   /* Metal needs a value swing, but --gold-dim is derived as lightness-25, which on
      a saturated accent lands almost black — dropping it into the ramp put dark
      patches mid-word that read as broken letters rather than shine. The ramp now
      spans only mid -> base -> light -> specular, a band that stays legible at
      any hue, with one narrow highlight doing the metallic work. */
-  h1{margin:0;font-weight:700;font-size:clamp(31px,4.6vw,44px);line-height:1.04;display:flex;align-items:center;gap:15px;
+  h1{margin:0;font-weight:700;font-size:clamp(29px,4.2vw,41px);line-height:1.04;
     background:linear-gradient(102deg,
       var(--gold-mid) 0%,var(--gold) 20%,var(--star) 36%,
       #fffaf0 44%,var(--star) 53%,var(--gold) 72%,var(--gold-mid) 100%);
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
     filter:drop-shadow(0 1px 1px #00000066)}
   h1.hex-display{letter-spacing:.02em}
-  .title-gem{width:17px;height:17px;flex-shrink:0;border-radius:5px;transform:rotate(45deg);
-    background:linear-gradient(145deg,var(--star),var(--gold) 52%,var(--gold-dim));
-    box-shadow:0 0 22px color-mix(in srgb,var(--gold) 60%,transparent),inset 0 0 0 1px #ffffff3d;
-    animation:gemGlow 3.6s ease-in-out infinite}
-  .sub{font-size:13px;color:var(--muted);margin:16px 0 0;max-width:660px;line-height:1.65}
-  .header-divider{height:1px;border:0;background:linear-gradient(90deg,var(--line) 0%,var(--line) 30%,transparent 90%);margin:26px 0 28px}
+  /* Replaces the full-width rule that used to sit here. That line started hard and
+     faded into nothing, belonging to neither the header above nor the text below —
+     a hairline down the side of the paragraph does the same separating job while
+     actually pointing at what it introduces. */
+  .sub{font-size:13px;color:var(--muted);margin:22px 0 30px;max-width:640px;line-height:1.65;
+    padding-left:15px;border-left:2px solid transparent;
+    border-image:linear-gradient(180deg,color-mix(in srgb,var(--gold) 55%,transparent),transparent 88%) 1}
 
   /* ---- buttons ---- */
   button,.btn{font:inherit;font-size:13px;font-weight:500;cursor:pointer;line-height:1.2;white-space:nowrap;
@@ -144,7 +166,7 @@
   button:hover,.btn:hover{background:var(--panel3);border-color:var(--line2)}
   button:active{transform:translateY(1px)}
   button:disabled{opacity:.4;cursor:not-allowed;transform:none}
-  :focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  :focus-visible{outline:2px solid var(--teal-txt);outline-offset:2px}
   /* text fields and selects draw their own indicator further down; checkboxes
      and the colour swatch keep this outline so keyboard focus stays visible */
   input:not([type=checkbox]):not([type=color]):focus,select:focus,textarea:focus{outline:none}
@@ -159,21 +181,21 @@
      background is redeclared on :hover on purpose: the generic button:hover rule
      is more specific than .b-gold, so omitting it here lets the plain dark hover
      background win and the button turns black. */
-  .b-gold{font-weight:600;color:var(--star);
+  .b-gold{font-weight:600;color:var(--gold-txt);
     border-color:var(--gold);border-color:color-mix(in srgb,var(--gold) 58%,transparent);
     background:var(--panel3);
     background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 26%,transparent),color-mix(in srgb,var(--gold) 12%,transparent)),var(--panel2);
     box-shadow:inset 0 1px 0 color-mix(in srgb,var(--gold) 34%,transparent),
       0 4px 16px -8px color-mix(in srgb,var(--gold) 50%,transparent)}
-  .b-gold:hover{color:var(--star);
+  .b-gold:hover{color:var(--gold-txt);
     border-color:color-mix(in srgb,var(--gold) 88%,transparent);
     background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 38%,transparent),color-mix(in srgb,var(--gold) 20%,transparent)),var(--panel2);
     box-shadow:inset 0 1px 0 color-mix(in srgb,var(--gold) 48%,transparent),
       0 0 0 3px color-mix(in srgb,var(--gold) 12%,transparent),
       0 6px 22px -8px color-mix(in srgb,var(--gold) 65%,transparent)}
-  .b-teal{color:var(--teal);border-color:var(--teal);border-color:color-mix(in srgb,var(--teal) 40%,transparent);
+  .b-teal{color:var(--teal-txt);border-color:var(--teal);border-color:color-mix(in srgb,var(--teal) 40%,transparent);
     background:var(--panel2);background:color-mix(in srgb,var(--teal) 9%,var(--panel2))}
-  .b-teal:hover{border-color:color-mix(in srgb,var(--teal) 68%,transparent);color:var(--teal);
+  .b-teal:hover{border-color:color-mix(in srgb,var(--teal) 68%,transparent);color:var(--teal-txt);
     background:color-mix(in srgb,var(--teal) 17%,var(--panel2));
     box-shadow:0 0 0 3px color-mix(in srgb,var(--teal) 11%,transparent)}
   .b-danger{color:var(--danger)}
@@ -256,7 +278,7 @@
     background:var(--panel2);color:var(--muted);cursor:pointer;
     transition:background .15s ease,border-color .15s ease,color .15s ease}
   .chip:hover{color:var(--text);border-color:var(--line2);background:var(--panel3)}
-  .chip.on{background:color-mix(in srgb,var(--gold) 15%,transparent);border-color:color-mix(in srgb,var(--gold) 55%,transparent);color:var(--gold)}
+  .chip.on{background:color-mix(in srgb,var(--gold) 15%,transparent);border-color:color-mix(in srgb,var(--gold) 55%,transparent);color:var(--gold-txt)}
 
   /* ---- grid + cards ---- */
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(335px,1fr));gap:16px}
@@ -310,7 +332,7 @@
   .rid b{color:var(--faint);font-weight:400;transition:color .15s ease}
   /* the tag is part of the same name — hovering must light all of it, not just
      the half before the # */
-  .rid:hover,.rid:hover b{color:var(--gold)}
+  .rid:hover,.rid:hover b{color:var(--gold-txt)}
   .rid:hover b{opacity:.72}
   .eye-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:6px;color:var(--muted)}
   .eye-btn:hover{color:var(--text)}
@@ -319,7 +341,7 @@
   .panel-close:hover{color:var(--danger);background:color-mix(in srgb,var(--danger) 13%,transparent);border-color:transparent}
 
   .regiontag{font-size:10.5px;font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:999px;flex-shrink:0;
-    background:color-mix(in srgb,var(--teal) 12%,transparent);color:var(--teal);
+    background:color-mix(in srgb,var(--teal) 12%,transparent);color:var(--teal-txt);
     border:1px solid color-mix(in srgb,var(--teal) 24%,transparent)}
   /* the rank is why the card exists, so it gets the card's largest type */
   .c-rank{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-top:3px}
@@ -370,14 +392,23 @@
      visible as leaving the green — and every check is a hoverable point.
      Height is fixed and matches the SVG viewBox height, so viewBox units and
      pixels are the same thing and the HTML overlay can be positioned in px. */
-  .lpc{position:relative;height:78px;margin-top:2px;border-radius:9px;overflow:visible;
+  .lpc{position:relative;margin-top:2px;border-radius:9px;overflow:visible;
     border:1px solid var(--line);background:#00000038}
-  .lpc-svg{display:block;width:100%;height:100%;border-radius:8px}
-  .lpc-lab{position:absolute;left:6px;font-size:8px;font-weight:600;letter-spacing:.09em;
+  /* the plot's height matches the SVG viewBox height, so viewBox units and pixels
+     are the same thing and the HTML overlay can be positioned in px */
+  .lpc-plot{position:relative;height:88px}
+  .lpc-svg{display:block;width:100%;height:100%;border-radius:8px 8px 0 0}
+  /* X is real time now, so the dates below are worth printing */
+  .lpc-axis{position:relative;height:16px;border-top:1px solid var(--line)}
+  .lpc-tick{position:absolute;top:3px;transform:translateX(-50%);white-space:nowrap;
+    font-size:8.5px;font-weight:500;letter-spacing:.04em;color:var(--faint);pointer-events:none}
+  .lpc-tick.l{transform:none;left:5px!important}
+  .lpc-tick.r{transform:none;left:auto!important;right:5px}
+  .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:8px;font-weight:600;letter-spacing:.09em;
     text-transform:uppercase;pointer-events:none;opacity:.62;line-height:1}
   /* division numerals below Master, LP marks above it — opposite side to the tier
      names so the two never collide */
-  .lpc-sub{position:absolute;right:6px;font-size:8px;font-weight:600;letter-spacing:.06em;
+  .lpc-plot .lpc-sub{position:absolute;right:6px;font-size:8px;font-weight:600;letter-spacing:.06em;
     color:#fff;opacity:.32;pointer-events:none;line-height:1;font-variant-numeric:tabular-nums}
   /* Each point owns the slice of the chart nearest to it, and the slices tile the
      chart exactly. The first version centred a fixed-width column on every point,
@@ -402,10 +433,10 @@
   .lpc-tip.r{left:auto;right:-6px;transform:none}
   .lpc-pt:hover .lpc-tip{opacity:1}
   .stale{color:var(--danger)}
-  #toast button{margin-left:12px;font-size:12px;padding:3px 10px;color:var(--teal)}
+  #toast button{margin-left:12px;font-size:12px;padding:3px 10px;color:var(--teal-txt)}
   .meta{font-size:12.5px;color:var(--muted);line-height:1.65}
   .meta b{color:var(--text);font-weight:500}
-  .meta .g{color:var(--gold)}
+  .meta .g{color:var(--gold-txt)}
   .ctags{display:flex;gap:6px;flex-wrap:wrap}
   .ctags span{font-size:11px;padding:3px 9px;border-radius:999px;background:#ffffff0a;border:1px solid #ffffff0f;color:var(--muted)}
   .login{background:#00000038;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:13px;display:flex;flex-direction:column;gap:9px}
@@ -455,7 +486,7 @@
     background:linear-gradient(145deg,color-mix(in srgb,var(--gold) 22%,transparent),#0f1218);
     box-shadow:0 0 40px color-mix(in srgb,var(--gold) 22%,transparent),inset 0 0 0 1px #ffffff0f}
   .count{margin-top:30px;text-align:center;font-size:12px;color:var(--faint)}
-  .count a{color:var(--gold-mid);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
+  .count a{color:var(--gold-txt);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
   .count a:hover{border-bottom-color:currentColor}
 
   /* ---- toast ---- */
@@ -534,7 +565,7 @@
   .confetti i{position:absolute;left:50%;top:40%;width:6px;height:10px;border-radius:2px;animation:pop 1.1s ease-out forwards}
   @keyframes pop{from{transform:translate(0,0) rotate(0)}to{transform:translate(var(--tx),var(--ty)) rotate(var(--rz));opacity:0}}
   @media (prefers-reduced-motion:reduce){
-    .spin,.c-crest,.title-gem,.grid.boot>.hx,.grid.boot .lpc,.hx.flash .lpc,.hx.flash,#toast,.confetti i,
+    .spin,.c-crest,.brand-mark::before,.grid.boot>.hx,.grid.boot .lpc,.hx.flash .lpc,.hx.flash,#toast,.confetti i,
     #form:not(.hidden),#settings:not(.hidden),#help:not(.hidden),#bulkAdd:not(.hidden),#lock:not(.hidden),
     #moreMenu:not(.hidden),#bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show,
     .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in{animation:none!important}
@@ -559,7 +590,7 @@
 <div class="wrap">
 
   <div id="lock" class="hx teal hidden" style="max-width:430px;margin:min(16vh,130px) auto"><div class="hx-in" style="padding:28px">
-    <div class="hex-display" style="color:var(--gold);font-size:14px;text-transform:uppercase;margin-bottom:12px">Vault locked</div>
+    <div class="hex-display" style="color:var(--gold-txt);font-size:14px;text-transform:uppercase;margin-bottom:12px">Vault locked</div>
     <p style="font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.6">This vault is protected with a master password. Enter it to unlock.</p>
     <input type="password" id="lockPass" placeholder="Master password" autocomplete="current-password" style="width:100%">
     <div id="lockErr" style="color:var(--danger);font-size:12px;margin-top:6px;display:none">Wrong password — try again.</div>
@@ -568,9 +599,12 @@
 
   <div id="appRoot" class="hidden">
   <div class="top">
-    <div>
-      <div class="eyebrow">Summoner Vault · local</div>
-      <h1 class="hex-display"><span class="title-gem"></span>Smurf Tracker</h1>
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1 class="hex-display">Smurf Tracker</h1>
+        <div class="brand-sub">Summoner Vault <b>Local only</b></div>
+      </div>
     </div>
     <div class="bar">
       <button id="bCheckAll" class="b-gold"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg> Check all ranks</button>
@@ -595,7 +629,6 @@
     </div>
   </div>
   <p class="sub">Everything is stored locally in this browser on this PC (localStorage). Export a backup now and then — clearing browser data wipes the vault. Rank checks are free and automatic (pulled from op.gg) — no account, no key needed.</p>
-  <div class="header-divider"></div>
 
   <div id="banner" class="banner">Persistent storage is not available in this environment — data will be lost when you close the page. Download the file and open it locally on your PC.</div>
 
@@ -607,7 +640,7 @@
   <!-- help -->
   <div id="help" class="hx hidden" style="margin-bottom:18px"><div class="hx-in" style="padding:24px;font-size:13px;color:var(--muted);line-height:1.8;position:relative">
     <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
-    <div class="hex-display" style="color:var(--gold);font-size:14px;text-transform:uppercase;margin-bottom:8px">How this works</div>
+    <div class="hex-display" style="color:var(--gold-txt);font-size:14px;text-transform:uppercase;margin-bottom:8px">How this works</div>
     <b style="color:var(--text)">Your data stays here.</b> Accounts are saved in this browser on this device — nothing gets uploaded. Clearing browser data wipes the vault, so use <b style="color:var(--text)">Export</b> for backups and <b style="color:var(--text)">Import</b> to restore or merge them.<br>
     <b style="color:var(--text)">Rank checks are free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b style="color:var(--text)">Paste</b> (copy the profile page in) or <b style="color:var(--text)">Rank</b> to enter it by hand — history, sparklines and stats work the same either way.<br>
     <b style="color:var(--text)">Tips:</b> the star pins favorites on top · search matches names, tags, even ranks (try "gold") · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
@@ -763,7 +796,7 @@
     </label>
   </div>
   <div id="bulkbar" class="hidden" style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--teal) 38%,transparent);border-radius:var(--r-md);background:color-mix(in srgb,var(--teal) 7%,var(--panel));box-shadow:var(--sh-1)">
-    <span id="bulkCount" style="font-size:12px;color:var(--teal);font-weight:600;letter-spacing:.02em"></span>
+    <span id="bulkCount" style="font-size:12px;color:var(--teal-txt);font-weight:600;letter-spacing:.02em"></span>
     <select id="bulkStatus">
       <option value="">Set status…</option>
       <option value="active">Active</option>
@@ -783,7 +816,7 @@
   <div id="count" class="count"></div>
 
   <div class="count" style="margin-top:8px">© 2026 MarvinPanVan · Smurf Tracker — not affiliated with Riot Games · Discord: marvinpanvan</div>
-  <div class="count" style="margin-top:4px;font-size:11px">Free for personal use. Do not resell, rebrand, publish modified versions, or use for anything malicious. <a href="https://github.com/MarvinPanVan/league-smurf-tracker/blob/main/LICENSE" target="_blank" rel="noreferrer" style="color:var(--gold-mid)">Terms</a></div>
+  <div class="count" style="margin-top:4px;font-size:11px">Free for personal use. Do not resell, rebrand, publish modified versions, or use for anything malicious. <a href="https://github.com/MarvinPanVan/league-smurf-tracker/blob/main/LICENSE" target="_blank" rel="noreferrer" style="color:var(--gold-txt)">Terms</a></div>
 
   <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
   <input type="file" id="fileInCsv" accept=".csv,text/csv" class="hidden">
@@ -917,7 +950,7 @@ function ladderLP(s){ // absolute position on the ladder, in LP
 // ladderLP() gives every tier below Master exactly 400 LP of room (4 divisions
 // × 100), which is what makes a fixed tier band possible at all.
 const TIER_SPAN=400;
-const LPC_W=200, LPC_H=78;
+const LPC_W=200, LPC_H=88;
 // The old sparkline plotted LP with no scale at all: it showed the number moving
 // but never how far, or through which ranks. This draws the ladder itself —
 // a coloured band per tier, division hairlines when the view is tight enough for
@@ -957,55 +990,106 @@ function rankChart(hist){
   // the chart at five marks or fewer. 100 is the floor, and MIN_SPAN guarantees
   // nothing finer is ever picked, which is what keeps the numerals honest.
   const M_BASE=mIdx*TIER_SPAN;
-  // picked on the space a label actually needs, not on a mark count — that way it
-  // stays right whatever the chart's height is
-  const step=[100,200,400,800,1600,3200,6400].find(s=>LPC_H*s/span>=11.5)||span/3;
-  // Only mark divisions when the step is one division, so all four get named.
-  // At a coarser step you get every other one, which reads as two "II"s on the
-  // same chart — correct (Silver II and Gold II) but it looks like a bug, and the
-  // tier bands already say everything those half-marks would.
-  const showDivisions=step===100;
-  for(let v=Math.ceil(lo/step)*step;v<hi;v+=step){
-    if(v<=M_BASE&&v%TIER_SPAN===0)continue; // already drawn as a tier boundary
-    if(v<M_BASE&&!showDivisions)continue;
-    const y=py(v);
-    if(y<11||y>LPC_H-3)continue;            // no room to label it
-    lines+=`<line x1="0" x2="${LPC_W}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#ffffff" stroke-opacity=".07" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
-    // above Master there are no divisions left to name, only LP
-    const txt=v>=M_BASE?(v-M_BASE)+" LP":(["IV","III","II","I"][Math.round((v%TIER_SPAN)/100)]||"");
-    if(txt)labels+=`<span class="lpc-sub" style="top:${(y-9.5).toFixed(1)}px">${txt}</span>`;
+  const room=v=>{const y=py(v);return y>=11&&y<=LPC_H-3}; // enough space to label it
+  const rule=v=>{const y=py(v).toFixed(1);
+    lines+=`<line x1="0" x2="${LPC_W}" y1="${y}" y2="${y}" stroke="#ffffff" stroke-opacity=".07" stroke-width="1" vector-effect="non-scaling-stroke"/>`};
+  const mark=(v,txt)=>{labels+=`<span class="lpc-sub" style="top:${(py(v)-9.5).toFixed(1)}px">${esc(txt)}</span>`};
+
+  // Two scales, because the two halves of the ladder want opposite things.
+  // Below Master the interesting unit is the division, which is always 100 LP —
+  // so that step is fixed and only disappears when there is genuinely no room.
+  const divs=[];
+  if(LPC_H*100/span>=13){
+    for(let v=Math.ceil(lo/100)*100;v<Math.min(hi,M_BASE);v+=100){
+      if(v%TIER_SPAN===0)continue;        // already drawn as a tier boundary
+      if(!room(v))continue;
+      const t=TIER_ORDER[Math.floor(v/TIER_SPAN)]||"";
+      divs.push({v,t,n:["IV","III","II","I"][Math.round((v%TIER_SPAN)/100)]||""});
+    }
+  }
+  // "II" twice on one chart is right (Silver II and Gold II) but reads as a bug,
+  // so the tier initial is added — and only when something actually repeats.
+  const dupe=divs.some((d,i)=>divs.findIndex(o=>o.n===d.n)!==i);
+  for(const d of divs){if(!d.n)continue;rule(d.v);mark(d.v,dupe?d.t.charAt(0)+" "+d.n:d.n)}
+
+  // Above Master there are no divisions left to name, only LP — and a fixed 100
+  // there is far too fine, so this step grows with the range. Chosen on the space
+  // a label needs rather than a mark count, so it stays right at any chart height.
+  if(hi>M_BASE){
+    const lpStep=[100,200,400,800,1600,3200,6400].find(s=>LPC_H*s/span>=22)||span/3;
+    for(let v=Math.max(Math.ceil(lo/lpStep)*lpStep,M_BASE);v<hi;v+=lpStep){
+      if(v===M_BASE||!room(v))continue;   // M_BASE is the "Master+" band boundary
+      rule(v);mark(v,(v-M_BASE)+" LP");
+    }
   }
 
-  const coords=pts.map((p,i)=>((i/(pts.length-1))*LPC_W).toFixed(1)+","+py(p.v).toFixed(1)).join(" ");
+  // X is real time, not check number. Spacing checks evenly implies they were
+  // evenly spaced, which they never are — a week-long break looked identical to
+  // two games back to back. Now a gap in the line is a gap in the record, and the
+  // dates underneath mean something. Falls back to even spacing only when the
+  // history carries no usable timestamps at all.
+  const last=pts.length-1;
+  const ts=pts.map(p=>+p.h.t||0);
+  const t0=ts[0], t1=ts[last];
+  const timed=t1>t0&&ts.every(t=>t>0);
+  const fx=i=>timed?(ts[i]-t0)/(t1-t0):i/last; // 0..1
+
+  const coords=pts.map((p,i)=>(fx(i)*LPC_W).toFixed(1)+","+py(p.v).toFixed(1)).join(" ");
   // unique per render so several cards' gradients never collide
   const gid="lc"+Math.random().toString(36).slice(2,9), aid="la"+Math.random().toString(36).slice(2,9);
-  const cur=tierColor(pts[pts.length-1].h.tier);
+  const cur=tierColor(pts[last].h.tier);
   // the line is its own legend: it takes the colour of whatever tier it is
   // passing through, so a promotion reads as a colour change, not just a step up
-  const stops=pts.map((p,i)=>`<stop offset="${((i/(pts.length-1))*100).toFixed(2)}%" stop-color="${tierColor(p.h.tier)}"/>`).join("");
-  const last=pts.length-1;
+  const stops=pts.map((p,i)=>`<stop offset="${(fx(i)*100).toFixed(2)}%" stop-color="${tierColor(p.h.tier)}"/>`).join("");
   const overlay=pts.map((p,i)=>{
-    const xp=(i/last)*100;
+    const xp=fx(i)*100;
     // Each point claims the ground nearer to it than to its neighbours, and the
     // outermost ones stop dead at the edge of the chart rather than reaching past
     // it — an overhanging column sits on top of the next card and eats its hover.
-    const cl=i===0?0:((i-.5)/last)*100, cr=i===last?100:((i+.5)/last)*100;
+    const cl=i===0?0:(fx(i-1)+fx(i))/2*100, cr=i===last?100:(fx(i)+fx(i+1))/2*100;
     // tooltips at the edges would hang off the card, so they anchor inwards there
     const side=xp<26?" l":xp>74?" r":"";
     const when=p.h.t?timeAgo(p.h.t):null;
-    return `<div class="lpc-pt" style="left:${cl.toFixed(2)}%;width:${(cr-cl).toFixed(2)}%;--x:${(((xp-cl)/(cr-cl))*100).toFixed(2)}%">`
+    const w=cr-cl;
+    return `<div class="lpc-pt" style="left:${cl.toFixed(2)}%;width:${w.toFixed(2)}%;--x:${(w?((xp-cl)/w)*100:50).toFixed(2)}%">`
       +`<b style="top:${py(p.v).toFixed(1)}px"><i style="background:${tierColor(p.h.tier)}"></i>`
-      +`<span class="lpc-tip${side}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(when)}</em>`:""}</span></b></div>`;
+      +`<span class="lpc-tip${side}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(dateLabel(p.h.t))} · ${esc(when)}</em>`:""}</span></b></div>`;
   }).join("");
 
-  return `<div class="lpc">`
+  // Date axis. Ticks sit at the ends and at even time fractions between them, and
+  // a tick whose label repeats the one before it is dropped rather than printed
+  // twice — a short history can easily be all one day.
+  let axis="";
+  if(timed){
+    const n=Math.min(4,Math.max(2,Math.round(LPC_W/60)));
+    let prev=null;
+    for(let k=0;k<n;k++){
+      const f=k/(n-1), txt=dateLabel(t0+(t1-t0)*f);
+      if(txt===prev)continue;
+      prev=txt;
+      const align=k===0?" l":k===n-1?" r":"";
+      axis+=`<span class="lpc-tick${align}" style="left:${(f*100).toFixed(2)}%">${esc(txt)}</span>`;
+    }
+  }
+
+  return `<div class="lpc"><div class="lpc-plot">`
     +`<svg class="lpc-svg" viewBox="0 0 ${LPC_W} ${LPC_H}" preserveAspectRatio="none" role="img" aria-label="LP over the last ${pts.length} checks">`
     +`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="0">${stops}</linearGradient>`
     +`<linearGradient id="${aid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${cur}" stop-opacity=".3"/><stop offset="1" stop-color="${cur}" stop-opacity="0"/></linearGradient></defs>`
     +bands+lines
     +`<polygon points="0,${LPC_H} ${coords} ${LPC_W},${LPC_H}" fill="url(#${aid})"/>`
     +`<polyline class="lpc-line" points="${coords}" fill="none" stroke="url(#${gid})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`
-    +`</svg>${labels}${overlay}</div>`;
+    +`</svg>${labels}${overlay}</div>`
+    +(axis?`<div class="lpc-axis">${axis}</div>`:"")
+    +`</div>`;
+}
+// Compact and unambiguous: "22 Jul" rather than 22/07 or 07/22, which mean
+// different days depending on where the reader lives.
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function dateLabel(t){
+  const d=new Date(+t);
+  if(isNaN(d))return"";
+  return d.getDate()+" "+MONTHS[d.getMonth()];
 }
 function postDiscord(content){
   if(!cfg.discordWebhook)return;
@@ -1401,6 +1485,36 @@ function renderTagbar(){
   $("tagbar").innerHTML=all.map(t=>`<span class="chip ${ui.tag===t?"on":""}" data-tag="${esc(t)}">${esc(t)}</span>`).join("");
 }
 
+// Split out of cardHTML so opening the editor can swap this one block instead of
+// rebuilding the card around it — see syncNoteBlock.
+function noteBlockHTML(a,rev){
+  if(editingNote===a.id)return`<div class="c-notes${rev||""}"><span class="k">Notes</span>`
+    +`<textarea data-f="notetext" rows="3" placeholder="Anything worth remembering about this account…">${esc(noteDraft)}</textarea>`
+    +`<div class="note-btns"><button data-act="notesave" style="color:var(--teal-txt)">Save</button>`
+    +`<button data-act="notecancel">Cancel</button><span class="hint">Ctrl+Enter saves · Esc cancels</span></div></div>`;
+  return a.notes?`<div class="c-notes" data-act="noteedit" title="Click to edit"><span class="k">Notes ${icon("pencil")}</span>${esc(a.notes)}</div>`:"";
+}
+// Replace only the note block, leaving the rest of the card's DOM alone. Going
+// through renderGrid meant every card on screen was thrown away and rebuilt just
+// to open one textarea, which is why the portrait, the select checkbox and the
+// rest of the card blinked out and came back.
+function syncNoteBlock(card,a){
+  const html=noteBlockHTML(a);
+  const cur=card.querySelector(".c-notes");
+  if(!html){if(cur)cur.remove();return}
+  const tmp=document.createElement("div");
+  tmp.innerHTML=html;
+  const node=tmp.firstElementChild;
+  if(cur)cur.replaceWith(node);
+  else{const foot=card.querySelector(".c-foot");foot?foot.before(node):card.appendChild(node)}
+  focusNoteEditor(card);
+}
+function focusNoteEditor(root){
+  const ta=(root||document).querySelector('[data-f="notetext"]');
+  // only when focus actually moved, or a background render yanks the caret to the
+  // end while the user is still typing
+  if(ta&&document.activeElement!==ta){ta.focus();try{ta.setSelectionRange(ta.value.length,ta.value.length)}catch(e){}}
+}
 function cardHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
   const stale=!!(s&&s.updatedAt&&Date.now()-s.updatedAt>STALE_MS);
@@ -1504,21 +1618,17 @@ function cardHTML(a,i){
         </div>
         <div style="font-size:11px;color:var(--faint);margin-top:7px;line-height:1.5">Refresh reads op.gg's own "Top tier" peak when the profile has one, and the app also tracks the highest rank it has seen itself. Set a peak here as well if you know better — whichever is genuinely highest is the one shown.</div>
       </div>
-      <div><button data-act="rankapply" style="color:var(--teal)">Save</button></div>
+      <div><button data-act="rankapply" style="color:var(--teal-txt)">Save</button></div>
     </div>`)(a.peakManual):""}
-    ${openPaste.has(a.id)?`<div class="login${rv("paste")}"><textarea data-f="pastetext" rows="3" placeholder="Open the OP.GG/DPM profile, select all (Ctrl+A), copy, paste here — I'll extract the rank" style="width:100%"></textarea><div style="margin-top:6px"><button data-act="pasteapply" style="color:var(--teal)">Parse &amp; save</button></div></div>`:""}
-    ${editingNote===a.id
-      ? `<div class="c-notes${rv("note")}"><span class="k">Notes</span>
-        <textarea data-f="notetext" rows="3" placeholder="Anything worth remembering about this account…">${esc(noteDraft)}</textarea>
-        <div class="note-btns"><button data-act="notesave" style="color:var(--teal)">Save</button><button data-act="notecancel">Cancel</button><span class="hint">Ctrl+Enter saves · Esc cancels</span></div></div>`
-      : a.notes?`<div class="c-notes" data-act="noteedit" title="Click to edit"><span class="k">Notes ${icon("pencil")}</span>${esc(a.notes)}</div>`:""}
+    ${openPaste.has(a.id)?`<div class="login${rv("paste")}"><textarea data-f="pastetext" rows="3" placeholder="Open the OP.GG/DPM profile, select all (Ctrl+A), copy, paste here — I'll extract the rank" style="width:100%"></textarea><div style="margin-top:6px"><button data-act="pasteapply" style="color:var(--teal-txt)">Parse &amp; save</button></div></div>`:""}
+    ${noteBlockHTML(a,rv("note"))}
     <div class="c-foot">
       <span class="c-meta"><span class="upd${stale?" stale":""}">${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${s&&s.asOf?`<span class="src">${esc(s.asOf)}</span>`:""}</span>
       <div class="acts">
         <button data-act="login" class="a-login" title="Show saved login">${icon("user")} ${loginOpen?"Hide login":"Login"}</button>
         <a class="a-dpm" href="${dpm}" target="_blank" rel="noreferrer">DPM ↗</a>
         <a class="btn" href="${opgg}" target="_blank" rel="noreferrer">OP.GG ↗</a>
-        <button data-act="check" ${isChecking?"disabled":""} style="color:var(--teal)">${isChecking?"…":icon("refresh")+" Refresh"}</button>
+        <button data-act="check" ${isChecking?"disabled":""} style="color:var(--teal-txt)">${isChecking?"…":icon("refresh")+" Refresh"}</button>
         <button data-act="more" title="More actions" aria-label="More actions">⋯</button>
       </div>
       ${openMore.has(a.id)?`<div class="acts${rv("more")}">
@@ -1537,24 +1647,35 @@ function renderGrid(){
   const list=filtered();
   const grid=$("grid");
   if(accounts.length===0){
-    grid.innerHTML=`<div class="hx" style="grid-column:1/-1"><div class="hx-in empty"><div class="d"><span class="empty-gem"></span></div>No accounts yet. Hit <span style="color:var(--teal)">+ Add account</span> to store your first smurf.<div style="margin-top:12px"><button id="bDemo">👁 Preview with example data</button></div></div></div>`;
+    grid.innerHTML=`<div class="hx" style="grid-column:1/-1"><div class="hx-in empty"><div class="d"><span class="empty-gem"></span></div>No accounts yet. Hit <span style="color:var(--teal-txt)">+ Add account</span> to store your first smurf.<div style="margin-top:12px"><button id="bDemo">👁 Preview with example data</button></div></div></div>`;
   }else if(list.length===0){
     grid.innerHTML=`<div class="hx" style="grid-column:1/-1"><div class="hx-in empty">No accounts match the current filters.</div></div>`;
   }else{
     grid.innerHTML=list.map((a,i)=>cardHTML(a,i)).join("");
   }
   reveal=null; // consumed by the render above — the next one must not replay it
-  // innerHTML replacement drops the focused textarea, so put the caret back —
-  // but only if focus actually moved, or a background render would yank the
-  // cursor to the end while the user is still typing.
-  if(editingNote){
-    const ta=grid.querySelector('[data-f="notetext"]');
-    if(ta&&document.activeElement!==ta){ta.focus();try{ta.setSelectionRange(ta.value.length,ta.value.length)}catch(e){}}
-  }
+  if(editingNote)focusNoteEditor(grid); // innerHTML replacement dropped the focused textarea
   document.title=accounts.length?"Smurf Tracker ("+accounts.length+")":"Smurf Tracker — Summoner Vault";
   $("count").textContent=accounts.length?list.length+" of "+accounts.length+" account"+(accounts.length===1?"":"s")+" shown":"";
   $("bCheckAll").disabled=accounts.length===0||checking.size>0;
   $("bCheckAll").innerHTML=checking.size>0?"Checking…":icon("refresh")+" Check all ranks";
+}
+
+// Opening a panel on one card is a change to that card, not to the grid. Redoing
+// the whole grid for it threw away and rebuilt every card on screen — visible as a
+// blink across the board — and dropped the browser's paint of all of them.
+// Falls back to a full render whenever the card isn't where we expect it.
+function renderCard(id){
+  const grid=$("grid");
+  const el=[...grid.querySelectorAll(".card")].find(c=>c.dataset.id===id);
+  const list=filtered();
+  const idx=list.findIndex(a=>a.id===id);
+  if(!el||idx<0||!el.parentElement){renderGrid();return}
+  const tmp=document.createElement("div");
+  tmp.innerHTML=cardHTML(list[idx],idx);
+  el.parentElement.replaceWith(tmp.firstElementChild);
+  reveal=null; // consumed, exactly as renderGrid does
+  if(editingNote)focusNoteEditor(grid);
 }
 
 // ---------- form ----------
@@ -1645,7 +1766,12 @@ function applyAccent(hex){
   root.setProperty("--gold-dim",hslToHex(h,Math.max(s-10,0),Math.max(l-25,10)));
   root.setProperty("--gold-mid",hslToHex(h,Math.max(s-10,0),Math.min(Math.max(l-5,30),65)));
   root.setProperty("--star",hslToHex(h,Math.min(s+10,100),Math.min(l+20,88)));
+  root.setProperty("--gold-txt",textSafe(h,s,l));
 }
+// Hold a hue inside the band that actually reads as type on our panels: chroma
+// capped so a saturated accent stops vibrating, lightness floored so a deep one
+// stays visible and ceilinged so a pale one doesn't glare.
+function textSafe(h,s,l){return hslToHex(h,Math.min(s,72),Math.min(Math.max(l,68),86))}
 // WCAG relative luminance — the only honest way to decide whether a colour wants
 // dark or light text on it. Eyeballing "is this bright" from the hex fails badly
 // on saturated blues and greens.
@@ -1658,9 +1784,10 @@ function relLuminance(hex){
 }
 // Secondary accent: the Login button, Refresh, focus rings, the card glow.
 function applyAccent2(hex){
-  const[h,s]=hexToHsl(hex);
+  const[h,s,l]=hexToHsl(hex);
   const root=document.documentElement.style;
   root.setProperty("--teal",hex);
+  root.setProperty("--teal-txt",textSafe(h,s,l));
   // Anything filled with --teal prints its label in --teal-ink. A fixed dark ink
   // vanishes on a deep secondary and a fixed light one vanishes on a pale one,
   // so the ink follows the colour instead of being hardcoded.
@@ -2096,33 +2223,34 @@ $("grid").addEventListener("click",async e=>{
     lastSelectedIdx=idx;
     renderBulkBar();
   }
-  else if(act==="more"){const on=!openMore.has(id);on?openMore.add(id):openMore.delete(id);reveal=on?id+":more":null;renderGrid()}
+  else if(act==="more"){const on=!openMore.has(id);on?openMore.add(id):openMore.delete(id);reveal=on?id+":more":null;renderCard(id)}
   else if(act==="fav"){acc.fav=!acc.fav;reveal=acc.fav?id+":fav":null;saveDB();render()}
   else if(act==="copyid")copyText(acc.gameName+"#"+acc.tagLine,"Riot ID");
   else if(act==="copylogin")copyText(acc.login,"Username");
   else if(act==="copypw")copyText(acc.password,"Password",true);
   else if(act==="copymail")copyText(acc.email,"Email");
-  else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderGrid()}
-  else if(act==="login"){const on=!openLogin.has(id);on?openLogin.add(id):openLogin.delete(id);shownPw.delete(id);reveal=on?id+":login":null;renderGrid()}
+  else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderCard(id)}
+  else if(act==="login"){const on=!openLogin.has(id);on?openLogin.add(id):openLogin.delete(id);shownPw.delete(id);reveal=on?id+":login":null;renderCard(id)}
   else if(act==="edit")openForm(acc);
   else if(act==="archive"){acc.archived=true;saveDB();render();toast("Archived — toggle \"Archived\" in the toolbar to see it again")}
   else if(act==="unarchive"){acc.archived=false;saveDB();render();toast("Restored to active accounts")}
   else if(act==="note"||act==="noteedit"){
     const on=editingNote!==id;
     editingNote=on?id:null;
-    if(on){noteDraft=acc.notes||"";openMore.delete(id);reveal=id+":note"}else reveal=null;
-    renderGrid();
+    if(on){noteDraft=acc.notes||"";}
+    // the overflow row has to close, and that is a card-level change
+    if(on&&openMore.delete(id))renderCard(id);else syncNoteBlock(card,acc);
   }
-  else if(act==="notecancel"){editingNote=null;noteDraft="";renderGrid()}
+  else if(act==="notecancel"){editingNote=null;noteDraft="";syncNoteBlock(card,acc)}
   else if(act==="notesave"){
     const ta=card.querySelector('[data-f="notetext"]');
     const v=(ta?ta.value:noteDraft).trim();
     if(v)acc.notes=v;else delete acc.notes;
     editingNote=null;noteDraft="";
-    saveDB();render();toast(v?"Note saved":"Note cleared");
+    saveDB();syncNoteBlock(card,acc);toast(v?"Note saved":"Note cleared");
   }
-  else if(act==="rank"){openPaste.delete(id);const on=!openRank.has(id);on?openRank.add(id):openRank.delete(id);reveal=on?id+":rank":null;renderGrid()}
-  else if(act==="paste"){openRank.delete(id);const on=!openPaste.has(id);on?openPaste.add(id):openPaste.delete(id);reveal=on?id+":paste":null;renderGrid()}
+  else if(act==="rank"){openPaste.delete(id);const on=!openRank.has(id);on?openRank.add(id):openRank.delete(id);reveal=on?id+":rank":null;renderCard(id)}
+  else if(act==="paste"){openRank.delete(id);const on=!openPaste.has(id);on?openPaste.add(id):openPaste.delete(id);reveal=on?id+":paste":null;renderCard(id)}
   else if(act==="rankapply"){
     const g=f=>card.querySelector('[data-f="'+f+'"]');
     const tier=g("tier").value, isU=tier==="UNRANKED", mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
