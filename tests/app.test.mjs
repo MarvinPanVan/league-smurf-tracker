@@ -477,3 +477,182 @@ test("an encrypted vault shows the lock screen on boot, and the right password u
   assert.equal(win2.document.getElementById("appRoot").classList.contains("hidden"), false);
   assert.equal(win2.document.querySelectorAll(".card").length, 1);
 });
+
+// ---- op.gg season peak + summoner level ----
+// Both fixtures are shaped like what the proxies actually return: reader-mode
+// markdown (r.jina.ai) and raw tag-dense HTML. The values are the real ones from
+// a live profile, so a change to op.gg's layout fails here rather than silently
+// putting a wrong peak on a card.
+const OPGG_MARKDOWN = [
+  "![Image 91](https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon7131.jpg?w=200)",
+  "764",
+  "# terminallucidity#final",
+  "*   EUW",
+  "![Image 92](https://opgg-static.akamaized.net/images/medals_new/diamond.png?w=144)",
+  "**diamond 1**52 LP",
+  "190 W 215 L Win rate 47%",
+  "![Image 93](https://opgg-static.akamaized.net/images/medals_new/master.png?w=72)",
+  "**master**393 LP",
+  "Top tier",
+].join("\n");
+
+const OPGG_HTML = '<div><img src="https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon7131.jpg">'
+  + '<span class="level">764</span><h1>terminallucidity#final</h1></div>'
+  + '<div><strong>diamond 1</strong><span>52 LP</span><div>190W 215L</div></div>'
+  + '<div><strong>master</strong><span>393 LP</span><em>Top tier</em></div>';
+
+// the parsers return objects built inside the jsdom realm, so they never pass a
+// prototype-strict deepEqual against a Node-realm literal — copy them over first
+const plain = o => (o ? { ...o } : o);
+
+test("the season peak is read from op.gg's Top tier badge, in both proxy formats", () => {
+  const win = bootApp();
+  for (const [name, fixture] of [["markdown", OPGG_MARKDOWN], ["html", OPGG_HTML]]) {
+    assert.deepEqual(plain(win.parsePeakText(fixture)), { tier: "MASTER", division: null, lp: 393 }, name);
+  }
+});
+
+test("the peak's division must not swallow the first digit of its LP", () => {
+  const win = bootApp();
+  // "master 393 LP" parsed as division 3 / 93 LP before the lookahead was added
+  assert.equal(win.parsePeakText("master 393 LP Top tier").lp, 393);
+  assert.deepEqual(plain(win.parsePeakText("emerald 2 57 LP Top tier")), { tier: "EMERALD", division: "II", lp: 57 });
+});
+
+test("no Top tier badge means no peak, rather than a guess", () => {
+  const win = bootApp();
+  assert.equal(win.parsePeakText("<strong>gold 4</strong><span>12 LP</span>"), null);
+  assert.equal(win.parsePeakText(""), null);
+});
+
+test("the summoner level is read from the bare number in front of the Riot ID", () => {
+  const win = bootApp();
+  const acc = { gameName: "terminallucidity", tagLine: "final" };
+  assert.equal(win.parseLevelText(OPGG_MARKDOWN, acc), 764);
+  assert.equal(win.parseLevelText(OPGG_HTML, acc), 764);
+  assert.equal(win.parseLevelText(OPGG_HTML, { gameName: "SomebodyElse", tagLine: "EUW" }), null);
+});
+
+test("a tag-dense page still yields the current rank (strict pass falls back to stripped text)", () => {
+  const win = bootApp();
+  const r = win.parseRankText(OPGG_HTML);
+  assert.equal(r.tier, "DIAMOND");
+  assert.equal(r.division, "I");
+  assert.equal(r.lp, 52);
+});
+
+// ---- LP chart ----
+test("the LP chart draws a labelled band per tier crossed, and one point per check", () => {
+  const win = bootApp();
+  const hist = [
+    { t: 1, tier: "EMERALD", division: "II", lp: 40 },
+    { t: 2, tier: "EMERALD", division: "I", lp: 80 },
+    { t: 3, tier: "DIAMOND", division: "IV", lp: 20 },
+  ];
+  const html = win.rankChart(hist);
+  const el = win.document.createElement("div");
+  el.innerHTML = html;
+  assert.equal(el.querySelectorAll(".lpc-pt").length, 3, "one hoverable point per check");
+  assert.equal(el.querySelectorAll(".lpc-line").length, 1);
+  const labels = [...el.querySelectorAll(".lpc-lab")].map(n => n.textContent);
+  assert.ok(labels.includes("Emerald") && labels.includes("Diamond"), "bands are labelled: " + labels);
+  // the tooltip has to name the actual rank, not just the raw LP number
+  assert.match(el.querySelector(".lpc-tip").textContent, /Emerald II . 40 LP/);
+  assert.doesNotMatch(html, /undefined|NaN/);
+});
+
+test("a single check is not a chart", () => {
+  const win = bootApp();
+  assert.equal(win.rankChart([{ t: 1, tier: "GOLD", division: "I", lp: 10 }]), "");
+  assert.equal(win.rankChart([]), "");
+});
+
+// ---- inline notes ----
+// `accounts` is a top-level `let`, which is not a window property — read what
+// was actually persisted instead
+const storedNote = win => (JSON.parse(win.localStorage.getItem("smurf-tracker")) || [])[0].notes;
+
+function typeNote(win, text) {
+  const ta = win.document.querySelector('[data-f="notetext"]');
+  ta.value = text;
+  ta.dispatchEvent(new win.Event("input", { bubbles: true }));
+  return ta;
+}
+
+test("a card's note can be written in place and survives an unrelated re-render", () => {
+  const win = bootApp();
+  addRealAccount(win, "NoteGuy", "1234");
+
+  win.document.querySelector('[data-act="more"]').click();
+  win.document.querySelector('[data-act="note"]').click();
+  assert.ok(win.document.querySelector('[data-f="notetext"]'), "editor must render");
+
+  typeNote(win, "smurf for duo queue");
+  win.renderGrid(); // must not throw the draft away
+  assert.equal(win.document.querySelector('[data-f="notetext"]').value, "smurf for duo queue");
+
+  win.document.querySelector('[data-act="notesave"]').click();
+  assert.equal(storedNote(win), "smurf for duo queue");
+  assert.match(win.document.querySelector(".c-notes").textContent, /smurf for duo queue/);
+  assert.equal(win.document.querySelector('[data-f="notetext"]'), null, "editor closes after save");
+});
+
+test("clicking a rendered note reopens it, and cancel leaves the saved text untouched", () => {
+  const win = bootApp();
+  addRealAccount(win, "NoteGuy", "1234");
+  win.document.querySelector('[data-act="more"]').click();
+  win.document.querySelector('[data-act="note"]').click();
+  typeNote(win, "original");
+  win.document.querySelector('[data-act="notesave"]').click();
+
+  win.document.querySelector('[data-act="noteedit"]').click();
+  assert.equal(win.document.querySelector('[data-f="notetext"]').value, "original");
+  typeNote(win, "throw this away");
+  win.document.querySelector('[data-act="notecancel"]').click();
+  assert.equal(storedNote(win), "original");
+  assert.match(win.document.querySelector(".c-notes").textContent, /original/);
+});
+
+// ---- accents ----
+test("the secondary accent drives --teal, and its ink flips with the colour's luminance", () => {
+  const win = bootApp();
+  const read = v => win.document.documentElement.style.getPropertyValue(v).trim().toLowerCase();
+
+  win.applyAccent2("#2ee0c2"); // bright -> dark label on the filled Login button
+  assert.equal(read("--teal"), "#2ee0c2");
+  assert.ok(win.relLuminance(read("--teal-ink")) < 0.1, "ink must be dark on a bright secondary");
+
+  win.applyAccent2("#3b1d7a"); // deep -> a dark ink here would be unreadable
+  assert.equal(read("--teal-ink"), "#ffffff");
+});
+
+test("both accents persist, and leaving Settings unsaved puts the previewed colours back", () => {
+  const win = bootApp();
+  const read = v => win.document.documentElement.style.getPropertyValue(v).trim().toLowerCase();
+
+  win.document.getElementById("bSettings").click();
+  win.document.getElementById("sAccent").value = "#ff0000";
+  win.document.getElementById("sAccent2").value = "#00ff00";
+  win.document.getElementById("sSave").click();
+  assert.equal(read("--gold"), "#ff0000");
+  assert.equal(read("--teal"), "#00ff00");
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).accent2, "#00ff00");
+
+  win.document.getElementById("bSettings").click();
+  const picker = win.document.getElementById("sAccent2");
+  picker.value = "#0000ff";
+  picker.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(read("--teal"), "#0000ff", "the picker previews live");
+  win.document.getElementById("sClose").click();
+  assert.equal(read("--teal"), "#00ff00", "closing without saving reverts");
+});
+
+test("a long Riot ID truncates inside an element that can actually ellipsize", () => {
+  const win = bootApp();
+  addRealAccount(win, "aVeryLongSummonerNameIndeed", "EUW123");
+  // text-overflow on the <button> itself does nothing in a real browser — the
+  // clipping has to happen on a child element
+  const inner = win.document.querySelector(".rid > span");
+  assert.ok(inner, "the Riot ID must be wrapped in an element of its own");
+  assert.match(inner.textContent, /aVeryLongSummonerNameIndeed#EUW123/);
+});

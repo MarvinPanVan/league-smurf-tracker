@@ -21,7 +21,11 @@
     /* accent — live-overridden by the accent picker in Settings */
     --gold:#d8b874; --gold-dim:#8a6a2e; --gold-mid:#c2a45f; --star:#f2d489;
     --text:#e9edf5; --muted:#8b93a6; --faint:#5d6577;
-    --teal:#2ee0c2; --danger:#ff6b6b; --good:#4ade80;
+    /* secondary accent — also live-overridden from Settings. --teal-ink is the
+       text colour for anything filled with --teal; applyAccent2 flips it between
+       near-black and white by luminance, because a fixed dark ink goes unreadable
+       the moment somebody picks a deep secondary. */
+    --teal:#2ee0c2; --teal-ink:#04211f; --danger:#ff6b6b; --good:#4ade80;
     /* elevation */
     --sh-1:0 1px 2px #00000059;
     --sh-2:0 2px 4px #0000003d,0 8px 24px -10px #000000a8;
@@ -30,11 +34,16 @@
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
-  *{scrollbar-width:thin;scrollbar-color:#2a3040 transparent}
+  /* the scrollbar is the one chrome element that touches every screen, so it
+     carries the primary accent — muted into the neutral so it tints rather than
+     glares. Plain hex first for anything without color-mix. */
+  *{scrollbar-width:thin;scrollbar-color:#2a3040 transparent;
+    scrollbar-color:color-mix(in srgb,var(--gold) 42%,#2a3040) transparent}
   ::-webkit-scrollbar{width:12px;height:12px}
   ::-webkit-scrollbar-track{background:transparent}
-  ::-webkit-scrollbar-thumb{background:#2a3040;border-radius:99px;border:3px solid transparent;background-clip:content-box}
-  ::-webkit-scrollbar-thumb:hover{background:#3d4557;background-clip:content-box}
+  ::-webkit-scrollbar-thumb{background:#2a3040;background:color-mix(in srgb,var(--gold) 42%,#2a3040);
+    border-radius:99px;border:3px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:#3d4557;background:color-mix(in srgb,var(--gold) 70%,#3d4557);background-clip:content-box}
   ::-webkit-scrollbar-corner{background:transparent}
   ::selection{background:color-mix(in srgb,var(--gold) 32%,transparent);color:#fff}
 
@@ -85,14 +94,24 @@
   /* Everything else on the page sits on a surface — cards, toolbar, stats. Left
      bare, these four buttons floated in dead space at the far edge and read as
      unrelated to each other. A tray makes them one deliberate cluster and ties
-     the header to the same visual language as the rest. */
-  .top .bar{gap:7px;padding:7px;border:1px solid var(--line);border-radius:16px;
-    background:#ffffff07;backdrop-filter:blur(12px) saturate(130%);-webkit-backdrop-filter:blur(12px) saturate(130%);
-    box-shadow:var(--sh-1);
+     the header to the same visual language as the rest.
+     The first version boxed four already-bordered buttons inside a fifth border,
+     which is why it still read as bolted on: five outlines competing in one
+     corner. Only the two real actions keep a rim now; the utilities are ghosts
+     and a hairline separates the two groups, so the tray reads as one control
+     with parts rather than a container of loose buttons. */
+  .top .bar{gap:5px;padding:6px;border:1px solid #ffffff10;border-radius:15px;
+    background:linear-gradient(180deg,#ffffff0b,#ffffff05);
+    backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
+    box-shadow:var(--sh-1),inset 0 1px 0 #ffffff0d;
+    transition:border-color .2s ease,box-shadow .2s ease;
     /* backdrop-filter makes this a stacking context, which traps the overflow
        menu's z-index inside it — without lifting the tray itself the menu paints
        under everything that follows in the document. */
     position:relative;z-index:30}
+  .top .bar:hover{border-color:#ffffff1c;box-shadow:var(--sh-2),inset 0 1px 0 #ffffff14}
+  .tray-sep{width:1px;align-self:stretch;margin:2px 3px;flex-shrink:0;
+    background:linear-gradient(180deg,transparent,var(--line2),transparent)}
   .eyebrow{display:inline-flex;align-items:center;gap:9px;margin-bottom:14px;
     font-size:10.5px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);
     padding:5px 12px 5px 10px;border:1px solid var(--line);border-radius:999px;background:#ffffff06}
@@ -160,8 +179,10 @@
   .b-danger{color:var(--danger)}
   .b-danger:hover{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);
     background:color-mix(in srgb,var(--danger) 13%,var(--panel2))}
-  #bMore,#bHelp{width:36px;padding:8px 0;color:var(--muted);font-size:15px}
-  #bMore:hover,#bHelp:hover{color:var(--text)}
+  /* utilities, not actions — no rim of their own inside the tray */
+  #bMore,#bHelp{width:34px;padding:8px 0;color:var(--muted);font-size:15px;
+    background:none;border-color:transparent;box-shadow:none}
+  #bMore:hover,#bHelp:hover{color:var(--text);background:#ffffff12;border-color:transparent}
   .bar{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 
   /* ---- dropdown menu ---- */
@@ -279,9 +300,13 @@
   /* Same face as everything else. Monospace was defensible in theory — it is an
      identifier — but sitting one line under the name it just read as a font
      glitch, so the tag is separated by colour and weight instead. */
+  /* text-overflow on a <button> does nothing: the button's anonymous inner box
+     doesn't shrink, so the label just got clipped mid-word with no ellipsis. The
+     truncation has to happen on a real element inside it. */
   .rid{font-size:12px;color:var(--muted);cursor:pointer;text-align:left;justify-content:flex-start;margin-top:2px;
-    letter-spacing:-.005em;transition:color .15s ease;max-width:100%;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+    letter-spacing:-.005em;transition:color .15s ease;width:100%;max-width:100%;
+    display:flex;min-width:0;overflow:hidden}
+  .rid>span{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rid b{color:var(--faint);font-weight:400;transition:color .15s ease}
   /* the tag is part of the same name — hovering must light all of it, not just
      the half before the # */
@@ -318,16 +343,56 @@
   /* This is the one thing on the card the user wrote themselves, so it reads as
      content on its own small surface rather than another grey caption line. */
   .c-notes{font-size:12.5px;line-height:1.6;color:var(--text);opacity:.9;
-    padding:9px 12px;border-radius:10px;background:#ffffff08;border:1px solid #ffffff0d}
+    padding:9px 12px;border-radius:10px;background:#ffffff08;border:1px solid #ffffff0d;
+    transition:background .16s ease,border-color .16s ease}
+  /* the note is the one field you actually keep rewriting, so it edits where it
+     lives — no round trip through the Edit form */
+  .c-notes[data-act]{cursor:text}
+  .c-notes[data-act]:hover{background:#ffffff0f;border-color:#ffffff21}
   .c-notes .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
-    display:block;margin-bottom:4px}
+    display:flex;align-items:center;gap:5px;margin-bottom:4px}
+  .c-notes .k .ico{width:11px;height:11px;opacity:0;transition:opacity .16s ease}
+  .c-notes[data-act]:hover .k .ico{opacity:.85}
+  .c-notes .none{color:var(--faint)}
+  .c-notes textarea{width:100%;font-size:12.5px;line-height:1.6;min-height:62px;display:block}
+  .note-btns{display:flex;gap:5px;margin-top:7px;align-items:center}
+  .note-btns button{font-size:11px;padding:4px 10px}
+  .note-btns .hint{font-size:10px;color:var(--faint);margin-left:2px}
   .wrbar{height:5px;background:var(--panel2);border-radius:999px;overflow:hidden}
   .wrbar i{display:block;height:100%;border-radius:999px}
   .delta{font-size:10.5px;padding:2px 8px;border-radius:999px;font-weight:600;display:inline-block;white-space:nowrap}
   .d-up{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
   .d-down{color:var(--danger);background:color-mix(in srgb,var(--danger) 15%,transparent)}
-  .spark{display:block;width:100%;margin-top:1px;color:var(--gold-dim);color:color-mix(in srgb,var(--gold) 62%,transparent);
-    border-bottom:1px solid var(--line)}
+  /* ---- LP chart ----
+     The old sparkline was a bare line with no scale: it told you the number went
+     up or down but never how far, or across which ranks. This draws the actual
+     ladder — a band per tier in that tier's colour, so a climb out of Emerald is
+     visible as leaving the green — and every check is a hoverable point.
+     Height is fixed and matches the SVG viewBox height, so viewBox units and
+     pixels are the same thing and the HTML overlay can be positioned in px. */
+  .lpc{position:relative;height:78px;margin-top:2px;border-radius:9px;overflow:visible;
+    border:1px solid var(--line);background:#00000038}
+  .lpc-svg{display:block;width:100%;height:100%;border-radius:8px}
+  .lpc-lab{position:absolute;left:6px;font-size:8px;font-weight:600;letter-spacing:.09em;
+    text-transform:uppercase;pointer-events:none;opacity:.62;line-height:1}
+  .lpc-pt{position:absolute;top:0;bottom:0;transform:translateX(-50%)}
+  /* the guide makes it obvious which check you're reading, not just which dot */
+  .lpc-pt::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;margin-left:-.5px;
+    background:#ffffff2b;opacity:0;transition:opacity .13s ease}
+  .lpc-pt:hover::before{opacity:1}
+  .lpc-pt>b{position:absolute;left:50%;width:0;height:0}
+  .lpc-pt i{position:absolute;left:0;top:0;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;
+    box-shadow:0 0 0 2px #0d1017;transition:transform .15s cubic-bezier(.34,1.56,.64,1)}
+  .lpc-pt:hover i{transform:scale(1.55)}
+  .lpc-tip{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:4;
+    opacity:0;pointer-events:none;transition:opacity .13s ease;
+    white-space:nowrap;font-size:11px;font-weight:500;line-height:1.35;color:var(--text);
+    padding:6px 9px;border-radius:8px;background:#181c26f5;border:1px solid var(--line2);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:var(--sh-2)}
+  .lpc-tip em{display:block;font-style:normal;font-size:9.5px;color:var(--faint);margin-top:1px}
+  .lpc-tip.l{left:-6px;transform:none}
+  .lpc-tip.r{left:auto;right:-6px;transform:none}
+  .lpc-pt:hover .lpc-tip{opacity:1}
   .stale{color:var(--danger)}
   #toast button{margin-left:12px;font-size:12px;padding:3px 10px;color:var(--teal)}
   .meta{font-size:12.5px;color:var(--muted);line-height:1.65}
@@ -363,9 +428,9 @@
      look the same. The gold tint implied a hierarchy that isn't there. */
   .a-dpm{border:1px solid var(--line);color:var(--text);font-weight:500;background:var(--panel2)}
   .a-dpm:hover{color:var(--text);border-color:var(--line2);background:var(--panel3)}
-  .a-login{background:var(--teal);border-color:var(--teal);color:#04211f;font-weight:700;
+  .a-login{background:var(--teal);border-color:var(--teal);color:var(--teal-ink);font-weight:700;
     box-shadow:0 4px 14px -6px color-mix(in srgb,var(--teal) 85%,transparent)}
-  .a-login:hover{background:var(--teal);border-color:var(--teal);color:#04211f;filter:brightness(1.1);
+  .a-login:hover{background:var(--teal);border-color:var(--teal);color:var(--teal-ink);filter:brightness(1.1);
     box-shadow:0 7px 22px -6px color-mix(in srgb,var(--teal) 95%,transparent)}
 
   /* ---- form + settings ---- */
@@ -413,7 +478,7 @@
   /* Card sections open by re-rendering the whole grid, so only the block flagged
      by `reveal` animates — see the note on that variable. */
   @keyframes sectionIn{from{opacity:0;transform:translateY(-7px) scaleY(.94)}to{opacity:1;transform:none}}
-  .login.reveal,.acts.reveal{transform-origin:top center;animation:sectionIn .24s cubic-bezier(.22,1,.36,1) both}
+  .login.reveal,.acts.reveal,.c-notes.reveal{transform-origin:top center;animation:sectionIn .24s cubic-bezier(.22,1,.36,1) both}
   .login.reveal .lrow{animation:rowIn .3s cubic-bezier(.22,1,.36,1) both}
   .login.reveal .lrow:nth-child(2){animation-delay:.045s}
   .login.reveal .lrow:nth-child(3){animation-delay:.09s}
@@ -445,8 +510,8 @@
   @keyframes cardIn{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
   .grid.boot>.hx{animation:cardIn .5s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--d,0ms)}
   @keyframes drawIn{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
-  .spark polyline{stroke-dasharray:100 100}
-  .grid.boot .spark polyline,.hx.flash .spark polyline{animation:drawIn .9s ease-out both}
+  .lpc-line{stroke-dasharray:100 100}
+  .grid.boot .lpc-line,.hx.flash .lpc-line{animation:drawIn .9s ease-out both}
   @keyframes borderPulse{0%{background:var(--teal)}100%{background:linear-gradient(155deg,#ffffff1f,#ffffff0a 38%,#ffffff05)}}
   .hx.flash{animation:borderPulse 1.1s ease-out}
   @keyframes toastIn{from{opacity:0;transform:translate(-50%,14px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
@@ -455,10 +520,10 @@
   .confetti i{position:absolute;left:50%;top:40%;width:6px;height:10px;border-radius:2px;animation:pop 1.1s ease-out forwards}
   @keyframes pop{from{transform:translate(0,0) rotate(0)}to{transform:translate(var(--tx),var(--ty)) rotate(var(--rz));opacity:0}}
   @media (prefers-reduced-motion:reduce){
-    .spin,.c-crest,.title-gem,.grid.boot>.hx,.spark polyline,.hx.flash,#toast,.confetti i,
+    .spin,.c-crest,.title-gem,.grid.boot>.hx,.lpc-line,.hx.flash,#toast,.confetti i,
     #form:not(.hidden),#settings:not(.hidden),#help:not(.hidden),#bulkAdd:not(.hidden),#lock:not(.hidden),
     #moreMenu:not(.hidden),#bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show,
-    .login.reveal,.acts.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in{animation:none!important}
+    .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in{animation:none!important}
     .grid>.hx{transition:none}
     .panel-close:hover,.chip:active,.card:hover .c-portrait,.a-login:hover .ico,.acts button:hover .ico{transform:none}
     html{scroll-behavior:auto}
@@ -496,6 +561,7 @@
     <div class="bar">
       <button id="bCheckAll" class="b-gold"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg> Check all ranks</button>
       <button id="bAdd" class="b-teal">+ Add account</button>
+      <span class="tray-sep" aria-hidden="true"></span>
       <div style="position:relative">
         <button id="bMore" title="Export, import, settings">⋯</button>
         <div id="moreMenu" class="hx teal hidden" style="position:absolute;right:0;top:calc(100% + 8px);z-index:20;min-width:206px"><div class="hx-in" style="padding:7px;display:flex;flex-direction:column;gap:1px">
@@ -533,7 +599,7 @@
     <b style="color:var(--text)">Tips:</b> the star pins favorites on top · search matches names, tags, even ranks (try "gold") · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
     <b style="color:var(--text)">Extra privacy:</b> set a master password in <b style="color:var(--text)">Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.<br>
     <b style="color:var(--text)">Using this app:</b> free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.<br>
-    <b style="color:var(--text)">More:</b> <b style="color:var(--text)">⋯</b> menu has bulk add (paste a list of Name#TAG) and CSV import · archive an account to hide it without deleting (toggle <b style="color:var(--text)">Archived</b> in the toolbar) · shift-click a card's checkbox to select a range · <b style="color:var(--text)">n</b> for a new account · pick your own accent color in Settings.
+    <b style="color:var(--text)">More:</b> <b style="color:var(--text)">⋯</b> menu has bulk add (paste a list of Name#TAG) and CSV import · archive an account to hide it without deleting (toggle <b style="color:var(--text)">Archived</b> in the toolbar) · shift-click a card's checkbox to select a range · <b style="color:var(--text)">n</b> for a new account · click a card's note to rewrite it on the spot · pick your own primary and secondary colors in Settings.
     <div style="margin-top:10px"><button id="bHelpClose">Got it</button></div>
   </div></div>
 
@@ -582,11 +648,18 @@
           <label style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)">minutes idle (0 = never)</label>
         </div>
       </div>
-      <div class="fld">
-        <label>Accent color</label>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input type="color" id="sAccent" style="width:44px;padding:2px;height:32px">
-          <button id="sAccentReset" type="button">Reset to gold</button>
+      <div class="fld fw">
+        <label>Accent colors — both preview live while you pick; closing without saving puts them back</label>
+        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="color" id="sAccent" style="width:44px;padding:2px;height:32px" aria-label="Primary accent color">
+            <span style="font-size:12px;color:var(--muted);line-height:1.4">Primary<br><span style="color:var(--faint)">title, favorites, scrollbar</span></span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="color" id="sAccent2" style="width:44px;padding:2px;height:32px" aria-label="Secondary accent color">
+            <span style="font-size:12px;color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login, Refresh, Add, focus rings</span></span>
+          </div>
+          <button id="sAccentReset" type="button">Reset both</button>
         </div>
       </div>
       <div class="fw" style="font-size:12px;color:var(--muted);line-height:1.5">
@@ -732,6 +805,10 @@ const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"
 const WEB_SEARCH_TOOL={"claude-sonnet-5":"web_search_20260209","claude-haiku-4-5":"web_search_20250305"};
 let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArchived:false};
 let checking=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), openPaste=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
+// Which card has its note open, plus the live text. The draft is kept out here
+// on purpose: the grid re-renders wholesale, so a textarea rendered from a.notes
+// would throw away whatever was typed the moment an unrelated card updated.
+let editingNote=null, noteDraft="";
 // "<accountId>:<block>" for the one card section that was *just* opened. The grid
 // re-renders wholesale on any change, so without this every open section would
 // replay its entrance animation whenever an unrelated card updated.
@@ -791,7 +868,8 @@ const ICON={
   eye:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
   eyeOff:'<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M1 1l22 22"/><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>',
   // a person, not a door: the button reveals the stored credentials, it doesn't sign you in anywhere
-  user:'<path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-7A4.5 4.5 0 0 0 4 19.5V21"/><circle cx="12" cy="8" r="4"/>'
+  user:'<path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-7A4.5 4.5 0 0 0 4 19.5V21"/><circle cx="12" cy="8" r="4"/>',
+  note:'<path d="M6.5 3H18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 18.5v-13A2.5 2.5 0 0 1 6.5 3z"/><line x1="8" y1="8.5" x2="16" y2="8.5"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="15.5" x2="13" y2="15.5"/>'
 };
 function icon(name,cls){return `<svg class="ico${cls?" "+cls:""}" viewBox="0 0 24 24">${ICON[name]}</svg>`}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -822,20 +900,74 @@ function ladderLP(s){ // absolute position on the ladder, in LP
   const d=DIV_ORDER[(s.division||"").toUpperCase()]??0;
   return t*400+d*100+(Number(s.lp)||0);
 }
-function sparkline(hist){
-  const vals=(hist||[]).map(h=>ladderLP(h)).filter(v=>v!==null);
-  if(vals.length<2)return"";
-  const min=Math.min(...vals),max=Math.max(...vals),range=(max-min)||1;
-  const w=200,h=34,pad=4,step=w/(vals.length-1);
-  const pts=vals.map((v,i)=>(i*step).toFixed(1)+","+(h-pad-((v-min)/range)*(h-pad*2)).toFixed(1)).join(" ");
+// ladderLP() gives every tier below Master exactly 400 LP of room (4 divisions
+// × 100), which is what makes a fixed tier band possible at all.
+const TIER_SPAN=400;
+const LPC_W=200, LPC_H=78;
+// The old sparkline plotted LP with no scale at all: it showed the number moving
+// but never how far, or through which ranks. This draws the ladder itself —
+// a coloured band per tier, division hairlines when the view is tight enough for
+// them to mean anything, and every check as its own hoverable point.
+function rankChart(hist){
+  const pts=(hist||[]).map(h=>({h,v:ladderLP(h)})).filter(p=>p.v!==null);
+  if(pts.length<2)return"";
+  const vals=pts.map(p=>p.v);
+  let lo=Math.min(...vals), hi=Math.max(...vals);
+  // A flat run would otherwise be stretched to fill the frame and read as a
+  // knife edge. Showing it against a fixed minimum of ladder keeps "barely
+  // moved" looking like barely moved.
+  const MIN_SPAN=260;
+  if(hi-lo<MIN_SPAN){const mid=(hi+lo)/2;lo=mid-MIN_SPAN/2;hi=mid+MIN_SPAN/2}
+  else{const pad=(hi-lo)*.2;lo-=pad;hi+=pad}
+  if(lo<0){hi-=lo;lo=0}
+  const span=(hi-lo)||1;
+  const py=v=>LPC_H-((v-lo)/span)*LPC_H;
+  const mIdx=TIER_ORDER.indexOf("MASTER");
+
+  let bands="",lines="",labels="";
+  for(let t=0;t<=mIdx;t++){
+    // Master and above share one band: ladderLP() can't separate GM from
+    // Challenger, since above Master the ladder is just LP.
+    const bot=t*TIER_SPAN, top=t===mIdx?Infinity:(t+1)*TIER_SPAN;
+    if(top<=lo||bot>=hi)continue;
+    const name=TIER_ORDER[t], c=TIER_COLORS[name];
+    const yTop=py(Math.min(top,hi)), yBot=py(Math.max(bot,lo));
+    bands+=`<rect x="0" y="${yTop.toFixed(1)}" width="${LPC_W}" height="${Math.max(yBot-yTop,0).toFixed(1)}" fill="${c}" opacity=".085"/>`;
+    if(bot>lo)lines+=`<line x1="0" x2="${LPC_W}" y1="${py(bot).toFixed(1)}" y2="${py(bot).toFixed(1)}" stroke="${c}" stroke-opacity=".36" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+    if(yBot-yTop>=14)labels+=`<span class="lpc-lab" style="top:${(yBot-11).toFixed(1)}px;color:${c}">${t===mIdx?"Master+":name.charAt(0)+name.slice(1).toLowerCase()}</span>`;
+  }
+  if(span<=900){
+    for(let v=Math.ceil(lo/100)*100;v<hi;v+=100){
+      if(v%TIER_SPAN===0)continue; // that one is already a tier boundary
+      lines+=`<line x1="0" x2="${LPC_W}" y1="${py(v).toFixed(1)}" y2="${py(v).toFixed(1)}" stroke="#ffffff" stroke-opacity=".055" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+    }
+  }
+
+  const coords=pts.map((p,i)=>((i/(pts.length-1))*LPC_W).toFixed(1)+","+py(p.v).toFixed(1)).join(" ");
   // unique per render so several cards' gradients never collide
-  const gid="sg"+Math.random().toString(36).slice(2,9);
-  return `<svg class="spark" viewBox="0 0 ${w} ${h}" height="${h}" preserveAspectRatio="none"><title>LP over the last ${vals.length} checks</title>`
-    +`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".34"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>`
-    // With only two checks the fill is one big triangle that reads as a graphic
-    // glitch rather than data — needs a real curve before it earns the area.
-    +(vals.length>=4?`<polygon points="0,${h} ${pts} ${w},${h}" fill="url(#${gid})"/>`:"")
-    +`<polyline points="${pts}" pathLength="100" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+  const gid="lc"+Math.random().toString(36).slice(2,9), aid="la"+Math.random().toString(36).slice(2,9);
+  const cur=tierColor(pts[pts.length-1].h.tier);
+  // the line is its own legend: it takes the colour of whatever tier it is
+  // passing through, so a promotion reads as a colour change, not just a step up
+  const stops=pts.map((p,i)=>`<stop offset="${((i/(pts.length-1))*100).toFixed(2)}%" stop-color="${tierColor(p.h.tier)}"/>`).join("");
+  const overlay=pts.map((p,i)=>{
+    const xp=(i/(pts.length-1))*100;
+    // tooltips at the edges would hang off the card, so they anchor inwards there
+    const side=xp<26?" l":xp>74?" r":"";
+    const when=p.h.t?timeAgo(p.h.t):null;
+    return `<div class="lpc-pt" style="left:${xp.toFixed(2)}%;width:${(100/pts.length).toFixed(2)}%">`
+      +`<b style="top:${py(p.v).toFixed(1)}px"><i style="background:${tierColor(p.h.tier)}"></i>`
+      +`<span class="lpc-tip${side}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(when)}</em>`:""}</span></b></div>`;
+  }).join("");
+
+  return `<div class="lpc">`
+    +`<svg class="lpc-svg" viewBox="0 0 ${LPC_W} ${LPC_H}" preserveAspectRatio="none" role="img" aria-label="LP over the last ${pts.length} checks">`
+    +`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="0">${stops}</linearGradient>`
+    +`<linearGradient id="${aid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${cur}" stop-opacity=".3"/><stop offset="1" stop-color="${cur}" stop-opacity="0"/></linearGradient></defs>`
+    +bands+lines
+    +`<polygon points="0,${LPC_H} ${coords} ${LPC_W},${LPC_H}" fill="url(#${aid})"/>`
+    +`<polyline class="lpc-line" points="${coords}" pathLength="100" fill="none" stroke="url(#${gid})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`
+    +`</svg>${labels}${overlay}</div>`;
 }
 function postDiscord(content){
   if(!cfg.discordWebhook)return;
@@ -908,7 +1040,16 @@ function passwordStrength(p){
 // ---------- rank data: parser + fetch cascade ----------
 function parseRankText(raw){
   if(!raw)return null;
-  const text=String(raw).replace(/\s+/g," ");
+  const first=parseRankFlat(String(raw).replace(/\s+/g," "));
+  if(first&&first.tier)return first;
+  // Some proxies hand back markup dense enough that the tier and its LP end up
+  // further apart than the strict pattern tolerates. Stripping to plain words is
+  // a second chance, never a downgrade — it only runs when pass one found no
+  // tier at all.
+  const second=parseRankFlat(stripMarkup(raw));
+  return(second&&second.tier)?second:(first||second);
+}
+function parseRankFlat(text){
   const strict=/\b(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)\b[^\dA-Za-z]{0,6}([1-4]|IV|III|II|I)?(?!\d)(?:\s\2(?!\d))?[^\d]{0,6}(\d{1,4})\s*LP\b/i;
   const m=text.match(strict);
   const out={tier:null,division:null,lp:null,wins:null,losses:null,level:null};
@@ -924,6 +1065,60 @@ function parseRankText(raw){
   if(lv)out.level=+lv[1];
   if(!out.tier&&out.level==null)return null;
   return out;
+}
+// Flatten a fetched page to plain words. The proxies return three different
+// things — raw HTML, reader-mode markdown, or something in between — and the two
+// parsers below key off word order, so they need one shape to work on.
+function stripMarkup(raw){
+  return String(raw)
+    .replace(/<script[\s\S]*?<\/script>/gi," ")
+    .replace(/<style[\s\S]*?<\/style>/gi," ")
+    .replace(/<[^>]*>/g," ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g," ")      // markdown images: the URLs contain tier names
+    .replace(/\[([^\]]*)\]\([^)]*\)/g," $1 ")  // markdown links: keep the label, drop the URL
+    .replace(/[*_`|]+/g," ")
+    .replace(/\s+/g," ");
+}
+// op.gg does publish a season peak after all: it prints the highest rank reached
+// right under the current one and badges it "Top tier". Verified against a live
+// profile, which flattens to "… diamond 1 52 LP 190 W 215 L Win rate 47%
+// master 393 LP Top tier". The peak is the last rank printed before the badge.
+function parsePeakText(raw){
+  if(!raw)return null;
+  const text=stripMarkup(raw);
+  const i=text.search(/Top\s*tier/i);
+  if(i<0)return null;
+  const before=text.slice(Math.max(0,i-140),i);
+  // The division is optional, and it must not be allowed to eat the first digit of
+  // the LP: without the lookahead, "master 393 LP" parses as division 3, 93 LP.
+  const re=/\b(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)\b(?:\s+([1-4]|IV|III|II|I)(?![\dA-Za-z]))?\s*(\d{1,4})\s*LP\b/ig;
+  let m,last=null;
+  while((m=re.exec(before)))last=m;
+  if(!last)return null;
+  const tier=last[1].toUpperCase();
+  const mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
+  const map={"1":"I","2":"II","3":"III","4":"IV"};
+  return{tier,division:(mPlus||!last[2])?null:(map[last[2]]||last[2].toUpperCase()),lp:+last[3]};
+}
+// The summoner level is stacked on the profile icon as a bare number with no
+// label anywhere near it, which is why the "Lv." patterns never found it. There
+// is nothing to match on except position: it is the number printed immediately
+// before the Riot ID heading. Deliberately a tight window and a sane range —
+// a wrong number here would show up as a confident, wrong "Level".
+function parseLevelText(raw,acc){
+  if(!raw||!acc||!acc.gameName)return null;
+  const text=stripMarkup(raw);
+  const needle=(acc.gameName+"#"+acc.tagLine).toLowerCase();
+  const hay=text.toLowerCase();
+  for(let from=0;;){
+    const i=hay.indexOf(needle,from);
+    if(i<0)return null;
+    // "#" and friends because the reader-mode proxies leave the markdown heading
+    // marker sitting between the level and the name: "764 # name#tag"
+    const m=text.slice(Math.max(0,i-14),i).match(/(\d{1,4})[\s#>]*$/);
+    if(m){const lv=+m[1];if(lv>=1&&lv<=5000)return lv}
+    from=i+1;
+  }
 }
 function parseProfileIcon(raw){
   if(!raw)return null;
@@ -958,7 +1153,10 @@ async function fetchViaProxy(acc){
       const parsed=parseRankText(text);
       if(parsed){
         lastGoodProxy=idx; // start here next time — skips dead proxies on bulk checks
-        return {found:true,tier:parsed.tier||"UNRANKED",division:parsed.division||null,lp:parsed.lp,wins:parsed.wins,losses:parsed.losses,level:parsed.level,icon:parseProfileIcon(text),mmr:null,avgRecent:null,asOf:"auto-fetch (op.gg via "+proxies[idx].name+")",note:null,updatedAt:Date.now()};
+        return {found:true,tier:parsed.tier||"UNRANKED",division:parsed.division||null,lp:parsed.lp,wins:parsed.wins,losses:parsed.losses,
+          level:parsed.level!=null?parsed.level:parseLevelText(text,acc),
+          peak:parsePeakText(text),
+          icon:parseProfileIcon(text),mmr:null,avgRecent:null,asOf:"auto-fetch (op.gg via "+proxies[idx].name+")",note:null,updatedAt:Date.now()};
       }
       lastErr="page loaded but no rank found — name/tag/region correct?";
     }catch(e){lastErr=e.name==="AbortError"?"timeout":(e.message||"fetch blocked")}
@@ -971,16 +1169,25 @@ async function fetchViaBackend(acc){
   const text=await fetchWithTimeout(url,12000);
   const d=JSON.parse(text);
   if(d.found===false)return {found:false,updatedAt:Date.now()};
-  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,updatedAt:Date.now()};
+  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,updatedAt:Date.now()};
+}
+// the backend and the AI path hand us a peak we didn't build ourselves, and it
+// goes straight into a rank comparison — normalise it or drop it
+function normPeak(p){
+  if(!p||typeof p!=="object")return null;
+  const tier=String(p.tier||"").toUpperCase();
+  if(TIER_ORDER.indexOf(tier)<0)return null;
+  const div=String(p.division||"").toUpperCase();
+  return{tier,division:DIV_ORDER[div]!==undefined?div:null,lp:Number(p.lp)||0};
 }
 async function fetchViaClaude(acc){
   if(!cfg.apiKey)throw new Error("No API key — add one in Settings");
   const r=REGIONS[acc.region]||REGIONS.EUW;
   const prompt=`Search the web for the current League of Legends ranked Solo/Duo stats of the player "${acc.gameName}#${acc.tagLine}" on the ${r.full} (${acc.region}) server.
 Preferred sources: dpm.lol first, then op.gg, leagueofgraphs, u.gg. Try queries like: dpm.lol ${acc.gameName} ${acc.tagLine} | op.gg ${acc.gameName} ${acc.tagLine} ${r.opgg}.
-Find: current tier, division and LP; this season's wins and losses; the summoner level; the profile icon image URL if visible (op.gg shows it as opgg-static.akamaized.net/.../profileIcon<number>.jpg); an estimated MMR if any site shows one (dpm.lol often does); and the average rank/tier of the last ~5 games if visible.
+Find: current tier, division and LP; this season's wins and losses; the summoner level; the highest rank reached this season (op.gg prints it under the current rank with a "Top tier" badge); the profile icon image URL if visible (op.gg shows it as opgg-static.akamaized.net/.../profileIcon<number>.jpg); an estimated MMR if any site shows one (dpm.lol often does); and the average rank/tier of the last ~5 games if visible.
 Respond with ONLY a raw JSON object, no markdown fences, no explanation, exactly this shape:
-{"found":true,"tier":"GOLD","division":"II","lp":45,"wins":30,"losses":25,"level":247,"icon":"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon123.jpg","mmr":"~2100","avgRecent":"Gold I","asOf":"how fresh the data looks","note":"one short remark only if something is off"}
+{"found":true,"tier":"GOLD","division":"II","lp":45,"wins":30,"losses":25,"level":247,"peak":{"tier":"PLATINUM","division":"IV","lp":12},"icon":"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon123.jpg","mmr":"~2100","avgRecent":"Gold I","asOf":"how fresh the data looks","note":"one short remark only if something is off"}
 Rules: use null for any value you cannot find. If unranked this season, tier "UNRANKED" and division null. If you cannot find the player at all, found=false. Numbers must be plain numbers, not strings.`;
   const res=await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",
@@ -999,6 +1206,7 @@ Rules: use null for any value you cannot find. If unranked this season, tier "UN
   if(a===-1||b===-1)throw new Error("No JSON in response");
   const parsed=JSON.parse(text.slice(a,b+1));
   parsed.icon=safeIconUrl(parsed.icon);
+  parsed.peak=normPeak(parsed.peak);
   parsed.updatedAt=Date.now();
   const modelName=cfg.model.includes("haiku")?"Haiku":"Sonnet";
   parsed.asOf=(parsed.asOf?parsed.asOf+" · ":"")+"AI ("+modelName+")";
@@ -1162,11 +1370,11 @@ function cardHTML(a,i){
   const st=STATUS[a.status]||STATUS.active;
   let peak=null;
   {let bestE=null,bestV=-1;
-   // op.gg publishes no season peak, so the observed history is all we can derive
-   // one from — and that misses anything before the account was added or between
-   // checks. A manually entered peak competes as just another candidate, and
-   // whichever is genuinely higher wins.
-   const cands=a.peakManual?hist.concat([a.peakManual]):hist;
+   // Three sources, all fallible on their own, so they simply compete and the
+   // genuinely highest wins: op.gg's own "Top tier" badge (missing on profiles
+   // that never had one), the history this app observed (blind to anything
+   // before the account was added or between checks), and a manual override.
+   const cands=hist.concat([s&&s.peak,a.peakManual].filter(Boolean));
    for(const h of cands){const v=ladderLP(h);if(v!==null&&v>bestV){bestV=v;bestE=h}}
    const cur=ladderLP(s);
    if(bestE&&(cur===null||bestV>cur))peak=shortRank(bestE);}
@@ -1219,7 +1427,7 @@ function cardHTML(a,i){
       </div>
       <div class="c-id">
         <div class="c-name"><span>${esc(a.label||a.gameName)}</span>${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.label)}</span>`:""}</div>
-        <button class="rid" data-act="copyid" title="Copy Riot ID">${esc(a.gameName)}<b>#${esc(a.tagLine)}</b></button>
+        <button class="rid" data-act="copyid" title="Copy Riot ID"><span>${esc(a.gameName)}<b>#${esc(a.tagLine)}</b></span></button>
       </div>
       <div class="c-chrome">
         <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select for bulk actions">
@@ -1232,7 +1440,7 @@ function cardHTML(a,i){
       ${deltaChip?`<div class="c-deltas">${deltaChip}</div>`:""}
     </div>
     ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
-    ${sparkline(hist)}
+    ${rankChart(hist)}
     ${microStats.length?`<div class="c-stats">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(a.tags||[]).length?`<div class="ctags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""}
@@ -1256,12 +1464,16 @@ function cardHTML(a,i){
           <select data-f="pdiv">${["I","II","III","IV"].map(d=>`<option ${pm&&pm.division===d?"selected":""}>${d}</option>`).join("")}</select>
           <input data-f="plp" type="number" min="0" max="2000" placeholder="LP" value="${pm&&pm.lp!=null?pm.lp:""}" style="width:72px">
         </div>
-        <div style="font-size:11px;color:var(--faint);margin-top:7px;line-height:1.5">op.gg doesn't publish a season peak, so it can only be read from checks this app has made. Set it here if you peaked before adding the account or between refreshes — the higher of the two is shown.</div>
+        <div style="font-size:11px;color:var(--faint);margin-top:7px;line-height:1.5">Refresh reads op.gg's own "Top tier" peak when the profile has one, and the app also tracks the highest rank it has seen itself. Set a peak here as well if you know better — whichever is genuinely highest is the one shown.</div>
       </div>
       <div><button data-act="rankapply" style="color:var(--teal)">Save</button></div>
     </div>`)(a.peakManual):""}
     ${openPaste.has(a.id)?`<div class="login${rv("paste")}"><textarea data-f="pastetext" rows="3" placeholder="Open the OP.GG/DPM profile, select all (Ctrl+A), copy, paste here — I'll extract the rank" style="width:100%"></textarea><div style="margin-top:6px"><button data-act="pasteapply" style="color:var(--teal)">Parse &amp; save</button></div></div>`:""}
-    ${a.notes?`<div class="c-notes"><span class="k">Notes</span>${esc(a.notes)}</div>`:""}
+    ${editingNote===a.id
+      ? `<div class="c-notes${rv("note")}"><span class="k">Notes</span>
+        <textarea data-f="notetext" rows="3" placeholder="Anything worth remembering about this account…">${esc(noteDraft)}</textarea>
+        <div class="note-btns"><button data-act="notesave" style="color:var(--teal)">Save</button><button data-act="notecancel">Cancel</button><span class="hint">Ctrl+Enter saves · Esc cancels</span></div></div>`
+      : a.notes?`<div class="c-notes" data-act="noteedit" title="Click to edit"><span class="k">Notes ${icon("pencil")}</span>${esc(a.notes)}</div>`:""}
     <div class="c-foot">
       <span class="c-meta"><span class="upd${stale?" stale":""}">${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${s&&s.asOf?`<span class="src">${esc(s.asOf)}</span>`:""}</span>
       <div class="acts">
@@ -1273,6 +1485,7 @@ function cardHTML(a,i){
       </div>
       ${openMore.has(a.id)?`<div class="acts${rv("more")}">
         <button data-act="rank" title="Enter rank manually">${icon("pencil")} Rank</button>
+        <button data-act="note" title="Write a note on this account">${icon("note")} Note</button>
         <button data-act="paste" title="Paste profile page text">${icon("clipboard")} Paste</button>
         <button data-act="edit">Edit</button>
         ${a.archived?'<button data-act="unarchive">Unarchive</button>':'<button data-act="archive">Archive</button>'}
@@ -1293,6 +1506,13 @@ function renderGrid(){
     grid.innerHTML=list.map((a,i)=>cardHTML(a,i)).join("");
   }
   reveal=null; // consumed by the render above — the next one must not replay it
+  // innerHTML replacement drops the focused textarea, so put the caret back —
+  // but only if focus actually moved, or a background render would yank the
+  // cursor to the end while the user is still typing.
+  if(editingNote){
+    const ta=grid.querySelector('[data-f="notetext"]');
+    if(ta&&document.activeElement!==ta){ta.focus();try{ta.setSelectionRange(ta.value.length,ta.value.length)}catch(e){}}
+  }
   document.title=accounts.length?"Smurf Tracker ("+accounts.length+")":"Smurf Tracker — Summoner Vault";
   $("count").textContent=accounts.length?list.length+" of "+accounts.length+" account"+(accounts.length===1?"":"s")+" shown":"";
   $("bCheckAll").disabled=accounts.length===0||checking.size>0;
@@ -1301,6 +1521,7 @@ function renderGrid(){
 
 // ---------- form ----------
 function closeAllPanels(){
+  revertAccents(); // Settings previews colours live; leaving it must not keep them
   $("form").classList.add("hidden");
   $("settings").classList.add("hidden");
   $("help").classList.add("hidden");
@@ -1351,7 +1572,7 @@ function submitForm(){
 }
 
 // ---------- settings ----------
-function openSettings(){closeAllPanels();$("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";$("sAutoLock").value=cfg.autoLockMin||0;$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sVaultPass").value="";updateVaultStatus();$("settings").classList.remove("hidden")}
+function openSettings(){closeAllPanels();$("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";$("sAutoLock").value=cfg.autoLockMin||0;$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;$("sVaultPass").value="";updateVaultStatus();$("settings").classList.remove("hidden")}
 function renderPwMeter(){
   const p=$("fPass").value;
   const {score,label}=passwordStrength(p);
@@ -1360,7 +1581,7 @@ function renderPwMeter(){
   $("pwMeterLabel").textContent=p?label:"";
 }
 function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted."}
-const DEFAULT_ACCENT="#d8b874";
+const DEFAULT_ACCENT="#d8b874", DEFAULT_ACCENT2="#2ee0c2";
 function hexToHsl(hex){
   const r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;
   const max=Math.max(r,g,b),min=Math.min(r,g,b);let h,s,l=(max+min)/2;
@@ -1386,6 +1607,32 @@ function applyAccent(hex){
   root.setProperty("--gold-dim",hslToHex(h,Math.max(s-10,0),Math.max(l-25,10)));
   root.setProperty("--gold-mid",hslToHex(h,Math.max(s-10,0),Math.min(Math.max(l-5,30),65)));
   root.setProperty("--star",hslToHex(h,Math.min(s+10,100),Math.min(l+20,88)));
+}
+// WCAG relative luminance — the only honest way to decide whether a colour wants
+// dark or light text on it. Eyeballing "is this bright" from the hex fails badly
+// on saturated blues and greens.
+function relLuminance(hex){
+  const ch=[1,3,5].map(i=>{
+    const v=parseInt(hex.slice(i,i+2),16)/255;
+    return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);
+  });
+  return 0.2126*ch[0]+0.7152*ch[1]+0.0722*ch[2];
+}
+// Secondary accent: the Login button, Refresh, focus rings, the card glow.
+function applyAccent2(hex){
+  const[h,s]=hexToHsl(hex);
+  const root=document.documentElement.style;
+  root.setProperty("--teal",hex);
+  // Anything filled with --teal prints its label in --teal-ink. A fixed dark ink
+  // vanishes on a deep secondary and a fixed light one vanishes on a pale one,
+  // so the ink follows the colour instead of being hardcoded.
+  root.setProperty("--teal-ink",relLuminance(hex)>0.42?hslToHex(h,Math.min(s+15,100),9):"#ffffff");
+}
+// Both pickers preview live while you drag them, so leaving Settings without
+// saving has to put the saved colours back.
+function revertAccents(){
+  applyAccent(cfg.accent||DEFAULT_ACCENT);
+  applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
 }
 function notify(title,body){
   if(!cfg.notify||!("Notification"in window)||Notification.permission!=="granted")return;
@@ -1610,6 +1857,7 @@ $("sSave").addEventListener("click",async()=>{
   cfg.discordWebhook=$("sDiscord").value.trim();
   cfg.autoLockMin=Math.max(0,+$("sAutoLock").value||0);
   cfg.accent=$("sAccent").value;applyAccent(cfg.accent);
+  cfg.accent2=$("sAccent2").value;applyAccent2(cfg.accent2);
   if(cfg.notify&&"Notification"in window&&Notification.permission==="default"){
     const perm=await Notification.requestPermission();
     if(perm!=="granted"){cfg.notify=false;$("sNotify").checked=false;toast("Notifications blocked by the browser")}
@@ -1618,8 +1866,14 @@ $("sSave").addEventListener("click",async()=>{
   }
   saveCfg();$("settings").classList.add("hidden");toast("Settings saved")
 });
-$("sClose").addEventListener("click",()=>$("settings").classList.add("hidden"));
-$("sAccentReset").addEventListener("click",()=>{$("sAccent").value=DEFAULT_ACCENT;applyAccent(DEFAULT_ACCENT);cfg.accent=null;saveCfg();toast("Accent reset")});
+$("sClose").addEventListener("click",()=>{revertAccents();$("settings").classList.add("hidden")});
+$("sAccent").addEventListener("input",e=>applyAccent(e.target.value));
+$("sAccent2").addEventListener("input",e=>applyAccent2(e.target.value));
+$("sAccentReset").addEventListener("click",()=>{
+  $("sAccent").value=DEFAULT_ACCENT;$("sAccent2").value=DEFAULT_ACCENT2;
+  applyAccent(DEFAULT_ACCENT);applyAccent2(DEFAULT_ACCENT2);
+  cfg.accent=null;cfg.accent2=null;saveCfg();toast("Accents reset");
+});
 $("sVaultSet").addEventListener("click",async()=>{
   const pass=$("sVaultPass").value;
   if(!pass||pass.length<4){toast("Choose a password with at least 4 characters");return}
@@ -1724,6 +1978,23 @@ $("bulkDelete").addEventListener("click",()=>{
 });
 $("bulkClear").addEventListener("click",()=>{selected.clear();render()});
 
+// the note editor lives inside the grid, which re-renders from scratch — so its
+// two listeners are delegated like everything else on a card
+$("grid").addEventListener("input",e=>{
+  if(e.target&&e.target.dataset&&e.target.dataset.f==="notetext")noteDraft=e.target.value;
+});
+$("grid").addEventListener("keydown",e=>{
+  const ta=e.target;
+  if(!ta||!ta.dataset||ta.dataset.f!=="notetext")return;
+  if(e.key==="Escape"){
+    e.stopPropagation(); // otherwise the global Esc closes every panel on the page too
+    editingNote=null;noteDraft="";renderGrid();
+  }else if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){
+    e.preventDefault();
+    const btn=ta.closest(".c-notes").querySelector('[data-act="notesave"]');
+    if(btn)btn.click();
+  }
+});
 $("grid").addEventListener("click",async e=>{
   if(e.target.id==="bDemo"){loadDemo();return}
   const btn=e.target.closest("[data-act]");if(!btn)return;
@@ -1754,6 +2025,20 @@ $("grid").addEventListener("click",async e=>{
   else if(act==="edit")openForm(acc);
   else if(act==="archive"){acc.archived=true;saveDB();render();toast("Archived — toggle \"Archived\" in the toolbar to see it again")}
   else if(act==="unarchive"){acc.archived=false;saveDB();render();toast("Restored to active accounts")}
+  else if(act==="note"||act==="noteedit"){
+    const on=editingNote!==id;
+    editingNote=on?id:null;
+    if(on){noteDraft=acc.notes||"";openMore.delete(id);reveal=id+":note"}else reveal=null;
+    renderGrid();
+  }
+  else if(act==="notecancel"){editingNote=null;noteDraft="";renderGrid()}
+  else if(act==="notesave"){
+    const ta=card.querySelector('[data-f="notetext"]');
+    const v=(ta?ta.value:noteDraft).trim();
+    if(v)acc.notes=v;else delete acc.notes;
+    editingNote=null;noteDraft="";
+    saveDB();render();toast(v?"Note saved":"Note cleared");
+  }
   else if(act==="rank"){openPaste.delete(id);const on=!openRank.has(id);on?openRank.add(id):openRank.delete(id);reveal=on?id+":rank":null;renderGrid()}
   else if(act==="paste"){openRank.delete(id);const on=!openPaste.has(id);on?openPaste.add(id):openPaste.delete(id);reveal=on?id+":paste":null;renderGrid()}
   else if(act==="rankapply"){
@@ -1762,7 +2047,7 @@ $("grid").addEventListener("click",async e=>{
     const old=acc.stats||{};
     const s={found:true,tier,division:(isU||mPlus)?null:g("div").value,lp:isU?null:(+g("lp").value||0),
       wins:g("w").value===""?null:+g("w").value,losses:g("l").value===""?null:+g("l").value,
-      level:old.level!=null?old.level:null,icon:old.icon||null,mmr:old.mmr||null,avgRecent:null,asOf:"manual entry",note:null,updatedAt:Date.now()};
+      level:old.level!=null?old.level:null,peak:old.peak||null,icon:old.icon||null,mmr:old.mmr||null,avgRecent:null,asOf:"manual entry",note:null,updatedAt:Date.now()};
     const ptier=g("ptier")?g("ptier").value:"UNRANKED";
     if(ptier==="UNRANKED")delete acc.peakManual;
     else acc.peakManual={tier:ptier,division:TIER_ORDER.indexOf(ptier)>=TIER_ORDER.indexOf("MASTER")?null:g("pdiv").value,lp:+g("plp").value||0};
@@ -1774,7 +2059,9 @@ $("grid").addEventListener("click",async e=>{
     if(!p){toast("Couldn't find a rank in that text — paste the whole profile page");return}
     const old=acc.stats||{};
     const s={found:true,tier:p.tier||"UNRANKED",division:p.division,lp:p.lp,wins:p.wins,losses:p.losses,
-      level:p.level!=null?p.level:(old.level!=null?old.level:null),icon:parseProfileIcon(pastedText)||old.icon||null,mmr:null,avgRecent:null,asOf:"pasted from profile",note:null,updatedAt:Date.now()};
+      level:p.level!=null?p.level:(parseLevelText(pastedText,acc)??(old.level!=null?old.level:null)),
+      peak:parsePeakText(pastedText)||old.peak||null,
+      icon:parseProfileIcon(pastedText)||old.icon||null,mmr:null,avgRecent:null,asOf:"pasted from profile",note:null,updatedAt:Date.now()};
     commitStats(id,acc,s);toast("Parsed: "+(p.tier?p.tier+(p.division?" "+p.division:"")+(p.lp!=null?" · "+p.lp+" LP":""):"Unranked, level "+p.level));
   }
   else if(act==="check")check(id);
@@ -1853,6 +2140,7 @@ function boot(){
   try{const c=hasStorage?localStorage.getItem(CFG_KEY):null;if(c)cfg=Object.assign(cfg,JSON.parse(c))}catch(e){}
   if(MODEL_ALIASES[cfg.model]){cfg.model=MODEL_ALIASES[cfg.model];saveCfg()}
   if(cfg.accent)applyAccent(cfg.accent);
+  if(cfg.accent2)applyAccent2(cfg.accent2);
   let envelope=null;
   try{
     const raw=hasStorage?localStorage.getItem(DB_KEY):null;
