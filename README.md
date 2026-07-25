@@ -45,8 +45,18 @@ npm install
 npm test
 ```
 
+## Terms of use
+
+This project is **source-available, not open source** — see [LICENSE](LICENSE) for the full text. In short:
+
+**You may** use it for free for your own personal use, share it by linking to this repo or the hosted version, and keep a private copy or fork for yourself and your friends.
+
+**You may not** use it for anything malicious or unlawful (including accessing accounts you don't own, or breaking Riot's terms of service), publish a modified/rebranded/rewritten version of it, sell it or bundle it into anything paid, or present it as your own work.
+
+Found a bug or want a feature? Open an issue — contributions and suggestions are welcome.
+
 ## Credits
 
-Made by **MarvinPanVan** · Discord: `marvinpanvan`. MIT-licensed, use it however you like.
+Made by **MarvinPanVan** · Discord: `marvinpanvan`
 
 ## Not affiliated with Riot Games.

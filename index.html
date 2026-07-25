@@ -247,19 +247,20 @@
 
   <!-- help -->
   <div id="help" class="hx hidden" style="margin-bottom:16px"><div class="hx-in" style="padding:16px;font-size:13px;color:var(--muted);line-height:1.7;position:relative">
-    <button class="panel-close" data-close-panel title="Close">✕</button>
+    <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     <div class="hex-display" style="color:var(--gold);font-size:14px;text-transform:uppercase;margin-bottom:8px">How this works</div>
     <b style="color:var(--text)">Your data stays here.</b> Accounts are saved in this browser on this device — nothing gets uploaded. Clearing browser data wipes the vault, so use <b style="color:var(--text)">Export</b> for backups and <b style="color:var(--text)">Import</b> to restore or merge them.<br>
     <b style="color:var(--text)">Rank checks are free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b style="color:var(--text)">Paste</b> (copy the profile page in) or <b style="color:var(--text)">Rank</b> to enter it by hand — history, sparklines and stats work the same either way.<br>
     <b style="color:var(--text)">Tips:</b> the star pins favorites on top · search matches names, tags, even ranks (try "gold") · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
     <b style="color:var(--text)">Extra privacy:</b> set a master password in <b style="color:var(--text)">Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.<br>
+    <b style="color:var(--text)">Using this app:</b> free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.<br>
     <b style="color:var(--text)">More:</b> <b style="color:var(--text)">⋯</b> menu has bulk add (paste a list of Name#TAG) and CSV import · archive an account to hide it without deleting (toggle <b style="color:var(--text)">Archived</b> in the toolbar) · shift-click a card's checkbox to select a range · <b style="color:var(--text)">n</b> for a new account · pick your own accent color in Settings.
     <div style="margin-top:10px"><button id="bHelpClose">Got it</button></div>
   </div></div>
 
   <!-- settings -->
   <div id="settings" class="hx teal hidden" style="margin-bottom:16px"><div class="hx-in" style="position:relative">
-    <button class="panel-close" data-close-panel title="Close">✕</button>
+    <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     <div class="formgrid">
       <div class="fld fw">
         <label>Backend URL (optional — your own rank server, e.g. Cloudflare Worker)</label>
@@ -272,7 +273,7 @@
       <div class="fld">
         <label>Model for rank checks</label>
         <select id="sModel">
-          <option value="claude-sonnet-4-6">Sonnet — more reliable (~1–2 ct/check)</option>
+          <option value="claude-sonnet-5">Sonnet — more reliable (~1–2 ct/check)</option>
           <option value="claude-haiku-4-5">Haiku — cheaper, may miss data</option>
         </select>
       </div>
@@ -321,7 +322,7 @@
 
   <!-- bulk add -->
   <div id="bulkAdd" class="hx teal hidden" style="margin-bottom:16px"><div class="hx-in" style="position:relative">
-    <button class="panel-close" data-close-panel title="Close">✕</button>
+    <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     <div class="formgrid">
       <div class="fw" style="font-size:13px;color:var(--muted)">One account per line, format <code>Name#TAG</code>. All get the region below — edit individually afterward for logins/notes.</div>
       <div class="fld"><label>Region for all</label><select id="baRegion"></select></div>
@@ -335,7 +336,7 @@
 
   <!-- add/edit form -->
   <div id="form" class="hx teal hidden" style="margin-bottom:16px"><div class="hx-in" style="position:relative">
-    <button class="panel-close" data-close-panel title="Close">✕</button>
+    <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     <div class="formgrid">
       <div class="fld"><label>Label (optional)</label><input id="fLabel" placeholder="e.g. ADC smurf"></div>
       <div class="fld"><label>Region</label>
@@ -416,6 +417,7 @@
   <div id="count" class="count"></div>
 
   <div class="count" style="margin-top:8px">© 2026 MarvinPanVan · Smurf Tracker — not affiliated with Riot Games · Discord: marvinpanvan</div>
+  <div class="count" style="margin-top:4px;font-size:11px">Free for personal use. Do not resell, rebrand, publish modified versions, or use for anything malicious. <a href="https://github.com/MarvinPanVan/league-smurf-tracker/blob/main/LICENSE" target="_blank" rel="noreferrer" style="color:var(--gold-mid)">Terms</a></div>
 
   <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
   <input type="file" id="fileInCsv" accept=".csv,text/csv" class="hidden">
@@ -443,7 +445,12 @@ const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / 
 
 // ---------- state ----------
 let accounts=[];
-let cfg={apiKey:"",model:"claude-sonnet-4-6",autoCheck:false,backendUrl:""};
+let cfg={apiKey:"",model:"claude-sonnet-5",autoCheck:false,backendUrl:""};
+// Older releases stored retired model IDs; map them forward so a saved setting
+// doesn't keep sending a model the API no longer serves.
+const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"claude-sonnet-5","claude-3-5-sonnet":"claude-sonnet-5"};
+// Only Sonnet 5 supports the newer dynamic-filtering web search; Haiku needs the basic one.
+const WEB_SEARCH_TOOL={"claude-sonnet-5":"web_search_20260209","claude-haiku-4-5":"web_search_20250305"};
 let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArchived:false};
 let checking=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), openPaste=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
 let hasStorage=true;
@@ -630,6 +637,12 @@ function parseProfileIcon(raw){
   const m=String(raw).match(/profile_icons?\/profileicon(\d+)/i);
   return m?`https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon${m[1]}.jpg`:null;
 }
+// The backend and the AI path both hand us an icon URL we didn't build ourselves,
+// and it ends up in an <img src>. Only let plain https URLs through.
+function safeIconUrl(u){
+  if(!u)return null;
+  try{return new URL(u).protocol==="https:"?u:null}catch(e){return null}
+}
 async function fetchWithTimeout(url,ms){
   const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);
   try{const r=await fetch(url,{signal:c.signal});if(!r.ok)throw new Error("HTTP "+r.status);return await r.text()}
@@ -665,7 +678,7 @@ async function fetchViaBackend(acc){
   const text=await fetchWithTimeout(url,12000);
   const d=JSON.parse(text);
   if(d.found===false)return {found:false,updatedAt:Date.now()};
-  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,icon:d.icon||null,mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,updatedAt:Date.now()};
+  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,updatedAt:Date.now()};
 }
 async function fetchViaClaude(acc){
   if(!cfg.apiKey)throw new Error("No API key — add one in Settings");
@@ -684,7 +697,7 @@ Rules: use null for any value you cannot find. If unranked this season, tier "UN
       "anthropic-version":"2023-06-01",
       "anthropic-dangerous-direct-browser-access":"true"
     },
-    body:JSON.stringify({model:cfg.model,max_tokens:1000,messages:[{role:"user",content:prompt}],tools:[{type:"web_search_20250305",name:"web_search"}]})
+    body:JSON.stringify({model:cfg.model,max_tokens:1000,messages:[{role:"user",content:prompt}],tools:[{type:WEB_SEARCH_TOOL[cfg.model]||"web_search_20250305",name:"web_search"}]})
   });
   const data=await res.json();
   if(data.error)throw new Error(data.error.message||"API error");
@@ -692,6 +705,7 @@ Rules: use null for any value you cannot find. If unranked this season, tier "UN
   const a=text.indexOf("{"),b=text.lastIndexOf("}");
   if(a===-1||b===-1)throw new Error("No JSON in response");
   const parsed=JSON.parse(text.slice(a,b+1));
+  parsed.icon=safeIconUrl(parsed.icon);
   parsed.updatedAt=Date.now();
   const modelName=cfg.model.includes("haiku")?"Haiku":"Sonnet";
   parsed.asOf=(parsed.asOf?parsed.asOf+" · ":"")+"AI ("+modelName+")";
@@ -781,12 +795,15 @@ function renderBulkBar(){
 }
 
 function renderFilterOptions(){
-  const regions=[...new Set(accounts.map(a=>a.region))].sort((a,b)=>a.localeCompare(b));
+  // Scope the options to whichever view is showing — offering a region or status
+  // that only exists on the other side of the archive toggle just yields "no matches".
+  const inView=accounts.filter(a=>!!a.archived===ui.showArchived);
+  const regions=[...new Set(inView.map(a=>a.region))].sort((a,b)=>a.localeCompare(b));
   if(ui.region&&!regions.includes(ui.region))ui.region="";
   $("tRegion").innerHTML=`<option value="">All regions</option>`+regions.map(r=>`<option value="${esc(r)}" ${ui.region===r?"selected":""}>${esc(r)}</option>`).join("");
 
   const order=["active","resting","restricted","banned"];
-  const statuses=[...new Set(accounts.map(a=>a.status||"active"))].sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+  const statuses=[...new Set(inView.map(a=>a.status||"active"))].sort((a,b)=>order.indexOf(a)-order.indexOf(b));
   if(ui.status&&!statuses.includes(ui.status))ui.status="";
   $("tStatus").innerHTML=`<option value="">All statuses</option>`+statuses.map(s=>`<option value="${s}" ${ui.status===s?"selected":""}>${esc((STATUS[s]||STATUS.active).label)}</option>`).join("");
 }
@@ -837,7 +854,8 @@ function renderDash(){
 }
 
 function renderTagbar(){
-  const all=[...new Set(accounts.flatMap(a=>a.tags||[]))].sort((a,b)=>a.localeCompare(b));
+  const all=[...new Set(accounts.filter(a=>!!a.archived===ui.showArchived).flatMap(a=>a.tags||[]))].sort((a,b)=>a.localeCompare(b));
+  if(ui.tag&&!all.includes(ui.tag))ui.tag=null;
   $("tagbar").innerHTML=all.map(t=>`<span class="chip ${ui.tag===t?"on":""}" data-tag="${esc(t)}">${esc(t)}</span>`).join("");
 }
 
@@ -1042,7 +1060,12 @@ function doExport(){
   toast("Backup exported");
 }
 function csvCell(v){
-  const s=String(v==null?"":v);
+  let s=String(v==null?"":v);
+  // Spreadsheets treat a cell starting with = + - @ (or a control char) as a formula,
+  // so a password like "@GN{Er..." or "+6qu..." gets executed or shown as #NAME? instead
+  // of surviving the round trip. Prefix those with an apostrophe — doImportCSV strips
+  // exactly one back off again, but only from files we exported ourselves.
+  if(/^['=+\-@\t\r]/.test(s))s="'"+s;
   return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
 }
 function doExportCSV(){
@@ -1116,8 +1139,15 @@ function doImportCSV(file){
       const rows=parseCSV(rd.result);
       if(rows.length<2)throw new Error("empty");
       const header=rows[0];
+      // Only un-escape the apostrophe csvCell() adds when this is one of our own exports —
+      // a third-party CSV whose password genuinely starts with ' must come through untouched.
+      const ownExport=header.includes("gameName")&&header.includes("favorite")&&header.includes("lastUpdated");
       const list=rows.slice(1).map(r=>{
-        const get=name=>{const i=header.indexOf(name);return i>=0?(r[i]||""):""};
+        const get=name=>{
+          const i=header.indexOf(name);
+          const v=i>=0?(r[i]||""):"";
+          return ownExport&&v.startsWith("'")?v.slice(1):v;
+        };
         const gameName=get("gameName"),tagLine=get("tagLine");
         if(!gameName||!tagLine)return null;
         const tier=get("tier");
@@ -1293,7 +1323,7 @@ $("tRegion").addEventListener("change",e=>{ui.region=e.target.value;renderGrid()
 $("tSort").addEventListener("change",e=>{ui.sort=e.target.value;renderGrid()});
 $("tStatus").addEventListener("change",e=>{ui.status=e.target.value;renderGrid()});
 $("tFav").addEventListener("click",()=>{ui.favOnly=!ui.favOnly;$("tFav").style.color=ui.favOnly?"var(--star)":"";$("tFav").style.borderColor=ui.favOnly?"var(--star)":"";renderGrid()});
-$("tArchived").addEventListener("click",()=>{ui.showArchived=!ui.showArchived;$("tArchived").style.color=ui.showArchived?"var(--star)":"";$("tArchived").style.borderColor=ui.showArchived?"var(--star)":"";renderGrid()});
+$("tArchived").addEventListener("click",()=>{ui.showArchived=!ui.showArchived;$("tArchived").style.color=ui.showArchived?"var(--star)":"";$("tArchived").style.borderColor=ui.showArchived?"var(--star)":"";render()});
 $("dash").addEventListener("click",e=>{if(e.target.id==="bDashToggle"){cfg.dashCollapsed=!cfg.dashCollapsed;saveCfg();renderDash()}});
 $("tagbar").addEventListener("click",e=>{const t=e.target.closest("[data-tag]");if(!t)return;ui.tag=ui.tag===t.dataset.tag?null:t.dataset.tag;render()});
 $("tSelectAll").addEventListener("change",e=>{
@@ -1436,6 +1466,10 @@ function relock(){
   }catch(e){}
   if(!envelope)return;
   vaultPassword=null;accounts=[];
+  // Drop every per-card UI state too — otherwise a password that was revealed
+  // before the auto-lock would still be on screen after the next unlock.
+  [checking,openLogin,shownPw,openRank,openPaste,selected,openMore].forEach(s=>s.clear());
+  armedDelete=null;editingId=null;lastSelectedIdx=null;
   closeAllPanels();
   $("appRoot").classList.add("hidden");
   showLockScreen(envelope);
@@ -1446,6 +1480,7 @@ function boot(){
   hasStorage=storageOK();
   if(!hasStorage){$("banner").classList.add("show")}
   try{const c=hasStorage?localStorage.getItem(CFG_KEY):null;if(c)cfg=Object.assign(cfg,JSON.parse(c))}catch(e){}
+  if(MODEL_ALIASES[cfg.model]){cfg.model=MODEL_ALIASES[cfg.model];saveCfg()}
   if(cfg.accent)applyAccent(cfg.accent);
   let envelope=null;
   try{

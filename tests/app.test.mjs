@@ -180,6 +180,76 @@ test("genPassword always mixes upper/lower/digit/symbol, never comes out all-let
   }
 });
 
+test("csvCell escapes leading =+-@ so spreadsheets don't treat a password as a formula", () => {
+  const win = bootApp();
+  assert.equal(win.csvCell("@GN{ErQW55"), "'@GN{ErQW55");
+  assert.equal(win.csvCell("+6quz"), "'+6quz");
+  assert.equal(win.csvCell("=1+1"), "'=1+1");
+  assert.equal(win.csvCell("-lead"), "'-lead");
+  assert.equal(win.csvCell("'already"), "''already");
+  assert.equal(win.csvCell("safe"), "safe", "ordinary values must not be altered");
+});
+
+test("CSV export -> import round-trips a formula-looking password unchanged", async () => {
+  const win = bootApp();
+  // Build a header identical to doExportCSV's so the importer recognises it as our own file
+  const cols = ["label","gameName","tagLine","region","status","tier","division","lp","wins","losses","level","login","password","email","tags","notes","favorite","lastUpdated"];
+  const nasty = "@GN{ErQW55tFGR_kr&~YxUkg,Dc]qKTD";
+  const row = ["", "Round Trip", "9999", "EUW", "active", "", "", "", "", "", "", "user", nasty, "", "", "", "no", ""];
+  const csv = [cols.join(","), row.map(win.csvCell).join(",")].join("\r\n");
+
+  const file = new win.File([csv], "rt.csv", { type: "text/csv" });
+  win.doImportCSV(file);
+  await new Promise(r => setTimeout(r, 150));
+
+  const stored = JSON.parse(win.localStorage.getItem("smurf-tracker"));
+  assert.equal(stored.length, 1);
+  assert.equal(stored[0].password, nasty, "password must survive the escape/un-escape round trip byte-for-byte");
+});
+
+test("a third-party CSV whose password starts with an apostrophe is left untouched", async () => {
+  const win = bootApp();
+  // No "favorite"/"lastUpdated" columns => not one of our exports => no un-escaping
+  const csv = "gameName,tagLine,region,password\r\nForeign,1234,EUW,'quoted";
+  const file = new win.File([csv], "foreign.csv", { type: "text/csv" });
+  win.doImportCSV(file);
+  await new Promise(r => setTimeout(r, 150));
+
+  const stored = JSON.parse(win.localStorage.getItem("smurf-tracker"));
+  assert.equal(stored[0].password, "'quoted");
+});
+
+test("safeIconUrl only lets https URLs through", () => {
+  const win = bootApp();
+  assert.equal(win.safeIconUrl("https://opgg-static.akamaized.net/x.jpg"), "https://opgg-static.akamaized.net/x.jpg");
+  assert.equal(win.safeIconUrl("javascript:alert(1)"), null);
+  assert.equal(win.safeIconUrl("http://insecure.example/x.jpg"), null);
+  assert.equal(win.safeIconUrl("not a url"), null);
+  assert.equal(win.safeIconUrl(null), null);
+  assert.equal(win.safeIconUrl(""), null);
+});
+
+test("region/status/tag filters list only values present in the view being shown", () => {
+  const win = bootApp();
+  addRealAccount(win, "Active One", "1111");           // EUW, active
+  addRealAccount(win, "To Archive", "2222");           // will become archived
+
+  // Give the second account a distinguishing tag, then archive it
+  let card = [...win.document.querySelectorAll(".card")].find(c => c.textContent.includes("To Archive"));
+  card.querySelector('[data-act="more"]').click();
+  card = [...win.document.querySelectorAll(".card")].find(c => c.textContent.includes("To Archive"));
+  card.querySelector('[data-act="archive"]').click();
+
+  // Active view must not offer a status that only the archived account has, and vice versa
+  const activeStatuses = [...win.document.querySelectorAll("#tStatus option")].map(o => o.value).filter(Boolean);
+  assert.deepEqual(activeStatuses, ["active"]);
+
+  win.document.getElementById("tArchived").click();
+  const archivedRegions = [...win.document.querySelectorAll("#tRegion option")].map(o => o.value).filter(Boolean);
+  assert.deepEqual(archivedRegions, ["EUW"], "archived view lists the archived account's region");
+  assert.equal(win.document.querySelectorAll(".card").length, 1);
+});
+
 test("demo preview never touches localStorage, and Exit preview cleanly returns to an empty vault", () => {
   const win = bootApp();
   win.document.getElementById("bDemo").click();

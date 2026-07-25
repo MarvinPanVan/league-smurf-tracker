@@ -1,21 +1,58 @@
-MIT License
+Smurf Tracker License
 
-Copyright (c) 2026 MarvinPanVan
+Copyright (c) 2026 MarvinPanVan. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software is source-available, not open source. Please read these terms
+before using it.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+WHAT YOU MAY DO
+
+1. Use this software for your own personal, non-commercial purposes, for free,
+   for as long as you like.
+2. Share it with others by linking to the official project page
+   (https://github.com/MarvinPanVan/league-smurf-tracker) or the official
+   hosted version (https://marvinpanvan.github.io/league-smurf-tracker/).
+3. Run your own private copy for yourself (for example, a personal fork used
+   only by you, or a copy hosted for you and your friends free of charge),
+   provided the copyright notice and this license remain intact and visible.
+4. Report bugs, request features, or propose changes to the author.
+
+WHAT YOU MAY NOT DO
+
+1. NO MALICIOUS OR UNLAWFUL USE. You may not use this software to break the
+   law, to gain unauthorized access to any account you do not own or are not
+   authorized to use, to harass or harm anyone, or to violate the terms of
+   service of Riot Games or any other third party. This software is a personal
+   organizational tool; it is your responsibility to use it lawfully.
+2. NO REDISTRIBUTION OF MODIFIED VERSIONS. You may not publish, distribute, or
+   otherwise make available to the public a modified, rewritten, translated,
+   rebranded, or derivative version of this software. Private modifications for
+   your own use are permitted under "What you may do" above.
+3. NO COMMERCIAL USE OR RESALE. You may not sell, license, rent, sublicense, or
+   otherwise commercialize this software or any part of it, whether modified or
+   unmodified. You may not offer it as a paid product or a paid service, bundle
+   it into a paid product, or monetize access to it.
+4. NO PASSING IT OFF AS YOUR OWN. You may not remove, obscure, or alter the
+   copyright notice, the author credit, or this license, and you may not
+   present this software or a derivative of it as your own work.
+
+RESERVATION OF RIGHTS
+
+All rights not expressly granted above are reserved by the copyright holder.
+The copyright holder may grant exceptions to these terms in writing.
+
+NO WARRANTY
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+AUTHOR OR COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+You are responsible for your own account credentials and your own data. The
+author is not responsible for any account loss, ban, data loss, or other harm
+arising from the use of this software.
+
+Not affiliated with, endorsed by, or sponsored by Riot Games, Inc.
