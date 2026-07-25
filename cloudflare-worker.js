@@ -1,7 +1,7 @@
 // Smurf Tracker — Cloudflare Worker backend
 // Deploy this, paste the worker's URL into the app's Settings > "Backend URL".
 // GET /?name=<gameName>&tag=<tagLine>&region=<euw|eune|na|kr>
-// -> {"found":true,"tier":"GOLD","division":"II","lp":45,"wins":30,"losses":25,"level":247,"icon":"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon123.jpg","mmr":null,"avgRecent":null}
+// -> {"found":true,"tier":"GOLD","division":"II","lp":45,"wins":30,"losses":25,"level":247,"peak":{"tier":"PLATINUM","division":"IV","lp":12},"icon":"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon123.jpg","mmr":null,"avgRecent":null}
 // -> {"found":false}  (summoner genuinely doesn't exist)
 // -> HTTP 4xx/5xx on transient failures (missing params, op.gg unreachable, page didn't parse) —
 //    the app falls back to the free proxy chain / paste / manual entry on any non-2xx response.
@@ -51,7 +51,8 @@ export default {
       lp: parsed.lp,
       wins: parsed.wins,
       losses: parsed.losses,
-      level: parsed.level,
+      level: parsed.level != null ? parsed.level : parseLevelText(html, name, tag),
+      peak: parsePeakText(html),
       icon: parseProfileIcon(html), // needs the raw HTML — htmlToText() already stripped the <img> tags out
       mmr: null,
       avgRecent: null,
@@ -79,6 +80,45 @@ function htmlToText(html) {
     .replace(/&amp;/g, "&")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+// op.gg stacks the summoner level on the profile icon as a bare number with no
+// label anywhere near it, which is why the "Lv." patterns below never found it and
+// every backend check came back with level: null. The only anchor is position — it
+// is the number printed immediately before the Riot ID heading.
+// Ported from the app's client-side parseLevelText; keep the two in sync.
+function parseLevelText(raw, name, tag) {
+  if (!raw || !name) return null;
+  const text = htmlToText(raw);
+  const needle = (name + "#" + tag).toLowerCase();
+  const hay = text.toLowerCase();
+  for (let from = 0; ; ) {
+    const i = hay.indexOf(needle, from);
+    if (i < 0) return null;
+    const m = text.slice(Math.max(0, i - 14), i).match(/(d{1,4})[s#>]*$/);
+    if (m) { const lv = +m[1]; if (lv >= 1 && lv <= 5000) return lv; }
+    from = i + 1;
+  }
+}
+
+// The season peak: op.gg prints the highest rank reached under the current one and
+// badges it "Top tier". The division must not be allowed to eat the first digit of
+// the LP — without the lookahead, "master 393 LP" parses as division 3, 93 LP.
+// Ported from the app's client-side parsePeakText; keep the two in sync.
+function parsePeakText(raw) {
+  if (!raw) return null;
+  const text = htmlToText(raw);
+  const i = text.search(/Tops*tier/i);
+  if (i < 0) return null;
+  const before = text.slice(Math.max(0, i - 140), i);
+  const re = /(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)(?:s+([1-4]|IV|III|II|I)(?![dA-Za-z]))?s*(d{1,4})s*LP/ig;
+  let m, last = null;
+  while ((m = re.exec(before))) last = m;
+  if (!last) return null;
+  const tier = last[1].toUpperCase();
+  const mPlus = ["MASTER", "GRANDMASTER", "CHALLENGER"].includes(tier);
+  const map = { "1": "I", "2": "II", "3": "III", "4": "IV" };
+  return { tier, division: (mPlus || !last[2]) ? null : (map[last[2]] || last[2].toUpperCase()), lp: +last[3] };
 }
 
 // Ported 1:1 from the app's client-side parseRankText — keep in sync if that one changes.

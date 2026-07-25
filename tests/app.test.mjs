@@ -790,3 +790,86 @@ test("division numerals only appear when all four are marked, so no chart shows 
     assert.deepEqual([...new Set(numerals)].length, numerals.length, "duplicate numerals: " + numerals);
   }
 });
+
+// ---- the rest of what the profile page carries ----
+// Rows copied from a live profile, in both shapes a proxy can hand back.
+const SEASONS_MD = [
+  "Ranked Solo/Duo| Season | Tier | LP |",
+  "| :--- | :--- | ---: |",
+  "| **S2025** | ![Image 94](https://opgg-static.akamaized.net/images/medals_mini/master.png?w=40)master | 135 |",
+  "| **S2024 S1** | ![Image 95](https://opgg-static.akamaized.net/images/medals_mini/emerald.png?w=40)emerald 2 | 57 |",
+  "Ranked Flex| Season | Tier | LP |",
+  "| :--- | :--- | ---: |",
+  "| **S2025** | ![Image 99](https://opgg-static.akamaized.net/images/medals_mini/silver.png?w=40)silver 2 | 37 |",
+].join("\n");
+
+test("past seasons are read per queue, and the medal image never leaks into the tier", () => {
+  const win = bootApp();
+  const r = win.parseSeasons(SEASONS_MD);
+  assert.deepEqual(Array.from(r.solo, e => `${e.season} ${e.tier}${e.division ? " " + e.division : ""} ${e.lp}`),
+    ["S2025 MASTER 135", "S2024 S1 EMERALD II 57"]);
+  assert.deepEqual(Array.from(r.flex, e => `${e.season} ${e.tier} ${e.division} ${e.lp}`), ["S2025 SILVER II 37"]);
+  assert.equal(win.parseSeasons("nothing resembling a season table"), null);
+});
+
+test("the flex rank is only trusted when a tier and an LP figure sit under the heading", () => {
+  const win = bootApp();
+  assert.deepEqual({ ...win.parseFlex("Ranked Flex\n\n**Unranked**\n") }, { tier: "UNRANKED", division: null, lp: null });
+  assert.deepEqual({ ...win.parseFlex("Ranked Flex\n\n**gold 2**45 LP\n") }, { tier: "GOLD", division: "II", lp: 45 });
+  assert.equal(win.parseFlex("Ranked Solo/Duo\n\n**gold 2**45 LP\n"), null, "must not read the solo rank as flex");
+});
+
+test("champion rows parse into name, winrate, games and KDA", () => {
+  const win = bootApp();
+  const line = "*   [![Image 101: Ashe](https://opgg-static.akamaized.net/x/Ashe.png?v=1)](https://op.gg/champions/ashe/build)"
+    + "[Ashe](https://op.gg/champions/ashe/build)CS 209 (7.2)  2.25:1 KDA 6 / 6.8 / 9.3 60%25 Games \n"
+    + "*   [![Image 102: Smolder](https://opgg-static.akamaized.net/x/Smolder.png?v=1)](https://op.gg/champions/smolder/build)"
+    + "[Smolder](https://op.gg/champions/smolder/build)CS 257 (8.6)  3.01:1 KDA 9 / 5.9 / 8.8 68%22 Games ";
+  const c = win.parseChampions(line);
+  assert.equal(c.length, 2);
+  assert.deepEqual({ ...c[0] }, { name: "Ashe", kda: 2.25, k: 6, d: 6.8, a: 9.3, wr: 60, games: 25 });
+  assert.equal(c[1].name, "Smolder");
+  assert.equal(win.parseChampions("Ashe went 6/6/9 last game"), null);
+});
+
+test("the GM and Challenger floors are read off the ladder page's medal alt text", () => {
+  const win = bootApp();
+  // the tier name exists only in the image's alt — the figure itself is a bare "2,417 LP"
+  const md = "*   ![Image 65: challenger](https://opgg-static.akamaized.net/images/medals_mini/challenger.png?w=48)**2,417 LP** 6 304 Summoners\n"
+    + "*   ![Image 66: grandmaster](https://opgg-static.akamaized.net/images/medals_mini/grandmaster.png?w=48)**1,785 LP** 4 747 Summoners";
+  assert.deepEqual({ ...win.parseCutoffs(md) }, { chall: 2417, gm: 1785 });
+
+  const html = '<li><img alt="challenger" src="x.png"><strong>2,417 LP</strong> 304 Summoners</li>'
+    + '<li><img alt="grandmaster" src="y.png"><strong>1,785 LP</strong> 747 Summoners</li>';
+  assert.deepEqual({ ...win.parseCutoffs(html) }, { chall: 2417, gm: 1785 });
+  assert.equal(win.parseCutoffs("Rank Up in 3 Days! Challenger Coaching"), null, "an ad is not a floor");
+});
+
+test("the chart draws the GM/Challenger floors only where the view reaches them", () => {
+  const win = bootApp();
+  const h = [{ t: 1, tier: "MASTER", division: null, lp: 400 }, { t: 2, tier: "MASTER", division: null, lp: 1900 }];
+  const withCut = win.document.createElement("div");
+  withCut.innerHTML = win.rankChart(h, { chall: 2417, gm: 1785 });
+  // 1785 is inside the plotted range, 2417 is well above it
+  assert.deepEqual([...withCut.querySelectorAll(".lpc-cut")].map(n => n.textContent), ["GM"]);
+
+  const noCut = win.document.createElement("div");
+  noCut.innerHTML = win.rankChart(h);
+  assert.equal(noCut.querySelectorAll(".lpc-cut").length, 0, "no floors known, none drawn");
+});
+
+test("the info panel only exists once a check has brought something back for it", () => {
+  const win = bootApp();
+  assert.equal(win.infoBlockHTML({ stats: {} }), "");
+  assert.equal(win.infoBlockHTML({}), "");
+  const html = win.infoBlockHTML({ stats: {
+    flex: { tier: "UNRANKED", division: null, lp: null },
+    seasons: { solo: [{ season: "S2025", tier: "MASTER", division: null, lp: 135 }], flex: [] },
+    champs: [{ name: "Ashe", kda: 2.25, wr: 60, games: 25 }],
+  } });
+  const el = win.document.createElement("div"); el.innerHTML = html;
+  assert.match(el.textContent, /Flex/);
+  assert.match(el.textContent, /S2025/);
+  assert.match(el.textContent, /Ashe/);
+  assert.doesNotMatch(html, /undefined|NaN/);
+});

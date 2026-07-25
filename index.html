@@ -380,6 +380,22 @@
   .note-btns{display:flex;gap:5px;margin-top:7px;align-items:center}
   .note-btns button{font-size:11px;padding:4px 10px}
   .note-btns .hint{font-size:10px;color:var(--faint);margin-left:2px}
+  /* ---- info panel: past seasons, flex, champions ---- */
+  .login.info{gap:13px}
+  .sea{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:3px 0;font-size:12px}
+  .sea+.sea{border-top:1px solid #ffffff0a}
+  .s-yr{color:var(--faint);font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
+  .s-rk{font-weight:600;font-size:12.5px;letter-spacing:-.01em}
+  /* a fixed grid, so the numbers line up into columns you can scan down */
+  .chp{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:baseline;
+    padding:3px 0;font-size:12px;font-variant-numeric:tabular-nums}
+  .chp+.chp{border-top:1px solid #ffffff0a}
+  .c-nm{color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .c-wr{font-weight:600;color:var(--muted)}
+  .c-wr.wr-good{color:var(--good)}
+  .c-gm,.c-kd{color:var(--faint);font-size:11px}
+  .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:7.5px;font-weight:700;letter-spacing:.12em;
+    pointer-events:none;line-height:1;opacity:.9}
   .wrbar{height:5px;background:var(--panel2);border-radius:999px;overflow:hidden}
   .wrbar i{display:block;height:100%;border-radius:999px}
   .delta{font-size:10.5px;padding:2px 8px;border-radius:999px;font-weight:600;display:inline-block;white-space:nowrap}
@@ -851,7 +867,7 @@ const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"
 // Only Sonnet 5 supports the newer dynamic-filtering web search; Haiku needs the basic one.
 const WEB_SEARCH_TOOL={"claude-sonnet-5":"web_search_20260209","claude-haiku-4-5":"web_search_20250305"};
 let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArchived:false};
-let checking=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), openPaste=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
+let checking=new Set(), openInfo=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), openPaste=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
 // Which card has its note open, plus the live text. The draft is kept out here
 // on purpose: the grid re-renders wholesale, so a textarea rendered from a.notes
 // would throw away whatever was typed the moment an unrelated card updated.
@@ -916,7 +932,8 @@ const ICON={
   eyeOff:'<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M1 1l22 22"/><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>',
   // a person, not a door: the button reveals the stored credentials, it doesn't sign you in anywhere
   user:'<path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-7A4.5 4.5 0 0 0 4 19.5V21"/><circle cx="12" cy="8" r="4"/>',
-  note:'<path d="M6.5 3H18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 18.5v-13A2.5 2.5 0 0 1 6.5 3z"/><line x1="8" y1="8.5" x2="16" y2="8.5"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="15.5" x2="13" y2="15.5"/>'
+  note:'<path d="M6.5 3H18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 18.5v-13A2.5 2.5 0 0 1 6.5 3z"/><line x1="8" y1="8.5" x2="16" y2="8.5"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="15.5" x2="13" y2="15.5"/>',
+  chart:'<line x1="3" y1="21" x2="21" y2="21"/><rect x="5" y="11" width="4" height="7" rx="1"/><rect x="11" y="6" width="4" height="12" rx="1"/><rect x="17" y="14" width="4" height="4" rx="1"/>'
 };
 function icon(name,cls){return `<svg class="ico${cls?" "+cls:""}" viewBox="0 0 24 24">${ICON[name]}</svg>`}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -955,7 +972,7 @@ const LPC_W=200, LPC_H=88;
 // but never how far, or through which ranks. This draws the ladder itself —
 // a coloured band per tier, division hairlines when the view is tight enough for
 // them to mean anything, and every check as its own hoverable point.
-function rankChart(hist){
+function rankChart(hist,cut){
   const pts=(hist||[]).map(h=>({h,v:ladderLP(h)})).filter(p=>p.v!==null);
   if(pts.length<2)return"";
   const vals=pts.map(p=>p.v);
@@ -1011,6 +1028,21 @@ function rankChart(hist){
   // so the tier initial is added — and only when something actually repeats.
   const dupe=divs.some((d,i)=>divs.findIndex(o=>o.n===d.n)!==i);
   for(const d of divs){if(!d.n)continue;rule(d.v);mark(d.v,dupe?d.t.charAt(0)+" "+d.n:d.n)}
+
+  // The Grandmaster and Challenger floors, where the view reaches them. These are
+  // the current floors, so they are drawn as a reference against today's ladder —
+  // not applied backwards to old points, whose floors were different numbers.
+  if(cut){
+    for(const[key,label]of[["gm","GM"],["chall","CHALL"]]){
+      const lp=cut[key];
+      if(!lp)continue;
+      const v=M_BASE+lp;
+      if(v<=lo||v>=hi)continue;
+      const y=py(v).toFixed(1);
+      lines+=`<line x1="0" x2="${LPC_W}" y1="${y}" y2="${y}" stroke="${TIER_COLORS[key==="gm"?"GRANDMASTER":"CHALLENGER"]}" stroke-opacity=".75" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>`;
+      labels+=`<span class="lpc-cut" style="top:${(py(v)-9.5).toFixed(1)}px;color:${TIER_COLORS[key==="gm"?"GRANDMASTER":"CHALLENGER"]}">${label}</span>`;
+    }
+  }
 
   // Above Master there are no divisions left to name, only LP — and a fixed 100
   // there is far too fine, so this step grows with the range. Chosen on the space
@@ -1201,6 +1233,103 @@ function stripMarkup(raw){
     .replace(/[*_`|]+/g," ")
     .replace(/\s+/g," ");
 }
+// Same idea as stripMarkup, but row boundaries survive — the season tables and the
+// champion list are only readable as rows. Raw HTML gets its block tags turned into
+// newlines first so it lands in the same shape as the reader-mode markdown.
+function stripRows(raw){
+  return String(raw)
+    .replace(/<script[\s\S]*?<\/script>/gi," ")
+    .replace(/<style[\s\S]*?<\/style>/gi," ")
+    .replace(/<\/(tr|li|div|p|h[1-6]|section|article)\s*>/gi,"\n")
+    .replace(/<br\s*\/?>/gi,"\n")
+    .replace(/<[^>]*>/g," ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g," ")      // images: their URLs carry tier names
+    .replace(/\[([^\]]*)\]\([^)]*\)/g," $1 ")  // links: keep the label, drop the URL
+    .replace(/[*`_]+/g," ")
+    .replace(/[ \t ]+/g," ")
+    .split("\n").map(l=>l.trim()).filter(Boolean);
+}
+const TIER_WORD="challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron";
+// op.gg lists one row per past season, for both queues. Verified against a live
+// profile: "| S2025 | master | 135 |" in reader mode, the same cells without the
+// pipes once raw table HTML has been through stripRows.
+function parseSeasons(raw){
+  if(!raw)return null;
+  const rowRe=new RegExp("(S\\d{4}(?:\\s*S\\d)?)\\s*\\|?\\s*(?:\\|\\s*)?("+TIER_WORD+")\\s*([1-4])?\\s*\\|?\\s*(\\d{1,4})\\s*\\|?\\s*$","i");
+  const out={solo:[],flex:[]};
+  let bucket=null;
+  for(const line of stripRows(raw)){
+    // the table's own caption is what says which queue the rows below belong to
+    if(/ranked\s*solo/i.test(line)&&/season/i.test(line)&&/\bLP\b/i.test(line)){bucket="solo";continue}
+    if(/ranked\s*flex/i.test(line)&&/season/i.test(line)&&/\bLP\b/i.test(line)){bucket="flex";continue}
+    if(!bucket)continue;
+    const m=line.match(rowRe);
+    if(!m){if(/^\|?\s*:?-{2,}/.test(line)||/season/i.test(line))continue;if(out[bucket].length)bucket=null;continue}
+    const map={"1":"I","2":"II","3":"III","4":"IV"};
+    const tier=m[2].toUpperCase();
+    const mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
+    out[bucket].push({season:m[1].replace(/\s+/g," "),tier,division:(mPlus||!m[3])?null:map[m[3]],lp:+m[4]});
+  }
+  return(out.solo.length||out.flex.length)?out:null;
+}
+// The flex rank sits under its own heading and is usually just "Unranked". Only
+// trusted when a tier and an LP figure appear together right after the heading.
+function parseFlex(raw){
+  if(!raw)return null;
+  const lines=stripRows(raw);
+  for(let i=0;i<lines.length;i++){
+    if(!/^ranked\s*flex$/i.test(lines[i]))continue;
+    const near=lines.slice(i+1,i+4).join(" ");
+    if(/^\s*unranked/i.test(near))return{tier:"UNRANKED",division:null,lp:null};
+    const m=near.match(new RegExp("\\b("+TIER_WORD+")\\b(?:\\s+([1-4]|IV|III|II|I)(?![\\dA-Za-z]))?\\s*(\\d{1,4})\\s*LP\\b","i"));
+    if(m){
+      const map={"1":"I","2":"II","3":"III","4":"IV"};
+      const tier=m[1].toUpperCase();
+      const mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
+      return{tier,division:(mPlus||!m[2])?null:(map[m[2]]||m[2].toUpperCase()),lp:+m[3]};
+    }
+  }
+  return null;
+}
+// Season champion rows, verified against a live profile:
+// "Ashe CS 209 (7.2) 2.25:1 KDA 6 / 6.8 / 9.3 60%25 Games"
+function parseChampions(raw){
+  if(!raw)return null;
+  const re=/^(.{2,26}?)\s+CS\s+[\d.,]+\s*\([\d.]+\)\s+([\d.]+):1\s+KDA\s+([\d.]+)\s*\/\s*([\d.]+)\s*\/\s*([\d.]+)\s+(\d{1,3})%\s*(\d{1,3})\s+Games\b/i;
+  const out=[];
+  for(const line of stripRows(raw)){
+    const m=line.match(re);
+    if(!m)continue;
+    const name=m[1].replace(/\s+/g," ").trim();
+    if(!name||out.some(c=>c.name===name))continue;
+    out.push({name,kda:+m[2],k:+m[3],d:+m[4],a:+m[5],wr:+m[6],games:+m[7]});
+  }
+  return out.length?out.slice(0,10):null;
+}
+// The Grandmaster and Challenger floors, from op.gg's ladder page:
+// "challenger 2,417 LP 6 304 Summoners". They move a couple of times a day.
+function parseCutoffs(raw){
+  if(!raw)return null;
+  // Unlike everywhere else, the alt text has to survive here: the page prints the
+  // floors as a bare "2,417 LP" and only the medal image says which tier that is.
+  const text=String(raw)
+    .replace(/<script[\s\S]*?<\/script>/gi," ")
+    .replace(/<img[^>]*\balt\s*=\s*["']([^"']*)["'][^>]*>/gi," $1 ")
+    .replace(/<\/(tr|li|div|p|h[1-6])\s*>/gi,"\n")
+    .replace(/<[^>]*>/g," ")
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g," $1 ")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g," $1 ")
+    .replace(/[*`_]+/g," ")
+    .replace(/[ \t ]+/g," ");
+  const grab=w=>{
+    const m=text.match(new RegExp(w+"[^\\n]{0,40}?([\\d][\\d,. ]{2,8})\\s*LP","i"));
+    if(!m)return null;
+    const n=+m[1].replace(/[,. ]/g,"");
+    return n>=200&&n<=20000?n:null;   // a plausible floor, not a stray table number
+  };
+  const chall=grab("challenger"), gm=grab("grandmaster");
+  return(chall||gm)?{chall,gm}:null;
+}
 // op.gg does publish a season peak after all: it prints the highest rank reached
 // right under the current one and badges it "Top tier". Verified against a live
 // profile, which flattens to "… diamond 1 52 LP 190 W 215 L Win rate 47%
@@ -1259,14 +1388,15 @@ async function fetchWithTimeout(url,ms){
   finally{clearTimeout(t)}
 }
 let lastGoodProxy=0;
+const PROXIES=[
+  {name:"corsproxy",make:u=>"https://corsproxy.io/?url="+encodeURIComponent(u)},
+  {name:"allorigins",make:u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u)},
+  {name:"jina reader",make:u=>"https://r.jina.ai/"+u} // reader-mode text extraction — may strip the <img> the profile icon needs
+];
 async function fetchViaProxy(acc){
   const r=REGIONS[acc.region]||REGIONS.EUW;
   const target="https://op.gg/lol/summoners/"+r.opgg+"/"+encodeURIComponent(acc.gameName)+"-"+encodeURIComponent(acc.tagLine);
-  const proxies=[
-    {name:"corsproxy",make:u=>"https://corsproxy.io/?url="+encodeURIComponent(u)},
-    {name:"allorigins",make:u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u)},
-    {name:"jina reader",make:u=>"https://r.jina.ai/"+u} // reader-mode text extraction — may strip the <img> the profile icon needs
-  ];
+  const proxies=PROXIES;
   let lastErr="no proxy reachable";
   for(let k=0;k<proxies.length;k++){
     const idx=(lastGoodProxy+k)%proxies.length;
@@ -1278,6 +1408,7 @@ async function fetchViaProxy(acc){
         return {found:true,tier:parsed.tier||"UNRANKED",division:parsed.division||null,lp:parsed.lp,wins:parsed.wins,losses:parsed.losses,
           level:parsed.level!=null?parsed.level:parseLevelText(text,acc),
           peak:parsePeakText(text),
+          seasons:parseSeasons(text),flex:parseFlex(text),champs:parseChampions(text),
           icon:parseProfileIcon(text),mmr:null,avgRecent:null,asOf:"auto-fetch (op.gg via "+proxies[idx].name+")",note:null,updatedAt:Date.now()};
       }
       lastErr="page loaded but no rank found — name/tag/region correct?";
@@ -1285,13 +1416,48 @@ async function fetchViaProxy(acc){
   }
   throw new Error(lastErr);
 }
+// Grandmaster and Challenger have no fixed LP: the floor is wherever the last
+// qualifying player sits, and Riot re-cuts it a couple of times a day. op.gg
+// prints both on its ladder page, so they get fetched once per region per half
+// day and cached — a stale floor is still far better than pretending 2800 LP is
+// the line, and refetching on every render would hammer the proxies.
+const CUTOFF_TTL=12*3600*1000;
+function cutoffsFor(region){
+  const r=(REGIONS[region]||REGIONS.EUW).opgg;
+  return(cfg.cutoffs&&cfg.cutoffs[r])||null;
+}
+async function ensureCutoffs(region){
+  const r=(REGIONS[region]||REGIONS.EUW).opgg;
+  cfg.cutoffs=cfg.cutoffs||{};
+  const have=cfg.cutoffs[r];
+  if(have&&Date.now()-have.at<CUTOFF_TTL)return false;
+  const target="https://op.gg/lol/leaderboards/tier?region="+encodeURIComponent(r);
+  for(let k=0;k<PROXIES.length;k++){
+    const idx=(lastGoodProxy+k)%PROXIES.length;
+    try{
+      const c=parseCutoffs(await fetchWithTimeout(PROXIES[idx].make(target),12000));
+      if(c){cfg.cutoffs[r]={chall:c.chall,gm:c.gm,at:Date.now()};saveCfg();return true}
+    }catch(e){}
+  }
+  return false;
+}
+// Only for regions that actually have a Master+ account in the vault — nobody
+// else's card can use the number, so nobody else's region is worth a request.
+function refreshCutoffs(){
+  const mIdx=TIER_ORDER.indexOf("MASTER");
+  const regions=[...new Set(accounts.filter(a=>a.stats&&a.stats.found!==false
+    &&TIER_ORDER.indexOf((a.stats.tier||"").toUpperCase())>=mIdx).map(a=>a.region))];
+  if(!regions.length)return;
+  Promise.all(regions.map(r=>ensureCutoffs(r).catch(()=>false)))
+    .then(res=>{if(res.some(Boolean))renderGrid()});
+}
 async function fetchViaBackend(acc){
   const r=REGIONS[acc.region]||REGIONS.EUW;
   const url=cfg.backendUrl.replace(/\/+$/,"")+"?name="+encodeURIComponent(acc.gameName)+"&tag="+encodeURIComponent(acc.tagLine)+"&region="+encodeURIComponent(r.opgg);
   const text=await fetchWithTimeout(url,12000);
   const d=JSON.parse(text);
   if(d.found===false)return {found:false,updatedAt:Date.now()};
-  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,updatedAt:Date.now()};
+  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),seasons:d.seasons||null,flex:normPeak(d.flex),champs:Array.isArray(d.champs)?d.champs.slice(0,10):null,icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,updatedAt:Date.now()};
 }
 // the backend and the AI path hand us a peak we didn't build ourselves, and it
 // goes straight into a rank comparison — normalise it or drop it
@@ -1485,6 +1651,31 @@ function renderTagbar(){
   $("tagbar").innerHTML=all.map(t=>`<span class="chip ${ui.tag===t?"on":""}" data-tag="${esc(t)}">${esc(t)}</span>`).join("");
 }
 
+// Everything the profile page carries that isn't the current rank: how the account
+// finished previous seasons, its flex rank, and the champions it actually plays.
+// Returns "" when a check has never brought any of it back, which is also what the
+// Info button keys off — no point offering a panel with nothing in it.
+function infoBlockHTML(a,rev){
+  const s=a.stats||{};
+  const solo=(s.seasons&&s.seasons.solo)||[], flexHist=(s.seasons&&s.seasons.flex)||[];
+  const champs=s.champs||[];
+  const flex=s.flex;
+  if(!solo.length&&!flexHist.length&&!champs.length&&!flex)return"";
+  const rank=e=>{const t=e.tier==="UNRANKED"?"Unranked":e.tier.charAt(0)+e.tier.slice(1).toLowerCase();
+    return t+(e.division?" "+e.division:"")+(e.lp!=null?" · "+e.lp+" LP":"")};
+  const rows=list=>list.map(e=>`<div class="sea"><span class="s-yr">${esc(e.season)}</span>`
+    +`<span class="s-rk" style="color:${tierColor(e.tier)}">${esc(rank(e))}</span></div>`).join("");
+  let out="";
+  if(flex)out+=`<div><span class="k">Flex</span><div class="s-rk" style="color:${tierColor(flex.tier)}">${esc(rank(flex))}</div></div>`;
+  if(solo.length)out+=`<div><span class="k">Past seasons · Solo/Duo</span>${rows(solo)}</div>`;
+  if(flexHist.length)out+=`<div><span class="k">Past seasons · Flex</span>${rows(flexHist)}</div>`;
+  if(champs.length)out+=`<div><span class="k">Most played this season</span>`
+    +champs.map(c=>`<div class="chp"><span class="c-nm">${esc(c.name)}</span>`
+      +`<span class="c-wr${c.wr>=50?" wr-good":""}">${esc(c.wr)}%</span>`
+      +`<span class="c-gm">${esc(c.games)}G</span>`
+      +`<span class="c-kd">${esc(c.kda)} KDA</span></div>`).join("")+`</div>`;
+  return `<div class="login info${rev||""}">${out}</div>`;
+}
 // Split out of cardHTML so opening the editor can swap this one block instead of
 // rebuilding the card around it — see syncNoteBlock.
 function noteBlockHTML(a,rev){
@@ -1560,6 +1751,18 @@ function cardHTML(a,i){
   if(s&&s.found!==false){
     if(peak)microStats.push(["Peak",peak]);
     if(s.level)microStats.push(["Level",s.level]);
+    // How far the climb still is, against today's floor. Only for Master+, where
+    // it's the only thing left that "next rank" can mean.
+    {
+      const cut=cutoffsFor(a.region), cur=ladderLP(s);
+      const mBase=TIER_ORDER.indexOf("MASTER")*TIER_SPAN;
+      if(cut&&cur!==null&&cur>=mBase){
+        const lp=cur-mBase;
+        if(cut.chall&&lp<cut.chall)microStats.push([lp>=(cut.gm||Infinity)?"To Challenger":"To Grandmaster",
+          (lp>=(cut.gm||Infinity)?cut.chall-lp:cut.gm-lp)+" LP"]);
+        else if(cut.chall)microStats.push(["Above","Challenger floor"]);
+      }
+    }
     if(s.mmr)microStats.push(["MMR est.",s.mmr]);
     if(s.avgRecent)microStats.push(["Recent avg",s.avgRecent]);
   }
@@ -1592,7 +1795,7 @@ function cardHTML(a,i){
       ${deltaChip?`<div class="c-deltas">${deltaChip}</div>`:""}
     </div>
     ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
-    ${rankChart(hist)}
+    ${rankChart(hist,cutoffsFor(a.region))}
     ${microStats.length?`<div class="c-stats">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(a.tags||[]).length?`<div class="ctags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""}
@@ -1620,6 +1823,7 @@ function cardHTML(a,i){
       </div>
       <div><button data-act="rankapply" style="color:var(--teal-txt)">Save</button></div>
     </div>`)(a.peakManual):""}
+    ${openInfo.has(a.id)?infoBlockHTML(a,rv("info")):""}
     ${openPaste.has(a.id)?`<div class="login${rv("paste")}"><textarea data-f="pastetext" rows="3" placeholder="Open the OP.GG/DPM profile, select all (Ctrl+A), copy, paste here — I'll extract the rank" style="width:100%"></textarea><div style="margin-top:6px"><button data-act="pasteapply" style="color:var(--teal-txt)">Parse &amp; save</button></div></div>`:""}
     ${noteBlockHTML(a,rv("note"))}
     <div class="c-foot">
@@ -1634,6 +1838,7 @@ function cardHTML(a,i){
       ${openMore.has(a.id)?`<div class="acts${rv("more")}">
         <button data-act="rank" title="Enter rank manually">${icon("pencil")} Rank</button>
         <button data-act="note" title="Write a note on this account">${icon("note")} Note</button>
+        ${infoBlockHTML(a)?`<button data-act="info" title="Past seasons, flex rank, champions">${icon("chart")} Info</button>`:""}
         <button data-act="paste" title="Paste profile page text">${icon("clipboard")} Paste</button>
         <button data-act="edit">Edit</button>
         ${a.archived?'<button data-act="unarchive">Unarchive</button>':'<button data-act="archive">Archive</button>'}
@@ -2249,6 +2454,7 @@ $("grid").addEventListener("click",async e=>{
     editingNote=null;noteDraft="";
     saveDB();syncNoteBlock(card,acc);toast(v?"Note saved":"Note cleared");
   }
+  else if(act==="info"){const on=!openInfo.has(id);on?openInfo.add(id):openInfo.delete(id);reveal=on?id+":info":null;renderCard(id)}
   else if(act==="rank"){openPaste.delete(id);const on=!openRank.has(id);on?openRank.add(id):openRank.delete(id);reveal=on?id+":rank":null;renderCard(id)}
   else if(act==="paste"){openRank.delete(id);const on=!openPaste.has(id);on?openPaste.add(id):openPaste.delete(id);reveal=on?id+":paste":null;renderCard(id)}
   else if(act==="rankapply"){
@@ -2257,7 +2463,8 @@ $("grid").addEventListener("click",async e=>{
     const old=acc.stats||{};
     const s={found:true,tier,division:(isU||mPlus)?null:g("div").value,lp:isU?null:(+g("lp").value||0),
       wins:g("w").value===""?null:+g("w").value,losses:g("l").value===""?null:+g("l").value,
-      level:old.level!=null?old.level:null,peak:old.peak||null,icon:old.icon||null,mmr:old.mmr||null,avgRecent:null,asOf:"manual entry",note:null,updatedAt:Date.now()};
+      level:old.level!=null?old.level:null,peak:old.peak||null,
+      seasons:old.seasons||null,flex:old.flex||null,champs:old.champs||null,icon:old.icon||null,mmr:old.mmr||null,avgRecent:null,asOf:"manual entry",note:null,updatedAt:Date.now()};
     const ptier=g("ptier")?g("ptier").value:"UNRANKED";
     if(ptier==="UNRANKED")delete acc.peakManual;
     else acc.peakManual={tier:ptier,division:TIER_ORDER.indexOf(ptier)>=TIER_ORDER.indexOf("MASTER")?null:g("pdiv").value,lp:+g("plp").value||0};
@@ -2271,6 +2478,9 @@ $("grid").addEventListener("click",async e=>{
     const s={found:true,tier:p.tier||"UNRANKED",division:p.division,lp:p.lp,wins:p.wins,losses:p.losses,
       level:p.level!=null?p.level:(parseLevelText(pastedText,acc)??(old.level!=null?old.level:null)),
       peak:parsePeakText(pastedText)||old.peak||null,
+      seasons:parseSeasons(pastedText)||old.seasons||null,
+      flex:parseFlex(pastedText)||old.flex||null,
+      champs:parseChampions(pastedText)||old.champs||null,
       icon:parseProfileIcon(pastedText)||old.icon||null,mmr:null,avgRecent:null,asOf:"pasted from profile",note:null,updatedAt:Date.now()};
     commitStats(id,acc,s);toast("Parsed: "+(p.tier?p.tier+(p.division?" "+p.division:"")+(p.lp!=null?" · "+p.lp+" LP":""):"Unranked, level "+p.level));
   }
@@ -2284,6 +2494,7 @@ $("grid").addEventListener("click",async e=>{
 // ---------- boot ----------
 function startApp(){
   $("appRoot").classList.remove("hidden");
+  refreshCutoffs(); // fire and forget; redraws only if a floor actually arrived
   $("grid").classList.add("boot");
   render();
   setTimeout(()=>$("grid").classList.remove("boot"),1200);
