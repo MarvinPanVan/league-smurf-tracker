@@ -88,7 +88,9 @@
   button:active{transform:translateY(1px)}
   button:disabled{opacity:.4;cursor:not-allowed;transform:none}
   :focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-  input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
+  /* text fields and selects draw their own indicator further down; checkboxes
+     and the colour swatch keep this outline so keyboard focus stays visible */
+  input:not([type=checkbox]):not([type=color]):focus,select:focus,textarea:focus{outline:none}
   .b-gold{border-color:var(--gold);border-color:color-mix(in srgb,var(--gold) 72%,transparent);color:#1c1406;font-weight:600;
     background:linear-gradient(180deg,var(--star),var(--gold) 52%,var(--gold-mid));
     box-shadow:inset 0 1px 0 #ffffff5c,0 6px 18px -8px color-mix(in srgb,var(--gold) 75%,transparent)}
@@ -150,8 +152,18 @@
     border-radius:var(--r-sm);color:var(--text);padding:9px 12px;
     transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
   input:hover,select:hover,textarea:hover{border-color:var(--line2)}
-  input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in srgb,var(--teal) 60%,transparent);
+  /* Text fields get the full treatment — you're about to type, so the ring
+     marks where your keystrokes land and it earns its weight.
+     Selects get a border tint only. A <select> keeps focus after you pick an
+     option, and browsers deliberately count that as focus-visible (arrow keys
+     still change the value), so :focus-visible can't tell a mouse pick from a
+     keyboard one here. Anything heavier than a tint therefore sits on the
+     control lit up until you happen to click elsewhere, which reads as stuck.
+     A tint still shows keyboard users where they are without shouting. */
+  input:not([type=checkbox]):not([type=color]):focus,textarea:focus{
+    border-color:color-mix(in srgb,var(--teal) 60%,transparent);
     box-shadow:0 0 0 3px color-mix(in srgb,var(--teal) 13%,transparent);background-color:var(--panel3)}
+  select:focus{border-color:color-mix(in srgb,var(--teal) 55%,transparent)}
   textarea{resize:vertical;line-height:1.55}
   select{appearance:none;-webkit-appearance:none;padding-right:32px;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b93a6' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:13px}
   select:hover,select:focus{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e9edf5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")}
