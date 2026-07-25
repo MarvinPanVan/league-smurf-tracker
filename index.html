@@ -88,15 +88,27 @@
      the header to the same visual language as the rest. */
   .top .bar{gap:7px;padding:7px;border:1px solid var(--line);border-radius:16px;
     background:#ffffff07;backdrop-filter:blur(12px) saturate(130%);-webkit-backdrop-filter:blur(12px) saturate(130%);
-    box-shadow:var(--sh-1)}
+    box-shadow:var(--sh-1);
+    /* backdrop-filter makes this a stacking context, which traps the overflow
+       menu's z-index inside it — without lifting the tray itself the menu paints
+       under everything that follows in the document. */
+    position:relative;z-index:30}
   .eyebrow{display:inline-flex;align-items:center;gap:9px;margin-bottom:14px;
     font-size:10.5px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);
     padding:5px 12px 5px 10px;border:1px solid var(--line);border-radius:999px;background:#ffffff06}
   .eyebrow::before{content:"";width:6px;height:6px;border-radius:2px;transform:rotate(45deg);background:var(--gold);
     box-shadow:0 0 10px color-mix(in srgb,var(--gold) 75%,transparent)}
+  /* Two flat stops read as beige plastic. Metal needs a value swing — shadow,
+     body, a narrow specular band, then back down — so the ramp below runs
+     dim -> gold -> highlight -> white -> gold -> dim. Built from the accent
+     variables so a custom accent colour still works. */
   h1{margin:0;font-weight:700;font-size:clamp(31px,4.6vw,44px);line-height:1.04;display:flex;align-items:center;gap:15px;
-    background:linear-gradient(100deg,var(--text) 2%,var(--gold) 44%,var(--star) 60%,var(--gold) 100%);
-    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+    background:linear-gradient(102deg,
+      var(--gold-dim) 0%,var(--gold-mid) 12%,var(--gold) 26%,var(--star) 36%,
+      #fff8e8 43%,var(--star) 50%,var(--gold) 62%,var(--gold-mid) 76%,
+      var(--gold-dim) 88%,var(--gold) 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+    filter:drop-shadow(0 1px 0 #00000059)}
   h1.hex-display{letter-spacing:.02em}
   .title-gem{width:17px;height:17px;flex-shrink:0;border-radius:5px;transform:rotate(45deg);
     background:linear-gradient(145deg,var(--star),var(--gold) 52%,var(--gold-dim));
@@ -117,12 +129,13 @@
   /* text fields and selects draw their own indicator further down; checkboxes
      and the colour swatch keep this outline so keyboard focus stays visible */
   input:not([type=checkbox]):not([type=color]):focus,select:focus,textarea:focus{outline:none}
-  .b-gold{border-color:var(--gold);border-color:color-mix(in srgb,var(--gold) 72%,transparent);color:#1c1406;font-weight:600;
-    background:linear-gradient(180deg,var(--star),var(--gold) 52%,var(--gold-mid));
-    box-shadow:inset 0 1px 0 #ffffff5c,0 6px 18px -8px color-mix(in srgb,var(--gold) 75%,transparent)}
-  .b-gold:hover{border-color:var(--gold);filter:brightness(1.07);
-    background:linear-gradient(180deg,var(--star),var(--gold) 52%,var(--gold-mid));
-    box-shadow:inset 0 1px 0 #ffffff70,0 9px 26px -8px color-mix(in srgb,var(--gold) 85%,transparent)}
+  /* same metallic idea vertically: bright crown, body, a darker roll-off at the
+     bottom edge — the label sits in the bright middle so contrast holds */
+  .b-gold{border-color:var(--gold);border-color:color-mix(in srgb,var(--gold) 76%,transparent);color:#1c1406;font-weight:600;
+    background:linear-gradient(180deg,#fff6dd 0%,var(--star) 16%,var(--gold) 46%,var(--gold-mid) 76%,var(--gold-dim) 100%);
+    box-shadow:inset 0 1px 0 #ffffffab,inset 0 -1px 0 #0000003d,0 6px 18px -8px color-mix(in srgb,var(--gold) 75%,transparent)}
+  .b-gold:hover{border-color:var(--gold);filter:brightness(1.06) saturate(1.05);
+    box-shadow:inset 0 1px 0 #ffffffc4,inset 0 -1px 0 #0000003d,0 9px 26px -8px color-mix(in srgb,var(--gold) 85%,transparent)}
   .b-teal{color:var(--teal);border-color:var(--teal);border-color:color-mix(in srgb,var(--teal) 40%,transparent);
     background:var(--panel2);background:color-mix(in srgb,var(--teal) 9%,var(--panel2))}
   .b-teal:hover{border-color:color-mix(in srgb,var(--teal) 68%,transparent);color:var(--teal);
@@ -165,9 +178,9 @@
   .stat .v{font-size:20px;font-weight:600;color:var(--text);line-height:1.25;letter-spacing:-.015em;font-variant-numeric:tabular-nums}
   .stat .v small{font-size:11.5px;color:var(--muted);font-weight:400;letter-spacing:0}
   .dash-toggle{display:flex;justify-content:flex-end;margin-bottom:14px}
-  .ghost-toggle{font-size:11.5px;padding:5px 11px;border-radius:999px;color:var(--muted);
-    background:none;border-color:transparent}
-  .ghost-toggle:hover{background:#ffffff0d;border-color:var(--line);color:var(--text)}
+  .ghost-toggle{font-size:11.5px;padding:6px 13px;border-radius:999px;color:var(--muted);
+    background:#ffffff09;border:1px solid var(--line);box-shadow:none}
+  .ghost-toggle:hover{background:#ffffff14;border-color:var(--line2);color:var(--text)}
   .ghost-toggle .ico{transition:transform .22s cubic-bezier(.22,1,.36,1)}
   .ghost-toggle.open .ico{transform:rotate(180deg)}
   .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px}
@@ -286,9 +299,12 @@
   .c-stats>div{display:flex;flex-direction:column;gap:2px;min-width:0}
   .c-stats .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
   .c-stats .v{font-size:13px;font-weight:500;color:var(--text);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
-  .c-notes{font-size:12.5px;color:var(--muted);line-height:1.6}
+  /* This is the one thing on the card the user wrote themselves, so it reads as
+     content on its own small surface rather than another grey caption line. */
+  .c-notes{font-size:12.5px;line-height:1.6;color:var(--text);opacity:.9;
+    padding:9px 12px;border-radius:10px;background:#ffffff08;border:1px solid #ffffff0d}
   .c-notes .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
-    display:block;margin-bottom:2px}
+    display:block;margin-bottom:4px}
   .wrbar{height:5px;background:var(--panel2);border-radius:999px;overflow:hidden}
   .wrbar i{display:block;height:100%;border-radius:999px}
   .delta{font-size:10.5px;padding:2px 8px;border-radius:999px;font-weight:600;display:inline-block;white-space:nowrap}
@@ -327,9 +343,10 @@
     padding:2px 8px;border-radius:999px;background:#ffffff0a;border:1px solid #ffffff0f;white-space:nowrap}
   .acts{display:flex;gap:5px;flex-wrap:wrap}
   .acts button,.acts a{font-size:11.5px;padding:6px 10px;text-decoration:none}
-  .a-dpm{border:1px solid var(--gold-dim);color:var(--gold);font-weight:600;background:var(--panel2);
-    border-color:color-mix(in srgb,var(--gold) 34%,transparent);background:color-mix(in srgb,var(--gold) 14%,transparent)}
-  .a-dpm:hover{color:var(--gold);border-color:color-mix(in srgb,var(--gold) 62%,transparent);background:color-mix(in srgb,var(--gold) 22%,transparent)}
+  /* DPM and OP.GG are the same kind of thing — an outbound profile link — so they
+     look the same. The gold tint implied a hierarchy that isn't there. */
+  .a-dpm{border:1px solid var(--line);color:var(--text);font-weight:500;background:var(--panel2)}
+  .a-dpm:hover{color:var(--text);border-color:var(--line2);background:var(--panel3)}
   .a-login{background:var(--teal);border-color:var(--teal);color:#04211f;font-weight:700;
     box-shadow:0 4px 14px -6px color-mix(in srgb,var(--teal) 85%,transparent)}
   .a-login:hover{background:var(--teal);border-color:var(--teal);color:#04211f;filter:brightness(1.1);
@@ -372,6 +389,8 @@
     animation:panelIn .3s cubic-bezier(.22,1,.36,1) both}
   @keyframes menuIn{from{opacity:0;transform:translateY(-6px) scale(.94)}to{opacity:1;transform:none}}
   #moreMenu:not(.hidden){transform-origin:top right;animation:menuIn .17s cubic-bezier(.22,1,.36,1) both}
+  @keyframes dashIn{from{opacity:0;transform:translateY(-12px) scaleY(.94)}to{opacity:1;transform:none}}
+  .hx.dash-in{transform-origin:top center;animation:dashIn .32s cubic-bezier(.22,1,.36,1) both}
   @keyframes barIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
   #bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show{animation:barIn .26s cubic-bezier(.22,1,.36,1) both}
 
@@ -423,7 +442,7 @@
     .spin,.c-crest,.title-gem,.grid.boot>.hx,.spark polyline,.hx.flash,#toast,.confetti i,
     #form:not(.hidden),#settings:not(.hidden),#help:not(.hidden),#bulkAdd:not(.hidden),#lock:not(.hidden),
     #moreMenu:not(.hidden),#bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show,
-    .login.reveal,.acts.reveal,.login.reveal .lrow,.star.reveal{animation:none!important}
+    .login.reveal,.acts.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in{animation:none!important}
     .grid>.hx{transition:none}
     .panel-close:hover,.chip:active,.card:hover .c-portrait,.a-login:hover .ico,.acts button:hover .ico{transform:none}
     html{scroll-behavior:auto}
@@ -701,6 +720,7 @@ let checking=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set
 // re-renders wholesale on any change, so without this every open section would
 // replay its entrance animation whenever an unrelated card updated.
 let reveal=null;
+let dashJustOpened=false; // same one-shot idea, for the stats panel
 let hasStorage=true;
 let vaultPassword=null;
 let previewMode=false;
@@ -1098,7 +1118,7 @@ function renderDash(){
   const gems=TIER_ORDER.filter(t=>dist[t]).map(t=>`<span class="gem"><i style="background:${TIER_COLORS[t]}"></i>${t.charAt(0)+t.slice(1).toLowerCase()} ×${dist[t]}</span>`).join("")
     +(un>0?`<span class="gem"><i style="background:${TIER_COLORS.UNRANKED}"></i>Unranked/unchecked ×${un}</span>`:"");
   el.innerHTML=`
-  <div class="hx" style="margin-bottom:16px"><div class="hx-in">
+  <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
   <div style="display:flex;justify-content:flex-end;padding:8px 10px 0"><button id="bDashToggle" class="ghost-toggle open">${icon("chevron")} Hide stats</button></div>
   <div class="dash">
     <div class="stat"><div class="k">Accounts</div><div class="v">${accounts0.length} <small>· ${accounts0.filter(a=>a.fav).length} ★${bannedN?" · "+bannedN+" banned":""}${archivedN?" · "+archivedN+" archived":""}</small></div></div>
@@ -1110,6 +1130,7 @@ function renderDash(){
   ${gems?`<div class="dist" style="border-top:1px solid var(--line)"><span class="k">Rank spread</span>${gems}</div>`:""}
   </div></div>
   ${bk?`<div style="font-size:12px;color:var(--muted);margin:-4px 0 16px">${bk}</div>`:""}`;
+  dashJustOpened=false; // consumed by the render above
 }
 
 function renderTagbar(){
@@ -1649,7 +1670,13 @@ $("tSort").addEventListener("change",e=>{ui.sort=e.target.value;renderGrid()});
 $("tStatus").addEventListener("change",e=>{ui.status=e.target.value;renderGrid()});
 $("tFav").addEventListener("click",()=>{ui.favOnly=!ui.favOnly;$("tFav").style.color=ui.favOnly?"var(--star)":"";$("tFav").style.borderColor=ui.favOnly?"var(--star)":"";renderGrid()});
 $("tArchived").addEventListener("click",()=>{ui.showArchived=!ui.showArchived;$("tArchived").style.color=ui.showArchived?"var(--star)":"";$("tArchived").style.borderColor=ui.showArchived?"var(--star)":"";render()});
-$("dash").addEventListener("click",e=>{if(e.target.id==="bDashToggle"){cfg.dashCollapsed=!cfg.dashCollapsed;saveCfg();renderDash()}});
+$("dash").addEventListener("click",e=>{if(e.target.closest("#bDashToggle")){
+  cfg.dashCollapsed=!cfg.dashCollapsed;
+  // one-shot: renderDash also runs on every account change, and the panel must
+  // not re-animate then — only when the user actually opened it
+  dashJustOpened=!cfg.dashCollapsed;
+  saveCfg();renderDash();
+}});
 $("tagbar").addEventListener("click",e=>{const t=e.target.closest("[data-tag]");if(!t)return;ui.tag=ui.tag===t.dataset.tag?null:t.dataset.tag;render()});
 $("tSelectAll").addEventListener("change",e=>{
   const list=filtered();
