@@ -1353,6 +1353,23 @@ document.addEventListener("keydown",e=>{
   },15000);
   if(lockTimer&&lockTimer.unref)lockTimer.unref(); // don't keep a Node/test process alive just for this
 }
+// A <select> keeps focus after you pick an option, so its focus tint sits on the
+// control until you happen to click elsewhere. Once you've picked with the mouse
+// you're done with the field, so drop focus then. Keyboard picks must keep it —
+// otherwise tabbing through the toolbar loses its place mid-row. Delegated, so it
+// covers the selects the cards render on the fly too.
+{
+  let pickedByPointer=false;
+  document.addEventListener("pointerdown",e=>{
+    pickedByPointer=!!(e.target&&e.target.tagName==="SELECT");
+  },true);
+  // any keypress means the user is on the keyboard now, whatever started the interaction
+  document.addEventListener("keydown",()=>{pickedByPointer=false},true);
+  document.addEventListener("change",e=>{
+    if(pickedByPointer&&e.target&&e.target.tagName==="SELECT")e.target.blur();
+    pickedByPointer=false;
+  });
+}
 document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListener("click",closeAllPanels));
 $("bMore").addEventListener("click",()=>$("moreMenu").classList.toggle("hidden"));
 $("moreMenu").addEventListener("click",e=>{if(e.target.closest("button"))$("moreMenu").classList.add("hidden")});
