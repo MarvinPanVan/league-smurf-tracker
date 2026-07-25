@@ -42,11 +42,26 @@
     font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
     font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
     background:
-      radial-gradient(1150px 620px at 6% -12%,#1a3a6b4d 0%,transparent 62%),
-      radial-gradient(900px 540px at 102% -4%,#7a5f2b40 0%,transparent 58%),
-      radial-gradient(900px 700px at 52% 112%,#0d3b4340 0%,transparent 62%),
+      radial-gradient(1150px 620px at 6% -12%,#1e427552 0%,transparent 62%),
+      radial-gradient(900px 540px at 102% -4%,#7a5f2b45 0%,transparent 58%),
+      radial-gradient(900px 700px at 52% 112%,#0d3b4345 0%,transparent 62%),
       var(--bg);
     background-attachment:fixed}
+
+  /* Ambient grid. Two scales — a fine cell plus a heavier line every fourth one —
+     so it reads as depth rather than graph paper. Masked to fade toward the
+     bottom, otherwise a uniform tile flattens the whole page. Fixed, so it stays
+     put while the cards scroll over it. */
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:
+      linear-gradient(to right,#ffffff14 1px,transparent 1px),
+      linear-gradient(to bottom,#ffffff14 1px,transparent 1px),
+      linear-gradient(to right,#ffffff08 1px,transparent 1px),
+      linear-gradient(to bottom,#ffffff08 1px,transparent 1px);
+    background-size:232px 232px,232px 232px,58px 58px,58px 58px;
+    -webkit-mask-image:radial-gradient(ellipse 130% 95% at 50% 0%,#000 0%,#000000b0 45%,#00000038 100%);
+    mask-image:radial-gradient(ellipse 130% 95% at 50% 0%,#000 0%,#000000b0 45%,#00000038 100%)}
+
   /* barely-there film grain so the large flat areas don't band */
   body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.035;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
