@@ -873,3 +873,104 @@ test("the info panel only exists once a check has brought something back for it"
   assert.match(el.textContent, /Ashe/);
   assert.doesNotMatch(html, /undefined|NaN/);
 });
+
+// ---- auto-check gating ----
+// cfg is a top-level let, not a window property, so these go through the real
+// Settings panel — which also proves the controls are actually wired to it.
+function setAutoCheck(win, { hours, rankedOnly }) {
+  win.document.getElementById("bSettings").click();
+  win.document.getElementById("sAuto").checked = true;
+  win.document.getElementById("sAutoEvery").value = String(hours);
+  win.document.getElementById("sAutoRanked").checked = !!rankedOnly;
+  win.document.getElementById("sSave").click();
+}
+
+test("the auto-check interval is settable and actually gates the refresh", () => {
+  const win = bootApp();
+  const now = Date.now();
+  const acc = (tier, ageHours, extra) => Object.assign(
+    { status: "active", stats: tier ? { found: true, tier, updatedAt: now - ageHours * 3600e3 } : null }, extra);
+
+  setAutoCheck(win, { hours: 0.5 });
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).autoEveryHours, 0.5);
+  assert.equal(win.autoCheckDue(acc("GOLD", 2)), true, "older than the interval");
+  assert.equal(win.autoCheckDue(acc("GOLD", 0.1)), false, "inside the interval");
+
+  setAutoCheck(win, { hours: 336 }); // two weeks
+  assert.equal(win.autoCheckDue(acc("GOLD", 200)), false);
+  assert.equal(win.autoCheckDue(acc("GOLD", 400)), true);
+
+  // never worth a request, whatever the interval
+  assert.equal(win.autoCheckDue(acc("GOLD", 9999, { status: "banned" })), false);
+  assert.equal(win.autoCheckDue(acc("GOLD", 9999, { archived: true })), false);
+});
+
+test("ranked-only skips accounts known to have no rank, but not ones never checked", () => {
+  const win = bootApp();
+  const now = Date.now();
+  const acc = (tier, ageHours) => ({ status: "active",
+    stats: tier ? { found: true, tier, updatedAt: now - ageHours * 3600e3 } : null });
+
+  setAutoCheck(win, { hours: 1, rankedOnly: true });
+  assert.equal(win.autoCheckDue(acc("GOLD", 9)), true);
+  assert.equal(win.autoCheckDue(acc("UNRANKED", 9)), false, "an unranked account answers the same every time");
+  // a never-checked account has no rank *yet*; skipping it would leave it stuck
+  // outside the filter permanently, with no way in
+  assert.equal(win.autoCheckDue(acc(null, 0)), true, "it still needs its first check");
+
+  setAutoCheck(win, { hours: 1, rankedOnly: false });
+  assert.equal(win.autoCheckDue(acc("UNRANKED", 9)), true, "off again, unranked is back in");
+});
+
+// ---- combined stats ----
+test("the combined stats pool respects the rank floor and per-account exclusions", () => {
+  const win = bootApp();
+  const a = (tier, extra) => Object.assign({ stats: { found: true, tier } }, extra);
+  const setFloor = v => {
+    win.loadDemo();
+    const sel = win.document.getElementById("dashMin");
+    sel.value = v;
+    sel.dispatchEvent(new win.Event("change", { bubbles: true }));
+  };
+
+  setFloor("");
+  assert.equal(win.inCombined(a("SILVER")), true);
+  assert.equal(win.inCombined(a("SILVER", { excludeStats: true })), false, "an explicit exclusion always wins");
+
+  setFloor("DIAMOND");
+  assert.equal(win.inCombined(a("SILVER")), false);
+  assert.equal(win.inCombined(a("DIAMOND")), true, "the floor is inclusive");
+  assert.equal(win.inCombined(a("CHALLENGER")), true);
+  assert.equal(win.inCombined(a("DIAMOND", { excludeStats: true })), false);
+});
+
+test("the floor narrows what the dashboard counts, and says how many it left out", () => {
+  const win = bootApp();
+  win.loadDemo(); // Platinum, Gold, Silver, Bronze + one unranked
+  const sel = () => win.document.getElementById("dashMin");
+  const summary = () => win.document.querySelector(".dash-ex").textContent.replace(/s+/g, " ").trim();
+
+  assert.match(summary(), /^4 of 4 ranked$/);
+  sel().value = "PLATINUM";
+  sel().dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert.match(summary(), /^1 of 4 ranked · 3 left out$/);
+});
+
+test("combined champion stats are weighted by games, not by winrate", () => {
+  const win = bootApp();
+  // one lucky 100% on two games must not outrank a real sample
+  const pool = [
+    { stats: { champs: [{ name: "Lucky", wr: 100, games: 2 }, { name: "Workhorse", wr: 60, games: 40 }] } },
+    { stats: { champs: [{ name: "Workhorse", wr: 50, games: 20 }] } },
+    { stats: {} },
+    {},
+  ];
+  const merged = win.mergeChampions(pool).map(c => ({ ...c }));
+  assert.equal(merged[0].name, "Workhorse");
+  assert.equal(merged[0].games, 60, "games add up across accounts");
+  assert.equal(merged[0].accs, 2);
+  assert.equal(merged[0].wr, 57, "24 + 10 wins over 60 games");
+  assert.equal(merged[1].name, "Lucky");
+  assert.equal(win.mergeChampions([]).length, 0);
+  assert.equal(win.mergeChampions(null).length, 0);
+});

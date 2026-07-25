@@ -242,6 +242,14 @@
   .ghost-toggle:hover{background:#ffffff14;border-color:var(--line2);color:var(--text)}
   .ghost-toggle .ico{transition:transform .22s cubic-bezier(.22,1,.36,1)}
   .ghost-toggle.open .ico{transform:rotate(180deg)}
+  .dash-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px 0}
+  .dash-filter{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .dash-filter select{font-size:12px;padding:5px 28px 5px 10px;background-color:#ffffff08}
+  .dash-ex{font-size:11px;color:var(--faint)}
+  .gem.cmb{gap:6px}
+  .gem.cmb b{font-weight:600;color:var(--muted)}
+  .gem.cmb b.wr-good{color:var(--good)}
+  .gem.cmb i.g{font-style:normal;font-size:10.5px;color:var(--faint)}
   .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px}
   .dist .k{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-right:2px}
   .gem{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text)}
@@ -685,9 +693,19 @@
           <option value="claude-haiku-4-5">Haiku — cheaper, may miss data</option>
         </select>
       </div>
-      <div class="fld fw" style="flex-direction:row;align-items:center;gap:8px">
-        <input type="checkbox" id="sAuto" style="width:auto">
-        <label for="sAuto" style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)">Auto-check accounts older than 3 days when opening the app</label>
+      <div class="fld fw">
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="sAuto" style="width:auto">
+          <label for="sAuto" style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)">Auto-check stale accounts when opening the app</label>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px;padding-left:24px">
+          <label style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--muted)">Refresh at most</label>
+          <select id="sAutoEvery" style="width:auto"></select>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding-left:24px">
+          <input type="checkbox" id="sAutoRanked" style="width:auto">
+          <label for="sAutoRanked" style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--muted)">Ranked accounts only — skip unranked and never-placed ones, which answer the same every time</label>
+        </div>
       </div>
       <div class="fld fw" style="flex-direction:row;align-items:center;gap:8px">
         <input type="checkbox" id="sNotify" style="width:auto">
@@ -856,6 +874,14 @@ const TIER_ORDER=["IRON","BRONZE","SILVER","GOLD","PLATINUM","EMERALD","DIAMOND"
 const TIER_COLORS={IRON:"#8a8a8a",BRONZE:"#b0765a",SILVER:"#a8bdd0",GOLD:"#e6c15a",PLATINUM:"#4fd1c5",EMERALD:"#3ddc84",DIAMOND:"#7ea6f0",MASTER:"#b16ce8",GRANDMASTER:"#e05656",CHALLENGER:"#f4d688",UNRANKED:"#5b7a99"};
 const DIV_ORDER={IV:0,III:1,II:2,I:3};
 const STALE_MS=3*24*3600*1000;
+// How often an auto-check may re-run, shortest to longest. The label is what the
+// dropdown shows; the value is what actually gates a refresh.
+const AUTO_EVERY=[
+  {v:0.5,label:"every 30 minutes"},{v:2,label:"every 2 hours"},{v:6,label:"every 6 hours"},
+  {v:12,label:"every 12 hours"},{v:24,label:"once a day"},{v:72,label:"every 3 days"},
+  {v:168,label:"once a week"},{v:336,label:"every 2 weeks"}
+];
+const DEFAULT_AUTO_HOURS=72;
 const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / unused",color:"#7a94ab"},restricted:{label:"Chat/ranked restricted",color:"#f4d688"},banned:{label:"Banned",color:"#d06060"}};
 
 // ---------- state ----------
@@ -885,6 +911,23 @@ let lastActivity=Date.now();
 let currentEnvelope=null;
 
 // ---------- storage ----------
+// A banned account is never worth a request. Beyond that, "active" here means the
+// account has a rank to track — an unranked or never-placed smurf produces the
+// same empty answer every time, so refreshing it on a timer is pure noise. Both
+// the age gate and the ranked-only gate are user settings.
+function autoCheckDue(a){
+  if(a.status==="banned"||a.archived)return false;
+  // Ranked-only skips accounts *known* to have no rank. An account that has never
+  // been checked is not one of those — it still needs its first check to find out,
+  // and skipping it would leave it stuck outside the filter forever.
+  if(cfg.autoRankedOnly&&a.stats){
+    const t=(a.stats.tier||"").toUpperCase();
+    if(a.stats.found===false||!t||t==="UNRANKED")return false;
+  }
+  const hrs=cfg.autoEveryHours!=null?cfg.autoEveryHours:DEFAULT_AUTO_HOURS;
+  if(!a.stats||!a.stats.updatedAt)return true;
+  return Date.now()-a.stats.updatedAt>hrs*3600*1000;
+}
 function storageOK(){try{localStorage.setItem("__t","1");localStorage.removeItem("__t");return true}catch(e){return false}}
 async function saveDB(){
   if(!hasStorage||previewMode)return;
@@ -1597,6 +1640,33 @@ function renderFilterOptions(){
   $("tStatus").innerHTML=`<option value="">All statuses</option>`+statuses.map(s=>`<option value="${s}" ${ui.status===s?"selected":""}>${esc((STATUS[s]||STATUS.active).label)}</option>`).join("");
 }
 
+// The floor for the combined numbers. "" is everything, otherwise the lowest tier
+// that still counts.
+const COMBINED_FLOORS=[
+  {v:"",label:"all ranked accounts"},{v:"GOLD",label:"Gold and above"},
+  {v:"PLATINUM",label:"Platinum and above"},{v:"EMERALD",label:"Emerald and above"},
+  {v:"DIAMOND",label:"Diamond and above"},{v:"MASTER",label:"Master and above"}
+];
+function inCombined(a){
+  if(a.excludeStats)return false;
+  const floor=cfg.statsMinTier||"";
+  if(!floor)return true;
+  const t=TIER_ORDER.indexOf((a.stats&&a.stats.tier||"").toUpperCase());
+  return t>=0&&t>=TIER_ORDER.indexOf(floor);
+}
+// Champions across several accounts, weighted by games rather than by winrate —
+// a lucky 100% on two games is not a better champion than a 58% on ninety.
+function mergeChampions(pool){
+  const agg={};
+  (pool||[]).forEach(a=>((a.stats&&a.stats.champs)||[]).forEach(c=>{
+    const g=Number(c.games)||0;
+    if(!g||!c.name)return;
+    const e=agg[c.name]||(agg[c.name]={name:c.name,games:0,wins:0,accs:0});
+    e.games+=g;e.wins+=Math.round((Number(c.wr)||0)/100*g);e.accs++;
+  }));
+  return Object.values(agg).sort((x,y)=>y.games-x.games).slice(0,8)
+    .map(c=>({name:c.name,games:c.games,accs:c.accs,wr:Math.round(c.wins/c.games*100)}));
+}
 function renderDash(){
   const el=$("dash");
   const accounts0=accounts.filter(a=>!a.archived);
@@ -1608,11 +1678,17 @@ function renderDash(){
     return;
   }
   const ranked=accounts0.filter(a=>a.stats&&a.stats.found!==false&&a.stats.tier&&a.stats.tier.toUpperCase()!=="UNRANKED");
+  // Combined numbers come from a pool you control: one silver account you never
+  // play would otherwise drag the whole vault's winrate down and call itself a
+  // summary. Everything below the floor, and anything explicitly excluded, is out.
+  const pool=ranked.filter(inCombined);
+  const excludedN=ranked.length-pool.length;
   let W=0,L=0;
-  ranked.forEach(a=>{W+=Number(a.stats.wins)||0;L+=Number(a.stats.losses)||0});
+  pool.forEach(a=>{W+=Number(a.stats.wins)||0;L+=Number(a.stats.losses)||0});
   const wr=(W+L)>0?Math.round(W/(W+L)*100)+"%":"—";
   let best=null;
-  accounts0.forEach(a=>{if(rankValue(a.stats)>rankValue(best&&best.stats))best=a});
+  pool.forEach(a=>{if(rankValue(a.stats)>rankValue(best&&best.stats))best=a});
+  const topChamps=mergeChampions(pool);
   const bestTxt=best&&rankValue(best.stats)>=0?esc(best.label||best.gameName)+" <small>"+esc(shortRank(best.stats)||"")+"</small>":"—";
   const regCount={};accounts0.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
   const regTxt=Object.entries(regCount).map(([r,n])=>r+" "+n).join(" · ");
@@ -1631,7 +1707,14 @@ function renderDash(){
     +(un>0?`<span class="gem"><i style="background:${TIER_COLORS.UNRANKED}"></i>Unranked/unchecked ×${un}</span>`:"");
   el.innerHTML=`
   <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
-  <div style="display:flex;justify-content:flex-end;padding:8px 10px 0"><button id="bDashToggle" class="ghost-toggle open">${icon("chevron")} Hide stats</button></div>
+  <div class="dash-head">
+    <div class="dash-filter">
+      <span class="k">Counting</span>
+      <select id="dashMin">${COMBINED_FLOORS.map(f=>`<option value="${f.v}"${(cfg.statsMinTier||"")===f.v?" selected":""}>${esc(f.label)}</option>`).join("")}</select>
+      <span class="dash-ex">${pool.length} of ${ranked.length} ranked${excludedN?" · "+excludedN+" left out":""}</span>
+    </div>
+    <button id="bDashToggle" class="ghost-toggle open">${icon("chevron")} Hide stats</button>
+  </div>
   <div class="dash">
     <div class="stat"><div class="k">Accounts</div><div class="v">${accounts0.length} <small>· ${accounts0.filter(a=>a.fav).length} ★${bannedN?" · "+bannedN+" banned":""}${archivedN?" · "+archivedN+" archived":""}</small></div></div>
     <div class="stat"><div class="k">Best account</div><div class="v" style="font-size:14px">${bestTxt}</div></div>
@@ -1640,6 +1723,9 @@ function renderDash(){
     <div class="stat"><div class="k">Needs refresh</div><div class="v"${staleN?' style="color:var(--danger)"':""}>${staleN}<small> · older than 3 days${veryStaleN?" ("+veryStaleN+" over 30d)":""}</small></div></div>
   </div>
   ${gems?`<div class="dist" style="border-top:1px solid var(--line)"><span class="k">Rank spread</span>${gems}</div>`:""}
+  ${topChamps.length?`<div class="dist" style="border-top:1px solid var(--line)"><span class="k">Best champions</span>${
+    topChamps.map(c=>`<span class="gem cmb" title="${esc(c.games)} games across ${esc(c.accs)} account${c.accs===1?"":"s"}">${esc(c.name)}
+      <b class="${c.wr>=50?"wr-good":""}">${esc(c.wr)}%</b><i class="g">${esc(c.games)}G</i></span>`).join("")}</div>`:""}
   </div></div>
   ${bk?`<div style="font-size:12px;color:var(--muted);margin:-4px 0 16px">${bk}</div>`:""}`;
   dashJustOpened=false; // consumed by the render above
@@ -1842,6 +1928,7 @@ function cardHTML(a,i){
         <button data-act="paste" title="Paste profile page text">${icon("clipboard")} Paste</button>
         <button data-act="edit">Edit</button>
         ${a.archived?'<button data-act="unarchive">Unarchive</button>':'<button data-act="archive">Archive</button>'}
+        <button data-act="exstats" title="Leave this account out of the combined stats at the top">${a.excludeStats?"Count in stats":"Exclude from stats"}</button>
         <button data-act="del" class="b-danger" ${armedDelete===a.id?'style="border-color:var(--danger)"':""}>${armedDelete===a.id?"Sure?":"Delete"}</button>
       </div>`:""}
     </div>
@@ -1936,7 +2023,7 @@ function submitForm(){
 }
 
 // ---------- settings ----------
-function openSettings(){closeAllPanels();$("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";$("sAutoLock").value=cfg.autoLockMin||0;$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;$("sVaultPass").value="";updateVaultStatus();$("settings").classList.remove("hidden")}
+function openSettings(){closeAllPanels();$("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(cfg.autoEveryHours!=null?cfg.autoEveryHours:DEFAULT_AUTO_HOURS);$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";$("sAutoLock").value=cfg.autoLockMin||0;$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;$("sVaultPass").value="";updateVaultStatus();$("settings").classList.remove("hidden")}
 function renderPwMeter(){
   const p=$("fPass").value;
   const {score,label}=passwordStrength(p);
@@ -2263,7 +2350,7 @@ $("moreMenu").addEventListener("click",e=>{if(e.target.closest("button"))$("more
 document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.target.closest("#bMore"))$("moreMenu").classList.add("hidden")});
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():$("settings").classList.add("hidden"));
 $("sSave").addEventListener("click",async()=>{
-  cfg.apiKey=$("sKey").value.trim();cfg.model=$("sModel").value;cfg.autoCheck=$("sAuto").checked;cfg.backendUrl=$("sBackend").value.trim();
+  cfg.apiKey=$("sKey").value.trim();cfg.model=$("sModel").value;cfg.autoCheck=$("sAuto").checked;cfg.autoEveryHours=+$("sAutoEvery").value;cfg.autoRankedOnly=$("sAutoRanked").checked;cfg.backendUrl=$("sBackend").value.trim();
   cfg.notify=$("sNotify").checked;
   cfg.discordWebhook=$("sDiscord").value.trim();
   cfg.autoLockMin=Math.max(0,+$("sAutoLock").value||0);
@@ -2361,6 +2448,9 @@ $("dash").addEventListener("click",e=>{if(e.target.closest("#bDashToggle")){
   dashJustOpened=!cfg.dashCollapsed;
   saveCfg();renderDash();
 }});
+$("dash").addEventListener("change",e=>{
+  if(e.target&&e.target.id==="dashMin"){cfg.statsMinTier=e.target.value;saveCfg();renderDash()}
+});
 $("tagbar").addEventListener("click",e=>{const t=e.target.closest("[data-tag]");if(!t)return;ui.tag=ui.tag===t.dataset.tag?null:t.dataset.tag;render()});
 $("tSelectAll").addEventListener("change",e=>{
   const list=filtered();
@@ -2437,6 +2527,7 @@ $("grid").addEventListener("click",async e=>{
   else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderCard(id)}
   else if(act==="login"){const on=!openLogin.has(id);on?openLogin.add(id):openLogin.delete(id);shownPw.delete(id);reveal=on?id+":login":null;renderCard(id)}
   else if(act==="edit")openForm(acc);
+  else if(act==="exstats"){acc.excludeStats=!acc.excludeStats;saveDB();renderCard(id);renderDash();toast(acc.excludeStats?"Left out of the combined stats":"Counted in the combined stats again")}
   else if(act==="archive"){acc.archived=true;saveDB();render();toast("Archived — toggle \"Archived\" in the toolbar to see it again")}
   else if(act==="unarchive"){acc.archived=false;saveDB();render();toast("Restored to active accounts")}
   else if(act==="note"||act==="noteedit"){
@@ -2500,7 +2591,7 @@ function startApp(){
   setTimeout(()=>$("grid").classList.remove("boot"),1200);
   if(!cfg.seenHelp&&accounts.length===0)$("help").classList.remove("hidden");
   if(cfg.autoCheck){
-    const staleAccs=accounts.filter(a=>a.status!=="banned"&&(!a.stats||!a.stats.updatedAt||Date.now()-a.stats.updatedAt>STALE_MS));
+    const staleAccs=accounts.filter(autoCheckDue);
     if(staleAccs.length){
       toast("Auto-checking "+staleAccs.length+" stale account"+(staleAccs.length===1?"":"s")+"…");
       (async()=>{for(const a of staleAccs){await check(a.id);await new Promise(r=>setTimeout(r,800))}})();
@@ -2555,6 +2646,7 @@ function relock(){
 }
 function boot(){
   $("fRegion").innerHTML=Object.keys(REGIONS).map(r=>`<option value="${r}">${esc(r)} — ${esc(REGIONS[r].full)}</option>`).join("");
+  $("sAutoEvery").innerHTML=AUTO_EVERY.map(o=>`<option value="${o.v}">${esc(o.label)}</option>`).join("");
   $("baRegion").innerHTML=$("fRegion").innerHTML;
   hasStorage=storageOK();
   if(!hasStorage){$("banner").classList.add("show")}
