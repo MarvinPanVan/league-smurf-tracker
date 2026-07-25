@@ -1,10 +1,21 @@
 // Smurf Tracker — Cloudflare Worker backend
 // Deploy this, paste the worker's URL into the app's Settings > "Backend URL".
-// GET /?name=<gameName>&tag=<tagLine>&region=<euw|eune|na|kr>
-// -> {"found":true,"tier":"GOLD","division":"II","lp":45,"wins":30,"losses":25,"level":247,"peak":{"tier":"PLATINUM","division":"IV","lp":12},"seasons":{"solo":[...],"flex":[...]},"flex":{"tier":"UNRANKED"},"champs":[{"name":"Ashe","wr":60,"games":25,"kda":2.25}],"icon":"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon123.jpg","mmr":null,"avgRecent":null}
+//
+// GET /?name=<gameName>&tag=<tagLine>&region=<euw|eune|na|kr|...>
+// -> {"found":true,"tier":"GOLD","division":"II","lp":45,"wins":30,"losses":25,
+//     "level":247,"peak":{"tier":"PLATINUM","division":"IV","lp":12},
+//     "seasons":{"solo":[{"season":"S2025","tier":"MASTER","division":null,"lp":135}],"flex":[]},
+//     "flex":{"tier":"UNRANKED","division":null,"lp":null},
+//     "champs":[{"name":"Ashe","wr":60,"games":25,"kda":2.25,"k":6,"d":6.8,"a":9.3}],
+//     "icon":"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon123.jpg",
+//     "mmr":null,"avgRecent":null}
 // -> {"found":false}  (summoner genuinely doesn't exist)
 // -> HTTP 4xx/5xx on transient failures (missing params, op.gg unreachable, page didn't parse) —
-//    the app falls back to the free proxy chain / paste / manual entry on any non-2xx response.
+//    the app falls back to the free proxy chain / manual entry on any non-2xx response.
+//
+// The parsers below are ported from the app's client-side ones and are exported so
+// tests/worker.test.mjs can run them against real op.gg fixtures. Cloudflare only
+// ever uses the default export, so the extra named exports cost nothing.
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
@@ -74,79 +85,10 @@ const TIER_WORD = "challenger|grandmaster|master|diamond|emerald|platinum|gold|s
 const MASTER_PLUS = ["MASTER", "GRANDMASTER", "CHALLENGER"];
 const DIV_MAP = { "1": "I", "2": "II", "3": "III", "4": "IV" };
 
-// The season tables and the champion list are only readable as rows, so block tags
-// become newlines instead of spaces here. Ported from the app's stripRows.
-function stripRows(raw) {
-  return String(raw)
-    .replace(/<script[sS]*?</script>/gi, " ")
-    .replace(/<style[sS]*?</style>/gi, " ")
-    .replace(/</(tr|li|div|p|h[1-6]|section|article)s*>/gi, "
-")
-    .replace(/<brs*/?>/gi, "
-")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/[ 	]+/g, " ")
-    .split("
-").map(l => l.trim()).filter(Boolean);
-}
-
-// One row per past season, for both queues. The caption above the rows is what
-// says which queue they belong to.
-function parseSeasons(raw) {
-  if (!raw) return null;
-  const rowRe = new RegExp("(S\d{4}(?:\s*S\d)?)\s*\|?\s*(?:\|\s*)?(" + TIER_WORD + ")\s*([1-4])?\s*\|?\s*(\d{1,4})\s*\|?\s*$", "i");
-  const out = { solo: [], flex: [] };
-  let bucket = null;
-  for (const line of stripRows(raw)) {
-    if (/rankeds*solo/i.test(line) && /season/i.test(line) && /LP/i.test(line)) { bucket = "solo"; continue; }
-    if (/rankeds*flex/i.test(line) && /season/i.test(line) && /LP/i.test(line)) { bucket = "flex"; continue; }
-    if (!bucket) continue;
-    const m = line.match(rowRe);
-    if (!m) { if (/^|?s*:?-{2,}/.test(line) || /season/i.test(line)) continue; if (out[bucket].length) bucket = null; continue; }
-    const tier = m[2].toUpperCase();
-    out[bucket].push({
-      season: m[1].replace(/s+/g, " "), tier,
-      division: (MASTER_PLUS.includes(tier) || !m[3]) ? null : DIV_MAP[m[3]],
-      lp: +m[4],
-    });
-  }
-  return (out.solo.length || out.flex.length) ? out : null;
-}
-
-// Only trusted when a tier and an LP figure sit together right under the heading.
-function parseFlex(raw) {
-  if (!raw) return null;
-  const lines = stripRows(raw);
-  for (let i = 0; i < lines.length; i++) {
-    if (!/^rankeds*flex$/i.test(lines[i])) continue;
-    const near = lines.slice(i + 1, i + 4).join(" ");
-    if (/^s*unranked/i.test(near)) return { tier: "UNRANKED", division: null, lp: null };
-    const m = near.match(new RegExp("\b(" + TIER_WORD + ")\b(?:\s+([1-4]|IV|III|II|I)(?![\dA-Za-z]))?\s*(\d{1,4})\s*LP\b", "i"));
-    if (m) {
-      const tier = m[1].toUpperCase();
-      return { tier, division: (MASTER_PLUS.includes(tier) || !m[2]) ? null : (DIV_MAP[m[2]] || m[2].toUpperCase()), lp: +m[3] };
-    }
-  }
-  return null;
-}
-
-// "Ashe CS 209 (7.2) 2.25:1 KDA 6 / 6.8 / 9.3 60%25 Games"
-function parseChampions(raw) {
-  if (!raw) return null;
-  const re = /^(.{2,26}?)s+CSs+[d.,]+s*([d.]+)s+([d.]+):1s+KDAs+([d.]+)s*/s*([d.]+)s*/s*([d.]+)s+(d{1,3})%s*(d{1,3})s+Games/i;
-  const out = [];
-  for (const line of stripRows(raw)) {
-    const m = line.match(re);
-    if (!m) continue;
-    const name = m[1].replace(/s+/g, " ").trim();
-    if (!name || out.some(c => c.name === name)) continue;
-    out.push({ name, kda: +m[2], k: +m[3], d: +m[4], a: +m[5], wr: +m[6], games: +m[7] });
-  }
-  return out.length ? out.slice(0, 10) : null;
-}
-
-function htmlToText(html) {
-  return html
+// Flattens a page to one line of plain words. Everything that keys off word order
+// rather than page structure reads from this.
+export function htmlToText(html) {
+  return String(html)
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ")
@@ -160,58 +102,43 @@ function htmlToText(html) {
     .trim();
 }
 
-// op.gg stacks the summoner level on the profile icon as a bare number with no
-// label anywhere near it, which is why the "Lv." patterns below never found it and
-// every backend check came back with level: null. The only anchor is position — it
-// is the number printed immediately before the Riot ID heading.
-// Ported from the app's client-side parseLevelText; keep the two in sync.
-function parseLevelText(raw, name, tag) {
-  if (!raw || !name) return null;
-  const text = htmlToText(raw);
-  const needle = (name + "#" + tag).toLowerCase();
-  const hay = text.toLowerCase();
-  for (let from = 0; ; ) {
-    const i = hay.indexOf(needle, from);
-    if (i < 0) return null;
-    const m = text.slice(Math.max(0, i - 14), i).match(/(d{1,4})[s#>]*$/);
-    if (m) { const lv = +m[1]; if (lv >= 1 && lv <= 5000) return lv; }
-    from = i + 1;
-  }
+// Same idea, but row boundaries survive: the season tables and the champion list
+// are only readable as rows, so block tags become newlines instead of spaces.
+// The markdown rules are no-ops on the raw HTML op.gg serves, and are kept only so
+// this behaves identically to the app's copy on any input.
+export function stripRows(raw) {
+  return String(raw)
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<\/(tr|li|div|p|h[1-6]|section|article)\s*>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")      // markdown images: their URLs carry tier names
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, " $1 ")  // markdown links: keep the label, drop the URL
+    .replace(/[*`_]+/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .split("\n").map(l => l.trim()).filter(Boolean);
 }
 
-// The season peak: op.gg prints the highest rank reached under the current one and
-// badges it "Top tier". The division must not be allowed to eat the first digit of
-// the LP — without the lookahead, "master 393 LP" parses as division 3, 93 LP.
-// Ported from the app's client-side parsePeakText; keep the two in sync.
-function parsePeakText(raw) {
+// The current rank. Two passes: the strict pattern on the flattened text, then —
+// only if that found no tier — the same pattern on the row-stripped version, for
+// pages dense enough that the tier and its LP end up further apart than the
+// pattern tolerates. Never a downgrade, since pass two only runs after a miss.
+export function parseRankText(raw) {
   if (!raw) return null;
-  const text = htmlToText(raw);
-  const i = text.search(/Tops*tier/i);
-  if (i < 0) return null;
-  const before = text.slice(Math.max(0, i - 140), i);
-  const re = /(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)(?:s+([1-4]|IV|III|II|I)(?![dA-Za-z]))?s*(d{1,4})s*LP/ig;
-  let m, last = null;
-  while ((m = re.exec(before))) last = m;
-  if (!last) return null;
-  const tier = last[1].toUpperCase();
-  const mPlus = ["MASTER", "GRANDMASTER", "CHALLENGER"].includes(tier);
-  const map = { "1": "I", "2": "II", "3": "III", "4": "IV" };
-  return { tier, division: (mPlus || !last[2]) ? null : (map[last[2]] || last[2].toUpperCase()), lp: +last[3] };
+  const first = parseRankFlat(String(raw).replace(/\s+/g, " "));
+  if (first && first.tier) return first;
+  const second = parseRankFlat(stripRows(raw).join(" "));
+  return (second && second.tier) ? second : (first || second);
 }
 
-// Ported 1:1 from the app's client-side parseRankText — keep in sync if that one changes.
-function parseRankText(raw) {
-  if (!raw) return null;
-  const text = String(raw).replace(/\s+/g, " ");
+function parseRankFlat(text) {
   const strict = /\b(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)\b[^\dA-Za-z]{0,6}([1-4]|IV|III|II|I)?(?!\d)(?:\s\2(?!\d))?[^\d]{0,6}(\d{1,4})\s*LP\b/i;
   const m = text.match(strict);
   const out = { tier: null, division: null, lp: null, wins: null, losses: null, level: null };
   if (m) {
     out.tier = m[1].toUpperCase();
-    if (m[2]) {
-      const map = { "1": "I", "2": "II", "3": "III", "4": "IV" };
-      out.division = map[m[2]] || m[2].toUpperCase();
-    }
+    if (m[2]) out.division = DIV_MAP[m[2]] || m[2].toUpperCase();
     out.lp = +m[3];
     const after = text.slice(m.index);
     const wl = after.match(/(\d{1,4})\s*W(?:in)?s?\b\s*[,\/]?\s*(\d{1,4})\s*L(?:ose|oss(?:es)?)?\b/i);
@@ -223,8 +150,119 @@ function parseRankText(raw) {
   return out;
 }
 
-// Ported 1:1 from the app's client-side parseProfileIcon.
-function parseProfileIcon(raw) {
+// op.gg stacks the summoner level on the profile icon as a bare number with no
+// label anywhere near it, which is why the "Lv." patterns above never found it and
+// every backend check used to come back with level: null. The only anchor is
+// position — it is the number printed immediately before the Riot ID heading.
+// Deliberately a tight window and a sane range: a wrong number here would render
+// as a confident, wrong "Level".
+export function parseLevelText(raw, name, tag) {
+  if (!raw || !name) return null;
+  const text = htmlToText(raw);
+  const needle = (name + "#" + tag).toLowerCase();
+  const hay = text.toLowerCase();
+  for (let from = 0; ;) {
+    const i = hay.indexOf(needle, from);
+    if (i < 0) return null;
+    const m = text.slice(Math.max(0, i - 14), i).match(/(\d{1,4})[\s#>]*$/);
+    if (m) { const lv = +m[1]; if (lv >= 1 && lv <= 5000) return lv; }
+    from = i + 1;
+  }
+}
+
+// The season peak: op.gg prints the highest rank reached under the current one and
+// badges it "Top tier", so the peak is the last rank printed before that badge.
+// The division must not be allowed to eat the first digit of the LP — without the
+// lookahead, "master 393 LP" parses as division 3, 93 LP.
+export function parsePeakText(raw) {
+  if (!raw) return null;
+  const text = htmlToText(raw);
+  const i = text.search(/Top\s*tier/i);
+  if (i < 0) return null;
+  const before = text.slice(Math.max(0, i - 140), i);
+  const re = new RegExp("\\b(" + TIER_WORD + ")\\b(?:\\s+([1-4]|IV|III|II|I)(?![\\dA-Za-z]))?\\s*(\\d{1,4})\\s*LP\\b", "ig");
+  let m, last = null;
+  while ((m = re.exec(before))) last = m;
+  if (!last) return null;
+  const tier = last[1].toUpperCase();
+  return {
+    tier,
+    division: (MASTER_PLUS.includes(tier) || !last[2]) ? null : (DIV_MAP[last[2]] || last[2].toUpperCase()),
+    lp: +last[3],
+  };
+}
+
+// One row per past season, for both queues. The caption above the rows is what
+// says which queue they belong to.
+export function parseSeasons(raw) {
+  if (!raw) return null;
+  // The division is optional and must not be allowed to eat the first digit of the
+  // LP: without the lookahead, "S2025 master 135" reads as division 1, 35 LP. The
+  // markdown shape hides this because its pipes separate the cells; raw table HTML
+  // does not, and raw HTML is what op.gg serves this worker.
+  const rowRe = new RegExp("(S\\d{4}(?:\\s*S\\d)?)\\s*\\|?\\s*(?:\\|\\s*)?(" + TIER_WORD + ")(?:\\s+([1-4])(?!\\d))?\\s*\\|?\\s*(\\d{1,4})\\s*\\|?\\s*$", "i");
+  const out = { solo: [], flex: [] };
+  let bucket = null;
+  for (const line of stripRows(raw)) {
+    if (/ranked\s*solo/i.test(line) && /season/i.test(line) && /\bLP\b/i.test(line)) { bucket = "solo"; continue; }
+    if (/ranked\s*flex/i.test(line) && /season/i.test(line) && /\bLP\b/i.test(line)) { bucket = "flex"; continue; }
+    if (!bucket) continue;
+    const m = line.match(rowRe);
+    if (!m) {
+      if (/^\|?\s*:?-{2,}/.test(line) || /season/i.test(line)) continue;
+      if (out[bucket].length) bucket = null;
+      continue;
+    }
+    const tier = m[2].toUpperCase();
+    out[bucket].push({
+      season: m[1].replace(/\s+/g, " "),
+      tier,
+      division: (MASTER_PLUS.includes(tier) || !m[3]) ? null : DIV_MAP[m[3]],
+      lp: +m[4],
+    });
+  }
+  return (out.solo.length || out.flex.length) ? out : null;
+}
+
+// The flex rank sits under its own heading and is usually just "Unranked". Only
+// trusted when a tier and an LP figure appear together right after that heading.
+export function parseFlex(raw) {
+  if (!raw) return null;
+  const lines = stripRows(raw);
+  for (let i = 0; i < lines.length; i++) {
+    if (!/^ranked\s*flex$/i.test(lines[i])) continue;
+    const near = lines.slice(i + 1, i + 4).join(" ");
+    if (/^\s*unranked/i.test(near)) return { tier: "UNRANKED", division: null, lp: null };
+    const m = near.match(new RegExp("\\b(" + TIER_WORD + ")\\b(?:\\s+([1-4]|IV|III|II|I)(?![\\dA-Za-z]))?\\s*(\\d{1,4})\\s*LP\\b", "i"));
+    if (m) {
+      const tier = m[1].toUpperCase();
+      return {
+        tier,
+        division: (MASTER_PLUS.includes(tier) || !m[2]) ? null : (DIV_MAP[m[2]] || m[2].toUpperCase()),
+        lp: +m[3],
+      };
+    }
+  }
+  return null;
+}
+
+// Season champion rows, as op.gg prints them:
+// "Ashe CS 209 (7.2) 2.25:1 KDA 6 / 6.8 / 9.3 60%25 Games"
+export function parseChampions(raw) {
+  if (!raw) return null;
+  const re = /^(.{2,26}?)\s+CS\s+[\d.,]+\s*\([\d.]+\)\s+([\d.]+):1\s+KDA\s+([\d.]+)\s*\/\s*([\d.]+)\s*\/\s*([\d.]+)\s+(\d{1,3})%\s*(\d{1,3})\s+Games\b/i;
+  const out = [];
+  for (const line of stripRows(raw)) {
+    const m = line.match(re);
+    if (!m) continue;
+    const name = m[1].replace(/\s+/g, " ").trim();
+    if (!name || out.some(c => c.name === name)) continue;
+    out.push({ name, kda: +m[2], k: +m[3], d: +m[4], a: +m[5], wr: +m[6], games: +m[7] });
+  }
+  return out.length ? out.slice(0, 10) : null;
+}
+
+export function parseProfileIcon(raw) {
   if (!raw) return null;
   const m = String(raw).match(/profile_icons?\/profileicon(\d+)/i);
   return m ? `https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon${m[1]}.jpg` : null;

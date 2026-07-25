@@ -1341,7 +1341,11 @@ const TIER_WORD="challenger|grandmaster|master|diamond|emerald|platinum|gold|sil
 // pipes once raw table HTML has been through stripRows.
 function parseSeasons(raw){
   if(!raw)return null;
-  const rowRe=new RegExp("(S\\d{4}(?:\\s*S\\d)?)\\s*\\|?\\s*(?:\\|\\s*)?("+TIER_WORD+")\\s*([1-4])?\\s*\\|?\\s*(\\d{1,4})\\s*\\|?\\s*$","i");
+  // The division is optional and must not be allowed to eat the first digit of the
+  // LP: without the lookahead, "S2025 master 135" reads as division 1, 35 LP. The
+  // reader-mode shape hides this because its pipes separate the cells — raw table
+  // HTML, which two of the three proxies return, does not.
+  const rowRe=new RegExp("(S\\d{4}(?:\\s*S\\d)?)\\s*\\|?\\s*(?:\\|\\s*)?("+TIER_WORD+")(?:\\s+([1-4])(?!\\d))?\\s*\\|?\\s*(\\d{1,4})\\s*\\|?\\s*$","i");
   const out={solo:[],flex:[]};
   let bucket=null;
   for(const line of stripRows(raw)){
