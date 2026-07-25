@@ -71,7 +71,13 @@
   .hx-in{border-radius:calc(var(--r-lg) - 1px);height:100%;
     background:linear-gradient(180deg,#151922f5,#0f1218fa);
     backdrop-filter:blur(16px) saturate(130%);-webkit-backdrop-filter:blur(16px) saturate(130%)}
-  .hx.gold{background:var(--gold-dim);background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 62%,transparent),color-mix(in srgb,var(--gold) 13%,transparent) 42%,#ffffff06)}
+  /* A favourite has to be spottable at a glance across a full grid, so it gets a
+     lit border plus a warm halo — the old faint gold edge was invisible in a row
+     of cards. */
+  .hx.gold{background:var(--gold-dim);
+    background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 95%,transparent),color-mix(in srgb,var(--gold) 34%,transparent) 42%,color-mix(in srgb,var(--gold) 12%,transparent));
+    box-shadow:var(--sh-2),0 0 30px -10px color-mix(in srgb,var(--gold) 60%,transparent)}
+  .hx.gold .hx-in{background:linear-gradient(180deg,#1b1812f5,#12131afa)}
   .hx.teal{background:var(--teal);background:linear-gradient(155deg,color-mix(in srgb,var(--teal) 52%,transparent),color-mix(in srgb,var(--teal) 10%,transparent) 45%,#ffffff06)}
 
   /* ---- header ---- */
@@ -241,13 +247,17 @@
   .star svg{fill:none;stroke:currentColor;stroke-width:1.7}
   .star.on{color:var(--star)}
   .star.on svg{fill:currentColor}
-  /* mono is deliberate — it's an identifier, not prose — so it's pushed well down
-     the scale and desaturated, otherwise the font switch just looks accidental */
-  .rid{font-size:11.5px;color:var(--faint);cursor:pointer;text-align:left;justify-content:flex-start;margin-top:3px;
-    font-family:ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:.01em;transition:color .15s ease;max-width:100%;
+  /* Same face as everything else. Monospace was defensible in theory — it is an
+     identifier — but sitting one line under the name it just read as a font
+     glitch, so the tag is separated by colour and weight instead. */
+  .rid{font-size:12px;color:var(--muted);cursor:pointer;text-align:left;justify-content:flex-start;margin-top:2px;
+    letter-spacing:-.005em;transition:color .15s ease;max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
-  .rid:hover{color:var(--gold)}
-  .rid b{color:#5a6275;font-weight:400}
+  .rid b{color:var(--faint);font-weight:400;transition:color .15s ease}
+  /* the tag is part of the same name — hovering must light all of it, not just
+     the half before the # */
+  .rid:hover,.rid:hover b{color:var(--gold)}
+  .rid:hover b{opacity:.72}
   .eye-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:6px;color:var(--muted)}
   .eye-btn:hover{color:var(--text)}
   .panel-close{position:absolute;top:13px;right:13px;width:29px;height:29px;border-radius:var(--r-sm);
@@ -262,10 +272,14 @@
   .c-deltas{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
   .rk{font-size:23px;font-weight:600;letter-spacing:-.035em;line-height:1.15;white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis}
-  .rk-lp{font-size:13.5px;font-weight:500;color:var(--muted);letter-spacing:-.01em;margin-left:9px;
-    font-variant-numeric:tabular-nums}
+  .rk-lp{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-.015em;margin-left:10px;
+    font-variant-numeric:tabular-nums;opacity:.82}
   .c-unchecked{font-size:17px;color:var(--faint);letter-spacing:-.02em}
-  .wl{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:3px}
+  .wl{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:4px}
+  .wl b{color:var(--text);font-weight:500}
+  /* winrate carries the verdict, so it gets the only colour on the line */
+  .wrv{font-weight:600;color:var(--text)}
+  .wrv.wr-good{color:var(--good)}
 
   /* labelled micro-stats instead of one muted run-on sentence */
   .c-stats{display:flex;flex-wrap:wrap;gap:7px 20px}
@@ -290,15 +304,27 @@
   .ctags{display:flex;gap:6px;flex-wrap:wrap}
   .ctags span{font-size:11px;padding:3px 9px;border-radius:999px;background:#ffffff0a;border:1px solid #ffffff0f;color:var(--muted)}
   .login{background:#00000038;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:13px;display:flex;flex-direction:column;gap:9px}
+  .login .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:7px}
   .lrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
   .lrow .val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .lrow .mono{font-family:ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:.01em}
   .lrow .none{color:var(--faint)}
   .lbtns{display:flex;gap:5px;flex-shrink:0}
   .lbtns button{font-size:11px;padding:4px 9px}
-  .c-foot{display:flex;justify-content:space-between;align-items:center;gap:9px;flex-wrap:wrap;
+  .c-foot{display:flex;flex-direction:column;align-items:stretch;gap:11px;
     border-top:1px solid var(--line);padding-top:12px;margin-top:auto}
-  .upd{font-size:11px;color:var(--faint)}
+  .c-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
+  /* was a bare run-on caption floating above the buttons; now a dot-led timestamp
+     with the source as its own tag, so it reads as a deliberate meta line */
+  .upd{font-size:10.5px;color:var(--faint);letter-spacing:.015em;display:inline-flex;align-items:center;gap:7px;min-width:0}
+  .upd::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.55;flex-shrink:0}
+  .upd.stale{color:var(--danger)}
+  .upd.stale::before{opacity:1}
+  /* asOf is sometimes a source ("backend", a proxy name) and sometimes a date
+     phrase op.gg printed ("updated today") — so no uppercasing, which would
+     shout at a sentence fragment */
+  .src{font-size:10px;font-weight:500;letter-spacing:.01em;color:var(--faint);
+    padding:2px 8px;border-radius:999px;background:#ffffff0a;border:1px solid #ffffff0f;white-space:nowrap}
   .acts{display:flex;gap:5px;flex-wrap:wrap}
   .acts button,.acts a{font-size:11.5px;padding:6px 10px;text-decoration:none}
   .a-dpm{border:1px solid var(--gold-dim);color:var(--gold);font-weight:600;background:var(--panel2);
@@ -1099,7 +1125,12 @@ function cardHTML(a,i){
   const st=STATUS[a.status]||STATUS.active;
   let peak=null;
   {let bestE=null,bestV=-1;
-   for(const h of hist){const v=ladderLP(h);if(v!==null&&v>bestV){bestV=v;bestE=h}}
+   // op.gg publishes no season peak, so the observed history is all we can derive
+   // one from — and that misses anything before the account was added or between
+   // checks. A manually entered peak competes as just another candidate, and
+   // whichever is genuinely higher wins.
+   const cands=a.peakManual?hist.concat([a.peakManual]):hist;
+   for(const h of cands){const v=ladderLP(h);if(v!==null&&v>bestV){bestV=v;bestE=h}}
    const cur=ladderLP(s);
    if(bestE&&(cur===null||bestV>cur))peak=shortRank(bestE);}
   let deltaChip="";
@@ -1125,7 +1156,7 @@ function cardHTML(a,i){
   else if(!s)rankBlock=`<div class="rk c-unchecked">Never checked</div>`;
   else if(s.found===false)rankBlock=`<div class="wl" style="color:var(--danger)">Not found — check name/tag/region</div>`;
   else rankBlock=`<div class="rk" style="color:${col}">${esc(tierTxt||"Unranked")}${lpTxt?`<span class="rk-lp">${esc(lpTxt)}</span>`:""}</div>
-    <div class="wl">${total>0?esc(s.wins+"W "+s.losses+"L · "+wr+"% WR"):"No ranked games found"}</div>`;
+    <div class="wl">${total>0?`<b>${esc(s.wins)}W</b> <b>${esc(s.losses)}L</b> · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:"No ranked games found"}</div>`;
   // Peak / Level / MMR are unrelated facts — label them instead of running them
   // together in one muted sentence.
   const microStats=[];
@@ -1138,7 +1169,11 @@ function cardHTML(a,i){
   const loginOpen=openLogin.has(a.id), pw=shownPw.has(a.id);
   const rv=block=>reveal===a.id+":"+block?" reveal":"";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" style="--d:${(i||0)*40}ms"><div class="hx-in card" data-id="${a.id}" style="--st:${st.color}">
+  // Active is the default state of almost every account, so railing it green just
+  // paints the same stripe down the whole grid and says nothing. Only the states
+  // worth spotting get one.
+  const railed=a.status&&a.status!=="active";
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" style="--d:${(i||0)*40}ms"><div class="hx-in card" data-id="${a.id}"${railed?` style="--st:${st.color}"`:""}>
     <div class="c-head">
       <div class="c-portrait">
         <span class="c-initial">${esc(initial)}</span>
@@ -1169,18 +1204,29 @@ function cardHTML(a,i){
       <div class="lrow"><span class="val mono ${a.password?"":"none"}" style="font-family:${a.password?"":"inherit"}">${a.password?(pw?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${pw?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
       ${a.email?`<div class="lrow"><span class="val">${esc(a.email)}</span><span class="lbtns"><button data-act="copymail">Copy</button></span></div>`:""}
     </div>`:""}
-    ${openRank.has(a.id)?`<div class="login${rv("rank")}"><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <select data-f="tier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${s&&(s.tier||"").toUpperCase()===t?"selected":""}>${t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
-      <select data-f="div">${["I","II","III","IV"].map(d=>`<option ${s&&s.division===d?"selected":""}>${d}</option>`).join("")}</select>
-      <input data-f="lp" type="number" min="0" max="2000" placeholder="LP" value="${s&&s.lp!=null?s.lp:""}" style="width:72px">
-      <input data-f="w" type="number" min="0" placeholder="W" value="${s&&s.wins!=null?s.wins:""}" style="width:64px">
-      <input data-f="l" type="number" min="0" placeholder="L" value="${s&&s.losses!=null?s.losses:""}" style="width:64px">
-      <button data-act="rankapply" style="color:var(--teal)">Save</button>
-    </div></div>`:""}
+    ${openRank.has(a.id)?(pm=>`<div class="login${rv("rank")}">
+      <div><span class="k">Current</span><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <select data-f="tier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${s&&(s.tier||"").toUpperCase()===t?"selected":""}>${t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
+        <select data-f="div">${["I","II","III","IV"].map(d=>`<option ${s&&s.division===d?"selected":""}>${d}</option>`).join("")}</select>
+        <input data-f="lp" type="number" min="0" max="2000" placeholder="LP" value="${s&&s.lp!=null?s.lp:""}" style="width:72px">
+        <input data-f="w" type="number" min="0" placeholder="W" value="${s&&s.wins!=null?s.wins:""}" style="width:64px">
+        <input data-f="l" type="number" min="0" placeholder="L" value="${s&&s.losses!=null?s.losses:""}" style="width:64px">
+      </div></div>
+      <div style="border-top:1px solid var(--line);padding-top:10px">
+        <span class="k">Season peak</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <select data-f="ptier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${(pm&&(pm.tier||"").toUpperCase())===t?"selected":""}>${t==="UNRANKED"?"— none —":t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
+          <select data-f="pdiv">${["I","II","III","IV"].map(d=>`<option ${pm&&pm.division===d?"selected":""}>${d}</option>`).join("")}</select>
+          <input data-f="plp" type="number" min="0" max="2000" placeholder="LP" value="${pm&&pm.lp!=null?pm.lp:""}" style="width:72px">
+        </div>
+        <div style="font-size:11px;color:var(--faint);margin-top:7px;line-height:1.5">op.gg doesn't publish a season peak, so it can only be read from checks this app has made. Set it here if you peaked before adding the account or between refreshes — the higher of the two is shown.</div>
+      </div>
+      <div><button data-act="rankapply" style="color:var(--teal)">Save</button></div>
+    </div>`)(a.peakManual):""}
     ${openPaste.has(a.id)?`<div class="login${rv("paste")}"><textarea data-f="pastetext" rows="3" placeholder="Open the OP.GG/DPM profile, select all (Ctrl+A), copy, paste here — I'll extract the rank" style="width:100%"></textarea><div style="margin-top:6px"><button data-act="pasteapply" style="color:var(--teal)">Parse &amp; save</button></div></div>`:""}
     ${a.notes?`<div class="c-notes"><span class="k">Notes</span>${esc(a.notes)}</div>`:""}
     <div class="c-foot">
-      <span class="upd${stale?" stale":""}">${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"—"}${s&&s.asOf?" · "+esc(s.asOf):""}</span>
+      <span class="c-meta"><span class="upd${stale?" stale":""}">${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${s&&s.asOf?`<span class="src">${esc(s.asOf)}</span>`:""}</span>
       <div class="acts">
         <button data-act="login" class="a-login" title="Show saved login">${icon("user")} ${loginOpen?"Hide login":"Login"}</button>
         <a class="a-dpm" href="${dpm}" target="_blank" rel="noreferrer">DPM ↗</a>
@@ -1674,6 +1720,9 @@ $("grid").addEventListener("click",async e=>{
     const s={found:true,tier,division:(isU||mPlus)?null:g("div").value,lp:isU?null:(+g("lp").value||0),
       wins:g("w").value===""?null:+g("w").value,losses:g("l").value===""?null:+g("l").value,
       level:old.level!=null?old.level:null,icon:old.icon||null,mmr:old.mmr||null,avgRecent:null,asOf:"manual entry",note:null,updatedAt:Date.now()};
+    const ptier=g("ptier")?g("ptier").value:"UNRANKED";
+    if(ptier==="UNRANKED")delete acc.peakManual;
+    else acc.peakManual={tier:ptier,division:TIER_ORDER.indexOf(ptier)>=TIER_ORDER.indexOf("MASTER")?null:g("pdiv").value,lp:+g("plp").value||0};
     commitStats(id,acc,s);toast("Rank saved");
   }
   else if(act==="pasteapply"){
