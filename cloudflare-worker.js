@@ -1,7 +1,7 @@
 // Smurf Tracker — Cloudflare Worker backend
 // Deploy this, paste the worker's URL into the app's Settings > "Backend URL".
 // GET /?name=<gameName>&tag=<tagLine>&region=<euw|eune|na|kr>
-// -> {"found":true,"tier":"GOLD","division":"II","lp":45,"wins":30,"losses":25,"level":247,"peak":{"tier":"PLATINUM","division":"IV","lp":12},"icon":"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon123.jpg","mmr":null,"avgRecent":null}
+// -> {"found":true,"tier":"GOLD","division":"II","lp":45,"wins":30,"losses":25,"level":247,"peak":{"tier":"PLATINUM","division":"IV","lp":12},"seasons":{"solo":[...],"flex":[...]},"flex":{"tier":"UNRANKED"},"champs":[{"name":"Ashe","wr":60,"games":25,"kda":2.25}],"icon":"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon123.jpg","mmr":null,"avgRecent":null}
 // -> {"found":false}  (summoner genuinely doesn't exist)
 // -> HTTP 4xx/5xx on transient failures (missing params, op.gg unreachable, page didn't parse) —
 //    the app falls back to the free proxy chain / paste / manual entry on any non-2xx response.
@@ -53,6 +53,9 @@ export default {
       losses: parsed.losses,
       level: parsed.level != null ? parsed.level : parseLevelText(html, name, tag),
       peak: parsePeakText(html),
+      seasons: parseSeasons(html),
+      flex: parseFlex(html),
+      champs: parseChampions(html),
       icon: parseProfileIcon(html), // needs the raw HTML — htmlToText() already stripped the <img> tags out
       mmr: null,
       avgRecent: null,
@@ -65,6 +68,81 @@ function json(obj, status) {
     status,
     headers: { "Content-Type": "application/json", ...CORS },
   });
+}
+
+const TIER_WORD = "challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron";
+const MASTER_PLUS = ["MASTER", "GRANDMASTER", "CHALLENGER"];
+const DIV_MAP = { "1": "I", "2": "II", "3": "III", "4": "IV" };
+
+// The season tables and the champion list are only readable as rows, so block tags
+// become newlines instead of spaces here. Ported from the app's stripRows.
+function stripRows(raw) {
+  return String(raw)
+    .replace(/<script[sS]*?</script>/gi, " ")
+    .replace(/<style[sS]*?</style>/gi, " ")
+    .replace(/</(tr|li|div|p|h[1-6]|section|article)s*>/gi, "
+")
+    .replace(/<brs*/?>/gi, "
+")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/[ 	]+/g, " ")
+    .split("
+").map(l => l.trim()).filter(Boolean);
+}
+
+// One row per past season, for both queues. The caption above the rows is what
+// says which queue they belong to.
+function parseSeasons(raw) {
+  if (!raw) return null;
+  const rowRe = new RegExp("(S\d{4}(?:\s*S\d)?)\s*\|?\s*(?:\|\s*)?(" + TIER_WORD + ")\s*([1-4])?\s*\|?\s*(\d{1,4})\s*\|?\s*$", "i");
+  const out = { solo: [], flex: [] };
+  let bucket = null;
+  for (const line of stripRows(raw)) {
+    if (/rankeds*solo/i.test(line) && /season/i.test(line) && /LP/i.test(line)) { bucket = "solo"; continue; }
+    if (/rankeds*flex/i.test(line) && /season/i.test(line) && /LP/i.test(line)) { bucket = "flex"; continue; }
+    if (!bucket) continue;
+    const m = line.match(rowRe);
+    if (!m) { if (/^|?s*:?-{2,}/.test(line) || /season/i.test(line)) continue; if (out[bucket].length) bucket = null; continue; }
+    const tier = m[2].toUpperCase();
+    out[bucket].push({
+      season: m[1].replace(/s+/g, " "), tier,
+      division: (MASTER_PLUS.includes(tier) || !m[3]) ? null : DIV_MAP[m[3]],
+      lp: +m[4],
+    });
+  }
+  return (out.solo.length || out.flex.length) ? out : null;
+}
+
+// Only trusted when a tier and an LP figure sit together right under the heading.
+function parseFlex(raw) {
+  if (!raw) return null;
+  const lines = stripRows(raw);
+  for (let i = 0; i < lines.length; i++) {
+    if (!/^rankeds*flex$/i.test(lines[i])) continue;
+    const near = lines.slice(i + 1, i + 4).join(" ");
+    if (/^s*unranked/i.test(near)) return { tier: "UNRANKED", division: null, lp: null };
+    const m = near.match(new RegExp("\b(" + TIER_WORD + ")\b(?:\s+([1-4]|IV|III|II|I)(?![\dA-Za-z]))?\s*(\d{1,4})\s*LP\b", "i"));
+    if (m) {
+      const tier = m[1].toUpperCase();
+      return { tier, division: (MASTER_PLUS.includes(tier) || !m[2]) ? null : (DIV_MAP[m[2]] || m[2].toUpperCase()), lp: +m[3] };
+    }
+  }
+  return null;
+}
+
+// "Ashe CS 209 (7.2) 2.25:1 KDA 6 / 6.8 / 9.3 60%25 Games"
+function parseChampions(raw) {
+  if (!raw) return null;
+  const re = /^(.{2,26}?)s+CSs+[d.,]+s*([d.]+)s+([d.]+):1s+KDAs+([d.]+)s*/s*([d.]+)s*/s*([d.]+)s+(d{1,3})%s*(d{1,3})s+Games/i;
+  const out = [];
+  for (const line of stripRows(raw)) {
+    const m = line.match(re);
+    if (!m) continue;
+    const name = m[1].replace(/s+/g, " ").trim();
+    if (!name || out.some(c => c.name === name)) continue;
+    out.push({ name, kda: +m[2], k: +m[3], d: +m[4], a: +m[5], wr: +m[6], games: +m[7] });
+  }
+  return out.length ? out.slice(0, 10) : null;
 }
 
 function htmlToText(html) {

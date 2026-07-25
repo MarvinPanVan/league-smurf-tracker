@@ -385,9 +385,12 @@
   .c-notes[data-act]:hover .k .ico{opacity:.85}
   .c-notes .none{color:var(--faint)}
   .c-notes textarea{width:100%;font-size:12.5px;line-height:1.6;min-height:62px;display:block}
-  .note-btns{display:flex;gap:5px;margin-top:7px;align-items:center}
-  .note-btns button{font-size:11px;padding:4px 10px}
-  .note-btns .hint{font-size:10px;color:var(--faint);margin-left:2px}
+  .c-notes.editing{border-color:color-mix(in srgb,var(--teal) 34%,transparent);background:#ffffff0d}
+  /* an empty note is an invitation, not a panel — one quiet line, no filled box */
+  .c-notes.blank{display:flex;align-items:center;gap:7px;padding:6px 12px;
+    background:none;border:1px dashed #ffffff14;color:var(--faint);font-size:11.5px}
+  .c-notes.blank:hover{background:#ffffff08;border-color:#ffffff26;color:var(--muted)}
+  .c-notes.blank .ico{width:11px;height:11px;opacity:.8}
   /* ---- info panel: past seasons, flex, champions ---- */
   .login.info{gap:13px}
   .sea{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:3px 0;font-size:12px}
@@ -428,6 +431,12 @@
     font-size:8.5px;font-weight:500;letter-spacing:.04em;color:var(--faint);pointer-events:none}
   .lpc-tick.l{transform:none;left:5px!important}
   .lpc-tick.r{transform:none;left:auto!important;right:5px}
+  .lpc-range{position:absolute;top:4px;right:5px;display:flex;gap:2px;z-index:3}
+  .lpc-range button{font-size:8.5px;font-weight:700;letter-spacing:.06em;line-height:1;
+    padding:3px 5px;border-radius:5px;border:1px solid transparent;background:#ffffff0d;
+    color:var(--faint);box-shadow:none}
+  .lpc-range button:hover{background:#ffffff1c;border-color:transparent;color:var(--text)}
+  .lpc-range button.on{background:color-mix(in srgb,var(--teal) 22%,transparent);color:var(--teal-txt)}
   .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:8px;font-weight:600;letter-spacing:.09em;
     text-transform:uppercase;pointer-events:none;opacity:.62;line-height:1}
   /* division numerals below Master, LP marks above it — opposite side to the tier
@@ -666,7 +675,7 @@
     <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     <div class="hex-display" style="color:var(--gold-txt);font-size:14px;text-transform:uppercase;margin-bottom:8px">How this works</div>
     <b style="color:var(--text)">Your data stays here.</b> Accounts are saved in this browser on this device — nothing gets uploaded. Clearing browser data wipes the vault, so use <b style="color:var(--text)">Export</b> for backups and <b style="color:var(--text)">Import</b> to restore or merge them.<br>
-    <b style="color:var(--text)">Rank checks are free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b style="color:var(--text)">Paste</b> (copy the profile page in) or <b style="color:var(--text)">Rank</b> to enter it by hand — history, sparklines and stats work the same either way.<br>
+    <b style="color:var(--text)">Rank checks are free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b style="color:var(--text)">Rank</b> in a card's ⋯ menu to enter it by hand — history, the chart and the stats all work the same either way.<br>
     <b style="color:var(--text)">Tips:</b> the star pins favorites on top · search matches names, tags, even ranks (try "gold") · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
     <b style="color:var(--text)">Extra privacy:</b> set a master password in <b style="color:var(--text)">Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.<br>
     <b style="color:var(--text)">Using this app:</b> free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.<br>
@@ -893,10 +902,11 @@ const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"
 // Only Sonnet 5 supports the newer dynamic-filtering web search; Haiku needs the basic one.
 const WEB_SEARCH_TOOL={"claude-sonnet-5":"web_search_20260209","claude-haiku-4-5":"web_search_20250305"};
 let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArchived:false};
-let checking=new Set(), openInfo=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), openPaste=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
+let checking=new Set(), openInfo=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
 // Which card has its note open, plus the live text. The draft is kept out here
 // on purpose: the grid re-renders wholesale, so a textarea rendered from a.notes
 // would throw away whatever was typed the moment an unrelated card updated.
+let chartRange=new Map(); // accountId -> "d" | "w" | "m", defaulted from the data
 let editingNote=null, noteDraft="";
 // "<accountId>:<block>" for the one card section that was *just* opened. The grid
 // re-renders wholesale on any change, so without this every open section would
@@ -1011,13 +1021,43 @@ function ladderLP(s){ // absolute position on the ladder, in LP
 // × 100), which is what makes a fixed tier band possible at all.
 const TIER_SPAN=400;
 const LPC_W=200, LPC_H=88;
+// Which check stands for a day / week / month, op.gg-style: the last one in each
+// bucket, because that is the value the account actually ended the period on.
+// Needs timestamps; without them there are no periods to bucket into.
+function bucketHistory(pts,mode){
+  if(!mode||mode==="all"||pts.length<2)return pts;
+  if(!pts.every(p=>+p.h.t))return pts;
+  const key=t=>{
+    const d=new Date(+t);
+    if(mode==="m")return d.getFullYear()+"-"+d.getMonth();
+    d.setHours(0,0,0,0);
+    if(mode==="w")d.setDate(d.getDate()-((d.getDay()+6)%7)); // back to Monday
+    return d.getTime();
+  };
+  const seen=new Map();
+  for(const p of pts)seen.set(key(p.h.t),p);
+  return[...seen.values()];
+}
+// A default that matches the data rather than a fixed one: a fortnight of checks
+// wants days, two years wants months.
+function defaultRange(hist){
+  const ts=(hist||[]).map(h=>+h.t).filter(Boolean);
+  if(ts.length<2)return"d";
+  const days=(Math.max(...ts)-Math.min(...ts))/86400000;
+  return days<=21?"d":days<=150?"w":"m";
+}
+const RANGES=[["d","Daily"],["w","Weekly"],["m","Monthly"]];
 // The old sparkline plotted LP with no scale at all: it showed the number moving
 // but never how far, or through which ranks. This draws the ladder itself —
 // a coloured band per tier, division hairlines when the view is tight enough for
 // them to mean anything, and every check as its own hoverable point.
-function rankChart(hist,cut){
-  const pts=(hist||[]).map(h=>({h,v:ladderLP(h)})).filter(p=>p.v!==null);
-  if(pts.length<2)return"";
+function rankChart(hist,cut,mode){
+  let pts=(hist||[]).map(h=>({h,v:ladderLP(h)})).filter(p=>p.v!==null);
+  // A brand new account has exactly one check, and showing it nothing at all was
+  // the least useful answer available — one point still says where on the ladder
+  // it sits, which is most of what the chart is for.
+  if(!pts.length)return"";
+  pts=bucketHistory(pts,mode);
   const vals=pts.map(p=>p.v);
   let lo=Math.min(...vals), hi=Math.max(...vals);
   // A flat run would otherwise be stretched to fill the frame and read as a
@@ -1050,7 +1090,7 @@ function rankChart(hist,cut){
   // the chart at five marks or fewer. 100 is the floor, and MIN_SPAN guarantees
   // nothing finer is ever picked, which is what keeps the numerals honest.
   const M_BASE=mIdx*TIER_SPAN;
-  const room=v=>{const y=py(v);return y>=11&&y<=LPC_H-3}; // enough space to label it
+  const room=v=>{const y=py(v);return y>=22&&y<=LPC_H-3}; // enough space to label it
   const rule=v=>{const y=py(v).toFixed(1);
     lines+=`<line x1="0" x2="${LPC_W}" y1="${y}" y2="${y}" stroke="#ffffff" stroke-opacity=".07" stroke-width="1" vector-effect="non-scaling-stroke"/>`};
   const mark=(v,txt)=>{labels+=`<span class="lpc-sub" style="top:${(py(v)-9.5).toFixed(1)}px">${esc(txt)}</span>`};
@@ -1107,7 +1147,8 @@ function rankChart(hist,cut){
   const ts=pts.map(p=>+p.h.t||0);
   const t0=ts[0], t1=ts[last];
   const timed=t1>t0&&ts.every(t=>t>0);
-  const fx=i=>timed?(ts[i]-t0)/(t1-t0):i/last; // 0..1
+  // one point has no span to spread across, so it sits in the middle
+  const fx=i=>last===0?.5:(timed?(ts[i]-t0)/(t1-t0):i/last); // 0..1
 
   const coords=pts.map((p,i)=>(fx(i)*LPC_W).toFixed(1)+","+py(p.v).toFixed(1)).join(" ");
   // unique per render so several cards' gradients never collide
@@ -1115,7 +1156,7 @@ function rankChart(hist,cut){
   const cur=tierColor(pts[last].h.tier);
   // the line is its own legend: it takes the colour of whatever tier it is
   // passing through, so a promotion reads as a colour change, not just a step up
-  const stops=pts.map((p,i)=>`<stop offset="${(fx(i)*100).toFixed(2)}%" stop-color="${tierColor(p.h.tier)}"/>`).join("");
+  const stops=(last?pts:[pts[0],pts[0]]).map((p,i)=>`<stop offset="${(last?fx(i)*100:i*100).toFixed(2)}%" stop-color="${tierColor(p.h.tier)}"/>`).join("");
   const overlay=pts.map((p,i)=>{
     const xp=fx(i)*100;
     // Each point claims the ground nearer to it than to its neighbours, and the
@@ -1152,9 +1193,11 @@ function rankChart(hist,cut){
     +`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="0">${stops}</linearGradient>`
     +`<linearGradient id="${aid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${cur}" stop-opacity=".3"/><stop offset="1" stop-color="${cur}" stop-opacity="0"/></linearGradient></defs>`
     +bands+lines
-    +`<polygon points="0,${LPC_H} ${coords} ${LPC_W},${LPC_H}" fill="url(#${aid})"/>`
-    +`<polyline class="lpc-line" points="${coords}" fill="none" stroke="url(#${gid})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`
-    +`</svg>${labels}${overlay}</div>`
+    +(last?`<polygon points="0,${LPC_H} ${coords} ${LPC_W},${LPC_H}" fill="url(#${aid})"/>`
+        +`<polyline class="lpc-line" points="${coords}" fill="none" stroke="url(#${gid})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`:"")
+    +`</svg>${labels}${overlay}`
+    +`<div class="lpc-range">${RANGES.map(([v,label])=>`<button data-act="range" data-r="${v}" class="${mode===v?"on":""}" title="${label}">${v.toUpperCase()}</button>`).join("")}</div>`
+    +`</div>`
     +(axis?`<div class="lpc-axis">${axis}</div>`:"")
     +`</div>`;
 }
@@ -1552,7 +1595,15 @@ function applyStats(acc,s){
     if(prev&&prev.tier===s.tier&&prev.division===s.division&&prev.lp===s.lp){
       prev.t=s.updatedAt; // nothing changed — refresh timestamp, don't spam history
     }else{
-      hist.push({t:s.updatedAt,tier:s.tier,division:s.division,lp:s.lp});
+      // The tier stored here is the one op.gg reported at that moment, and it is
+      // never recomputed — an account that was Challenger in March stays
+      // Challenger on the chart even though today's floor is somewhere else.
+      // The floors of the day go in beside it so a future reading of this point
+      // can judge it against its own ladder rather than against a later one.
+      const row={t:s.updatedAt,tier:s.tier,division:s.division,lp:s.lp};
+      const cut=cutoffsFor(acc.region);
+      if(cut&&(cut.gm||cut.chall))row.cut={gm:cut.gm,chall:cut.chall};
+      hist.push(row);
       if(prev&&TIER_ORDER.indexOf((s.tier||"").toUpperCase())>TIER_ORDER.indexOf((prev.tier||"").toUpperCase()))rankedUp=true;
     }
   }
@@ -1560,7 +1611,7 @@ function applyStats(acc,s){
 }
 function commitStats(id,acc,s){
   const up=applyStats(acc,s);
-  openRank.delete(id);openPaste.delete(id);
+  openRank.delete(id);
   flashId=id;saveDB();render();
   if(up)celebrate(id,acc);
   setTimeout(()=>{if(flashId===id){flashId=null;renderGrid()}},1500);
@@ -1575,7 +1626,7 @@ async function check(id){
   checking.delete(id);
   if(s){commitStats(id,acc,s);return true}
   else{
-    acc.stats=Object.assign({},acc.stats||{},{note:"Auto-fetch failed ("+err+") — use 📋 Paste or ✎ Rank"});
+    acc.stats=Object.assign({},acc.stats||{},{note:"Auto-fetch failed ("+err+") — enter it by hand with ✎ Rank"});
     saveDB();render();return false;
   }
 }
@@ -1765,11 +1816,12 @@ function infoBlockHTML(a,rev){
 // Split out of cardHTML so opening the editor can swap this one block instead of
 // rebuilding the card around it — see syncNoteBlock.
 function noteBlockHTML(a,rev){
-  if(editingNote===a.id)return`<div class="c-notes${rev||""}"><span class="k">Notes</span>`
-    +`<textarea data-f="notetext" rows="3" placeholder="Anything worth remembering about this account…">${esc(noteDraft)}</textarea>`
-    +`<div class="note-btns"><button data-act="notesave" style="color:var(--teal-txt)">Save</button>`
-    +`<button data-act="notecancel">Cancel</button><span class="hint">Ctrl+Enter saves · Esc cancels</span></div></div>`;
-  return a.notes?`<div class="c-notes" data-act="noteedit" title="Click to edit"><span class="k">Notes ${icon("pencil")}</span>${esc(a.notes)}</div>`:"";
+  if(editingNote===a.id)return`<div class="c-notes editing${rev||""}"><span class="k">Notes</span>`
+    +`<textarea data-f="notetext" rows="3" placeholder="Anything worth remembering about this account…">${esc(noteDraft)}</textarea></div>`;
+  // Always clickable, so there is no separate "add a note" action to find — an
+  // empty one is just a quiet line rather than a filled box.
+  if(a.notes)return`<div class="c-notes" data-act="noteedit" title="Click to edit"><span class="k">Notes ${icon("pencil")}</span>${esc(a.notes)}</div>`;
+  return`<div class="c-notes blank" data-act="noteedit" title="Click to write a note">${icon("pencil")} Add a note</div>`;
 }
 // Replace only the note block, leaving the rest of the card's DOM alone. Going
 // through renderGrid meant every card on screen was thrown away and rebuilt just
@@ -1881,7 +1933,7 @@ function cardHTML(a,i){
       ${deltaChip?`<div class="c-deltas">${deltaChip}</div>`:""}
     </div>
     ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
-    ${rankChart(hist,cutoffsFor(a.region))}
+    ${rankChart(hist,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(hist))}
     ${microStats.length?`<div class="c-stats">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(a.tags||[]).length?`<div class="ctags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""}
@@ -1910,7 +1962,6 @@ function cardHTML(a,i){
       <div><button data-act="rankapply" style="color:var(--teal-txt)">Save</button></div>
     </div>`)(a.peakManual):""}
     ${openInfo.has(a.id)?infoBlockHTML(a,rv("info")):""}
-    ${openPaste.has(a.id)?`<div class="login${rv("paste")}"><textarea data-f="pastetext" rows="3" placeholder="Open the OP.GG/DPM profile, select all (Ctrl+A), copy, paste here — I'll extract the rank" style="width:100%"></textarea><div style="margin-top:6px"><button data-act="pasteapply" style="color:var(--teal-txt)">Parse &amp; save</button></div></div>`:""}
     ${noteBlockHTML(a,rv("note"))}
     <div class="c-foot">
       <span class="c-meta"><span class="upd${stale?" stale":""}">${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${s&&s.asOf?`<span class="src">${esc(s.asOf)}</span>`:""}</span>
@@ -1919,13 +1970,11 @@ function cardHTML(a,i){
         <a class="a-dpm" href="${dpm}" target="_blank" rel="noreferrer">DPM ↗</a>
         <a class="btn" href="${opgg}" target="_blank" rel="noreferrer">OP.GG ↗</a>
         <button data-act="check" ${isChecking?"disabled":""} style="color:var(--teal-txt)">${isChecking?"…":icon("refresh")+" Refresh"}</button>
+        ${infoBlockHTML(a)?`<button data-act="info" class="a-info" title="Past seasons, flex rank, champions">${icon("chart")} ${openInfo.has(a.id)?"Hide":"Details"}</button>`:""}
         <button data-act="more" title="More actions" aria-label="More actions">⋯</button>
       </div>
       ${openMore.has(a.id)?`<div class="acts${rv("more")}">
         <button data-act="rank" title="Enter rank manually">${icon("pencil")} Rank</button>
-        <button data-act="note" title="Write a note on this account">${icon("note")} Note</button>
-        ${infoBlockHTML(a)?`<button data-act="info" title="Past seasons, flex rank, champions">${icon("chart")} Info</button>`:""}
-        <button data-act="paste" title="Paste profile page text">${icon("clipboard")} Paste</button>
         <button data-act="edit">Edit</button>
         ${a.archived?'<button data-act="unarchive">Unarchive</button>':'<button data-act="archive">Archive</button>'}
         <button data-act="exstats" title="Leave this account out of the combined stats at the top">${a.excludeStats?"Count in stats":"Exclude from stats"}</button>
@@ -2484,19 +2533,56 @@ $("bulkClear").addEventListener("click",()=>{selected.clear();render()});
 
 // the note editor lives inside the grid, which re-renders from scratch — so its
 // two listeners are delegated like everything else on a card
+// The note saves itself as you type — there was never anything for a Save button
+// to decide. A short debounce so a sentence is one write to storage, not thirty.
+let noteSaveT=0;
 $("grid").addEventListener("input",e=>{
-  if(e.target&&e.target.dataset&&e.target.dataset.f==="notetext")noteDraft=e.target.value;
+  if(!e.target||!e.target.dataset||e.target.dataset.f!=="notetext")return;
+  noteDraft=e.target.value;
+  clearTimeout(noteSaveT);
+  noteSaveT=setTimeout(()=>writeNote(),400);
 });
+// Writes the draft through to the account. Split out because three different
+// things end an edit — typing, clicking away, Escape — and all of them save.
+function writeNote(){
+  if(!editingNote)return false;
+  const acc=accounts.find(a=>a.id===editingNote);
+  if(!acc)return false;
+  const v=noteDraft.trim();
+  const before=acc.notes||"";
+  if(v===before)return false;
+  if(v)acc.notes=v;else delete acc.notes;
+  saveDB();
+  return true;
+}
+// Leaving the field is the whole gesture: it saves and collapses back to the
+// normal display, with no button to hunt for.
+function commitNote(){
+  if(!editingNote)return;
+  clearTimeout(noteSaveT);
+  writeNote();
+  const id=editingNote, acc=accounts.find(a=>a.id===id);
+  editingNote=null;noteDraft="";
+  const card=[...$("grid").querySelectorAll(".card")].find(c=>c.dataset.id===id);
+  if(card&&acc)syncNoteBlock(card,acc);
+}
+$("grid").addEventListener("focusout",e=>{
+  if(!e.target||!e.target.dataset||e.target.dataset.f!=="notetext")return;
+  // a click inside the same block (or a re-render) must not count as leaving
+  setTimeout(()=>{
+    const ta=$("grid").querySelector('[data-f="notetext"]');
+    if(!ta||document.activeElement!==ta)commitNote();
+  },0);
+});
+document.addEventListener("pointerdown",e=>{
+  if(editingNote&&!e.target.closest(".c-notes"))commitNote();
+},true);
 $("grid").addEventListener("keydown",e=>{
   const ta=e.target;
   if(!ta||!ta.dataset||ta.dataset.f!=="notetext")return;
   if(e.key==="Escape"){
     e.stopPropagation(); // otherwise the global Esc closes every panel on the page too
-    editingNote=null;noteDraft="";renderGrid();
-  }else if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){
-    e.preventDefault();
-    const btn=ta.closest(".c-notes").querySelector('[data-act="notesave"]');
-    if(btn)btn.click();
+    ta.blur();           // which commits, like clicking away does
   }
 });
 $("grid").addEventListener("click",async e=>{
@@ -2530,24 +2616,16 @@ $("grid").addEventListener("click",async e=>{
   else if(act==="exstats"){acc.excludeStats=!acc.excludeStats;saveDB();renderCard(id);renderDash();toast(acc.excludeStats?"Left out of the combined stats":"Counted in the combined stats again")}
   else if(act==="archive"){acc.archived=true;saveDB();render();toast("Archived — toggle \"Archived\" in the toolbar to see it again")}
   else if(act==="unarchive"){acc.archived=false;saveDB();render();toast("Restored to active accounts")}
-  else if(act==="note"||act==="noteedit"){
-    const on=editingNote!==id;
-    editingNote=on?id:null;
-    if(on){noteDraft=acc.notes||"";}
-    // the overflow row has to close, and that is a card-level change
-    if(on&&openMore.delete(id))renderCard(id);else syncNoteBlock(card,acc);
+  else if(act==="noteedit"){
+    if(editingNote===id)return;
+    commitNote();            // only one editor open at a time
+    editingNote=id;noteDraft=acc.notes||"";
+    syncNoteBlock(card,acc);
   }
-  else if(act==="notecancel"){editingNote=null;noteDraft="";syncNoteBlock(card,acc)}
-  else if(act==="notesave"){
-    const ta=card.querySelector('[data-f="notetext"]');
-    const v=(ta?ta.value:noteDraft).trim();
-    if(v)acc.notes=v;else delete acc.notes;
-    editingNote=null;noteDraft="";
-    saveDB();syncNoteBlock(card,acc);toast(v?"Note saved":"Note cleared");
-  }
+
+  else if(act==="range"){chartRange.set(id,btn.dataset.r);renderCard(id)}
   else if(act==="info"){const on=!openInfo.has(id);on?openInfo.add(id):openInfo.delete(id);reveal=on?id+":info":null;renderCard(id)}
-  else if(act==="rank"){openPaste.delete(id);const on=!openRank.has(id);on?openRank.add(id):openRank.delete(id);reveal=on?id+":rank":null;renderCard(id)}
-  else if(act==="paste"){openRank.delete(id);const on=!openPaste.has(id);on?openPaste.add(id):openPaste.delete(id);reveal=on?id+":paste":null;renderCard(id)}
+  else if(act==="rank"){const on=!openRank.has(id);on?openRank.add(id):openRank.delete(id);reveal=on?id+":rank":null;renderCard(id)}
   else if(act==="rankapply"){
     const g=f=>card.querySelector('[data-f="'+f+'"]');
     const tier=g("tier").value, isU=tier==="UNRANKED", mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
@@ -2560,20 +2638,6 @@ $("grid").addEventListener("click",async e=>{
     if(ptier==="UNRANKED")delete acc.peakManual;
     else acc.peakManual={tier:ptier,division:TIER_ORDER.indexOf(ptier)>=TIER_ORDER.indexOf("MASTER")?null:g("pdiv").value,lp:+g("plp").value||0};
     commitStats(id,acc,s);toast("Rank saved");
-  }
-  else if(act==="pasteapply"){
-    const pastedText=card.querySelector('[data-f="pastetext"]').value;
-    const p=parseRankText(pastedText);
-    if(!p){toast("Couldn't find a rank in that text — paste the whole profile page");return}
-    const old=acc.stats||{};
-    const s={found:true,tier:p.tier||"UNRANKED",division:p.division,lp:p.lp,wins:p.wins,losses:p.losses,
-      level:p.level!=null?p.level:(parseLevelText(pastedText,acc)??(old.level!=null?old.level:null)),
-      peak:parsePeakText(pastedText)||old.peak||null,
-      seasons:parseSeasons(pastedText)||old.seasons||null,
-      flex:parseFlex(pastedText)||old.flex||null,
-      champs:parseChampions(pastedText)||old.champs||null,
-      icon:parseProfileIcon(pastedText)||old.icon||null,mmr:null,avgRecent:null,asOf:"pasted from profile",note:null,updatedAt:Date.now()};
-    commitStats(id,acc,s);toast("Parsed: "+(p.tier?p.tier+(p.division?" "+p.division:"")+(p.lp!=null?" · "+p.lp+" LP":""):"Unranked, level "+p.level));
   }
   else if(act==="check")check(id);
   else if(act==="del"){
@@ -2638,7 +2702,7 @@ function relock(){
   vaultPassword=null;accounts=[];
   // Drop every per-card UI state too — otherwise a password that was revealed
   // before the auto-lock would still be on screen after the next unlock.
-  [checking,openLogin,shownPw,openRank,openPaste,selected,openMore].forEach(s=>s.clear());
+  [checking,openInfo,openLogin,shownPw,openRank,selected,openMore].forEach(s=>s.clear());
   armedDelete=null;editingId=null;lastSelectedIdx=null;
   closeAllPanels();
   $("appRoot").classList.add("hidden");

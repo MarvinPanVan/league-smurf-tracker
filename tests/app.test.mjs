@@ -561,10 +561,36 @@ test("the LP chart draws a labelled band per tier crossed, and one point per che
   assert.doesNotMatch(html, /undefined|NaN/);
 });
 
-test("a single check is not a chart", () => {
+test("one check still gets a chart — it says where on the ladder the account sits", () => {
   const win = bootApp();
-  assert.equal(win.rankChart([{ t: 1, tier: "GOLD", division: "I", lp: 10 }]), "");
+  const el = chartDom(win, [{ t: Date.now(), tier: "GOLD", division: "I", lp: 10 }]);
+  assert.equal(el.querySelectorAll(".lpc-pt").length, 1);
+  assert.equal(el.querySelectorAll(".lpc-line").length, 0, "one point is not a line");
+  assert.match(el.querySelector(".lpc-tip").textContent, /Gold I · 10 LP/);
+  assert.doesNotMatch(el.innerHTML, /undefined|NaN/);
+  // nothing rankable at all is still nothing to draw
   assert.equal(win.rankChart([]), "");
+  assert.equal(win.rankChart([{ t: 1, tier: "UNRANKED", division: null, lp: null }]), "");
+});
+
+test("daily/weekly/monthly keep the last check in each period, like op.gg", () => {
+  const win = bootApp();
+  const day = 86400000, now = Date.now();
+  // 14 consecutive days of checks
+  const h = Array.from({ length: 14 }, (_, i) => ({ t: now - (13 - i) * day, tier: "GOLD", division: "II", lp: i * 3 }));
+  const points = mode => chartDom(win, h, mode).querySelectorAll(".lpc-pt").length;
+  assert.equal(points("d"), 14);
+  assert.equal(points("w"), 3, "14 days spans three calendar weeks");
+  assert.equal(points("m"), 1);
+
+  // the survivor of a bucket is the one the period ended on
+  const el = chartDom(win, h, "m");
+  assert.match(el.querySelector(".lpc-tip").textContent, /39 LP/);
+
+  // and the default follows the data rather than being fixed
+  assert.equal(win.defaultRange(h), "d");
+  assert.equal(win.defaultRange([{ t: now - 60 * day, tier: "GOLD", division: "II", lp: 1 }, { t: now, tier: "GOLD", division: "II", lp: 2 }]), "w");
+  assert.equal(win.defaultRange([{ t: now - 700 * day, tier: "GOLD", division: "II", lp: 1 }, { t: now, tier: "GOLD", division: "II", lp: 2 }]), "m");
 });
 
 // ---- inline notes ----
@@ -579,38 +605,54 @@ function typeNote(win, text) {
   return ta;
 }
 
-test("a card's note can be written in place and survives an unrelated re-render", () => {
+test("a note saves itself as you type — there is no Save button to miss", () => {
   const win = bootApp();
   addRealAccount(win, "NoteGuy", "1234");
 
-  win.document.querySelector('[data-act="more"]').click();
-  win.document.querySelector('[data-act="note"]').click();
-  assert.ok(win.document.querySelector('[data-f="notetext"]'), "editor must render");
+  // an empty note is still a click target, so there is no separate "add" action
+  win.document.querySelector('[data-act="noteedit"]').click();
+  const ta = win.document.querySelector('[data-f="notetext"]');
+  assert.ok(ta, "editor must open");
 
   typeNote(win, "smurf for duo queue");
-  win.renderGrid(); // must not throw the draft away
-  assert.equal(win.document.querySelector('[data-f="notetext"]').value, "smurf for duo queue");
-
-  win.document.querySelector('[data-act="notesave"]').click();
+  win.writeNote(); // the debounce, without waiting on it
   assert.equal(storedNote(win), "smurf for duo queue");
-  assert.match(win.document.querySelector(".c-notes").textContent, /smurf for duo queue/);
-  assert.equal(win.document.querySelector('[data-f="notetext"]'), null, "editor closes after save");
+
+  // an unrelated re-render must not throw the draft away
+  win.renderGrid();
+  assert.equal(win.document.querySelector('[data-f="notetext"]').value, "smurf for duo queue");
 });
 
-test("clicking a rendered note reopens it, and cancel leaves the saved text untouched", () => {
+test("clicking away commits the note and collapses the editor", () => {
   const win = bootApp();
   addRealAccount(win, "NoteGuy", "1234");
-  win.document.querySelector('[data-act="more"]').click();
-  win.document.querySelector('[data-act="note"]').click();
+  win.document.querySelector('[data-act="noteedit"]').click();
   typeNote(win, "original");
-  win.document.querySelector('[data-act="notesave"]').click();
 
+  // pointerdown outside the note block is the whole gesture
+  win.document.body.dispatchEvent(new win.Event("pointerdown", { bubbles: true }));
+  assert.equal(storedNote(win), "original");
+  assert.equal(win.document.querySelector('[data-f="notetext"]'), null, "editor collapses");
+  assert.match(win.document.querySelector(".c-notes").textContent, /original/);
+
+  // reopening shows what was saved, and clearing it puts the blank state back
   win.document.querySelector('[data-act="noteedit"]').click();
   assert.equal(win.document.querySelector('[data-f="notetext"]').value, "original");
-  typeNote(win, "throw this away");
-  win.document.querySelector('[data-act="notecancel"]').click();
-  assert.equal(storedNote(win), "original");
-  assert.match(win.document.querySelector(".c-notes").textContent, /original/);
+  typeNote(win, "   ");
+  win.document.body.dispatchEvent(new win.Event("pointerdown", { bubbles: true }));
+  assert.equal(storedNote(win), undefined, "whitespace is not a note");
+  assert.ok(win.document.querySelector(".c-notes.blank"), "back to the quiet invitation");
+});
+
+test("the paste-a-whole-page fallback is gone; manual rank entry replaces it", () => {
+  const win = bootApp();
+  win.loadDemo();
+  win.document.querySelector('[data-act="more"]').click();
+  const acts = [...win.document.querySelectorAll("[data-act]")].map(b => b.dataset.act);
+  assert.ok(!acts.includes("paste"), "no Paste button");
+  assert.ok(!acts.includes("note"), "no separate Note button — the note itself is the target");
+  assert.ok(acts.includes("rank"), "manual entry stays");
+  assert.equal(win.document.querySelector('[data-f="pastetext"]'), null);
 });
 
 // ---- accents ----
@@ -683,9 +725,9 @@ test("the accent preview is rate limited during a drag, and the released value a
 
 // ---- LP chart: hit areas, geometry, scale ----
 const hist = (...rows) => rows.map(([tier, division, lp], i) => ({ t: i + 1, tier, division, lp }));
-function chartDom(win, h) {
+function chartDom(win, h, mode) {
   const el = win.document.createElement("div");
-  el.innerHTML = win.rankChart(h);
+  el.innerHTML = win.rankChart(h, null, mode);
   return el;
 }
 
@@ -736,12 +778,12 @@ test("the two halves of the ladder get their own scale", () => {
 
   // above it a fixed 100 is far too fine — a Master account decaying 1600 -> 800
   // would be dozens of lines, so that step grows with the range
-  assert.deepEqual(marks(hist(["MASTER", null, 1600], ["MASTER", null, 800])), ["800 LP", "1200 LP", "1600 LP"]);
+  assert.deepEqual(marks(hist(["MASTER", null, 1600], ["MASTER", null, 800])), ["800 LP", "1200 LP"]);
   assert.deepEqual(marks(hist(["MASTER", null, 2400], ["MASTER", null, 300])), ["400 LP", "1200 LP", "2000 LP"]);
 
   // both at once, each on its own scale
   assert.deepEqual(marks(hist(["MASTER", null, 393], ["MASTER", null, 196], ["DIAMOND", "I", 52])),
-    ["I", "200 LP", "400 LP"]);
+    ["I", "200 LP"]);
 
   // too much ladder in view for a 100 LP line to be readable: the bands carry it
   assert.deepEqual(marks(hist(["SILVER", "II", 20], ["PLATINUM", "IV", 8])), []);
