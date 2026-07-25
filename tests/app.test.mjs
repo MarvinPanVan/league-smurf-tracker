@@ -656,3 +656,27 @@ test("a long Riot ID truncates inside an element that can actually ellipsize", (
   assert.ok(inner, "the Riot ID must be wrapped in an element of its own");
   assert.match(inner.textContent, /aVeryLongSummonerNameIndeed#EUW123/);
 });
+
+test("the accent preview is rate limited during a drag, and the released value always lands", () => {
+  const win = bootApp();
+  const read = v => win.document.documentElement.style.getPropertyValue(v).trim().toLowerCase();
+  const picker = win.document.getElementById("sAccent");
+  const move = hex => { picker.value = hex; picker.dispatchEvent(new win.Event("input", { bubbles: true })); };
+
+  win.document.getElementById("bSettings").click();
+
+  // the first move has to show at once — a preview that waits feels broken
+  move("#112233");
+  assert.equal(read("--gold"), "#112233");
+
+  // everything after it inside the budget is collapsed rather than applied one by
+  // one; each application is a full-document style recalc, which is what made the
+  // page unusable while dragging
+  for (let i = 0; i < 50; i++) move("#" + (0x445566 + i).toString(16));
+  assert.equal(read("--gold"), "#112233", "mid-drag events must not each trigger a restyle");
+
+  // releasing the picker fires change, and that value skips the queue
+  picker.value = "#ff8800";
+  picker.dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert.equal(read("--gold"), "#ff8800");
+});

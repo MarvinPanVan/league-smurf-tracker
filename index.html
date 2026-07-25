@@ -1628,9 +1628,50 @@ function applyAccent2(hex){
   // so the ink follows the colour instead of being hardcoded.
   root.setProperty("--teal-ink",relLuminance(hex)>0.42?hslToHex(h,Math.min(s+15,100),9):"#ffffff");
 }
+// Dragging the colour picker fires `input` continuously, and one accent change is
+// not cheap: setting a custom property on :root makes the browser re-resolve
+// style for everything beneath it, and with a full grid of cards that measured at
+// 55-60 ms — several frames' worth. Answering every event meant the work queued up
+// faster than it could be done and the page stopped responding.
+//
+// Measured, not guessed: the cost is proportional to how many elements hang off
+// the root (hiding the grid alone took a step from 62 ms to 14 ms), so it cannot
+// be optimised away from inside applyAccent — containment, compositing hints and
+// re-declaring the variables on the grid all changed nothing. Rate limiting is
+// the fix that works: the page follows the drag in steps instead of trying to
+// repaint on every pixel, and the value you release on always lands via the
+// trailing update and the picker's change event.
+const ACCENT_MIN_MS=140;
+let accentQueue=null, accentTimer=0, accentLast=0;
+function flushAccents(){
+  const q=accentQueue;accentQueue=null;accentTimer=0;accentLast=performance.now();
+  if(!q)return;
+  if(q.primary)applyAccent(q.primary);
+  if(q.secondary)applyAccent2(q.secondary);
+}
+function previewAccent(which,hex){
+  (accentQueue=accentQueue||{})[which]=hex;
+  if(accentTimer)return; // an update is already due; it will pick up this value
+  // accentLast=0 means nothing has been applied yet, and that first move must
+  // show immediately — not "140 ms minus however long the page has been open"
+  const wait=accentLast?ACCENT_MIN_MS-(performance.now()-accentLast):0;
+  if(wait<=0)flushAccents();                       // first move: show it at once
+  else accentTimer=setTimeout(flushAccents,wait);  // mid-drag: wait out the budget
+}
+// the picker's change event is the release, so that value skips the queue
+function commitAccent(which,hex){
+  (accentQueue=accentQueue||{})[which]=hex;
+  clearTimeout(accentTimer);accentTimer=0;
+  flushAccents();
+}
+// Reset and close both set colours directly, so a queued preview from a drag a
+// moment earlier has to be dropped — otherwise it lands afterwards and quietly
+// overwrites what the user just chose.
+function cancelAccentPreview(){clearTimeout(accentTimer);accentTimer=0;accentQueue=null}
 // Both pickers preview live while you drag them, so leaving Settings without
 // saving has to put the saved colours back.
 function revertAccents(){
+  cancelAccentPreview();
   applyAccent(cfg.accent||DEFAULT_ACCENT);
   applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
 }
@@ -1867,9 +1908,12 @@ $("sSave").addEventListener("click",async()=>{
   saveCfg();$("settings").classList.add("hidden");toast("Settings saved")
 });
 $("sClose").addEventListener("click",()=>{revertAccents();$("settings").classList.add("hidden")});
-$("sAccent").addEventListener("input",e=>applyAccent(e.target.value));
-$("sAccent2").addEventListener("input",e=>applyAccent2(e.target.value));
+$("sAccent").addEventListener("input",e=>previewAccent("primary",e.target.value));
+$("sAccent2").addEventListener("input",e=>previewAccent("secondary",e.target.value));
+$("sAccent").addEventListener("change",e=>commitAccent("primary",e.target.value));
+$("sAccent2").addEventListener("change",e=>commitAccent("secondary",e.target.value));
 $("sAccentReset").addEventListener("click",()=>{
+  cancelAccentPreview();
   $("sAccent").value=DEFAULT_ACCENT;$("sAccent2").value=DEFAULT_ACCENT2;
   applyAccent(DEFAULT_ACCENT);applyAccent2(DEFAULT_ACCENT2);
   cfg.accent=null;cfg.accent2=null;saveCfg();toast("Accents reset");
