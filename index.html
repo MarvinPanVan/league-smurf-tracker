@@ -98,17 +98,17 @@
     padding:5px 12px 5px 10px;border:1px solid var(--line);border-radius:999px;background:#ffffff06}
   .eyebrow::before{content:"";width:6px;height:6px;border-radius:2px;transform:rotate(45deg);background:var(--gold);
     box-shadow:0 0 10px color-mix(in srgb,var(--gold) 75%,transparent)}
-  /* Two flat stops read as beige plastic. Metal needs a value swing — shadow,
-     body, a narrow specular band, then back down — so the ramp below runs
-     dim -> gold -> highlight -> white -> gold -> dim. Built from the accent
-     variables so a custom accent colour still works. */
+  /* Metal needs a value swing, but --gold-dim is derived as lightness-25, which on
+     a saturated accent lands almost black — dropping it into the ramp put dark
+     patches mid-word that read as broken letters rather than shine. The ramp now
+     spans only mid -> base -> light -> specular, a band that stays legible at
+     any hue, with one narrow highlight doing the metallic work. */
   h1{margin:0;font-weight:700;font-size:clamp(31px,4.6vw,44px);line-height:1.04;display:flex;align-items:center;gap:15px;
     background:linear-gradient(102deg,
-      var(--gold-dim) 0%,var(--gold-mid) 12%,var(--gold) 26%,var(--star) 36%,
-      #fff8e8 43%,var(--star) 50%,var(--gold) 62%,var(--gold-mid) 76%,
-      var(--gold-dim) 88%,var(--gold) 100%);
+      var(--gold-mid) 0%,var(--gold) 20%,var(--star) 36%,
+      #fffaf0 44%,var(--star) 53%,var(--gold) 72%,var(--gold-mid) 100%);
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
-    filter:drop-shadow(0 1px 0 #00000059)}
+    filter:drop-shadow(0 1px 1px #00000066)}
   h1.hex-display{letter-spacing:.02em}
   .title-gem{width:17px;height:17px;flex-shrink:0;border-radius:5px;transform:rotate(45deg);
     background:linear-gradient(145deg,var(--star),var(--gold) 52%,var(--gold-dim));
@@ -129,13 +129,29 @@
   /* text fields and selects draw their own indicator further down; checkboxes
      and the colour swatch keep this outline so keyboard focus stays visible */
   input:not([type=checkbox]):not([type=color]):focus,select:focus,textarea:focus{outline:none}
-  /* same metallic idea vertically: bright crown, body, a darker roll-off at the
-     bottom edge — the label sits in the bright middle so contrast holds */
-  .b-gold{border-color:var(--gold);border-color:color-mix(in srgb,var(--gold) 76%,transparent);color:#1c1406;font-weight:600;
-    background:linear-gradient(180deg,#fff6dd 0%,var(--star) 16%,var(--gold) 46%,var(--gold-mid) 76%,var(--gold-dim) 100%);
-    box-shadow:inset 0 1px 0 #ffffffab,inset 0 -1px 0 #0000003d,0 6px 18px -8px color-mix(in srgb,var(--gold) 75%,transparent)}
-  .b-gold:hover{border-color:var(--gold);filter:brightness(1.06) saturate(1.05);
-    box-shadow:inset 0 1px 0 #ffffffc4,inset 0 -1px 0 #0000003d,0 9px 26px -8px color-mix(in srgb,var(--gold) 85%,transparent)}
+  /* The filled metallic version was skeuomorphic in a UI that is otherwise
+     translucent surfaces and hairlines — which is exactly why it read as bolted
+     on. This speaks the same language as every other surface, just louder: an
+     accent-tinted pane, a bright accent rim, a lit top edge and a glow that
+     grows on hover.
+     Light accent text rather than dark-on-fill, because the accent is
+     user-configurable — dark text silently becomes unreadable the moment
+     somebody picks a deep colour.
+     background is redeclared on :hover on purpose: the generic button:hover rule
+     is more specific than .b-gold, so omitting it here lets the plain dark hover
+     background win and the button turns black. */
+  .b-gold{font-weight:600;color:var(--star);
+    border-color:var(--gold);border-color:color-mix(in srgb,var(--gold) 58%,transparent);
+    background:var(--panel3);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 26%,transparent),color-mix(in srgb,var(--gold) 12%,transparent)),var(--panel2);
+    box-shadow:inset 0 1px 0 color-mix(in srgb,var(--gold) 34%,transparent),
+      0 4px 16px -8px color-mix(in srgb,var(--gold) 50%,transparent)}
+  .b-gold:hover{color:var(--star);
+    border-color:color-mix(in srgb,var(--gold) 88%,transparent);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 38%,transparent),color-mix(in srgb,var(--gold) 20%,transparent)),var(--panel2);
+    box-shadow:inset 0 1px 0 color-mix(in srgb,var(--gold) 48%,transparent),
+      0 0 0 3px color-mix(in srgb,var(--gold) 12%,transparent),
+      0 6px 22px -8px color-mix(in srgb,var(--gold) 65%,transparent)}
   .b-teal{color:var(--teal);border-color:var(--teal);border-color:color-mix(in srgb,var(--teal) 40%,transparent);
     background:var(--panel2);background:color-mix(in srgb,var(--teal) 9%,var(--panel2))}
   .b-teal:hover{border-color:color-mix(in srgb,var(--teal) 68%,transparent);color:var(--teal);
