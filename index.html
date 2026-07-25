@@ -375,12 +375,20 @@
   .lpc-svg{display:block;width:100%;height:100%;border-radius:8px}
   .lpc-lab{position:absolute;left:6px;font-size:8px;font-weight:600;letter-spacing:.09em;
     text-transform:uppercase;pointer-events:none;opacity:.62;line-height:1}
-  .lpc-pt{position:absolute;top:0;bottom:0;transform:translateX(-50%)}
+  /* division numerals below Master, LP marks above it — opposite side to the tier
+     names so the two never collide */
+  .lpc-sub{position:absolute;right:6px;font-size:8px;font-weight:600;letter-spacing:.06em;
+    color:#fff;opacity:.32;pointer-events:none;line-height:1;font-variant-numeric:tabular-nums}
+  /* Each point owns the slice of the chart nearest to it, and the slices tile the
+     chart exactly. The first version centred a fixed-width column on every point,
+     which meant the outermost ones hung ~56 px past the edge of the chart — far
+     enough to cover part of the neighbouring card and steal its hover. */
+  .lpc-pt{position:absolute;top:0;bottom:0}
   /* the guide makes it obvious which check you're reading, not just which dot */
-  .lpc-pt::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;margin-left:-.5px;
+  .lpc-pt::before{content:"";position:absolute;left:var(--x);top:0;bottom:0;width:1px;margin-left:-.5px;
     background:#ffffff2b;opacity:0;transition:opacity .13s ease}
   .lpc-pt:hover::before{opacity:1}
-  .lpc-pt>b{position:absolute;left:50%;width:0;height:0}
+  .lpc-pt>b{position:absolute;left:var(--x);width:0;height:0}
   .lpc-pt i{position:absolute;left:0;top:0;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;
     box-shadow:0 0 0 2px #0d1017;transition:transform .15s cubic-bezier(.34,1.56,.64,1)}
   .lpc-pt:hover i{transform:scale(1.55)}
@@ -509,9 +517,15 @@
   @keyframes gemGlow{50%{filter:brightness(1.22)}}
   @keyframes cardIn{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
   .grid.boot>.hx{animation:cardIn .5s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--d,0ms)}
-  @keyframes drawIn{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
-  .lpc-line{stroke-dasharray:100 100}
-  .grid.boot .lpc-line,.hx.flash .lpc-line{animation:drawIn .9s ease-out both}
+  /* The line used to be revealed with stroke-dasharray, which is the wrong tool
+     here: vector-effect:non-scaling-stroke makes the dash pattern measure in
+     screen pixels, while pathLength normalises the path to 100 units. The two
+     never agreed, so "100 on, 100 off" left a real gap in any chart whose drawn
+     length passed 100 px — the stretch to the newest point simply never showed.
+     A wipe has no such coupling. No fill-mode on purpose: once it has run the
+     clip is gone entirely, so it can't clip a tooltip later. */
+  @keyframes drawIn{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+  .grid.boot .lpc,.hx.flash .lpc{animation:drawIn .8s cubic-bezier(.22,1,.36,1)}
   @keyframes borderPulse{0%{background:var(--teal)}100%{background:linear-gradient(155deg,#ffffff1f,#ffffff0a 38%,#ffffff05)}}
   .hx.flash{animation:borderPulse 1.1s ease-out}
   @keyframes toastIn{from{opacity:0;transform:translate(-50%,14px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
@@ -520,7 +534,7 @@
   .confetti i{position:absolute;left:50%;top:40%;width:6px;height:10px;border-radius:2px;animation:pop 1.1s ease-out forwards}
   @keyframes pop{from{transform:translate(0,0) rotate(0)}to{transform:translate(var(--tx),var(--ty)) rotate(var(--rz));opacity:0}}
   @media (prefers-reduced-motion:reduce){
-    .spin,.c-crest,.title-gem,.grid.boot>.hx,.lpc-line,.hx.flash,#toast,.confetti i,
+    .spin,.c-crest,.title-gem,.grid.boot>.hx,.grid.boot .lpc,.hx.flash .lpc,.hx.flash,#toast,.confetti i,
     #form:not(.hidden),#settings:not(.hidden),#help:not(.hidden),#bulkAdd:not(.hidden),#lock:not(.hidden),
     #moreMenu:not(.hidden),#bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show,
     .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in{animation:none!important}
@@ -936,11 +950,30 @@ function rankChart(hist){
     if(bot>lo)lines+=`<line x1="0" x2="${LPC_W}" y1="${py(bot).toFixed(1)}" y2="${py(bot).toFixed(1)}" stroke="${c}" stroke-opacity=".36" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
     if(yBot-yTop>=14)labels+=`<span class="lpc-lab" style="top:${(yBot-11).toFixed(1)}px;color:${c}">${t===mIdx?"Master+":name.charAt(0)+name.slice(1).toLowerCase()}</span>`;
   }
-  if(span<=900){
-    for(let v=Math.ceil(lo/100)*100;v<hi;v+=100){
-      if(v%TIER_SPAN===0)continue; // that one is already a tier boundary
-      lines+=`<line x1="0" x2="${LPC_W}" y1="${py(v).toFixed(1)}" y2="${py(v).toFixed(1)}" stroke="#ffffff" stroke-opacity=".055" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
-    }
+  // Steps inside the bands. Below Master a step of 100 LP is exactly one division,
+  // so the numerals come for free — but a fixed 100 stops working the moment the
+  // view is wide (a Master account sliding 1600 -> 800 LP would draw dozens of
+  // lines). So the step grows with the range instead: the smallest one that keeps
+  // the chart at five marks or fewer. 100 is the floor, and MIN_SPAN guarantees
+  // nothing finer is ever picked, which is what keeps the numerals honest.
+  const M_BASE=mIdx*TIER_SPAN;
+  // picked on the space a label actually needs, not on a mark count — that way it
+  // stays right whatever the chart's height is
+  const step=[100,200,400,800,1600,3200,6400].find(s=>LPC_H*s/span>=11.5)||span/3;
+  // Only mark divisions when the step is one division, so all four get named.
+  // At a coarser step you get every other one, which reads as two "II"s on the
+  // same chart — correct (Silver II and Gold II) but it looks like a bug, and the
+  // tier bands already say everything those half-marks would.
+  const showDivisions=step===100;
+  for(let v=Math.ceil(lo/step)*step;v<hi;v+=step){
+    if(v<=M_BASE&&v%TIER_SPAN===0)continue; // already drawn as a tier boundary
+    if(v<M_BASE&&!showDivisions)continue;
+    const y=py(v);
+    if(y<11||y>LPC_H-3)continue;            // no room to label it
+    lines+=`<line x1="0" x2="${LPC_W}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#ffffff" stroke-opacity=".07" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+    // above Master there are no divisions left to name, only LP
+    const txt=v>=M_BASE?(v-M_BASE)+" LP":(["IV","III","II","I"][Math.round((v%TIER_SPAN)/100)]||"");
+    if(txt)labels+=`<span class="lpc-sub" style="top:${(y-9.5).toFixed(1)}px">${txt}</span>`;
   }
 
   const coords=pts.map((p,i)=>((i/(pts.length-1))*LPC_W).toFixed(1)+","+py(p.v).toFixed(1)).join(" ");
@@ -950,12 +983,17 @@ function rankChart(hist){
   // the line is its own legend: it takes the colour of whatever tier it is
   // passing through, so a promotion reads as a colour change, not just a step up
   const stops=pts.map((p,i)=>`<stop offset="${((i/(pts.length-1))*100).toFixed(2)}%" stop-color="${tierColor(p.h.tier)}"/>`).join("");
+  const last=pts.length-1;
   const overlay=pts.map((p,i)=>{
-    const xp=(i/(pts.length-1))*100;
+    const xp=(i/last)*100;
+    // Each point claims the ground nearer to it than to its neighbours, and the
+    // outermost ones stop dead at the edge of the chart rather than reaching past
+    // it — an overhanging column sits on top of the next card and eats its hover.
+    const cl=i===0?0:((i-.5)/last)*100, cr=i===last?100:((i+.5)/last)*100;
     // tooltips at the edges would hang off the card, so they anchor inwards there
     const side=xp<26?" l":xp>74?" r":"";
     const when=p.h.t?timeAgo(p.h.t):null;
-    return `<div class="lpc-pt" style="left:${xp.toFixed(2)}%;width:${(100/pts.length).toFixed(2)}%">`
+    return `<div class="lpc-pt" style="left:${cl.toFixed(2)}%;width:${(cr-cl).toFixed(2)}%;--x:${(((xp-cl)/(cr-cl))*100).toFixed(2)}%">`
       +`<b style="top:${py(p.v).toFixed(1)}px"><i style="background:${tierColor(p.h.tier)}"></i>`
       +`<span class="lpc-tip${side}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(when)}</em>`:""}</span></b></div>`;
   }).join("");
@@ -966,7 +1004,7 @@ function rankChart(hist){
     +`<linearGradient id="${aid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${cur}" stop-opacity=".3"/><stop offset="1" stop-color="${cur}" stop-opacity="0"/></linearGradient></defs>`
     +bands+lines
     +`<polygon points="0,${LPC_H} ${coords} ${LPC_W},${LPC_H}" fill="url(#${aid})"/>`
-    +`<polyline class="lpc-line" points="${coords}" pathLength="100" fill="none" stroke="url(#${gid})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`
+    +`<polyline class="lpc-line" points="${coords}" fill="none" stroke="url(#${gid})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`
     +`</svg>${labels}${overlay}</div>`;
 }
 function postDiscord(content){

@@ -680,3 +680,81 @@ test("the accent preview is rate limited during a drag, and the released value a
   picker.dispatchEvent(new win.Event("change", { bubbles: true }));
   assert.equal(read("--gold"), "#ff8800");
 });
+
+// ---- LP chart: hit areas, geometry, scale ----
+const hist = (...rows) => rows.map(([tier, division, lp], i) => ({ t: i + 1, tier, division, lp }));
+function chartDom(win, h) {
+  const el = win.document.createElement("div");
+  el.innerHTML = win.rankChart(h);
+  return el;
+}
+
+test("the point hit areas tile the chart exactly and never reach past its edges", () => {
+  const win = bootApp();
+  // an overhanging column lies on top of the neighbouring card and steals its
+  // hover, which is how clicking a card's newest point landed on the next card
+  for (const n of [2, 3, 8, 30]) {
+    const rows = Array.from({ length: n }, (_, i) => ["GOLD", "II", i]);
+    const cols = [...chartDom(win, hist(...rows)).querySelectorAll(".lpc-pt")]
+      .map(p => ({ l: parseFloat(p.style.left), w: parseFloat(p.style.width) }));
+    assert.equal(cols.length, n, `${n} points`);
+    assert.equal(cols[0].l, 0, `${n}: first column starts at the left edge`);
+    const last = cols[cols.length - 1];
+    assert.ok(Math.abs(last.l + last.w - 100) < 0.02, `${n}: last column ends at the right edge`);
+    for (let i = 1; i < cols.length; i++) {
+      assert.ok(Math.abs(cols[i].l - (cols[i - 1].l + cols[i - 1].w)) < 0.02, `${n}: columns must not gap or overlap`);
+    }
+  }
+});
+
+test("each point's dot sits on its own value, not in the middle of its hit area", () => {
+  const win = bootApp();
+  const dots = [...chartDom(win, hist(["GOLD", "II", 0], ["GOLD", "II", 40], ["GOLD", "I", 5]))
+    .querySelectorAll(".lpc-pt")].map(p => p.style.getPropertyValue("--x").trim());
+  // the outer points sit on the edge of their (half-width) column, the middle one is centred
+  assert.deepEqual(dots, ["0.00%", "50.00%", "100.00%"]);
+});
+
+test("the line spans the full chart, with no pathLength for a dash pattern to disagree with", () => {
+  const win = bootApp();
+  const el = chartDom(win, hist(["MASTER", null, 393], ["MASTER", null, 196], ["DIAMOND", "I", 52]));
+  const line = el.querySelector(".lpc-line");
+  // stroke-dasharray measured in screen pixels against a pathLength of 100 left a
+  // gap before the newest point — the reveal is a clip wipe now, so neither exists
+  assert.equal(line.getAttribute("pathLength"), null);
+  const coords = line.getAttribute("points").split(" ");
+  assert.ok(coords[0].startsWith("0.0,"), "starts at the left edge: " + coords[0]);
+  assert.ok(coords[coords.length - 1].startsWith("200.0,"), "reaches the right edge: " + coords[coords.length - 1]);
+});
+
+test("the scale step grows with the range instead of drowning the chart in 100 LP lines", () => {
+  const win = bootApp();
+  const marks = h => [...chartDom(win, h).querySelectorAll(".lpc-sub")].map(n => n.textContent);
+
+  // one tier in view: every division named
+  assert.deepEqual(marks(hist(["PLATINUM", "IV", 5], ["PLATINUM", "I", 88])), ["III", "II", "I"]);
+
+  // a Master account decaying 1600 -> 800 would be dozens of lines at 100 LP
+  const decay = marks(hist(["MASTER", null, 1600], ["MASTER", null, 800]));
+  assert.deepEqual(decay, ["800 LP", "1000 LP", "1200 LP", "1400 LP", "1600 LP"]);
+
+  // wider still, and the step grows again rather than the marks getting closer
+  const wide = marks(hist(["MASTER", null, 2400], ["MASTER", null, 300]));
+  assert.deepEqual(wide, ["400 LP", "1200 LP", "2000 LP"]);
+
+  // several tiers in view: the coloured bands carry it, no half-labelled divisions
+  assert.deepEqual(marks(hist(["SILVER", "II", 20], ["PLATINUM", "IV", 8])), []);
+});
+
+test("division numerals only appear when all four are marked, so no chart shows two IIs", () => {
+  const win = bootApp();
+  for (const h of [
+    hist(["SILVER", "II", 20], ["PLATINUM", "IV", 8]),
+    hist(["IRON", "IV", 0], ["CHALLENGER", null, 900]),
+    hist(["BRONZE", "I", 10], ["EMERALD", "III", 70]),
+  ]) {
+    const numerals = [...chartDom(win, h).querySelectorAll(".lpc-sub")]
+      .map(n => n.textContent).filter(t => /^(I|II|III|IV)$/.test(t));
+    assert.deepEqual([...new Set(numerals)].length, numerals.length, "duplicate numerals: " + numerals);
+  }
+});
