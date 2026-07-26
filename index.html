@@ -87,7 +87,11 @@
   /* barely-there film grain so the large flat areas don't band */
   body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.035;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
-  .wrap{position:relative;z-index:1;max-width:1220px;margin:0 auto;padding:clamp(26px,5vw,58px) clamp(16px,3vw,30px) 90px}
+  /* 1220px is a reading measure, and this page stopped being prose a long time
+     ago. On a wide screen it forced a sixty-card grid into three columns with
+     390 px of empty margin either side. Prose still gets the narrow measure. */
+  .wrap{position:relative;z-index:1;max-width:1640px;margin:0 auto;padding:clamp(26px,5vw,58px) clamp(16px,3vw,30px) 90px}
+  .measure{max-width:1220px}
   .hex-display{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em}
 
   /* ---- surfaces: rounded, gradient hairline, soft glass ---- */
@@ -261,6 +265,19 @@
   .gem.cmb{gap:7px;padding:3px 4px 3px 10px;border-radius:999px;
     background:#ffffff08;border:1px solid #ffffff0f}
   .gem.cmb .n{font-weight:500}
+  /* every count in here answers "how many"; clicking it answers "which ones" */
+  .gem-b{border:1px solid transparent;border-radius:999px;padding:4px 11px;background:none;font-size:12px}
+  .gem-b b{font-weight:600;color:var(--faint)}
+  .gem-b:hover{background:#ffffff0f;border-color:var(--line2)}
+  .gem-b.on{background:color-mix(in srgb,var(--gold) 16%,transparent);
+    border-color:color-mix(in srgb,var(--gold) 52%,transparent);color:var(--gold-txt)}
+  .gem-b.on b{color:var(--gold-txt)}
+  .stat-b{display:block;width:100%;text-align:left;border:0;border-radius:0;background:none;
+    padding:16px 20px;font:inherit;white-space:normal}
+  .stat-b:hover{background:#ffffff08;border:0}
+  .stat-b.on{background:color-mix(in srgb,var(--gold) 11%,transparent);border:0;
+    box-shadow:inset 2px 0 0 var(--gold)}
+  .s-note{font-size:10.5px;color:var(--faint);margin-top:4px;line-height:1.4}
   .gem.cmb b{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .gem.cmb b.wr-good{color:var(--good)}
   .gem.cmb i.g{font-style:normal;font-size:10.5px;font-weight:600;color:var(--faint);
@@ -269,7 +286,10 @@
   .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px}
   .dist .k{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-right:2px}
   .gem{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text)}
-  .gem i{width:9px;height:9px;border-radius:3px;transform:rotate(45deg);display:inline-block}
+  /* the tier lozenge — scoped to a class rather than the bare tag, because every
+     <i> inside a .gem was inheriting a 9px box and a 45° rotation, which is what
+     turned the champion pills' W-L into a squashed diagonal smudge */
+  .gem i.d{width:9px;height:9px;border-radius:3px;transform:rotate(45deg);display:inline-block}
 
   /* ---- console: the account actions and the filters, as one control ---- */
   /* Check all ranks and + Add account used to sit in the header, diagonally
@@ -290,6 +310,42 @@
   .cmd-count b{font-weight:600;color:var(--muted)}
   .cmd-count .warn{color:var(--danger);font-weight:600}
   .tools{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:12px}
+  /* layout switch: two states, so a segmented control rather than a menu */
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2)}
+  .seg button{border:0;border-radius:0;padding:7px 10px;background:none;color:var(--faint)}
+  .seg button:hover{background:#ffffff0d;border:0;color:var(--muted)}
+  .seg button.on{background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--gold-txt)}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg .ico{width:15px;height:15px}
+  /* A run over sixty accounts is minutes long. Where it has got to, which account
+     it is on, and how to stop it all have to be on screen the whole time. */
+  .runbar{position:relative;height:26px;display:flex;align-items:center;
+    border-top:1px solid var(--line);background:#00000030;overflow:hidden}
+  .run-fill{position:absolute;left:0;top:0;bottom:0;width:0;
+    background:linear-gradient(90deg,color-mix(in srgb,var(--gold) 34%,transparent),color-mix(in srgb,var(--gold) 16%,transparent));
+    transition:width .3s cubic-bezier(.22,1,.36,1)}
+  .run-txt{position:relative;padding:0 13px;font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--gold-txt);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* failures used to be a toast telling you to go and find them among sixty cards */
+  .failbar{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:9px 13px;
+    border-top:1px solid color-mix(in srgb,var(--danger) 30%,transparent);
+    background:color-mix(in srgb,var(--danger) 9%,transparent);font-size:12px}
+  .fb-n{font-weight:600;color:var(--danger)}
+  .fb-l{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+  .failbar button{font-size:11.5px;padding:5px 10px}
+  .fb-x{padding:5px 9px;background:none;border-color:transparent;color:var(--faint)}
+  /* what the stats panel just filtered on — invisible filters make a short grid
+     look like a bug */
+  .chips{display:flex;gap:7px;flex-wrap:wrap;padding:0 12px}
+  .chips:not(:empty){padding:11px 12px;border-top:1px solid var(--line)}
+  .fchip{font-size:11.5px;font-weight:600;padding:4px 8px 4px 11px;gap:7px;border-radius:999px;
+    color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 45%,transparent);
+    background:color-mix(in srgb,var(--gold) 12%,transparent)}
+  .fchip span{opacity:.65;font-size:10px}
+  .fchip:hover{color:var(--gold-txt);background:color-mix(in srgb,var(--gold) 22%,transparent);
+    border-color:color-mix(in srgb,var(--gold) 70%,transparent)}
+  .fchip-all{color:var(--faint);background:none;border-color:var(--line);padding:4px 11px}
+  .fchip-all:hover{color:var(--text);background:var(--panel3);border-color:var(--line2)}
   input,select,textarea{font:inherit;font-size:13.5px;background:var(--panel2);border:1px solid var(--line);
     border-radius:var(--r-sm);color:var(--text);padding:9px 12px;
     transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
@@ -320,6 +376,62 @@
 
   /* ---- grid + cards ---- */
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(335px,1fr));gap:16px}
+
+  /* ---- list view ----
+     Sixty cards is thirteen screens and no two accounts ever visible together.
+     Same facts, one line each, in columns you read straight down. Clicking a row
+     unfolds the chart and the details under it, so nothing is hidden — the card
+     grid stays for browsing, this is for working through a collection. */
+  .grid.list{display:flex;flex-direction:column;gap:5px}
+  .hx.row{padding:1px;background:#ffffff0d;border-radius:11px}
+  .hx.row:hover{background:#ffffff1c}
+  .hx.row.gold{background:color-mix(in srgb,var(--gold) 40%,transparent)}
+  .hx.row.open{background:color-mix(in srgb,var(--teal) 34%,transparent)}
+  .rw{border-radius:10px;background:var(--panel);overflow:hidden}
+  .rw-main{display:grid;align-items:center;gap:12px;padding:8px 13px;cursor:pointer;
+    grid-template-columns:auto 30px minmax(120px,1.6fr) minmax(96px,1fr) 62px 92px 46px 44px 74px 16px;
+    transition:background .14s ease}
+  .rw-main:hover{background:#ffffff07}
+  .rw-main:focus-visible{outline-offset:-2px}
+  .rw{position:relative}
+  .rw::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;z-index:1;
+    border-radius:0 3px 3px 0;background:var(--st,transparent);opacity:.85}
+  /* a row is a line in a list, not a tile — it must not lift off the page */
+  .grid.list>.hx:hover{transform:none;box-shadow:var(--sh-1)}
+  .rw-pic{width:30px;height:30px;border-radius:9px;overflow:hidden;position:relative;
+    background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
+    display:flex;align-items:center;justify-content:center}
+  .rw-pic img{width:100%;height:100%;object-fit:cover;display:block}
+  .rw-pic b{font-size:13px;font-weight:600;color:var(--faint)}
+  .rw-id{min-width:0;display:flex;flex-direction:column;gap:1px}
+  .rw-nm{font-size:13.5px;font-weight:600;letter-spacing:-.01em;color:var(--text);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
+  .rw-star{color:var(--star);display:inline-flex}
+  .rw-star .ico{width:11px;height:11px;fill:var(--star)}
+  .rw-tag{font-size:10.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rw-rank{font-size:13.5px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:baseline;gap:7px;
+    overflow:hidden;white-space:nowrap}
+  .rw-rank em{font-style:normal;font-size:11px;font-weight:600;color:var(--muted);flex-shrink:0}
+  .rw-d,.rw-wr,.rw-lv{display:flex;flex-direction:column;gap:1px;font-variant-numeric:tabular-nums}
+  .rw-wr b,.rw-lv b{font-size:12.5px;font-weight:700;color:var(--muted)}
+  .rw-wr b.wr-good{color:var(--good)}
+  .rw-wr em,.rw-lv em{font-style:normal;font-size:9.5px;color:var(--faint);letter-spacing:.02em}
+  .rw-d .delta{font-size:10.5px;padding:2px 6px}
+  .rw-rg{font-size:10px;font-weight:600;letter-spacing:.09em;color:var(--faint);text-align:center}
+  .rw-up{font-size:10.5px;color:var(--faint);text-align:right;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  .rw-up.stale{color:var(--danger)}
+  .rw-chev{width:14px;height:14px;color:var(--faint);transition:transform .24s cubic-bezier(.22,1,.36,1)}
+  .hx.row.open .rw-chev{transform:rotate(180deg)}
+  .rw-open{display:flex;flex-direction:column;gap:11px;padding:4px 13px 13px;
+    border-top:1px solid var(--line);margin-top:1px;
+    animation:sectionIn .22s cubic-bezier(.22,1,.36,1) both}
+  .rw-open .lpc-wrap{margin:0}
+  @media (max-width:900px){
+    /* the columns that are nice-to-know go first, the identity stays */
+    .rw-main{grid-template-columns:auto 30px minmax(110px,1.5fr) minmax(90px,1fr) 62px 16px;gap:10px}
+    .rw-wr,.rw-lv,.rw-rg,.rw-up{display:none}
+  }
   .card{position:relative;padding:17px;display:flex;flex-direction:column;gap:11px}
   /* status as a left edge rail — scannable down a column of 60 cards in a way a
      7px dot next to the name never was */
@@ -389,6 +501,10 @@
   .rk-lp{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-.015em;margin-left:10px;
     font-variant-numeric:tabular-nums;opacity:.82}
   .c-unchecked{font-size:17px;color:var(--faint);letter-spacing:-.02em}
+  /* on an account with no rank yet, the level is the headline — it was set in
+     10 px caps underneath a 23 px "Unranked" that answered nothing */
+  .c-lvl{font-size:15px;color:var(--faint);letter-spacing:.02em;font-weight:500}
+  .c-lvl .rk-lp{font-size:26px;color:var(--text);opacity:1;margin-left:8px;letter-spacing:-.03em}
   .wl{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:4px}
   .wl b{color:var(--text);font-weight:500}
   /* winrate carries the verdict, so it gets the only colour on the line */
@@ -757,7 +873,10 @@
       <button id="bHelp" title="How this works">?</button>
     </div>
   </div>
-  <p class="sub">Everything is stored locally in this browser on this PC (localStorage). Export a backup now and then — clearing browser data wipes the vault. Rank checks are free and automatic (pulled from op.gg) — no account, no key needed.</p>
+  <!-- Onboarding, not chrome: true the first time, a wall you scroll past every
+       time after that. It also says the same thing as the help panel. Hidden once
+       there are accounts in the vault, which is exactly when it stops being news. -->
+  <p class="sub measure" id="intro">Everything is stored locally in this browser on this PC (localStorage). Export a backup now and then — clearing browser data wipes the vault. Rank checks are free and automatic (pulled from op.gg) — no account, no key needed.</p>
 
   <div id="banner" class="banner">Persistent storage is not available in this environment — data will be lost when you close the page. Download the file and open it locally on your PC.</div>
 
@@ -918,9 +1037,18 @@
   <div class="console">
   <div class="cmd">
     <button id="bCheckAll" class="b-gold"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg> Check all ranks</button>
+    <button id="bCheckStale" class="hidden" title="Only the ones that are actually out of date">Refresh stale</button>
+    <button id="bCancelCheck" class="b-danger hidden">Stop</button>
     <button id="bAdd" class="b-teal">+ Add account</button>
     <span id="count" class="cmd-count"></span>
+    <div id="density" class="seg" role="group" aria-label="Layout">
+      <button data-density="cards" title="Cards" aria-label="Card view"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
+      <button data-density="list" title="List" aria-label="List view"><svg class="ico" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    </div>
   </div>
+  <div id="runbar" class="runbar hidden"><div class="run-fill"></div><span class="run-txt"></span></div>
+  <div id="failbar" class="failbar hidden"></div>
+  <div id="chips" class="chips"></div>
   <div class="tools">
     <input type="search" id="tSearch" placeholder="Search name, label, tag, email…">
     <select id="tRegion">
@@ -929,6 +1057,8 @@
     <select id="tSort">
       <option value="rank">Sort: Rank</option>
       <option value="name">Sort: Name</option>
+      <option value="level">Sort: Level</option>
+      <option value="change">Sort: LP change</option>
       <option value="updated">Sort: Last updated</option>
     </select>
     <select id="tStatus">
@@ -1003,7 +1133,16 @@ let cfg={apiKey:"",model:"claude-sonnet-5",autoCheck:false,backendUrl:""};
 const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"claude-sonnet-5","claude-3-5-sonnet":"claude-sonnet-5"};
 // Only Sonnet 5 supports the newer dynamic-filtering web search; Haiku needs the basic one.
 const WEB_SEARCH_TOOL={"claude-sonnet-5":"web_search_20260209","claude-haiku-4-5":"web_search_20250305"};
-let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArchived:false};
+let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArchived:false,
+  flag:"",   // "" | "stale" | "unchecked" | "failed" — the states you actually go looking for
+  tier:"",   // a single tier, or "UNRANKED"; set by clicking the rank spread
+  density:"cards"};
+// The three questions a vault of sixty accounts raises, as functions, because the
+// filters, the stats panel and the check runner all need to agree on the answers.
+function isChecked(a){return !!(a.stats&&a.stats.updatedAt)}
+function isStale(a){return a.status!=="banned"&&(!isChecked(a)||Date.now()-a.stats.updatedAt>STALE_MS)}
+function isRanked(a){const t=a.stats&&a.stats.found!==false&&(a.stats.tier||"").toUpperCase();return !!(t&&t!=="UNRANKED")}
+function isFailed(a){return !!(a.stats&&(a.stats.found===false||a.stats.note))}
 let checking=new Set(), openInfo=new Set(), openSec=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
 // Which card has its note open, plus the live text. The draft is kept out here
 // on purpose: the grid re-renders wholesale, so a textarea rendered from a.notes
@@ -1852,14 +1991,62 @@ async function check(id){
     saveDB();renderCard(id);return false;
   }
 }
-async function checkAll(){
-  const list=filtered().filter(a=>a.status!=="banned");
-  let ok=0,bad=0;
-  for(const acc of list){(await check(acc.id))?ok++:bad++;await new Promise(r=>setTimeout(r,800))}
+// Sixty accounts at roughly a second each is minutes of waiting, and the only
+// sign of life used to be the word "Checking…" on a button — no idea how far it
+// had got, which account it was on, how many had failed, or any way to stop it.
+let run=null;
+function renderRun(){
+  const bar=$("runbar"), cancel=$("bCancelCheck");
+  bar.classList.toggle("hidden",!run);
+  cancel.classList.toggle("hidden",!run);
+  if(!run)return;
+  const pct=run.total?Math.round(run.done/run.total*100):0;
+  bar.querySelector(".run-fill").style.width=pct+"%";
+  bar.querySelector(".run-txt").textContent=
+    `${run.done} of ${run.total}${run.failed.length?" · "+run.failed.length+" failed":""}${run.current?" · "+run.current:""}`;
+}
+function renderFailbar(){
+  const el=$("failbar");
+  const fails=(run&&run.failed)||lastFails;
+  if(!fails||!fails.length||run){el.classList.add("hidden");return}
+  el.classList.remove("hidden");
+  setHTML(el,`<span class="fb-n">${fails.length} account${fails.length===1?"":"s"} failed to refresh</span>`
+    +`<span class="fb-l">${fails.slice(0,6).map(f=>esc(f.name)).join(", ")}${fails.length>6?" +"+(fails.length-6)+" more":""}</span>`
+    +`<button id="bRetryFails">Try again</button><button id="bDismissFails" class="fb-x" aria-label="Dismiss">✕</button>`);
+}
+let lastFails=null;
+async function checkAll(ids){
+  if(run)return;
+  const list=(ids?ids.map(id=>accounts.find(a=>a.id===id)).filter(Boolean):filtered()).filter(a=>a.status!=="banned");
+  if(!list.length){toast("Nothing to refresh");return}
+  run={total:list.length,done:0,failed:[],current:null,stop:false};
+  lastFails=null;renderFailbar();renderRun();syncCheckAll();
+  for(const acc of list){
+    if(run.stop)break;
+    run.current=acc.label||acc.gameName;renderRun();
+    if(!(await check(acc.id)))run.failed.push({id:acc.id,name:acc.label||acc.gameName});
+    run.done++;renderRun();
+    if(run.stop)break;
+    await new Promise(r=>setTimeout(r,800));
+  }
+  const {done,failed,stop}=run;
+  run=null;lastFails=failed.length?failed:null;
   render(); // the sort order was deliberately left alone during the run
-  const msg=bad===0?"Refreshed "+ok+" account"+(ok===1?"":"s"):ok+" refreshed, "+bad+" failed — see the cards";
+  renderRun();renderFailbar();
+  const ok=done-failed.length;
+  const msg=stop?"Stopped after "+done+" of "+list.length
+    :failed.length?ok+" refreshed, "+failed.length+" failed"
+    :"Refreshed "+ok+" account"+(ok===1?"":"s");
   toast(msg);
-  notify("Check all ranks finished",msg);
+  if(!stop)notify("Check all ranks finished",msg);
+}
+
+// LP moved since the check before last — what "who is climbing right now" means.
+function lastDelta(a){
+  const h=a.history||[];
+  if(h.length<2)return 0;
+  const now=ladderLP(h[h.length-1]), prev=ladderLP(h[h.length-2]);
+  return now===null||prev===null?0:now-prev;
 }
 
 // ---------- filtering / sorting ----------
@@ -1872,6 +2059,13 @@ function filtered(){
     if(ui.region&&a.region!==ui.region)return false;
     if(ui.status&&(a.status||"active")!==ui.status)return false;
     if(ui.tag&&!(a.tags||[]).includes(ui.tag))return false;
+    if(ui.flag==="stale"&&!isStale(a))return false;
+    if(ui.flag==="unchecked"&&isChecked(a))return false;
+    if(ui.flag==="failed"&&!isFailed(a))return false;
+    if(ui.tier){
+      const t=(a.stats&&a.stats.found!==false&&a.stats.tier||"").toUpperCase();
+      if(ui.tier==="UNRANKED"?isRanked(a):t!==ui.tier)return false;
+    }
     if(q){
       const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,(a.tags||[]).join(" "),a.stats?(a.stats.tier||"")+" "+(shortRank(a.stats)||""):"",(STATUS[a.status]||STATUS.active).label].join(" ").toLowerCase();
       if(!hay.includes(q))return false;
@@ -1881,8 +2075,11 @@ function filtered(){
   const by={
     rank:(x,y)=>rankValue(y.stats)-rankValue(x.stats),
     name:(x,y)=>(x.label||x.gameName).localeCompare(y.label||y.gameName),
-    updated:(x,y)=>((y.stats&&y.stats.updatedAt)||0)-((x.stats&&x.stats.updatedAt)||0)
-  }[ui.sort];
+    updated:(x,y)=>((y.stats&&y.stats.updatedAt)||0)-((x.stats&&x.stats.updatedAt)||0),
+    // the only number that matters on an account that isn't ranked yet
+    level:(x,y)=>((y.stats&&y.stats.level)||0)-((x.stats&&x.stats.level)||0),
+    change:(x,y)=>lastDelta(y)-lastDelta(x)
+  }[ui.sort]||((x,y)=>rankValue(y.stats)-rankValue(x.stats));
   list.sort((x,y)=>(y.fav?1:0)-(x.fav?1:0)||by(x,y));
   return list;
 }
@@ -1964,9 +2161,12 @@ function pruneCardState(){
 }
 function render(){
   pruneCardState();
+  $("intro").classList.toggle("hidden",accounts.length>0);
   $("previewBanner").classList.toggle("hidden",!previewMode);
   $("bDeleteAll").disabled=accounts.length===0;
-  renderDash();renderTagbar();renderFilterOptions();renderGrid();renderBulkBar();
+  renderDash();renderTagbar();renderChips();renderFilterOptions();renderGrid();renderBulkBar();
+  renderRun();renderFailbar();
+  for(const b of $("density").children)b.classList.toggle("on",b.dataset.density===ui.density);
 }
 function renderBulkBar(){
   const n=selected.size;
@@ -2048,9 +2248,13 @@ function renderDash(){
   const regCount={};accounts0.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
   const regTxt=Object.entries(regCount).map(([r,n])=>r+" "+n).join(" · ");
   const dist={};ranked.forEach(a=>{const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1});
-  const un=accounts0.length-ranked.length;
-  const staleN=accounts0.filter(a=>a.status!=="banned"&&(!a.stats||!a.stats.updatedAt||Date.now()-a.stats.updatedAt>STALE_MS)).length;
-  const veryStaleN=accounts0.filter(a=>a.status!=="banned"&&(!a.stats||!a.stats.updatedAt||Date.now()-a.stats.updatedAt>30*24*3600*1000)).length;
+  // "Unranked/unchecked ×54" lumped together a result and a chore. Never checked
+  // is work waiting to be done; unranked is an answer. They belong apart, and the
+  // one that is a chore should not be the quietest thing on the panel.
+  const neverN=accounts0.filter(a=>!isChecked(a)).length;
+  const un=accounts0.length-ranked.length-neverN;
+  const staleN=accounts0.filter(a=>a.status!=="banned"&&isStale(a)).length;
+  const veryStaleN=accounts0.filter(a=>a.status!=="banned"&&(!isChecked(a)||Date.now()-a.stats.updatedAt>30*24*3600*1000)).length;
   const bannedN=accounts0.filter(a=>a.status==="banned").length;
   const archivedN=accounts.length-accounts0.length;
   let bk="";
@@ -2058,8 +2262,10 @@ function renderDash(){
     if(!cfg.lastExport)bk="No backup yet — hit Export once your accounts are in.";
     else if(Date.now()-cfg.lastExport>30*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago — consider exporting.";
   }
-  const gems=TIER_ORDER.filter(t=>dist[t]).map(t=>`<span class="gem"><i style="background:${TIER_COLORS[t]}"></i>${t.charAt(0)+t.slice(1).toLowerCase()} ×${dist[t]}</span>`).join("")
-    +(un>0?`<span class="gem"><i style="background:${TIER_COLORS.UNRANKED}"></i>Unranked/unchecked ×${un}</span>`:"");
+  const gem=(tier,label,n,colour)=>`<button class="gem gem-b${ui.tier===tier?" on":""}" data-tier="${tier}" title="Show only these">`
+    +`<i class="d" style="background:${colour}"></i>${label} <b>×${n}</b></button>`;
+  const gems=TIER_ORDER.filter(t=>dist[t]).map(t=>gem(t,t.charAt(0)+t.slice(1).toLowerCase(),dist[t],TIER_COLORS[t])).join("")
+    +(un>0?gem("UNRANKED","Unranked",un,TIER_COLORS.UNRANKED):"");
   setHTML(el,`
   <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
   <div class="dash-head">
@@ -2073,9 +2279,14 @@ function renderDash(){
   <div class="dash">
     <div class="stat"><div class="k">Accounts</div><div class="v">${accounts0.length} <small>· ${accounts0.filter(a=>a.fav).length} ★${bannedN?" · "+bannedN+" banned":""}${archivedN?" · "+archivedN+" archived":""}</small></div></div>
     <div class="stat"><div class="k">Best account</div><div class="v" style="font-size:14px">${bestTxt}</div></div>
-    <div class="stat"><div class="k">Season W/L (checked)</div><div class="v">${W}W ${L}L <small>· ${wr} WR</small></div></div>
+    <div class="stat"><div class="k">Season W/L</div><div class="v">${W}W ${L}L <small>· ${wr} WR</small></div>
+      <div class="s-note">from ${pool.length} counted account${pool.length===1?"":"s"}</div></div>
     <div class="stat"><div class="k">Regions</div><div class="v" style="font-size:14px">${esc(regTxt)||"—"}</div></div>
-    <div class="stat"><div class="k">Needs refresh</div><div class="v"${staleN?' style="color:var(--danger)"':""}>${staleN}<small> · older than 3 days${veryStaleN?" ("+veryStaleN+" over 30d)":""}</small></div></div>
+    ${neverN?`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked"><div class="k">Never checked</div>
+      <div class="v" style="color:var(--gold-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`:""}
+    <button class="stat stat-b${ui.flag==="stale"?" on":""}" data-flag="stale"><div class="k">Needs refresh</div>
+      <div class="v"${staleN?' style="color:var(--danger)"':""}>${staleN}</div>
+      <div class="s-note">older than 3 days${veryStaleN?" · "+veryStaleN+" over 30d":""}</div></button>
   </div>
   ${gems?`<div class="dist" style="border-top:1px solid var(--line)"><span class="k">Rank spread</span>${gems}</div>`:""}
   ${topChamps.length?`<div class="dist" style="border-top:1px solid var(--line)"><span class="k">Best champions</span>${
@@ -2092,6 +2303,21 @@ function renderTagbar(){
   const all=[...new Set(accounts.filter(a=>!!a.archived===ui.showArchived).flatMap(a=>a.tags||[]))].sort((a,b)=>a.localeCompare(b));
   if(ui.tag&&!all.includes(ui.tag))ui.tag=null;
   setHTML($("tagbar"),all.map(t=>`<span class="chip ${ui.tag===t?"on":""}" data-k="${esc(t)}" data-tag="${esc(t)}">${esc(t)}</span>`).join(""));
+}
+// A number in a dashboard always raises "which ones?", so the stats panel sets
+// these — and they have to be visible and removable, or the grid just looks
+// mysteriously short.
+const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed"};
+function renderChips(){
+  const out=[];
+  if(ui.flag)out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
+  if(ui.tier)out.push(["tier",ui.tier==="UNRANKED"?"Unranked":ui.tier.charAt(0)+ui.tier.slice(1).toLowerCase()]);
+  if(ui.tag)out.push(["tag","Tag: "+ui.tag]);
+  if(ui.favOnly)out.push(["favOnly","Favorites"]);
+  if(ui.search)out.push(["search",'"'+ui.search+'"']);
+  setHTML($("chips"),!out.length?"":out.map(([k,label])=>
+    `<button class="fchip" data-clear="${k}">${esc(label)}<span aria-hidden="true">✕</span></button>`).join("")
+    +(out.length>1?`<button class="fchip fchip-all" data-clear="all">Clear all</button>`:""));
 }
 
 // Everything the profile page carries that isn't the current rank: how the account
@@ -2196,6 +2422,88 @@ function focusNoteEditor(root){
   // end while the user is still typing
   if(ta&&document.activeElement!==ta){ta.focus();try{ta.setSelectionRange(ta.value.length,ta.value.length)}catch(e){}}
 }
+// Manual rank entry, shared by both views rather than living inside the card.
+function rankPanelHTML(a,s,rev){
+  const pm=a.peakManual;
+  return `<div class="login${rev||""}">
+    <div><span class="k">Current</span><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <select data-f="tier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${s&&(s.tier||"").toUpperCase()===t?"selected":""}>${t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
+      <select data-f="div">${["I","II","III","IV"].map(d=>`<option ${s&&s.division===d?"selected":""}>${d}</option>`).join("")}</select>
+      <input data-f="lp" type="number" min="0" max="2000" placeholder="LP" value="${s&&s.lp!=null?s.lp:""}" style="width:72px">
+      <input data-f="w" type="number" min="0" placeholder="W" value="${s&&s.wins!=null?s.wins:""}" style="width:64px">
+      <input data-f="l" type="number" min="0" placeholder="L" value="${s&&s.losses!=null?s.losses:""}" style="width:64px">
+    </div></div>
+    <div style="border-top:1px solid var(--line);padding-top:10px">
+      <span class="k">Season peak</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <select data-f="ptier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${(pm&&(pm.tier||"").toUpperCase())===t?"selected":""}>${t==="UNRANKED"?"— none —":t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
+        <select data-f="pdiv">${["I","II","III","IV"].map(d=>`<option ${pm&&pm.division===d?"selected":""}>${d}</option>`).join("")}</select>
+        <input data-f="plp" type="number" min="0" max="2000" placeholder="LP" value="${pm&&pm.lp!=null?pm.lp:""}" style="width:72px">
+      </div>
+      <div style="font-size:11px;color:var(--faint);margin-top:7px;line-height:1.5">Refresh reads op.gg's own "Top tier" peak when the profile has one, and the app also tracks the highest rank it has seen itself. Set a peak here as well if you know better — whichever is genuinely highest is the one shown.</div>
+    </div>
+    <div><button data-act="rankapply" style="color:var(--teal-txt)">Save</button></div>
+  </div>`;
+}
+
+// A sixty-account vault is a list, not a wall. Each card is ~450 px tall, so the
+// grid runs to thirteen screens and comparing two accounts means remembering one
+// of them. A row is 46 px and puts the same six facts in columns you can read
+// straight down. Clicking one unfolds the chart and the details under it, so
+// nothing is lost — the card view stays for browsing, this is for working.
+function rowHTML(a,i){
+  const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
+  const st=STATUS[a.status]||STATUS.active;
+  const open=openInfo.has(a.id);
+  const total=s?(Number(s.wins)||0)+(Number(s.losses)||0):0;
+  const wr=total>0?Math.round((Number(s.wins)||0)/total*100):null;
+  const dv=lastDelta(a);
+  let rank="—",lp="";
+  if(isChecking)rank="…";
+  else if(!s)rank="Never checked";
+  else if(s.found===false)rank="Not found";
+  else if(isRanked(a)){const t=s.tier.toUpperCase();
+    rank=t.charAt(0)+t.slice(1).toLowerCase()+(s.division?" "+s.division:"");
+    if(s.lp!=null)lp=s.lp+" LP";
+  }else rank="Unranked";
+  const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
+  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${a.id}"><div class="hx-in rw" data-id="${a.id}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
+    <div class="rw-main" data-act="info" role="button" tabindex="0" aria-expanded="${open}">
+      <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}" onclick="event.stopPropagation()">
+      <span class="rw-pic">${s&&s.icon?`<img src="${esc(s.icon)}" alt="" loading="lazy" onerror="this.remove()">`:`<b>${esc(initial)}</b>`}</span>
+      <span class="rw-id">
+        <span class="rw-nm">${esc(a.label||a.gameName)}${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}</span>
+        <span class="rw-tag">${esc(a.gameName)}#${esc(a.tagLine)}</span>
+      </span>
+      <span class="rw-rank" style="color:${col}">${esc(rank)}${lp?`<em>${esc(lp)}</em>`:""}</span>
+      <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${Math.abs(dv)}</span>`:""}</span>
+      <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><em>${esc(s.wins)}W ${esc(s.losses)}L</em>`:""}</span>
+      <span class="rw-lv">${s&&s.level?`<b>${esc(s.level)}</b><em>lvl</em>`:""}</span>
+      <span class="rw-rg">${esc(a.region)}</span>
+      <span class="rw-up${isStale(a)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
+      <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    ${open?`<div class="rw-open">
+      ${rankChart(a.history||[],cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(a.history||[]))}
+      ${infoBlockHTML(a)||""}
+      ${noteBlockHTML(a)}
+      <div class="acts">
+        <button data-act="login" class="a-login">${icon("user")} ${openLogin.has(a.id)?"Hide login":"Login"}</button>
+        <a class="btn" href="https://op.gg/lol/summoners/${(REGIONS[a.region]||REGIONS.EUW).opgg}/${encodeURIComponent(a.gameName)}-${encodeURIComponent(a.tagLine)}" target="_blank" rel="noreferrer">OP.GG ↗</a>
+        <button data-act="check" ${isChecking?"disabled":""} style="color:var(--teal-txt)">${isChecking?"…":icon("refresh")+" Refresh"}</button>
+        <button data-act="rank">${icon("pencil")} Rank</button>
+        <button data-act="edit">Edit</button>
+        ${a.archived?'<button data-act="unarchive">Unarchive</button>':'<button data-act="archive">Archive</button>'}
+        <button data-act="del" class="b-danger">${armedDelete===a.id?"Sure?":"Delete"}</button>
+      </div>
+      ${openLogin.has(a.id)?`<div class="login">
+        <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
+        <div class="lrow"><span class="val mono ${a.password?"":"none"}">${a.password?(shownPw.has(a.id)?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${shownPw.has(a.id)?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
+      </div>`:""}
+      ${openRank.has(a.id)?rankPanelHTML(a,s):""}
+    </div>`:""}
+  </div></div>`;
+}
 function cardHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
   const stale=!!(s&&s.updatedAt&&Date.now()-s.updatedAt>STALE_MS);
@@ -2229,10 +2537,16 @@ function cardHTML(a,i){
     tierTxt=t==="UNRANKED"?"Unranked":t.charAt(0)+t.slice(1).toLowerCase()+(s.division?" "+s.division:"");
     if(s.lp!==null&&s.lp!==undefined)lpTxt=s.lp+" LP";
   }
+  // On an account that isn't ranked yet the level is the whole story, so it gets
+  // the headline slot. Printing "Unranked" in 26 px and tucking "Level 97" into a
+  // 10 px caption underneath answered the question nobody asked, in the larger type.
+  const levelLed=!!(s&&s.found!==false&&!isRanked(a)&&s.level);
   let rankBlock;
   if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
   else if(!s)rankBlock=`<div class="rk c-unchecked">Never checked</div>`;
   else if(s.found===false)rankBlock=`<div class="wl" style="color:var(--danger)">Not found — check name/tag/region</div>`;
+  else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
+    <div class="wl">${s.level>=30?"Unranked this season":"Not level 30 yet"}</div>`;
   else rankBlock=`<div class="rk" style="color:${col}">${esc(tierTxt||"Unranked")}${lpTxt?`<span class="rk-lp">${esc(lpTxt)}</span>`:""}</div>
     <div class="wl">${total>0?`<b>${esc(s.wins)}W</b> <b>${esc(s.losses)}L</b> · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:"No ranked games found"}</div>`;
   // Peak / Level / MMR are unrelated facts — label them instead of running them
@@ -2240,7 +2554,7 @@ function cardHTML(a,i){
   const microStats=[];
   if(s&&s.found!==false){
     if(peak)microStats.push(["Peak",peak]);
-    if(s.level)microStats.push(["Level",s.level]);
+    if(s.level&&!levelLed)microStats.push(["Level",s.level]);
     // How far the climb still is, against today's floor. Only for Master+, where
     // it's the only thing left that "next rank" can mean.
     {
@@ -2294,25 +2608,7 @@ function cardHTML(a,i){
       <div class="lrow"><span class="val mono ${a.password?"":"none"}" style="font-family:${a.password?"":"inherit"}">${a.password?(pw?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${pw?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
       ${a.email?`<div class="lrow"><span class="val">${esc(a.email)}</span><span class="lbtns"><button data-act="copymail">Copy</button></span></div>`:""}
     </div>`:""}
-    ${openRank.has(a.id)?(pm=>`<div class="login${rv("rank")}">
-      <div><span class="k">Current</span><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <select data-f="tier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${s&&(s.tier||"").toUpperCase()===t?"selected":""}>${t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
-        <select data-f="div">${["I","II","III","IV"].map(d=>`<option ${s&&s.division===d?"selected":""}>${d}</option>`).join("")}</select>
-        <input data-f="lp" type="number" min="0" max="2000" placeholder="LP" value="${s&&s.lp!=null?s.lp:""}" style="width:72px">
-        <input data-f="w" type="number" min="0" placeholder="W" value="${s&&s.wins!=null?s.wins:""}" style="width:64px">
-        <input data-f="l" type="number" min="0" placeholder="L" value="${s&&s.losses!=null?s.losses:""}" style="width:64px">
-      </div></div>
-      <div style="border-top:1px solid var(--line);padding-top:10px">
-        <span class="k">Season peak</span>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-          <select data-f="ptier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${(pm&&(pm.tier||"").toUpperCase())===t?"selected":""}>${t==="UNRANKED"?"— none —":t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
-          <select data-f="pdiv">${["I","II","III","IV"].map(d=>`<option ${pm&&pm.division===d?"selected":""}>${d}</option>`).join("")}</select>
-          <input data-f="plp" type="number" min="0" max="2000" placeholder="LP" value="${pm&&pm.lp!=null?pm.lp:""}" style="width:72px">
-        </div>
-        <div style="font-size:11px;color:var(--faint);margin-top:7px;line-height:1.5">Refresh reads op.gg's own "Top tier" peak when the profile has one, and the app also tracks the highest rank it has seen itself. Set a peak here as well if you know better — whichever is genuinely highest is the one shown.</div>
-      </div>
-      <div><button data-act="rankapply" style="color:var(--teal-txt)">Save</button></div>
-    </div>`)(a.peakManual):""}
+    ${openRank.has(a.id)?rankPanelHTML(a,s,rv("rank")):""}
     ${noteBlockHTML(a,rv("note"))}
     <div class="c-foot">
       <span class="c-meta"><span class="upd${stale?" stale":""}">${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${s&&s.asOf?`<span class="src">${esc(s.asOf)}</span>`:""}</span>
@@ -2349,7 +2645,9 @@ function renderGrid(){
   }else if(list.length===0){
     setHTML(grid,`<div class="hx" data-k="nomatch" style="grid-column:1/-1"><div class="hx-in empty">No accounts match the current filters.</div></div>`);
   }else{
-    setHTML(grid,list.map((a,i)=>cardHTML(a,i)).join(""));
+    const asList=ui.density==="list";
+    grid.classList.toggle("list",asList);
+    setHTML(grid,list.map((a,i)=>asList?rowHTML(a,i):cardHTML(a,i)).join(""));
   }
   reveal=null; // consumed by the render above — the next one must not replay it
   // patching keeps a focused textarea alive, so this is normally a no-op — it
@@ -2366,6 +2664,15 @@ function renderGrid(){
 function syncCheckAll(){
   $("bCheckAll").disabled=accounts.length===0||checking.size>0;
   setHTML($("bCheckAll"),checking.size?`<span class="spin">${icon("refresh")}</span> Checking…`:icon("refresh")+" Check all ranks");
+  // "Check all ranks" also re-checks the twenty accounts you did an hour ago. The
+  // run you actually mean is almost always the stale ones, so it gets its own
+  // button — hidden when it would do exactly the same work as the one beside it.
+  const live=accounts.filter(a=>!a.archived&&a.status!=="banned");
+  const stale=live.filter(isStale).length;
+  const sb=$("bCheckStale");
+  sb.classList.toggle("hidden",!!run||!stale||stale===live.length);
+  sb.textContent="Refresh "+stale+" stale";
+  sb.disabled=checking.size>0;
 }
 
 // Opening a panel on one card is a change to that card, not to the grid, and it
@@ -2379,7 +2686,7 @@ function renderCard(id){
   const idx=list.findIndex(a=>a.id===id);
   if(!el||idx<0){renderGrid();return}
   const tmp=document.createElement("div");
-  tmp.innerHTML=cardHTML(list[idx],idx);
+  tmp.innerHTML=ui.density==="list"?rowHTML(list[idx],idx):cardHTML(list[idx],idx);
   morph(el,tmp.firstElementChild);
   reveal=null; // consumed, exactly as renderGrid does
   if(editingNote)focusNoteEditor(grid);
@@ -2856,13 +3163,46 @@ $("tSort").addEventListener("change",e=>{ui.sort=e.target.value;renderGrid()});
 $("tStatus").addEventListener("change",e=>{ui.status=e.target.value;renderGrid()});
 $("tFav").addEventListener("click",()=>{ui.favOnly=!ui.favOnly;$("tFav").style.color=ui.favOnly?"var(--star)":"";$("tFav").style.borderColor=ui.favOnly?"var(--star)":"";renderGrid()});
 $("tArchived").addEventListener("click",()=>{ui.showArchived=!ui.showArchived;$("tArchived").style.color=ui.showArchived?"var(--star)":"";$("tArchived").style.borderColor=ui.showArchived?"var(--star)":"";render()});
-$("dash").addEventListener("click",e=>{if(e.target.closest("#bDashToggle")){
-  cfg.dashCollapsed=!cfg.dashCollapsed;
-  // one-shot: renderDash also runs on every account change, and the panel must
-  // not re-animate then — only when the user actually opened it
-  dashJustOpened=!cfg.dashCollapsed;
-  saveCfg();renderDash();
-}});
+$("dash").addEventListener("click",e=>{
+  if(e.target.closest("#bDashToggle")){
+    cfg.dashCollapsed=!cfg.dashCollapsed;
+    // one-shot: renderDash also runs on every account change, and the panel must
+    // not re-animate then — only when the user actually opened it
+    dashJustOpened=!cfg.dashCollapsed;
+    saveCfg();renderDash();
+    return;
+  }
+  // every count answers "how many"; clicking it answers "which ones"
+  const flag=e.target.closest("[data-flag]");
+  if(flag){ui.flag=ui.flag===flag.dataset.flag?"":flag.dataset.flag;render();return}
+  const tier=e.target.closest("[data-tier]");
+  if(tier){ui.tier=ui.tier===tier.dataset.tier?"":tier.dataset.tier;render()}
+});
+$("chips").addEventListener("click",e=>{
+  const b=e.target.closest("[data-clear]");if(!b)return;
+  const k=b.dataset.clear;
+  if(k==="all")Object.assign(ui,{flag:"",tier:"",tag:null,favOnly:false,search:""});
+  else if(k==="tag")ui.tag=null;
+  else if(k==="favOnly")ui.favOnly=false;
+  else ui[k]="";
+  if(!ui.search)$("tSearch").value="";
+  $("tFav").style.color=ui.favOnly?"var(--star)":"";
+  $("tFav").style.borderColor=ui.favOnly?"var(--star)":"";
+  render();
+});
+$("density").addEventListener("click",e=>{
+  const b=e.target.closest("[data-density]");if(!b)return;
+  ui.density=b.dataset.density;cfg.density=ui.density;saveCfg();
+  openInfo.clear(); // "expanded" means different things in the two layouts
+  render();
+});
+$("bCheckStale").addEventListener("click",()=>
+  checkAll(accounts.filter(a=>!a.archived&&a.status!=="banned"&&isStale(a)).map(a=>a.id)));
+$("bCancelCheck").addEventListener("click",()=>{if(run){run.stop=true;toast("Stopping after this account…")}});
+$("failbar").addEventListener("click",e=>{
+  if(e.target.closest("#bDismissFails")){lastFails=null;renderFailbar();return}
+  if(e.target.closest("#bRetryFails")&&lastFails)checkAll(lastFails.map(f=>f.id));
+});
 $("dash").addEventListener("change",e=>{
   if(e.target&&e.target.id==="dashMin"){cfg.statsMinTier=e.target.value;saveCfg();renderDash()}
 });
@@ -3014,8 +3354,24 @@ $("grid").addEventListener("click",async e=>{
 });
 
 // ---------- boot ----------
+// A failure note is written into the account and then kept forever, so advice
+// from an older build outlives the feature it points at — cards were still
+// telling people to use "📋 Paste", removed two versions ago. Anything naming a
+// control that no longer exists goes.
+function migrateStats(){
+  let touched=false;
+  for(const a of accounts){
+    if(a.stats&&a.stats.note&&/paste/i.test(a.stats.note)){
+      a.stats.note=a.stats.note.replace(/\s*—.*$/,"")+" — enter it by hand with ✎ Rank";
+      touched=true;
+    }
+  }
+  if(touched)saveDB();
+}
 function startApp(){
   $("appRoot").classList.remove("hidden");
+  migrateStats();
+  if(cfg.density==="list"||cfg.density==="cards")ui.density=cfg.density;
   refreshCutoffs(); // fire and forget; redraws only if a floor actually arrived
   $("grid").classList.add("boot");
   render();

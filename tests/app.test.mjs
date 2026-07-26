@@ -1033,7 +1033,9 @@ const RICH_STATS = {
   asOf: "backend", updatedAt: Date.now(),
 };
 const seededAccount = () => [{ id: "seed1", label: "Main", gameName: "Seeded", tagLine: "1234",
-  region: "EUW", status: "active", stats: JSON.parse(JSON.stringify(RICH_STATS)) }];
+  region: "EUW", status: "active", stats: JSON.parse(JSON.stringify(RICH_STATS)),
+  history: [{ t: Date.now() - 2 * 86400000, tier: "DIAMOND", division: "II", lp: 40 },
+            { t: Date.now(), tier: "DIAMOND", division: "I", lp: 52 }] }];
 
 test("the details drawer sits on the card's bottom edge", () => {
   const win = bootApp(seededAccount());
@@ -1067,6 +1069,106 @@ test("the details drawer sits on the card's bottom edge", () => {
   const both = win.document.querySelector(".login.info");
   assert.equal(both.querySelectorAll(".sea").length, 2, "and the first one stays open");
   assert.equal(both.querySelectorAll(".chp").length, 3, "two champions plus the column header");
+});
+
+// ---- working through sixty accounts ----
+const listView = win => { win.document.querySelector('[data-density="list"]').click(); return win.document; };
+
+test("the list view puts a whole account on one row, and unfolds it in place", () => {
+  const win = bootApp(seededAccount());
+  const doc = listView(win);
+  assert.equal(doc.querySelectorAll(".card").length, 0, "cards give way to rows");
+  const row = doc.querySelector(".rw");
+  assert.ok(row);
+  // the six facts you scan a collection by, all on the line
+  assert.match(row.textContent, /Main/);
+  assert.match(row.textContent, /Diamond I/);
+  assert.match(row.textContent, /52 LP/);
+  assert.match(row.textContent, /47%/);
+  assert.match(row.textContent, /764/, "level");
+  assert.match(row.textContent, /EUW/);
+  assert.equal(doc.querySelector(".lpc"), null, "no chart until asked");
+
+  doc.querySelector(".rw-main").click();
+  const open = win.document.querySelector(".rw");
+  assert.ok(open.querySelector(".lpc"), "the chart unfolds under the row");
+  assert.ok(open.querySelector(".sec"), "so do the details");
+  assert.ok(open.querySelector('[data-act="check"]'), "and the actions");
+  assert.equal(open.querySelector(".rw-main").getAttribute("aria-expanded"), "true");
+
+  // the layout choice outlives the session
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).density, "list");
+});
+
+test("a count in the stats panel filters the grid to the accounts behind it", () => {
+  const win = bootApp(seededAccount());
+  addRealAccount(win, "Never Checked One", "1111");
+  const doc = win.document;
+  assert.equal(doc.querySelectorAll(".card").length, 2);
+
+  const tile = doc.querySelector('[data-flag="unchecked"]');
+  assert.ok(tile, "a vault with an unchecked account says so");
+  tile.click();
+  assert.equal(doc.querySelectorAll(".card").length, 1, "only the unchecked one is left");
+  assert.match(doc.querySelector(".card").textContent, /Never Checked One/);
+
+  // an invisible filter makes a short grid look like a bug, so it is spelled out
+  const chip = doc.querySelector(".fchip");
+  assert.ok(chip);
+  assert.match(chip.textContent, /Never checked/);
+  chip.click();
+  assert.equal(doc.querySelectorAll(".card").length, 2, "clearing the chip restores the grid");
+  assert.equal(doc.querySelectorAll(".fchip").length, 0);
+});
+
+test("the rank spread filters by tier, and toggles back off", () => {
+  const win = bootApp(seededAccount());
+  addRealAccount(win, "Other", "2222");
+  const doc = win.document;
+  const gem = [...doc.querySelectorAll("[data-tier]")].find(g => g.dataset.tier === "DIAMOND");
+  assert.ok(gem, "the seeded account is Diamond");
+  gem.click();
+  assert.equal(doc.querySelectorAll(".card").length, 1);
+  doc.querySelector("[data-tier=DIAMOND]").click();
+  assert.equal(doc.querySelectorAll(".card").length, 2, "clicking the same tier again clears it");
+});
+
+test("an account with no rank leads with its level, not with the word Unranked", () => {
+  const stats = { found: true, tier: "UNRANKED", division: null, lp: null, level: 97, updatedAt: Date.now() };
+  const win = bootApp([{ id: "u1", gameName: "Leveling", tagLine: "EUW", region: "EUW", status: "active", stats }]);
+  const rk = win.document.querySelector(".rk");
+  assert.ok(rk.classList.contains("c-lvl"), "the headline slot holds the level");
+  assert.match(rk.textContent, /Level\s*97/);
+  // and it is not then repeated in the caption row underneath
+  const stats2 = win.document.querySelector(".c-stats");
+  if (stats2) assert.doesNotMatch(stats2.textContent, /Level/);
+});
+
+test("sorting by level and by LP change", () => {
+  const mk = (id, level, hist) => ({ id, gameName: id, tagLine: "EUW", region: "EUW", status: "active",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 10, level, updatedAt: Date.now() }, history: hist });
+  const win = bootApp([
+    mk("low", 30, [{ t: 1, tier: "GOLD", division: "II", lp: 10 }, { t: 2, tier: "GOLD", division: "II", lp: 90 }]),
+    mk("high", 300, [{ t: 1, tier: "GOLD", division: "II", lp: 90 }, { t: 2, tier: "GOLD", division: "II", lp: 10 }]),
+  ]);
+  const names = () => [...win.document.querySelectorAll(".c-name span")].map(n => n.textContent);
+  const sort = win.document.getElementById("tSort");
+  sort.value = "level"; sort.dispatchEvent(new win.Event("change"));
+  assert.deepEqual(names(), ["high", "low"], "highest level first");
+  sort.value = "change"; sort.dispatchEvent(new win.Event("change"));
+  assert.deepEqual(names(), ["low", "high"], "biggest climb first");
+});
+
+test("advice naming a control that no longer exists is rewritten on load", () => {
+  // the note is written into the account and then kept forever, so cards were
+  // still telling people to use Paste two versions after it was removed
+  const win = bootApp([{ id: "s1", gameName: "Stale", tagLine: "EUW", region: "EUW", status: "active",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now(),
+      note: "Auto-fetch failed (HTTP 404) — use 📋 Paste or ✎ Rank" } }]);
+  const stored = JSON.parse(win.localStorage.getItem("smurf-tracker"))[0];
+  assert.doesNotMatch(stored.stats.note, /Paste/);
+  assert.match(stored.stats.note, /Auto-fetch failed \(HTTP 404\)/, "what went wrong is kept");
+  assert.doesNotMatch(win.document.querySelector(".card").textContent, /Paste/);
 });
 
 test("a card is patched in place, not rebuilt, so nothing blinks", () => {
