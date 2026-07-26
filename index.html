@@ -39,18 +39,27 @@
     --r-sm:9px; --r-md:13px; --r-lg:18px;
   }
   *{box-sizing:border-box}
+  /* The <meta name="color-scheme"> up top does not reach the computed style, so
+     the browser was still treating this as a light page: the native <select>
+     dropdown opened white on white, and the scrollbar drew a light track behind
+     the tinted thumb. This is the declaration that actually decides it. */
+  :root{color-scheme:dark}
   html{scroll-behavior:smooth}
   /* the scrollbar is the one chrome element that touches every screen, so it
-     carries the primary accent — muted into the neutral so it tints rather than
-     glares. Plain hex first for anything without color-mix. */
-  *{scrollbar-width:thin;scrollbar-color:#2a3040 transparent;
-    scrollbar-color:color-mix(in srgb,var(--gold) 42%,#2a3040) transparent}
+     carries the primary accent. It was mixed only 42% into the neutral, which on
+     a muted accent is a tint you have to be told about — it now reads as the
+     colour you picked. Plain hex first for anything without color-mix. */
+  *{scrollbar-width:thin;scrollbar-color:#3a4152 transparent;
+    scrollbar-color:color-mix(in srgb,var(--gold) 72%,#2a3040) transparent}
   ::-webkit-scrollbar{width:12px;height:12px}
   ::-webkit-scrollbar-track{background:transparent}
-  ::-webkit-scrollbar-thumb{background:#2a3040;background:color-mix(in srgb,var(--gold) 42%,#2a3040);
+  ::-webkit-scrollbar-thumb{background:#3a4152;background:color-mix(in srgb,var(--gold) 72%,#2a3040);
     border-radius:99px;border:3px solid transparent;background-clip:content-box}
-  ::-webkit-scrollbar-thumb:hover{background:#3d4557;background:color-mix(in srgb,var(--gold) 70%,#3d4557);background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:#4a5266;background:var(--gold);background-clip:content-box}
   ::-webkit-scrollbar-corner{background:transparent}
+  /* the popup list is drawn by the OS, which only takes plain colours — no
+     color-mix, no custom properties it can't resolve at paint time */
+  option{background-color:#141821;color:#e9edf5}
   ::selection{background:color-mix(in srgb,var(--gold) 32%,transparent);color:#fff}
 
   body{margin:0;position:relative;color:var(--text);
@@ -245,10 +254,18 @@
   .dash-filter{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
   .dash-filter select{font-size:12px;padding:5px 28px 5px 10px;background-color:#ffffff08}
   .dash-ex{font-size:11px;color:var(--faint)}
-  .gem.cmb{gap:6px}
-  .gem.cmb b{font-weight:600;color:var(--muted)}
+  /* Was a bare name, a percentage and a hanging "30G" all at different sizes with
+     nothing holding them together — at eight across a row it read as debris. One
+     pill per champion, with the games as a W-L pair rather than a count needing a
+     unit letter glued to it. */
+  .gem.cmb{gap:7px;padding:3px 4px 3px 10px;border-radius:999px;
+    background:#ffffff08;border:1px solid #ffffff0f}
+  .gem.cmb .n{font-weight:500}
+  .gem.cmb b{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .gem.cmb b.wr-good{color:var(--good)}
-  .gem.cmb i.g{font-style:normal;font-size:10.5px;color:var(--faint)}
+  .gem.cmb i.g{font-style:normal;font-size:10.5px;font-weight:600;color:var(--faint);
+    font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:999px;background:#ffffff0d}
+  .gem.cmb i.g em{font-style:normal;opacity:.5;padding:0 1px}
   .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px}
   .dist .k{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-right:2px}
   .gem{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text)}
@@ -2002,7 +2019,8 @@ function mergeChampions(pool){
     e.games+=g;e.wins+=c.wins!=null?Number(c.wins):Math.round((Number(c.wr)||0)/100*g);e.accs++;
   }));
   return Object.values(agg).sort((x,y)=>y.games-x.games).slice(0,8)
-    .map(c=>({name:c.name,games:c.games,accs:c.accs,wr:Math.round(c.wins/c.games*100)}));
+    .map(c=>({name:c.name,games:c.games,accs:c.accs,wins:c.wins,losses:c.games-c.wins,
+      wr:Math.round(c.wins/c.games*100)}));
 }
 function renderDash(){
   const el=$("dash");
@@ -2061,8 +2079,10 @@ function renderDash(){
   </div>
   ${gems?`<div class="dist" style="border-top:1px solid var(--line)"><span class="k">Rank spread</span>${gems}</div>`:""}
   ${topChamps.length?`<div class="dist" style="border-top:1px solid var(--line)"><span class="k">Best champions</span>${
-    topChamps.map(c=>`<span class="gem cmb" title="${esc(c.games)} games across ${esc(c.accs)} account${c.accs===1?"":"s"}">${esc(c.name)}
-      <b class="${c.wr>=50?"wr-good":""}">${esc(c.wr)}%</b><i class="g">${esc(c.games)}G</i></span>`).join("")}</div>`:""}
+    topChamps.map(c=>`<span class="gem cmb" title="${esc(c.games)} games across ${esc(c.accs)} account${c.accs===1?"":"s"}">`
+      +`<span class="n">${esc(c.name)}</span>`
+      +`<b class="${c.wr>=50?"wr-good":""}">${esc(c.wr)}%</b>`
+      +`<i class="g">${esc(c.wins)}<em>-</em>${esc(c.losses)}</i></span>`).join("")}</div>`:""}
   </div></div>
   ${bk?`<div style="font-size:12px;color:var(--muted);margin:-4px 0 16px">${bk}</div>`:""}`);
   dashJustOpened=false; // consumed by the render above
