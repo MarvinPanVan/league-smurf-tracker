@@ -5,9 +5,98 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  parseRankText, parseLevelText, parsePeakText,
-  parseSeasons, parseFlex, parseChampions, parseProfileIcon, stripRows,
+  parseRankText, parseLevelText, parsePeakText, parseSeasons, parseFlex,
+  parseChampions, parseChampionTable, parseChampionsMeta, parseProfileIcon, stripRows,
 } from "../cloudflare-worker.js";
+
+// The shape op.gg actually serves, reduced but structurally faithful — this is
+// what every one of these parsers was getting wrong. Three things matter here and
+// none of them survive a naive flatten:
+//   * cells carry their own <div>s, so splitting on </div> lands mid-row and
+//     scatters one season across three lines
+//   * the Riot ID heading is two elements, so the text reads "764 name # tag"
+//   * each champion's matchup breakdown is a <table> nested inside its own row
+const REAL_PROFILE = `
+<title>terminallucidity#final - Summoner stats</title>
+<meta name="description" content="terminallucidity#final / Diamond 1 1 52LP / 190Win 215Lose Win rate 47% / Ashe - 15Win 10Lose Win rate 60%, Smolder - 15Win 7Lose Win rate 68%, Ezreal - 8Win 11Lose Win rate 42%"/>
+<img src="https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon7131.jpg?image=q_auto"/>
+<div class="mt-[-11px] text-center"><span class="inline-flex h-5">764</span></div>
+<h1><strong>terminallucidity</strong><span>#</span><span>final</span></h1>
+<div><strong>diamond 1</strong><span>52 LP</span><div>190W 215L Win rate 47%</div></div>
+<div><img alt="master" src="/images/medals_new/master.png?w=72"/> master 393 LP <span>Top tier</span></div>
+<table><tbody>
+  <tr><th>Season</th><th>Tier</th><th>LP</th></tr>
+  <tr><td><strong>S2025 </strong></td>
+      <td><div class="flex"><div class="inline-flex"><img src="/medals_mini/master.png"/><span>master</span></div></div></td>
+      <td align="right">135</td></tr>
+  <tr><td><strong>S2024 S1</strong></td>
+      <td><div class="flex"><div class="inline-flex"><img src="/medals_mini/emerald.png"/><span>emerald 2</span></div></div></td>
+      <td align="right">57</td></tr>
+</tbody></table>
+<div class="relative flex"> Ranked Flex </div><div>Unranked</div>
+<table><tbody>
+  <tr><th>Season</th><th>Tier</th><th>LP</th></tr>
+  <tr><td><strong>S2025</strong></td>
+      <td><div class="flex"><div class="inline-flex"><img src="/medals_mini/silver.png"/><span>silver 2</span></div></div></td>
+      <td align="right">37</td></tr>
+</tbody></table>`;
+
+// The /champions sub-page, where the season totals actually live.
+const REAL_CHAMPIONS = `
+<table><tbody>
+  <tr><th>#</th><th>Champion</th><th>Played</th><th>KDA</th></tr>
+  <tr><td>-</td><td>All champions</td><td>193 W 215 L 47%</td><td>2.13:1</td><td>6.6 / 6.4 / 7 (45%)</td></tr>
+  <tr><td>1</td><td>Ashe</td><td>15 W 10 L 60%</td><td>2.25:1</td><td>6 / 6.8 / 9.3 (48%)</td>
+    <td><table><tbody>
+      <tr><td>vs Ezreal</td><td>3 W 3 L 50%</td><td>1.63:1</td><td>4.8 / 9.0 / 9.8</td></tr>
+      <tr><td>vs Draven</td><td>1 W 1 L 50%</td><td>2.40:1</td><td>8.5 / 7.5 / 9.5</td></tr>
+    </tbody></table></td></tr>
+  <tr><td>2</td><td>Smolder</td><td>15 W 7 L 68%</td><td>3.01:1</td><td>9 / 5.9 / 8.8 (51%)</td></tr>
+</tbody></table>`;
+
+test("past seasons come off the real table, with the LP intact", () => {
+  const s = parseSeasons(REAL_PROFILE);
+  // "Emerald · 2 LP" was the division digit being read as the LP, because the
+  // cells had been scattered onto separate lines before the pattern ever ran
+  assert.deepEqual(Array.from(s.solo, e => `${e.season} ${e.tier}${e.division ? " " + e.division : ""} ${e.lp}`),
+    ["S2025 MASTER 135", "S2024 S1 EMERALD II 57"]);
+  assert.deepEqual(Array.from(s.flex, e => `${e.season} ${e.tier} ${e.division} ${e.lp}`), ["S2025 SILVER II 37"]);
+});
+
+test("the level is found even though the Riot ID is split across elements", () => {
+  // the flattened text reads "764 terminallucidity # final" — matching the literal
+  // "name#tag" only ever hit the <title>, where no number precedes it
+  assert.equal(parseLevelText(REAL_PROFILE, "terminallucidity", "final"), 764);
+  assert.equal(parseLevelText(REAL_PROFILE, "SomebodyElse", "EUW"), null);
+});
+
+test("champions come off the sub-page table, nested matchup rows and all", () => {
+  const c = parseChampionTable(REAL_CHAMPIONS);
+  // a non-greedy <table>…</table> closes on the inner matchup table and loses
+  // everything after the first champion
+  assert.deepEqual(Array.from(c, x => x.name), ["Ashe", "Smolder"]);
+  assert.deepEqual({ ...c[0] },
+    { name: "Ashe", wins: 15, losses: 10, games: 25, wr: 60, kda: 2.25, k: 6, d: 6.8, a: 9.3 });
+  assert.equal(parseChampionTable("<p>no rows</p>"), null);
+});
+
+test("the profile's own description is the champion fallback when the sub-page fails", () => {
+  const c = parseChampionsMeta(REAL_PROFILE);
+  assert.deepEqual(Array.from(c, x => `${x.name} ${x.wins}-${x.losses} ${x.wr}%`),
+    ["Ashe 15-10 60%", "Smolder 15-7 68%", "Ezreal 8-11 42%"]);
+  assert.equal(c[0].kda, null, "the description carries no KDA, and none is invented");
+  assert.equal(parseChampionsMeta("<p>nothing</p>"), null);
+});
+
+test("the peak and current rank still read off the real markup", () => {
+  const r = parseRankText(REAL_PROFILE);
+  assert.equal(r.tier, "DIAMOND");
+  assert.equal(r.lp, 52);
+  assert.deepEqual({ ...parsePeakText(REAL_PROFILE) }, { tier: "MASTER", division: null, lp: 393 });
+  assert.deepEqual({ ...parseFlex(REAL_PROFILE) }, { tier: "UNRANKED", division: null, lp: null });
+  assert.equal(parseProfileIcon(REAL_PROFILE),
+    "https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon7131.jpg");
+});
 
 // Trimmed from a live profile, keeping op.gg's real markup shape.
 const PROFILE_HTML = `

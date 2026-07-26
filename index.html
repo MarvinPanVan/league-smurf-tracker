@@ -410,27 +410,27 @@
      that don't. A bar across the card's bottom edge says "there is more under
      here" before the label is read, and it stays pinned there when open, so the
      panel unfolds above its own handle instead of pushing it down the page. */
-  .c-drawer{margin:1px -17px -17px;padding:9px 14px;gap:10px;
-    border:0;border-top:1px solid var(--line);border-radius:0 0 calc(var(--r-lg) - 2px) calc(var(--r-lg) - 2px);
-    background:linear-gradient(180deg,transparent,#ffffff08);
-    color:var(--faint);font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;
-    transition:background .18s ease,color .18s ease,border-color .18s ease}
-  .c-drawer:hover{color:var(--teal-txt);
-    border-top-color:color-mix(in srgb,var(--teal) 30%,transparent);
-    background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--teal) 14%,transparent))}
+  /* No rim, no fill, no rule above it: a bordered bar reads as a control bolted to
+     the bottom of the card, and this is meant to be the bottom of the card. What's
+     left is a line running the full width with a chevron sitting in it — the shape
+     alone says "pull". It only picks up a surface under the pointer. */
+  .c-drawer{margin:0 -17px -17px;padding:11px 14px 12px;gap:11px;
+    border:0;border-radius:0 0 calc(var(--r-lg) - 2px) calc(var(--r-lg) - 2px);
+    background:none;color:var(--faint);
+    font-size:9.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+    transition:background .18s ease,color .18s ease}
+  .c-drawer:hover{color:var(--teal-txt);border:0;
+    background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--teal) 11%,transparent))}
   .c-drawer.on{color:var(--teal-txt)}
   .c-drawer:active{transform:none}
-  .c-dt{display:inline-flex;align-items:baseline;gap:9px;min-width:0}
-  .c-drawer em{font-style:normal;font-weight:500;font-size:10.5px;letter-spacing:.02em;
-    text-transform:none;color:var(--faint);opacity:.9;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .c-dt{white-space:nowrap}
   /* the rules either side turn the chevron into one long arrow spanning the card
      rather than a small glyph adrift in the middle of a bar */
-  .c-dl{flex:1;height:1px;min-width:8px;background:linear-gradient(90deg,transparent,var(--line2))}
+  .c-dl{flex:1;height:1px;min-width:10px;background:linear-gradient(90deg,transparent,var(--line2))}
   .c-dl:last-child{background:linear-gradient(90deg,var(--line2),transparent)}
-  .c-drawer:hover .c-dl{background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--teal) 55%,transparent))}
-  .c-drawer:hover .c-dl:last-child{background:linear-gradient(90deg,color-mix(in srgb,var(--teal) 55%,transparent),transparent)}
-  .c-drawer .ico{width:24px;height:11px;stroke-width:2.2;flex-shrink:0;
+  .c-drawer:hover .c-dl{background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--teal) 60%,transparent))}
+  .c-drawer:hover .c-dl:last-child{background:linear-gradient(90deg,color-mix(in srgb,var(--teal) 60%,transparent),transparent)}
+  .c-drawer .ico{width:22px;height:10px;stroke-width:2.2;flex-shrink:0;
     transition:transform .28s cubic-bezier(.22,1,.36,1)}
   .c-drawer:hover .ico{transform:translateY(2px)}
   .c-drawer.on .ico,.c-drawer.on:hover .ico{transform:rotate(180deg)}
@@ -1244,15 +1244,20 @@ function rankChart(hist,cut,mode){
   const stops=(last?pts:[pts[0],pts[0]]).map((p,i)=>`<stop offset="${(last?fx(i)*100:i*100).toFixed(2)}%" stop-color="${tierColor(p.h.tier)}"/>`).join("");
   const overlay=pts.map((p,i)=>{
     const xp=fx(i)*100;
-    // Each point claims the ground nearer to it than to its neighbours, and the
-    // outermost ones stop dead at the edge of the chart rather than reaching past
-    // it — an overhanging column sits on top of the next card and eats its hover.
+    // A point claims at most the ground nearer to it than to its neighbours — but
+    // no more than a target's width either way. Letting the columns tile the full
+    // chart meant a handful of points split it into slabs, so pointing anywhere at
+    // all lit up whichever dot happened to be nearest, including from the far side
+    // of the plot. The 40 px cap wins when points are sparse, the tiling wins when
+    // they are dense, and neither ever overhangs onto the next card: the outermost
+    // columns hang off their own dot instead of straddling it.
     const cl=i===0?0:(fx(i-1)+fx(i))/2*100, cr=i===last?100:(fx(i)+fx(i+1))/2*100;
     // tooltips at the edges would hang off the card, so they anchor inwards there
     const side=xp<26?" l":xp>74?" r":"";
     const when=p.h.t?timeAgo(p.h.t):null;
     const w=cr-cl;
-    return `<div class="lpc-pt" style="left:${cl.toFixed(2)}%;width:${w.toFixed(2)}%;--x:${(w?((xp-cl)/w)*100:50).toFixed(2)}%">`
+    const anchor=last===0?50:(i===0?0:i===last?100:50); // where the dot sits in its column
+    return `<div class="lpc-pt" style="left:${xp.toFixed(2)}%;width:min(${w.toFixed(2)}%,40px);transform:translateX(-${anchor}%);--x:${anchor}%">`
       +`<b style="top:${py(p.v).toFixed(1)}px"><i style="background:${tierColor(p.h.tier)}"></i>`
       +`<span class="lpc-tip${side}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(dateLabel(p.h.t))} · ${esc(when)}</em>`:""}</span></b></div>`;
   }).join("");
@@ -1424,12 +1429,49 @@ const TIER_WORD="challenger|grandmaster|master|diamond|emerald|platinum|gold|sil
 // op.gg lists one row per past season, for both queues. Verified against a live
 // profile: "| S2025 | master | 135 |" in reader mode, the same cells without the
 // pipes once raw table HTML has been through stripRows.
+// Rows read as rows only if the row markup survives, and stripRows breaks on
+// </div> — which lands mid-cell in op.gg's real tables and scattered one season
+// across three lines. That is where "Emerald · 2 LP" came from: the LP cell ended
+// up on its own line, so the division digit was the last number the pattern saw.
+// Checked against a live profile.
+function seasonTables(html){
+  return[...String(html).matchAll(/<table[\s\S]*?<\/table>/gi)].map(m=>({
+    at:m.index,rows:(m[0].match(/<tr[\s\S]*?<\/tr>/gi)||[]).map(r=>stripMarkup(r).trim())
+  }));
+}
+function parseSeasonTables(raw){
+  const html=String(raw);
+  if(!/<table/i.test(html))return null;
+  const rowRe=new RegExp("^(S\\d{4}(?:\\s*S\\d)?)\\s+("+TIER_WORD+")(?:\\s+([1-4])(?!\\d))?\\s+(\\d{1,4})$","i");
+  const map={"1":"I","2":"II","3":"III","4":"IV"};
+  const out={solo:[],flex:[]};
+  let n=0;
+  for(const t of seasonTables(html)){
+    if(!t.rows.some(r=>/^season\s+tier\s+lp$/i.test(r)))continue; // not a season table
+    // "Ranked Flex" is the heading sitting directly on top of the flex table;
+    // document order decides it otherwise, since op.gg always prints solo first
+    const above=stripMarkup(html.slice(Math.max(0,t.at-400),t.at));
+    const bucket=/ranked\s*flex[^<]{0,30}$/i.test(above)?"flex":(n===0?"solo":"flex");
+    n++;
+    for(const r of t.rows){
+      const m=r.match(rowRe);
+      if(!m)continue;
+      const tier=m[2].toUpperCase();
+      const mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
+      out[bucket].push({season:m[1].replace(/\s+/g," "),tier,division:(mPlus||!m[3])?null:map[m[3]],lp:+m[4]});
+    }
+  }
+  return(out.solo.length||out.flex.length)?out:null;
+}
 function parseSeasons(raw){
+  return parseSeasonTables(raw)||parseSeasonLines(raw);
+}
+// The reader-mode proxy returns pipe-table markdown instead of HTML, which has no
+// <tr> to read — this is the shape that handles it.
+function parseSeasonLines(raw){
   if(!raw)return null;
   // The division is optional and must not be allowed to eat the first digit of the
-  // LP: without the lookahead, "S2025 master 135" reads as division 1, 35 LP. The
-  // reader-mode shape hides this because its pipes separate the cells — raw table
-  // HTML, which two of the three proxies return, does not.
+  // LP: without the lookahead, "S2025 master 135" reads as division 1, 35 LP.
   const rowRe=new RegExp("(S\\d{4}(?:\\s*S\\d)?)\\s*\\|?\\s*(?:\\|\\s*)?("+TIER_WORD+")(?:\\s+([1-4])(?!\\d))?\\s*\\|?\\s*(\\d{1,4})\\s*\\|?\\s*$","i");
   const out={solo:[],flex:[]};
   let bucket=null;
@@ -1466,9 +1508,29 @@ function parseFlex(raw){
   }
   return null;
 }
-// Season champion rows, verified against a live profile:
+// The profile page carries no per-champion season totals at all — they live on
+// the /champions sub-page, which is why this kept coming back with nothing no
+// matter how the pattern was written. What the profile does carry is op.gg's own
+// page description, listing the season's top five with wins, losses and win rate.
+// No KDA, but five champions with real numbers beat none, and it costs no second
+// request through the proxy chain.
+function parseChampionsMeta(raw){
+  if(!raw)return null;
+  const meta=String(raw).match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+  const src=meta?meta[1]:String(raw).slice(0,4000); // reader mode prints it as plain text
+  const re=/([A-Za-z0-9'.\- ]{2,26}?)\s*-\s*(\d{1,4})Win\s+(\d{1,4})Lose\s+Win rate\s+(\d{1,3})%/gi;
+  const out=[];
+  let m;
+  while((m=re.exec(src))){
+    const name=m[1].replace(/\s+/g," ").trim();
+    if(!name||out.some(c=>c.name===name))continue;
+    out.push({name,wins:+m[2],losses:+m[3],games:+m[2]+ +m[3],wr:+m[4],kda:null});
+  }
+  return out.length?out.slice(0,10):null;
+}
+// The rendered shape a reader-mode proxy returns:
 // "Ashe CS 209 (7.2) 2.25:1 KDA 6 / 6.8 / 9.3 60%25 Games"
-function parseChampions(raw){
+function parseChampionRows(raw){
   if(!raw)return null;
   const re=/^(.{2,26}?)\s+CS\s+[\d.,]+\s*\([\d.]+\)\s+([\d.]+):1\s+KDA\s+([\d.]+)\s*\/\s*([\d.]+)\s*\/\s*([\d.]+)\s+(\d{1,3})%\s*(\d{1,3})\s+Games\b/i;
   const out=[];
@@ -1480,6 +1542,9 @@ function parseChampions(raw){
     out.push({name,kda:+m[2],k:+m[3],d:+m[4],a:+m[5],wr:+m[6],games:+m[7]});
   }
   return out.length?out.slice(0,10):null;
+}
+function parseChampions(raw){
+  return parseChampionRows(raw)||parseChampionsMeta(raw);
 }
 // The Grandmaster and Challenger floors, from op.gg's ladder page:
 // "challenger 2,417 LP 6 304 Summoners". They move a couple of times a day.
@@ -1531,20 +1596,21 @@ function parsePeakText(raw){
 // is nothing to match on except position: it is the number printed immediately
 // before the Riot ID heading. Deliberately a tight window and a sane range —
 // a wrong number here would show up as a confident, wrong "Level".
+function reEsc(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
 function parseLevelText(raw,acc){
   if(!raw||!acc||!acc.gameName)return null;
   const text=stripMarkup(raw);
-  const needle=(acc.gameName+"#"+acc.tagLine).toLowerCase();
-  const hay=text.toLowerCase();
-  for(let from=0;;){
-    const i=hay.indexOf(needle,from);
-    if(i<0)return null;
-    // "#" and friends because the reader-mode proxies leave the markdown heading
-    // marker sitting between the level and the name: "764 # name#tag"
-    const m=text.slice(Math.max(0,i-14),i).match(/(\d{1,4})[\s#>]*$/);
-    if(m){const lv=+m[1];if(lv>=1&&lv<=5000)return lv}
-    from=i+1;
-  }
+  // op.gg renders the Riot ID as two separate elements, so once the tags are gone
+  // the text reads "764 terminallucidity # final". Matching the literal "name#tag"
+  // only ever hit the <title>, where nothing precedes it — which is exactly why
+  // every check came back with no level at all. The "#" is optional and may carry
+  // spaces, and the reader-mode proxies also leave a markdown heading marker in
+  // between: "764 # name#tag".
+  const re=new RegExp("(\\d{1,4})[\\s#>]{0,4}"+reEsc(acc.gameName)+"\\s*#?\\s*"+reEsc(acc.tagLine||"")+"\\b","i");
+  const m=text.match(re);
+  if(!m)return null;
+  const lv=+m[1];
+  return lv>=1&&lv<=5000?lv:null;
 }
 function parseProfileIcon(raw){
   if(!raw)return null;
@@ -1663,12 +1729,18 @@ function normSeasons(s){
 }
 function normChamps(list){
   if(!Array.isArray(list))return null;
+  const num=(v,d)=>v==null||v===""||isNaN(Number(v))?d:Number(v);
   const out=list.map(c=>{
     if(!c||typeof c!=="object"||!c.name)return null;
+    const wins=num(c.wins,null), losses=num(c.losses,null);
     return{name:String(c.name).slice(0,40),
-      kda:Math.round((Number(c.kda)||0)*100)/100,
-      wr:Math.max(0,Math.min(100,Math.round(Number(c.wr)||0))),
-      games:Math.max(0,Math.round(Number(c.games)||0))};
+      // null rather than 0 — the profile page's own champion list has no KDA, and
+      // printing "0.00 KDA" would be a made-up number rather than a missing one
+      kda:c.kda==null?null:Math.round(num(c.kda,0)*100)/100,
+      wr:Math.max(0,Math.min(100,Math.round(num(c.wr,0)))),
+      games:Math.max(0,Math.round(num(c.games,(wins||0)+(losses||0)))),
+      wins:wins==null?null:Math.max(0,Math.round(wins)),
+      losses:losses==null?null:Math.max(0,Math.round(losses))};
   }).filter(Boolean).slice(0,10);
   return out.length?out:null;
 }
@@ -1925,7 +1997,9 @@ function mergeChampions(pool){
     const g=Number(c.games)||0;
     if(!g||!c.name)return;
     const e=agg[c.name]||(agg[c.name]={name:c.name,games:0,wins:0,accs:0});
-    e.games+=g;e.wins+=Math.round((Number(c.wr)||0)/100*g);e.accs++;
+    // the real win count when a source gave one, rather than re-deriving it from a
+    // rounded percentage
+    e.games+=g;e.wins+=c.wins!=null?Number(c.wins):Math.round((Number(c.wr)||0)/100*g);e.accs++;
   }));
   return Object.values(agg).sort((x,y)=>y.games-x.games).slice(0,8)
     .map(c=>({name:c.name,games:c.games,accs:c.accs,wr:Math.round(c.wins/c.games*100)}));
@@ -2057,13 +2131,17 @@ function infoBlockHTML(a,rev){
   if(flexHist.length)out+=secHTML(a,"flexhist","Past seasons · Flex",flexHist.length,seasonPeek(flexHist),rows(flexHist));
   if(champs.length){
     const top=champs[0];
+    // The KDA column only exists when a source supplied one — a column of dashes
+    // is worse than no column.
+    const kdaCol=champs.some(c=>c.kda!=null);
+    const row=(cls,cells)=>`<div class="chp${cls}"${kdaCol?"":' style="grid-template-columns:1fr auto auto"'}>${cells}</div>`;
     out+=secHTML(a,"champs","Champions this season",champs.length,
       `<span class="c-nm">${esc(top.name)}</span> <span class="${top.wr>=50?"wr-good":""}">${esc(top.wr)}%</span>`,
-      `<div class="chp chp-h"><span>Champion</span><span>WR</span><span>Games</span><span>KDA</span></div>`
-      +champs.map(c=>`<div class="chp"><span class="c-nm">${esc(c.name)}</span>`
+      row(" chp-h",`<span>Champion</span><span>W-L</span><span>WR</span>${kdaCol?"<span>KDA</span>":""}`)
+      +champs.map(c=>row("",`<span class="c-nm">${esc(c.name)}</span>`
+        +`<span class="c-gm">${c.wins!=null&&c.losses!=null?esc(c.wins)+"-"+esc(c.losses):esc(c.games)+"G"}</span>`
         +`<span class="c-wr${c.wr>=50?" wr-good":""}">${esc(c.wr)}%</span>`
-        +`<span class="c-gm">${esc(c.games)}</span>`
-        +`<span class="c-kd">${esc(c.kda)}</span></div>`).join(""));
+        +(kdaCol?`<span class="c-kd">${c.kda!=null?esc(c.kda):"—"}</span>`:""))).join(""));
   }
   return `<div class="login info${rev||""}">${out}</div>`;
 }
@@ -2236,7 +2314,7 @@ function cardHTML(a,i){
     ${openInfo.has(a.id)?infoBlockHTML(a,rv("info")):""}
     ${hasInfo(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="Past seasons, flex rank, champions">
       <span class="c-dl" aria-hidden="true"></span>
-      <span class="c-dt">${open?"Close":"Details"}${!open&&infoPeek(a)?`<em>${esc(infoPeek(a))}</em>`:""}</span>
+      <span class="c-dt">${open?"Close":"Details"}</span>
       <svg class="ico" viewBox="0 0 26 12" aria-hidden="true"><polyline points="2 3 13 10 24 3"/></svg>
       <span class="c-dl" aria-hidden="true"></span>
     </button>`)(openInfo.has(a.id)):""}

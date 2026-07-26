@@ -740,30 +740,42 @@ function chartDom(win, h, mode) {
   return el;
 }
 
-test("the point hit areas tile the chart exactly and never reach past its edges", () => {
+test("a point's hit area is a window around it, never a slab of the whole chart", () => {
   const win = bootApp();
-  // an overhanging column lies on top of the neighbouring card and steals its
-  // hover, which is how clicking a card's newest point landed on the next card
+  // Two failure modes, opposite ends of the same dial. Columns that overhang the
+  // chart lie on top of the neighbouring card and steal its hover. Columns that
+  // tile the chart edge to edge mean pointing anywhere at all — the empty middle
+  // of the plot — lights up whichever dot happens to be nearest.
   for (const n of [2, 3, 8, 30]) {
     const rows = Array.from({ length: n }, (_, i) => ["GOLD", "II", i]);
-    const cols = [...chartDom(win, hist(...rows)).querySelectorAll(".lpc-pt")]
-      .map(p => ({ l: parseFloat(p.style.left), w: parseFloat(p.style.width) }));
+    const cols = [...chartDom(win, hist(...rows)).querySelectorAll(".lpc-pt")];
     assert.equal(cols.length, n, `${n} points`);
-    assert.equal(cols[0].l, 0, `${n}: first column starts at the left edge`);
-    const last = cols[cols.length - 1];
-    assert.ok(Math.abs(last.l + last.w - 100) < 0.02, `${n}: last column ends at the right edge`);
-    for (let i = 1; i < cols.length; i++) {
-      assert.ok(Math.abs(cols[i].l - (cols[i - 1].l + cols[i - 1].w)) < 0.02, `${n}: columns must not gap or overlap`);
-    }
+    cols.forEach((p, i) => {
+      const left = parseFloat(p.style.left);
+      // never wider than the slice between neighbours, and never wider than a
+      // target either way
+      assert.match(p.style.width, /^min\(\d+(\.\d+)?%,\s*40px\)$/, `${n}[${i}]: capped width`);
+      const slice = parseFloat(p.style.width.match(/([\d.]+)%/)[1]);
+      assert.ok(slice > 0 && slice <= 100 / (n - 1) + 0.02, `${n}[${i}]: no wider than its share`);
+      // anchored so nothing hangs off either end of the plot
+      const anchor = i === 0 ? 0 : i === n - 1 ? 100 : 50;
+      assert.equal(p.style.transform, `translateX(-${anchor}%)`, `${n}[${i}]: anchor`);
+      assert.ok(left >= -0.01 && left <= 100.01, `${n}[${i}]: stays inside the chart`);
+    });
+    assert.equal(parseFloat(cols[0].style.left), 0, `${n}: first sits on the left edge`);
+    assert.ok(Math.abs(parseFloat(cols[n - 1].style.left) - 100) < 0.02, `${n}: last sits on the right edge`);
   }
 });
 
 test("each point's dot sits on its own value, not in the middle of its hit area", () => {
   const win = bootApp();
-  const dots = [...chartDom(win, hist(["GOLD", "II", 0], ["GOLD", "II", 40], ["GOLD", "I", 5]))
-    .querySelectorAll(".lpc-pt")].map(p => p.style.getPropertyValue("--x").trim());
-  // the outer points sit on the edge of their (half-width) column, the middle one is centred
-  assert.deepEqual(dots, ["0.00%", "50.00%", "100.00%"]);
+  const pts = [...chartDom(win, hist(["GOLD", "II", 0], ["GOLD", "II", 40], ["GOLD", "I", 5]))
+    .querySelectorAll(".lpc-pt")];
+  // the outer points hang off their own dot, the middle one is centred on it —
+  // and --x has to agree with the anchor or the guide line drifts off the dot
+  assert.deepEqual(pts.map(p => p.style.getPropertyValue("--x").trim()), ["0%", "50%", "100%"]);
+  assert.deepEqual(pts.map(p => p.style.transform),
+    ["translateX(-0%)", "translateX(-50%)", "translateX(-100%)"]);
 });
 
 test("the line spans the full chart, with no pathLength for a dash pattern to disagree with", () => {
@@ -934,6 +946,51 @@ test("the info panel only exists once a check has brought something back for it"
   assert.doesNotMatch(html, /undefined|NaN/);
 });
 
+// The app keeps its own copy of these parsers for the proxy path, and two of the
+// three proxies hand it raw op.gg HTML rather than rendered markdown — so it has
+// to survive the same real markup the worker does.
+const REAL_PROFILE = `
+<title>terminallucidity#final - Summoner stats</title>
+<meta name="description" content="terminallucidity#final / Diamond 1 1 52LP / 190Win 215Lose Win rate 47% / Ashe - 15Win 10Lose Win rate 60%, Smolder - 15Win 7Lose Win rate 68%"/>
+<div class="mt-[-11px]"><span>764</span></div>
+<h1><strong>terminallucidity</strong><span>#</span><span>final</span></h1>
+<table><tbody>
+  <tr><th>Season</th><th>Tier</th><th>LP</th></tr>
+  <tr><td><strong>S2025 </strong></td>
+      <td><div class="flex"><div class="inline-flex"><img src="/medals_mini/master.png"/><span>master</span></div></div></td>
+      <td align="right">135</td></tr>
+  <tr><td><strong>S2024 S1</strong></td>
+      <td><div class="flex"><div class="inline-flex"><img src="/medals_mini/emerald.png"/><span>emerald 2</span></div></div></td>
+      <td align="right">57</td></tr>
+</tbody></table>
+<div class="relative flex"> Ranked Flex </div><div>Unranked</div>
+<table><tbody>
+  <tr><th>Season</th><th>Tier</th><th>LP</th></tr>
+  <tr><td><strong>S2025</strong></td>
+      <td><div class="flex"><div class="inline-flex"><img src="/medals_mini/silver.png"/><span>silver 2</span></div></div></td>
+      <td align="right">37</td></tr>
+</tbody></table>`;
+
+test("the app reads real op.gg table markup, not just the proxies' rendered version", () => {
+  const win = bootApp();
+  const s = win.parseSeasons(REAL_PROFILE);
+  // the cells carry their own <div>s; splitting on </div> scattered one season
+  // across three lines and left the division digit standing in for the LP
+  assert.deepEqual(Array.from(s.solo, e => `${e.season} ${e.tier}${e.division ? " " + e.division : ""} ${e.lp}`),
+    ["S2025 MASTER 135", "S2024 S1 EMERALD II 57"]);
+  assert.deepEqual(Array.from(s.flex, e => `${e.season} ${e.tier} ${e.division} ${e.lp}`), ["S2025 SILVER II 37"]);
+
+  // the Riot ID heading is three elements, so the text reads "764 name # tag"
+  assert.equal(win.parseLevelText(REAL_PROFILE, { gameName: "terminallucidity", tagLine: "final" }), 764);
+  assert.equal(win.parseLevelText(REAL_PROFILE, { gameName: "Nobody", tagLine: "x" }), null);
+
+  // the profile page has no per-champion season table at all — op.gg's own page
+  // description is the only champion data on it
+  const c = win.parseChampions(REAL_PROFILE);
+  assert.deepEqual(Array.from(c, x => `${x.name} ${x.wins}-${x.losses} ${x.wr}%`), ["Ashe 15-10 60%", "Smolder 15-7 68%"]);
+  assert.equal(c[0].kda, null);
+});
+
 test("a malformed backend response cannot throw its way through a render", () => {
   const win = bootApp();
   // what a wrong-shaped or half-broken backend actually sends
@@ -949,8 +1006,11 @@ test("a malformed backend response cannot throw its way through a render", () =>
   assert.equal(win.normChamps([{ wr: 60 }]), null, "a champion with no name is not a champion");
   const c = win.normChamps([{ name: "Ashe", wr: "60", games: "25", kda: "2.253" }, null, 7]);
   assert.equal(c.length, 1);
-  assert.deepEqual({ ...c[0] }, { name: "Ashe", kda: 2.25, wr: 60, games: 25 });
+  assert.deepEqual({ ...c[0] }, { name: "Ashe", kda: 2.25, wr: 60, games: 25, wins: null, losses: null });
   assert.equal(win.normChamps([{ name: "X", wr: 9000, games: -3 }])[0].wr, 100, "a nonsense win rate is clamped");
+  // no KDA stays no KDA — 0.00 would be a made-up number rather than a missing one
+  assert.equal(win.normChamps([{ name: "X", wr: 60, wins: 15, losses: 10 }])[0].kda, null);
+  assert.equal(win.normChamps([{ name: "X", wr: 60, wins: 15, losses: 10 }])[0].games, 25, "games fall out of W+L");
 
   // and the whole thing renders rather than blowing up the grid
   const html = win.infoBlockHTML({ id: "x", stats: { seasons: { solo: [{ tier: null }, { season: "S2025", tier: "GOLD", lp: 3 }] }, champs: [{}, { name: "Ashe", wr: 55, games: 4 }] } });
@@ -975,13 +1035,12 @@ const RICH_STATS = {
 const seededAccount = () => [{ id: "seed1", label: "Main", gameName: "Seeded", tagLine: "1234",
   region: "EUW", status: "active", stats: JSON.parse(JSON.stringify(RICH_STATS)) }];
 
-test("the details drawer sits on the card's bottom edge and says what is folded away", () => {
+test("the details drawer sits on the card's bottom edge", () => {
   const win = bootApp(seededAccount());
   const drawer = win.document.querySelector(".c-drawer");
   assert.ok(drawer, "a card with extra data gets a drawer");
   assert.equal(drawer.getAttribute("aria-expanded"), "false");
-  assert.match(drawer.textContent, /Details/);
-  assert.match(drawer.textContent, /flex · 2 seasons · 2 champions/, "the peek counts what is inside");
+  assert.equal(drawer.textContent.replace(/\s+/g, " ").trim(), "Details", "the label is the label, nothing else");
   // it is the last thing in the card, so the panel unfolds above its own handle
   assert.equal(win.document.querySelector(".card").lastElementChild, drawer);
   assert.equal(win.document.querySelectorAll(".login.info").length, 0, "nothing rendered until asked");

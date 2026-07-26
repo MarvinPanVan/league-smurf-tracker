@@ -36,13 +36,18 @@ export default {
 
     if (!name || !tag) return json({ error: "missing name/tag" }, 400);
 
-    const target = `https://op.gg/lol/summoners/${encodeURIComponent(region)}/${encodeURIComponent(name)}-${encodeURIComponent(tag)}`;
+    const base = `https://op.gg/lol/summoners/${encodeURIComponent(region)}/${encodeURIComponent(name)}-${encodeURIComponent(tag)}`;
+    const get = u => fetch(u, { headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" } });
 
-    let res;
+    // The per-champion season totals are not on the profile page — they live on
+    // /champions. Both are requested at once, so the extra data costs no extra
+    // wall time, and a failure on the second one is not allowed to sink the check.
+    let res, champHtml = null;
     try {
-      res = await fetch(target, {
-        headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" },
-      });
+      const [main, champs] = await Promise.allSettled([get(base), get(base + "/champions")]);
+      if (main.status === "rejected") throw main.reason || new Error("unreachable");
+      res = main.value;
+      if (champs.status === "fulfilled" && champs.value.ok) champHtml = await champs.value.text();
     } catch (e) {
       return json({ error: "fetch failed: " + (e && e.message) }, 502);
     }
@@ -66,7 +71,9 @@ export default {
       peak: parsePeakText(html),
       seasons: parseSeasons(html),
       flex: parseFlex(html),
-      champs: parseChampions(html),
+      // full table with KDA when /champions came back, the profile's own top five
+      // (wins/losses/win rate, no KDA) when it didn't
+      champs: (champHtml && parseChampionTable(champHtml)) || parseChampionsMeta(html) || parseChampions(html),
       icon: parseProfileIcon(html), // needs the raw HTML — htmlToText() already stripped the <img> tags out
       mmr: null,
       avgRecent: null,
@@ -150,24 +157,36 @@ function parseRankFlat(text) {
   return out;
 }
 
+function reEsc(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
 // op.gg stacks the summoner level on the profile icon as a bare number with no
-// label anywhere near it, which is why the "Lv." patterns above never found it and
-// every backend check used to come back with level: null. The only anchor is
-// position — it is the number printed immediately before the Riot ID heading.
-// Deliberately a tight window and a sane range: a wrong number here would render
+// label anywhere near it, so the "Lv." patterns above never find it. The only
+// anchor is position — it is the number printed immediately before the Riot ID
+// heading. The heading itself is two separate elements, so once the tags are
+// stripped the text reads "764 terminallucidity # final": matching the literal
+// "name#tag" only ever hit the <title>, where no number precedes it, and every
+// backend check came back with level: null because of it.
+// Deliberately a tight window and a sane range — a wrong number here would render
 // as a confident, wrong "Level".
 export function parseLevelText(raw, name, tag) {
   if (!raw || !name) return null;
   const text = htmlToText(raw);
-  const needle = (name + "#" + tag).toLowerCase();
-  const hay = text.toLowerCase();
-  for (let from = 0; ;) {
-    const i = hay.indexOf(needle, from);
-    if (i < 0) return null;
-    const m = text.slice(Math.max(0, i - 14), i).match(/(\d{1,4})[\s#>]*$/);
-    if (m) { const lv = +m[1]; if (lv >= 1 && lv <= 5000) return lv; }
-    from = i + 1;
-  }
+  const re = new RegExp("(\\d{1,4})\\s{0,3}" + reEsc(name) + "\\s*#\\s*" + reEsc(tag || "") + "\\b", "i");
+  const m = text.match(re);
+  if (!m) return null;
+  const lv = +m[1];
+  return lv >= 1 && lv <= 5000 ? lv : null;
+}
+
+// op.gg's season history and champion list are real <table>s, and the cells only
+// line up when the row is read as a row. stripRows breaks on </div>, which lands
+// mid-cell and scattered one season across three lines — that is why past seasons
+// came back with the division digit parsed as the LP ("Emerald · 2 LP").
+function tableRows(html) {
+  return [...String(html).matchAll(/<table[\s\S]*?<\/table>/gi)].map(m => ({
+    at: m.index,
+    rows: (m[0].match(/<tr[\s\S]*?<\/tr>/gi) || []).map(r => htmlToText(r)),
+  }));
 }
 
 // The season peak: op.gg prints the highest rank reached under the current one and
@@ -192,9 +211,40 @@ export function parsePeakText(raw) {
   };
 }
 
-// One row per past season, for both queues. The caption above the rows is what
-// says which queue they belong to.
+// One row per past season, for both queues. Two shapes have to work: the real
+// <table> op.gg serves, and the pipe-table markdown the r.jina.ai proxy returns.
 export function parseSeasons(raw) {
+  return parseSeasonTables(raw) || parseSeasonLines(raw);
+}
+// The <table> shape. Which queue a table belongs to is decided by the heading
+// immediately above it — "Ranked Flex" sits right on top of the flex one — with
+// document order as the fallback, since op.gg always prints solo first.
+function parseSeasonTables(raw) {
+  if (!raw) return null;
+  const html = String(raw);
+  const rowRe = new RegExp("^(S\\d{4}(?:\\s*S\\d)?)\\s+(" + TIER_WORD + ")(?:\\s+([1-4])(?!\\d))?\\s+(\\d{1,4})$", "i");
+  const out = { solo: [], flex: [] };
+  let n = 0;
+  for (const t of tableRows(html)) {
+    if (!t.rows.some(r => /^season\s+tier\s+lp$/i.test(r))) continue; // not a season table
+    const above = htmlToText(html.slice(Math.max(0, t.at - 400), t.at));
+    const bucket = /ranked\s*flex\s*[^<]{0,30}$/i.test(above) ? "flex" : (n === 0 ? "solo" : "flex");
+    n++;
+    for (const r of t.rows) {
+      const m = r.trim().match(rowRe);
+      if (!m) continue;
+      const tier = m[2].toUpperCase();
+      out[bucket].push({
+        season: m[1].replace(/\s+/g, " "),
+        tier,
+        division: (MASTER_PLUS.includes(tier) || !m[3]) ? null : DIV_MAP[m[3]],
+        lp: +m[4],
+      });
+    }
+  }
+  return (out.solo.length || out.flex.length) ? out : null;
+}
+function parseSeasonLines(raw) {
   if (!raw) return null;
   // The division is optional and must not be allowed to eat the first digit of the
   // LP: without the lookahead, "S2025 master 135" reads as division 1, 35 LP. The
@@ -246,8 +296,52 @@ export function parseFlex(raw) {
   return null;
 }
 
-// Season champion rows, as op.gg prints them:
-// "Ashe CS 209 (7.2) 2.25:1 KDA 6 / 6.8 / 9.3 60%25 Games"
+// The season champion table lives on the /champions sub-page, not the profile —
+// the profile page carries no per-champion season totals at all, which is why
+// this came back null however the regex was written. Rows read:
+// "1 Ashe 15 W 10 L 60% 2.25:1 6 / 6.8 / 9.3 (48%) ..."
+// The rank number at the front is what separates a real row from the "All
+// champions" summary and the "vs <champion>" matchup rows folded underneath.
+export function parseChampionTable(raw) {
+  if (!raw) return null;
+  // Every champion's matchup breakdown is its own <table> nested inside the row,
+  // so a non-greedy <table>…</table> match closes on the inner one and loses all
+  // but the first champion. Scanning <tr> across the whole document sidesteps the
+  // nesting entirely — the leading rank number is already what identifies a real
+  // row, against the "All champions" summary and the "vs <champion>" sub-rows.
+  const re = /^(\d{1,3})\s+(.{2,26}?)\s+(\d{1,4})\s*W\s+(\d{1,4})\s*L\s+(\d{1,3})%\s+([\d.]+):1\s+([\d.]+)\s*\/\s*([\d.]+)\s*\/\s*([\d.]+)/i;
+  const out = [];
+  for (const m0 of String(raw).matchAll(/<tr[\s\S]*?<\/tr>/gi)) {
+    const m = htmlToText(m0[0]).trim().match(re);
+    if (!m) continue;
+    const name = m[2].replace(/\s+/g, " ").trim();
+    if (!name || out.some(c => c.name === name)) continue;
+    out.push({ name, wins: +m[3], losses: +m[4], games: +m[3] + +m[4],
+      wr: +m[5], kda: +m[6], k: +m[7], d: +m[8], a: +m[9] });
+  }
+  return out.length ? out.slice(0, 10) : null;
+}
+
+// Fallback, and the only champion data the profile page itself carries: op.gg
+// puts the season's top five in the page description, with wins and losses but
+// no KDA. Worth having — five champions with real win rates beat none.
+export function parseChampionsMeta(raw) {
+  if (!raw) return null;
+  const m = String(raw).match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+  if (!m) return null;
+  const out = [];
+  const re = /([A-Za-z0-9'.\- ]{2,26}?)\s*-\s*(\d{1,4})Win\s+(\d{1,4})Lose\s+Win rate\s+(\d{1,3})%/gi;
+  let r;
+  while ((r = re.exec(m[1]))) {
+    const name = r[1].replace(/\s+/g, " ").trim();
+    if (!name || out.some(c => c.name === name)) continue;
+    out.push({ name, wins: +r[2], losses: +r[3], games: +r[2] + +r[3], wr: +r[4], kda: null });
+  }
+  return out.length ? out.slice(0, 10) : null;
+}
+
+// Kept for the markdown a rendering proxy returns, where the champion list comes
+// through as "Ashe CS 209 (7.2) 2.25:1 KDA 6 / 6.8 / 9.3 60%25 Games".
 export function parseChampions(raw) {
   if (!raw) return null;
   const re = /^(.{2,26}?)\s+CS\s+[\d.,]+\s*\([\d.]+\)\s+([\d.]+):1\s+KDA\s+([\d.]+)\s*\/\s*([\d.]+)\s*\/\s*([\d.]+)\s+(\d{1,3})%\s*(\d{1,3})\s+Games\b/i;
