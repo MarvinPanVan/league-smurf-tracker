@@ -1874,3 +1874,85 @@ test("a truncated name keeps its full text in a title", () => {
   win.document.querySelector('[data-density="list"]').click();
   assert.equal(win.document.querySelector(".rw-nm").getAttribute("title"), long);
 });
+
+// ---- render cost ----
+
+// The chart minted its gradient ids with Math.random(), so every card's markup
+// was different on every render even when nothing about the account had changed:
+// the ids and the url(#…) references pointing at them were rewritten each time,
+// and it made "has this card changed?" unanswerable.
+test("a card's markup is stable when nothing about it changed", () => {
+  const win = bootApp(seededAccount());
+  const once = win.cardHTML(win.filtered()[0], 0);
+  const twice = win.cardHTML(win.filtered()[0], 0);
+  assert.equal(once, twice, "same account, same index, same markup");
+  assert.doesNotMatch(once, /id="lc-undefined"/);
+});
+
+test("chart gradients are keyed to the account and every reference resolves", () => {
+  const now = Date.now();
+  const withHistory = n => ({ id: "chart" + n, gameName: "Acc" + n, tagLine: "1", region: "EUW",
+    status: "active", tags: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 42, updatedAt: now },
+    history: [{ t: now - 86400000, tier: "GOLD", division: "III", lp: 10 },
+              { t: now, tier: "GOLD", division: "II", lp: 42 }] });
+  const win = bootApp([withHistory(1), withHistory(2)]);
+  assert.equal(win.document.querySelectorAll(".lpc-svg").length, 2, "two charts to collide with each other");
+
+  const ids = [...win.document.querySelectorAll("linearGradient")].map(g => g.id);
+  assert.ok(ids.length >= 2, "one gradient pair per chart");
+  assert.equal(new Set(ids).size, ids.length, "no two charts share an id");
+
+  for (const line of win.document.querySelectorAll(".lpc-line")) {
+    const ref = (line.getAttribute("stroke") || "").match(/url\(#(.+)\)/);
+    assert.ok(ref, "the line is painted with a gradient");
+    assert.ok(win.document.getElementById(ref[1]), `#${ref[1]} exists`);
+  }
+});
+
+// syncGrid leaves a card whose markup is unchanged completely alone — which is
+// both the cheap path and the strongest version of the no-flicker guarantee.
+test("re-rendering an unchanged grid touches nothing", () => {
+  const win = bootApp(seededAccount());
+  const card = win.document.querySelector(".card");
+  const portrait = win.document.querySelector(".c-portrait");
+  const chart = win.document.querySelector(".lpc-svg");
+  const foot = win.document.querySelector(".c-foot");
+
+  win.renderGrid();
+  win.renderGrid();
+
+  assert.equal(win.document.querySelector(".card"), card, "same card element");
+  assert.equal(win.document.querySelector(".c-portrait"), portrait);
+  assert.equal(win.document.querySelector(".lpc-svg"), chart, "the chart is not redrawn");
+  assert.equal(win.document.querySelector(".c-foot"), foot);
+});
+
+// ...but a card that did change still gets patched, in place.
+test("a changed card is patched without being replaced", () => {
+  const win = bootApp(seededAccount());
+  const card = win.document.querySelector(".card");
+  const id = card.dataset.id;
+  assert.equal(win.document.querySelector(".star").classList.contains("on"), false);
+
+  win.document.querySelector('[data-act="fav"]').click();
+
+  assert.equal(win.document.querySelector(".card"), card, "same node");
+  assert.equal(win.document.querySelector(".star").classList.contains("on"), true, "new state");
+  assert.equal(win.document.querySelector(`.card[data-id="${id}"]`), card);
+});
+
+// Switching layout swaps structures that share nothing worth patching together.
+test("switching layout rebuilds rather than diffing a card into a row", () => {
+  const win = bootApp(seededAccount());
+  assert.equal(win.document.querySelectorAll(".card").length, 1);
+
+  win.document.querySelector('[data-density="list"]').click();
+  assert.equal(win.document.querySelectorAll(".card").length, 0);
+  assert.equal(win.document.querySelectorAll(".rw").length, 1);
+
+  win.document.querySelector('[data-density="cards"]').click();
+  assert.equal(win.document.querySelectorAll(".rw").length, 0);
+  assert.equal(win.document.querySelectorAll(".card").length, 1);
+  assert.ok(win.document.querySelector(".lpc-svg"), "and the chart comes back with it");
+});

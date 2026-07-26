@@ -1467,7 +1467,7 @@ const RANGES=[["d","Daily"],["w","Weekly"],["m","Monthly"]];
 // but never how far, or through which ranks. This draws the ladder itself —
 // a coloured band per tier, division hairlines when the view is tight enough for
 // them to mean anything, and every check as its own hoverable point.
-function rankChart(hist,cut,mode){
+function rankChart(hist,cut,mode,key){
   let pts=(hist||[]).map(h=>({h,v:ladderLP(h)})).filter(p=>p.v!==null);
   // A brand new account has exactly one check, and showing it nothing at all was
   // the least useful answer available — one point still says where on the ladder
@@ -1567,8 +1567,14 @@ function rankChart(hist,cut,mode){
   const fx=i=>last===0?.5:(timed?(ts[i]-t0)/(t1-t0):i/last); // 0..1
 
   const coords=pts.map((p,i)=>(fx(i)*LPC_W).toFixed(1)+","+py(p.v).toFixed(1)).join(" ");
-  // unique per render so several cards' gradients never collide
-  const gid="lc"+Math.random().toString(36).slice(2,9), aid="la"+Math.random().toString(36).slice(2,9);
+  // Unique per chart, and — importantly — *stable* across renders. These used to
+  // be Math.random(), which made every card's markup different on every single
+  // render: the gradient ids and the url(#…) references pointing at them had to be
+  // rewritten each time, and it defeated the "has this card changed?" check in
+  // syncGrid outright, because the answer was always yes. Only one chart exists
+  // per account at a time, so the account is all the uniqueness needed.
+  const uniq=key!=null?String(key):"x"+Math.random().toString(36).slice(2,9);
+  const gid="lc-"+uniq, aid="la-"+uniq;
   const cur=tierColor(pts[last].h.tier);
   // the line is its own legend: it takes the colour of whatever tier it is
   // passing through, so a promotion reads as a colour change, not just a step up
@@ -2396,6 +2402,41 @@ function setHTML(el,html){
   tmp.innerHTML=html;
   morphChildren(el,tmp);
 }
+// The grid is the one place where diffing everything is genuinely expensive. A
+// full vault is around 4000 nodes, 150 of them SVG, and a keystroke in the search
+// box re-renders the lot — measured at 30 ms for thirty accounts, of which only
+// 1.4 ms was generating the markup and 8 ms parsing it. The remaining 20 ms was
+// walking the tree to discover that almost nothing had changed.
+//
+// A card's markup is a pure function of its account and the UI state, so two
+// identical strings mean two identical cards. Comparing the string a card was
+// last built from is far cheaper than proving the same thing node by node, and a
+// card that hasn't changed is left completely alone — which is also the strongest
+// possible version of the no-flicker guarantee.
+let cardCache=new Map();
+function syncGrid(grid,list,htmls){
+  const have=new Map();
+  for(const n of grid.children)if(n.dataset&&n.dataset.id)have.set(n.dataset.id,n);
+  const tmp=document.createElement("div");
+  const seen=new Set();
+  let cur=grid.firstElementChild;
+  for(let i=0;i<list.length;i++){
+    const id=list[i].id, html=htmls[i];
+    let node=have.get(id);
+    if(node){
+      if(cardCache.get(id)!==html){tmp.innerHTML=html;morph(node,tmp.firstElementChild)}
+    }else{
+      tmp.innerHTML=html;
+      node=tmp.firstElementChild;
+    }
+    cardCache.set(id,html);
+    seen.add(id);
+    if(node===cur)cur=cur.nextElementSibling;
+    else grid.insertBefore(node,cur);   // moves it if it was already elsewhere
+  }
+  for(const n of[...grid.children])if(!n.dataset||!seen.has(n.dataset.id))grid.removeChild(n);
+  for(const id of[...cardCache.keys()])if(!seen.has(id))cardCache.delete(id);
+}
 
 // ---------- render ----------
 // Every per-card UI flag is keyed by account id and none of them were ever
@@ -2762,7 +2803,7 @@ function rowHTML(a,i){
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     ${open?`<div class="rw-open">
-      ${rankChart(a.history||[],cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(a.history||[]))}
+      ${rankChart(a.history||[],cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(a.history||[]),a.id)}
       ${infoBlockHTML(a)||""}
       ${noteBlockHTML(a)}
       <div class="acts">
@@ -2885,7 +2926,7 @@ function cardHTML(a,i){
       ${deltaChip?`<div class="c-deltas">${deltaChip}</div>`:""}
     </div>
     ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
-    ${rankChart(hist,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(hist))}
+    ${rankChart(hist,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(hist),a.id)}
     ${microStats.length?`<div class="c-stats">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(a.tags||[]).length?`<div class="ctags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""}
@@ -2933,7 +2974,11 @@ function renderGrid(){
   }else{
     const asList=ui.density==="list";
     grid.classList.toggle("list",asList);
-    setHTML(grid,list.map((a,i)=>asList?rowHTML(a,i):cardHTML(a,i)).join(""));
+    // A row and a card share no structure worth patching into each other, so
+    // switching layout starts from nothing rather than diffing one into the other.
+    const layout=asList?"list":"cards";
+    if(grid.dataset.layout!==layout){grid.textContent="";cardCache.clear();grid.dataset.layout=layout}
+    syncGrid(grid,list,list.map((a,i)=>asList?rowHTML(a,i):cardHTML(a,i)));
   }
   reveal=null; // consumed by the render above — the next one must not replay it
   renderBulkBar(list); // the "select all shown" box tracks whatever is shown now
@@ -2983,8 +3028,10 @@ function renderCard(id){
   const idx=list.findIndex(a=>a.id===id);
   if(!el||idx<0){renderGrid();return}
   const tmp=document.createElement("div");
-  tmp.innerHTML=ui.density==="list"?rowHTML(list[idx],idx):cardHTML(list[idx],idx);
+  const html=ui.density==="list"?rowHTML(list[idx],idx):cardHTML(list[idx],idx);
+  tmp.innerHTML=html;
   morph(el,tmp.firstElementChild);
+  cardCache.set(id,html); // keep the skip-check honest about what this node holds
   reveal=null; // consumed, exactly as renderGrid does
   if(editingNote)focusNoteEditor(grid);
 }
@@ -3229,6 +3276,9 @@ function doImport(file){
       }
     }catch(e){toast("Import failed: not a valid backup file")}
   };
+  // a file that can't be read at all (permissions, a device that went away, a
+  // directory dropped on the picker) fired nothing and looked like a no-op
+  rd.onerror=()=>toast("Couldn't read that file");
   rd.readAsText(file);
 }
 
@@ -3296,6 +3346,9 @@ function doImportCSV(file){
       }
     }catch(e){toast("CSV import failed: not a valid export file")}
   };
+  // a file that can't be read at all (permissions, a device that went away, a
+  // directory dropped on the picker) fired nothing and looked like a no-op
+  rd.onerror=()=>toast("Couldn't read that file");
   rd.readAsText(file);
 }
 
