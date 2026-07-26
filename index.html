@@ -773,8 +773,77 @@
   .count a{color:var(--gold-txt);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
   .count a:hover{border-bottom-color:currentColor}
 
+  /* ---- modal panels ----
+     Settings and Help are launched from the header tray and have nothing to do
+     with the accounts below them, but as inline panels they shoved the entire
+     grid down the page — open Settings on a full vault and the cards you were
+     looking at are three screens away. They open over the page instead.
+     The account form and bulk add deliberately stay inline: those come from the
+     console and act on the collection directly underneath, so keeping that
+     collection in view is the point. Header tray opens over, console opens in. */
+  .modal{position:fixed;inset:0;z-index:60;overflow:auto;overscroll-behavior:contain;
+    display:flex;align-items:flex-start;justify-content:center;
+    padding:clamp(14px,5vh,60px) clamp(12px,4vw,32px)}
+  .modal::before{content:"";position:fixed;inset:0;background:#05070bd1;
+    backdrop-filter:blur(7px) saturate(120%);-webkit-backdrop-filter:blur(7px) saturate(120%);
+    animation:backIn .22s ease both}
+  /* margin:auto centres it while short, and lets it grow past the viewport and
+     scroll the overlay when the content is genuinely tall */
+  .mdl{position:relative;width:100%;max-width:860px;margin:auto}
+  .mdl.narrow{max-width:680px}
+  /* header and footer stay put, the middle scrolls — on a laptop the Save button
+     was below the fold of a panel that had already pushed the page around */
+  .mdl-in{display:flex;flex-direction:column;max-height:calc(100vh - clamp(28px,10vh,120px))}
+  .mdl-h{display:flex;align-items:center;gap:13px;flex-shrink:0;padding:17px 22px;
+    border-bottom:1px solid var(--line);background:linear-gradient(180deg,#ffffff0a,transparent)}
+  .mdl-h .t{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em;text-transform:uppercase;
+    font-size:14px;color:var(--gold-txt)}
+  .mdl-h .s{font-size:11.5px;color:var(--faint);margin-left:auto;margin-right:34px;
+    min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mdl-b{flex:1;min-height:0;overflow:auto}
+  .mdl-f{display:flex;gap:9px;align-items:center;flex-wrap:wrap;flex-shrink:0;
+    padding:14px 22px;border-top:1px solid var(--line);background:#0b0e14b8}
+  .mdl-f .sp{margin-left:auto}
+  /* a labelled group per concern, instead of eight unrelated fields in one grid */
+  .grp{padding:20px 22px}
+  .grp+.grp{border-top:1px solid var(--line)}
+  .grp-h{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:9px}
+  .grp-h::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  .grp .formgrid{padding:0;gap:15px}
+  .hint{font-size:11.5px;color:var(--faint);line-height:1.55}
+  /* align-items:flex-start so a label that wraps to two lines still starts level
+     with its checkbox instead of floating half a line below it */
+  .sub-fld{padding-left:24px;margin-top:9px;display:flex;align-items:flex-start;gap:9px;flex-wrap:wrap}
+  .sub-fld>label,.sub-fld>span{flex:1;min-width:0}
+  .sub-fld input[type=checkbox]{margin-top:3px}
+  .chk{display:flex;align-items:center;gap:9px}
+  .chk label{font-size:13px;color:var(--text);line-height:1.45}
+  /* The viewport's scroll container is the root element, not <body>, so locking
+     only <body> leaves the page scrolling behind the modal in most browsers. */
+  body.modal-open{overflow:hidden}
+  html:has(body.modal-open){overflow:hidden}
+  /* and reserve the scrollbar's width at all times, so taking it away doesn't
+     shunt the whole layout sideways as the modal opens */
+  html{scrollbar-gutter:stable}
+  /* On a phone a centred card floating in a dimmed page is the wrong shape — it
+     leaves a dead band of backdrop under the footer and wastes the width. Full
+     sheet instead: the header and footer pin to the screen edges and only the
+     middle scrolls. dvh, not vh, so the browser's own collapsing toolbar doesn't
+     push the footer out of reach. */
+  @media (max-width:620px){
+    .modal{padding:0;align-items:stretch}
+    .mdl{max-width:none;margin:0}
+    .mdl.hx{border-radius:0;padding:0;box-shadow:none}
+    .mdl-in{max-height:none;min-height:100vh;min-height:100dvh;border-radius:0}
+    .mdl-h .s{display:none}
+    .grp,.mdl-h,.mdl-f{padding-left:16px;padding-right:16px}
+  }
+
   /* ---- toast ---- */
-  #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:50;display:none;
+  /* above the modals (z 60): "Vault password set" is confirmed from inside
+     Settings, and behind the backdrop it would never be seen */
+  #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:80;display:none;
     background:#161a23f2;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
     border:1px solid var(--line2);border-radius:999px;color:var(--text);
     padding:11px 20px;font-size:13px;font-weight:500;box-shadow:var(--sh-3)}
@@ -789,8 +858,14 @@
      deferring it would mean .hidden lands a beat after the click, and both the UI
      and the tests read that class straight away. */
   @keyframes panelIn{from{opacity:0;transform:translateY(-10px) scale(.985)}to{opacity:1;transform:none}}
-  #form:not(.hidden),#settings:not(.hidden),#help:not(.hidden),#bulkAdd:not(.hidden),#lock:not(.hidden){
+  #form:not(.hidden),#bulkAdd:not(.hidden),#lock:not(.hidden){
     animation:panelIn .3s cubic-bezier(.22,1,.36,1) both}
+  /* A modal arrives from further away and settles, rather than sliding down from
+     the top edge the way the inline panels do — it is replacing the page's
+     attention, not adding a row to it. */
+  @keyframes backIn{from{opacity:0}to{opacity:1}}
+  @keyframes modalIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+  .modal:not(.hidden) .mdl{animation:modalIn .32s cubic-bezier(.22,1,.36,1) both}
   @keyframes menuIn{from{opacity:0;transform:translateY(-6px) scale(.94)}to{opacity:1;transform:none}}
   #moreMenu:not(.hidden){transform-origin:top right;animation:menuIn .17s cubic-bezier(.22,1,.36,1) both}
   @keyframes dashIn{from{opacity:0;transform:translateY(-12px) scaleY(.94)}to{opacity:1;transform:none}}
@@ -873,9 +948,10 @@
   @keyframes pop{from{transform:translate(0,0) rotate(0)}to{transform:translate(var(--tx),var(--ty)) rotate(var(--rz));opacity:0}}
   @media (prefers-reduced-motion:reduce){
     .spin,.c-crest,.brand-mark::before,.grid.boot>.hx,.grid.boot .lpc,.hx.flash .lpc,.hx.flash,#toast,.confetti i,
-    #form:not(.hidden),#settings:not(.hidden),#help:not(.hidden),#bulkAdd:not(.hidden),#lock:not(.hidden),
+    #form:not(.hidden),#bulkAdd:not(.hidden),#lock:not(.hidden),
     #moreMenu:not(.hidden),#bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show,
-    .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in,.sec-b{animation:none!important}
+    .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in,.sec-b,
+    .modal::before,.modal:not(.hidden) .mdl{animation:none!important}
     .grid>.hx{transition:none}
     .panel-close:hover,.chip:active,.card:hover .c-portrait,.a-login:hover .ico,.acts button:hover .ico,
     .c-drawer:hover .ico{transform:none}
@@ -954,96 +1030,126 @@
   </div>
 
   <!-- help -->
-  <div id="help" class="hx hidden" style="margin-bottom:18px"><div class="hx-in" style="padding:24px;font-size:13px;color:var(--muted);line-height:1.8;position:relative">
-    <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
-    <div class="hex-display" style="color:var(--gold-txt);font-size:14px;text-transform:uppercase;margin-bottom:8px">How this works</div>
+  <div id="help" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="mdl narrow hx"><div class="hx-in mdl-in" style="position:relative">
+    <div class="mdl-h">
+      <span class="t" id="helpTitle">How this works</span>
+      <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+    </div>
+    <div class="mdl-b" style="padding:22px;font-size:13px;color:var(--muted);line-height:1.8">
     <b style="color:var(--text)">Your data stays here.</b> Accounts are saved in this browser on this device — nothing gets uploaded. Clearing browser data wipes the vault, so use <b style="color:var(--text)">Export</b> for backups and <b style="color:var(--text)">Import</b> to restore or merge them.<br>
     <b style="color:var(--text)">Rank checks are free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b style="color:var(--text)">Rank</b> in a card's ⋯ menu to enter it by hand — history, the chart and the stats all work the same either way.<br>
     <b style="color:var(--text)">Tips:</b> the bar across a card's bottom edge opens <b style="color:var(--text)">Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · search matches names, tags, even ranks (try "gold") · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
     <b style="color:var(--text)">Extra privacy:</b> set a master password in <b style="color:var(--text)">Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.<br>
     <b style="color:var(--text)">Using this app:</b> free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.<br>
     <b style="color:var(--text)">More:</b> <b style="color:var(--text)">⋯</b> menu has bulk add (paste a list of Name#TAG) and CSV import · archive an account to hide it without deleting (toggle <b style="color:var(--text)">Archived</b> in the toolbar) · shift-click a card's checkbox to select a range · <b style="color:var(--text)">n</b> for a new account · click a card's note to rewrite it on the spot · pick your own primary and secondary colors in Settings.
-    <div style="margin-top:10px"><button id="bHelpClose">Got it</button></div>
-  </div></div>
+    </div>
+    <div class="mdl-f"><button id="bHelpClose" class="b-gold">Got it</button></div>
+  </div></div></div>
 
   <!-- settings -->
-  <div id="settings" class="hx teal hidden" style="margin-bottom:16px"><div class="hx-in" style="position:relative">
-    <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
-    <div class="formgrid">
-      <div class="fld fw">
-        <label>Backend URL (optional — your own rank server, e.g. Cloudflare Worker)</label>
-        <input id="sBackend" placeholder="https://... — leave empty to use the free auto-fetch" autocomplete="off">
-      </div>
-      <div class="fld fw">
-        <label>Advanced: Anthropic API key (optional, stored only in this browser)</label>
-        <input type="text" id="sKey" class="mask" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
-      </div>
-      <div class="fld">
-        <label>Model for rank checks</label>
-        <select id="sModel">
-          <option value="claude-sonnet-5">Sonnet — more reliable (~1–2 ct/check)</option>
-          <option value="claude-haiku-4-5">Haiku — cheaper, may miss data</option>
-        </select>
-      </div>
-      <div class="fld fw">
-        <div style="display:flex;align-items:center;gap:8px">
-          <input type="checkbox" id="sAuto" style="width:auto">
-          <label for="sAuto" style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)">Auto-check stale accounts when opening the app</label>
+  <div id="settings" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="mdl hx teal"><div class="hx-in mdl-in" style="position:relative">
+    <div class="mdl-h">
+      <span class="t" id="settingsTitle">Settings</span>
+      <span class="s">Everything here is optional and stays in this browser</span>
+      <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+    </div>
+    <div class="mdl-b">
+
+      <div class="grp">
+        <div class="grp-h">Rank checks</div>
+        <div class="formgrid">
+          <div class="fld fw">
+            <label>Backend URL (optional — your own rank server, e.g. Cloudflare Worker)</label>
+            <input id="sBackend" placeholder="https://... — leave empty to use the free auto-fetch" autocomplete="off">
+          </div>
+          <div class="fld fw">
+            <label>Advanced: Anthropic API key (optional, stored only in this browser)</label>
+            <input type="text" id="sKey" class="mask" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
+          </div>
+          <div class="fld">
+            <label>Model for rank checks</label>
+            <select id="sModel">
+              <option value="claude-sonnet-5">Sonnet — more reliable (~1–2 ct/check)</option>
+              <option value="claude-haiku-4-5">Haiku — cheaper, may miss data</option>
+            </select>
+          </div>
+          <div class="fw hint">
+            Check order: <b>backend URL → API key → free op.gg auto-fetch</b>. With all three empty, checks use the free auto-fetch and cost nothing. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable, but only worth it for power users.
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px;padding-left:24px">
-          <label style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--muted)">Refresh at most</label>
+      </div>
+
+      <div class="grp">
+        <div class="grp-h">Automatic refresh</div>
+        <div class="chk">
+          <input type="checkbox" id="sAuto" style="width:auto">
+          <label for="sAuto">Auto-check stale accounts when opening the app</label>
+        </div>
+        <div class="sub-fld">
+          <label for="sAutoEvery" style="font-size:13px;color:var(--muted)">Refresh at most</label>
           <select id="sAutoEvery" style="width:auto"></select>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding-left:24px">
+        <div class="sub-fld">
           <input type="checkbox" id="sAutoRanked" style="width:auto">
-          <label for="sAutoRanked" style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--muted)">Ranked accounts only — skip unranked and never-placed ones, which answer the same every time</label>
+          <label for="sAutoRanked" style="font-size:13px;color:var(--muted);max-width:560px">Ranked accounts only — skip unranked and never-placed ones, which answer the same every time</label>
         </div>
       </div>
-      <div class="fld fw" style="flex-direction:row;align-items:center;gap:8px">
-        <input type="checkbox" id="sNotify" style="width:auto">
-        <label for="sNotify" style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)">Browser notifications for tier-ups and finished "Check all" runs</label>
-      </div>
-      <div class="fld fw">
-        <label>Discord webhook URL (optional — posts tier-ups to a channel)</label>
-        <input id="sDiscord" placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
-      </div>
-      <div class="fld fw" style="border-top:1px solid var(--line);padding-top:12px;margin-top:2px">
-        <label>Master password (optional — encrypts the vault, AES-256. Lost password = lost vault, there is no recovery)</label>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <input type="password" id="sVaultPass" placeholder="New master password" autocomplete="new-password" style="flex:1;min-width:160px">
-          <button id="sVaultSet">Set / change</button>
-          <button id="sVaultRemove" class="b-danger">Remove protection</button>
+
+      <div class="grp">
+        <div class="grp-h">Alerts</div>
+        <div class="chk">
+          <input type="checkbox" id="sNotify" style="width:auto">
+          <label for="sNotify">Browser notifications for tier-ups and finished "Check all" runs</label>
         </div>
-        <div id="sVaultStatus" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
-        <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
-          <label style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)">Auto-lock after</label>
+        <div class="fld fw" style="margin-top:14px">
+          <label>Discord webhook URL (optional — posts tier-ups to a channel)</label>
+          <input id="sDiscord" placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
+        </div>
+      </div>
+
+      <div class="grp">
+        <div class="grp-h">Security</div>
+        <div class="fld fw">
+          <label>Master password — encrypts the whole vault at rest with AES-256. There is no recovery: lose the password and the vault is gone.</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <input type="password" id="sVaultPass" placeholder="New master password" autocomplete="new-password" style="flex:1;min-width:170px">
+            <button id="sVaultSet">Set / change</button>
+            <button id="sVaultRemove" class="b-danger">Remove protection</button>
+          </div>
+          <div id="sVaultStatus" class="hint" style="margin-top:2px"></div>
+        </div>
+        <div class="sub-fld" style="padding-left:0;margin-top:14px">
+          <label for="sAutoLock" style="font-size:13px;color:var(--text)">Auto-lock after</label>
           <input type="number" id="sAutoLock" min="0" max="180" style="width:80px">
-          <label style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)">minutes idle (0 = never)</label>
+          <span style="font-size:13px;color:var(--text)">minutes idle (0 = never)</span>
         </div>
       </div>
-      <div class="fld fw">
-        <label>Accent colors — both preview live while you pick; closing without saving puts them back</label>
-        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
-          <div style="display:flex;gap:8px;align-items:center">
+
+      <div class="grp">
+        <div class="grp-h">Appearance</div>
+        <div class="hint" style="margin-bottom:12px">Both preview live while you pick. Closing without saving puts them back.</div>
+        <div style="display:flex;gap:22px;flex-wrap:wrap;align-items:center">
+          <div style="display:flex;gap:9px;align-items:center">
             <input type="color" id="sAccent" style="width:44px;padding:2px;height:32px" aria-label="Primary accent color">
             <span style="font-size:12px;color:var(--muted);line-height:1.4">Primary<br><span style="color:var(--faint)">title, favorites, scrollbar</span></span>
           </div>
-          <div style="display:flex;gap:8px;align-items:center">
+          <div style="display:flex;gap:9px;align-items:center">
             <input type="color" id="sAccent2" style="width:44px;padding:2px;height:32px" aria-label="Secondary accent color">
             <span style="font-size:12px;color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login, Refresh, Add, focus rings</span></span>
           </div>
           <button id="sAccentReset" type="button">Reset both</button>
         </div>
       </div>
-      <div class="fw" style="font-size:12px;color:var(--muted);line-height:1.5">
-        Check order: backend URL → API key → free op.gg auto-fetch. Everything here is optional — with all fields empty, checks use the free auto-fetch. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable option but only worth it for power users.
-      </div>
-      <div class="fw bar" style="justify-content:center;margin-top:4px">
-        <button id="sSave" class="b-gold">Save settings</button>
-        <button id="sClose">Close</button>
-      </div>
+
     </div>
-  </div></div>
+    <div class="mdl-f">
+      <button id="sSave" class="b-gold">Save settings</button>
+      <button id="sClose">Close</button>
+      <span class="sp hint">Nothing here is uploaded anywhere.</span>
+    </div>
+  </div></div></div>
 
   <!-- bulk add -->
   <div id="bulkAdd" class="hx teal hidden" style="margin-bottom:16px"><div class="hx-in" style="position:relative">
@@ -3273,6 +3379,72 @@ document.body.classList.toggle("away",document.hidden); // a restored tab can bo
   });
 }
 document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListener("click",closeAllPanels));
+
+// ---------- modal panels ----------
+// Settings and Help open over the page. Everything a modal owes the user beyond
+// looking like one — the page behind it not scrolling, focus starting inside it
+// and coming back afterwards, Tab staying in, a click on the backdrop closing it
+// — is here.
+//
+// Driven by an observer rather than by each of the eight places that add or
+// remove .hidden on these two. Wiring it into every call site works right up
+// until the ninth one is added and quietly doesn't lock the page.
+const MODALS=["settings","help"];
+let modalReturn=null;
+function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains("hidden"))}
+function syncModals(){
+  const open=openModals();
+  document.body.classList.toggle("modal-open",open.length>0);
+  if(open.length){
+    if(!modalReturn){
+      const a=document.activeElement;
+      // body means nothing had focus; restoring to it later would be a no-op that
+      // still counts as "handled", so don't record it
+      modalReturn=a&&a!==document.body?a:null;
+    }
+    const el=open[0];
+    if(!el.contains(document.activeElement)){
+      // the first real field, not the ✕ — landing on Close reads as "are you sure
+      // you meant to open this". Help has no fields, so it falls through to it.
+      const first=el.querySelector("input:not([type=hidden]),select,textarea")||el.querySelector("button");
+      if(first)first.focus();
+    }
+  }else if(modalReturn){
+    // Back to whatever opened it, so the keyboard doesn't restart at the top of
+    // the page. Settings is opened from inside the ⋯ menu, which closes with it —
+    // focusing a display:none button silently does nothing and drops focus to
+    // <body>, so that one hands back to the tray button the menu hangs off.
+    const back=modalReturn.isConnected
+      ?(modalReturn.closest("#moreMenu")?$("bMore"):modalReturn)
+      :null;
+    try{if(back)back.focus()}catch(e){}
+    modalReturn=null;
+  }
+}
+{
+  const obs=new MutationObserver(syncModals);
+  for(const id of MODALS){
+    const el=$(id);
+    if(!el)continue;
+    obs.observe(el,{attributes:true,attributeFilter:["class"]});
+    // Only a press that both starts and ends on the backdrop counts. Checking the
+    // click alone would close the panel when a text selection that began inside it
+    // happened to be released outside.
+    let downOnBack=false;
+    el.addEventListener("mousedown",e=>{downOnBack=e.target===el});
+    el.addEventListener("click",e=>{if(downOnBack&&e.target===el)closeAllPanels();downOnBack=false});
+  }
+}
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Tab")return;
+  const el=openModals()[0];
+  if(!el)return;
+  const f=[...el.querySelectorAll('a[href],button:not([disabled]),input:not([type=hidden]),select,textarea,[tabindex]:not([tabindex="-1"])')];
+  if(!f.length)return;
+  const first=f[0], last=f[f.length-1];
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+});
 $("bMore").addEventListener("click",()=>$("moreMenu").classList.toggle("hidden"));
 $("moreMenu").addEventListener("click",e=>{if(e.target.closest("button"))$("moreMenu").classList.add("hidden")});
 document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.target.closest("#bMore"))$("moreMenu").classList.add("hidden")});

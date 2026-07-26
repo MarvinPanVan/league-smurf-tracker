@@ -1650,3 +1650,107 @@ test("a narrowed grid always says what narrowed it", async () => {
   assert.deepEqual(chips(), []);
   assert.equal(win.document.querySelectorAll(".card").length, 2, "and the grid comes back");
 });
+
+// ---- Settings and Help as modal panels ----
+
+// They are launched from the header tray and have nothing to do with the grid, so
+// as inline panels they just shoved sixty cards down the page.
+test("Settings and Help open over the page, the account form still opens in it", () => {
+  const win = bootApp(seededAccount());
+  const cls = id => win.document.getElementById(id).className;
+  assert.match(cls("settings"), /\bmodal\b/);
+  assert.match(cls("help"), /\bmodal\b/);
+  // the console's own panels act on the collection right below them and stay put
+  assert.doesNotMatch(cls("form"), /\bmodal\b/);
+  assert.doesNotMatch(cls("bulkAdd"), /\bmodal\b/);
+
+  const s = win.document.getElementById("settings");
+  assert.equal(s.getAttribute("role"), "dialog");
+  assert.equal(s.getAttribute("aria-modal"), "true");
+  assert.ok(win.document.getElementById(s.getAttribute("aria-labelledby")), "labelled by a real element");
+});
+
+// The lock rides a MutationObserver, so it lands on the next microtask rather
+// than inside the click — soon enough that no frame is ever painted unlocked,
+// but the test has to yield for it.
+const tick = () => new Promise(r => setTimeout(r, 0));
+
+test("opening a modal locks the page behind it and releases it again", async () => {
+  const win = bootApp(seededAccount());
+  const locked = () => win.document.body.classList.contains("modal-open");
+  assert.equal(locked(), false);
+
+  win.openSettings();
+  await tick();
+  assert.equal(locked(), true);
+
+  win.document.getElementById("sClose").click();
+  await tick();
+  assert.equal(locked(), false);
+
+  // and Help, which is the other one
+  win.document.getElementById("bHelp").click();
+  await tick();
+  assert.equal(locked(), true);
+  win.document.getElementById("bHelpClose").click();
+  await tick();
+  assert.equal(locked(), false);
+});
+
+test("a modal closes on Escape and on a press that starts and ends on the backdrop", () => {
+  const press = (win, el) => {
+    el.dispatchEvent(new win.MouseEvent("mousedown", { bubbles: true }));
+    el.dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
+  };
+  const hidden = win => win.document.getElementById("settings").classList.contains("hidden");
+
+  const a = bootApp(seededAccount());
+  a.openSettings();
+  a.document.dispatchEvent(new a.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(hidden(a), true, "Escape closes it");
+
+  const b = bootApp(seededAccount());
+  b.openSettings();
+  press(b, b.document.getElementById("settings"));
+  assert.equal(hidden(b), true, "a press on the backdrop closes it");
+
+  const c = bootApp(seededAccount());
+  c.openSettings();
+  press(c, c.document.getElementById("sBackend"));
+  assert.equal(hidden(c), false, "a press on a field inside must never close it");
+});
+
+// A drag that selects text inside the panel and happens to be released over the
+// backdrop is not a click on the backdrop.
+test("a press released on the backdrop only counts if it started there", () => {
+  const win = bootApp(seededAccount());
+  win.openSettings();
+  const overlay = win.document.getElementById("settings");
+  win.document.getElementById("sBackend").dispatchEvent(new win.MouseEvent("mousedown", { bubbles: true }));
+  overlay.dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
+  assert.equal(overlay.classList.contains("hidden"), false);
+});
+
+test("the modal panels keep every control the app talks to", () => {
+  const win = bootApp();
+  for (const id of ["sBackend", "sKey", "sModel", "sAuto", "sAutoEvery", "sAutoRanked", "sNotify",
+                    "sDiscord", "sVaultPass", "sVaultSet", "sVaultRemove", "sVaultStatus", "sAutoLock",
+                    "sAccent", "sAccent2", "sAccentReset", "sSave", "sClose"]) {
+    const el = win.document.getElementById(id);
+    assert.ok(el, `#${id} still exists`);
+    assert.ok(win.document.getElementById("settings").contains(el), `#${id} is inside the dialog`);
+  }
+  assert.ok(win.document.querySelector("#settings [data-close-panel]"), "and the ✕ closer");
+  assert.ok(win.document.getElementById("help").contains(win.document.getElementById("bHelpClose")));
+});
+
+test("the settings body is grouped rather than one flat run of fields", () => {
+  const win = bootApp();
+  const groups = [...win.document.querySelectorAll("#settings .grp-h")].map(g => g.textContent.trim());
+  assert.deepEqual(groups, ["Rank checks", "Automatic refresh", "Alerts", "Security", "Appearance"]);
+  // header and footer sit outside the scrolling middle, so Save is always reachable
+  const body = win.document.querySelector("#settings .mdl-b");
+  assert.ok(body, "there is a scroll region");
+  assert.equal(body.contains(win.document.getElementById("sSave")), false, "Save is pinned, not scrolled");
+  assert.ok(body.contains(win.document.getElementById("sBackend")), "the fields are the part that scrolls");
+});
