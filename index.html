@@ -106,9 +106,19 @@
 
   /* ---- surfaces: rounded, gradient hairline, soft glass ---- */
   .hx{border-radius:var(--r-lg);padding:1px;background:linear-gradient(155deg,#ffffff1f,#ffffff0a 38%,#ffffff05);box-shadow:var(--sh-2)}
+  /* No backdrop-filter here, deliberately. This surface is 96–98% opaque, so at
+     most 4% of whatever is behind it comes through — and what is behind it is a
+     smooth background gradient, which blurring leaves essentially unchanged.
+     Screenshots with and against are indistinguishable, which is the whole reason
+     it goes: with sixty cards on screen it was sixty backdrop-sampling layers
+     rendering an effect nobody can see. Measured honestly it is *not* a frame-rate
+     win — scrolling the full grid sits at 6.9 ms a frame either way on this
+     machine, no dropped frames — so the case is GPU memory and power on weaker
+     hardware, not speed. Glass is kept where the surface is genuinely translucent
+     and there is one of it: the sticky console, the header tray, the toast and the
+     chart tooltip. */
   .hx-in{border-radius:calc(var(--r-lg) - 1px);height:100%;
-    background:linear-gradient(180deg,#151922f5,#0f1218fa);
-    backdrop-filter:blur(16px) saturate(130%);-webkit-backdrop-filter:blur(16px) saturate(130%)}
+    background:linear-gradient(180deg,#151922f5,#0f1218fa)}
   /* A favourite has to be spottable at a glance across a full grid, so it gets a
      lit border plus a warm halo — the old faint gold edge was invisible in a row
      of cards. */
@@ -377,6 +387,14 @@
   select:hover,select:focus{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e9edf5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")}
   input::placeholder,textarea::placeholder{color:var(--faint)}
   .tools input[type=search]{flex:1;min-width:180px}
+  /* Favorites and Archived are toggles, so their lit state is a class carrying
+     aria-pressed with it — it used to be two inline style properties assigned by
+     hand from three different places, which is how the state got out of step with
+     the filter it stands for. */
+  .tools button.on{color:var(--star);border-color:color-mix(in srgb,var(--star) 55%,transparent);
+    background:color-mix(in srgb,var(--star) 12%,transparent)}
+  .tools button.on:hover{color:var(--star);border-color:color-mix(in srgb,var(--star) 80%,transparent);
+    background:color-mix(in srgb,var(--star) 20%,transparent)}
   .tagbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}
   .chip{font-size:12px;font-weight:500;padding:5px 12px;border:1px solid var(--line);border-radius:999px;
     background:var(--panel2);color:var(--muted);cursor:pointer;
@@ -829,6 +847,12 @@
   .hx-in{position:relative;z-index:1}
   .c-crest{animation:gemGlow 3.6s ease-in-out infinite}
   @keyframes gemGlow{50%{filter:brightness(1.22)}}
+  /* Three loops never stop on their own: the header mark, the spinner, and the
+     rank crest — which is one animation per card, so sixty of them on a full
+     vault. A hidden tab stops being painted, but the animations are still live
+     objects the compositor keeps ticking, and this app is meant to sit open in a
+     background tab for days. Parked explicitly instead. */
+  body.away .c-crest,body.away .brand-mark::before,body.away .spin{animation-play-state:paused}
   @keyframes cardIn{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
   .grid.boot>.hx{animation:cardIn .5s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--d,0ms)}
   /* The line used to be revealed with stroke-dasharray, which is the wrong tool
@@ -1109,8 +1133,8 @@
     <select id="tStatus">
       <option value="">All statuses</option>
     </select>
-    <button id="tFav"><svg class="ico" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Favorites</button>
-    <button id="tArchived" title="Show archived accounts instead of active ones">Archived</button>
+    <button id="tFav" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Favorites</button>
+    <button id="tArchived" aria-pressed="false" title="Show archived accounts instead of active ones">Archived</button>
     <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;padding:0 4px">
       <input type="checkbox" id="tSelectAll" style="width:auto">Select all shown
     </label>
@@ -1141,7 +1165,7 @@
   <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
   <input type="file" id="fileInCsv" accept=".csv,text/csv" class="hidden">
   </div>
-  <div id="toast"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
 </div>
 
 <script>
@@ -1551,6 +1575,15 @@ function genPassword(len){
   return chars.join("");
 }
 function parseTags(str){return String(str||"").split(",").map(t=>t.trim()).filter(Boolean)}
+// Imports are the one place an account can arrive with a region this app has
+// never heard of. Everything downstream falls back to EUW when it looks the code
+// up, so an unknown one only survives as a wrong label on the card and a filter
+// entry that matches nothing — pin it to something real on the way in.
+function normRegion(r){const k=String(r||"").toUpperCase().trim();return REGIONS[k]?k:"EUW"}
+// Same for the status: an unrecognised one renders as "Active" everywhere while
+// still filtering as its own value, so the status dropdown grows a second entry
+// reading "Active" that matches a different set of accounts.
+function normStatus(s){const k=String(s||"").toLowerCase().trim();return STATUS[k]?k:"active"}
 function isClimbing(hist){
   if(!hist||hist.length<3)return false;
   const last3=hist.slice(-3).map(ladderLP);
@@ -1835,6 +1868,20 @@ function parseLpHistory(raw){
   return{t,tier:T,division:mPlus||!div?null:{"1":"I","2":"II","3":"III","4":"IV"}[div[1]],
     lp:lp?+lp[1]:0,elo:m[3]?+m[3]:null};
 }
+// Icon URLs that 404ed. The <img> used to delete itself in an inline onerror,
+// which the next render undid — the markup still carried the src, so a dead icon
+// was re-inserted and re-requested on every single re-render, forever. Remembering
+// the URL instead means it is asked for once per session.
+const deadIcons=new Set();
+function iconUrl(s){
+  const u=s&&s.icon;
+  return u&&!deadIcons.has(u)?u:null;
+}
+function markIconDead(img){
+  const u=img.getAttribute("src");
+  if(u)deadIcons.add(u);
+  img.remove();
+}
 function parseProfileIcon(raw){
   if(!raw)return null;
   const m=String(raw).match(/profile_icons?\/profileicon(\d+)/i);
@@ -2063,7 +2110,9 @@ function commitStats(id,acc,s){
   setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
 }
 async function check(id){
-  const acc=accounts.find(a=>a.id===id);if(!acc)return;
+  // an account deleted mid-run is not a failed check — but the caller reads the
+  // return value as a boolean, so say so rather than returning undefined
+  const acc=accounts.find(a=>a.id===id);if(!acc)return true;
   checking.add(id);renderCard(id);syncCheckAll();
   let s=null,err="";
   if(cfg.backendUrl){try{s=await fetchViaBackend(acc)}catch(e){err="backend: "+(e.message||"failed")}}
@@ -2103,7 +2152,9 @@ function renderFailbar(){
 let lastFails=null;
 async function checkAll(ids){
   if(run)return;
-  const list=(ids?ids.map(id=>accounts.find(a=>a.id===id)).filter(Boolean):filtered()).filter(a=>a.status!=="banned");
+  // Array.isArray rather than a truthiness test: this used to be wired straight to
+  // a click listener, which passes an Event — truthy, and with no .map on it.
+  const list=(Array.isArray(ids)?ids.map(id=>accounts.find(a=>a.id===id)).filter(Boolean):filtered()).filter(a=>a.status!=="banned");
   if(!list.length){toast("Nothing to refresh");return}
   run={total:list.length,done:0,failed:[],current:null,stop:false};
   lastFails=null;renderFailbar();renderRun();syncCheckAll();
@@ -2194,8 +2245,15 @@ function morph(from,to){
     // dirty the attribute stops driving it, so it has to be set directly.
     if(from.type==="checkbox"||from.type==="radio")from.checked=to.checked;
     else if(tag==="TEXTAREA"){if(from.value!==to.textContent)from.value=to.textContent}
-    else if(from.value!==to.value)from.value=to.value;
+    else if(tag!=="SELECT"&&from.value!==to.value)from.value=to.value;
     if(tag!=="SELECT")return;
+    // A <select>'s value is only meaningful once its options exist, so it is set
+    // after the children are patched, not before: assigning first meant matching
+    // against the *old* option list, and any value that had just been added
+    // silently fell back to the first entry.
+    morphChildren(from,to);
+    if(from.value!==to.value)from.value=to.value;
+    return;
   }
   morphChildren(from,to);
 }
@@ -2541,8 +2599,12 @@ function rowHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
   const st=STATUS[a.status]||STATUS.active;
   const open=openInfo.has(a.id);
-  const total=s?(Number(s.wins)||0)+(Number(s.losses)||0):0;
-  const wr=total>0?Math.round((Number(s.wins)||0)/total*100):null;
+  // Coerced once, and printed from these rather than from s.wins/s.losses: a
+  // source that reports wins but no losses used to render "10W L", because the
+  // total was computed from a coerced 0 while the label escaped a raw null.
+  const wins=Number(s&&s.wins)||0, losses=Number(s&&s.losses)||0;
+  const total=s?wins+losses:0;
+  const wr=total>0?Math.round(wins/total*100):null;
   const dv=lastDelta(a);
   let rank="—",lp="";
   if(isChecking)rank="…";
@@ -2553,17 +2615,23 @@ function rowHTML(a,i){
     if(s.lp!=null)lp=s.lp+" LP";
   }else rank="Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
+  const icon0=iconUrl(s);
   return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${a.id}"><div class="hx-in rw" data-id="${a.id}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
     <div class="rw-main" data-act="info" role="button" tabindex="0" aria-expanded="${open}">
-      <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}" onclick="event.stopPropagation()">
-      <span class="rw-pic">${s&&s.icon?`<img src="${esc(s.icon)}" alt="" loading="lazy" onerror="this.remove()">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}</span>
+      <!-- No stopPropagation here: every click on a card is handled by one
+           delegated listener on #grid, and closest("[data-act]") already stops at
+           this checkbox rather than the row behind it. Blocking the bubble only
+           stopped that listener from ever running, so ticking a row selected
+           nothing and the bulk bar never appeared. -->
+      <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}">
+      <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}</span>
       <span class="rw-id">
         <span class="rw-nm">${esc(a.label||a.gameName)}${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}</span>
         <span class="rw-tag">${esc(a.gameName)}#${esc(a.tagLine)}</span>
       </span>
       <span class="rw-rank" style="color:${col}">${esc(rank)}${lp?`<em>${esc(lp)}</em>`:""}</span>
       <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${Math.abs(dv)}</span>`:""}</span>
-      <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><em>${esc(s.wins)}W ${esc(s.losses)}L</em>`:""}</span>
+      <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><em>${wins}W ${losses}L</em>`:""}</span>
       <span class="rw-rg">${esc(a.region)}</span>
       <span class="rw-up${isStale(a)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
@@ -2610,8 +2678,11 @@ function cardHTML(a,i){
     if(dv)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
   }
   if(isClimbing(hist))deltaChip+='<span class="delta d-up" title="LP has gone up 3 checks in a row">🔥 Climbing</span>';
-  const total=s?(Number(s.wins)||0)+(Number(s.losses)||0):0;
-  const wr=total>0?Math.round((Number(s.wins)||0)/total*100):null;
+  // see rowHTML: the printed figures have to be the coerced ones, or a missing
+  // loss count renders as a bare "L" next to a real win count
+  const wins=Number(s&&s.wins)||0, losses=Number(s&&s.losses)||0;
+  const total=s?wins+losses:0;
+  const wr=total>0?Math.round(wins/total*100):null;
   const dpm="https://dpm.lol/"+encodeURIComponent(a.gameName)+"-"+encodeURIComponent(a.tagLine);
   const opgg="https://op.gg/lol/summoners/"+(REGIONS[a.region]||REGIONS.EUW).opgg+"/"+encodeURIComponent(a.gameName)+"-"+encodeURIComponent(a.tagLine);
   // Tier and LP are rendered separately so the tier can carry the card's type scale
@@ -2633,7 +2704,7 @@ function cardHTML(a,i){
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
     <div class="wl">${s.level>=30?"Unranked this season":"Not level 30 yet"}</div>`;
   else rankBlock=`<div class="rk" style="color:${col}">${esc(tierTxt||"Unranked")}${lpTxt?`<span class="rk-lp">${esc(lpTxt)}</span>`:""}</div>
-    <div class="wl">${total>0?`<b>${esc(s.wins)}W</b> <b>${esc(s.losses)}L</b> · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:"No ranked games found"}</div>`;
+    <div class="wl">${total>0?`<b>${wins}W</b> <b>${losses}L</b> · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:"No ranked games found"}</div>`;
   // Peak / Level / MMR are unrelated facts — label them instead of running them
   // together in one muted sentence.
   const microStats=[];
@@ -2663,11 +2734,12 @@ function cardHTML(a,i){
   // paints the same stripe down the whole grid and says nothing. Only the states
   // worth spotting get one.
   const railed=a.status&&a.status!=="active";
+  const icon0=iconUrl(s);
   return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${a.id}" style="--d:${(i||0)*40}ms"><div class="hx-in card" data-id="${a.id}"${railed?` style="--st:${st.color}"`:""}>
     <div class="c-head">
       <div class="c-portrait">
         <span class="c-initial">${esc(initial)}</span>
-        ${s&&s.icon?`<img class="c-avatar" src="${esc(s.icon)}" alt="" loading="lazy" onerror="this.remove()">`:""}
+        ${icon0?`<img class="c-avatar" src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:""}
         ${s&&s.found!==false&&s.tier?`<span class="c-crest" style="--c:${col}" title="${esc(tierTxt)}"></span>`:""}
         ${s&&s.found!==false&&s.level&&!levelLed?`<span class="c-lvbadge" title="Summoner level">${esc(s.level)}</span>`:""}
       </div>
@@ -2741,7 +2813,10 @@ function renderGrid(){
   // only matters if the note block was structurally replaced rather than patched
   if(editingNote)focusNoteEditor(grid);
   document.title=accounts.length?"Smurf Tracker ("+accounts.length+")":"Smurf Tracker — Summoner Vault";
-  const stale=accounts.filter(a=>!a.archived&&a.stats&&a.stats.updatedAt&&Date.now()-a.stats.updatedAt>STALE_MS).length;
+  // isStale(), not a second hand-rolled version of it: this one required an
+  // updatedAt, so never-checked accounts were left out and the readout disagreed
+  // with both the "Refresh N stale" button and the stats panel beside it.
+  const stale=accounts.filter(a=>!a.archived&&isStale(a)).length;
   setHTML($("count"),!accounts.length?"":`<span><b>${list.length}</b> of <b>${accounts.length}</b> shown</span>`
     +(stale?`<span class="warn">${stale} need${stale===1?"s":""} a refresh</span>`:""));
   syncCheckAll();
@@ -2750,7 +2825,14 @@ function renderGrid(){
 // would undo the point of rendering a single card.
 function syncCheckAll(){
   $("bCheckAll").disabled=accounts.length===0||checking.size>0;
-  setHTML($("bCheckAll"),checking.size?`<span class="spin">${icon("refresh")}</span> Checking…`:icon("refresh")+" Check all ranks");
+  // The button runs over whatever the filters are showing, not over the vault —
+  // which is the right behaviour and was a trap while it still said "all". With a
+  // search or a tier filter on, "Check all ranks" would quietly refresh three of
+  // sixty accounts. Say which it is.
+  const shown=filtered().filter(a=>a.status!=="banned").length;
+  const inView=accounts.filter(a=>!!a.archived===ui.showArchived&&a.status!=="banned").length;
+  const label=shown&&shown<inView?`Check ${shown} shown`:"Check all ranks";
+  setHTML($("bCheckAll"),checking.size?`<span class="spin">${icon("refresh")}</span> Checking…`:icon("refresh")+" "+label);
   // "Check all ranks" also re-checks the twenty accounts you did an hour ago. The
   // run you actually mean is almost always the stale ones, so it gets its own
   // button — hidden when it would do exactly the same work as the one beside it.
@@ -2793,7 +2875,7 @@ function openForm(acc){
   closeAllPanels();
   editingId=acc?acc.id:null;
   $("fLabel").value=acc?acc.label||"":"";
-  $("fRegion").value=acc?acc.region:"EUW";
+  $("fRegion").value=acc?normRegion(acc.region):"EUW";
   $("fName").value=acc?acc.gameName:"";
   $("fTag").value=acc?acc.tagLine:"";
   $("fLogin").value=acc?acc.login||"":"";
@@ -2993,7 +3075,13 @@ function doImport(file){
       const p=JSON.parse(rd.result);
       const list=Array.isArray(p)?p:p.accounts;
       if(!Array.isArray(list))throw new Error("no accounts array");
-      const cleaned=list.filter(a=>a&&a.gameName&&a.tagLine).map(a=>Object.assign({id:uid(),fav:false,stats:null,tags:[],history:[],status:"active",label:"",login:"",password:"",email:"",notes:"",region:"EUW"},a));
+      const cleaned=list.filter(a=>a&&a.gameName&&a.tagLine)
+        // id last, not first: spreading the file's own fields over the defaults
+        // meant the uid() was thrown away whenever the backup carried an id, so
+        // importing the same file twice produced accounts sharing an id — and
+        // every per-card lookup goes through find(a=>a.id===id).
+        .map(a=>Object.assign({fav:false,stats:null,tags:[],history:[],status:"active",label:"",login:"",password:"",email:"",notes:"",region:"EUW"},a,
+          {id:uid(),region:normRegion(a.region),status:normStatus(a.status)}));
       const merge=accounts.length>0&&confirm("OK = MERGE backup into current vault (adds only new accounts)\nCancel = replace everything instead");
       if(merge){
         const key=a=>(a.gameName+"#"+a.tagLine+"@"+a.region).toLowerCase();
@@ -3050,7 +3138,7 @@ function doImportCSV(file){
         const tier=get("tier");
         return{
           id:uid(),tags:get("tags")?get("tags").split("|").filter(Boolean):[],history:[],
-          label:get("label"),region:get("region")||"EUW",gameName,tagLine,status:get("status")||"active",
+          label:get("label"),region:normRegion(get("region")),gameName,tagLine,status:normStatus(get("status")),
           login:get("login"),password:get("password"),email:get("email"),notes:get("notes"),
           fav:get("favorite")==="yes",
           stats:tier?{found:true,tier,division:get("division")||null,lp:get("lp")?+get("lp"):null,wins:get("wins")?+get("wins"):null,losses:get("losses")?+get("losses"):null,level:get("level")?+get("level"):null,mmr:null,avgRecent:null,asOf:"CSV import",note:null,updatedAt:get("lastUpdated")?new Date(get("lastUpdated")).getTime()||null:null}:null
@@ -3134,13 +3222,39 @@ document.addEventListener("keydown",e=>{
   if(e.key==="f"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$("tFav").click()}
   if(e.key==="Escape"){closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}}
 });
-["mousemove","keydown","click","scroll","touchstart"].forEach(evt=>document.addEventListener(evt,()=>{lastActivity=Date.now()},{passive:true}));
+// mousemove alone fires a hundred times a second while the pointer is moving, and
+// all any of these do is stamp a clock. A second's resolution is far finer than
+// an auto-lock measured in minutes needs.
 {
-  const lockTimer=setInterval(()=>{
-    if(vaultPassword&&cfg.autoLockMin>0&&Date.now()-lastActivity>cfg.autoLockMin*60000)relock();
-  },15000);
+  let coarse=0;
+  const touch=()=>{const t=Date.now();if(t-coarse<1000)return;coarse=t;lastActivity=t};
+  for(const evt of["mousemove","keydown","click","scroll","touchstart"])
+    document.addEventListener(evt,touch,{passive:true});
+}
+// The idle timer only exists while there is something to lock. It used to tick
+// every 15 s for the entire life of the tab even with no master password set —
+// nothing to do, but enough to keep waking a backgrounded page.
+let lockTimer=0;
+function syncLockTimer(){
+  const want=!!vaultPassword&&cfg.autoLockMin>0;
+  if(want===!!lockTimer)return;
+  if(!want){clearInterval(lockTimer);lockTimer=0;return}
+  lockTimer=setInterval(checkAutoLock,15000);
   if(lockTimer&&lockTimer.unref)lockTimer.unref(); // don't keep a Node/test process alive just for this
 }
+function checkAutoLock(){
+  if(vaultPassword&&cfg.autoLockMin>0&&Date.now()-lastActivity>cfg.autoLockMin*60000)relock();
+}
+// Everything decorative is parked while the page is out of sight, and the lock is
+// re-evaluated the moment it comes back: background tabs have their timers
+// throttled hard, so a tab hidden for an hour must not come back still unlocked
+// because the interval only managed to fire a handful of times.
+document.addEventListener("visibilitychange",()=>{
+  const away=document.hidden;
+  document.body.classList.toggle("away",away);
+  if(!away)checkAutoLock();
+});
+document.body.classList.toggle("away",document.hidden); // a restored tab can boot already hidden
 // A <select> keeps focus after you pick an option, so its focus tint sits on the
 // control until you happen to click elsewhere. Once you've picked with the mouse
 // you're done with the field, so drop focus then. Keyboard picks must keep it —
@@ -3176,7 +3290,7 @@ $("sSave").addEventListener("click",async()=>{
   }else if(cfg.notify&&"Notification"in window&&Notification.permission==="denied"){
     cfg.notify=false;$("sNotify").checked=false;toast("Notifications are blocked — allow them in your browser's site settings first");
   }
-  saveCfg();$("settings").classList.add("hidden");toast("Settings saved")
+  saveCfg();syncLockTimer();$("settings").classList.add("hidden");toast("Settings saved")
 });
 $("sClose").addEventListener("click",()=>{revertAccents();$("settings").classList.add("hidden")});
 $("sAccent").addEventListener("input",e=>previewAccent("primary",e.target.value));
@@ -3196,7 +3310,7 @@ $("sVaultSet").addEventListener("click",async()=>{
   vaultPassword=pass;
   await saveDB();
   $("sVaultPass").value="";
-  updateVaultStatus();
+  updateVaultStatus();syncLockTimer();
   toast("Vault password set — remember it, there's no way to recover it if lost");
 });
 $("sVaultRemove").addEventListener("click",async()=>{
@@ -3204,7 +3318,7 @@ $("sVaultRemove").addEventListener("click",async()=>{
   if(!confirm("Remove password protection? Your vault will be saved unencrypted again."))return;
   vaultPassword=null;
   await saveDB();
-  updateVaultStatus();
+  updateVaultStatus();syncLockTimer();
   toast("Password protection removed");
 });
 $("bHelp").addEventListener("click",()=>{const willShow=$("help").classList.contains("hidden");closeAllPanels();if(willShow)$("help").classList.remove("hidden")});
@@ -3247,14 +3361,31 @@ $("baSave").addEventListener("click",()=>{
   saveDB();render();$("bulkAdd").classList.add("hidden");
   toast(added+" added"+(skipped?", "+skipped+" duplicate"+(skipped===1?"":"s")+" skipped":"")+(bad?", "+bad+" line"+(bad===1?"":"s")+" couldn't be parsed":""));
 });
-$("bCheckAll").addEventListener("click",checkAll);
+// Wrapped, not passed directly: addEventListener hands the listener a MouseEvent,
+// which checkAll would take as its `ids` list and immediately call .map() on — so
+// the button threw on every click and refreshed nothing at all.
+$("bCheckAll").addEventListener("click",()=>checkAll());
+// Narrowing the grid without redrawing the chip that says why is the exact
+// problem the chips exist to solve: searching or hitting Favorites went through
+// renderGrid alone, so the grid went short with nothing on screen explaining it
+// and nothing to click to undo it.
+function renderFilters(){renderChips();renderGrid()}
 let searchT;
-$("tSearch").addEventListener("input",e=>{ui.search=e.target.value;clearTimeout(searchT);searchT=setTimeout(renderGrid,120)});
+$("tSearch").addEventListener("input",e=>{ui.search=e.target.value;clearTimeout(searchT);searchT=setTimeout(renderFilters,120)});
 $("tRegion").addEventListener("change",e=>{ui.region=e.target.value;renderGrid()});
 $("tSort").addEventListener("change",e=>{ui.sort=e.target.value;renderGrid()});
 $("tStatus").addEventListener("change",e=>{ui.status=e.target.value;renderGrid()});
-$("tFav").addEventListener("click",()=>{ui.favOnly=!ui.favOnly;$("tFav").style.color=ui.favOnly?"var(--star)":"";$("tFav").style.borderColor=ui.favOnly?"var(--star)":"";renderGrid()});
-$("tArchived").addEventListener("click",()=>{ui.showArchived=!ui.showArchived;$("tArchived").style.color=ui.showArchived?"var(--star)":"";$("tArchived").style.borderColor=ui.showArchived?"var(--star)":"";render()});
+// One place that puts the two toolbar toggles in step with the state they stand
+// for, rather than three copies of the same pair of style assignments.
+function syncToggles(){
+  for(const[id,on]of[["tFav",ui.favOnly],["tArchived",ui.showArchived]]){
+    const b=$(id);
+    b.classList.toggle("on",!!on);
+    b.setAttribute("aria-pressed",on?"true":"false");
+  }
+}
+$("tFav").addEventListener("click",()=>{ui.favOnly=!ui.favOnly;syncToggles();renderFilters()});
+$("tArchived").addEventListener("click",()=>{ui.showArchived=!ui.showArchived;syncToggles();render()});
 $("dash").addEventListener("click",e=>{
   if(e.target.closest("#bDashToggle")){
     cfg.dashCollapsed=!cfg.dashCollapsed;
@@ -3278,8 +3409,7 @@ $("chips").addEventListener("click",e=>{
   else if(k==="favOnly")ui.favOnly=false;
   else ui[k]="";
   if(!ui.search)$("tSearch").value="";
-  $("tFav").style.color=ui.favOnly?"var(--star)":"";
-  $("tFav").style.borderColor=ui.favOnly?"var(--star)":"";
+  syncToggles();
   render();
 });
 $("density").addEventListener("click",e=>{
@@ -3361,7 +3491,10 @@ function commitNote(){
   writeNote();
   const id=editingNote, acc=accounts.find(a=>a.id===id);
   editingNote=null;noteDraft="";
-  const card=[...$("grid").querySelectorAll(".card")].find(c=>c.dataset.id===id);
+  // ".card" only exists in the card layout. In the list the note lives inside an
+  // expanded .rw, so this found nothing and the textarea simply stayed open —
+  // the edit had been saved, but the card went on looking like it hadn't.
+  const card=[...$("grid").querySelectorAll(".card,.rw")].find(c=>c.dataset.id===id);
   if(card&&acc)syncNoteBlock(card,acc);
 }
 $("grid").addEventListener("focusout",e=>{
@@ -3376,6 +3509,12 @@ document.addEventListener("pointerdown",e=>{
   if(editingNote&&!e.target.closest(".c-notes"))commitNote();
 },true);
 $("grid").addEventListener("keydown",e=>{
+  // A list row carries role="button" and tabindex="0" but is a <div>, so the
+  // browser gives it none of a button's key handling — it could be tabbed to and
+  // then not opened. Only when the row itself has focus: the checkbox inside it
+  // has its own meaning for Space.
+  const row=e.target&&e.target.classList&&e.target.classList.contains("rw-main")?e.target:null;
+  if(row&&(e.key==="Enter"||e.key===" ")){e.preventDefault();row.click();return}
   const ta=e.target;
   if(!ta||!ta.dataset||ta.dataset.f!=="notetext")return;
   if(e.key==="Escape"){
@@ -3462,6 +3601,7 @@ function migrateStats(){
 }
 function startApp(){
   $("appRoot").classList.remove("hidden");
+  syncLockTimer();
   migrateStats();
   if(cfg.density==="list"||cfg.density==="cards")ui.density=cfg.density;
   refreshCutoffs(); // fire and forget; redraws only if a floor actually arrived
@@ -3473,7 +3613,11 @@ function startApp(){
     const staleAccs=accounts.filter(autoCheckDue);
     if(staleAccs.length){
       toast("Auto-checking "+staleAccs.length+" stale account"+(staleAccs.length===1?"":"s")+"…");
-      (async()=>{for(const a of staleAccs){await check(a.id);await new Promise(r=>setTimeout(r,800))}})();
+      // Through checkAll rather than its own loop: this ran as an invisible second
+      // runner, so it got no progress bar and no Stop button, and pressing Check
+      // all ranks while it was going started a *parallel* pass over the same
+      // accounts — two requests each, into the same rate limits.
+      checkAll(staleAccs.map(a=>a.id));
     }
   }
   if("serviceWorker"in navigator&&location.protocol.startsWith("http")){
@@ -3517,10 +3661,19 @@ function relock(){
   vaultPassword=null;accounts=[];
   // Drop every per-card UI state too — otherwise a password that was revealed
   // before the auto-lock would still be on screen after the next unlock.
-  [checking,openInfo,openLogin,shownPw,openRank,selected,openMore].forEach(s=>s.clear());
-  armedDelete=null;editingId=null;lastSelectedIdx=null;
+  [checking,openInfo,openLogin,shownPw,openRank,selected,openMore,openSec].forEach(s=>s.clear());
+  chartRange.clear();
+  armedDelete=null;editingId=null;lastSelectedIdx=null;flashId=null;
+  // an unsaved note draft is vault content too, and it was surviving the lock
+  editingNote=null;noteDraft="";
+  // Empty the grid rather than only hiding it. Locking used to leave every card
+  // standing in the hidden #appRoot with everything still on it — including a
+  // password that had been revealed just before — until the next unlock happened
+  // to re-render over the top.
+  render();
   closeAllPanels();
   $("appRoot").classList.add("hidden");
+  syncLockTimer(); // nothing left to lock until the vault is opened again
   showLockScreen(envelope);
 }
 function boot(){

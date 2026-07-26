@@ -38,7 +38,10 @@ function runScript(window, code) {
 // `seed` writes accounts straight into localStorage before the app boots, which
 // is the only way to get an account carrying seasons/flex/champions in here —
 // those arrive from a rank check, and the network is deliberately dead.
-function bootApp(seed) {
+// `tweak` runs against the window just before the app's script does, which is the
+// only place to stand in front of something the app calls during boot — setInterval,
+// for one, where the assertion is about the call never happening.
+function bootApp(seed, tweak) {
   const dom = new JSDOM(htmlNoScript, {
     url: "https://example.com/index.html",
     pretendToBeVisual: true,
@@ -53,6 +56,7 @@ function bootApp(seed) {
   window.confirm = () => true;
   window.alert = () => {};
   if (seed) window.localStorage.setItem("smurf-tracker", JSON.stringify(seed));
+  if (tweak) tweak(window);
   runScript(window, appScript); // runs the app's boot() at the end, exactly like a real page load
   return window;
 }
@@ -1362,4 +1366,287 @@ test("combined champion stats are weighted by games, not by winrate", () => {
   assert.equal(merged[1].name, "Lucky");
   assert.equal(win.mergeChampions([]).length, 0);
   assert.equal(win.mergeChampions(null).length, 0);
+});
+
+// ---- review pass: bugs found by reading the code, each reproduced first ----
+
+// The one that mattered most: "Check all ranks" was wired straight to
+// addEventListener, so the listener's MouseEvent arrived as checkAll's `ids` list
+// and .map() threw on it before anything else ran. The button did nothing at all.
+test("Check all ranks starts a run instead of throwing", () => {
+  const win = bootApp(seededAccount());
+  const thrown = [];
+  win.addEventListener("error", e => thrown.push(String(e.message)));
+  win.document.getElementById("bCheckAll").click();
+  assert.deepEqual(thrown, []);
+  assert.equal(win.document.getElementById("runbar").classList.contains("hidden"), false,
+    "a run is under way, with its progress bar and Stop button");
+  assert.equal(win.document.getElementById("bCancelCheck").classList.contains("hidden"), false);
+});
+
+// It refreshes what the filters are showing, which is right — but it said "all"
+// while doing it, so a search left it quietly refreshing three of sixty.
+test("the Check all label says how many it would actually refresh", async () => {
+  const win = bootApp();
+  addRealAccount(win, "Alpha", "1");
+  addRealAccount(win, "Beta", "2");
+  addRealAccount(win, "Gamma", "3");
+  const label = () => win.document.getElementById("bCheckAll").textContent.trim();
+  assert.equal(label(), "Check all ranks");
+
+  const search = win.document.getElementById("tSearch");
+  search.value = "Beta";
+  search.dispatchEvent(new win.Event("input", { bubbles: true }));
+  await new Promise(r => setTimeout(r, 200));
+  assert.equal(label(), "Check 1 shown");
+});
+
+// A row's checkbox carried an inline stopPropagation, which killed the one
+// delegated listener on #grid that handles every click on a card — so ticking a
+// row in list view selected nothing and the bulk bar never appeared.
+test("bulk selection works in the list view as well as the cards", () => {
+  const count = win => win.document.getElementById("bulkCount").textContent;
+  const hidden = win => win.document.getElementById("bulkbar").classList.contains("hidden");
+
+  const cards = bootApp(seededAccount());
+  cards.document.querySelector(".card .bulkchk").click();
+  assert.equal(count(cards), "1 selected");
+
+  const rows = bootApp(seededAccount());
+  rows.document.querySelector('[data-density="list"]').click();
+  rows.document.querySelector(".rw .bulkchk").click();
+  assert.equal(hidden(rows), false);
+  assert.equal(count(rows), "1 selected");
+  assert.equal(rows.document.querySelector(".rw-open"), null,
+    "and the row does not also unfold — the checkbox is the nearer target");
+});
+
+// commitNote only ever looked for ".card", which does not exist in the list, so
+// the editor stayed on screen after the edit had already been saved.
+test("the note editor closes after clicking away, in either layout", () => {
+  for (const asList of [false, true]) {
+    const win = bootApp(seededAccount());
+    if (asList) {
+      win.document.querySelector('[data-density="list"]').click();
+      win.document.querySelector(".rw-main").click();
+    }
+    win.document.querySelector('[data-act="noteedit"]').click();
+    const ta = win.document.querySelector('[data-f="notetext"]');
+    assert.ok(ta, `editor opens (list: ${asList})`);
+    ta.value = "written in the " + (asList ? "list" : "cards");
+    ta.dispatchEvent(new win.Event("input", { bubbles: true }));
+
+    win.document.body.dispatchEvent(new win.MouseEvent("pointerdown", { bubbles: true }));
+    assert.equal(win.document.querySelector('[data-f="notetext"]'), null,
+      `editor closed again (list: ${asList})`);
+    assert.match(win.document.querySelector(".c-notes").textContent,
+      /written in the/, "and the text is on the card");
+  }
+});
+
+// A list row is a <div> with role="button" — the browser gives it none of a
+// button's key handling, so it could be tabbed to and then not opened.
+test("a list row opens from the keyboard", () => {
+  for (const key of ["Enter", " "]) {
+    const win = bootApp(seededAccount());
+    win.document.querySelector('[data-density="list"]').click();
+    const row = win.document.querySelector(".rw-main");
+    assert.equal(row.getAttribute("tabindex"), "0");
+    row.dispatchEvent(new win.KeyboardEvent("keydown", { key, bubbles: true }));
+    assert.ok(win.document.querySelector(".rw-open"), `${key} opens the row`);
+  }
+});
+
+// The total was computed from a coerced 0 while the label printed the raw value,
+// so a source reporting wins but no losses rendered "10W L".
+test("a missing loss count renders as 0, not as a bare L", () => {
+  const seed = seededAccount();
+  seed[0].stats.wins = 10;
+  seed[0].stats.losses = null;
+
+  const win = bootApp(seed);
+  assert.match(win.document.querySelector(".wl").textContent, /10W 0L/);
+
+  win.document.querySelector('[data-density="list"]').click();
+  assert.match(win.document.querySelector(".rw-wr").textContent, /10W 0L/);
+});
+
+// Defaults were spread *under* the file's own fields, so a backup carrying ids
+// kept them and importing one file twice produced accounts sharing an id — and
+// every per-card lookup is a find(a => a.id === id).
+test("import assigns fresh ids and pins region and status to known values", async () => {
+  const win = bootApp();
+  win.doImport(new win.Blob([JSON.stringify({ accounts: [
+    { id: "same", gameName: "Xavier", tagLine: "1", region: "Europe West", status: "not-a-status" },
+    { id: "same", gameName: "Yvonne", tagLine: "2", region: "kr", status: "banned" },
+  ] })], { type: "application/json" }));
+  await new Promise(r => setTimeout(r, 150));
+
+  const ids = [...win.document.querySelectorAll(".card")].map(c => c.dataset.id);
+  assert.equal(ids.length, 2);
+  assert.equal(new Set(ids).size, 2, "two accounts, two ids");
+  assert.ok(!ids.includes("same"), "and neither is the id from the file");
+
+  assert.deepEqual([...win.document.querySelectorAll(".regiontag")].map(r => r.textContent),
+    ["EUW", "KR"], "an unknown region falls back, a lowercase one is normalised");
+  assert.deepEqual([...win.document.querySelectorAll(".stchip")].map(r => r.textContent),
+    ["Banned"], "not-a-status became active, which prints no chip");
+});
+
+test("normRegion and normStatus only ever return values the app knows", () => {
+  const win = bootApp();
+  assert.equal(win.normRegion("kr"), "KR");
+  assert.equal(win.normRegion(" euw "), "EUW");
+  assert.equal(win.normRegion("Europe West"), "EUW");
+  assert.equal(win.normRegion(null), "EUW");
+  assert.equal(win.normStatus("BANNED"), "banned");
+  assert.equal(win.normStatus("nonsense"), "active");
+  assert.equal(win.normStatus(undefined), "active");
+});
+
+// The <img> deleted itself in an inline onerror, which the next render undid —
+// the markup still carried the src, so a dead icon was re-inserted and
+// re-requested on every re-render for the life of the tab.
+test("an icon that fails to load is not asked for again", () => {
+  const seed = seededAccount();
+  seed[0].stats.icon = "https://example.com/gone.jpg";
+  const win = bootApp(seed);
+
+  const img = win.document.querySelector(".c-avatar");
+  assert.ok(img, "it is tried once");
+  win.markIconDead(img);
+  win.renderGrid();
+  assert.equal(win.document.querySelector(".c-avatar"), null, "and not re-inserted");
+  assert.ok(win.document.querySelector(".c-initial"), "the initial stands in for it");
+});
+
+// morph assigned a <select>'s value before patching its options, so it matched
+// against the old list and any value just added fell back to the first entry.
+test("a select keeps its value when the option list grows under it", () => {
+  const win = bootApp();
+  addRealAccount(win, "Euwer", "1");
+  const before = win.document.getElementById("tRegion");
+
+  win.document.getElementById("bAdd").click();
+  win.document.getElementById("fName").value = "Korean";
+  win.document.getElementById("fTag").value = "KR1";
+  win.document.getElementById("fRegion").value = "KR";
+  win.document.getElementById("fSave").click();
+
+  const sel = win.document.getElementById("tRegion");
+  assert.equal(sel, before, "the element itself is patched, not replaced");
+  assert.deepEqual([...sel.options].map(o => o.value), ["", "EUW", "KR"]);
+
+  sel.value = "KR";
+  sel.dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert.equal(win.document.querySelectorAll(".card").length, 1);
+  assert.equal(sel.value, "KR", "and the pick survives the re-render it triggered");
+});
+
+// ---- idle cost ----
+
+// The interval used to be started unconditionally and tick for the life of the
+// tab, with nothing to do unless a master password was set.
+test("the auto-lock timer only runs when there is something to lock", async () => {
+  const started = [];
+  const win = bootApp(seededAccount(), w => {
+    const orig = w.setInterval;
+    w.setInterval = (fn, ms) => { started.push(ms); return orig(fn, ms); };
+  });
+  assert.deepEqual(started, [], "no vault password: no timer");
+
+  win.document.getElementById("bSettings").click();
+  win.document.getElementById("sAutoLock").value = "5";
+  win.document.getElementById("sSave").click();
+  await new Promise(r => setTimeout(r, 50));
+  assert.deepEqual(started, [], "an auto-lock setting alone still locks nothing");
+
+  win.document.getElementById("sVaultPass").value = "a-master-password";
+  win.document.getElementById("sVaultSet").click();
+  await new Promise(r => setTimeout(r, 400));
+  assert.deepEqual(started, [15000], "now it has a reason to run");
+});
+
+// Two decorative loops never stop on their own, and one of them is per card.
+test("decorative animations are parked while the page is hidden", () => {
+  const win = bootApp(seededAccount());
+  const hide = v => Object.defineProperty(win.document, "hidden", { value: v, configurable: true });
+
+  assert.equal(win.document.body.classList.contains("away"), false);
+  hide(true);
+  win.document.dispatchEvent(new win.Event("visibilitychange"));
+  assert.equal(win.document.body.classList.contains("away"), true);
+  hide(false);
+  win.document.dispatchEvent(new win.Event("visibilitychange"));
+  assert.equal(win.document.body.classList.contains("away"), false);
+});
+
+// Cards are 96-98% opaque, so blurring what is behind them is invisible — sixty
+// backdrop-sampling layers rendering an effect that cannot be seen. (It is not a
+// frame-rate win: scrolling measures the same either way. It is GPU memory.)
+test("cards do not carry a backdrop filter", () => {
+  assert.doesNotMatch(html.match(/\.hx-in\{[^}]*\}/)[0], /backdrop-filter/,
+    "the card surface is opaque; glass belongs to the console, tray, toast and tooltip");
+  assert.match(html, /\.console\{[^}]*backdrop-filter/, "the sticky console is genuinely translucent");
+});
+
+// The toolbar toggles used to be styled by hand from three separate places.
+test("the toolbar toggles report their state", () => {
+  const win = bootApp(seededAccount());
+  const fav = win.document.getElementById("tFav");
+  assert.equal(fav.getAttribute("aria-pressed"), "false");
+
+  fav.click();
+  assert.equal(fav.getAttribute("aria-pressed"), "true");
+  assert.equal(fav.classList.contains("on"), true);
+
+  // clearing it from the filter chip has to put the button back too
+  win.document.querySelector('[data-clear="favOnly"]').click();
+  assert.equal(fav.getAttribute("aria-pressed"), "false");
+  assert.equal(fav.classList.contains("on"), false);
+});
+
+// A revealed password surviving an auto-lock was the point of clearing this state;
+// an unsaved note draft is vault content by the same argument.
+test("locking clears every scrap of per-card state", async () => {
+  const win = bootApp(seededAccount());
+  win.document.getElementById("bSettings").click();
+  win.document.getElementById("sVaultPass").value = "a-master-password";
+  win.document.getElementById("sVaultSet").click();
+  await new Promise(r => setTimeout(r, 400));
+
+  win.document.querySelector('[data-act="noteedit"]').click();
+  const ta = win.document.querySelector('[data-f="notetext"]');
+  ta.value = "half-written secret";
+  ta.dispatchEvent(new win.Event("input", { bubbles: true }));
+
+  win.relock();
+  assert.equal(win.document.getElementById("lock").classList.contains("hidden"), false, "locked");
+  assert.equal(win.document.getElementById("appRoot").classList.contains("hidden"), true);
+  assert.equal(win.document.querySelector('[data-f="notetext"]'), null, "the draft is gone with the rest");
+});
+
+// Searching and hitting Favorites went through renderGrid alone, which does not
+// draw the chip row — so the grid went short with nothing saying why and nothing
+// to click to undo it, which is the one thing the chips were added to prevent.
+test("a narrowed grid always says what narrowed it", async () => {
+  const win = bootApp();
+  addRealAccount(win, "Alpha", "1");
+  addRealAccount(win, "Beta", "2");
+  const chips = () => [...win.document.querySelectorAll(".fchip")].map(c => c.textContent.replace("✕", "").trim());
+  assert.deepEqual(chips(), [], "nothing filtered, nothing to say");
+
+  const search = win.document.getElementById("tSearch");
+  search.value = "Alpha";
+  search.dispatchEvent(new win.Event("input", { bubbles: true }));
+  await new Promise(r => setTimeout(r, 200));
+  assert.equal(win.document.querySelectorAll(".card").length, 1);
+  assert.deepEqual(chips(), ['"Alpha"'], "the search says so");
+
+  win.document.getElementById("tFav").click();
+  assert.deepEqual(chips(), ["Favorites", '"Alpha"', "Clear all"]);
+
+  win.document.querySelector('[data-clear="all"]').click();
+  assert.deepEqual(chips(), []);
+  assert.equal(win.document.querySelectorAll(".card").length, 2, "and the grid comes back");
 });
