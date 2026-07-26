@@ -74,6 +74,7 @@ export default {
       // full table with KDA when /champions came back, the profile's own top five
       // (wins/losses/win rate, no KDA) when it didn't
       champs: (champHtml && parseChampionTable(champHtml)) || parseChampionsMeta(html) || parseChampions(html),
+      lpAt: parseLpHistory(html), // when this LP was actually reached, per op.gg
       icon: parseProfileIcon(html), // needs the raw HTML — htmlToText() already stripped the <img> tags out
       mmr: null,
       avgRecent: null,
@@ -354,6 +355,33 @@ export function parseChampions(raw) {
     out.push({ name, kda: +m[2], k: +m[3], d: +m[4], a: +m[5], wr: +m[6], games: +m[7] });
   }
   return out.length ? out.slice(0, 10) : null;
+}
+
+// op.gg's tier graph runs off an lpHistories array; exactly one entry of it is
+// server-rendered into the page and the rest arrives over an internal RPC keyed
+// to their build, which is not something to depend on. The one entry still beats
+// nothing: it carries the moment the LP actually changed, so a check made a week
+// later dates the point correctly instead of stamping it "now".
+export function parseLpHistory(raw) {
+  if (!raw) return null;
+  const text = String(raw).replace(/\\"/g, '"');
+  const m = text.match(/"created_at"\s*:\s*"([^"]+)"\s*,\s*"tier_info"\s*:\s*\{([^}]*)\}\s*(?:,\s*"elo_point"\s*:\s*(\d+))?/);
+  if (!m) return null;
+  const t = Date.parse(m[1]);
+  if (!t || t > Date.now() + 86400000) return null;
+  const tier = m[2].match(/"tier"\s*:\s*"([A-Z]+)"/i);
+  // the name has to be a real tier, or a typo upstream becomes a point on a chart
+  if (!tier || !new RegExp("^(" + TIER_WORD + ")$", "i").test(tier[1])) return null;
+  const T = tier[1].toUpperCase();
+  const lp = m[2].match(/"lp"\s*:\s*(\d+)/);
+  const label = m[2].match(/"label"\s*:\s*"([^"]*)"/);
+  const div = label && label[1].match(/\b([1-4])\b/);
+  return {
+    t, tier: T,
+    division: (MASTER_PLUS.includes(T) || !div) ? null : DIV_MAP[div[1]],
+    lp: lp ? +lp[1] : 0,
+    elo: m[3] ? +m[3] : null,
+  };
 }
 
 export function parseProfileIcon(raw) {

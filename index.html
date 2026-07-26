@@ -60,6 +60,16 @@
   /* the popup list is drawn by the OS, which only takes plain colours — no
      color-mix, no custom properties it can't resolve at paint time */
   option{background-color:#141821;color:#e9edf5}
+  /* The account password and the API key are masked with CSS rather than being
+     type="password" inputs. A real password field next to a text field the
+     browser reads as a username is all Chrome's heuristics need: filling both
+     programmatically (which is what opening an account for editing does) and
+     then hiding the panel looks exactly like a submitted sign-in form, so it
+     offered to save credentials for a site the user was never signing in to —
+     at random moments, for whichever account had last been opened.
+     These are stored secrets in a local vault, not a login this page performs. */
+  .mask{-webkit-text-security:disc;text-security:disc;
+    font-family:ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:.06em}
   ::selection{background:color-mix(in srgb,var(--gold) 32%,transparent);color:#fff}
 
   body{margin:0;position:relative;color:var(--text);
@@ -389,7 +399,7 @@
   .hx.row.open{background:color-mix(in srgb,var(--teal) 34%,transparent)}
   .rw{border-radius:10px;background:var(--panel);overflow:hidden}
   .rw-main{display:grid;align-items:center;gap:12px;padding:8px 13px;cursor:pointer;
-    grid-template-columns:auto 30px minmax(120px,1.6fr) minmax(96px,1fr) 62px 92px 46px 44px 74px 16px;
+    grid-template-columns:auto 30px minmax(120px,1.6fr) minmax(96px,1fr) 62px 92px 44px 74px 16px;
     transition:background .14s ease}
   .rw-main:hover{background:#ffffff07}
   .rw-main:focus-visible{outline-offset:-2px}
@@ -402,7 +412,15 @@
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center}
   .rw-pic img{width:100%;height:100%;object-fit:cover;display:block}
+  .rw-pic{overflow:visible}
   .rw-pic b{font-size:13px;font-weight:600;color:var(--faint)}
+  .rw-pic img{border-radius:9px}
+  /* same idea as the card: the level belongs to the picture, not to a column of
+     performance numbers */
+  .rw-lvb{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
+    font-style:normal;font-size:9px;font-weight:700;line-height:13px;padding:0 4px;
+    min-width:18px;text-align:center;border-radius:999px;font-variant-numeric:tabular-nums;
+    color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
   .rw-id{min-width:0;display:flex;flex-direction:column;gap:1px}
   .rw-nm{font-size:13.5px;font-weight:600;letter-spacing:-.01em;color:var(--text);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
@@ -430,7 +448,7 @@
   @media (max-width:900px){
     /* the columns that are nice-to-know go first, the identity stays */
     .rw-main{grid-template-columns:auto 30px minmax(110px,1.5fr) minmax(90px,1fr) 62px 16px;gap:10px}
-    .rw-wr,.rw-lv,.rw-rg,.rw-up{display:none}
+    .rw-wr,.rw-rg,.rw-up{display:none}
   }
   .card{position:relative;padding:17px;display:flex;flex-direction:column;gap:11px}
   /* status as a left edge rail — scannable down a column of 60 cards in a way a
@@ -447,10 +465,19 @@
     font-size:21px;font-weight:600;color:var(--faint);letter-spacing:-.02em}
   .c-avatar{position:absolute;inset:0;width:100%;height:100%;border-radius:15px;object-fit:cover;
     box-shadow:inset 0 0 0 1px #ffffff1f,0 0 0 1px var(--line),0 4px 12px #00000073}
-  /* the rank crest rides the portrait like a level badge */
-  .c-crest{position:absolute;right:-4px;bottom:-4px;width:19px;height:19px;border-radius:6px;transform:rotate(45deg);
+  /* The rank crest rides the portrait; it moved to the top corner to make room
+     for the level, which now sits centred on the bottom edge the way op.gg puts
+     it. Level was in the stats row next to Peak and MMR, which read as another
+     performance figure — it isn't one. It belongs to the identity of the
+     account, so it belongs on the picture. */
+  .c-crest{position:absolute;right:-4px;top:-4px;width:19px;height:19px;border-radius:6px;transform:rotate(45deg);
     background:linear-gradient(145deg,#ffffff73,var(--c) 58%,var(--c));
     box-shadow:0 0 0 3px #131720,0 0 12px var(--c)}
+  .c-lvbadge{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);
+    min-width:24px;padding:1px 6px;border-radius:999px;text-align:center;
+    font-size:10.5px;font-weight:700;line-height:16px;letter-spacing:.01em;
+    font-variant-numeric:tabular-nums;color:var(--text);
+    background:#0d1017;box-shadow:0 0 0 1px var(--line2),0 2px 8px #00000080}
   .c-id{min-width:0;flex:1}
   .c-name{font-weight:600;font-size:17px;letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
   .c-name>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -779,10 +806,27 @@
   .card:hover .regiontag{background:color-mix(in srgb,var(--teal) 19%,transparent);border-color:color-mix(in srgb,var(--teal) 40%,transparent)}
 
   /* ---- motion ---- */
-  .grid>.hx{transition:transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s ease,background .2s ease}
+  /* The lit border used to be a `background` transition between two gradients,
+     and gradients do not interpolate — the browser holds the old one and swaps
+     at the end. Going in that reads as a delay; coming out it reads as a snap,
+     which is the "glow going back" that looked wrong. The bright edge is its own
+     layer now and only its opacity moves, which interpolates exactly, so the
+     lift and the light travel together in both directions.
+     Slightly longer on the way out than in: matching the entry timing makes a
+     hover-out feel abrupt, because nothing initiated it. */
+  .grid>.hx{position:relative;
+    transition:transform .34s cubic-bezier(.22,1,.36,1),box-shadow .34s ease}
+  /* z-index 0, not -1: a negative one would sit behind the card's own background
+     and never be seen. It has to land between that background and .hx-in. */
+  .grid>.hx::after{content:"";position:absolute;inset:0;border-radius:inherit;z-index:0;
+    pointer-events:none;opacity:0;transition:opacity .34s ease;
+    background:linear-gradient(155deg,#ffffff3d,#ffffff12 38%,#ffffff06)}
+  .grid>.hx.gold::after{background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 92%,transparent),color-mix(in srgb,var(--gold) 24%,transparent) 42%,#ffffff08)}
   .grid>.hx:hover{transform:translateY(-3px);box-shadow:var(--sh-3);
-    background:linear-gradient(155deg,#ffffff33,#ffffff0f 38%,#ffffff06)}
-  .grid>.hx.gold:hover{background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 85%,transparent),color-mix(in srgb,var(--gold) 20%,transparent) 42%,#ffffff08)}
+    transition-duration:.22s}
+  .grid>.hx:hover::after{opacity:1;transition-duration:.22s}
+  /* the inner pane has to paint over the glow layer, not under it */
+  .hx-in{position:relative;z-index:1}
   .c-crest{animation:gemGlow 3.6s ease-in-out infinite}
   @keyframes gemGlow{50%{filter:brightness(1.22)}}
   @keyframes cardIn{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
@@ -908,7 +952,7 @@
       </div>
       <div class="fld fw">
         <label>Advanced: Anthropic API key (optional, stored only in this browser)</label>
-        <input type="password" id="sKey" placeholder="sk-ant-..." autocomplete="off">
+        <input type="text" id="sKey" class="mask" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
       </div>
       <div class="fld">
         <label>Model for rank checks</label>
@@ -1004,7 +1048,8 @@
       <div class="fld"><label>Login username</label><input id="fLogin" placeholder="Riot client login" autocomplete="off"></div>
       <div class="fld"><label>Password</label><div style="display:flex;gap:6px">
         <div style="position:relative;flex:1;display:flex">
-          <input type="password" id="fPass" placeholder="Stored unencrypted, locally" autocomplete="new-password" style="width:100%;padding-right:34px">
+          <!-- Deliberately not type="password": see the .mask rule in the CSS. -->
+          <input type="text" id="fPass" class="mask" placeholder="Stored unencrypted, locally" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" style="width:100%;padding-right:34px">
           <button id="fTogglePass" class="eye-btn" type="button" title="Show password" aria-label="Show password"><svg id="fToggleIco" class="ico" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
         <button id="fGen" type="button" title="Generate a new safe password (asks first if there's already one)"><svg class="ico" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg> Gen</button>
@@ -1768,6 +1813,28 @@ function parseLevelText(raw,acc){
   const lv=+m[1];
   return lv>=1&&lv<=5000?lv:null;
 }
+// op.gg's own tier graph is built from an lpHistories array, and exactly one
+// entry of it is server-rendered into the page — the rest arrives over an
+// internal RPC this app has no business replaying. That one entry is still worth
+// having: it is dated by when the LP actually changed, rather than by when
+// Refresh happened to be pressed, so a check after a week away lands the point on
+// the right day instead of today. elo_point is op.gg's own flat ladder number.
+function parseLpHistory(raw){
+  if(!raw)return null;
+  const text=String(raw).replace(/\\"/g,'"');
+  const m=text.match(/"created_at"\s*:\s*"([^"]+)"\s*,\s*"tier_info"\s*:\s*\{([^}]*)\}\s*(?:,\s*"elo_point"\s*:\s*(\d+))?/);
+  if(!m)return null;
+  const t=Date.parse(m[1]);
+  if(!t||t>Date.now()+86400000)return null;
+  const lp=m[2].match(/"lp"\s*:\s*(\d+)/), tier=m[2].match(/"tier"\s*:\s*"([A-Z]+)"/i);
+  if(!tier||TIER_ORDER.indexOf(tier[1].toUpperCase())<0)return null;
+  const label=m[2].match(/"label"\s*:\s*"([^"]*)"/);
+  const div=label&&label[1].match(/\b([1-4])\b/);
+  const T=tier[1].toUpperCase();
+  const mPlus=TIER_ORDER.indexOf(T)>=TIER_ORDER.indexOf("MASTER");
+  return{t,tier:T,division:mPlus||!div?null:{"1":"I","2":"II","3":"III","4":"IV"}[div[1]],
+    lp:lp?+lp[1]:0,elo:m[3]?+m[3]:null};
+}
 function parseProfileIcon(raw){
   if(!raw)return null;
   const m=String(raw).match(/profile_icons?\/profileicon(\d+)/i);
@@ -1806,6 +1873,7 @@ async function fetchViaProxy(acc){
           level:parsed.level!=null?parsed.level:parseLevelText(text,acc),
           peak:parsePeakText(text),
           seasons:parseSeasons(text),flex:parseFlex(text),champs:parseChampions(text),
+          lpAt:parseLpHistory(text),
           icon:parseProfileIcon(text),mmr:null,avgRecent:null,asOf:"auto-fetch (op.gg via "+proxies[idx].name+")",note:null,updatedAt:Date.now()};
       }
       lastErr="page loaded but no rank found — name/tag/region correct?";
@@ -1854,7 +1922,7 @@ async function fetchViaBackend(acc){
   const text=await fetchWithTimeout(url,12000);
   const d=JSON.parse(text);
   if(d.found===false)return {found:false,updatedAt:Date.now()};
-  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),seasons:d.seasons||null,flex:normPeak(d.flex),champs:Array.isArray(d.champs)?d.champs.slice(0,10):null,icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,updatedAt:Date.now()};
+  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),seasons:d.seasons||null,flex:normPeak(d.flex),champs:Array.isArray(d.champs)?d.champs.slice(0,10):null,lpAt:normLpAt(d.lpAt),icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,updatedAt:Date.now()};
 }
 // the backend and the AI path hand us a peak we didn't build ourselves, and it
 // goes straight into a rank comparison — normalise it or drop it
@@ -1882,6 +1950,16 @@ function normSeasons(s){
   const pick=k=>(Array.isArray(s[k])?s[k]:[]).map(normSeasonRow).filter(Boolean).slice(0,20);
   const solo=pick("solo"), flex=pick("flex");
   return solo.length||flex.length?{solo,flex}:null;
+}
+// This one decides the date a history point is filed under, so a wrong value
+// would bend the chart rather than just show a wrong figure.
+function normLpAt(p){
+  if(!p||typeof p!=="object")return null;
+  const t=Number(p.t);
+  const tier=String(p.tier||"").toUpperCase();
+  if(!t||!isFinite(t)||t>Date.now()+86400000||TIER_ORDER.indexOf(tier)<0)return null;
+  const div=String(p.division||"").toUpperCase();
+  return{t,tier,division:DIV_ORDER[div]!==undefined?div:null,lp:Number(p.lp)||0};
 }
 function normChamps(list){
   if(!Array.isArray(list))return null;
@@ -1942,6 +2020,7 @@ function applyStats(acc,s){
     s.champs=normChamps(s.champs);
     s.flex=normPeak(s.flex);   // an unranked flex row says nothing; dropping it
     s.peak=normPeak(s.peak);   // is what the backend path already did
+    s.lpAt=normLpAt(s.lpAt);
   }
   acc.stats=s;
   let rankedUp=false;
@@ -1956,10 +2035,17 @@ function applyStats(acc,s){
       // Challenger on the chart even though today's floor is somewhere else.
       // The floors of the day go in beside it so a future reading of this point
       // can judge it against its own ladder rather than against a later one.
-      const row={t:s.updatedAt,tier:s.tier,division:s.division,lp:s.lp};
+      // When op.gg told us when this LP was actually reached, use that date. A
+      // point recorded on the day you happened to press Refresh puts a week of
+      // inactivity on the chart as a flat line ending today, which is a shape the
+      // account never had. Only trusted when it agrees with the rank we just read.
+      const at=s.lpAt;
+      const sameRank=at&&at.tier===(s.tier||"").toUpperCase()&&at.lp===s.lp;
+      const row={t:(sameRank&&at.t<=s.updatedAt)?at.t:s.updatedAt,tier:s.tier,division:s.division,lp:s.lp};
       const cut=cutoffsFor(acc.region);
       if(cut&&(cut.gm||cut.chall))row.cut={gm:cut.gm,chall:cut.chall};
       hist.push(row);
+      hist.sort((x,y)=>(+x.t||0)-(+y.t||0)); // a corrected date can land before the previous point
       if(prev&&TIER_ORDER.indexOf((s.tier||"").toUpperCase())>TIER_ORDER.indexOf((prev.tier||"").toUpperCase()))rankedUp=true;
     }
   }
@@ -2470,7 +2556,7 @@ function rowHTML(a,i){
   return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${a.id}"><div class="hx-in rw" data-id="${a.id}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
     <div class="rw-main" data-act="info" role="button" tabindex="0" aria-expanded="${open}">
       <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}" onclick="event.stopPropagation()">
-      <span class="rw-pic">${s&&s.icon?`<img src="${esc(s.icon)}" alt="" loading="lazy" onerror="this.remove()">`:`<b>${esc(initial)}</b>`}</span>
+      <span class="rw-pic">${s&&s.icon?`<img src="${esc(s.icon)}" alt="" loading="lazy" onerror="this.remove()">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}</span>
       <span class="rw-id">
         <span class="rw-nm">${esc(a.label||a.gameName)}${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}</span>
         <span class="rw-tag">${esc(a.gameName)}#${esc(a.tagLine)}</span>
@@ -2478,7 +2564,6 @@ function rowHTML(a,i){
       <span class="rw-rank" style="color:${col}">${esc(rank)}${lp?`<em>${esc(lp)}</em>`:""}</span>
       <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${Math.abs(dv)}</span>`:""}</span>
       <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><em>${esc(s.wins)}W ${esc(s.losses)}L</em>`:""}</span>
-      <span class="rw-lv">${s&&s.level?`<b>${esc(s.level)}</b><em>lvl</em>`:""}</span>
       <span class="rw-rg">${esc(a.region)}</span>
       <span class="rw-up${isStale(a)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
@@ -2554,7 +2639,8 @@ function cardHTML(a,i){
   const microStats=[];
   if(s&&s.found!==false){
     if(peak)microStats.push(["Peak",peak]);
-    if(s.level&&!levelLed)microStats.push(["Level",s.level]);
+    // Level is no longer one of these — it belongs to the identity, not to the
+    // performance figures, and it now rides on the portrait the way op.gg does it.
     // How far the climb still is, against today's floor. Only for Master+, where
     // it's the only thing left that "next rank" can mean.
     {
@@ -2583,6 +2669,7 @@ function cardHTML(a,i){
         <span class="c-initial">${esc(initial)}</span>
         ${s&&s.icon?`<img class="c-avatar" src="${esc(s.icon)}" alt="" loading="lazy" onerror="this.remove()">`:""}
         ${s&&s.found!==false&&s.tier?`<span class="c-crest" style="--c:${col}" title="${esc(tierTxt)}"></span>`:""}
+        ${s&&s.found!==false&&s.level&&!levelLed?`<span class="c-lvbadge" title="Summoner level">${esc(s.level)}</span>`:""}
       </div>
       <div class="c-id">
         <div class="c-name"><span>${esc(a.label||a.gameName)}</span>${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.label)}</span>`:""}</div>
@@ -2713,9 +2800,7 @@ function openForm(acc){
   $("fPass").value=acc?acc.password||"":"";
   $("fEmail").value=acc?acc.email||"":"";
   $("fStatus").value=acc?(acc.status||"active"):"active";
-  $("fPass").type="password";
-  $("fToggleIco").outerHTML=`<svg id="fToggleIco" class="ico" viewBox="0 0 24 24">${ICON.eye}</svg>`;
-  $("fTogglePass").title="Show password";
+  setPassShown(false);
   $("fPass").placeholder=vaultPassword?"Encrypted at rest with your master password":"Stored unencrypted, locally";
   renderPwMeter();
   $("fTags").value=acc?(acc.tags||[]).join(", "):"";
@@ -3019,21 +3104,28 @@ function loadDemo(){
 $("bAdd").addEventListener("click",()=>$("form").classList.contains("hidden")?openForm(null):closeForm());
 $("fSave").addEventListener("click",submitForm);
 $("fCancel").addEventListener("click",closeForm);
+// A CSS-masked text field only stays secret where the browser implements
+// text-security. Anywhere it doesn't, a stored password would sit on screen in
+// clear — so those browsers get a real password field back, prompt and all.
+const CAN_MASK=typeof CSS!=="undefined"&&CSS.supports&&
+  (CSS.supports("-webkit-text-security","disc")||CSS.supports("text-security","disc"));
+if(!CAN_MASK)for(const id of ["fPass","sKey"]){const el=$(id);if(el){el.type="password";el.classList.remove("mask")}}
+function setPassShown(show){
+  if(!CAN_MASK){$("fPass").type=show?"text":"password"}
+  $("fPass").classList.toggle("mask",!show&&CAN_MASK);
+  $("fToggleIco").outerHTML=`<svg id="fToggleIco" class="ico" viewBox="0 0 24 24">${show?ICON.eyeOff:ICON.eye}</svg>`;
+  $("fTogglePass").title=show?"Hide password":"Show password";
+  $("fTogglePass").setAttribute("aria-label",show?"Hide password":"Show password");
+}
 $("fGen").addEventListener("click",()=>{
   if($("fPass").value&&!confirm("This overwrites the password already in this field — there's no undo. Continue?"))return;
-  $("fPass").value=genPassword(16);$("fPass").type="text";
-  $("fToggleIco").outerHTML=`<svg id="fToggleIco" class="ico" viewBox="0 0 24 24">${ICON.eyeOff}</svg>`;
-  $("fTogglePass").title="Hide password";
+  $("fPass").value=genPassword(16);
+  setPassShown(true);
   renderPwMeter();
   toast("Password generated — shown in clear so you can note it");
 });
 $("fPass").addEventListener("input",renderPwMeter);
-$("fTogglePass").addEventListener("click",()=>{
-  const show=$("fPass").type==="password";
-  $("fPass").type=show?"text":"password";
-  $("fToggleIco").outerHTML=`<svg id="fToggleIco" class="ico" viewBox="0 0 24 24">${show?ICON.eyeOff:ICON.eye}</svg>`;
-  $("fTogglePass").title=show?"Hide password":"Show password";
-});
+$("fTogglePass").addEventListener("click",()=>setPassShown($("fPass").classList.contains("mask")));
 document.addEventListener("keydown",e=>{
   const tag=document.activeElement?document.activeElement.tagName:"";
   const typing=tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT";

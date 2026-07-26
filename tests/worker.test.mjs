@@ -6,7 +6,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   parseRankText, parseLevelText, parsePeakText, parseSeasons, parseFlex,
-  parseChampions, parseChampionTable, parseChampionsMeta, parseProfileIcon, stripRows,
+  parseChampions, parseChampionTable, parseChampionsMeta, parseProfileIcon,
+  parseLpHistory, stripRows,
 } from "../cloudflare-worker.js";
 
 // The shape op.gg actually serves, reduced but structurally faithful — this is
@@ -86,6 +87,24 @@ test("the profile's own description is the champion fallback when the sub-page f
     ["Ashe 15-10 60%", "Smolder 15-7 68%", "Ezreal 8-11 42%"]);
   assert.equal(c[0].kda, null, "the description carries no KDA, and none is invented");
   assert.equal(parseChampionsMeta("<p>nothing</p>"), null);
+});
+
+test("the one LP-history point op.gg server-renders is read, with its own date", () => {
+  // the rest of the tier graph arrives over an internal RPC; this entry is in the
+  // page and carries when the LP was actually reached rather than when we looked
+  const page = `<div>{"lpHistories":[{"created_at":"2026-07-23T03:21:28+09:00","tier_info":{"lp":129,"tier":"MASTER","label":"M 1"},"elo_point":2570}]}</div>`;
+  const p = parseLpHistory(page);
+  assert.equal(p.tier, "MASTER");
+  assert.equal(p.lp, 129);
+  assert.equal(p.division, null, "Master has no division");
+  assert.equal(p.elo, 2570);
+  assert.equal(new Date(p.t).toISOString().slice(0, 10), "2026-07-22");
+
+  assert.equal(parseLpHistory(`{"created_at":"2026-07-23T03:21:28+09:00","tier_info":{"lp":57,"tier":"EMERALD","label":"E 2"}}`).division, "II");
+  assert.equal(parseLpHistory("<p>nothing</p>"), null);
+  // a date in the future would drag the chart somewhere the account never was
+  assert.equal(parseLpHistory(`{"created_at":"2099-01-01T00:00:00+09:00","tier_info":{"lp":1,"tier":"GOLD","label":"G 1"}}`), null);
+  assert.equal(parseLpHistory(`{"created_at":"2026-07-23T03:21:28+09:00","tier_info":{"lp":1,"tier":"WOOD","label":"W 1"}}`), null);
 });
 
 test("the peak and current rank still read off the real markup", () => {

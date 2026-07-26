@@ -1171,6 +1171,67 @@ test("advice naming a control that no longer exists is rewritten on load", () =>
   assert.doesNotMatch(win.document.querySelector(".card").textContent, /Paste/);
 });
 
+test("a history point is dated by when the LP was reached, not by when we looked", () => {
+  const win = bootApp();
+  const reached = Date.parse("2026-07-22T18:21:28Z");
+  const acc = { id: "h1", history: [] };
+  // op.gg says this rank was reached days ago; the check is happening now
+  win.applyStats(acc, { found: true, tier: "MASTER", division: null, lp: 129, updatedAt: Date.now(),
+    lpAt: { t: reached, tier: "MASTER", division: null, lp: 129 } });
+  assert.equal(acc.history.length, 1);
+  assert.equal(acc.history[0].t, reached, "a week of inactivity is not drawn as a line ending today");
+
+  // but only when it describes the rank we actually read — otherwise it is stale
+  const acc2 = { id: "h2", history: [] };
+  win.applyStats(acc2, { found: true, tier: "MASTER", division: null, lp: 300, updatedAt: 1234567890,
+    lpAt: { t: reached, tier: "MASTER", division: null, lp: 129 } });
+  assert.equal(acc2.history[0].t, 1234567890, "a mismatched point falls back to the check time");
+
+  // and a shape that cannot be trusted is dropped rather than bending the chart
+  assert.equal(win.normLpAt({ t: Date.now() + 9e9, tier: "GOLD", lp: 5 }), null, "no future dates");
+  assert.equal(win.normLpAt({ t: reached, tier: "NOPE", lp: 5 }), null);
+  assert.equal(win.normLpAt(null), null);
+});
+
+test("the level rides the portrait instead of standing in the stats row", () => {
+  const win = bootApp(seededAccount());
+  const card = win.document.querySelector(".card");
+  const badge = card.querySelector(".c-lvbadge");
+  assert.ok(badge, "it belongs to the identity of the account, so it sits on the picture");
+  assert.equal(badge.textContent, "764");
+  assert.ok(card.querySelector(".c-portrait").contains(badge));
+  const stats = card.querySelector(".c-stats");
+  if (stats) assert.doesNotMatch(stats.textContent, /Level/, "and not among Peak and MMR");
+});
+
+test("stored secrets are not password inputs, so the browser stops offering to save them", () => {
+  // a real password field beside a field the browser reads as a username, both
+  // filled programmatically and then hidden, looks exactly like a submitted
+  // sign-in form — which is why Chrome kept offering to save credentials for
+  // accounts the user was never signing in to
+  assert.match(html, /id="fPass"[^>]*type="text"|type="text"[^>]*id="fPass"/,
+    "the field ships as a text input");
+  assert.match(html, /id="fPass"[^>]*class="mask"|class="mask"[^>]*id="fPass"/,
+    "masked in CSS instead of by the input type");
+
+  // ...but a CSS mask is only a mask where the browser implements text-security.
+  // jsdom does not, so this also exercises the fallback: anywhere it is missing,
+  // a real password field comes back, because a stored password sitting on screen
+  // in clear is worse than a save prompt.
+  const win = bootApp();
+  const pass = win.document.getElementById("fPass");
+  // (CAN_MASK is a top-level const, which is not a window property — the field's
+  // own type is the observable proof that the fallback ran)
+  assert.equal(pass.type, "password", "jsdom has no text-security, so the real input comes back");
+  assert.equal(pass.classList.contains("mask"), false, "no dead class left behind");
+
+  // the eye toggle works on either path
+  win.setPassShown(true);
+  assert.equal(pass.type, "text");
+  win.setPassShown(false);
+  assert.equal(pass.type, "password");
+});
+
 test("a card is patched in place, not rebuilt, so nothing blinks", () => {
   const win = bootApp(seededAccount());
   const doc = win.document;
