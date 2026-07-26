@@ -101,12 +101,11 @@
      bare, these four buttons floated in dead space at the far edge and read as
      unrelated to each other. A tray makes them one deliberate cluster and ties
      the header to the same visual language as the rest.
-     The first version boxed four already-bordered buttons inside a fifth border,
-     which is why it still read as bolted on: five outlines competing in one
-     corner. Only the two real actions keep a rim now; the utilities are ghosts
-     and a hairline separates the two groups, so the tray reads as one control
-     with parts rather than a container of loose buttons. */
-  .top .bar{gap:5px;padding:6px;border:1px solid #ffffff10;border-radius:15px;
+     The account actions have since moved down to the console above the grid,
+     where the rest of the controls over those accounts live. What's left here is
+     what it should have been: two app-level utilities — settings/backup and help
+     — in a quiet tray, not a second, competing command centre. */
+  .top .bar{gap:3px;padding:5px;border:1px solid #ffffff10;border-radius:14px;
     background:linear-gradient(180deg,#ffffff0b,#ffffff05);
     backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
     box-shadow:var(--sh-1),inset 0 1px 0 #ffffff0d;
@@ -255,11 +254,25 @@
   .gem{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text)}
   .gem i{width:9px;height:9px;border-radius:3px;transform:rotate(45deg);display:inline-block}
 
-  /* ---- toolbar ---- */
-  .tools{position:sticky;top:0;z-index:10;display:flex;gap:9px;flex-wrap:wrap;align-items:center;
-    padding:12px;margin:0 0 18px;border:1px solid var(--line);border-radius:var(--r-md);
+  /* ---- console: the account actions and the filters, as one control ---- */
+  /* Check all ranks and + Add account used to sit in the header, diagonally
+     opposite the grid they act on, while every other control over the same
+     accounts lived down here. Joined onto the filter bar they read as what they
+     are — the row you work the collection from — and being sticky as one unit
+     means the primary action stays reachable instead of scrolling off the top. */
+  .console{position:sticky;top:0;z-index:10;margin:0 0 18px;
+    border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;
     background:#0b0d13d9;backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
     box-shadow:var(--sh-1)}
+  .cmd{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:11px 12px;
+    border-bottom:1px solid var(--line);background:linear-gradient(180deg,#ffffff0a,transparent)}
+  /* the count was a lone grey line under the grid, where it answered a question
+     nobody was asking by then; beside the buttons it's a status readout */
+  .cmd-count{margin-left:auto;padding-right:3px;font-size:11.5px;color:var(--faint);
+    display:inline-flex;align-items:center;gap:9px;letter-spacing:.015em}
+  .cmd-count b{font-weight:600;color:var(--muted)}
+  .cmd-count .warn{color:var(--danger);font-weight:600}
+  .tools{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:12px}
   input,select,textarea{font:inherit;font-size:13.5px;background:var(--panel2);border:1px solid var(--line);
     border-radius:var(--r-sm);color:var(--text);padding:9px 12px;
     transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
@@ -391,8 +404,68 @@
     background:none;border:1px dashed #ffffff14;color:var(--faint);font-size:11.5px}
   .c-notes.blank:hover{background:#ffffff08;border-color:#ffffff26;color:var(--muted)}
   .c-notes.blank .ico{width:11px;height:11px;opacity:.8}
-  /* ---- info panel: past seasons, flex, champions ---- */
-  .login.info{gap:13px}
+  /* ---- the details drawer ----
+     Details was one button among six in the action row — a poor home for the one
+     control that changes the card's height, and easy to miss among five things
+     that don't. A bar across the card's bottom edge says "there is more under
+     here" before the label is read, and it stays pinned there when open, so the
+     panel unfolds above its own handle instead of pushing it down the page. */
+  .c-drawer{margin:1px -17px -17px;padding:9px 14px;gap:10px;
+    border:0;border-top:1px solid var(--line);border-radius:0 0 calc(var(--r-lg) - 2px) calc(var(--r-lg) - 2px);
+    background:linear-gradient(180deg,transparent,#ffffff08);
+    color:var(--faint);font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;
+    transition:background .18s ease,color .18s ease,border-color .18s ease}
+  .c-drawer:hover{color:var(--teal-txt);
+    border-top-color:color-mix(in srgb,var(--teal) 30%,transparent);
+    background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--teal) 14%,transparent))}
+  .c-drawer.on{color:var(--teal-txt)}
+  .c-drawer:active{transform:none}
+  .c-dt{display:inline-flex;align-items:baseline;gap:9px;min-width:0}
+  .c-drawer em{font-style:normal;font-weight:500;font-size:10.5px;letter-spacing:.02em;
+    text-transform:none;color:var(--faint);opacity:.9;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* the rules either side turn the chevron into one long arrow spanning the card
+     rather than a small glyph adrift in the middle of a bar */
+  .c-dl{flex:1;height:1px;min-width:8px;background:linear-gradient(90deg,transparent,var(--line2))}
+  .c-dl:last-child{background:linear-gradient(90deg,var(--line2),transparent)}
+  .c-drawer:hover .c-dl{background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--teal) 55%,transparent))}
+  .c-drawer:hover .c-dl:last-child{background:linear-gradient(90deg,color-mix(in srgb,var(--teal) 55%,transparent),transparent)}
+  .c-drawer .ico{width:24px;height:11px;stroke-width:2.2;flex-shrink:0;
+    transition:transform .28s cubic-bezier(.22,1,.36,1)}
+  .c-drawer:hover .ico{transform:translateY(2px)}
+  .c-drawer.on .ico,.c-drawer.on:hover .ico{transform:rotate(180deg)}
+
+  /* ---- info panel: past seasons, flex, champions ----
+     Unrolling every season and every champion at once buried the one number you
+     came for under thirty others. Each group is a headline that already answers
+     most of the question — the peak of those seasons, the champion actually
+     played — with the rows one click behind it. */
+  .login.info{gap:0;padding:0;overflow:hidden}
+  .sec{border-top:1px solid #ffffff0d}
+  .sec:first-child{border-top:0}
+  .sec-h{width:100%;display:flex;align-items:center;gap:11px;padding:10px 13px;
+    background:none;border:0;border-radius:0;white-space:normal}
+  .sec-h:hover{background:#ffffff09;border:0}
+  .sec-n{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+    display:inline-flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0}
+  .sec-n i{font-style:normal;font-size:9.5px;letter-spacing:.03em;color:var(--faint);
+    padding:1px 6px;border-radius:999px;background:#ffffff0f}
+  .sec-p{margin-left:auto;font-size:12px;font-weight:600;letter-spacing:-.01em;color:var(--muted);
+    min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+  .sec-p .c-nm{display:inline}
+  .sec-h .ico{width:13px;height:13px;color:var(--faint);flex-shrink:0;
+    transition:transform .24s cubic-bezier(.22,1,.36,1)}
+  .sec.on .sec-h .ico{transform:rotate(180deg)}
+  .sec.on .sec-n{color:var(--text)}
+  .sec.on .sec-p{opacity:.5}
+  .sec-b{padding:1px 13px 11px;transform-origin:top center;
+    animation:sectionIn .22s cubic-bezier(.22,1,.36,1) both}
+  /* one fact, one line — folding it would cost a click to reveal nothing extra */
+  .sec.flat{display:flex;align-items:center;gap:11px;padding:11px 13px}
+  .chp-h{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);padding-bottom:5px;border-bottom:1px solid #ffffff12;margin-bottom:2px}
+  .chp-h span:not(:first-child){text-align:right}
+  .chp-h+.chp{border-top:0}
   .sea{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:3px 0;font-size:12px}
   .sea+.sea{border-top:1px solid #ffffff0a}
   .s-yr{color:var(--faint);font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
@@ -402,9 +475,9 @@
     padding:3px 0;font-size:12px;font-variant-numeric:tabular-nums}
   .chp+.chp{border-top:1px solid #ffffff0a}
   .c-nm{color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .c-wr{font-weight:600;color:var(--muted)}
+  .c-wr{font-weight:600;color:var(--muted);text-align:right}
   .c-wr.wr-good{color:var(--good)}
-  .c-gm,.c-kd{color:var(--faint);font-size:11px}
+  .c-gm,.c-kd{color:var(--faint);font-size:11px;text-align:right}
   .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:7.5px;font-weight:700;letter-spacing:.12em;
     pointer-events:none;line-height:1;opacity:.9}
   .wrbar{height:5px;background:var(--panel2);border-radius:999px;overflow:hidden}
@@ -601,9 +674,12 @@
     .spin,.c-crest,.brand-mark::before,.grid.boot>.hx,.grid.boot .lpc,.hx.flash .lpc,.hx.flash,#toast,.confetti i,
     #form:not(.hidden),#settings:not(.hidden),#help:not(.hidden),#bulkAdd:not(.hidden),#lock:not(.hidden),
     #moreMenu:not(.hidden),#bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show,
-    .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in{animation:none!important}
+    .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in,.sec-b{animation:none!important}
     .grid>.hx{transition:none}
-    .panel-close:hover,.chip:active,.card:hover .c-portrait,.a-login:hover .ico,.acts button:hover .ico{transform:none}
+    .panel-close:hover,.chip:active,.card:hover .c-portrait,.a-login:hover .ico,.acts button:hover .ico,
+    .c-drawer:hover .ico{transform:none}
+    /* the flipped chevrons stay — they say open vs closed, they aren't decoration */
+    .c-drawer .ico,.sec-h .ico{transition:none}
     html{scroll-behavior:auto}
   }
   @media (pointer:coarse){
@@ -615,8 +691,14 @@
   @media (max-width:760px){
     .top{align-items:flex-start;gap:16px}
     .tools{padding:10px}
+    .cmd{padding:10px}
+    .cmd-count{margin-left:0;width:100%}
+    /* wrapped onto four or five rows this is a third of a phone screen; pinning
+       that much of the viewport costs more than scrolling back up to it */
+    .console{position:static}
   }
-  @media (max-width:560px){.formgrid{grid-template-columns:1fr;padding:18px}.card{padding:15px}}
+  @media (max-width:560px){.formgrid{grid-template-columns:1fr;padding:18px}.card{padding:15px}
+    .c-drawer{margin:1px -15px -15px}}
 </style>
 </head>
 <body>
@@ -640,9 +722,6 @@
       </div>
     </div>
     <div class="bar">
-      <button id="bCheckAll" class="b-gold"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg> Check all ranks</button>
-      <button id="bAdd" class="b-teal">+ Add account</button>
-      <span class="tray-sep" aria-hidden="true"></span>
       <div style="position:relative">
         <button id="bMore" title="Export, import, settings">⋯</button>
         <div id="moreMenu" class="hx teal hidden" style="position:absolute;right:0;top:calc(100% + 8px);z-index:20;min-width:206px"><div class="hx-in" style="padding:7px;display:flex;flex-direction:column;gap:1px">
@@ -676,7 +755,7 @@
     <div class="hex-display" style="color:var(--gold-txt);font-size:14px;text-transform:uppercase;margin-bottom:8px">How this works</div>
     <b style="color:var(--text)">Your data stays here.</b> Accounts are saved in this browser on this device — nothing gets uploaded. Clearing browser data wipes the vault, so use <b style="color:var(--text)">Export</b> for backups and <b style="color:var(--text)">Import</b> to restore or merge them.<br>
     <b style="color:var(--text)">Rank checks are free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b style="color:var(--text)">Rank</b> in a card's ⋯ menu to enter it by hand — history, the chart and the stats all work the same either way.<br>
-    <b style="color:var(--text)">Tips:</b> the star pins favorites on top · search matches names, tags, even ranks (try "gold") · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
+    <b style="color:var(--text)">Tips:</b> the bar across a card's bottom edge opens <b style="color:var(--text)">Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · search matches names, tags, even ranks (try "gold") · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
     <b style="color:var(--text)">Extra privacy:</b> set a master password in <b style="color:var(--text)">Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.<br>
     <b style="color:var(--text)">Using this app:</b> free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.<br>
     <b style="color:var(--text)">More:</b> <b style="color:var(--text)">⋯</b> menu has bulk add (paste a list of Name#TAG) and CSV import · archive an account to hide it without deleting (toggle <b style="color:var(--text)">Archived</b> in the toolbar) · shift-click a card's checkbox to select a range · <b style="color:var(--text)">n</b> for a new account · click a card's note to rewrite it on the spot · pick your own primary and secondary colors in Settings.
@@ -819,6 +898,12 @@
   <div id="dash"></div>
 
   <!-- toolbar -->
+  <div class="console">
+  <div class="cmd">
+    <button id="bCheckAll" class="b-gold"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg> Check all ranks</button>
+    <button id="bAdd" class="b-teal">+ Add account</button>
+    <span id="count" class="cmd-count"></span>
+  </div>
   <div class="tools">
     <input type="search" id="tSearch" placeholder="Search name, label, tag, email…">
     <select id="tRegion">
@@ -838,6 +923,7 @@
       <input type="checkbox" id="tSelectAll" style="width:auto">Select all shown
     </label>
   </div>
+  </div>
   <div id="bulkbar" class="hidden" style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--teal) 38%,transparent);border-radius:var(--r-md);background:color-mix(in srgb,var(--teal) 7%,var(--panel));box-shadow:var(--sh-1)">
     <span id="bulkCount" style="font-size:12px;color:var(--teal-txt);font-weight:600;letter-spacing:.02em"></span>
     <select id="bulkStatus">
@@ -856,7 +942,6 @@
 
   <!-- cards -->
   <div id="grid" class="grid"></div>
-  <div id="count" class="count"></div>
 
   <div class="count" style="margin-top:8px">© 2026 MarvinPanVan · Smurf Tracker — not affiliated with Riot Games · Discord: marvinpanvan</div>
   <div class="count" style="margin-top:4px;font-size:11px">Free for personal use. Do not resell, rebrand, publish modified versions, or use for anything malicious. <a href="https://github.com/MarvinPanVan/league-smurf-tracker/blob/main/LICENSE" target="_blank" rel="noreferrer" style="color:var(--gold-txt)">Terms</a></div>
@@ -902,7 +987,7 @@ const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"
 // Only Sonnet 5 supports the newer dynamic-filtering web search; Haiku needs the basic one.
 const WEB_SEARCH_TOOL={"claude-sonnet-5":"web_search_20260209","claude-haiku-4-5":"web_search_20250305"};
 let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArchived:false};
-let checking=new Set(), openInfo=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
+let checking=new Set(), openInfo=new Set(), openSec=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
 // Which card has its note open, plus the live text. The draft is kept out here
 // on purpose: the grid re-renders wholesale, so a textarea rendered from a.notes
 // would throw away whatever was typed the moment an unrelated card updated.
@@ -1558,6 +1643,35 @@ function normPeak(p){
   const div=String(p.division||"").toUpperCase();
   return{tier,division:DIV_ORDER[div]!==undefined?div:null,lp:Number(p.lp)||0};
 }
+// Same reasoning for the two lists. A season row with no tier used to reach
+// `e.tier.charAt(0)` inside the render and throw, which takes the whole grid down
+// — one malformed backend response and the app shows nothing.
+function normSeasonRow(e){
+  if(!e||typeof e!=="object")return null;
+  const tier=String(e.tier||"").toUpperCase();
+  if(tier!=="UNRANKED"&&TIER_ORDER.indexOf(tier)<0)return null;
+  const div=String(e.division||"").toUpperCase();
+  return{season:String(e.season||"—").slice(0,16),tier,
+    division:DIV_ORDER[div]!==undefined?div:null,
+    lp:e.lp==null?null:(Number(e.lp)||0)};
+}
+function normSeasons(s){
+  if(!s||typeof s!=="object")return null;
+  const pick=k=>(Array.isArray(s[k])?s[k]:[]).map(normSeasonRow).filter(Boolean).slice(0,20);
+  const solo=pick("solo"), flex=pick("flex");
+  return solo.length||flex.length?{solo,flex}:null;
+}
+function normChamps(list){
+  if(!Array.isArray(list))return null;
+  const out=list.map(c=>{
+    if(!c||typeof c!=="object"||!c.name)return null;
+    return{name:String(c.name).slice(0,40),
+      kda:Math.round((Number(c.kda)||0)*100)/100,
+      wr:Math.max(0,Math.min(100,Math.round(Number(c.wr)||0))),
+      games:Math.max(0,Math.round(Number(c.games)||0))};
+  }).filter(Boolean).slice(0,10);
+  return out.length?out:null;
+}
 async function fetchViaClaude(acc){
   if(!cfg.apiKey)throw new Error("No API key — add one in Settings");
   const r=REGIONS[acc.region]||REGIONS.EUW;
@@ -1591,6 +1705,16 @@ Rules: use null for any value you cannot find. If unranked this season, tier "UN
   return parsed;
 }
 function applyStats(acc,s){
+  // Three sources feed this: the local op.gg parsers, a backend URL the user
+  // configures, and a model's JSON. Only the first is guaranteed to be shaped the
+  // way the card reads it, and this is the one point all three meet — so the
+  // shaping happens here rather than three times over, differently.
+  if(s&&s.found!==false){
+    s.seasons=normSeasons(s.seasons);
+    s.champs=normChamps(s.champs);
+    s.flex=normPeak(s.flex);   // an unranked flex row says nothing; dropping it
+    s.peak=normPeak(s.peak);   // is what the backend path already did
+  }
   acc.stats=s;
   let rankedUp=false;
   if(s.found!==false&&ladderLP(s)!==null){
@@ -1616,28 +1740,34 @@ function applyStats(acc,s){
 function commitStats(id,acc,s){
   const up=applyStats(acc,s);
   openRank.delete(id);
-  flashId=id;saveDB();render();
+  flashId=id;saveDB();
+  // Only this card changed. Going through render() re-sorted the grid after every
+  // single check, so during Check all ranks the whole board reshuffled once per
+  // account — the order settles on the next full render instead.
+  renderCard(id);renderDash();
   if(up)celebrate(id,acc);
-  setTimeout(()=>{if(flashId===id){flashId=null;renderGrid()}},1500);
+  setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
 }
 async function check(id){
   const acc=accounts.find(a=>a.id===id);if(!acc)return;
-  checking.add(id);render();
+  checking.add(id);renderCard(id);syncCheckAll();
   let s=null,err="";
   if(cfg.backendUrl){try{s=await fetchViaBackend(acc)}catch(e){err="backend: "+(e.message||"failed")}}
   if(!s&&cfg.apiKey){try{s=await fetchViaClaude(acc)}catch(e){err=err||("api: "+(e.message||"failed"))}}
   if(!s){try{s=await fetchViaProxy(acc)}catch(e){err=err||e.message||"auto-fetch failed"}}
   checking.delete(id);
+  syncCheckAll();
   if(s){commitStats(id,acc,s);return true}
   else{
     acc.stats=Object.assign({},acc.stats||{},{note:"Auto-fetch failed ("+err+") — enter it by hand with ✎ Rank"});
-    saveDB();render();return false;
+    saveDB();renderCard(id);return false;
   }
 }
 async function checkAll(){
   const list=filtered().filter(a=>a.status!=="banned");
   let ok=0,bad=0;
   for(const acc of list){(await check(acc.id))?ok++:bad++;await new Promise(r=>setTimeout(r,800))}
+  render(); // the sort order was deliberately left alone during the run
   const msg=bad===0?"Refreshed "+ok+" account"+(ok===1?"":"s"):ok+" refreshed, "+bad+" failed — see the cards";
   toast(msg);
   notify("Check all ranks finished",msg);
@@ -1668,9 +1798,83 @@ function filtered(){
   return list;
 }
 
+// ---------- DOM patching ----------
+// Regenerating a card's markup is cheap; throwing its DOM away is not. Replacing
+// a node re-runs its entrance animation, makes the browser re-decode the avatar
+// <img>, drops the caret out of an open textarea and resets scroll — which is the
+// blink that showed after every rank check and on every panel toggle, because
+// each of those went through innerHTML on the whole grid. So the new markup is
+// parsed off-screen and then patched onto the live tree: a node that still
+// belongs in the same slot keeps its identity, and only the differences are
+// written. Nothing above this point had to change for it.
+function nodeKey(n){return n.nodeType===1?(n.getAttribute("data-k")||n.getAttribute("data-id")||null):null}
+function sameKind(a,b){return a.nodeType===b.nodeType&&(a.nodeType!==1||a.tagName===b.tagName)}
+function morph(from,to){
+  if(from.nodeType!==1){if(from.nodeValue!==to.nodeValue)from.nodeValue=to.nodeValue;return}
+  for(const at of Array.from(from.attributes))if(!to.hasAttribute(at.name))from.removeAttribute(at.name);
+  for(const at of Array.from(to.attributes))if(from.getAttribute(at.name)!==at.value)from.setAttribute(at.name,at.value);
+  const tag=from.tagName;
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"){
+    // Whatever the user is currently in is left completely alone, so a render
+    // triggered while they type can't eat the keystroke or move the caret.
+    if(document.activeElement===from)return;
+    // Live value lives in the property, not the attribute — once a field is
+    // dirty the attribute stops driving it, so it has to be set directly.
+    if(from.type==="checkbox"||from.type==="radio")from.checked=to.checked;
+    else if(tag==="TEXTAREA"){if(from.value!==to.textContent)from.value=to.textContent}
+    else if(from.value!==to.value)from.value=to.value;
+    if(tag!=="SELECT")return;
+  }
+  morphChildren(from,to);
+}
+function morphChildren(from,to){
+  const keyed=new Map();
+  for(let n=from.firstChild;n;n=n.nextSibling){const k=nodeKey(n);if(k&&!keyed.has(k))keyed.set(k,n)}
+  const kept=new Set();
+  let cur=from.firstChild;
+  for(let want=to.firstChild;want;want=want.nextSibling){
+    const k=nodeKey(want);
+    let m=null;
+    if(k){const c=keyed.get(k);if(c&&!kept.has(c)&&sameKind(c,want)){m=c;keyed.delete(k)}}
+    // otherwise the next unclaimed, unkeyed node of the same kind at or after
+    // the write cursor — enough to hold structure through panels opening and
+    // closing, since the markup is generated in a fixed order
+    if(!m)for(let c=cur;c;c=c.nextSibling){
+      if(kept.has(c)||nodeKey(c)||!sameKind(c,want))continue;
+      m=c;break;
+    }
+    if(m)morph(m,want);
+    else m=want.cloneNode(true);
+    kept.add(m);
+    if(m===cur)cur=cur.nextSibling;
+    else from.insertBefore(m,cur);
+  }
+  for(let n=from.firstChild;n;){const next=n.nextSibling;if(!kept.has(n))from.removeChild(n);n=next}
+}
+// Drop-in for `el.innerHTML = html` that patches instead of replacing.
+function setHTML(el,html){
+  const tmp=el.cloneNode(false);
+  tmp.innerHTML=html;
+  morphChildren(el,tmp);
+}
+
 // ---------- render ----------
+// Every per-card UI flag is keyed by account id and none of them were ever
+// cleaned up, so deleting an account left its open panels, its chart period and
+// its expanded sections behind forever — invisible, but they accumulate for the
+// life of the tab and an armed Delete could outlive the row it was armed on.
+function pruneCardState(){
+  const live=new Set(accounts.map(a=>a.id));
+  for(const s of [selected,openInfo,openLogin,shownPw,openRank,openMore,checking])
+    for(const id of [...s])if(!live.has(id))s.delete(id);
+  for(const k of [...openSec])if(!live.has(k.slice(0,k.lastIndexOf("|"))))openSec.delete(k);
+  for(const id of [...chartRange.keys()])if(!live.has(id))chartRange.delete(id);
+  if(armedDelete&&!live.has(armedDelete))armedDelete=null;
+  if(editingNote&&!live.has(editingNote)){editingNote=null;noteDraft=""}
+  if(flashId&&!live.has(flashId))flashId=null;
+}
 function render(){
-  for(const id of [...selected])if(!accounts.some(a=>a.id===id))selected.delete(id);
+  pruneCardState();
   $("previewBanner").classList.toggle("hidden",!previewMode);
   $("bDeleteAll").disabled=accounts.length===0;
   renderDash();renderTagbar();renderFilterOptions();renderGrid();renderBulkBar();
@@ -1687,12 +1891,16 @@ function renderFilterOptions(){
   const inView=accounts.filter(a=>!!a.archived===ui.showArchived);
   const regions=[...new Set(inView.map(a=>a.region))].sort((a,b)=>a.localeCompare(b));
   if(ui.region&&!regions.includes(ui.region))ui.region="";
-  $("tRegion").innerHTML=`<option value="">All regions</option>`+regions.map(r=>`<option value="${esc(r)}" ${ui.region===r?"selected":""}>${esc(r)}</option>`).join("");
+  setHTML($("tRegion"),`<option value="">All regions</option>`+regions.map(r=>`<option value="${esc(r)}">${esc(r)}</option>`).join(""));
+  // patching options keeps the element, and a <select> the user has touched stops
+  // honouring the `selected` attribute — so the value is set outright
+  $("tRegion").value=ui.region||"";
 
   const order=["active","resting","restricted","banned"];
   const statuses=[...new Set(inView.map(a=>a.status||"active"))].sort((a,b)=>order.indexOf(a)-order.indexOf(b));
   if(ui.status&&!statuses.includes(ui.status))ui.status="";
-  $("tStatus").innerHTML=`<option value="">All statuses</option>`+statuses.map(s=>`<option value="${s}" ${ui.status===s?"selected":""}>${esc((STATUS[s]||STATUS.active).label)}</option>`).join("");
+  setHTML($("tStatus"),`<option value="">All statuses</option>`+statuses.map(s=>`<option value="${s}">${esc((STATUS[s]||STATUS.active).label)}</option>`).join(""));
+  $("tStatus").value=ui.status||"";
 }
 
 // The floor for the combined numbers. "" is everything, otherwise the lowest tier
@@ -1760,7 +1968,7 @@ function renderDash(){
   }
   const gems=TIER_ORDER.filter(t=>dist[t]).map(t=>`<span class="gem"><i style="background:${TIER_COLORS[t]}"></i>${t.charAt(0)+t.slice(1).toLowerCase()} ×${dist[t]}</span>`).join("")
     +(un>0?`<span class="gem"><i style="background:${TIER_COLORS.UNRANKED}"></i>Unranked/unchecked ×${un}</span>`:"");
-  el.innerHTML=`
+  setHTML(el,`
   <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
   <div class="dash-head">
     <div class="dash-filter">
@@ -1782,39 +1990,81 @@ function renderDash(){
     topChamps.map(c=>`<span class="gem cmb" title="${esc(c.games)} games across ${esc(c.accs)} account${c.accs===1?"":"s"}">${esc(c.name)}
       <b class="${c.wr>=50?"wr-good":""}">${esc(c.wr)}%</b><i class="g">${esc(c.games)}G</i></span>`).join("")}</div>`:""}
   </div></div>
-  ${bk?`<div style="font-size:12px;color:var(--muted);margin:-4px 0 16px">${bk}</div>`:""}`;
+  ${bk?`<div style="font-size:12px;color:var(--muted);margin:-4px 0 16px">${bk}</div>`:""}`);
   dashJustOpened=false; // consumed by the render above
 }
 
 function renderTagbar(){
   const all=[...new Set(accounts.filter(a=>!!a.archived===ui.showArchived).flatMap(a=>a.tags||[]))].sort((a,b)=>a.localeCompare(b));
   if(ui.tag&&!all.includes(ui.tag))ui.tag=null;
-  $("tagbar").innerHTML=all.map(t=>`<span class="chip ${ui.tag===t?"on":""}" data-tag="${esc(t)}">${esc(t)}</span>`).join("");
+  setHTML($("tagbar"),all.map(t=>`<span class="chip ${ui.tag===t?"on":""}" data-k="${esc(t)}" data-tag="${esc(t)}">${esc(t)}</span>`).join(""));
 }
 
 // Everything the profile page carries that isn't the current rank: how the account
 // finished previous seasons, its flex rank, and the champions it actually plays.
 // Returns "" when a check has never brought any of it back, which is also what the
 // Info button keys off — no point offering a panel with nothing in it.
-function infoBlockHTML(a,rev){
+// Normalised on the way out as well as on the way in: a vault saved before
+// applyStats started shaping these — or one restored from someone else's export —
+// must not be able to throw inside a render.
+function infoParts(a){
   const s=a.stats||{};
-  const solo=(s.seasons&&s.seasons.solo)||[], flexHist=(s.seasons&&s.seasons.flex)||[];
-  const champs=s.champs||[];
-  const flex=s.flex;
+  const seasons=normSeasons(s.seasons)||{solo:[],flex:[]};
+  return {solo:seasons.solo,flexHist:seasons.flex,
+    champs:normChamps(s.champs)||[],flex:normPeak(s.flex)};
+}
+function hasInfo(a){const p=infoParts(a);return !!(p.solo.length||p.flexHist.length||p.champs.length||p.flex)}
+// The one-line summary on the drawer pull, so the card says what is folded away
+// before you open it.
+function infoPeek(a){
+  const p=infoParts(a),bits=[];
+  if(p.flex)bits.push("flex");
+  const seasons=p.solo.length+p.flexHist.length;
+  if(seasons)bits.push(seasons+" season"+(seasons===1?"":"s"));
+  if(p.champs.length)bits.push(p.champs.length+" champion"+(p.champs.length===1?"":"s"));
+  return bits.join(" · ");
+}
+function highestOf(list){let best=null,v=-1;for(const e of list){const x=ladderLP(e);if(x!==null&&x>v){v=x;best=e}}return best}
+// Opening the panel used to unroll every season and every champion at once, which
+// buried the one number you came for under thirty others. Each group is a
+// headline that already answers most of the question — the ranked peak, the
+// champion you actually play — and the rows behind it are one click away.
+function secHTML(a,key,label,n,peek,body){
+  const on=openSec.has(a.id+"|"+key);
+  return `<div class="sec${on?" on":""}" data-k="sec-${key}">`
+    +`<button class="sec-h" data-act="sec" data-s="${key}" aria-expanded="${on}">`
+      +`<span class="sec-n">${esc(label)}<i>${n}</i></span>`
+      +`<span class="sec-p">${peek}</span>`
+      +`<svg class="ico" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>`
+    +`</button>`
+    +(on?`<div class="sec-b">${body}</div>`:"")
+  +`</div>`;
+}
+function infoBlockHTML(a,rev){
+  const {solo,flexHist,champs,flex}=infoParts(a);
   if(!solo.length&&!flexHist.length&&!champs.length&&!flex)return"";
   const rank=e=>{const t=e.tier==="UNRANKED"?"Unranked":e.tier.charAt(0)+e.tier.slice(1).toLowerCase();
     return t+(e.division?" "+e.division:"")+(e.lp!=null?" · "+e.lp+" LP":"")};
+  const tinted=e=>`<span style="color:${tierColor(e.tier)}">${esc(rank(e))}</span>`;
   const rows=list=>list.map(e=>`<div class="sea"><span class="s-yr">${esc(e.season)}</span>`
     +`<span class="s-rk" style="color:${tierColor(e.tier)}">${esc(rank(e))}</span></div>`).join("");
+  const seasonPeek=list=>{const b=highestOf(list);return b?tinted(b):""};
   let out="";
-  if(flex)out+=`<div><span class="k">Flex</span><div class="s-rk" style="color:${tierColor(flex.tier)}">${esc(rank(flex))}</div></div>`;
-  if(solo.length)out+=`<div><span class="k">Past seasons · Solo/Duo</span>${rows(solo)}</div>`;
-  if(flexHist.length)out+=`<div><span class="k">Past seasons · Flex</span>${rows(flexHist)}</div>`;
-  if(champs.length)out+=`<div><span class="k">Most played this season</span>`
-    +champs.map(c=>`<div class="chp"><span class="c-nm">${esc(c.name)}</span>`
-      +`<span class="c-wr${c.wr>=50?" wr-good":""}">${esc(c.wr)}%</span>`
-      +`<span class="c-gm">${esc(c.games)}G</span>`
-      +`<span class="c-kd">${esc(c.kda)} KDA</span></div>`).join("")+`</div>`;
+  // one fact, one line — folding it would cost a click to reveal nothing extra
+  if(flex)out+=`<div class="sec flat" data-k="sec-flex"><span class="sec-n">Flex rank</span>`
+    +`<span class="sec-p" style="color:${tierColor(flex.tier)}">${esc(rank(flex))}</span></div>`;
+  if(solo.length)out+=secHTML(a,"solo","Past seasons · Solo",solo.length,seasonPeek(solo),rows(solo));
+  if(flexHist.length)out+=secHTML(a,"flexhist","Past seasons · Flex",flexHist.length,seasonPeek(flexHist),rows(flexHist));
+  if(champs.length){
+    const top=champs[0];
+    out+=secHTML(a,"champs","Champions this season",champs.length,
+      `<span class="c-nm">${esc(top.name)}</span> <span class="${top.wr>=50?"wr-good":""}">${esc(top.wr)}%</span>`,
+      `<div class="chp chp-h"><span>Champion</span><span>WR</span><span>Games</span><span>KDA</span></div>`
+      +champs.map(c=>`<div class="chp"><span class="c-nm">${esc(c.name)}</span>`
+        +`<span class="c-wr${c.wr>=50?" wr-good":""}">${esc(c.wr)}%</span>`
+        +`<span class="c-gm">${esc(c.games)}</span>`
+        +`<span class="c-kd">${esc(c.kda)}</span></div>`).join(""));
+  }
   return `<div class="login info${rev||""}">${out}</div>`;
 }
 // Split out of cardHTML so opening the editor can swap this one block instead of
@@ -1915,7 +2165,7 @@ function cardHTML(a,i){
   // paints the same stripe down the whole grid and says nothing. Only the states
   // worth spotting get one.
   const railed=a.status&&a.status!=="active";
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" style="--d:${(i||0)*40}ms"><div class="hx-in card" data-id="${a.id}"${railed?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${a.id}" style="--d:${(i||0)*40}ms"><div class="hx-in card" data-id="${a.id}"${railed?` style="--st:${st.color}"`:""}>
     <div class="c-head">
       <div class="c-portrait">
         <span class="c-initial">${esc(initial)}</span>
@@ -1965,7 +2215,6 @@ function cardHTML(a,i){
       </div>
       <div><button data-act="rankapply" style="color:var(--teal-txt)">Save</button></div>
     </div>`)(a.peakManual):""}
-    ${openInfo.has(a.id)?infoBlockHTML(a,rv("info")):""}
     ${noteBlockHTML(a,rv("note"))}
     <div class="c-foot">
       <span class="c-meta"><span class="upd${stale?" stale":""}">${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${s&&s.asOf?`<span class="src">${esc(s.asOf)}</span>`:""}</span>
@@ -1974,7 +2223,6 @@ function cardHTML(a,i){
         <a class="a-dpm" href="${dpm}" target="_blank" rel="noreferrer">DPM ↗</a>
         <a class="btn" href="${opgg}" target="_blank" rel="noreferrer">OP.GG ↗</a>
         <button data-act="check" ${isChecking?"disabled":""} style="color:var(--teal-txt)">${isChecking?"…":icon("refresh")+" Refresh"}</button>
-        ${infoBlockHTML(a)?`<button data-act="info" class="a-info" title="Past seasons, flex rank, champions">${icon("chart")} ${openInfo.has(a.id)?"Hide":"Details"}</button>`:""}
         <button data-act="more" title="More actions" aria-label="More actions">⋯</button>
       </div>
       ${openMore.has(a.id)?`<div class="acts${rv("more")}">
@@ -1985,6 +2233,13 @@ function cardHTML(a,i){
         <button data-act="del" class="b-danger" ${armedDelete===a.id?'style="border-color:var(--danger)"':""}>${armedDelete===a.id?"Sure?":"Delete"}</button>
       </div>`:""}
     </div>
+    ${openInfo.has(a.id)?infoBlockHTML(a,rv("info")):""}
+    ${hasInfo(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="Past seasons, flex rank, champions">
+      <span class="c-dl" aria-hidden="true"></span>
+      <span class="c-dt">${open?"Close":"Details"}${!open&&infoPeek(a)?`<em>${esc(infoPeek(a))}</em>`:""}</span>
+      <svg class="ico" viewBox="0 0 26 12" aria-hidden="true"><polyline points="2 3 13 10 24 3"/></svg>
+      <span class="c-dl" aria-hidden="true"></span>
+    </button>`)(openInfo.has(a.id)):""}
   </div></div>`;
 }
 
@@ -1992,33 +2247,42 @@ function renderGrid(){
   const list=filtered();
   const grid=$("grid");
   if(accounts.length===0){
-    grid.innerHTML=`<div class="hx" style="grid-column:1/-1"><div class="hx-in empty"><div class="d"><span class="empty-gem"></span></div>No accounts yet. Hit <span style="color:var(--teal-txt)">+ Add account</span> to store your first smurf.<div style="margin-top:12px"><button id="bDemo">👁 Preview with example data</button></div></div></div>`;
+    setHTML(grid,`<div class="hx" data-k="empty" style="grid-column:1/-1"><div class="hx-in empty"><div class="d"><span class="empty-gem"></span></div>No accounts yet. Hit <span style="color:var(--teal-txt)">+ Add account</span> to store your first smurf.<div style="margin-top:12px"><button id="bDemo">👁 Preview with example data</button></div></div></div>`);
   }else if(list.length===0){
-    grid.innerHTML=`<div class="hx" style="grid-column:1/-1"><div class="hx-in empty">No accounts match the current filters.</div></div>`;
+    setHTML(grid,`<div class="hx" data-k="nomatch" style="grid-column:1/-1"><div class="hx-in empty">No accounts match the current filters.</div></div>`);
   }else{
-    grid.innerHTML=list.map((a,i)=>cardHTML(a,i)).join("");
+    setHTML(grid,list.map((a,i)=>cardHTML(a,i)).join(""));
   }
   reveal=null; // consumed by the render above — the next one must not replay it
-  if(editingNote)focusNoteEditor(grid); // innerHTML replacement dropped the focused textarea
+  // patching keeps a focused textarea alive, so this is normally a no-op — it
+  // only matters if the note block was structurally replaced rather than patched
+  if(editingNote)focusNoteEditor(grid);
   document.title=accounts.length?"Smurf Tracker ("+accounts.length+")":"Smurf Tracker — Summoner Vault";
-  $("count").textContent=accounts.length?list.length+" of "+accounts.length+" account"+(accounts.length===1?"":"s")+" shown":"";
+  const stale=accounts.filter(a=>!a.archived&&a.stats&&a.stats.updatedAt&&Date.now()-a.stats.updatedAt>STALE_MS).length;
+  setHTML($("count"),!accounts.length?"":`<span><b>${list.length}</b> of <b>${accounts.length}</b> shown</span>`
+    +(stale?`<span class="warn">${stale} need${stale===1?"s":""} a refresh</span>`:""));
+  syncCheckAll();
+}
+// Called on its own during a run, where re-rendering the grid to flip one button
+// would undo the point of rendering a single card.
+function syncCheckAll(){
   $("bCheckAll").disabled=accounts.length===0||checking.size>0;
-  $("bCheckAll").innerHTML=checking.size>0?"Checking…":icon("refresh")+" Check all ranks";
+  setHTML($("bCheckAll"),checking.size?`<span class="spin">${icon("refresh")}</span> Checking…`:icon("refresh")+" Check all ranks");
 }
 
-// Opening a panel on one card is a change to that card, not to the grid. Redoing
-// the whole grid for it threw away and rebuilt every card on screen — visible as a
-// blink across the board — and dropped the browser's paint of all of them.
+// Opening a panel on one card is a change to that card, not to the grid, and it
+// must not touch the sort order either — a card jumping to a new column because
+// you opened its details is not a thing anyone asked for.
 // Falls back to a full render whenever the card isn't where we expect it.
 function renderCard(id){
   const grid=$("grid");
-  const el=[...grid.querySelectorAll(".card")].find(c=>c.dataset.id===id);
+  const el=[...grid.children].find(c=>c.dataset.id===id);
   const list=filtered();
   const idx=list.findIndex(a=>a.id===id);
-  if(!el||idx<0||!el.parentElement){renderGrid();return}
+  if(!el||idx<0){renderGrid();return}
   const tmp=document.createElement("div");
   tmp.innerHTML=cardHTML(list[idx],idx);
-  el.parentElement.replaceWith(tmp.firstElementChild);
+  morph(el,tmp.firstElementChild);
   reveal=null; // consumed, exactly as renderGrid does
   if(editingNote)focusNoteEditor(grid);
 }
@@ -2629,6 +2893,7 @@ $("grid").addEventListener("click",async e=>{
 
   else if(act==="range"){chartRange.set(id,btn.dataset.r);renderCard(id)}
   else if(act==="info"){const on=!openInfo.has(id);on?openInfo.add(id):openInfo.delete(id);reveal=on?id+":info":null;renderCard(id)}
+  else if(act==="sec"){const k=id+"|"+btn.dataset.s;openSec.has(k)?openSec.delete(k):openSec.add(k);renderCard(id)}
   else if(act==="rank"){const on=!openRank.has(id);on?openRank.add(id):openRank.delete(id);reveal=on?id+":rank":null;renderCard(id)}
   else if(act==="rankapply"){
     const g=f=>card.querySelector('[data-f="'+f+'"]');

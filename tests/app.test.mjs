@@ -35,7 +35,10 @@ function runScript(window, code) {
   window.document.body.appendChild(el); // runScripts:"dangerously" executes this synchronously
 }
 
-function bootApp() {
+// `seed` writes accounts straight into localStorage before the app boots, which
+// is the only way to get an account carrying seasons/flex/champions in here —
+// those arrive from a rank check, and the network is deliberately dead.
+function bootApp(seed) {
   const dom = new JSDOM(htmlNoScript, {
     url: "https://example.com/index.html",
     pretendToBeVisual: true,
@@ -49,6 +52,7 @@ function bootApp() {
   window.fetch = async () => { throw new Error("network disabled in tests"); };
   window.confirm = () => true;
   window.alert = () => {};
+  if (seed) window.localStorage.setItem("smurf-tracker", JSON.stringify(seed));
   runScript(window, appScript); // runs the app's boot() at the end, exactly like a real page load
   return window;
 }
@@ -575,7 +579,11 @@ test("one check still gets a chart — it says where on the ladder the account s
 
 test("daily/weekly/monthly keep the last check in each period, like op.gg", () => {
   const win = bootApp();
-  const day = 86400000, now = Date.now();
+  const day = 86400000;
+  // Anchored to a fixed Wednesday rather than Date.now(): how many calendar weeks
+  // a 14-day run touches depends on the weekday it ends on — run on a Sunday it
+  // lands on exactly two Monday-anchored weeks, and this test failed once a week.
+  const now = new Date(2026, 0, 14, 12, 0, 0).getTime(); // Wed 14 Jan 2026, local
   // 14 consecutive days of checks
   const h = Array.from({ length: 14 }, (_, i) => ({ t: now - (13 - i) * day, tier: "GOLD", division: "II", lp: i * 3 }));
   const points = mode => chartDom(win, h, mode).querySelectorAll(".lpc-pt").length;
@@ -587,7 +595,8 @@ test("daily/weekly/monthly keep the last check in each period, like op.gg", () =
   const el = chartDom(win, h, "m");
   assert.match(el.querySelector(".lpc-tip").textContent, /39 LP/);
 
-  // and the default follows the data rather than being fixed
+  // and the default follows the data rather than being fixed — this one reads the
+  // span between the points, so it doesn't care when "now" is
   assert.equal(win.defaultRange(h), "d");
   assert.equal(win.defaultRange([{ t: now - 60 * day, tier: "GOLD", division: "II", lp: 1 }, { t: now, tier: "GOLD", division: "II", lp: 2 }]), "w");
   assert.equal(win.defaultRange([{ t: now - 700 * day, tier: "GOLD", division: "II", lp: 1 }, { t: now, tier: "GOLD", division: "II", lp: 2 }]), "m");
@@ -904,16 +913,132 @@ test("the info panel only exists once a check has brought something back for it"
   const win = bootApp();
   assert.equal(win.infoBlockHTML({ stats: {} }), "");
   assert.equal(win.infoBlockHTML({}), "");
+  // an unranked flex queue is not a fact worth a row — it is dropped, not printed
+  assert.doesNotMatch(win.infoBlockHTML({ stats: { flex: { tier: "UNRANKED", division: null, lp: null } } }), /Flex rank/);
+
   const html = win.infoBlockHTML({ stats: {
-    flex: { tier: "UNRANKED", division: null, lp: null },
+    flex: { tier: "GOLD", division: "II", lp: 45 },
     seasons: { solo: [{ season: "S2025", tier: "MASTER", division: null, lp: 135 }], flex: [] },
     champs: [{ name: "Ashe", kda: 2.25, wr: 60, games: 25 }],
   } });
   const el = win.document.createElement("div"); el.innerHTML = html;
-  assert.match(el.textContent, /Flex/);
-  assert.match(el.textContent, /S2025/);
-  assert.match(el.textContent, /Ashe/);
+  // Folded: every group announces itself, with a count and the headline answer,
+  // and none of the rows behind it are in the DOM yet.
+  assert.match(el.textContent, /Flex rank/);
+  assert.match(el.textContent, /Past seasons · Solo/);
+  assert.match(el.textContent, /Champions this season/);
+  assert.match(el.textContent, /Master · 135 LP/, "the peak of those seasons is the headline");
+  assert.match(el.textContent, /Ashe/, "and the champion actually played");
+  assert.equal(el.querySelectorAll(".sea").length, 0, "season rows stay behind the click");
+  assert.equal(el.querySelectorAll(".chp").length, 0, "so do champion rows");
   assert.doesNotMatch(html, /undefined|NaN/);
+});
+
+test("a malformed backend response cannot throw its way through a render", () => {
+  const win = bootApp();
+  // what a wrong-shaped or half-broken backend actually sends
+  assert.equal(win.normSeasons(null), null);
+  assert.equal(win.normSeasons({ solo: "not an array" }), null);
+  assert.equal(win.normSeasons({ solo: [{ season: "S2025" }] }), null, "a row with no tier is dropped, not rendered");
+  assert.equal(win.normSeasons({ solo: [{ season: "S2025", tier: "PRETEND" }] }), null);
+  const ok = win.normSeasons({ solo: [{ season: "S2025", tier: "master", division: "x", lp: "135" }], flex: null });
+  assert.deepEqual({ ...ok.solo[0] }, { season: "S2025", tier: "MASTER", division: null, lp: 135 });
+  assert.equal(ok.flex.length, 0);
+
+  assert.equal(win.normChamps("nope"), null);
+  assert.equal(win.normChamps([{ wr: 60 }]), null, "a champion with no name is not a champion");
+  const c = win.normChamps([{ name: "Ashe", wr: "60", games: "25", kda: "2.253" }, null, 7]);
+  assert.equal(c.length, 1);
+  assert.deepEqual({ ...c[0] }, { name: "Ashe", kda: 2.25, wr: 60, games: 25 });
+  assert.equal(win.normChamps([{ name: "X", wr: 9000, games: -3 }])[0].wr, 100, "a nonsense win rate is clamped");
+
+  // and the whole thing renders rather than blowing up the grid
+  const html = win.infoBlockHTML({ id: "x", stats: { seasons: { solo: [{ tier: null }, { season: "S2025", tier: "GOLD", lp: 3 }] }, champs: [{}, { name: "Ashe", wr: 55, games: 4 }] } });
+  assert.match(html, /Past seasons/);
+  assert.doesNotMatch(html, /undefined|NaN/);
+});
+
+// Seasons, flex and champions only ever arrive from a rank check, so this seeds
+// them through localStorage and then drives the real card the way a user does.
+const RICH_STATS = {
+  found: true, tier: "DIAMOND", division: "I", lp: 52, wins: 190, losses: 215, level: 764,
+  flex: { tier: "GOLD", division: "II", lp: 45 },
+  seasons: {
+    solo: [{ season: "S2025", tier: "MASTER", division: null, lp: 135 },
+           { season: "S2024", tier: "EMERALD", division: "II", lp: 57 }],
+    flex: [],
+  },
+  champs: [{ name: "Ashe", kda: 2.25, wr: 60, games: 25 },
+           { name: "Smolder", kda: 3.01, wr: 68, games: 22 }],
+  asOf: "backend", updatedAt: Date.now(),
+};
+const seededAccount = () => [{ id: "seed1", label: "Main", gameName: "Seeded", tagLine: "1234",
+  region: "EUW", status: "active", stats: JSON.parse(JSON.stringify(RICH_STATS)) }];
+
+test("the details drawer sits on the card's bottom edge and says what is folded away", () => {
+  const win = bootApp(seededAccount());
+  const drawer = win.document.querySelector(".c-drawer");
+  assert.ok(drawer, "a card with extra data gets a drawer");
+  assert.equal(drawer.getAttribute("aria-expanded"), "false");
+  assert.match(drawer.textContent, /Details/);
+  assert.match(drawer.textContent, /flex · 2 seasons · 2 champions/, "the peek counts what is inside");
+  // it is the last thing in the card, so the panel unfolds above its own handle
+  assert.equal(win.document.querySelector(".card").lastElementChild, drawer);
+  assert.equal(win.document.querySelectorAll(".login.info").length, 0, "nothing rendered until asked");
+
+  drawer.click();
+  const panel = win.document.querySelector(".login.info");
+  assert.ok(panel, "clicking the drawer opens the panel");
+  assert.equal(win.document.querySelector(".c-drawer").getAttribute("aria-expanded"), "true");
+  assert.equal(win.document.querySelector(".card").lastElementChild.className.includes("c-drawer"), true,
+    "the handle stays pinned to the bottom edge with the panel above it");
+  assert.equal(panel.querySelectorAll(".sec").length, 3, "flex, past solo seasons, champions");
+  assert.equal(panel.querySelectorAll(".sea").length, 0, "still folded");
+
+  // each group opens on its own, and leaves the others alone
+  const solo = [...panel.querySelectorAll(".sec-h")].find(b => b.textContent.includes("Past seasons"));
+  solo.click();
+  const after = win.document.querySelector(".login.info");
+  assert.equal(after.querySelectorAll(".sea").length, 2, "both seasons are now listed");
+  assert.match(after.textContent, /S2025/);
+  assert.equal(after.querySelectorAll(".chp").length, 0, "opening one does not open the rest");
+
+  const champs = [...after.querySelectorAll(".sec-h")].find(b => b.textContent.includes("Champions"));
+  champs.click();
+  const both = win.document.querySelector(".login.info");
+  assert.equal(both.querySelectorAll(".sea").length, 2, "and the first one stays open");
+  assert.equal(both.querySelectorAll(".chp").length, 3, "two champions plus the column header");
+});
+
+test("a card is patched in place, not rebuilt, so nothing blinks", () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document;
+  const card = doc.querySelector(".card");
+  const portrait = doc.querySelector(".c-portrait");
+  const chart = doc.querySelector(".lpc");
+
+  doc.querySelector('[data-act="more"]').click();
+  assert.equal(doc.querySelector(".card"), card, "the card element survives a panel toggle");
+  assert.equal(doc.querySelector(".c-portrait"), portrait, "so the avatar is never re-fetched");
+  if (chart) assert.equal(doc.querySelector(".lpc"), chart, "and the chart is not redrawn from scratch");
+  assert.equal(doc.querySelectorAll(".acts").length, 2, "the overflow row did appear");
+
+  doc.querySelector(".c-drawer").click();
+  assert.equal(doc.querySelector(".card"), card, "same through the details drawer");
+  assert.equal(doc.querySelector(".c-portrait"), portrait);
+});
+
+test("typing a note survives a background re-render of the grid", () => {
+  const win = bootApp(seededAccount());
+  win.document.querySelector('[data-act="noteedit"]').click();
+  const ta = win.document.querySelector('[data-f="notetext"]');
+  ta.focus();
+  ta.value = "half-typed thought";
+  // something else redraws the board underneath — an auto-check landing, say
+  win.renderGrid();
+  const still = win.document.querySelector('[data-f="notetext"]');
+  assert.equal(still, ta, "the textarea is the same node");
+  assert.equal(still.value, "half-typed thought", "and keeps what was typed into it");
 });
 
 // ---- auto-check gating ----
