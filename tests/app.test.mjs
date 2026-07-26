@@ -1754,3 +1754,123 @@ test("the settings body is grouped rather than one flat run of fields", () => {
   assert.equal(body.contains(win.document.getElementById("sSave")), false, "Save is pinned, not scrolled");
   assert.ok(body.contains(win.document.getElementById("sBackend")), "the fields are the part that scrolls");
 });
+
+// ---- second review pass ----
+
+// "Needs refresh · N over 30d" counted never-checked accounts as 30 days old,
+// double-counting them against the "Never checked" tile right beside it.
+test("the over-30d figure only counts checks that actually happened", () => {
+  const now = Date.now(), D = 86400000;
+  const acc = (n, updatedAt) => ({ id: "x" + n, gameName: "A" + n, tagLine: "1", region: "EUW",
+    status: "active", tags: [], history: [],
+    stats: updatedAt ? { found: true, tier: "GOLD", division: "II", lp: 10, updatedAt } : null });
+
+  const win = bootApp([acc(1, now - 40 * D), acc(2, now - 5 * D), acc(3, null), acc(4, null)]);
+  const note = win.document.querySelector('[data-flag="stale"] .s-note').textContent;
+  assert.match(note, /over 30d/);
+  assert.match(note, /· 1 over 30d/, "only the one that was checked 40 days ago");
+
+  const never = win.document.querySelector('[data-flag="unchecked"] .v').textContent;
+  assert.equal(never, "2", "the two unchecked ones are counted here, and only here");
+});
+
+// The duplicate guard only ran on add, so renaming one account onto another got
+// two rows for the same Riot ID past it — and every check then refreshed both
+// off the same profile.
+test("an edit cannot rename one account on top of another", () => {
+  const win = bootApp();
+  addRealAccount(win, "First", "AAA");
+  addRealAccount(win, "Second", "BBB");
+  assert.equal(win.document.querySelectorAll(".card").length, 2);
+
+  // edit the second one to collide with the first
+  const cards = [...win.document.querySelectorAll(".card")];
+  const second = cards.find(c => c.textContent.includes("Second"));
+  second.querySelector('[data-act="more"]').click();
+  win.document.querySelector(`.card[data-id="${second.dataset.id}"] [data-act="edit"]`).click();
+  win.document.getElementById("fName").value = "First";
+  win.document.getElementById("fTag").value = "AAA";
+  win.document.getElementById("fSave").click();
+
+  assert.equal(win.document.getElementById("form").classList.contains("hidden"), false,
+    "the form stays open, the save was refused");
+  assert.match(win.document.getElementById("toast").textContent, /Already in the vault/);
+  assert.equal(win.document.querySelectorAll(".card").length, 2);
+
+  // but editing an account without changing its identity still saves
+  win.document.getElementById("fName").value = "Second";
+  win.document.getElementById("fTag").value = "BBB";
+  win.document.getElementById("fLabel").value = "Renamed label";
+  win.document.getElementById("fSave").click();
+  assert.equal(win.document.getElementById("form").classList.contains("hidden"), true);
+  assert.match(win.document.getElementById("grid").textContent, /Renamed label/);
+});
+
+// Excel and Sheets write a UTF-8 BOM, which lands inside the first header cell.
+test("a CSV exported by a spreadsheet imports despite its byte-order mark", () => {
+  const win = bootApp();
+  const rows = win.parseCSV("﻿label,gameName,tagLine\nMy smurf,Hide on Bush,0001\n");
+  assert.equal(rows[0][0], "label", "the BOM is not part of the first column's name");
+  assert.deepEqual(Array.from(rows[1]), ["My smurf", "Hide on Bush", "0001"]);
+});
+
+// A ticked "select all shown" claimed a selection that no longer matched the
+// grid under it — and clicking it then cleared instead of selecting, because a
+// ticked box unticks first.
+test("select-all tracks whatever the filters are showing", async () => {
+  const win = bootApp();
+  addRealAccount(win, "Alpha", "1");
+  addRealAccount(win, "Beta", "2");
+  const box = win.document.getElementById("tSelectAll");
+
+  box.checked = true;
+  box.dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert.equal(win.document.getElementById("bulkCount").textContent, "2 selected");
+  assert.equal(box.checked, true);
+
+  // narrow to one account that is already selected — still "all shown"
+  const search = win.document.getElementById("tSearch");
+  search.value = "Alpha";
+  search.dispatchEvent(new win.Event("input", { bubbles: true }));
+  await new Promise(r => setTimeout(r, 200));
+  assert.equal(box.checked, true);
+
+  // clear the selection: the box has to follow, or its next click clears nothing
+  win.document.getElementById("bulkClear").click();
+  assert.equal(box.checked, false);
+});
+
+test("every filter toggle reports its state, not just its colour", () => {
+  const now = Date.now();
+  const win = bootApp([{ id: "g1", gameName: "G", tagLine: "1", region: "EUW", status: "active",
+    tags: [], history: [], stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: now } }]);
+
+  const gem = () => win.document.querySelector('[data-tier="GOLD"]');
+  assert.equal(gem().getAttribute("aria-pressed"), "false");
+  gem().click();
+  assert.equal(gem().getAttribute("aria-pressed"), "true");
+
+  const stale = () => win.document.querySelector('[data-flag="stale"]');
+  assert.equal(stale().getAttribute("aria-pressed"), "false");
+  stale().click();
+  assert.equal(stale().getAttribute("aria-pressed"), "true");
+
+  const density = d => win.document.querySelector(`[data-density="${d}"]`);
+  assert.equal(density("cards").getAttribute("aria-pressed"), "true");
+  assert.equal(density("list").getAttribute("aria-pressed"), "false");
+  density("list").click();
+  assert.equal(density("list").getAttribute("aria-pressed"), "true");
+  assert.equal(density("cards").getAttribute("aria-pressed"), "false");
+});
+
+// A name wider than its column is ellipsised, so the full one has to survive
+// somewhere reachable.
+test("a truncated name keeps its full text in a title", () => {
+  const long = "An extremely long account label that will not fit the card";
+  const win = bootApp([{ id: "t1", label: long, gameName: "Short", tagLine: "1", region: "EUW",
+    status: "active", tags: [], history: [], stats: null }]);
+  assert.equal(win.document.querySelector(".c-name span").getAttribute("title"), long);
+
+  win.document.querySelector('[data-density="list"]').click();
+  assert.equal(win.document.querySelector(".rw-nm").getAttribute("title"), long);
+});

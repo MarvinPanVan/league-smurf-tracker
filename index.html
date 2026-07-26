@@ -1640,7 +1640,10 @@ function celebrate(id,acc){
   notify("Tier up — "+(acc.label||acc.gameName),(prev.tier||"?")+" → "+acc.stats.tier);
   postDiscord("🎉 **"+(acc.label||acc.gameName)+"** tiered up: "+(prev.tier||"?")+" → "+acc.stats.tier);
   if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)return;
-  const card=document.querySelector('.card[data-id="'+id+'"]');if(!card)return;
+  // ".card" only exists in the card layout, so a tier-up reached in list view got
+  // the toast and the notification but never the confetti
+  const card=[...$("grid").querySelectorAll(".card,.rw")].find(c=>c.dataset.id===id);
+  if(!card)return;
   const r=card.getBoundingClientRect();
   const c=document.createElement("div");c.className="confetti";
   c.style.left=r.left+"px";c.style.top=r.top+"px";c.style.width=r.width+"px";c.style.height=r.height+"px";
@@ -2416,12 +2419,23 @@ function render(){
   $("bDeleteAll").disabled=accounts.length===0;
   renderDash();renderTagbar();renderChips();renderFilterOptions();renderGrid();renderBulkBar();
   renderRun();renderFailbar();
-  for(const b of $("density").children)b.classList.toggle("on",b.dataset.density===ui.density);
+  for(const b of $("density").children){
+    const on=b.dataset.density===ui.density;
+    b.classList.toggle("on",on);
+    b.setAttribute("aria-pressed",on?"true":"false");
+  }
 }
-function renderBulkBar(){
+// `shown` is passed in by renderGrid, which has just built the same list — this
+// is called on every filter change and filtered() sorts.
+function renderBulkBar(shown){
   const n=selected.size;
   $("bulkbar").classList.toggle("hidden",n===0);
   $("bulkCount").textContent=n+" selected";
+  // "Select all shown" stayed ticked after the filter under it changed, so it
+  // claimed a selection that no longer matched anything on screen — and clicking
+  // it then *cleared* rather than selected, because a ticked box unticks first.
+  const list=shown||filtered();
+  $("tSelectAll").checked=list.length>0&&list.every(a=>selected.has(a.id));
 }
 
 function renderFilterOptions(){
@@ -2504,7 +2518,10 @@ function renderDash(){
   const neverN=accounts0.filter(a=>!isChecked(a)).length;
   const un=accounts0.length-ranked.length-neverN;
   const staleN=accounts0.filter(a=>a.status!=="banned"&&isStale(a)).length;
-  const veryStaleN=accounts0.filter(a=>a.status!=="banned"&&(!isChecked(a)||Date.now()-a.stats.updatedAt>30*24*3600*1000)).length;
+  // "over 30d" means a check that happened and has since gone stale. It used to
+  // fold never-checked accounts in as well, which double-counts them against the
+  // "Never checked" tile right beside it and reads as an age nobody measured.
+  const veryStaleN=accounts0.filter(a=>a.status!=="banned"&&isChecked(a)&&Date.now()-a.stats.updatedAt>30*24*3600*1000).length;
   const bannedN=accounts0.filter(a=>a.status==="banned").length;
   const archivedN=accounts.length-accounts0.length;
   let bk="";
@@ -2512,7 +2529,9 @@ function renderDash(){
     if(!cfg.lastExport)bk="No backup yet — hit Export once your accounts are in.";
     else if(Date.now()-cfg.lastExport>30*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago — consider exporting.";
   }
-  const gem=(tier,label,n,colour)=>`<button class="gem gem-b${ui.tier===tier?" on":""}" data-tier="${tier}" title="Show only these">`
+  // These are filter toggles, not links — they say so to a screen reader as well
+  // as by lighting up.
+  const gem=(tier,label,n,colour)=>`<button class="gem gem-b${ui.tier===tier?" on":""}" data-tier="${tier}" aria-pressed="${ui.tier===tier}" title="Show only these">`
     +`<i class="d" style="background:${colour}"></i>${label} <b>×${n}</b></button>`;
   const gems=TIER_ORDER.filter(t=>dist[t]).map(t=>gem(t,t.charAt(0)+t.slice(1).toLowerCase(),dist[t],TIER_COLORS[t])).join("")
     +(un>0?gem("UNRANKED","Unranked",un,TIER_COLORS.UNRANKED):"");
@@ -2532,9 +2551,9 @@ function renderDash(){
     <div class="stat"><div class="k">Season W/L</div><div class="v">${W}W ${L}L <small>· ${wr} WR</small></div>
       <div class="s-note">from ${pool.length} counted account${pool.length===1?"":"s"}</div></div>
     <div class="stat"><div class="k">Regions</div><div class="v" style="font-size:14px">${esc(regTxt)||"—"}</div></div>
-    ${neverN?`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked"><div class="k">Never checked</div>
+    ${neverN?`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
       <div class="v" style="color:var(--gold-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`:""}
-    <button class="stat stat-b${ui.flag==="stale"?" on":""}" data-flag="stale"><div class="k">Needs refresh</div>
+    <button class="stat stat-b${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"><div class="k">Needs refresh</div>
       <div class="v"${staleN?' style="color:var(--danger)"':""}>${staleN}</div>
       <div class="s-note">older than 3 days${veryStaleN?" · "+veryStaleN+" over 30d":""}</div></button>
   </div>
@@ -2732,7 +2751,7 @@ function rowHTML(a,i){
       <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}">
       <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}</span>
       <span class="rw-id">
-        <span class="rw-nm">${esc(a.label||a.gameName)}${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}</span>
+        <span class="rw-nm" title="${esc(a.label||a.gameName)}">${esc(a.label||a.gameName)}${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}</span>
         <span class="rw-tag">${esc(a.gameName)}#${esc(a.tagLine)}</span>
       </span>
       <span class="rw-rank" style="color:${col}">${esc(rank)}${lp?`<em>${esc(lp)}</em>`:""}</span>
@@ -2850,7 +2869,9 @@ function cardHTML(a,i){
         ${s&&s.found!==false&&s.level&&!levelLed?`<span class="c-lvbadge" title="Summoner level">${esc(s.level)}</span>`:""}
       </div>
       <div class="c-id">
-        <div class="c-name"><span>${esc(a.label||a.gameName)}</span>${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.label)}</span>`:""}</div>
+        <!-- the name is ellipsised at the card's width, so the full one has to be
+             available somewhere; hovering is the only place left for it -->
+        <div class="c-name"><span title="${esc(a.label||a.gameName)}">${esc(a.label||a.gameName)}</span>${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.label)}</span>`:""}</div>
         <button class="rid" data-act="copyid" title="Copy Riot ID"><span>${esc(a.gameName)}<b>#${esc(a.tagLine)}</b></span></button>
       </div>
       <div class="c-chrome">
@@ -2915,6 +2936,7 @@ function renderGrid(){
     setHTML(grid,list.map((a,i)=>asList?rowHTML(a,i):cardHTML(a,i)).join(""));
   }
   reveal=null; // consumed by the render above — the next one must not replay it
+  renderBulkBar(list); // the "select all shown" box tracks whatever is shown now
   // patching keeps a focused textarea alive, so this is normally a no-op — it
   // only matters if the note block was structurally replaced rather than patched
   if(editingNote)focusNoteEditor(grid);
@@ -3002,8 +3024,14 @@ function closeForm(){$("form").classList.add("hidden");editingId=null}
 function submitForm(){
   const gameName=$("fName").value.trim(), tagLine=$("fTag").value.trim().replace(/^#/,"");
   if(!gameName||!tagLine){toast("Riot name and tag are required");return}
-  if(!editingId){
-    const dup=accounts.find(a=>a.gameName.toLowerCase()===gameName.toLowerCase()&&a.tagLine.toLowerCase()===tagLine.toLowerCase()&&a.region===$("fRegion").value);
+  // Checked on edit too, not only on add: renaming one account onto another was
+  // the one way to get two rows for the same Riot ID past the guard, and every
+  // check then refreshed both of them off the same profile.
+  {
+    const dup=accounts.find(a=>a.id!==editingId
+      &&a.gameName.toLowerCase()===gameName.toLowerCase()
+      &&a.tagLine.toLowerCase()===tagLine.toLowerCase()
+      &&a.region===$("fRegion").value);
     if(dup){toast("Already in the vault: "+(dup.label||dup.gameName));return}
   }
   const data={label:$("fLabel").value.trim(),region:$("fRegion").value,gameName,tagLine,status:$("fStatus").value,
@@ -3205,6 +3233,10 @@ function doImport(file){
 }
 
 function parseCSV(text){
+  // Excel and Sheets write a UTF-8 BOM, which lands inside the first header cell
+  // and turns "label" into "﻿label" — so every lookup for the first column
+  // missed and that column silently imported as empty.
+  text=String(text).replace(/^﻿/,"");
   const rows=[];let row=[],field="",inQuotes=false;
   for(let i=0;i<text.length;i++){
     const c=text[i];
