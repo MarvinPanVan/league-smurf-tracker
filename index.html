@@ -411,15 +411,16 @@
      unfolds the chart and the details under it, so nothing is hidden — the card
      grid stays for browsing, this is for working through a collection. */
   .grid.list{display:flex;flex-direction:column;gap:5px}
-  /* The display serif appears exactly twice in the app now: the wordmark, and
-     here. Anywhere else it starts to read as costume. */
+  /* Set in the display serif at first, on the theory that one more use would tie
+     the identity together. It doesn't — the wordmark is a logo and reads as one,
+     and the same face on a row of small uppercase labels inside a dense list just
+     reads as the wrong font. Back to the interface face everything else uses. */
   .lgrp{display:flex;align-items:center;gap:9px;padding:15px 5px 6px}
   .lgrp:first-child{padding-top:3px}
   .lgrp-crest{width:16px;height:16px;flex-shrink:0}
   .lgrp-dot{width:8px;height:8px;border-radius:2px;transform:rotate(45deg);flex-shrink:0;opacity:.8}
   .lgrp-star{width:13px;height:13px;fill:var(--star);stroke:var(--star);flex-shrink:0}
-  .lgrp-n{font-family:'Cinzel',Georgia,serif;font-size:12px;font-weight:700;
-    letter-spacing:.13em;text-transform:uppercase}
+  .lgrp-n{font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase}
   .lgrp-ln{flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
   .lgrp-k{font-size:10.5px;font-weight:600;color:var(--faint);letter-spacing:.05em;
     font-variant-numeric:tabular-nums}
@@ -449,7 +450,7 @@
   .rw-pic b{font-size:15px;font-weight:600;color:var(--faint)}
   /* the tier, on the picture, the way the card puts it beside the rank */
   .rw-crest{position:absolute;right:-6px;top:-6px;width:17px;height:17px;
-    filter:drop-shadow(0 0 5px var(--c)) drop-shadow(0 1px 2px #000000b3)}
+    filter:drop-shadow(0 1px 2px #000000cc)}
   .rw-crest .crest{width:100%;height:100%}
   /* same idea as the card: the level belongs to the picture, not to a column of
      performance numbers */
@@ -599,19 +600,28 @@
      what gives an Iron card and a Challenger card different weight from across
      the room — that one is texture, and never has to be read. */
   .c-rank{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-top:3px}
-  /* Anchored to the card, not to the rank row: hung off the row it had only ~50px
-     of height to live in, so it either got clipped to a meaningless band or — with
-     nothing clipping it — spilled out into the gap between cards.
+  /* The tier as a wash over the card rather than as a picture on it.
+     A large crest bleeding off the right edge was the first attempt: it read as a
+     shape half-hidden behind the delta chips — the eye keeps trying to complete it
+     and there is nothing to complete. A tint has no silhouette to be cut off, so
+     it can sit at the strength needed to be felt from across the room without ever
+     asking to be looked at. Anchored top-left, away from every chip and number.
      isolation:isolate is what lets z-index:-1 paint above the card's own
      background while still staying under every child. */
-  .c-wm{position:absolute;right:-30px;top:52px;width:128px;height:128px;z-index:-1;
-    opacity:.13;pointer-events:none}
+  .c-tint{position:absolute;inset:0;z-index:-1;pointer-events:none;
+    background:radial-gradient(125% 78% at 0% 0%,
+      color-mix(in srgb,var(--tier) 15%,transparent),transparent 60%)}
   .c-deltas{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
   .rk{font-size:23px;font-weight:600;letter-spacing:-.035em;line-height:1.15;white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:9px;min-width:0}
   .rk-t{overflow:hidden;text-overflow:ellipsis}
+  /* No coloured glow. A 9px halo in the tier's own full-saturation colour around
+     a 27px shape stops reading as a lit emblem and starts reading as a lit square
+     box — the glow is larger than the thing it is meant to be lighting. The crest
+     carries its own highlight in the gradient; all it needs from here is enough
+     shadow to sit off the panel. */
   .rk-crest{width:27px;height:27px;flex-shrink:0;
-    filter:drop-shadow(0 1px 3px #00000073) drop-shadow(0 0 9px currentColor)}
+    filter:drop-shadow(0 1px 2px #000000a6)}
   .rk-lp{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-.015em;margin-left:10px;
     font-variant-numeric:tabular-nums;opacity:.82}
   .c-unchecked{font-size:17px;color:var(--faint);letter-spacing:-.02em}
@@ -1695,7 +1705,16 @@ function rankChart(hist,cut,mode,key){
     const yTop=py(Math.min(top,hi)), yBot=py(Math.max(bot,lo));
     bands+=`<rect x="0" y="${yTop.toFixed(1)}" width="${LPC_W}" height="${Math.max(yBot-yTop,0).toFixed(1)}" fill="${c}" opacity=".085"/>`;
     if(bot>lo)lines+=`<line x1="0" x2="${LPC_W}" y1="${py(bot).toFixed(1)}" y2="${py(bot).toFixed(1)}" stroke="${c}" stroke-opacity=".36" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
-    if(yBot-yTop>=14)labels+=`<span class="lpc-lab" style="top:${(yBot-11).toFixed(1)}px;color:${c}">${t===mIdx?"Master+":name.charAt(0)+name.slice(1).toLowerCase()}</span>`;
+    /* The label normally sits just above the band's own bottom boundary, which is
+       what it names. When one band fills the entire view — every Master+ account,
+       which is exactly where the cutoff lines and the LP marks also live — that
+       boundary is off the bottom of the chart and the label was landing flat on
+       the floor, stacked in with the date axis, an LP numeral and the GM line.
+       Four unrelated things reading as one crowded row. With no boundary left to
+       mark it is a caption for the whole view, so it goes to the top instead. */
+    const fillsView=bot<=lo&&top>=hi;
+    const labY=fillsView?2:yBot-11;
+    if(yBot-yTop>=14)labels+=`<span class="lpc-lab" style="top:${labY.toFixed(1)}px;color:${c}">${t===mIdx?"Master+":name.charAt(0)+name.slice(1).toLowerCase()}</span>`;
   }
   // Steps inside the bands. Below Master a step of 100 LP is exactly one division,
   // so the numerals come for free — but a fixed 100 stops working the moment the
@@ -1729,15 +1748,25 @@ function rankChart(hist,cut,mode,key){
   // The Grandmaster and Challenger floors, where the view reaches them. These are
   // the current floors, so they are drawn as a reference against today's ladder —
   // not applied backwards to old points, whose floors were different numbers.
+  const cutYs=[];
   if(cut){
-    for(const[key,label]of[["gm","GM"],["chall","CHALL"]]){
+    // Challenger first, so that when the two floors are too close to label twice
+    // it is the higher one that keeps its name.
+    for(const[key,label]of[["chall","CHALL"],["gm","GM"]]){
       const lp=cut[key];
       if(!lp)continue;
       const v=M_BASE+lp;
       if(v<=lo||v>=hi)continue;
-      const y=py(v).toFixed(1);
-      lines+=`<line x1="0" x2="${LPC_W}" y1="${y}" y2="${y}" stroke="${TIER_COLORS[key==="gm"?"GRANDMASTER":"CHALLENGER"]}" stroke-opacity=".75" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>`;
-      labels+=`<span class="lpc-cut" style="top:${(py(v)-9.5).toFixed(1)}px;color:${TIER_COLORS[key==="gm"?"GRANDMASTER":"CHALLENGER"]}">${label}</span>`;
+      const yv=py(v), y=yv.toFixed(1);
+      const c=TIER_COLORS[key==="gm"?"GRANDMASTER":"CHALLENGER"];
+      lines+=`<line x1="0" x2="${LPC_W}" y1="${y}" y2="${y}" stroke="${c}" stroke-opacity=".75" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>`;
+      // Zoomed far enough out — an Iron-to-Challenger history spans the entire
+      // ladder — the two floors sit a couple of pixels apart. Both lines are still
+      // drawn and their colours tell them apart; only the second label is dropped,
+      // because two words printed over each other say less than one.
+      if(!cutYs.some(cy=>Math.abs(yv-cy)<11))
+        labels+=`<span class="lpc-cut" style="top:${(yv-9.5).toFixed(1)}px;color:${c}">${label}</span>`;
+      cutYs.push(yv);
     }
   }
 
@@ -1748,6 +1777,10 @@ function rankChart(hist,cut,mode,key){
     const lpStep=[100,200,400,800,1600,3200,6400].find(s=>LPC_H*s/span>=22)||span/3;
     for(let v=Math.max(Math.ceil(lo/lpStep)*lpStep,M_BASE);v<hi;v+=lpStep){
       if(v===M_BASE||!room(v))continue;   // M_BASE is the "Master+" band boundary
+      // A plain LP numeral landing on top of the Grandmaster or Challenger floor
+      // draws a second hairline a few pixels from a dashed one and prints a number
+      // beside a label. The floor is the more useful of the two, so it wins.
+      if(cutYs.some(cy=>Math.abs(py(v)-cy)<11))continue;
       rule(v);mark(v,(v-M_BASE)+" LP");
     }
   }
@@ -3105,7 +3138,7 @@ function cardHTML(a,i){
   const railed=a.status&&a.status!=="active";
   const icon0=iconUrl(s);
   return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${a.id}" style="--d:${(i||0)*40}ms"><div class="hx-in card" data-id="${a.id}"${railed?` style="--st:${st.color}"`:""}>
-    ${isRanked(a)?crest(s.tier,"c-wm"):""}
+    ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <div class="c-head">
       <div class="c-portrait">
         <span class="c-initial">${esc(initial)}</span>

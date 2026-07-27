@@ -2107,9 +2107,9 @@ test("a ranked card carries its tier crest, an unranked one carries none", () =>
   const win = bootApp(ladderSeed());
   const byId = id => win.document.querySelector(`.card[data-id="${id}"]`);
   assert.ok(byId("t9").querySelector(".rk-crest"), "Challenger gets a crest in the rank line");
-  assert.ok(byId("t9").querySelector(".c-wm"), "and the large one behind the card");
+  assert.ok(byId("t9").querySelector(".c-tint"), "and the card is washed in its tier colour");
   assert.equal(byId("un").querySelector(".rk-crest"), null, "unranked has no tier to show");
-  assert.equal(byId("nv").querySelector(".c-wm"), null, "nor does never-checked");
+  assert.equal(byId("nv").querySelector(".c-tint"), null, "nor does never-checked");
 });
 
 // The list used to throw the chart away entirely, so all sixty rows looked alike.
@@ -2192,4 +2192,81 @@ test("the sparkline survives a flat run, and needs two points to draw at all", (
   assert.ok(!/ (0|27)\.0"/.test(svg.match(/<path d="M[^"]+" fill="none"/)[0]), "and no point sits on the top or bottom edge");
   assert.equal(win.sparkline([flat[0]], "#e6c15a"), "", "one reading is not a shape");
   assert.equal(win.sparkline(null, "#e6c15a"), "");
+});
+
+// ---- chart label crowding ----
+
+const chartLabels = (win, hist, cut) => {
+  const d = win.document.createElement("div");
+  d.innerHTML = win.rankChart(hist, cut || null, "d", "probe");
+  const out = [...d.querySelectorAll(".lpc-lab,.lpc-sub,.lpc-cut")].map(e => ({
+    kind: e.className, text: e.textContent, top: parseFloat(e.style.top),
+  }));
+  return out;
+};
+const days = n => Date.now() - n * 86400000;
+
+// Above Master the whole visible window sits inside one band, so that band's own
+// bottom boundary is off the bottom of the chart. The label had nothing to sit
+// above and ended up flat on the floor, in among the date axis, an LP numeral and
+// the Grandmaster line — four unrelated things reading as one crowded row.
+test("a band that fills the whole view captions from the top, not the floor", () => {
+  const win = bootApp();
+  const hist = Array.from({ length: 7 }, (_, i) => ({ t: days(6 - i), tier: "CHALLENGER", division: null, lp: 1830 + i * 15 }));
+  const labs = chartLabels(win, hist, { gm: 1500, chall: 1750 });
+
+  const band = labs.find(l => l.kind === "lpc-lab");
+  assert.equal(band.text, "Master+");
+  assert.ok(band.top < 10, `the caption belongs at the top, was at ${band.top}`);
+  // and nothing else may share that line
+  for (const other of labs.filter(l => l !== band))
+    assert.ok(Math.abs(other.top - band.top) > 12, `"${other.text}" collides with the band caption`);
+});
+
+// ...but where the boundary *is* on screen the label still marks it, because there
+// it is naming a line rather than the view.
+test("a band whose boundary is visible keeps its label on that boundary", () => {
+  const win = bootApp();
+  const hist = [{ t: days(6), tier: "PLATINUM", division: "I", lp: 80 },
+                { t: days(0), tier: "EMERALD", division: "IV", lp: 30 }];
+  const labs = chartLabels(win, hist).filter(l => l.kind === "lpc-lab");
+  const names = labs.map(l => l.text);
+  assert.deepEqual(names.sort(), ["Emerald", "Platinum"]);
+  assert.ok(labs.every(l => l.top > 10), "both bands have a visible boundary to sit on");
+});
+
+// A plain LP numeral landing on the Grandmaster floor drew a second hairline a few
+// pixels from a dashed one and printed a number next to a label.
+test("an LP numeral is dropped where it would land on a cutoff floor", () => {
+  const win = bootApp();
+  const hist = Array.from({ length: 7 }, (_, i) => ({ t: days(6 - i), tier: "CHALLENGER", division: null, lp: 1830 + i * 15 }));
+
+  const clear = chartLabels(win, hist, { gm: 1500, chall: 2100 }).map(l => l.text);
+  assert.ok(clear.includes("1800 LP"), "with the floor elsewhere the numeral is drawn");
+
+  const onTop = chartLabels(win, hist, { gm: 1800, chall: 2100 });
+  assert.ok(!onTop.some(l => l.text === "1800 LP"), "with the floor on it, the floor wins");
+  assert.ok(onTop.some(l => l.text === "GM"));
+});
+
+// The general version of the same complaint: whatever the data, two labels in the
+// same horizontal lane must never be printed on top of each other.
+test("no two chart labels in one lane land on the same line", () => {
+  const win = bootApp();
+  const cases = [
+    [Array.from({ length: 7 }, (_, i) => ({ t: days(6 - i), tier: "CHALLENGER", division: null, lp: 1830 + i * 15 })), { gm: 1500, chall: 1750 }],
+    [Array.from({ length: 7 }, (_, i) => ({ t: days(6 - i), tier: "GOLD", division: "II", lp: 20 + i * 9 })), null],
+    [[{ t: days(9), tier: "IRON", division: "IV", lp: 0 }, { t: days(0), tier: "CHALLENGER", division: null, lp: 1800 }], { gm: 900, chall: 1600 }],
+    [[{ t: days(6), tier: "PLATINUM", division: "I", lp: 80 }, { t: days(0), tier: "EMERALD", division: "IV", lp: 30 }], null],
+  ];
+  for (const [hist, cut] of cases) {
+    const byLane = {};
+    for (const l of chartLabels(win, hist, cut)) (byLane[l.kind] ||= []).push(l);
+    for (const [lane, items] of Object.entries(byLane)) {
+      items.sort((a, b) => a.top - b.top);
+      for (let i = 1; i < items.length; i++)
+        assert.ok(items[i].top - items[i - 1].top >= 10,
+          `${lane}: "${items[i - 1].text}" and "${items[i].text}" overlap at ${items[i].top}`);
+    }
+  }
 });
