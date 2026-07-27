@@ -1956,3 +1956,111 @@ test("switching layout rebuilds rather than diffing a card into a row", () => {
   assert.equal(win.document.querySelectorAll(".card").length, 1);
   assert.ok(win.document.querySelector(".lpc-svg"), "and the chart comes back with it");
 });
+
+// ---- vault key caching ----
+
+// Boots with a crypto whose deriveKey is counted, so a test can assert on how
+// many times the app paid for one. Everything else is the real webcrypto.
+function bootCounting(seed) {
+  const counted = { n: 0 };
+  const subtle = {
+    importKey: webcrypto.subtle.importKey.bind(webcrypto.subtle),
+    encrypt: webcrypto.subtle.encrypt.bind(webcrypto.subtle),
+    decrypt: webcrypto.subtle.decrypt.bind(webcrypto.subtle),
+    deriveKey: (...a) => { counted.n++; return webcrypto.subtle.deriveKey(...a); },
+  };
+  const win = bootApp(seed, w => {
+    Object.defineProperty(w, "crypto", {
+      value: { getRandomValues: webcrypto.getRandomValues.bind(webcrypto), randomUUID: () => webcrypto.randomUUID(), subtle },
+      configurable: true,
+    });
+  });
+  return { win, counted };
+}
+
+// encryptData used to draw a fresh salt and derive a fresh key on every call, and
+// saveDB is called once per account during a check run — so checking sixty
+// accounts meant sixty 150 000-round PBKDF2 derivations (~63 ms each here) purely
+// to write out data the app already had in hand.
+test("saving an encrypted vault derives the key once, not once per save", async () => {
+  const { win, counted } = bootCounting();
+  addRealAccount(win, "Test Smurf", "1234");
+  win.document.getElementById("sVaultPass").value = "hunter2pass";
+  win.document.getElementById("sVaultSet").click();
+  await new Promise(r => setTimeout(r, 400));
+
+  const afterUnlock = counted.n;
+  assert.ok(afterUnlock >= 1, "setting a password has to derive a key at least once");
+
+  for (let i = 0; i < 20; i++) await win.saveDB();
+  assert.equal(counted.n, afterUnlock, "twenty further saves must not derive anything");
+
+  // and the data still has to be readable with the password
+  const stored = JSON.parse(win.localStorage.getItem("smurf-tracker"));
+  assert.equal(stored.__enc, true);
+  const back = await win.decryptData("hunter2pass", stored);
+  assert.equal(back.length, 1);
+  assert.equal(back[0].gameName, "Test Smurf");
+});
+
+// The salt is held steady while the vault is open, which is fine — but the IV is
+// what must never repeat under one key, so that one still has to be fresh every
+// time. Two saves of identical data must not produce identical ciphertext.
+test("every save gets its own IV even though the salt is reused", async () => {
+  const win = bootApp();
+  addRealAccount(win, "Test Smurf", "1234");
+  win.document.getElementById("sVaultPass").value = "hunter2pass";
+  win.document.getElementById("sVaultSet").click();
+  await new Promise(r => setTimeout(r, 400));
+
+  const first = JSON.parse(win.localStorage.getItem("smurf-tracker"));
+  await win.saveDB();
+  const second = JSON.parse(win.localStorage.getItem("smurf-tracker"));
+
+  assert.equal(first.salt, second.salt, "the salt stays with the vault");
+  assert.notEqual(first.iv, second.iv, "the IV must be drawn fresh");
+  assert.notEqual(first.data, second.data, "so identical data must not encrypt identically");
+});
+
+// A wrong guess derives a key too. If that key stayed in the cache it would be
+// handed straight back to the next call for the real password.
+test("a wrong password is rejected and does not poison the cached key", async () => {
+  const win = bootApp();
+  addRealAccount(win, "Test Smurf", "1234");
+  win.document.getElementById("sVaultPass").value = "hunter2pass";
+  win.document.getElementById("sVaultSet").click();
+  await new Promise(r => setTimeout(r, 400));
+  const stored = JSON.parse(win.localStorage.getItem("smurf-tracker"));
+
+  await assert.rejects(() => win.decryptData("not-the-password", stored));
+  const back = await win.decryptData("hunter2pass", stored);
+  assert.equal(back.length, 1, "the real password still opens it afterwards");
+});
+
+// Locking clears the password; the key derived from it opens the vault just as
+// well, so it has to go at the same moment.
+test("locking the vault forgets the derived key as well as the password", async () => {
+  const { win, counted } = bootCounting();
+  addRealAccount(win, "Test Smurf", "1234");
+  win.document.getElementById("sVaultPass").value = "hunter2pass";
+  win.document.getElementById("sVaultSet").click();
+  await new Promise(r => setTimeout(r, 400));
+
+  win.relock();
+  const afterLock = counted.n;
+  const stored = JSON.parse(win.localStorage.getItem("smurf-tracker"));
+  await win.decryptData("hunter2pass", stored);
+  assert.ok(counted.n > afterLock, "unlocking again has to derive from scratch");
+});
+
+// b64 is on the path of every single vault write. It used to concatenate one
+// character at a time, which on the ~150 KB an encrypted vault runs to cost more
+// than the cipher did.
+test("b64 round-trips a buffer larger than one apply() chunk", () => {
+  const win = bootApp();
+  const bytes = new Uint8Array(0x8000 * 2 + 777);
+  for (let i = 0; i < bytes.length; i++) bytes[i] = i % 256;
+  const back = win.unb64(win.b64(bytes));
+  assert.equal(back.length, bytes.length);
+  assert.ok(back.every((v, i) => v === bytes[i]), "every byte survives the round trip");
+});

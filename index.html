@@ -1369,23 +1369,53 @@ async function saveDB(){
 function saveCfg(){if(!hasStorage)return;try{localStorage.setItem(CFG_KEY,JSON.stringify(cfg))}catch(e){}}
 
 // ---------- vault encryption (Web Crypto, AES-256-GCM) ----------
-function b64(bytes){let s="";bytes.forEach(b=>s+=String.fromCharCode(b));return btoa(s)}
+/* Built one character at a time this re-allocated the string on every byte, and
+   an encrypted sixty-account vault is around 150 000 of them — which made this
+   line, not the cipher, the most expensive part of writing the vault out.
+   Chunked so the joining happens inside the engine, with a chunk small enough to
+   stay well under the argument limit on apply(). */
+function b64(bytes){
+  let s="";
+  for(let i=0;i<bytes.length;i+=0x8000)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+  return btoa(s);
+}
 function unb64(str){return Uint8Array.from(atob(str),c=>c.charCodeAt(0))}
 async function deriveKey(password,salt){
   const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),"PBKDF2",false,["deriveKey"]);
   return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:150000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
 }
+/* The derived key, held for as long as the vault stays open.
+   Deriving it is 150 000 PBKDF2 rounds, and encryptData used to do that on every
+   single save — with a save committed after each account, one "Check all ranks"
+   over sixty accounts paid for sixty full derivations on top of the network work.
+   The salt is what stops a precomputed table from attacking the password, so it
+   has to be random per *vault*, not per *write*; holding it steady while the vault
+   is open takes nothing away from that. What must never repeat under one key is
+   the IV, and that is still drawn fresh for every single encryption below.
+   The key itself is created non-extractable, so unlike the password beside it,
+   it cannot be read back out of memory by script. */
+let vaultKey=null;   // {password, salt:Uint8Array, key:CryptoKey}
+async function keyFor(password,salt){
+  if(vaultKey&&vaultKey.password===password&&(!salt||b64(salt)===b64(vaultKey.salt)))return vaultKey;
+  const s=salt||crypto.getRandomValues(new Uint8Array(16));
+  vaultKey={password,salt:s,key:await deriveKey(password,s)};
+  return vaultKey;
+}
+function forgetVaultKey(){vaultKey=null}
 async function encryptData(password,obj){
-  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const {salt,key}=await keyFor(password);
   const iv=crypto.getRandomValues(new Uint8Array(12));
-  const key=await deriveKey(password,salt);
   const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(JSON.stringify(obj)));
   return {__enc:true,salt:b64(salt),iv:b64(iv),data:b64(new Uint8Array(ct))};
 }
 async function decryptData(password,envelope){
   const salt=unb64(envelope.salt),iv=unb64(envelope.iv),data=unb64(envelope.data);
-  const key=await deriveKey(password,salt);
-  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,data);
+  // Derived against the envelope's own salt and cached under it, so unlocking is
+  // the last derivation that happens until the vault is locked again.
+  const {key}=await keyFor(password,salt);
+  let pt;
+  try{pt=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,data)}
+  catch(e){forgetVaultKey();throw e}   // a key derived from a wrong guess must not linger
   return JSON.parse(new TextDecoder().decode(pt));
 }
 
@@ -3573,7 +3603,7 @@ $("sVaultSet").addEventListener("click",async()=>{
 $("sVaultRemove").addEventListener("click",async()=>{
   if(!vaultPassword){toast("No password is set");return}
   if(!confirm("Remove password protection? Your vault will be saved unencrypted again."))return;
-  vaultPassword=null;
+  vaultPassword=null;forgetVaultKey();
   await saveDB();
   updateVaultStatus();syncLockTimer();
   toast("Password protection removed");
@@ -3915,7 +3945,9 @@ function relock(){
     if(parsed&&parsed.__enc)envelope=parsed;
   }catch(e){}
   if(!envelope)return;
-  vaultPassword=null;accounts=[];
+  // The derived key goes with the password: leaving it behind would keep the one
+  // thing that opens the vault sitting in memory across a lock.
+  vaultPassword=null;forgetVaultKey();accounts=[];
   // Drop every per-card UI state too — otherwise a password that was revealed
   // before the auto-lock would still be on screen after the next unlock.
   [checking,openInfo,openLogin,shownPw,openRank,selected,openMore,openSec].forEach(s=>s.clear());
