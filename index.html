@@ -927,6 +927,16 @@
   .lrow .val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .lrow .mono{font-family:ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:.01em}
   .lrow .none{color:var(--faint)}
+  /* The recovery facts are labelled; the credentials above them are not, because
+     a username and a password are obvious from their shape and these are not. */
+  .lrow .lk{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);margin-right:9px}
+  .lrow .lage{font-style:normal;font-size:10.5px;color:var(--faint);margin-left:9px}
+  /* Beside the name in all three layouts, because the point of the flag is that
+     you spot it without having opened anything. */
+  .flagmark{display:inline-flex;flex-shrink:0;color:var(--danger)}
+  .flagmark .ico{width:12px;height:12px;stroke-width:2.2}
+  .t-nm .flagmark .ico,.rw-nm .flagmark .ico{width:11px;height:11px}
   .lbtns{display:flex;gap:5px;flex-shrink:0}
   .lbtns button{font-size:11px;padding:4px 9px}
   .c-foot{display:flex;flex-direction:column;align-items:stretch;gap:11px;
@@ -1403,6 +1413,12 @@
       <div id="pwMeterLabel" style="font-size:11px;color:var(--muted);margin-top:5px"></div>
       </div>
       <div class="fld"><label>Email on the account</label><input id="fEmail" placeholder="mail the account is registered to" autocomplete="off"></div>
+      <!-- These two were being kept in the Notes box by hand — "birthdate 8/1/1987,
+           created 4/2/2022" — which means they could not be searched, sorted or
+           shown anywhere in particular. They are facts about the account, so they
+           get fields. -->
+      <div class="fld"><label>Account created</label><input type="date" id="fCreated" title="When the account itself was made"></div>
+      <div class="fld"><label>Date of birth on file</label><input type="date" id="fBirth" title="The date of birth the account was registered with — Riot asks for it on recovery"></div>
       <div class="fld"><label>Tags (comma-separated)</label><input id="fTags" placeholder="e.g. ranked-ready, jungle, honor3"></div>
       <div class="fld"><label>Status</label>
         <select id="fStatus">
@@ -1565,6 +1581,15 @@ function isChecked(a){return !!(a.stats&&a.stats.updatedAt)}
 function isStale(a){return a.status!=="banned"&&(!isChecked(a)||Date.now()-a.stats.updatedAt>STALE_MS)}
 function isRanked(a){const t=a.stats&&a.stats.found!==false&&(a.stats.tier||"").toUpperCase();return !!(t&&t!=="UNRANKED")}
 function isFailed(a){return !!(a.stats&&(a.stats.found===false||a.stats.note))}
+/* Something about this account needs a human. Set by hand from the card menu, and
+   set automatically when a check comes back saying the profile does not exist —
+   which almost always means the Riot ID has been changed and nothing about this
+   account will work again until it is corrected. Never cleared automatically:
+   only the person who wrote it down knows whether it has been dealt with.
+   This exists because the vault filled up with notes reading "verify Riot ID",
+   typed by hand into a freetext box where nothing could count them, filter by
+   them, or show them anywhere but inside that one card. */
+function needsAttention(a){return !!a.flagged}
 let checking=new Set(), openInfo=new Set(), openSec=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
 // Which card has its note open, plus the live text. The draft is kept out here
 // on purpose: the grid re-renders wholesale, so a textarea rendered from a.notes
@@ -1674,6 +1699,7 @@ const ICON={
   clipboard:'<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
   star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
   chevron:'<polyline points="6 9 12 15 18 9"/>',
+  flag:'<path d="M4 22V4h11l-1.4 3.5L15 11H4"/><line x1="4" y1="4" x2="4" y2="22"/>',
   eye:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
   eyeOff:'<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M1 1l22 22"/><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>',
   // a person, not a door: the button reveals the stored credentials, it doesn't sign you in anywhere
@@ -1686,6 +1712,27 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;",
 // Asked in three places now, and jsdom has no matchMedia unless a test supplies one
 function prefersReducedMotion(){return !!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)}
 function toast(msg,action,fn){const t=$("toast");t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");if(action)document.getElementById("toastBtn").onclick=()=>{t.style.display="none";fn()};t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",action?6000:2200)}
+/* Both dates are stored as the plain "YYYY-MM-DD" the date input hands over, and
+   they are read back the same way. Parsing them into a Date only to format them is
+   how a birthday becomes a day earlier for anyone west of Greenwich. */
+function fmtDate(iso){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||""));
+  if(!m)return String(iso||"");
+  const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return +m[3]+" "+MON[+m[2]-1]+" "+m[1];
+}
+// "created 4/2/2022" on its own means arithmetic; this is the number you wanted.
+function ageFrom(iso){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||""));
+  if(!m)return "";
+  const days=Math.floor((Date.now()-Date.UTC(+m[1],+m[2]-1,+m[3]))/86400000);
+  if(!isFinite(days)||days<0)return "";
+  if(days<31)return days+(days===1?" day old":" days old");
+  const mo=Math.floor(days/30.44);
+  if(mo<24)return mo+(mo===1?" month old":" months old");
+  const yr=Math.floor(days/365.25);
+  return yr+(yr===1?" year old":" years old");
+}
 function timeAgo(ts){if(!ts)return null;const s=Math.floor((Date.now()-ts)/1000);if(s<60)return"just now";const m=Math.floor(s/60);if(m<60)return m+" min ago";const h=Math.floor(m/60);if(h<24)return h+" h ago";const d=Math.floor(h/24);return d+(d===1?" day ago":" days ago")}
 function tierColor(t){return TIER_COLORS[(t||"UNRANKED").toUpperCase()]||TIER_COLORS.UNRANKED}
 /* One <defs> for the whole document instead of one per crest. Sixty cards each
@@ -2635,6 +2682,10 @@ function rollNumber(el,from,to,suffix){
   requestAnimationFrame(step);
 }
 function commitStats(id,acc,s){
+  // A profile that does not exist is not a failed request to be retried later —
+  // it means the Riot ID has moved, and every future check on this account will
+  // fail the same way until somebody corrects it. Raise the flag once.
+  if(s&&s.found===false&&!acc.flagged)acc.flagged=true;
   const beforeLP=acc.stats&&acc.stats.found!==false&&acc.stats.lp!=null?Number(acc.stats.lp):null;
   const beforeTier=acc.stats&&(acc.stats.tier||"").toUpperCase();
   const up=applyStats(acc,s);
@@ -2748,12 +2799,14 @@ function filtered(){
     if(ui.flag==="stale"&&!isStale(a))return false;
     if(ui.flag==="unchecked"&&isChecked(a))return false;
     if(ui.flag==="failed"&&!isFailed(a))return false;
+    if(ui.flag==="attention"&&!needsAttention(a))return false;
     if(ui.tier){
       const t=(a.stats&&a.stats.found!==false&&a.stats.tier||"").toUpperCase();
       if(ui.tier==="UNRANKED"?isRanked(a):t!==ui.tier)return false;
     }
     if(q){
-      const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,(a.tags||[]).join(" "),a.stats?(a.stats.tier||"")+" "+(shortRank(a.stats)||""):"",(STATUS[a.status]||STATUS.active).label].join(" ").toLowerCase();
+      const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,a.createdOn,a.birthdate,
+        a.flagged?"flagged attention":"",(a.tags||[]).join(" "),a.stats?(a.stats.tier||"")+" "+(shortRank(a.stats)||""):"",(STATUS[a.status]||STATUS.active).label].join(" ").toLowerCase();
       if(!hay.includes(q))return false;
     }
     return true;
@@ -3079,6 +3132,7 @@ function renderDash(){
   // "Never checked" tile right beside it and reads as an age nobody measured.
   const veryStaleN=accounts0.filter(a=>a.status!=="banned"&&isChecked(a)&&Date.now()-a.stats.updatedAt>30*24*3600*1000).length;
   const bannedN=accounts0.filter(a=>a.status==="banned").length;
+  const attentionN=accounts0.filter(needsAttention).length;
   const archivedN=accounts.length-accounts0.length;
   let bk="";
   if(hasStorage){
@@ -3108,6 +3162,8 @@ function renderDash(){
     <div class="stat"><div class="k">Regions</div><div class="v" style="font-size:14px">${esc(regTxt)||"—"}</div></div>
     ${neverN?`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
       <div class="v" style="color:var(--gold-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`:""}
+    ${attentionN?`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
+      <div class="v" style="color:var(--danger)">${attentionN}</div><div class="s-note">flagged by you, or the profile no longer exists</div></button>`:""}
     <button class="stat stat-b${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"><div class="k">Needs refresh</div>
       <div class="v"${staleN?' style="color:var(--danger)"':""}>${staleN}</div>
       <div class="s-note">older than 3 days${veryStaleN?" · "+veryStaleN+" over 30d":""}</div></button>
@@ -3131,7 +3187,7 @@ function renderTagbar(){
 // A number in a dashboard always raises "which ones?", so the stats panel sets
 // these — and they have to be visible and removable, or the grid just looks
 // mysteriously short.
-const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed"};
+const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Needs attention"};
 function renderChips(){
   const out=[];
   if(ui.flag)out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
@@ -3306,7 +3362,7 @@ function rowHTML(a,i){
       <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}">
       <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
       <span class="rw-id">
-        <span class="rw-nm" title="${esc(a.label||a.gameName)}">${esc(a.label||a.gameName)}${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}</span>
+        <span class="rw-nm" title="${esc(a.label||a.gameName)}">${esc(a.label||a.gameName)}${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
         <span class="rw-tag">${esc(a.gameName)}#${esc(a.tagLine)}</span>
         ${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}
       </span>
@@ -3365,7 +3421,7 @@ function tileHTML(a){
     <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
-    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}${esc(a.label||a.gameName)}</span>
+    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}${esc(a.label||a.gameName)}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
     <span class="t-rk" style="color:${col}">${esc(rank)}</span>
     ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
   </div></div>`;
@@ -3462,7 +3518,7 @@ function cardHTML(a,i){
       <div class="c-id">
         <!-- the name is ellipsised at the card's width, so the full one has to be
              available somewhere; hovering is the only place left for it -->
-        <div class="c-name"><span title="${esc(a.label||a.gameName)}">${esc(a.label||a.gameName)}</span>${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.label)}</span>`:""}</div>
+        <div class="c-name"><span title="${esc(a.label||a.gameName)}">${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.label)}</span>`:""}</div>
         <button class="rid" data-act="copyid" title="Copy Riot ID"><span>${esc(a.gameName)}<b>#${esc(a.tagLine)}</b></span></button>
       </div>
       <div class="c-chrome">
@@ -3484,6 +3540,10 @@ function cardHTML(a,i){
       <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
       <div class="lrow"><span class="val mono ${a.password?"":"none"}" style="font-family:${a.password?"":"inherit"}">${a.password?(pw?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${pw?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
       ${a.email?`<div class="lrow"><span class="val">${esc(a.email)}</span><span class="lbtns"><button data-act="copymail">Copy</button></span></div>`:""}
+      <!-- The two facts Riot asks for when an account has to be recovered, which is
+           exactly the moment you are looking at this panel. -->
+      ${a.birthdate?`<div class="lrow"><span class="val"><span class="lk">Date of birth</span>${esc(fmtDate(a.birthdate))}</span><span class="lbtns"><button data-act="copybirth">Copy</button></span></div>`:""}
+      ${a.createdOn?`<div class="lrow"><span class="val"><span class="lk">Created</span>${esc(fmtDate(a.createdOn))}<em class="lage">${esc(ageFrom(a.createdOn))}</em></span></div>`:""}
     </div>`:""}
     ${openRank.has(a.id)?rankPanelHTML(a,s,rv("rank")):""}
     ${noteBlockHTML(a,rv("note"))}
@@ -3503,6 +3563,7 @@ function cardHTML(a,i){
         <button data-act="rank" title="Enter rank manually">${icon("pencil")} Rank</button>
         <button data-act="edit">Edit</button>
         ${a.archived?'<button data-act="unarchive">Unarchive</button>':'<button data-act="archive">Archive</button>'}
+        <button data-act="flag" title="Mark this account as needing a look — it gets a marker and its own filter">${a.flagged?"Clear the flag":"Flag for attention"}</button>
         <button data-act="exstats" title="Leave this account out of the combined stats at the top">${a.excludeStats?"Count in stats":"Exclude from stats"}</button>
         <button data-act="del" class="b-danger" ${armedDelete===a.id?'style="border-color:var(--danger)"':""}>${armedDelete===a.id?"Sure?":"Delete"}</button>
       </div>`:""}
@@ -3653,6 +3714,8 @@ function openForm(acc){
   $("fLogin").value=acc?acc.login||"":"";
   $("fPass").value=acc?acc.password||"":"";
   $("fEmail").value=acc?acc.email||"":"";
+  $("fCreated").value=acc?acc.createdOn||"":"";
+  $("fBirth").value=acc?acc.birthdate||"":"";
   $("fStatus").value=acc?(acc.status||"active"):"active";
   setPassShown(false);
   $("fPass").placeholder=vaultPassword?"Encrypted at rest with your master password":"Stored unencrypted, locally";
@@ -3680,6 +3743,10 @@ function submitForm(){
   }
   const data={label:$("fLabel").value.trim(),region:$("fRegion").value,gameName,tagLine,status:$("fStatus").value,
     login:$("fLogin").value,password:$("fPass").value,email:$("fEmail").value.trim(),
+    // Stored as the ISO string the date input hands over, so they sort as strings
+    // and survive a JSON round trip without a timezone deciding to shift them by a
+    // day — which a Date object serialised to UTC absolutely will.
+    createdOn:$("fCreated").value||"",birthdate:$("fBirth").value||"",
     tags:parseTags($("fTags").value),notes:$("fNotes").value.trim()};
   if(editingId){
     const a=accounts.find(x=>x.id===editingId);if(a)Object.assign(a,data);
@@ -3826,13 +3893,13 @@ function csvCell(v){
   return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
 }
 function doExportCSV(){
-  const cols=["label","gameName","tagLine","region","status","tier","division","lp","wins","losses","level","login","password","email","tags","notes","favorite","lastUpdated"];
+  const cols=["label","gameName","tagLine","region","status","tier","division","lp","wins","losses","level","login","password","email","createdOn","birthdate","tags","notes","favorite","lastUpdated"];
   const rows=accounts.map(a=>{
     const s=a.stats||{};
     return [
       a.label||"",a.gameName,a.tagLine,a.region,a.status||"active",
       s.tier||"",s.division||"",s.lp??"",s.wins??"",s.losses??"",s.level??"",
-      a.login||"",a.password||"",a.email||"",(a.tags||[]).join("|"),a.notes||"",
+      a.login||"",a.password||"",a.email||"",a.createdOn||"",a.birthdate||"",(a.tags||[]).join("|"),a.notes||"",
       a.fav?"yes":"no",s.updatedAt?new Date(s.updatedAt).toISOString():""
     ].map(csvCell).join(",");
   });
@@ -3925,6 +3992,7 @@ function doImportCSV(file){
           id:uid(),tags:get("tags")?get("tags").split("|").filter(Boolean):[],history:[],
           label:get("label"),region:normRegion(get("region")),gameName,tagLine,status:normStatus(get("status")),
           login:get("login"),password:get("password"),email:get("email"),notes:get("notes"),
+          createdOn:get("createdOn"),birthdate:get("birthdate"),
           fav:get("favorite")==="yes",
           stats:tier?{found:true,tier,division:get("division")||null,lp:get("lp")?+get("lp"):null,wins:get("wins")?+get("wins"):null,losses:get("losses")?+get("losses"):null,level:get("level")?+get("level"):null,mmr:null,avgRecent:null,asOf:"CSV import",note:null,updatedAt:get("lastUpdated")?new Date(get("lastUpdated")).getTime()||null:null}:null
         };
@@ -4454,6 +4522,9 @@ $("grid").addEventListener("click",async e=>{
   else if(act==="copylogin")copyText(acc.login,"Username");
   else if(act==="copypw")copyText(acc.password,"Password",true);
   else if(act==="copymail")copyText(acc.email,"Email");
+  else if(act==="copybirth")copyText(acc.birthdate,"Date of birth");
+  else if(act==="flag"){acc.flagged=!acc.flagged;saveDB();render();
+    toast(acc.flagged?"Flagged — it's under Needs attention now":"Flag cleared")}
   else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderCard(id)}
   else if(act==="login"){const on=!openLogin.has(id);on?openLogin.add(id):openLogin.delete(id);shownPw.delete(id);reveal=on?id+":login":null;renderCard(id)}
   else if(act==="edit")openForm(acc);

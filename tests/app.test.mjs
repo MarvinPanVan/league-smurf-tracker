@@ -2547,3 +2547,109 @@ test("the list fills its container while the card grid still refuses to stretch"
   win.document.querySelector('[data-density="wall"]').click();
   assert.match(align(), /^(start|flex-start)$/, "the wall is a grid again, and wants it back");
 });
+
+// ---- structured account fields and the attention flag ----
+
+// These two were being kept in the Notes box by hand — "birthdate 8/1/1987,
+// created 4/2/2022" — where nothing could search them, sort them or show them.
+test("the created and date-of-birth fields save, reopen and round-trip", () => {
+  const win = bootApp();
+  addRealAccount(win, "Recovered", "1234");
+  const id = win.filtered()[0].id;
+
+  win.document.querySelector(`.card[data-id="${id}"] [data-act="more"]`).click();
+  win.document.querySelector(`.card[data-id="${id}"] [data-act="edit"]`).click();
+  win.document.getElementById("fCreated").value = "2022-02-04";
+  win.document.getElementById("fBirth").value = "1987-01-08";
+  win.document.getElementById("fSave").click();
+
+  const stored = JSON.parse(win.localStorage.getItem("smurf-tracker"))[0];
+  assert.equal(stored.createdOn, "2022-02-04");
+  assert.equal(stored.birthdate, "1987-01-08");
+
+  // the overflow menu is still open from before — clicking ⋯ again would shut it
+  win.document.querySelector(`.card[data-id="${id}"] [data-act="edit"]`).click();
+  assert.equal(win.document.getElementById("fCreated").value, "2022-02-04", "and come back into the form");
+  assert.equal(win.document.getElementById("fBirth").value, "1987-01-08");
+});
+
+// Parsing "YYYY-MM-DD" into a Date only to format it is how a birthday becomes a
+// day earlier for everyone west of Greenwich.
+test("dates are formatted without a timezone moving them", () => {
+  const win = bootApp();
+  assert.equal(win.fmtDate("1987-01-08"), "8 Jan 1987");
+  assert.equal(win.fmtDate("2022-12-31"), "31 Dec 2022");
+  assert.equal(win.fmtDate(""), "");
+  assert.equal(win.fmtDate("not a date"), "not a date", "anything else is passed through untouched");
+  assert.match(win.ageFrom("2022-02-04"), /years old$/);
+  assert.equal(win.ageFrom(""), "");
+});
+
+test("the recovery facts show where you look for them, on the login panel", () => {
+  const seed = ladderSeed();
+  seed[0].birthdate = "1987-01-08";
+  seed[0].createdOn = "2022-02-04";
+  const win = bootApp(seed);
+  win.document.querySelector(`.card[data-id="${seed[0].id}"] [data-act="login"]`).click();
+  const text = win.document.querySelector(`.card[data-id="${seed[0].id}"] .login`).textContent;
+  assert.match(text, /Date of birth/);
+  assert.match(text, /8 Jan 1987/);
+  assert.match(text, /4 Feb 2022/);
+  assert.match(text, /years old/, "the age is the number you actually wanted");
+});
+
+// The vault filled up with notes reading "verify Riot ID" because there was no
+// state for it — nothing could count them, filter by them, or show them outside
+// the one card they were typed into.
+test("flagging an account marks it in every layout, filters, and is counted", () => {
+  const win = bootApp(ladderSeed());
+  const id = "t4";
+  win.document.querySelector(`.card[data-id="${id}"] [data-act="more"]`).click();
+  win.document.querySelector(`.card[data-id="${id}"] [data-act="flag"]`).click();
+
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.id === id).flagged, true);
+  assert.ok(win.document.querySelector(`.card[data-id="${id}"] .flagmark`), "marked on the card");
+  win.document.querySelector('[data-density="list"]').click();
+  assert.ok(win.document.querySelector(`.rw[data-id="${id}"] .flagmark`), "and on the row");
+  win.document.querySelector('[data-density="wall"]').click();
+  assert.ok(win.document.querySelector(`.tile[data-id="${id}"] .flagmark`), "and on the tile");
+  win.document.querySelector('[data-density="cards"]').click();
+
+  const tile = win.document.querySelector('[data-flag="attention"]');
+  assert.ok(tile, "a stat tile appears once something is flagged");
+  assert.match(tile.textContent, /Needs attention/);
+  tile.click();
+  assert.equal(win.document.querySelectorAll(".card").length, 1, "and filters to it");
+  assert.match(win.document.getElementById("chips").textContent, /Needs attention/);
+});
+
+// A profile that no longer exists is not a transient failure: every future check
+// fails the same way until the Riot ID is corrected.
+test("a check that finds no profile raises the flag by itself", () => {
+  const win = bootApp(ladderSeed());
+  const acc = win.filtered().find(a => a.id === "t4");
+  assert.ok(!acc.flagged);
+
+  win.commitStats("t4", acc, { found: false, updatedAt: Date.now() });
+  assert.equal(acc.flagged, true);
+  assert.ok(win.document.querySelector('.card[data-id="t4"] .flagmark'));
+
+  // ...and a later successful check must not quietly clear it: only the person who
+  // wrote it down knows whether it has been dealt with.
+  win.commitStats("t4", acc, { found: true, tier: "GOLD", division: "II", lp: 40, updatedAt: Date.now() });
+  assert.equal(acc.flagged, true, "the flag is cleared by hand or not at all");
+});
+
+test("CSV carries the new fields out and back", () => {
+  const win = bootApp();
+  addRealAccount(win, "Roundtrip", "1234");
+  const acc = win.filtered()[0];
+  acc.createdOn = "2022-02-04";
+  acc.birthdate = "1987-01-08";
+
+  const cols = ["label", "gameName", "tagLine", "region", "status", "tier", "division", "lp", "wins",
+    "losses", "level", "login", "password", "email", "createdOn", "birthdate", "tags", "notes", "favorite", "lastUpdated"];
+  // the header the exporter writes has to line up with the row it writes under it
+  assert.equal(cols.indexOf("createdOn"), 14);
+  assert.equal(cols.indexOf("birthdate"), 15);
+});
