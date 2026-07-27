@@ -411,13 +411,29 @@
      unfolds the chart and the details under it, so nothing is hidden — the card
      grid stays for browsing, this is for working through a collection. */
   .grid.list{display:flex;flex-direction:column;gap:5px}
+  /* The display serif appears exactly twice in the app now: the wordmark, and
+     here. Anywhere else it starts to read as costume. */
+  .lgrp{display:flex;align-items:center;gap:9px;padding:15px 5px 6px}
+  .lgrp:first-child{padding-top:3px}
+  .lgrp-crest{width:16px;height:16px;flex-shrink:0}
+  .lgrp-dot{width:8px;height:8px;border-radius:2px;transform:rotate(45deg);flex-shrink:0;opacity:.8}
+  .lgrp-star{width:13px;height:13px;fill:var(--star);stroke:var(--star);flex-shrink:0}
+  .lgrp-n{font-family:'Cinzel',Georgia,serif;font-size:12px;font-weight:700;
+    letter-spacing:.13em;text-transform:uppercase}
+  .lgrp-ln{flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
+  .lgrp-k{font-size:10.5px;font-weight:600;color:var(--faint);letter-spacing:.05em;
+    font-variant-numeric:tabular-nums}
   .hx.row{padding:1px;background:#ffffff0d;border-radius:11px}
   .hx.row:hover{background:#ffffff1c}
   .hx.row.gold{background:color-mix(in srgb,var(--gold) 40%,transparent)}
   .hx.row.open{background:color-mix(in srgb,var(--teal) 34%,transparent)}
   .rw{border-radius:10px;background:var(--panel);overflow:hidden}
-  .rw-main{display:grid;align-items:center;gap:12px;padding:8px 13px;cursor:pointer;
-    grid-template-columns:auto 30px minmax(120px,1.6fr) minmax(96px,1fr) 62px 92px 44px 74px 16px;
+  /* Roughly 46px of row, of which about a third was padding: a 30px picture,
+     13.5px type, and six hundred pixels of nothing between the name and the rank.
+     Taller, and with that gap given to the two things the list had been throwing
+     away — the shape of the climb, and how the wins and losses actually sit. */
+  .rw-main{display:grid;align-items:center;gap:13px;padding:11px 14px;cursor:pointer;
+    grid-template-columns:auto 40px minmax(140px,1.35fr) 124px minmax(102px,1fr) 60px 94px 38px 72px 16px;
     transition:background .14s ease}
   .rw-main:hover{background:#ffffff07}
   .rw-main:focus-visible{outline-offset:-2px}
@@ -426,13 +442,15 @@
     border-radius:0 3px 3px 0;background:var(--st,transparent);opacity:.85}
   /* a row is a line in a list, not a tile — it must not lift off the page */
   .grid.list>.hx:hover{transform:none;box-shadow:var(--sh-1)}
-  .rw-pic{width:30px;height:30px;border-radius:9px;overflow:hidden;position:relative;
+  .rw-pic{width:40px;height:40px;border-radius:11px;position:relative;overflow:visible;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center}
-  .rw-pic img{width:100%;height:100%;object-fit:cover;display:block}
-  .rw-pic{overflow:visible}
-  .rw-pic b{font-size:13px;font-weight:600;color:var(--faint)}
-  .rw-pic img{border-radius:9px}
+  .rw-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:11px}
+  .rw-pic b{font-size:15px;font-weight:600;color:var(--faint)}
+  /* the tier, on the picture, the way the card puts it beside the rank */
+  .rw-crest{position:absolute;right:-6px;top:-6px;width:17px;height:17px;
+    filter:drop-shadow(0 0 5px var(--c)) drop-shadow(0 1px 2px #000000b3)}
+  .rw-crest .crest{width:100%;height:100%}
   /* same idea as the card: the level belongs to the picture, not to a column of
      performance numbers */
   .rw-lvb{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
@@ -440,20 +458,41 @@
     min-width:18px;text-align:center;border-radius:999px;font-variant-numeric:tabular-nums;
     color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
   .rw-id{min-width:0;display:flex;flex-direction:column;gap:1px}
-  .rw-nm{font-size:13.5px;font-weight:600;letter-spacing:-.01em;color:var(--text);
+  .rw-nm{font-size:14.5px;font-weight:600;letter-spacing:-.012em;color:var(--text);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
   .rw-star{color:var(--star);display:inline-flex}
   .rw-star .ico{width:11px;height:11px;fill:var(--star)}
-  .rw-tag{font-size:10.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .rw-rank{font-size:13.5px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:baseline;gap:7px;
-    overflow:hidden;white-space:nowrap}
-  .rw-rank em{font-style:normal;font-size:11px;font-weight:600;color:var(--muted);flex-shrink:0}
-  .rw-d,.rw-wr,.rw-lv{display:flex;flex-direction:column;gap:1px;font-variant-numeric:tabular-nums}
-  .rw-wr b,.rw-lv b{font-size:12.5px;font-weight:700;color:var(--muted)}
+  .rw-tag{font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rw-tags{display:flex;gap:4px;margin-top:3px;overflow:hidden}
+  .rw-tags i{font-style:normal;font-size:9.5px;letter-spacing:.02em;color:var(--muted);
+    padding:1px 6px;border-radius:999px;background:#ffffff0f;white-space:nowrap}
+  /* the shape of the climb, which the list used to leave out entirely */
+  .rw-spark{display:flex;align-items:center;height:30px}
+  .spk{width:100%;height:100%;display:block}
+  .rw-check{font-size:10.5px;padding:4px 9px;gap:5px;opacity:0;color:var(--teal-txt);
+    transition:opacity .15s ease,background .15s ease,border-color .15s ease}
+  .rw-check .ico{width:11px;height:11px}
+  .rw-main:hover .rw-check,.rw-check:focus-visible{opacity:1}
+  .rw-rank{display:flex;flex-direction:column;gap:0;overflow:hidden;white-space:nowrap}
+  .rw-rank b{font-size:14.5px;font-weight:700;letter-spacing:-.015em;
+    overflow:hidden;text-overflow:ellipsis}
+  .rw-rank em{font-style:normal;font-size:11px;font-weight:600;color:var(--muted);
+    font-variant-numeric:tabular-nums}
+  .rw-d,.rw-wr,.rw-lv{display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
+  .rw-wr b,.rw-lv b{font-size:12.5px;font-weight:700;color:var(--muted);line-height:1.1}
   .rw-wr b.wr-good{color:var(--good)}
   .rw-wr em,.rw-lv em{font-style:normal;font-size:9.5px;color:var(--faint);letter-spacing:.02em}
+  /* Sixty rows of "47%" are sixty identical grey blocks. Sixty bars of differing
+     length are a shape you can run your eye down. */
+  .rw-bar{display:block;height:3px;border-radius:999px;background:#ffffff14;overflow:hidden}
+  .rw-bar i{display:block;height:100%;border-radius:999px}
   .rw-d .delta{font-size:10.5px;padding:2px 6px}
   .rw-rg{font-size:10px;font-weight:600;letter-spacing:.09em;color:var(--faint);text-align:center}
+  /* An unranked row has nothing to say in four of its columns, and at full
+     strength a wall of them drowns out the rows that do. */
+  .rw-quiet .rw-pic{opacity:.62}
+  .rw-quiet .rw-nm{color:var(--muted);font-weight:500}
+  .rw-quiet .rw-rank b{font-size:13px;font-weight:600}
   .rw-up{font-size:10.5px;color:var(--faint);text-align:right;white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis}
   .rw-up.stale{color:var(--danger)}
@@ -463,12 +502,23 @@
     border-top:1px solid var(--line);margin-top:1px;
     animation:sectionIn .22s cubic-bezier(.22,1,.36,1) both}
   .rw-open .lpc-wrap{margin:0}
-  @media (max-width:900px){
-    /* the columns that are nice-to-know go first, the identity stays */
-    .rw-main{grid-template-columns:auto 30px minmax(110px,1.5fr) minmax(90px,1fr) 62px 16px;gap:10px}
-    .rw-wr,.rw-rg,.rw-up{display:none}
+  /* The columns that are nice-to-know go first, the identity and the rank stay.
+     The sparkline outranks the region code and the timestamp: it is the only
+     column that says anything a glance can't already get from the rank. */
+  @media (max-width:1180px){
+    .rw-main{grid-template-columns:auto 40px minmax(130px,1.35fr) 104px minmax(96px,1fr) 58px 88px 72px 16px;gap:11px}
+    .rw-rg{display:none}
   }
-  .card{position:relative;padding:17px;display:flex;flex-direction:column;gap:11px}
+  @media (max-width:980px){
+    .rw-main{grid-template-columns:auto 40px minmax(120px,1.4fr) 92px minmax(92px,1fr) 56px 16px;gap:10px}
+    .rw-wr,.rw-up{display:none}
+  }
+  @media (max-width:720px){
+    .rw-main{grid-template-columns:auto 36px minmax(110px,1.5fr) minmax(90px,1fr) 54px 16px;gap:10px}
+    .rw-spark,.rw-tags{display:none}
+  }
+  .card{position:relative;padding:17px;display:flex;flex-direction:column;gap:11px;
+    overflow:hidden;isolation:isolate}
   /* status as a left edge rail — scannable down a column of 60 cards in a way a
      7px dot next to the name never was */
   .card::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:3px;
@@ -488,9 +538,12 @@
      it. Level was in the stats row next to Peak and MMR, which read as another
      performance figure — it isn't one. It belongs to the identity of the
      account, so it belongs on the picture. */
-  .c-crest{position:absolute;right:-4px;top:-4px;width:19px;height:19px;border-radius:6px;transform:rotate(45deg);
-    background:linear-gradient(145deg,#ffffff73,var(--c) 58%,var(--c));
-    box-shadow:0 0 0 3px #131720,0 0 12px var(--c)}
+  /* Was a rotated square in the tier colour — a shape that says "there is a tier"
+     without saying which. The crest says which. */
+  .crest{display:block;flex-shrink:0;overflow:visible}
+  .c-crest{position:absolute;right:-7px;top:-7px;width:25px;height:25px;
+    filter:drop-shadow(0 0 7px var(--c)) drop-shadow(0 1px 2px #000000b3)}
+  .c-crest .crest{width:100%;height:100%}
   .c-lvbadge{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);
     min-width:24px;padding:1px 6px;border-radius:999px;text-align:center;
     font-size:10.5px;font-weight:700;line-height:16px;letter-spacing:.01em;
@@ -539,10 +592,26 @@
     background:color-mix(in srgb,var(--teal) 12%,transparent);color:var(--teal-txt);
     border:1px solid color-mix(in srgb,var(--teal) 24%,transparent)}
   /* the rank is why the card exists, so it gets the card's largest type */
+  /* The tier as an emblem rather than only as a coloured word. It sits in the
+     rank line itself rather than watermarked behind it: faint behind the type it
+     landed under the delta chips, where it was both invisible and in the way.
+     A second, much larger copy bleeds off the right edge at low opacity, which is
+     what gives an Iron card and a Challenger card different weight from across
+     the room — that one is texture, and never has to be read. */
   .c-rank{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-top:3px}
+  /* Anchored to the card, not to the rank row: hung off the row it had only ~50px
+     of height to live in, so it either got clipped to a meaningless band or — with
+     nothing clipping it — spilled out into the gap between cards.
+     isolation:isolate is what lets z-index:-1 paint above the card's own
+     background while still staying under every child. */
+  .c-wm{position:absolute;right:-30px;top:52px;width:128px;height:128px;z-index:-1;
+    opacity:.13;pointer-events:none}
   .c-deltas{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
   .rk{font-size:23px;font-weight:600;letter-spacing:-.035em;line-height:1.15;white-space:nowrap;
-    overflow:hidden;text-overflow:ellipsis}
+    overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:9px;min-width:0}
+  .rk-t{overflow:hidden;text-overflow:ellipsis}
+  .rk-crest{width:27px;height:27px;flex-shrink:0;
+    filter:drop-shadow(0 1px 3px #00000073) drop-shadow(0 0 9px currentColor)}
   .rk-lp{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-.015em;margin-left:10px;
     font-variant-numeric:tabular-nums;opacity:.82}
   .c-unchecked{font-size:17px;color:var(--faint);letter-spacing:-.02em}
@@ -1288,6 +1357,31 @@ const REGIONS={
 };
 const TIER_ORDER=["IRON","BRONZE","SILVER","GOLD","PLATINUM","EMERALD","DIAMOND","MASTER","GRANDMASTER","CHALLENGER"];
 const TIER_COLORS={IRON:"#8a8a8a",BRONZE:"#b0765a",SILVER:"#a8bdd0",GOLD:"#e6c15a",PLATINUM:"#4fd1c5",EMERALD:"#3ddc84",DIAMOND:"#7ea6f0",MASTER:"#b16ce8",GRANDMASTER:"#e05656",CHALLENGER:"#f4d688",UNRANKED:"#5b7a99"};
+/* ---- tier crests ----
+   Ten emblems, one per tier, drawn here rather than fetched. The app is a single
+   file that has to keep working offline, and Riot's own rank art is neither ours
+   to ship nor reachable without a network — so this is an original set that only
+   borrows the idea of a rank emblem.
+   They are built to be told apart by silhouette alone, because at the 13px the
+   list rows use no interior detail survives at all: plates for Iron through
+   Silver, cut gems for Gold through Diamond, crowned gems with escalating wings
+   above that. `d` is the body, `c` a crown behind it, `w` wings, `s` a star,
+   `f` facet lines scored over the top. */
+const CRESTS={
+  IRON:{d:"M6.5 6.5h11l2.5 11H4z"},
+  BRONZE:{d:"M4.5 5h15v6.5c0 4.2-3.4 7-7.5 9.5-4.1-2.5-7.5-5.3-7.5-9.5z"},
+  SILVER:{d:"M4.5 4.5h6L12 6.4l1.5-1.9h6V11c0 4.2-3.4 7-7.5 9.5C7.9 18 4.5 15.2 4.5 11z",f:["M12 9.2l3.4 2 3.4-2"]},
+  GOLD:{d:"M12 2.5l8 4.6v9.8L12 21.5l-8-4.6V7.1z",f:["M12 6.6l4.4 2.5v5.8L12 17.4l-4.4-2.5V9.1z"]},
+  PLATINUM:{d:"M8.4 3h7.2L20 7.4v9.2L15.6 21H8.4L4 16.6V7.4z",f:["M8.4 3l3.6 4.6L15.6 3","M4 16.6L12 12l8 4.6","M12 7.6v4.4"]},
+  EMERALD:{d:"M8 3h8l4 4v10l-4 4H8l-4-4V7z",f:["M8.6 7.4h6.8v9.2H8.6z"]},
+  DIAMOND:{d:"M6.8 3.5h10.4L21.5 9.5 12 21 2.5 9.5z",f:["M2.5 9.5h19","M6.8 3.5L8.8 9.5 12 21 15.2 9.5 17.2 3.5"]},
+  MASTER:{d:"M12 8.6l6.2 3.6v6.2L12 22l-6.2-3.6v-6.2z",c:"M4.6 9.4L3.4 3.2l4 3L12 1l4.6 5.2 4-3-1.2 6.2z"},
+  GRANDMASTER:{d:"M12 9.2l5.8 3.4v5.8L12 21.8l-5.8-3.4v-5.8z",c:"M5.2 10L4 4.2l3.9 2.9L12 2.2l4.1 4.9L20 4.2 18.8 10z",
+    w:["M6 12.6L.5 9.4l.4 6.4z","M18 12.6l5.5-3.2-.4 6.4z"]},
+  CHALLENGER:{d:"M12 9.8l5.4 3.1v5.4L12 21.4l-5.4-3.1v-5.4z",c:"M5.4 10.6L4.2 5.2 7.9 8 12 3.4 16.1 8l3.7-2.8-1.2 5.4z",
+    w:["M5.8 13L0 9.6l.4 6.8z","M18.2 13L24 9.6l-.4 6.8z"],
+    s:"M12 0l.9 2 2.1.3-1.55 1.5.4 2.1L12 4.9l-1.85 1 .4-2.1L9 2.3l2.1-.3z"}
+};
 const DIV_ORDER={IV:0,III:1,II:2,I:3};
 const STALE_MS=3*24*3600*1000;
 // How often an auto-check may re-run, shortest to longest. The label is what the
@@ -1439,6 +1533,37 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;",
 function toast(msg,action,fn){const t=$("toast");t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");if(action)document.getElementById("toastBtn").onclick=()=>{t.style.display="none";fn()};t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",action?6000:2200)}
 function timeAgo(ts){if(!ts)return null;const s=Math.floor((Date.now()-ts)/1000);if(s<60)return"just now";const m=Math.floor(s/60);if(m<60)return m+" min ago";const h=Math.floor(m/60);if(h<24)return h+" h ago";const d=Math.floor(h/24);return d+(d===1?" day ago":" days ago")}
 function tierColor(t){return TIER_COLORS[(t||"UNRANKED").toUpperCase()]||TIER_COLORS.UNRANKED}
+/* One <defs> for the whole document instead of one per crest. Sixty cards each
+   carrying their own gradient definition would be sixty duplicate ids — invalid
+   markup, and pointless, since every crest of a tier wants exactly the same ramp.
+   Tier colours are fixed constants, not the accent the picker drives, so this is
+   written once at boot and never touched again. */
+function installCrestDefs(){
+  if($("crestDefs"))return;
+  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.id="crestDefs";svg.setAttribute("width","0");svg.setAttribute("height","0");
+  svg.setAttribute("aria-hidden","true");svg.style.cssText="position:absolute;pointer-events:none";
+  svg.innerHTML="<defs>"+TIER_ORDER.map(t=>{const c=TIER_COLORS[t];
+    return `<linearGradient id="cr-${t}" x1="0" y1="0" x2=".35" y2="1">`
+      +`<stop offset="0" stop-color="#fff" stop-opacity=".78"/>`
+      +`<stop offset=".42" stop-color="${c}"/>`
+      +`<stop offset="1" stop-color="${c}" stop-opacity=".5"/></linearGradient>`;
+  }).join("")+"</defs>";
+  document.body.appendChild(svg);
+}
+// Sized by CSS through `cls`, never by attributes — the same markup is the 13px
+// mark on a row, the 20px badge on a portrait and the 80px watermark on a card.
+function crest(tier,cls){
+  const t=(tier||"").toUpperCase(), c=CRESTS[t];
+  if(!c)return "";
+  let s=`<svg class="crest${cls?" "+cls:""}" viewBox="0 0 24 24" aria-hidden="true">`;
+  if(c.w)for(const w of c.w)s+=`<path d="${w}" fill="${TIER_COLORS[t]}" opacity=".6"/>`;
+  if(c.c)s+=`<path d="${c.c}" fill="url(#cr-${t})"/>`;
+  if(c.s)s+=`<path d="${c.s}" fill="#fff" opacity=".92"/>`;
+  s+=`<path d="${c.d}" fill="url(#cr-${t})"/>`;
+  if(c.f)for(const f of c.f)s+=`<path d="${f}" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="1"/>`;
+  return s+"</svg>";
+}
 function rankValue(s){ // sortable number, higher = better
   if(!s||!s.tier||s.found===false)return -1;
   const t=TIER_ORDER.indexOf((s.tier||"").toUpperCase());
@@ -1493,6 +1618,49 @@ function defaultRange(hist){
   return days<=21?"d":days<=150?"w":"m";
 }
 const RANGES=[["d","Daily"],["w","Weekly"],["m","Monthly"]];
+/* The list row's chart. rankChart() below is the real one — bands, division
+   hairlines, hoverable points, a range switcher — and none of that fits in a
+   40 px slot, so the list simply threw the shape away and every row looked like
+   every other row. This keeps only the shape: the last sixteen readings, scaled
+   to themselves, in the tier's colour.
+   No gradients and so no ids, which matters more here than anywhere: sixty rows
+   minting sixty gradient definitions is exactly what made a re-render expensive
+   the last time. Flat fills keep the markup identical between renders, which is
+   what lets syncGrid leave an unchanged row alone. */
+const SPK_W=124, SPK_H=30;
+function sparkline(hist,col){
+  const vals=(hist||[]).map(ladderLP).filter(v=>v!==null).slice(-16);
+  if(vals.length<2)return "";
+  const lo=Math.min(...vals), hi=Math.max(...vals), span=hi-lo;
+  // A flat run has no range to scale against; centring it says "steady" instead
+  // of pinning the whole line to the top or the bottom of the box.
+  const px=i=>(i/(vals.length-1))*SPK_W;
+  const py=v=>span?SPK_H-3-((v-lo)/span)*(SPK_H-6):SPK_H/2;
+  const pts=vals.map((v,i)=>px(i).toFixed(1)+" "+py(v).toFixed(1));
+  const line="M"+pts.join(" L");
+  const area="M0 "+SPK_H+" L"+pts.join(" L")+" L"+SPK_W+" "+SPK_H+"Z";
+  const last=pts[pts.length-1].split(" ");
+  return `<svg class="spk" viewBox="0 0 ${SPK_W} ${SPK_H}" preserveAspectRatio="none" aria-hidden="true">`
+    +`<path d="${area}" fill="${col}" opacity=".14"/>`
+    +`<path d="${line}" fill="none" stroke="${col}" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`
+    +`<circle cx="${last[0]}" cy="${last[1]}" r="2.4" fill="${col}" vector-effect="non-scaling-stroke"/></svg>`;
+}
+// Which band a row belongs under when the list is grouped. Never-checked is kept
+// apart from unranked: one is a fact about the account, the other about us.
+function listGroup(a){
+  if(isRanked(a))return (a.stats.tier||"").toUpperCase();
+  return isChecked(a)?"UNRANKED":"UNCHECKED";
+}
+function groupLabel(k){
+  if(k==="FAV")return "Favorites";
+  if(k==="UNCHECKED")return "Never checked";
+  if(k==="UNRANKED")return "Unranked";
+  return k.charAt(0)+k.slice(1).toLowerCase();
+}
+function groupColor(k){
+  if(k==="FAV")return "var(--gold-txt)";
+  return k==="UNCHECKED"?"#5d6577":tierColor(k);
+}
 // The old sparkline plotted LP with no scale at all: it showed the number moving
 // but never how far, or through which ranks. This draws the ladder itself —
 // a coloured band per tier, division hairlines when the view is tight enough for
@@ -2812,7 +2980,7 @@ function rowHTML(a,i){
   }else rank="Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
-  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${a.id}"><div class="hx-in rw" data-id="${a.id}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${a.id}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}" data-id="${a.id}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
     <div class="rw-main" data-act="info" role="button" tabindex="0" aria-expanded="${open}">
       <!-- No stopPropagation here: every click on a card is handled by one
            delegated listener on #grid, and closest("[data-act]") already stops at
@@ -2820,14 +2988,19 @@ function rowHTML(a,i){
            stopped that listener from ever running, so ticking a row selected
            nothing and the bulk bar never appeared. -->
       <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}">
-      <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}</span>
+      <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
       <span class="rw-id">
         <span class="rw-nm" title="${esc(a.label||a.gameName)}">${esc(a.label||a.gameName)}${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}</span>
         <span class="rw-tag">${esc(a.gameName)}#${esc(a.tagLine)}</span>
+        ${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}
       </span>
-      <span class="rw-rank" style="color:${col}">${esc(rank)}${lp?`<em>${esc(lp)}</em>`:""}</span>
+      <span class="rw-spark">${sparkline(a.history,col)
+        // Nothing to plot yet, so the slot offers the one thing that would change
+        // that. Sixty never-checked rows used to be sixty dead lines.
+        ||(!isChecked(a)&&!isChecking?`<button class="rw-check" data-act="check" title="Check this account's rank now">${icon("refresh")} Check</button>`:"")}</span>
+      <span class="rw-rank" style="color:${col}"><b>${esc(rank)}</b>${lp?`<em>${esc(lp)}</em>`:""}</span>
       <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${Math.abs(dv)}</span>`:""}</span>
-      <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><em>${wins}W ${losses}L</em>`:""}</span>
+      <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wins}W ${losses}L</em>`:""}</span>
       <span class="rw-rg">${esc(a.region)}</span>
       <span class="rw-up${isStale(a)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
@@ -2899,7 +3072,7 @@ function cardHTML(a,i){
   else if(s.found===false)rankBlock=`<div class="wl" style="color:var(--danger)">Not found — check name/tag/region</div>`;
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
     <div class="wl">${s.level>=30?"Unranked this season":"Not level 30 yet"}</div>`;
-  else rankBlock=`<div class="rk" style="color:${col}">${esc(tierTxt||"Unranked")}${lpTxt?`<span class="rk-lp">${esc(lpTxt)}</span>`:""}</div>
+  else rankBlock=`<div class="rk" style="color:${col}">${isRanked(a)?crest(s.tier,"rk-crest"):""}<span class="rk-t">${esc(tierTxt||"Unranked")}</span>${lpTxt?`<span class="rk-lp">${esc(lpTxt)}</span>`:""}</div>
     <div class="wl">${total>0?`<b>${wins}W</b> <b>${losses}L</b> · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:"No ranked games found"}</div>`;
   // Peak / Level / MMR are unrelated facts — label them instead of running them
   // together in one muted sentence.
@@ -2932,11 +3105,14 @@ function cardHTML(a,i){
   const railed=a.status&&a.status!=="active";
   const icon0=iconUrl(s);
   return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${a.id}" style="--d:${(i||0)*40}ms"><div class="hx-in card" data-id="${a.id}"${railed?` style="--st:${st.color}"`:""}>
+    ${isRanked(a)?crest(s.tier,"c-wm"):""}
     <div class="c-head">
       <div class="c-portrait">
         <span class="c-initial">${esc(initial)}</span>
         ${icon0?`<img class="c-avatar" src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:""}
-        ${s&&s.found!==false&&s.tier?`<span class="c-crest" style="--c:${col}" title="${esc(tierTxt)}"></span>`:""}
+        <!-- no tier crest here any more: it earns its place beside the rank
+             itself, and two of them on one card is one too many -->
+        ${""}
         ${s&&s.found!==false&&s.level&&!levelLed?`<span class="c-lvbadge" title="Summoner level">${esc(s.level)}</span>`:""}
       </div>
       <div class="c-id">
@@ -2994,6 +3170,41 @@ function cardHTML(a,i){
   </div></div>`;
 }
 
+/* The rank-sorted list as a flat sequence with a heading before each new tier.
+   Sixty rows of identical grey is a wall you scroll past; the headings are what
+   turn the same sixty rows into a ladder you can read down. The count is filled
+   in as the list is walked, which is safe because nothing renders until the whole
+   sequence has been built. */
+function withGroups(list){
+  const out=[];let cur=null,head=null;const seen=new Map();
+  for(const a of list){
+    // Favourites are pinned above everything by filtered(), so they need a band of
+    // their own: grouped by tier alone, a favourite Gold account opened a GOLD
+    // heading at the top of the list and the real Gold accounts opened a second
+    // one further down — two headings claiming the same data-id, which is the one
+    // thing syncGrid cannot survive.
+    const k=a.fav?"FAV":listGroup(a);
+    if(k!==cur){
+      cur=k;
+      // And belt-and-braces for any future sort that interleaves groups again.
+      const n=(seen.get(k)||0)+1;seen.set(k,n);
+      head={id:"grp:"+k+(n>1?":"+n:""),group:k,n:0};
+      out.push(head);
+    }
+    head.n++;
+    out.push(a);
+  }
+  return out;
+}
+function groupHTML(g){
+  const c=groupColor(g.group);
+  const mark=g.group==="FAV"?icon("star","lgrp-star")
+    :CRESTS[g.group]?crest(g.group,"lgrp-crest")
+    :`<span class="lgrp-dot" style="background:${c}"></span>`;
+  return `<div class="lgrp" data-id="${g.id}" role="presentation">${mark}`
+    +`<span class="lgrp-n" style="color:${c}">${esc(groupLabel(g.group))}</span>`
+    +`<span class="lgrp-ln"></span><span class="lgrp-k">${g.n}</span></div>`;
+}
 function renderGrid(){
   const list=filtered();
   const grid=$("grid");
@@ -3008,7 +3219,10 @@ function renderGrid(){
     // switching layout starts from nothing rather than diffing one into the other.
     const layout=asList?"list":"cards";
     if(grid.dataset.layout!==layout){grid.textContent="";cardCache.clear();grid.dataset.layout=layout}
-    syncGrid(grid,list,list.map((a,i)=>asList?rowHTML(a,i):cardHTML(a,i)));
+    // Grouped only when the list is actually in rank order — under any other sort
+    // the headings would be scattered through the list and mean nothing.
+    const items=asList&&ui.sort==="rank"?withGroups(list):list;
+    syncGrid(grid,items,items.map((it,i)=>it.group?groupHTML(it):asList?rowHTML(it,i):cardHTML(it,i)));
   }
   reveal=null; // consumed by the render above — the next one must not replay it
   renderBulkBar(list); // the "select all shown" box tracks whatever is shown now
@@ -3969,6 +4183,7 @@ function boot(){
   $("fRegion").innerHTML=Object.keys(REGIONS).map(r=>`<option value="${r}">${esc(r)} — ${esc(REGIONS[r].full)}</option>`).join("");
   $("sAutoEvery").innerHTML=AUTO_EVERY.map(o=>`<option value="${o.v}">${esc(o.label)}</option>`).join("");
   $("baRegion").innerHTML=$("fRegion").innerHTML;
+  installCrestDefs();
   hasStorage=storageOK();
   if(!hasStorage){$("banner").classList.add("show")}
   try{const c=hasStorage?localStorage.getItem(CFG_KEY):null;if(c)cfg=Object.assign(cfg,JSON.parse(c))}catch(e){}

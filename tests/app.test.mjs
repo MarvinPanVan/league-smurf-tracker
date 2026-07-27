@@ -2064,3 +2064,132 @@ test("b64 round-trips a buffer larger than one apply() chunk", () => {
   assert.equal(back.length, bytes.length);
   assert.ok(back.every((v, i) => v === bytes[i]), "every byte survives the round trip");
 });
+
+// ---- tier crests and the list redesign ----
+
+// A vault spanning the whole ladder plus the two states that have no rank at all.
+const ladderSeed = () => {
+  const T = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER"];
+  const now = Date.now();
+  const out = T.map((t, i) => ({
+    id: "t" + i, gameName: t + "Guy", tagLine: "EUW", region: "EUW", status: "active", fav: t === "GOLD",
+    stats: { found: true, tier: t, division: i >= 7 ? null : "II", lp: 40 + i, wins: 30, losses: 25, level: 100 + i, updatedAt: now - 3600e3 },
+    history: [{ t: now - 86400000, tier: t, division: i >= 7 ? null : "II", lp: 20 + i },
+              { t: now, tier: t, division: i >= 7 ? null : "II", lp: 40 + i }],
+  }));
+  out.push({ id: "un", gameName: "Unranked", tagLine: "EUW", region: "EUW", status: "active",
+    stats: { found: true, tier: "UNRANKED", division: null, lp: null, level: 42, updatedAt: now }, history: [] });
+  out.push({ id: "nv", gameName: "Never", tagLine: "EUW", region: "EUW", status: "active", stats: null, history: [] });
+  return out;
+};
+
+// Every crest points at a gradient in one shared <defs>. Minting a gradient per
+// crest would be sixty duplicate ids on a full vault — and, worse, would make each
+// card's markup differ from the last render, which is exactly what used to defeat
+// syncGrid's "has this changed?" check.
+test("every crest reference resolves against a single shared defs block", () => {
+  const win = bootApp(ladderSeed());
+  const defs = win.document.getElementById("crestDefs");
+  assert.ok(defs, "the defs block is installed at boot");
+  assert.equal(defs.querySelectorAll("linearGradient").length, 10, "one gradient per tier");
+
+  const refs = [...win.document.querySelectorAll('.crest path[fill^="url("]')];
+  assert.ok(refs.length >= 10, "the ladder draws crests");
+  for (const p of refs) {
+    const id = p.getAttribute("fill").match(/url\(#(.+?)\)/)[1];
+    assert.ok(win.document.getElementById(id), `#${id} exists`);
+  }
+  const ids = [...win.document.querySelectorAll("[id^=cr-]")].map(e => e.id);
+  assert.equal(new Set(ids).size, ids.length, "and no id is defined twice");
+});
+
+test("a ranked card carries its tier crest, an unranked one carries none", () => {
+  const win = bootApp(ladderSeed());
+  const byId = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  assert.ok(byId("t9").querySelector(".rk-crest"), "Challenger gets a crest in the rank line");
+  assert.ok(byId("t9").querySelector(".c-wm"), "and the large one behind the card");
+  assert.equal(byId("un").querySelector(".rk-crest"), null, "unranked has no tier to show");
+  assert.equal(byId("nv").querySelector(".c-wm"), null, "nor does never-checked");
+});
+
+// The list used to throw the chart away entirely, so all sixty rows looked alike.
+test("list rows draw a sparkline only when there is a shape to draw", () => {
+  const win = bootApp(ladderSeed());
+  win.document.querySelector('[data-density="list"]').click();
+
+  const row = id => win.document.querySelector(`.rw[data-id="${id}"]`);
+  assert.ok(row("t9").querySelector(".spk"), "two readings is enough for a line");
+  assert.equal(row("nv").querySelector(".spk"), null, "no history, no line");
+  assert.ok(row("nv").querySelector('.rw-check[data-act="check"]'),
+    "and the empty slot offers the one thing that would change that");
+  assert.ok(row("nv").classList.contains("rw-quiet"), "an unranked row is dimmed");
+  assert.equal(row("t9").classList.contains("rw-quiet"), false);
+});
+
+// Favourites are pinned above everything by filtered(). Grouping purely by tier
+// therefore opened a heading for the favourite's tier at the top and a second one
+// for the same tier further down — two headings sharing a data-id, which is the
+// one thing syncGrid cannot survive.
+test("the rank-sorted list groups by tier, with favorites in a band of their own", () => {
+  const win = bootApp(ladderSeed());
+  win.document.querySelector('[data-density="list"]').click();
+
+  const heads = [...win.document.querySelectorAll(".lgrp")];
+  const labels = heads.map(h => h.querySelector(".lgrp-n").textContent);
+  assert.equal(labels[0], "Favorites", "the pinned favourite gets its own band first");
+  assert.equal(labels[1], "Challenger", "then the ladder, top down");
+  assert.equal(labels[labels.length - 1], "Never checked");
+  assert.ok(labels.includes("Unranked"));
+  // The favourite here is the only Gold account, so it is pulled into the
+  // Favorites band and no Gold heading is opened at all. What has to hold either
+  // way is that no heading is ever opened twice.
+  assert.equal(new Set(labels).size, labels.length, "no band is named twice");
+
+  const ids = heads.map(h => h.dataset.id);
+  assert.equal(new Set(ids).size, ids.length, "no two headings share a data-id");
+
+  // the counts have to add up to the accounts actually on screen
+  const counted = heads.reduce((n, h) => n + Number(h.querySelector(".lgrp-k").textContent), 0);
+  assert.equal(counted, win.document.querySelectorAll(".rw").length);
+});
+
+test("grouping is dropped when the list is not in rank order", () => {
+  const win = bootApp(ladderSeed());
+  win.document.querySelector('[data-density="list"]').click();
+  assert.ok(win.document.querySelectorAll(".lgrp").length > 0);
+
+  const sort = win.document.getElementById("tSort");
+  sort.value = "name";
+  sort.dispatchEvent(new win.Event("change"));
+  assert.equal(win.document.querySelectorAll(".lgrp").length, 0,
+    "headings scattered through a name-sorted list would mean nothing");
+  assert.equal(win.document.querySelectorAll(".rw").length, 12, "every row is still there");
+});
+
+// Same guarantee the cards already had: unchanged rows must produce byte-identical
+// markup, or syncGrid patches every row on every keystroke.
+test("a row's markup is stable when nothing about it changed", () => {
+  const win = bootApp(ladderSeed());
+  win.document.querySelector('[data-density="list"]').click();
+  const acc = win.filtered()[0];
+  assert.equal(win.rowHTML(acc, 0), win.rowHTML(acc, 0));
+
+  const row = win.document.querySelector(".rw");
+  const spark = win.document.querySelector(".spk");
+  win.renderGrid();
+  assert.equal(win.document.querySelector(".rw"), row, "same row element");
+  assert.equal(win.document.querySelector(".spk"), spark, "the sparkline is not redrawn");
+});
+
+// A flat run has no range to scale against; it must not divide by zero or pin the
+// whole line to one edge of the box.
+test("the sparkline survives a flat run, and needs two points to draw at all", () => {
+  const win = bootApp();
+  const flat = Array.from({ length: 5 }, (_, i) => ({ t: Date.now() - i * 86400000, tier: "GOLD", division: "II", lp: 40 }));
+  const svg = win.sparkline(flat, "#e6c15a");
+  assert.doesNotMatch(svg, /NaN|Infinity|undefined/);
+  assert.match(svg, /stroke="#e6c15a"[^/]*\/><circle cx="124\.0" cy="15\.0"/, "the run ends mid-box, not pinned to an edge");
+  assert.ok(!/ (0|27)\.0"/.test(svg.match(/<path d="M[^"]+" fill="none"/)[0]), "and no point sits on the top or bottom edge");
+  assert.equal(win.sparkline([flat[0]], "#e6c15a"), "", "one reading is not a shape");
+  assert.equal(win.sparkline(null, "#e6c15a"), "");
+});
