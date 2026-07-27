@@ -1,7 +1,7 @@
 // Smurf Tracker offline cache. Only useful when the app is hosted over http(s)
 // (e.g. GitHub Pages) — service workers cannot register on file:// pages, so
 // opening the HTML file directly just skips all of this, which is fine.
-const CACHE = "smurf-tracker-cache-v19";
+const CACHE = "smurf-tracker-cache-v20";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", e => {

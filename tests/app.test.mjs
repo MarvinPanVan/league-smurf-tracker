@@ -2527,3 +2527,23 @@ test("a rolling number refuses the cases where it would be wrong or stranded", (
   }
   win.rollNumber(null, 10, 90, " LP");   // must not throw on a missing element
 });
+
+// align-items:start went on .grid to stop the card grid stretching a short card to
+// the height of the tallest one in its row. The list is a flex column, where the
+// same declaration stops meaning "don't stretch to the row height" and starts
+// meaning "shrink every row to the width of its own text" — which cut the list off
+// in the middle of the page and left half the screen empty.
+test("the list fills its container while the card grid still refuses to stretch", () => {
+  const win = bootApp(ladderSeed());
+  const grid = win.document.getElementById("grid");
+  const align = () => win.getComputedStyle(grid).alignItems;
+
+  assert.match(align(), /^(start|flex-start)$/, "cards must not stretch to the row height");
+
+  win.document.querySelector('[data-density="list"]').click();
+  assert.doesNotMatch(align(), /^(start|flex-start)$/,
+    "a flex column reads that as shrink-to-content, and the rows stop filling the page");
+
+  win.document.querySelector('[data-density="wall"]').click();
+  assert.match(align(), /^(start|flex-start)$/, "the wall is a grid again, and wants it back");
+});

@@ -452,7 +452,12 @@
      chart, a peak and a winrate bar; an unranked one has none of those, so it got
      the same box with a hundred pixels of nothing between its notes and its
      footer. Ragged bottoms are honest — a hollow card is not. */
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(335px,1fr));gap:16px;align-items:start}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(335px,1fr));gap:16px}
+  /* Not on .grid itself. The list is a flex column, where align-items:start stops
+     meaning "don't stretch the short card to the row height" and starts meaning
+     "shrink every row to the width of its own text" — which cut the list off in
+     the middle of the page and left half the screen empty. */
+  .grid:not(.list){align-items:start}
   /* Sixty cards, each with an SVG chart, is a lot of layout and paint for a page
      that shows six of them at a time. This lets the browser skip everything about
      a card that is nowhere near the viewport. `auto` on the intrinsic size means
