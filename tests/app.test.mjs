@@ -2469,3 +2469,61 @@ test("a single-account re-render keeps the wall's shape", () => {
   assert.equal(win.document.querySelector('.tile[data-id="t4"]'), tile, "same node");
   assert.equal(win.document.querySelectorAll(".card").length, 0, "and still a tile, not a card");
 });
+
+// ---- reorder animation, scan sweep, rolling numbers ----
+
+// The guard is the whole design. Measuring rects forces layout, and doing it on
+// every render would hand back the render work this file already did — so it may
+// only engage when the set is unchanged and purely the order differs.
+test("the reorder animation engages on a sort change and never on a filter change", () => {
+  const win = bootApp(ladderSeed());
+  const grid = win.document.getElementById("grid");
+  const ids = [...grid.children].map(n => n.dataset.id).filter(Boolean);
+
+  assert.equal(win.reorderOnly(grid, ids.map(id => ({ id }))), null, "nothing moved");
+  const shuffled = ids.slice().reverse().map(id => ({ id }));
+  assert.ok(win.reorderOnly(grid, shuffled), "same accounts, different order");
+
+  const fewer = ids.slice(2).map(id => ({ id }));
+  assert.equal(win.reorderOnly(grid, fewer), null, "a filter dropped some — not a reorder");
+  const extra = ids.concat("brand-new").map(id => ({ id }));
+  assert.equal(win.reorderOnly(grid, extra), null, "something arrived — not a reorder");
+  assert.equal(win.reorderOnly(grid, [{ id: ids[0] }]), null, "one card cannot be out of order");
+});
+
+// A check run had a progress bar and sixty perfectly still cards, while the run
+// knew which account it was on the whole time.
+test("the card being checked shows it, in every layout", async () => {
+  const win = bootApp(ladderSeed());
+  const started = win.check("t4");                 // fetch is stubbed to reject
+  assert.ok(win.document.querySelector('.card[data-id="t4"]').classList.contains("scanning"));
+  assert.equal(win.document.querySelector('.card[data-id="t5"]').classList.contains("scanning"), false);
+
+  win.document.querySelector('[data-density="wall"]').click();
+  assert.ok(win.document.querySelector('.tile[data-id="t4"]').classList.contains("scanning"));
+  win.document.querySelector('[data-density="list"]').click();
+  assert.ok(win.document.querySelector('.rw[data-id="t4"]').classList.contains("scanning"));
+
+  await started;
+  assert.equal(win.document.querySelector('.rw[data-id="t4"]').classList.contains("scanning"), false,
+    "and stops when the check does");
+});
+
+// The roll writes to an element on a timer; the card can be re-rendered out from
+// under it at any point, and a check run re-renders constantly.
+test("a rolling number refuses the cases where it would be wrong or stranded", () => {
+  const win = bootApp();
+  const el = win.document.createElement("span");
+  el.textContent = "untouched";
+  // not connected to the document
+  win.rollNumber(el, 10, 90, " LP");
+  assert.equal(el.textContent, "untouched", "nothing is written before the first frame");
+
+  win.document.body.appendChild(el);
+  for (const [from, to] of [[null, 50], [50, null], [50, 50]]) {
+    el.textContent = "untouched";
+    win.rollNumber(el, from, to, " LP");
+    assert.equal(el.textContent, "untouched", `${from} -> ${to} is not a roll`);
+  }
+  win.rollNumber(null, 10, 90, " LP");   // must not throw on a missing element
+});

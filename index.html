@@ -1120,7 +1120,19 @@
      vault. A hidden tab stops being painted, but the animations are still live
      objects the compositor keeps ticking, and this app is meant to sit open in a
      background tab for days. Parked explicitly instead. */
-  body.away .c-crest,body.away .brand-mark::before,body.away .spin{animation-play-state:paused}
+  body.away .c-crest,body.away .brand-mark::before,body.away .spin,
+  body.away .hx-in.scanning::after{animation-play-state:paused}
+  /* A check run had a progress bar and sixty perfectly still cards. The run knows
+     which account it is on at every moment and the card already carries that state
+     — it just never showed it. A sweep travels the card being read, so the work is
+     visible where the work is happening.
+     Lives on .hx-in, whose ::after is free; .hx's own is the hover glow. All three
+     layouts already clip their overflow. */
+  @keyframes scanSweep{from{transform:translateX(-110%)}to{transform:translateX(110%)}}
+  .hx-in.scanning::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+    background:linear-gradient(102deg,transparent 38%,
+      color-mix(in srgb,var(--teal) 22%,transparent) 50%,transparent 62%);
+    animation:scanSweep 1.25s cubic-bezier(.5,0,.5,1) infinite}
   @keyframes cardIn{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
   .grid.boot>.hx{animation:cardIn .5s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--d,0ms)}
   /* The line used to be revealed with stroke-dasharray, which is the wrong tool
@@ -2023,9 +2035,19 @@ function celebrate(id,acc){
   notify("Tier up — "+(acc.label||acc.gameName),(prev.tier||"?")+" → "+acc.stats.tier);
   postDiscord("🎉 **"+(acc.label||acc.gameName)+"** tiered up: "+(prev.tier||"?")+" → "+acc.stats.tier);
   if(prefersReducedMotion())return;
+  // The crest is now a different emblem than it was a second ago, which is the
+  // most literal statement of what just happened this app can make. Worth half a
+  // second of everyone's attention.
+  for(const c of $("grid").querySelectorAll(`[data-id="${id}"] .rk-crest,[data-id="${id}"] .rw-crest,[data-id="${id}"] .t-crest`)){
+    if(c.animate)c.animate(
+      [{transform:"scale(.4) rotate(-25deg)",opacity:0},
+       {transform:"scale(1.35) rotate(6deg)",opacity:1,offset:.55},
+       {transform:"none",opacity:1}],
+      {duration:620,easing:"cubic-bezier(.34,1.56,.64,1)"});
+  }
   // ".card" only exists in the card layout, so a tier-up reached in list view got
   // the toast and the notification but never the confetti
-  const card=[...$("grid").querySelectorAll(".card,.rw")].find(c=>c.dataset.id===id);
+  const card=[...$("grid").querySelectorAll(".card,.rw,.tile")].find(c=>c.dataset.id===id);
   if(!card)return;
   const r=card.getBoundingClientRect();
   const c=document.createElement("div");c.className="confetti";
@@ -2590,7 +2612,26 @@ function applyStats(acc,s){
   }
   return rankedUp;
 }
+/* The LP figure is the one number on the card that a check exists to change, and
+   it changed by snapping. Rolled instead, from the old value to the new, so the
+   size of the move is something you see rather than something you work out.
+   Only ever fires on an actual change, so it costs nothing at rest. */
+function rollNumber(el,from,to,suffix){
+  if(!el||from==null||to==null||from===to||prefersReducedMotion())return;
+  if(!window.requestAnimationFrame)return;
+  const t0=performance.now(), dur=Math.min(220+Math.abs(to-from)*7,900);
+  const step=now=>{
+    if(!el.isConnected)return;   // the card was re-rendered under us; let it stand
+    const p=Math.min((now-t0)/dur,1);
+    const e=1-Math.pow(1-p,3);
+    el.textContent=Math.round(from+(to-from)*e)+suffix;
+    if(p<1)requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
 function commitStats(id,acc,s){
+  const beforeLP=acc.stats&&acc.stats.found!==false&&acc.stats.lp!=null?Number(acc.stats.lp):null;
+  const beforeTier=acc.stats&&(acc.stats.tier||"").toUpperCase();
   const up=applyStats(acc,s);
   openRank.delete(id);
   flashId=id;saveDB();
@@ -2598,6 +2639,17 @@ function commitStats(id,acc,s){
   // single check, so during Check all ranks the whole board reshuffled once per
   // account — the order settles on the next full render instead.
   renderCard(id);renderDash();
+  {
+    // Within a tier the LP number is comparable end to end; across a tier it is
+    // not — 90 LP to 12 LP is a promotion, and counting down through it would
+    // read as a loss. So the roll is only for a move inside one tier.
+    const afterTier=acc.stats&&(acc.stats.tier||"").toUpperCase();
+    const afterLP=acc.stats&&acc.stats.lp!=null?Number(acc.stats.lp):null;
+    if(beforeTier&&afterTier===beforeTier){
+      const el=$("grid").querySelector(`[data-id="${id}"] .rk-lp`);
+      rollNumber(el,beforeLP,afterLP," LP");
+    }
+  }
   if(up)celebrate(id,acc);
   setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
 }
@@ -2791,7 +2843,52 @@ function setHTML(el,html){
 // card that hasn't changed is left completely alone — which is also the strongest
 // possible version of the no-flicker guarantee.
 let cardCache=new Map();
+/* Cards slide to their new places when the order changes, rather than teleporting.
+   This is only possible at all because syncGrid moves the existing nodes instead
+   of rebuilding them — the node that was third and is now tenth is the same node,
+   so it can be told where it came from.
+
+   The guard matters more than the animation. Measuring rects forces layout, and
+   doing that twice over sixty cards on every render would hand back the render
+   work this file already did. So it only runs when the *set* is unchanged and only
+   the order differs — which is exactly a sort change or a favourite being toggled.
+   Typing in the search box changes the set, takes none of this, and stays at the
+   three milliseconds it costs today. Both checks are string compares against a
+   list we already have; neither touches the DOM. */
+function reorderOnly(grid,list){
+  const prev=[];
+  for(const n of grid.children)if(n.dataset&&n.dataset.id)prev.push(n.dataset.id);
+  if(prev.length<2||prev.length!==list.length)return null;
+  const now=list.map(x=>x.id);
+  const set=new Set(prev);
+  if(!now.every(id=>set.has(id)))return null;      // something came or went
+  if(!prev.some((id,i)=>id!==now[i]))return null;  // nothing actually moved
+  return prev;
+}
+function flipFrom(grid,before){
+  const vh=window.innerHeight||0;
+  for(const n of grid.children){
+    const id=n.dataset&&n.dataset.id;if(!id)continue;
+    const was=before.get(id);if(!was)continue;
+    const now=n.getBoundingClientRect();
+    // Only what ends up on screen. Measured on sixty cards: reading the rects
+    // costs about 3ms, animating the ones you can see costs about 22ms, and
+    // animating all sixty costs 72ms — fifty milliseconds of animation nobody is
+    // in a position to watch. A card that glides past the fold is not an
+    // animation, it is a bill.
+    if(now.bottom<0||now.top>vh)continue;
+    const dx=was.left-now.left, dy=was.top-now.top;
+    if(Math.abs(dx)<1&&Math.abs(dy)<1)continue;
+    n.animate([{transform:`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`},{transform:"none"}],
+      {duration:380,easing:"cubic-bezier(.22,1,.36,1)"});
+  }
+}
 function syncGrid(grid,list,htmls){
+  let before=null;
+  if(!prefersReducedMotion()&&typeof Element!=="undefined"&&Element.prototype.animate&&reorderOnly(grid,list)){
+    before=new Map();
+    for(const n of grid.children)if(n.dataset&&n.dataset.id)before.set(n.dataset.id,n.getBoundingClientRect());
+  }
   const have=new Map();
   for(const n of grid.children)if(n.dataset&&n.dataset.id)have.set(n.dataset.id,n);
   const tmp=document.createElement("div");
@@ -2813,6 +2910,7 @@ function syncGrid(grid,list,htmls){
   }
   for(const n of[...grid.children])if(!n.dataset||!seen.has(n.dataset.id))grid.removeChild(n);
   for(const id of[...cardCache.keys()])if(!seen.has(id))cardCache.delete(id);
+  if(before)flipFrom(grid,before);
 }
 
 // ---------- render ----------
@@ -3193,7 +3291,7 @@ function rowHTML(a,i){
   }else rank="Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
-  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${a.id}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}" data-id="${a.id}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${a.id}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${a.id}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
     <div class="rw-main" data-act="info" role="button" tabindex="0" aria-expanded="${open}">
       <!-- No stopPropagation here: every click on a card is handled by one
            delegated listener on #grid, and closest("[data-act]") already stops at
@@ -3257,7 +3355,7 @@ function tileHTML(a){
     if(s.lp!=null)lp=s.lp+" LP";
   }else rank="Unranked";
   const st=STATUS[a.status]||STATUS.active;
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${a.id}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}" data-id="${a.id}" data-act="zoom" role="button" tabindex="0" title="${esc((a.label||a.gameName)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${a.id}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${a.id}" data-act="zoom" role="button" tabindex="0" title="${esc((a.label||a.gameName)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
@@ -3345,7 +3443,7 @@ function cardHTML(a,i){
   // worth spotting get one.
   const railed=a.status&&a.status!=="active";
   const icon0=iconUrl(s);
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${a.id}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}" data-id="${a.id}"${railed?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${a.id}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${a.id}"${railed?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <div class="c-head">
       <div class="c-portrait">
