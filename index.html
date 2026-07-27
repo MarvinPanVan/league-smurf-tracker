@@ -87,12 +87,18 @@
   /* Ambient dot field. Lines read as a chessboard the moment they get strong
      enough to see, so this is dots — same texture, none of the grid rigidity.
      Absolute rather than fixed so it travels with the page; a backdrop that
-     stays nailed to the viewport while everything slides over it feels off. */
-  body::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
-    background-image:radial-gradient(circle at 1px 1px,#ffffff0d 1px,transparent 0);
-    background-size:28px 28px;
-    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000000d4 28%,#00000066 68%,#0000002b 100%);
-    mask-image:linear-gradient(to bottom,#000 0%,#000000d4 28%,#00000066 68%,#0000002b 100%)}
+     stays nailed to the viewport while everything slides over it feels off.
+     At 5% alpha, faded across the full height of a thirteen-screen page, this was
+     texture nobody could see paying for a compositing layer the size of the
+     document. Either commit or cut: it is committed. Stronger, tighter, and shut
+     off entirely below the first screen and a half — it belongs to the header, as
+     atmosphere behind the masthead, not as wallpaper behind sixty cards. Which
+     also means the layer is a screen tall instead of a document tall. */
+  body::before{content:"";position:absolute;left:0;right:0;top:0;height:150vh;z-index:0;pointer-events:none;
+    background-image:radial-gradient(circle at 1px 1px,#ffffff1c 1px,transparent 0);
+    background-size:24px 24px;
+    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000000b8 34%,#0000 100%);
+    mask-image:linear-gradient(to bottom,#000 0%,#000000b8 34%,#0000 100%)}
 
   /* barely-there film grain so the large flat areas don't band */
   body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.035;
@@ -354,7 +360,12 @@
   .cmd-count{margin-left:auto;padding-right:3px;font-size:11.5px;color:var(--faint);
     display:inline-flex;align-items:center;gap:9px;letter-spacing:.015em}
   .cmd-count b{font-weight:600;color:var(--muted)}
-  .cmd-count .warn{color:var(--danger);font-weight:600}
+  .cmd-count .warn{color:var(--danger);font-weight:600;font-size:11.5px;letter-spacing:.015em;
+    padding:3px 9px;border-radius:999px;background:none;border:1px solid transparent;box-shadow:none}
+  .cmd-count .warn:hover{background:color-mix(in srgb,var(--danger) 13%,transparent);
+    border-color:color-mix(in srgb,var(--danger) 34%,transparent)}
+  .cmd-count .warn.on{background:color-mix(in srgb,var(--danger) 18%,transparent);
+    border-color:color-mix(in srgb,var(--danger) 46%,transparent)}
   .tools{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:12px}
   /* layout switch: two states, so a segmented control rather than a menu */
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2)}
@@ -429,7 +440,12 @@
   .chip.on{background:color-mix(in srgb,var(--gold) 15%,transparent);border-color:color-mix(in srgb,var(--gold) 55%,transparent);color:var(--gold-txt)}
 
   /* ---- grid + cards ---- */
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(335px,1fr));gap:16px}
+  /* align-items:start, because the default stretch made every card in a row as
+     tall as the tallest one in it. A ranked account fills that height with a
+     chart, a peak and a winrate bar; an unranked one has none of those, so it got
+     the same box with a hundred pixels of nothing between its notes and its
+     footer. Ragged bottoms are honest — a hollow card is not. */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(335px,1fr));gap:16px;align-items:start}
 
   /* ---- list view ----
      Sixty cards is thirteen screens and no two accounts ever visible together.
@@ -520,6 +536,16 @@
   .rw-quiet .rw-pic{opacity:.62}
   .rw-quiet .rw-nm{color:var(--muted);font-weight:500}
   .rw-quiet .rw-rank b{font-size:13px;font-weight:600}
+  /* A banned account was marked by a 3px rail and a chip, which is the same
+     weight the app gives "resting". It isn't the same thing: nothing about that
+     rank will ever change again. It should read as finished from across the room. */
+  .card.dead .c-portrait,.rw.dead .rw-pic{filter:grayscale(.9);opacity:.5}
+  .card.dead .c-tint{opacity:.35}
+  .card.dead .rk-crest,.rw.dead .rw-crest{filter:grayscale(.9);opacity:.55}
+  .card.dead .rk .rk-t,.rw.dead .rw-rank b{text-decoration:line-through;
+    text-decoration-thickness:1.5px;text-decoration-color:currentColor;opacity:.62}
+  .card.dead .lpc-wrap,.rw.dead .spk{filter:grayscale(.75);opacity:.55}
+  .card.dead .wrbar,.rw.dead .rw-bar{filter:grayscale(.9);opacity:.5}
   .rw-up{font-size:10.5px;color:var(--faint);text-align:right;white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis}
   .rw-up.stale{color:var(--danger)}
@@ -787,6 +813,14 @@
     font-size:8.5px;font-weight:500;letter-spacing:.04em;color:var(--faint);pointer-events:none}
   .lpc-tick.l{transform:none;left:5px!important}
   .lpc-tick.r{transform:none;left:auto!important;right:5px}
+  .to-top{position:fixed;right:clamp(14px,3vw,28px);bottom:clamp(14px,3vw,28px);z-index:55;
+    width:40px;height:40px;padding:0;border-radius:50%;
+    background:#0b0e14e0;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border:1px solid var(--line2);box-shadow:var(--sh-2);color:var(--muted);
+    transition:opacity .2s ease,transform .2s cubic-bezier(.22,1,.36,1),color .16s ease,border-color .16s ease}
+  .to-top .ico{width:17px;height:17px;stroke-width:2.4}
+  .to-top:hover{color:var(--text);border-color:var(--line2);transform:translateY(-2px)}
+  .to-top.hidden{display:block;opacity:0;pointer-events:none;transform:translateY(8px) scale(.9)}
   .lpc-range{position:absolute;top:4px;right:5px;display:flex;gap:2px;z-index:3}
   .lpc-range button{font-size:8.5px;font-weight:700;letter-spacing:.06em;line-height:1;
     padding:3px 5px;border-radius:5px;border:1px solid transparent;background:#ffffff0d;
@@ -795,6 +829,11 @@
   .lpc-range button.on{background:color-mix(in srgb,var(--teal) 22%,transparent);color:var(--teal-txt)}
   .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:8px;font-weight:600;letter-spacing:.09em;
     text-transform:uppercase;pointer-events:none;opacity:.62;line-height:1}
+  /* the ceiling the line is climbing back towards; left lane, with the band
+     captions, and dropped rather than stacked when one is already there */
+  .lpc-plot .lpc-peak{position:absolute;left:50%;transform:translateX(-50%);
+    font-size:7.5px;font-weight:700;letter-spacing:.12em;
+    text-transform:uppercase;pointer-events:none;line-height:1;color:var(--gold-txt);opacity:.9}
   /* division numerals below Master, LP marks above it — opposite side to the tier
      names so the two never collide */
   .lpc-plot .lpc-sub{position:absolute;right:6px;font-size:8px;font-weight:600;letter-spacing:.06em;
@@ -1381,6 +1420,12 @@
   <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
   <input type="file" id="fileInCsv" accept=".csv,text/csv" class="hidden">
   </div>
+  <!-- Sixty cards is thirteen screens, and the only way back was to scroll all of
+       them again. Kept out of the way until there is actually something to go back
+       up to. -->
+  <button id="toTop" class="to-top hidden" title="Back to top" aria-label="Back to top">
+    <svg class="ico" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+  </button>
   <div id="toast" role="status" aria-live="polite"></div>
 </div>
 
@@ -1706,7 +1751,7 @@ function groupColor(k){
 // but never how far, or through which ranks. This draws the ladder itself —
 // a coloured band per tier, division hairlines when the view is tight enough for
 // them to mean anything, and every check as its own hoverable point.
-function rankChart(hist,cut,mode,key){
+function rankChart(hist,cut,mode,key,peakV){
   let pts=(hist||[]).map(h=>({h,v:ladderLP(h)})).filter(p=>p.v!==null);
   // A brand new account has exactly one check, and showing it nothing at all was
   // the least useful answer available — one point still says where on the ladder
@@ -1799,6 +1844,24 @@ function rankChart(hist,cut,mode,key){
         labels+=`<span class="lpc-cut" style="top:${(yv-9.5).toFixed(1)}px;color:${c}">${label}</span>`;
       cutYs.push(yv);
     }
+  }
+
+  /* The peak, where it is above everything the chart is currently showing. It is
+     the one number on the card the line cannot express — the highest this account
+     ever got, from op.gg's badge, this app's own record or a manual override,
+     whichever is genuinely highest. Drawn as a ceiling the line is climbing back
+     towards. Left lane, so it shares space with the band captions rather than the
+     LP numerals; skipped if a band caption is already sitting there. */
+  if(peakV!=null&&peakV>lo&&peakV<hi){
+    const y=py(peakV);
+    lines+=`<line x1="0" x2="${LPC_W}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--gold)" stroke-opacity=".6" stroke-width="1" stroke-dasharray="2 4" vector-effect="non-scaling-stroke"/>`;
+    // Centre lane, with the floors — the other horizontal threshold on this chart —
+    // rather than the left, where the band captions live. A peak just above the
+    // current rank is the common case, and there the caption is right at the top
+    // and swallowed the label every time, leaving a dashed line explaining nothing.
+    if(!cutYs.some(cy=>Math.abs(y-cy)<11))
+      labels+=`<span class="lpc-peak" style="top:${(y-9.5).toFixed(1)}px">Peak</span>`;
+    cutYs.push(y);   // and an LP numeral must not land on it either
   }
 
   // Above Master there are no divisions left to name, only LP — and a fixed 100
@@ -3078,7 +3141,7 @@ function rowHTML(a,i){
   }else rank="Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
-  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${a.id}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}" data-id="${a.id}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${a.id}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}" data-id="${a.id}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
     <div class="rw-main" data-act="info" role="button" tabindex="0" aria-expanded="${open}">
       <!-- No stopPropagation here: every click on a card is handled by one
            delegated listener on #grid, and closest("[data-act]") already stops at
@@ -3129,7 +3192,7 @@ function cardHTML(a,i){
   const stale=!!(s&&s.updatedAt&&Date.now()-s.updatedAt>STALE_MS);
   const hist=a.history||[];
   const st=STATUS[a.status]||STATUS.active;
-  let peak=null;
+  let peak=null,peakV=null;
   {let bestE=null,bestV=-1;
    // Three sources, all fallible on their own, so they simply compete and the
    // genuinely highest wins: op.gg's own "Top tier" badge (missing on profiles
@@ -3138,7 +3201,7 @@ function cardHTML(a,i){
    const cands=hist.concat([s&&s.peak,a.peakManual].filter(Boolean));
    for(const h of cands){const v=ladderLP(h);if(v!==null&&v>bestV){bestV=v;bestE=h}}
    const cur=ladderLP(s);
-   if(bestE&&(cur===null||bestV>cur))peak=shortRank(bestE);}
+   if(bestE&&(cur===null||bestV>cur)){peak=shortRank(bestE);peakV=bestV}}
   let deltaChip="";
   if(hist.length>=2){
     const dv=(ladderLP(hist[hist.length-1])||0)-(ladderLP(hist[hist.length-2])||0);
@@ -3202,7 +3265,7 @@ function cardHTML(a,i){
   // worth spotting get one.
   const railed=a.status&&a.status!=="active";
   const icon0=iconUrl(s);
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${a.id}" style="--d:${(i||0)*40}ms"><div class="hx-in card" data-id="${a.id}"${railed?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${a.id}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}" data-id="${a.id}"${railed?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <div class="c-head">
       <div class="c-portrait">
@@ -3230,7 +3293,7 @@ function cardHTML(a,i){
       ${deltaChip?`<div class="c-deltas">${deltaChip}</div>`:""}
     </div>
     ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
-    ${rankChart(hist,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(hist),a.id)}
+    ${rankChart(hist,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(hist),a.id,peakV)}
     ${microStats.length?`<div class="c-stats">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(a.tags||[]).length?`<div class="ctags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""}
@@ -3242,7 +3305,10 @@ function cardHTML(a,i){
     ${openRank.has(a.id)?rankPanelHTML(a,s,rv("rank")):""}
     ${noteBlockHTML(a,rv("note"))}
     <div class="c-foot">
-      <span class="c-meta"><span class="upd${stale?" stale":""}">${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${s&&s.asOf?`<span class="src">${esc(s.asOf)}</span>`:""}</span>
+      <!-- Where the numbers came from used to sit here as its own pill. It is
+           developer detail: it never changes what you would do next, and it took a
+           slot on every card in the vault. It hangs off the timestamp instead. -->
+      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&s.asOf?` title="Read from ${esc(s.asOf)}"`:""}>${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span></span>
       <div class="acts">
         <button data-act="login" class="a-login" title="Show saved login">${icon("user")} ${loginOpen?"Hide login":"Login"}</button>
         <a class="a-dpm" href="${dpm}" target="_blank" rel="noreferrer">DPM ↗</a>
@@ -3332,8 +3398,11 @@ function renderGrid(){
   // updatedAt, so never-checked accounts were left out and the readout disagreed
   // with both the "Refresh N stale" button and the stats panel beside it.
   const stale=accounts.filter(a=>!a.archived&&isStale(a)).length;
+  // "21 need a refresh" was a red sentence you could not act on — the filter that
+  // shows exactly those already existed, behind a stat tile in a collapsed panel.
   setHTML($("count"),!accounts.length?"":`<span><b>${list.length}</b> of <b>${accounts.length}</b> shown</span>`
-    +(stale?`<span class="warn">${stale} need${stale===1?"s":""} a refresh</span>`:""));
+    +(stale?`<button class="warn${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"
+        title="Show only the accounts that are out of date">${stale} need${stale===1?"s":""} a refresh</button>`:""));
   syncCheckAll();
 }
 // Called on its own during a run, where re-rendering the grid to flip one button
@@ -3994,6 +4063,37 @@ $("bDashToggle").addEventListener("click",()=>{
 });
 // The ribbon filters by tier exactly the way the dashboard's gem row does, so it
 // hands the click to the same place rather than growing its own idea of filtering.
+/* Shown past two screens of scrolling. An IntersectionObserver on a sentinel
+   rather than a scroll listener, because this app is meant to sit open for days
+   and a listener that fires on every scroll frame is exactly the kind of idle
+   cost the rest of this file works to avoid — the observer fires twice, on the
+   two crossings, and nothing in between. */
+{
+  const btn=$("toTop"), head=document.querySelector(".top");
+  /* Watching the header, not a marker planted at some depth down the page. A
+     marker at 200vh is unreachable on a page only two screens tall — the button
+     could never appear — and "not intersecting" is the same answer whether it is
+     still below the fold or already scrolled past, which had the button showing at
+     the very top. The header has neither problem: it starts on screen, there is
+     only one way for it to leave, and leaving is exactly the moment "back to top"
+     starts to mean something.
+     No observer, no button. This page already needs :has(), color-mix() and
+     backdrop-filter, all newer than IntersectionObserver, so anything that got
+     this far has it. */
+  if("IntersectionObserver"in window&&head){
+    new IntersectionObserver(([e])=>btn.classList.toggle("hidden",e.isIntersecting),{threshold:0})
+      .observe(head);
+  }
+  btn.addEventListener("click",()=>{
+    window.scrollTo({top:0,behavior:window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+    const first=document.querySelector("#tSearch");
+    if(first)first.focus({preventScroll:true});   // so the keyboard lands somewhere useful too
+  });
+}
+$("count").addEventListener("click",e=>{
+  const b=e.target.closest("[data-flag]");if(!b)return;
+  ui.flag=ui.flag===b.dataset.flag?"":b.dataset.flag;render();
+});
 $("ribbon").addEventListener("click",e=>{
   const seg=e.target.closest("[data-tier]");if(!seg)return;
   ui.tier=ui.tier===seg.dataset.tier?"":seg.dataset.tier;

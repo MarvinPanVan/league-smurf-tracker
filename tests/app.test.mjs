@@ -2341,3 +2341,78 @@ test("the stats toggle lives in the header tray and survives a re-render", () =>
   assert.equal(win.document.querySelector(".bar #bDashToggle"), btn, "the same button, not a rebuilt one");
   assert.match(btn.textContent, /Show stats/, "and it still knows which way it is pointing");
 });
+
+// ---- peak ceiling, dead accounts, and the console readout ----
+
+// The peak is the one number the line cannot express: the highest this account
+// ever got. Drawn as a ceiling it is climbing back towards — but only when it is
+// somewhere the chart can actually show.
+test("the peak is drawn as a ceiling when it falls inside the view", () => {
+  const win = bootApp();
+  const hist = Array.from({ length: 6 }, (_, i) => ({ t: days(5 - i), tier: "GOLD", division: "II", lp: 40 + i * 4 }));
+  const cur = win.ladderLP({ tier: "GOLD", division: "II", lp: 60 });
+  const draw = pv => {
+    const d = win.document.createElement("div");
+    d.innerHTML = win.rankChart(hist, null, "d", "p", pv);
+    return { dashed: d.querySelectorAll("line[stroke-dasharray]").length, peak: d.querySelector(".lpc-peak") };
+  };
+
+  const near = draw(cur + 55);
+  assert.equal(near.dashed, 1, "a peak just above the current rank gets its line");
+  assert.ok(near.peak, "and a label — a dashed line explaining nothing is worse than no line");
+
+  assert.equal(draw(cur + 900).dashed, 0, "a peak far above the view is not squeezed into it");
+  assert.equal(draw(null).dashed, 0, "an account at its own peak has no ceiling to draw");
+});
+
+// A banned account was marked by a 3px rail and a chip — the same weight the app
+// gives "resting". Nothing about that rank will ever change again.
+test("a banned account reads as finished in both layouts", () => {
+  const seed = ladderSeed();
+  seed[0].status = "banned";
+  const win = bootApp(seed);
+  assert.ok(win.document.querySelector(`.card[data-id="${seed[0].id}"]`).classList.contains("dead"));
+  assert.equal(win.document.querySelector(`.card[data-id="${seed[1].id}"]`).classList.contains("dead"), false);
+
+  win.document.querySelector('[data-density="list"]').click();
+  assert.ok(win.document.querySelector(`.rw[data-id="${seed[0].id}"]`).classList.contains("dead"));
+  assert.equal(win.document.querySelector(`.rw[data-id="${seed[1].id}"]`).classList.contains("dead"), false);
+});
+
+// "21 need a refresh" was a red sentence you could not act on, while the filter
+// that shows exactly those sat behind a stat tile in a collapsed panel.
+test("the refresh count is the button that filters to those accounts", () => {
+  const seed = ladderSeed();
+  seed[0].stats.updatedAt = Date.now() - 40 * 86400000;   // long stale
+  const win = bootApp(seed);
+  const btn = win.document.querySelector("#count [data-flag='stale']");
+  assert.ok(btn, "the readout is a control");
+  assert.equal(btn.tagName, "BUTTON");
+  assert.match(btn.textContent, /needs? a refresh/);
+
+  btn.click();
+  const shown = win.document.querySelectorAll(".card").length;
+  assert.ok(shown < seed.length, "clicking it narrows the grid");
+  assert.equal(win.document.querySelector("#count [data-flag='stale']").getAttribute("aria-pressed"), "true");
+
+  win.document.querySelector("#count [data-flag='stale']").click();
+  assert.equal(win.document.querySelectorAll(".card").length, seed.length, "and clicking again clears it");
+});
+
+// Which proxy answered is developer detail: it never changes what you would do
+// next, and it took a slot on every card in the vault.
+test("the source of the numbers hangs off the timestamp instead of taking its own pill", () => {
+  const win = bootApp(ladderSeed());
+  const foot = win.document.querySelector(".c-foot");
+  assert.equal(foot.querySelector(".src"), null, "no pill");
+  const upd = foot.querySelector(".upd");
+  assert.match(upd.textContent, /Updated/);
+});
+
+test("back to top is present and stays out of the way until it is needed", () => {
+  const win = bootApp(ladderSeed());
+  const btn = win.document.getElementById("toTop");
+  assert.ok(btn);
+  assert.ok(btn.classList.contains("hidden"), "hidden at the top of the page");
+  assert.equal(btn.getAttribute("aria-label"), "Back to top");
+});
