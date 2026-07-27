@@ -367,6 +367,13 @@
   .cmd-count .warn.on{background:color-mix(in srgb,var(--danger) 18%,transparent);
     border-color:color-mix(in srgb,var(--danger) 46%,transparent)}
   .tools{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:12px}
+  /* Scrolled past the header the console is pure overhead on screen, so it gives
+     some of that height back. Controls stay put — only the air around them goes. */
+  body.scrolled .cmd{padding:7px 12px}
+  body.scrolled .tools{padding:8px 12px}
+  body.scrolled .console{border-radius:0 0 var(--r-md) var(--r-md)}
+  .cmd,.tools{transition:padding .18s cubic-bezier(.22,1,.36,1)}
+  @media (prefers-reduced-motion:reduce){.cmd,.tools{transition:none}}
   /* layout switch: two states, so a segmented control rather than a menu */
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2)}
   .seg button{border:0;border-radius:0;padding:7px 10px;background:none;color:var(--faint)}
@@ -446,6 +453,14 @@
      the same box with a hundred pixels of nothing between its notes and its
      footer. Ragged bottoms are honest — a hollow card is not. */
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(335px,1fr));gap:16px;align-items:start}
+  /* Sixty cards, each with an SVG chart, is a lot of layout and paint for a page
+     that shows six of them at a time. This lets the browser skip everything about
+     a card that is nowhere near the viewport. `auto` on the intrinsic size means
+     it remembers each card's real height after the first pass, so the scrollbar
+     stops lying about the page length as soon as a card has been seen once.
+     Only the card grid: a list row is cheap enough that the bookkeeping would
+     cost more than the skipping saves. */
+  .grid:not(.list)>.hx{content-visibility:auto;contain-intrinsic-size:auto 420px}
 
   /* ---- list view ----
      Sixty cards is thirteen screens and no two accounts ever visible together.
@@ -4081,8 +4096,14 @@ $("bDashToggle").addEventListener("click",()=>{
      backdrop-filter, all newer than IntersectionObserver, so anything that got
      this far has it. */
   if("IntersectionObserver"in window&&head){
-    new IntersectionObserver(([e])=>btn.classList.toggle("hidden",e.isIntersecting),{threshold:0})
-      .observe(head);
+    new IntersectionObserver(([e])=>{
+      btn.classList.toggle("hidden",e.isIntersecting);
+      // The sticky console keeps two full rows pinned to the top of the viewport
+      // for the whole scroll. Once the header is gone it tightens up: same
+      // controls, less of the screen spent on them. One observer for both, so
+      // there is still no scroll listener anywhere in this file.
+      document.body.classList.toggle("scrolled",!e.isIntersecting);
+    },{threshold:0}).observe(head);
   }
   btn.addEventListener("click",()=>{
     window.scrollTo({top:0,behavior:window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
