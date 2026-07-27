@@ -154,6 +154,32 @@
      bands of decreasing importance, all left-aligned, which is what made it read
      as flat and pasted into the corner. This is a lockup instead: a mark the
      wordmark sits against, with the descriptor tucked under it. */
+  /* The whole vault's spread across the ladder, in the band the header was
+     wasting. The dashboard's gem row already answers "how many are Platinum";
+     this answers what shape the collection is, and answers it without being
+     opened. Best on the left, the same order the list is sorted in. */
+  .ribbon{flex:1 1 260px;min-width:0;max-width:640px;display:flex;flex-direction:column;gap:6px}
+  .ribbon:empty{display:none}
+  .rib-bar{display:flex;gap:2px;height:19px}
+  .rib-seg{flex-grow:1;flex-basis:0;min-width:20px;padding:0;border:0;border-radius:4px;
+    background:color-mix(in srgb,var(--c) 62%,#0b0e14);box-shadow:none;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+    transition:background .16s ease,transform .16s cubic-bezier(.22,1,.36,1),box-shadow .16s ease}
+  .rib-seg:first-child{border-radius:999px 4px 4px 999px}
+  .rib-seg:last-child{border-radius:4px 999px 999px 4px}
+  .rib-seg:only-child{border-radius:999px}
+  .rib-seg i{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.02em;
+    color:#0b0e14;opacity:.72;font-variant-numeric:tabular-nums}
+  .rib-seg:hover{background:var(--c);transform:translateY(-1px);border:0}
+  .rib-seg:hover i{opacity:.95}
+  /* the selected tier reads as the only lit one, so the bar doubles as a readout
+     of which filter is on */
+  .rib-bar:has(.rib-seg.on) .rib-seg:not(.on){background:color-mix(in srgb,var(--c) 22%,#0b0e14)}
+  .rib-bar:has(.rib-seg.on) .rib-seg:not(.on) i{opacity:.4}
+  .rib-seg.on{background:var(--c);box-shadow:0 0 0 1px #0b0e14,0 0 14px -2px var(--c)}
+  .rib-cap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    font-size:10.5px;letter-spacing:.02em;color:var(--faint)}
+  .rib-cap b{font-weight:600;color:var(--muted)}
   .brand{display:flex;align-items:center;gap:16px;min-width:0}
   .brand-mark{position:relative;width:54px;height:54px;flex-shrink:0;border-radius:17px;
     display:flex;align-items:center;justify-content:center;
@@ -1077,7 +1103,12 @@
         <div class="brand-sub">Summoner Vault <b>Local only</b></div>
       </div>
     </div>
+    <!-- The header ran brand on the left, two buttons on the right and a whole
+         empty band between them, with the stats toggle orphaned on its own row
+         underneath. This is what the middle is for. -->
+    <div id="ribbon" class="ribbon"></div>
     <div class="bar">
+      <button id="bDashToggle" class="ghost-toggle" title="Season totals, champion pool, account counts"></button>
       <div style="position:relative">
         <button id="bMore" title="Export, import, settings">⋯</button>
         <div id="moreMenu" class="hx teal hidden" style="position:absolute;right:0;top:calc(100% + 8px);z-index:20;min-width:206px"><div class="hx-in" style="padding:7px;display:flex;flex-direction:column;gap:1px">
@@ -2689,7 +2720,7 @@ function render(){
   $("intro").classList.toggle("hidden",accounts.length>0);
   $("previewBanner").classList.toggle("hidden",!previewMode);
   $("bDeleteAll").disabled=accounts.length===0;
-  renderDash();renderTagbar();renderChips();renderFilterOptions();renderGrid();renderBulkBar();
+  renderRibbon();renderDash();renderTagbar();renderChips();renderFilterOptions();renderGrid();renderBulkBar();
   renderRun();renderFailbar();
   for(const b of $("density").children){
     const on=b.dataset.density===ui.density;
@@ -2758,16 +2789,51 @@ function mergeChampions(pool){
     .map(c=>({name:c.name,games:c.games,accs:c.accs,wins:c.wins,losses:c.games-c.wins,
       wr:Math.round(c.wins/c.games*100)}));
 }
+/* How the whole vault spreads across the ladder, as one bar. The dashboard's gem
+   row already answers "how many are Platinum"; this answers the question nobody
+   could ask before, which is what shape the collection is — and it does it without
+   being opened, because it lives in space the header was wasting anyway.
+   Segments are ordered the way the list is, best first, so the two agree. */
+function renderRibbon(){
+  const el=$("ribbon");
+  const pool=accounts.filter(a=>!a.archived);
+  // Under two accounts there is no distribution to show, only a full-width block
+  // of one colour pretending to be information.
+  if(pool.length<2){setHTML(el,"");return}
+  const dist={};let other=0;
+  for(const a of pool){
+    if(isRanked(a)){const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1}
+    else other++;
+  }
+  const segs=TIER_ORDER.slice().reverse().filter(t=>dist[t])
+    .map(t=>({k:t,n:dist[t],c:TIER_COLORS[t],label:groupLabel(t)}));
+  const tierN=segs.length;   // counted before the unranked segment joins them
+  if(other)segs.push({k:"UNRANKED",n:other,c:TIER_COLORS.UNRANKED,label:"Unranked or never checked"});
+  if(!segs.length){setHTML(el,"");return}
+  const best=pool.filter(isRanked).sort((x,y)=>rankValue(y.stats)-rankValue(x.stats))[0];
+  setHTML(el,`<div class="rib-bar" role="group" aria-label="Accounts by tier">${segs.map(s=>
+      `<button class="rib-seg${ui.tier===s.k?" on":""}" data-tier="${s.k}" style="--c:${s.c};flex:${s.n}"
+        aria-pressed="${ui.tier===s.k}" title="${esc(s.label)} — ${s.n} account${s.n===1?"":"s"} (click to show only these)"
+        aria-label="${esc(s.label)}, ${s.n}"><i>${s.n}</i></button>`).join("")}</div>
+    <div class="rib-cap"><span><b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}${other?` · <b>${other}</b> unranked`:""}</span>`
+    +(best?`<span>best <b style="color:${tierColor(best.stats.tier)}">${esc(shortRank(best.stats))}</b></span>`:"")
+    +`</div>`);
+}
+function syncDashToggle(){
+  const b=$("bDashToggle");
+  const show=accounts.some(a=>!a.archived);
+  b.classList.toggle("hidden",!show);
+  b.classList.toggle("open",!cfg.dashCollapsed);
+  setHTML(b,icon("chevron")+" "+(cfg.dashCollapsed?"Show stats":"Hide stats"));
+}
 function renderDash(){
   const el=$("dash");
   const accounts0=accounts.filter(a=>!a.archived);
+  syncDashToggle();
   if(accounts0.length===0){el.innerHTML="";return}
-  if(cfg.dashCollapsed){
-    // Just the affordance — a full panel wrapped around one button was a fat
-    // empty bar carrying no information at all.
-    el.innerHTML=`<div class="dash-toggle"><button id="bDashToggle" class="ghost-toggle">${icon("chevron")} Show stats</button></div>`;
-    return;
-  }
+  // The affordance itself now lives in the header tray beside the other chrome,
+  // rather than floating alone on a row of its own above the console.
+  if(cfg.dashCollapsed){el.innerHTML="";return}
   const ranked=accounts0.filter(a=>a.stats&&a.stats.found!==false&&a.stats.tier&&a.stats.tier.toUpperCase()!=="UNRANKED");
   // Combined numbers come from a pool you control: one silver account you never
   // play would otherwise drag the whole vault's winrate down and call itself a
@@ -2815,7 +2881,6 @@ function renderDash(){
       <select id="dashMin">${COMBINED_FLOORS.map(f=>`<option value="${f.v}"${(cfg.statsMinTier||"")===f.v?" selected":""}>${esc(f.label)}</option>`).join("")}</select>
       <span class="dash-ex">${pool.length} of ${ranked.length} ranked${excludedN?" · "+excludedN+" left out":""}</span>
     </div>
-    <button id="bDashToggle" class="ghost-toggle open">${icon("chevron")} Hide stats</button>
   </div>
   <div class="dash">
     <div class="stat"><div class="k">Accounts</div><div class="v">${accounts0.length} <small>· ${accounts0.filter(a=>a.fav).length} ★${bannedN?" · "+bannedN+" banned":""}${archivedN?" · "+archivedN+" archived":""}</small></div></div>
@@ -3920,15 +3985,21 @@ function syncToggles(){
 }
 $("tFav").addEventListener("click",()=>{ui.favOnly=!ui.favOnly;syncToggles();renderFilters()});
 $("tArchived").addEventListener("click",()=>{ui.showArchived=!ui.showArchived;syncToggles();render()});
+$("bDashToggle").addEventListener("click",()=>{
+  cfg.dashCollapsed=!cfg.dashCollapsed;
+  // one-shot: renderDash also runs on every account change, and the panel must
+  // not re-animate then — only when the user actually opened it
+  dashJustOpened=!cfg.dashCollapsed;
+  saveCfg();renderDash();
+});
+// The ribbon filters by tier exactly the way the dashboard's gem row does, so it
+// hands the click to the same place rather than growing its own idea of filtering.
+$("ribbon").addEventListener("click",e=>{
+  const seg=e.target.closest("[data-tier]");if(!seg)return;
+  ui.tier=ui.tier===seg.dataset.tier?"":seg.dataset.tier;
+  render();
+});
 $("dash").addEventListener("click",e=>{
-  if(e.target.closest("#bDashToggle")){
-    cfg.dashCollapsed=!cfg.dashCollapsed;
-    // one-shot: renderDash also runs on every account change, and the panel must
-    // not re-animate then — only when the user actually opened it
-    dashJustOpened=!cfg.dashCollapsed;
-    saveCfg();renderDash();
-    return;
-  }
   // every count answers "how many"; clicking it answers "which ones"
   const flag=e.target.closest("[data-flag]");
   if(flag){ui.flag=ui.flag===flag.dataset.flag?"":flag.dataset.flag;render();return}

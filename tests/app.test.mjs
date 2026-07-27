@@ -61,6 +61,25 @@ function bootApp(seed, tweak) {
   return window;
 }
 
+/* The suite boots a fresh jsdom window for every test and never closes any of
+   them, so by the end there are well over a hundred live windows each running
+   their own animation-frame loop. A fixed 300ms sleep that was comfortable at
+   test 30 is marginal at test 130 — which is how these vault tests began failing
+   intermittently without a line of vault code changing. Wait for the thing that
+   was actually being waited for instead. */
+async function until(pred, label, ms = 5000) {
+  const t0 = Date.now();
+  for (;;) {
+    let ok = false;
+    try { ok = pred() } catch (e) { ok = false }
+    if (ok) return;
+    if (Date.now() - t0 > ms) throw new Error("timed out waiting for " + label);
+    await new Promise(r => setTimeout(r, 10));
+  }
+}
+const encrypted = w => { const r = w.localStorage.getItem("smurf-tracker"); return !!(r && JSON.parse(r).__enc) };
+const storedPlain = w => { const r = w.localStorage.getItem("smurf-tracker"); return !!r && Array.isArray(JSON.parse(r)) };
+
 test("boots clean with an empty vault, no accounts", () => {
   const win = bootApp();
   assert.equal(win.document.querySelectorAll(".card").length, 0);
@@ -359,7 +378,7 @@ test("relock re-shows the lock screen and clears in-memory accounts; the same pa
   addRealAccount(win, "Locked One", "1234");
   win.document.getElementById("sVaultPass").value = "lockme123";
   win.document.getElementById("sVaultSet").click();
-  await new Promise(r => setTimeout(r, 300));
+  await until(() => encrypted(win), "the vault to be written encrypted");
   assert.equal(win.document.querySelectorAll(".card").length, 1);
 
   win.relock();
@@ -369,13 +388,13 @@ test("relock re-shows the lock screen and clears in-memory accounts; the same pa
   // the wrong-password check below is the black-box proof that in-memory state was actually cleared/reset
   win.document.getElementById("lockPass").value = "wrong password";
   win.document.getElementById("lockBtn").click();
-  await new Promise(r => setTimeout(r, 300));
+  await until(() => win.document.getElementById("lockErr").style.display === "block", "the wrong password to be rejected");
   assert.equal(win.document.getElementById("lockErr").style.display, "block");
   assert.equal(win.document.getElementById("lock").classList.contains("hidden"), false);
 
   win.document.getElementById("lockPass").value = "lockme123";
   win.document.getElementById("lockBtn").click();
-  await new Promise(r => setTimeout(r, 300));
+  await until(() => win.document.getElementById("lock").classList.contains("hidden"), "the vault to unlock");
   assert.equal(win.document.querySelectorAll(".card").length, 1, "the same account must come back after unlocking");
 });
 
@@ -438,12 +457,12 @@ test("saveDB writes an encrypted envelope once a vault password is set, and plai
   addRealAccount(win, "Test Smurf", "1234");
   win.document.getElementById("sVaultPass").value = "testpass123";
   win.document.getElementById("sVaultSet").click();
-  await new Promise(r => setTimeout(r, 300));
+  await until(() => encrypted(win), "the vault to be written encrypted");
   let raw = JSON.parse(win.localStorage.getItem("smurf-tracker"));
   assert.equal(raw.__enc, true);
 
   win.document.getElementById("sVaultRemove").click(); // confirm() is stubbed to always return true
-  await new Promise(r => setTimeout(r, 300));
+  await until(() => storedPlain(win), "the vault to be written back in the clear");
   raw = JSON.parse(win.localStorage.getItem("smurf-tracker"));
   assert.ok(Array.isArray(raw));
   assert.equal(raw.length, 1);
@@ -455,7 +474,7 @@ test("an encrypted vault shows the lock screen on boot, and the right password u
   addRealAccount(win1, "Test Smurf", "1234");
   win1.document.getElementById("sVaultPass").value = "letmein123";
   win1.document.getElementById("sVaultSet").click();
-  await new Promise(r => setTimeout(r, 300));
+  await until(() => encrypted(win1), "the vault to be written encrypted");
   const stored = win1.localStorage.getItem("smurf-tracker");
 
   // second boot: fresh window, pre-seed localStorage with the encrypted envelope
@@ -474,13 +493,13 @@ test("an encrypted vault shows the lock screen on boot, and the right password u
 
   win2.document.getElementById("lockPass").value = "wrong";
   win2.document.getElementById("lockBtn").click();
-  await new Promise(r => setTimeout(r, 300));
+  await until(() => win2.document.getElementById("lockErr").style.display === "block", "the wrong password to be rejected");
   assert.equal(win2.document.getElementById("lockErr").style.display, "block");
   assert.equal(win2.document.getElementById("lock").classList.contains("hidden"), false, "wrong password must not unlock");
 
   win2.document.getElementById("lockPass").value = "letmein123";
   win2.document.getElementById("lockBtn").click();
-  await new Promise(r => setTimeout(r, 300));
+  await until(() => win2.document.getElementById("lock").classList.contains("hidden"), "the vault to unlock");
   assert.equal(win2.document.getElementById("lock").classList.contains("hidden"), true);
   assert.equal(win2.document.getElementById("appRoot").classList.contains("hidden"), false);
   assert.equal(win2.document.querySelectorAll(".card").length, 1);
@@ -1563,7 +1582,7 @@ test("the auto-lock timer only runs when there is something to lock", async () =
 
   win.document.getElementById("sVaultPass").value = "a-master-password";
   win.document.getElementById("sVaultSet").click();
-  await new Promise(r => setTimeout(r, 400));
+  await until(() => encrypted(win), "the vault to be written encrypted");
   assert.deepEqual(started, [15000], "now it has a reason to run");
 });
 
@@ -1613,7 +1632,7 @@ test("locking clears every scrap of per-card state", async () => {
   win.document.getElementById("bSettings").click();
   win.document.getElementById("sVaultPass").value = "a-master-password";
   win.document.getElementById("sVaultSet").click();
-  await new Promise(r => setTimeout(r, 400));
+  await until(() => encrypted(win), "the vault to be written encrypted");
 
   win.document.querySelector('[data-act="noteedit"]').click();
   const ta = win.document.querySelector('[data-f="notetext"]');
@@ -1987,7 +2006,7 @@ test("saving an encrypted vault derives the key once, not once per save", async 
   addRealAccount(win, "Test Smurf", "1234");
   win.document.getElementById("sVaultPass").value = "hunter2pass";
   win.document.getElementById("sVaultSet").click();
-  await new Promise(r => setTimeout(r, 400));
+  await until(() => encrypted(win), "the vault to be written encrypted");
 
   const afterUnlock = counted.n;
   assert.ok(afterUnlock >= 1, "setting a password has to derive a key at least once");
@@ -2011,7 +2030,7 @@ test("every save gets its own IV even though the salt is reused", async () => {
   addRealAccount(win, "Test Smurf", "1234");
   win.document.getElementById("sVaultPass").value = "hunter2pass";
   win.document.getElementById("sVaultSet").click();
-  await new Promise(r => setTimeout(r, 400));
+  await until(() => encrypted(win), "the vault to be written encrypted");
 
   const first = JSON.parse(win.localStorage.getItem("smurf-tracker"));
   await win.saveDB();
@@ -2029,7 +2048,7 @@ test("a wrong password is rejected and does not poison the cached key", async ()
   addRealAccount(win, "Test Smurf", "1234");
   win.document.getElementById("sVaultPass").value = "hunter2pass";
   win.document.getElementById("sVaultSet").click();
-  await new Promise(r => setTimeout(r, 400));
+  await until(() => encrypted(win), "the vault to be written encrypted");
   const stored = JSON.parse(win.localStorage.getItem("smurf-tracker"));
 
   await assert.rejects(() => win.decryptData("not-the-password", stored));
@@ -2044,7 +2063,7 @@ test("locking the vault forgets the derived key as well as the password", async 
   addRealAccount(win, "Test Smurf", "1234");
   win.document.getElementById("sVaultPass").value = "hunter2pass";
   win.document.getElementById("sVaultSet").click();
-  await new Promise(r => setTimeout(r, 400));
+  await until(() => encrypted(win), "the vault to be written encrypted");
 
   win.relock();
   const afterLock = counted.n;
@@ -2269,4 +2288,56 @@ test("no two chart labels in one lane land on the same line", () => {
           `${lane}: "${items[i - 1].text}" and "${items[i].text}" overlap at ${items[i].top}`);
     }
   }
+});
+
+// ---- the tier ribbon ----
+
+test("the ribbon shows the vault's spread and filters when a segment is clicked", () => {
+  const win = bootApp(ladderSeed());
+  const segs = [...win.document.querySelectorAll(".rib-seg")];
+  assert.equal(segs.length, 11, "ten tiers plus one band for everything unranked");
+  assert.equal(segs[0].dataset.tier, "CHALLENGER", "best first, the same order the list sorts in");
+  assert.equal(segs[segs.length - 1].dataset.tier, "UNRANKED");
+  assert.match(win.document.querySelector(".rib-cap").textContent, /12 accounts across 10 tiers/);
+  assert.match(win.document.querySelector(".rib-cap").textContent, /2 unranked/);
+
+  const master = win.document.querySelector('.rib-seg[data-tier="MASTER"]');
+  master.click();
+  assert.equal(win.document.querySelectorAll(".card").length, 1, "the grid narrows to that tier");
+  assert.equal(win.document.querySelector('.rib-seg[data-tier="MASTER"]').getAttribute("aria-pressed"), "true");
+  assert.equal(win.document.querySelectorAll(".rib-seg.on").length, 1, "and only that one is lit");
+
+  win.document.querySelector('.rib-seg[data-tier="MASTER"]').click();
+  assert.equal(win.document.querySelectorAll(".card").length, 12, "clicking it again clears the filter");
+});
+
+// One account is not a distribution; a full-width block of a single colour is a
+// picture of nothing.
+test("the ribbon stays out of the way until there is a spread to show", () => {
+  const win = bootApp();
+  assert.equal(win.document.getElementById("ribbon").innerHTML, "", "empty vault, no ribbon");
+  addRealAccount(win, "Only One", "1234");
+  assert.equal(win.document.getElementById("ribbon").innerHTML, "", "one account, still nothing to compare");
+  addRealAccount(win, "Second", "1234");
+  assert.ok(win.document.querySelectorAll(".rib-seg").length > 0, "two is a distribution");
+});
+
+// The stats toggle used to float alone on a row of its own above the console, and
+// was rebuilt by renderDash on every account change.
+test("the stats toggle lives in the header tray and survives a re-render", () => {
+  const win = bootApp(ladderSeed());
+  const btn = win.document.querySelector(".bar #bDashToggle");
+  assert.ok(btn, "it sits with the rest of the header chrome");
+  assert.equal(win.document.querySelectorAll("#bDashToggle").length, 1, "and there is exactly one of it");
+  // the panel starts open, so the button offers the other direction
+  assert.match(btn.textContent, /Hide stats/);
+  assert.ok(win.document.querySelectorAll(".dash .stat").length > 0);
+
+  btn.click();
+  assert.match(win.document.querySelector("#bDashToggle").textContent, /Show stats/);
+  assert.equal(win.document.querySelectorAll(".dash .stat").length, 0, "the panel closes");
+
+  win.render();
+  assert.equal(win.document.querySelector(".bar #bDashToggle"), btn, "the same button, not a rebuilt one");
+  assert.match(btn.textContent, /Show stats/, "and it still knows which way it is pointing");
 });
