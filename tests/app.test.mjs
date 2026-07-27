@@ -2755,3 +2755,142 @@ test("sorting by climb puts the account actually moving at the top", () => {
   assert.ok(order.indexOf(seed[1].id) < order.indexOf(seed[0].id),
     "the one gaining 30 LP a day outranks the one gaining half of one");
 });
+
+// ---- quick find, search operators, while you were away ----
+
+test("Ctrl+K opens quick find, and typing narrows accounts and commands together", () => {
+  const win = bootApp(ladderSeed());
+  const pal = win.document.getElementById("palette");
+  assert.ok(pal.classList.contains("hidden"));
+
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }));
+  assert.equal(pal.classList.contains("hidden"), false, "it opens from anywhere, even mid-typing");
+
+  const input = win.document.getElementById("palInput");
+  input.value = "challenger";
+  input.dispatchEvent(new win.Event("input"));
+  const items = [...win.document.querySelectorAll(".pal-i")];
+  assert.ok(items.length, "the Challenger account is found by its rank as well as its name");
+  assert.match(items[0].textContent, /Challenger/);
+
+  input.value = "layout";
+  input.dispatchEvent(new win.Event("input"));
+  assert.equal(win.document.querySelectorAll(".pal-i").length, 1);
+  assert.match(win.document.querySelector(".pal-i").textContent, /Switch layout/);
+
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }));
+  assert.ok(pal.classList.contains("hidden"), "and the same key closes it");
+});
+
+test("quick find walks with the arrows and opens with Enter", () => {
+  const win = bootApp(ladderSeed());
+  win.openPalette();
+  const input = win.document.getElementById("palInput");
+  const key = k => input.dispatchEvent(new win.KeyboardEvent("keydown", { key: k, bubbles: true }));
+
+  assert.equal(win.document.querySelectorAll(".pal-i")[0].classList.contains("sel"), true, "the first result starts selected");
+  key("ArrowDown");
+  assert.equal(win.document.querySelectorAll(".pal-i")[1].classList.contains("sel"), true);
+  key("ArrowUp"); key("ArrowUp");
+  const items = win.document.querySelectorAll(".pal-i");
+  assert.equal(items[items.length - 1].classList.contains("sel"), true, "and wraps around the ends");
+
+  key("ArrowDown");                       // back to the first, which is an account
+  key("Enter");
+  assert.ok(win.document.getElementById("palette").classList.contains("hidden"), "picking closes it");
+  assert.ok(win.document.querySelector(".hx.flash"), "and lights up where you landed");
+});
+
+// An account reached through quick find has to be visible when you get there, so
+// whatever was filtering the grid gets cleared on the way.
+test("jumping to an account clears the filters that would have hidden it", () => {
+  const win = bootApp(ladderSeed());
+  win.document.querySelector('.rib-seg[data-tier="MASTER"]').click();
+  assert.equal(win.document.querySelectorAll(".card").length, 1);
+
+  win.openPalette();
+  const input = win.document.getElementById("palInput");
+  input.value = "IRONGuy";
+  input.dispatchEvent(new win.Event("input"));
+  input.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+  assert.ok(win.document.querySelector('.card[data-id="t0"]'), "the Iron account is on screen");
+  assert.equal(win.document.querySelectorAll(".rib-seg.on").length, 0, "the tier filter is gone");
+});
+
+test("search operators filter the way the toolbar does, without leaving the keyboard", () => {
+  const win = bootApp(ladderSeed());
+  const count = s => {
+    const box = win.document.getElementById("tSearch");
+    box.value = s;
+    box.dispatchEvent(new win.Event("input"));
+    win.renderFilters();                       // skip the 120ms debounce
+    return win.document.querySelectorAll(".card").length;
+  };
+  assert.equal(count(""), 12);
+  assert.equal(count("tier:diamond"), 1);
+  assert.equal(count("t:chall"), 1, "a prefix is enough");
+  assert.equal(count("region:euw"), 12);
+  assert.equal(count(">diamond"), 4, "Diamond and up, the way people say it out loud");
+  assert.equal(count("<gold"), 3, "Iron, Bronze, Silver");
+  assert.equal(count("is:fav"), 1);
+  assert.equal(count("is:never"), 1);
+  // an unrecognised operator has to stay a plain search term rather than silently
+  // swallowing the rest of the query
+  assert.equal(count("colour:blue"), 0);
+  assert.equal(count(""), 12);
+});
+
+// The app is built to sit in a background tab for days and check by itself, and
+// had no idea of "since you last looked".
+test("what moved while you were away is measured from before you left", () => {
+  const now = Date.now();
+  const seed = ladderSeed();
+  // a fortnight of checks, of which the last three happened after the last visit
+  seed[0].history = [
+    { t: now - 10 * 86400000, tier: "CHALLENGER", division: null, lp: 100 },
+    { t: now - 2 * 86400000, tier: "CHALLENGER", division: null, lp: 300 },
+    { t: now - 1 * 86400000, tier: "CHALLENGER", division: null, lp: 400 },
+  ];
+  seed[1].history = [
+    { t: now - 10 * 86400000, tier: "GRANDMASTER", division: null, lp: 500 },
+    { t: now - 1 * 86400000, tier: "GRANDMASTER", division: null, lp: 300 },
+  ];
+  const win = bootApp(seed);
+  const since = now - 5 * 86400000;
+
+  const sum = win.awaySummary(since);
+  assert.equal(sum.up.length, 1);
+  assert.equal(sum.down.length, 1);
+  // measured against the last reading before the visit ended, not the previous
+  // check — over a week away an account may have been checked five times
+  assert.equal(sum.up[0].d, 300, "100 -> 400, not 300 -> 400");
+  assert.equal(sum.down[0].d, -200);
+
+  assert.equal(win.awaySummary(0), null, "no previous visit, nothing to report");
+  assert.equal(win.awaySummary(now + 86400000), null, "and nothing has happened since the future");
+});
+
+test("the away band stays quiet for a quick tab flick, and once dismissed is gone", () => {
+  const now = Date.now();
+  const seed = ladderSeed();
+  seed[0].history = [
+    { t: now - 10 * 86400000, tier: "CHALLENGER", division: null, lp: 100 },
+    { t: now - 1 * 86400000, tier: "CHALLENGER", division: null, lp: 400 },
+  ];
+  const cfgWith = ms => w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ lastSeenAt: ms }));
+
+  const quick = bootApp(seed, cfgWith(now - 60000));
+  assert.ok(quick.document.getElementById("awayBand").classList.contains("hidden"),
+    "closing a tab and reopening it must not announce itself");
+
+  const away = bootApp(seed, cfgWith(now - 3 * 86400000));
+  const band = away.document.getElementById("awayBand");
+  assert.equal(band.classList.contains("hidden"), false);
+  assert.match(band.textContent, /climbed/);
+
+  band.querySelector("#awayHide").click();
+  assert.ok(band.classList.contains("hidden"));
+  assert.ok(JSON.parse(away.localStorage.getItem("smurf-tracker-cfg")).lastSeenAt > now - 60000,
+    "the visit it was reporting on is over the moment it has been read");
+});

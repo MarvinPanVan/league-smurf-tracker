@@ -867,6 +867,55 @@
     font-size:8.5px;font-weight:500;letter-spacing:.04em;color:var(--faint);pointer-events:none}
   .lpc-tick.l{transform:none;left:5px!important}
   .lpc-tick.r{transform:none;left:auto!important;right:5px}
+  .away-band{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;
+    padding:12px 15px;border-radius:var(--r-md);font-size:13px;
+    border:1px solid color-mix(in srgb,var(--teal) 34%,transparent);
+    background:color-mix(in srgb,var(--teal) 8%,var(--panel));box-shadow:var(--sh-1);
+    animation:barIn .3s cubic-bezier(.22,1,.36,1) both}
+  .away-band.hidden{display:none}
+  .away-k{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-txt)}
+  .away-band b{font-weight:600;color:var(--text)}
+  .away-band .up{color:var(--good);font-weight:600}
+  .away-band .down{color:var(--danger);font-weight:600}
+  .away-band .sp{margin-left:auto;display:flex;gap:7px}
+  .away-band button{font-size:11.5px;padding:5px 11px}
+  @media (prefers-reduced-motion:reduce){.away-band{animation:none}}
+
+  /* ---- quick find ---- */
+  .pal{max-width:600px}
+  .modal .pal{margin-top:clamp(0px,9vh,110px);margin-bottom:auto}
+  .pal-h{display:flex;align-items:center;gap:11px;padding:15px 18px;border-bottom:1px solid var(--line);flex-shrink:0}
+  .pal-h .ico{width:17px;height:17px;color:var(--faint);flex-shrink:0}
+  .pal-h input{border:0;background:none;box-shadow:none;padding:0;font-size:15.5px;flex:1;min-width:0}
+  .pal-h input:focus{border:0;box-shadow:none;outline:none}
+  .pal-list{flex:1;min-height:0;overflow:auto;padding:7px;display:flex;flex-direction:column;gap:1px;
+    max-height:min(52vh,420px)}
+  .pal-i{display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:var(--r-sm);
+    cursor:pointer;text-align:left;background:none;border:0;box-shadow:none;width:100%}
+  .pal-i:hover{background:#ffffff0a;border:0}
+  /* Selection is driven by the keyboard, so it has to be visible without a
+     pointer anywhere near it — a hover tint is not enough on its own. */
+  .pal-i.sel{background:color-mix(in srgb,var(--teal) 13%,transparent);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--teal) 32%,transparent)}
+  .pal-pic{width:28px;height:28px;border-radius:9px;flex-shrink:0;position:relative;overflow:visible;
+    background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--faint)}
+  .pal-pic img{width:100%;height:100%;object-fit:cover;border-radius:9px;display:block}
+  .pal-pic .crest{position:absolute;right:-5px;top:-5px;width:14px;height:14px}
+  .pal-ico{width:28px;height:28px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;
+    justify-content:center;background:#ffffff0d;color:var(--muted)}
+  .pal-ico .ico{width:15px;height:15px}
+  .pal-t{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px}
+  .pal-n{font-size:13.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pal-s{font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pal-r{font-size:11.5px;font-weight:700;flex-shrink:0;letter-spacing:-.01em}
+  .pal-g{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+    padding:9px 10px 4px}
+  .pal-empty{padding:26px 14px;text-align:center;color:var(--faint);font-size:13px}
+  .pal-f{display:flex;gap:16px;padding:9px 16px;border-top:1px solid var(--line);flex-shrink:0;
+    font-size:10.5px;color:var(--faint);background:#0b0e14b8}
+  .pal-f kbd{font-family:inherit;font-size:9.5px;padding:1px 5px;border-radius:4px;margin-right:3px;
+    background:#ffffff12;box-shadow:inset 0 0 0 1px var(--line2)}
   .to-top{position:fixed;right:clamp(14px,3vw,28px);bottom:clamp(14px,3vw,28px);z-index:55;
     width:40px;height:40px;padding:0;border-radius:50%;
     background:#0b0e14e0;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
@@ -1261,6 +1310,11 @@
 
   <div id="banner" class="banner">Persistent storage is not available in this environment — data will be lost when you close the page. Download the file and open it locally on your PC.</div>
 
+  <!-- This app is built to sit open in a background tab for days and check by
+       itself. It had no idea of "since you last looked" — you came back to the same
+       grid and had to spot what moved. -->
+  <div id="awayBand" class="away-band hidden"></div>
+
   <div id="previewBanner" class="hidden" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border:1px solid color-mix(in srgb,var(--gold) 42%,transparent);background:color-mix(in srgb,var(--gold) 9%,transparent);color:var(--text);padding:13px 16px;border-radius:var(--r-md);font-size:13px;margin-bottom:18px">
     <span>👁 <b>Preview mode</b> — this is example data to show you the layout. Nothing here is saved.</span>
     <button id="bExitPreview" class="b-gold">Exit preview</button>
@@ -1277,6 +1331,10 @@
     <b style="color:var(--text)">Your data stays here.</b> Accounts are saved in this browser on this device — nothing gets uploaded. Clearing browser data wipes the vault, so use <b style="color:var(--text)">Export</b> for backups and <b style="color:var(--text)">Import</b> to restore or merge them.<br>
     <b style="color:var(--text)">Rank checks are free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b style="color:var(--text)">Rank</b> in a card's ⋯ menu to enter it by hand — history, the chart and the stats all work the same either way.<br>
     <b style="color:var(--text)">Tips:</b> the bar across a card's bottom edge opens <b style="color:var(--text)">Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · search matches names, tags, even ranks (try "gold") · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
+    <b style="color:var(--text)">Quick find:</b> <b style="color:var(--text)">Ctrl+K</b> (or ⌘K) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.<br>
+    <b style="color:var(--text)">Search operators:</b> beyond plain words the search box takes <b style="color:var(--text)">tier:diamond</b>, <b style="color:var(--text)">region:euw</b>, <b style="color:var(--text)">&gt;plat</b> and <b style="color:var(--text)">&lt;gold</b> for "at least" and "below", and <b style="color:var(--text)">is:</b> stale · never · flagged · banned · fav · goal. They combine, so <b style="color:var(--text)">&gt;diamond is:stale</b> is one query.<br>
+    <b style="color:var(--text)">Three layouts:</b> cards for browsing, the list for working through the vault a row at a time, and the wall for seeing all sixty at once — click any tile to land back on that account's card.<br>
+    <b style="color:var(--text)">Goals:</b> set a target rank in a card's <b style="color:var(--text)">Rank</b> panel and the card grows a rail showing how far there is left, plus a rough estimate once there's a fortnight of checks to work from.<br>
     <b style="color:var(--text)">Extra privacy:</b> set a master password in <b style="color:var(--text)">Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.<br>
     <b style="color:var(--text)">Using this app:</b> free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.<br>
     <b style="color:var(--text)">More:</b> <b style="color:var(--text)">⋯</b> menu has bulk add (paste a list of Name#TAG) and CSV import · archive an account to hide it without deleting (toggle <b style="color:var(--text)">Archived</b> in the toolbar) · shift-click a card's checkbox to select a range · <b style="color:var(--text)">n</b> for a new account · click a card's note to rewrite it on the spot · pick your own primary and secondary colors in Settings.
@@ -1516,6 +1574,22 @@
   <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
   <input type="file" id="fileInCsv" accept=".csv,text/csv" class="hidden">
   </div>
+  <!-- Sixty accounts is more than anyone scrolls to find one. Typing is the
+       shortest path to every account and to most of what you would then do with
+       it, so it gets its own window. -->
+  <div id="palette" class="modal hidden" role="dialog" aria-modal="true" aria-label="Quick find">
+    <div class="mdl narrow hx pal"><div class="hx-in mdl-in">
+      <div class="pal-h">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+        <input id="palInput" type="text" placeholder="Jump to an account, or start typing a command…"
+          autocomplete="off" autocorrect="off" spellcheck="false" role="combobox"
+          aria-expanded="true" aria-controls="palList" aria-autocomplete="list">
+      </div>
+      <div id="palList" class="pal-list" role="listbox" aria-label="Results"></div>
+      <div class="pal-f"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>⏎</kbd> open</span><span><kbd>Esc</kbd> close</span></div>
+    </div></div>
+  </div>
+
   <!-- Sixty cards is thirteen screens, and the only way back was to scroll all of
        them again. Kept out of the way until there is actually something to go back
        up to. -->
@@ -1713,6 +1787,7 @@ const ICON={
   star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
   chevron:'<polyline points="6 9 12 15 18 9"/>',
   flag:'<path d="M4 22V4h11l-1.4 3.5L15 11H4"/><line x1="4" y1="4" x2="4" y2="22"/>',
+  plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
   eye:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
   eyeOff:'<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M1 1l22 22"/><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>',
   // a person, not a door: the button reveals the stored credentials, it doesn't sign you in anywhere
@@ -2851,8 +2926,47 @@ function lastDelta(a){
 }
 
 // ---------- filtering / sorting ----------
+/* Sixty accounts is the point where "type some letters and see what sticks" stops
+   being enough. The operators are the filters that already exist in the toolbar,
+   reachable without leaving the keyboard:
+     tier:diamond   region:euw   is:stale|never|flagged|banned|fav|goal
+     >plat  >=plat  <gold        (rank at least / below)
+   Anything not recognised as an operator stays a plain search term, so a stray
+   colon in a note never silently swallows the rest of the query. */
+function parseQuery(q){
+  const out={terms:[],tier:"",region:"",is:[],min:null,max:null};
+  for(const raw of String(q||"").trim().split(/\s+/)){
+    if(!raw)continue;
+    const tok=raw.toLowerCase();
+    let m;
+    if((m=/^(?:tier|t):(.+)$/.exec(tok))){
+      const t=TIER_ORDER.find(x=>x.toLowerCase().startsWith(m[1]))||(("unranked").startsWith(m[1])?"UNRANKED":null);
+      if(t){out.tier=t;continue}
+    }
+    if((m=/^(?:region|r):(.+)$/.exec(tok))){
+      const r=Object.keys(REGIONS).find(x=>x.toLowerCase()===m[1]||x.toLowerCase().startsWith(m[1]));
+      if(r){out.region=r;continue}
+    }
+    if((m=/^is:(.+)$/.exec(tok))){
+      if(["stale","never","flagged","banned","fav","goal"].includes(m[1])){out.is.push(m[1]);continue}
+    }
+    if((m=/^(>=|>|<=|<)(.+)$/.exec(tok))){
+      const t=TIER_ORDER.find(x=>x.toLowerCase().startsWith(m[2]));
+      if(t){
+        const i=TIER_ORDER.indexOf(t);
+        // ">plat" means "Platinum and up" the way people say it out loud, not
+        // "strictly better than every Platinum".
+        if(m[1][0]===">")out.min=i; else out.max=i;
+        continue;
+      }
+    }
+    out.terms.push(tok);
+  }
+  return out;
+}
 function filtered(){
-  const q=ui.search.toLowerCase();
+  const Q=parseQuery(ui.search);
+  const q=Q.terms.join(" ");
   let list=accounts.filter(a=>{
     if(a.archived&&!ui.showArchived)return false;
     if(ui.showArchived&&!a.archived)return false;
@@ -2867,6 +2981,25 @@ function filtered(){
     if(ui.tier){
       const t=(a.stats&&a.stats.found!==false&&a.stats.tier||"").toUpperCase();
       if(ui.tier==="UNRANKED"?isRanked(a):t!==ui.tier)return false;
+    }
+    if(Q.tier){
+      const t=(a.stats&&a.stats.found!==false&&a.stats.tier||"").toUpperCase();
+      if(Q.tier==="UNRANKED"?isRanked(a):t!==Q.tier)return false;
+    }
+    if(Q.region&&a.region!==Q.region)return false;
+    if(Q.min!=null||Q.max!=null){
+      const i=isRanked(a)?TIER_ORDER.indexOf((a.stats.tier||"").toUpperCase()):-1;
+      if(i<0)return false;                       // unranked is not "above Gold"
+      if(Q.min!=null&&i<Q.min)return false;
+      if(Q.max!=null&&i>=Q.max)return false;
+    }
+    for(const f of Q.is){
+      if(f==="stale"&&!isStale(a))return false;
+      if(f==="never"&&isChecked(a))return false;
+      if(f==="flagged"&&!needsAttention(a))return false;
+      if(f==="banned"&&a.status!=="banned")return false;
+      if(f==="fav"&&!a.fav)return false;
+      if(f==="goal"&&!(a.goal&&a.goal.tier))return false;
     }
     if(q){
       const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,a.createdOn,a.birthdate,
@@ -4173,6 +4306,13 @@ $("fTogglePass").addEventListener("click",()=>setPassShown($("fPass").classList.
 document.addEventListener("keydown",e=>{
   const tag=document.activeElement?document.activeElement.tagName:"";
   const typing=tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT";
+  // Works while typing, unlike every other shortcut here — Ctrl+K is the one you
+  // reach for *because* your hands are already on the keyboard.
+  if((e.key==="k"||e.key==="K")&&(e.ctrlKey||e.metaKey)&&!e.altKey){
+    e.preventDefault();
+    $("palette").classList.contains("hidden")?openPalette():closePalette();
+    return;
+  }
   if(e.key==="/"&&!typing){e.preventDefault();$("tSearch").focus()}
   if(e.key==="n"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();openForm(null)}
   if(e.key==="f"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$("tFav").click()}
@@ -4239,7 +4379,7 @@ document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListene
 // Driven by an observer rather than by each of the eight places that add or
 // remove .hidden on these two. Wiring it into every call site works right up
 // until the ninth one is added and quietly doesn't lock the page.
-const MODALS=["settings","help"];
+const MODALS=["settings","help","palette"];
 let modalReturn=null;
 function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains("hidden"))}
 function syncModals(){
@@ -4450,6 +4590,177 @@ $("bDashToggle").addEventListener("click",()=>{
     if(first)first.focus({preventScroll:true});   // so the keyboard lands somewhere useful too
   });
 }
+/* ---------- while you were away ----------
+   The app is meant to sit in a background tab for days and check by itself, and it
+   had no idea of "since you last looked": you came back to the same grid and had
+   to spot what had moved on your own.
+   Movement is measured against the last reading taken before you left, not against
+   the previous check — over a week away an account may have been checked five
+   times, and what you want is where it started and where it is now. */
+function awaySummary(since){
+  if(!since)return null;
+  const out={up:[],down:[]};
+  for(const a of accounts){
+    if(a.archived)continue;
+    const hist=(a.history||[]).filter(h=>+h.t&&ladderLP(h)!==null);
+    if(hist.length<2)continue;
+    const after=hist[hist.length-1];
+    if(+after.t<=since)continue;                       // nothing new while away
+    const before=hist.filter(h=>+h.t<=since).pop();
+    if(!before)continue;                               // no reading from before you left
+    const d=ladderLP(after)-ladderLP(before);
+    if(!d)continue;
+    (d>0?out.up:out.down).push({a,d});
+  }
+  out.up.sort((x,y)=>y.d-x.d);
+  out.down.sort((x,y)=>x.d-y.d);
+  return out.up.length||out.down.length?out:null;
+}
+function renderAwayBand(){
+  const el=$("awayBand");
+  // An hour, so that closing a tab and reopening it does not announce itself.
+  const since=cfg.lastSeenAt&&Date.now()-cfg.lastSeenAt>3600000?cfg.lastSeenAt:0;
+  const sum=since?awaySummary(since):null;
+  if(!sum){el.classList.add("hidden");el.innerHTML="";return}
+  const best=sum.up[0], worst=sum.down[0];
+  const bits=[];
+  if(sum.up.length)bits.push(`<span class="up">${sum.up.length} climbed</span>`);
+  if(sum.down.length)bits.push(`<span class="down">${sum.down.length} fell</span>`);
+  const star=best&&(!worst||best.d>=-worst.d)?best:worst;
+  setHTML(el,`<span class="away-k">While you were away</span>`
+    +`<span>${bits.join(" · ")}${star?` — biggest mover <b>${esc(star.a.label||star.a.gameName)}</b> `
+      +`<span class="${star.d>0?"up":"down"}">${star.d>0?"+":""}${star.d} LP</span>`:""}</span>`
+    +`<span class="sp"><button id="awayShow">Sort by movement</button><button id="awayHide">Dismiss</button></span>`);
+  el.classList.remove("hidden");
+}
+$("awayBand").addEventListener("click",e=>{
+  if(e.target.closest("#awayShow")){
+    const sort=$("tSort");sort.value="change";ui.sort="change";render();
+  }
+  // Dismissed for good, not until the next render: the visit it was reporting on
+  // is over the moment it has been read.
+  cfg.lastSeenAt=Date.now();saveCfg();
+  $("awayBand").classList.add("hidden");
+});
+// Stamped when the tab goes away rather than on a timer, so "last seen" means the
+// last moment this page was actually in front of somebody.
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden&&!vaultLocked()){cfg.lastSeenAt=Date.now();saveCfg()}
+});
+window.addEventListener("pagehide",()=>{if(!vaultLocked()){cfg.lastSeenAt=Date.now();saveCfg()}});
+function vaultLocked(){return !$("lock").classList.contains("hidden")}
+
+/* ---------- quick find ----------
+   Sixty accounts is more than anyone scrolls through to reach one, and the things
+   you then want — the password, op.gg, a refresh — are each two more clicks away
+   behind a menu. Typing is the shortest path to all of it.
+   Accounts are matched on everything that identifies them; commands are matched on
+   their own words. Both lists are capped, because a palette that returns sixty
+   results has not answered anything. */
+let palSel=0, palItems=[];
+function palCommands(){
+  return [
+    {k:"add",n:"Add account",s:"New entry in the vault",i:"plus",run:()=>openForm(null)},
+    {k:"check",n:"Check all ranks",s:"Refresh everything currently shown",i:"refresh",run:()=>checkAll()},
+    {k:"stale",n:"Refresh stale accounts",s:"Only the ones actually out of date",i:"refresh",run:()=>$("bCheckStale").click()},
+    {k:"cards list wall layout",n:"Switch layout",s:"Cards, list, wall",i:"chart",run:()=>{
+      const order=["cards","list","wall"];
+      ui.density=order[(order.indexOf(ui.density)+1)%order.length];
+      cfg.density=ui.density;saveCfg();openInfo.clear();render();
+    }},
+    {k:"settings",n:"Settings",s:"Rank checks, alerts, security, appearance",i:"user",run:()=>openSettings()},
+    {k:"export backup",n:"Export backup",s:"Download the vault as JSON",i:"clipboard",run:()=>doExport()},
+    {k:"help",n:"Help",s:"How this works",i:"note",run:()=>$("bHelp").click()},
+  ];
+}
+function palResults(q){
+  const s=q.trim().toLowerCase();
+  const accs=accounts.filter(a=>!a.archived).filter(a=>{
+    if(!s)return true;
+    return [a.label,a.gameName,a.tagLine,a.email,a.login,(a.tags||[]).join(" "),
+      a.stats?shortRank(a.stats)||"":""].join(" ").toLowerCase().includes(s);
+  });
+  // Favourites first, then the best ranks — the same order the grid uses, so the
+  // palette never disagrees with the page behind it.
+  accs.sort((x,y)=>(y.fav?1:0)-(x.fav?1:0)||rankValue(y.stats)-rankValue(x.stats));
+  const cmds=palCommands().filter(c=>!s||(c.k+" "+c.n).toLowerCase().includes(s));
+  return accs.slice(0,8).map(a=>({type:"acc",a})).concat(cmds.slice(0,6).map(c=>({type:"cmd",c})));
+}
+function renderPalette(){
+  palItems=palResults($("palInput").value);
+  if(palSel>=palItems.length)palSel=Math.max(0,palItems.length-1);
+  if(!palItems.length){
+    setHTML($("palList"),`<div class="pal-empty">Nothing matches that.</div>`);
+    return;
+  }
+  let html="",lastType=null;
+  palItems.forEach((it,i)=>{
+    if(it.type!==lastType){
+      html+=`<div class="pal-g">${it.type==="acc"?"Accounts":"Commands"}</div>`;
+      lastType=it.type;
+    }
+    const sel=i===palSel?" sel":"";
+    if(it.type==="acc"){
+      const a=it.a, s=a.stats, col=tierColor(s&&s.tier);
+      const url=iconUrl(s);
+      const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
+      html+=`<button class="pal-i${sel}" data-i="${i}" role="option" aria-selected="${i===palSel}">`
+        +`<span class="pal-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" onerror="markIconDead(this)">`:esc(initial)}`
+        +`${isRanked(a)?crest(s.tier):""}</span>`
+        +`<span class="pal-t"><span class="pal-n">${esc(a.label||a.gameName)}</span>`
+        +`<span class="pal-s">${esc(a.gameName)}#${esc(a.tagLine)} · ${esc(a.region)}</span></span>`
+        +`<span class="pal-r" style="color:${col}">${esc(isRanked(a)?shortRank(s)||"":isChecked(a)?"Unranked":"Never checked")}</span>`
+        +`</button>`;
+    }else{
+      const c=it.c;
+      html+=`<button class="pal-i${sel}" data-i="${i}" role="option" aria-selected="${i===palSel}">`
+        +`<span class="pal-ico">${icon(c.i)}</span>`
+        +`<span class="pal-t"><span class="pal-n">${esc(c.n)}</span><span class="pal-s">${esc(c.s)}</span></span>`
+        +`</button>`;
+    }
+  });
+  setHTML($("palList"),html);
+  const sel=$("palList").querySelector(".sel");
+  if(sel&&sel.scrollIntoView)sel.scrollIntoView({block:"nearest"});
+}
+function openPalette(){
+  if(!accounts.length&&!previewMode){toast("Nothing in the vault yet");return}
+  closeAllPanels();
+  palSel=0;
+  $("palInput").value="";
+  renderPalette();
+  $("palette").classList.remove("hidden");
+}
+function closePalette(){$("palette").classList.add("hidden")}
+function runPalette(i){
+  const it=palItems[i];if(!it)return;
+  closePalette();
+  if(it.type==="cmd"){it.c.run();return}
+  // An account is a place, not an action: go there, in the layout that can
+  // actually show it, and light it up so it is obvious which one you landed on.
+  const id=it.a.id;
+  if(ui.density==="wall"){ui.density="cards";cfg.density="cards";saveCfg()}
+  ui.search="";ui.tier="";ui.flag="";ui.tag=null;ui.favOnly=false;
+  if(it.a.archived)ui.showArchived=true;
+  $("tSearch").value="";syncToggles();
+  flashId=id;render();
+  const card=$("grid").querySelector(`[data-id="${id}"]`);
+  if(card&&card.scrollIntoView)card.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
+  setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1600);
+}
+$("palInput").addEventListener("input",()=>{palSel=0;renderPalette()});
+$("palInput").addEventListener("keydown",e=>{
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){
+    e.preventDefault();
+    if(!palItems.length)return;
+    palSel=(palSel+(e.key==="ArrowDown"?1:-1)+palItems.length)%palItems.length;
+    renderPalette();
+  }else if(e.key==="Enter"){e.preventDefault();runPalette(palSel)}
+});
+$("palList").addEventListener("click",e=>{
+  const b=e.target.closest("[data-i]");if(!b)return;
+  runPalette(+b.dataset.i);
+});
 $("count").addEventListener("click",e=>{
   const b=e.target.closest("[data-flag]");if(!b)return;
   ui.flag=ui.flag===b.dataset.flag?"":b.dataset.flag;render();
@@ -4701,6 +5012,7 @@ function startApp(){
   refreshCutoffs(); // fire and forget; redraws only if a floor actually arrived
   $("grid").classList.add("boot");
   render();
+  renderAwayBand();
   setTimeout(()=>$("grid").classList.remove("boot"),1200);
   if(!cfg.seenHelp&&accounts.length===0)$("help").classList.remove("hidden");
   if(cfg.autoCheck){
