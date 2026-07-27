@@ -934,6 +934,18 @@
   .lrow .lage{font-style:normal;font-size:10.5px;color:var(--faint);margin-left:9px}
   /* Beside the name in all three layouts, because the point of the flag is that
      you spot it without having opened anything. */
+  /* Drawn only when there is a goal. An account with nothing to climb towards
+     should not be shown an empty progress bar to feel bad about. */
+  .goal{display:flex;flex-direction:column;gap:5px;margin-top:-3px}
+  .goal-h{display:flex;align-items:baseline;gap:8px;font-size:10.5px}
+  .goal-h .k{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .goal-t{font-weight:700;letter-spacing:-.01em;font-size:11.5px}
+  .goal-r{margin-left:auto;color:var(--faint);font-variant-numeric:tabular-nums;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .goal-bar{height:4px;border-radius:999px;background:#ffffff12;overflow:hidden}
+  .goal-bar i{display:block;height:100%;border-radius:999px;transition:width .5s cubic-bezier(.22,1,.36,1)}
+  .goal.hit .goal-r{color:var(--good);font-weight:600}
+  @media (prefers-reduced-motion:reduce){.goal-bar i{transition:none}}
   .flagmark{display:inline-flex;flex-shrink:0;color:var(--danger)}
   .flagmark .ico{width:12px;height:12px;stroke-width:2.2}
   .t-nm .flagmark .ico,.rw-nm .flagmark .ico{width:11px;height:11px}
@@ -1466,6 +1478,7 @@
       <option value="name">Sort: Name</option>
       <option value="level">Sort: Level</option>
       <option value="change">Sort: LP change</option>
+      <option value="climb">Sort: Climbing fastest</option>
       <option value="updated">Sort: Last updated</option>
     </select>
     <select id="tStatus">
@@ -2150,6 +2163,51 @@ function normRegion(r){const k=String(r||"").toUpperCase().trim();return REGIONS
 // still filtering as its own value, so the status dropdown grows a second entry
 // reading "Active" that matches a different set of accounts.
 function normStatus(s){const k=String(s||"").toLowerCase().trim();return STATUS[k]?k:"active"}
+/* What happened between the last two checks. "Updated 22h ago" tells you when the
+   app last looked; this tells you whether the account was doing anything, which is
+   the question you were actually asking. Only reads points that carry the totals,
+   so it stays quiet on history recorded before those were kept. */
+function gamesSince(hist){
+  if(!hist||hist.length<2)return null;
+  const withWL=hist.filter(h=>h.w!=null&&h.l!=null);
+  if(withWL.length<2)return null;
+  const a=withWL[withWL.length-2], b=withWL[withWL.length-1];
+  const w=b.w-a.w, l=b.l-a.l;
+  // A season reset takes the totals back to zero, so a negative difference is not
+  // "minus four games", it is a different season and nothing to report.
+  if(w<0||l<0||(w===0&&l===0))return null;
+  return {w,l,n:w+l,from:a.t,to:b.t};
+}
+/* LP a day over the last fortnight. lastDelta() answers "what did the most recent
+   check see", which on an account checked twice in an hour is noise; this answers
+   "which way is this account actually going", which is the one you sort by. */
+function climbRate(hist){
+  if(!hist||hist.length<2)return null;
+  const cut=Date.now()-14*86400000;
+  const pts=hist.map(h=>({t:+h.t||0,v:ladderLP(h)})).filter(p=>p.t&&p.v!==null&&p.t>=cut);
+  if(pts.length<2)return null;
+  const first=pts[0], last=pts[pts.length-1];
+  const days=(last.t-first.t)/86400000;
+  if(days<0.5)return null;   // a few hours of data extrapolates to nonsense
+  return {lpPerDay:(last.v-first.v)/days,days,total:last.v-first.v};
+}
+/* How far to the target, and — only when the account is actually moving towards it
+   — roughly how long at the current rate. Deliberately vague past a month: an
+   estimate built on a fortnight of LP does not deserve a date. */
+function goalProgress(a){
+  const goal=a.goal;
+  if(!goal||!goal.tier)return null;
+  const target=ladderLP(goal), cur=ladderLP(a.stats);
+  if(target===null||cur===null)return null;
+  const rate=climbRate(a.history);
+  const gap=target-cur;
+  let eta=null;
+  if(gap>0&&rate&&rate.lpPerDay>0.5){
+    const d=gap/rate.lpPerDay;
+    eta=d<=1?"about a day":d<=31?Math.round(d)+" days":d<=120?"a month or two":"a long way";
+  }
+  return {target,cur,gap,eta,done:gap<=0,label:shortRank(goal)};
+}
 function isClimbing(hist){
   if(!hist||hist.length<3)return false;
   const last3=hist.slice(-3).map(ladderLP);
@@ -2655,6 +2713,12 @@ function applyStats(acc,s){
       const at=s.lpAt;
       const sameRank=at&&at.tier===(s.tier||"").toUpperCase()&&at.lp===s.lp;
       const row={t:(sameRank&&at.t<=s.updatedAt)?at.t:s.updatedAt,tier:s.tier,division:s.division,lp:s.lp};
+      // The season win/loss totals ride along with the point. On their own they are
+      // the same two numbers already on the card, but the difference between two
+      // consecutive points is something the app could not answer at all before:
+      // how many games were actually played between one check and the next.
+      if(s.wins!=null)row.w=Number(s.wins)||0;
+      if(s.losses!=null)row.l=Number(s.losses)||0;
       const cut=cutoffsFor(acc.region);
       if(cut&&(cut.gm||cut.chall))row.cut={gm:cut.gm,chall:cut.chall};
       hist.push(row);
@@ -2817,7 +2881,13 @@ function filtered(){
     updated:(x,y)=>((y.stats&&y.stats.updatedAt)||0)-((x.stats&&x.stats.updatedAt)||0),
     // the only number that matters on an account that isn't ranked yet
     level:(x,y)=>((y.stats&&y.stats.level)||0)-((x.stats&&x.stats.level)||0),
-    change:(x,y)=>lastDelta(y)-lastDelta(x)
+    change:(x,y)=>lastDelta(y)-lastDelta(x),
+    // "LP change" is whatever the last check happened to see, which on an account
+    // checked twice in an hour is noise. This is the fortnight's actual trend.
+    climb:(x,y)=>{
+      const r=a=>{const c=climbRate(a.history);return c?c.lpPerDay:-Infinity};
+      return r(y)-r(x);
+    }
   }[ui.sort]||((x,y)=>rankValue(y.stats)-rankValue(x.stats));
   list.sort((x,y)=>(y.fav?1:0)-(x.fav?1:0)||by(x,y));
   return list;
@@ -3304,7 +3374,7 @@ function focusNoteEditor(root){
 }
 // Manual rank entry, shared by both views rather than living inside the card.
 function rankPanelHTML(a,s,rev){
-  const pm=a.peakManual;
+  const pm=a.peakManual, gm=a.goal;
   return `<div class="login${rev||""}">
     <div><span class="k">Current</span><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <select data-f="tier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${s&&(s.tier||"").toUpperCase()===t?"selected":""}>${t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
@@ -3321,6 +3391,14 @@ function rankPanelHTML(a,s,rev){
         <input data-f="plp" type="number" min="0" max="2000" placeholder="LP" value="${pm&&pm.lp!=null?pm.lp:""}" style="width:72px">
       </div>
       <div style="font-size:11px;color:var(--faint);margin-top:7px;line-height:1.5">Refresh reads op.gg's own "Top tier" peak when the profile has one, and the app also tracks the highest rank it has seen itself. Set a peak here as well if you know better — whichever is genuinely highest is the one shown.</div>
+    </div>
+    <div style="border-top:1px solid var(--line);padding-top:10px">
+      <span class="k">Goal</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <select data-f="gtier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${(gm&&(gm.tier||"").toUpperCase())===t?"selected":""}>${t==="UNRANKED"?"— none —":t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
+        <select data-f="gdiv">${["I","II","III","IV"].map(d=>`<option ${gm&&gm.division===d?"selected":""}>${d}</option>`).join("")}</select>
+      </div>
+      <div style="font-size:11px;color:var(--faint);margin-top:7px;line-height:1.5">The card gets a rail showing how far there is left to go, and — once there is a fortnight of checks to work from — roughly how long at the rate this account has actually been climbing.</div>
     </div>
     <div><button data-act="rankapply" style="color:var(--teal-txt)">Save</button></div>
   </div>`;
@@ -3493,6 +3571,13 @@ function cardHTML(a,i){
         else if(cut.chall)microStats.push(["Above","Challenger floor"]);
       }
     }
+    {
+      const g=gamesSince(hist);
+      if(g)microStats.push(["Since last check",g.n+(g.n===1?" game · ":" games · ")+g.w+"W "+g.l+"L"]);
+      const r=climbRate(hist);
+      if(r&&Math.abs(r.lpPerDay)>=1)
+        microStats.push(["Climb",(r.lpPerDay>0?"+":"")+Math.round(r.lpPerDay)+" LP/day"]);
+    }
     if(s.mmr)microStats.push(["MMR est.",s.mmr]);
     if(s.avgRecent)microStats.push(["Recent avg",s.avgRecent]);
   }
@@ -3532,6 +3617,21 @@ function cardHTML(a,i){
       ${deltaChip?`<div class="c-deltas">${deltaChip}</div>`:""}
     </div>
     ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
+    ${(()=>{
+      // The goal rail. Only drawn once there is a goal — an account with nothing to
+      // climb towards should not be shown an empty progress bar.
+      const g=goalProgress(a);
+      if(!g)return "";
+      const from=ladderLP((a.history||[])[0])??g.cur;
+      const span=Math.max(g.target-Math.min(from,g.cur),1);
+      const pct=g.done?100:Math.max(0,Math.min(100,Math.round((g.cur-Math.min(from,g.cur))/span*100)));
+      const gcol=tierColor(a.goal.tier);
+      return `<div class="goal${g.done?" hit":""}" title="Goal: ${esc(g.label)}">
+        <div class="goal-h"><span class="k">Goal</span><span class="goal-t" style="color:${gcol}">${esc(g.label)}</span>
+          <span class="goal-r">${g.done?"reached":g.gap+" LP to go"+(g.eta?" · "+esc(g.eta):"")}</span></div>
+        <div class="goal-bar"><i style="width:${pct}%;background:${gcol}"></i></div>
+      </div>`;
+    })()}
     ${rankChart(hist,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(hist),a.id,peakV)}
     ${microStats.length?`<div class="c-stats">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
@@ -3551,7 +3651,7 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&s.asOf?` title="Read from ${esc(s.asOf)}"`:""}>${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span></span>
+      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&s.asOf?` title="Read from ${esc(s.asOf)}"`:""}>${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
       <div class="acts">
         <button data-act="login" class="a-login" title="Show saved login">${icon("user")} ${loginOpen?"Hide login":"Login"}</button>
         <a class="a-dpm" href="${dpm}" target="_blank" rel="noreferrer">DPM ↗</a>
@@ -4526,7 +4626,16 @@ $("grid").addEventListener("click",async e=>{
   else if(act==="flag"){acc.flagged=!acc.flagged;saveDB();render();
     toast(acc.flagged?"Flagged — it's under Needs attention now":"Flag cleared")}
   else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderCard(id)}
-  else if(act==="login"){const on=!openLogin.has(id);on?openLogin.add(id):openLogin.delete(id);shownPw.delete(id);reveal=on?id+":login":null;renderCard(id)}
+  else if(act==="login"){
+    const on=!openLogin.has(id);
+    on?openLogin.add(id):openLogin.delete(id);
+    shownPw.delete(id);reveal=on?id+":login":null;
+    // Reaching for the credentials is the closest thing this app can observe to
+    // actually using the account. "Status: resting" was a label you had to keep up
+    // by hand; this is the same fact, kept by itself.
+    if(on){acc.lastLoginAt=Date.now();saveDB()}
+    renderCard(id);
+  }
   else if(act==="edit")openForm(acc);
   else if(act==="exstats"){acc.excludeStats=!acc.excludeStats;saveDB();renderCard(id);renderDash();toast(acc.excludeStats?"Left out of the combined stats":"Counted in the combined stats again")}
   else if(act==="archive"){acc.archived=true;saveDB();render();toast("Archived — toggle \"Archived\" in the toolbar to see it again")}
@@ -4553,6 +4662,13 @@ $("grid").addEventListener("click",async e=>{
     const ptier=g("ptier")?g("ptier").value:"UNRANKED";
     if(ptier==="UNRANKED")delete acc.peakManual;
     else acc.peakManual={tier:ptier,division:TIER_ORDER.indexOf(ptier)>=TIER_ORDER.indexOf("MASTER")?null:g("pdiv").value,lp:+g("plp").value||0};
+    // A goal is a rank, not a rank and an LP figure: nobody sets out to reach
+    // Diamond II with exactly 47 LP. The division is as fine as it gets.
+    const gtier=g("gtier")?g("gtier").value:"UNRANKED";
+    if(gtier==="UNRANKED")delete acc.goal;
+    // lp stays null, not 0: ladderLP reads it as zero either way, but shortRank
+    // prints it, and "Master · 0 LP" is not a goal anybody set.
+    else acc.goal={tier:gtier,division:TIER_ORDER.indexOf(gtier)>=TIER_ORDER.indexOf("MASTER")?null:g("gdiv").value,lp:null};
     commitStats(id,acc,s);toast("Rank saved");
   }
   else if(act==="check")check(id);

@@ -2653,3 +2653,105 @@ test("CSV carries the new fields out and back", () => {
   assert.equal(cols.indexOf("createdOn"), 14);
   assert.equal(cols.indexOf("birthdate"), 15);
 });
+
+// ---- games played, climb rate, goals, last opened ----
+
+const pt = (daysAgo, tier, division, lp, w, l) => {
+  const o = { t: Date.now() - daysAgo * 86400000, tier, division, lp };
+  if (w != null) { o.w = w; o.l = l }
+  return o;
+};
+
+// "Updated 22h ago" says when the app last looked. This says whether the account
+// was doing anything, which is the question that was actually being asked.
+test("games since the last check, and the cases where there is no answer", () => {
+  const win = bootApp();
+  assert.deepEqual(
+    { n: 3, w: 2, l: 1 },
+    (({ n, w, l }) => ({ n, w, l }))(win.gamesSince([pt(2, "GOLD", "II", 20, 100, 90), pt(1, "GOLD", "II", 40, 102, 91)])));
+
+  assert.equal(win.gamesSince([pt(1, "GOLD", "II", 40)]), null, "one point is not a difference");
+  assert.equal(win.gamesSince([pt(2, "GOLD", "II", 20), pt(1, "GOLD", "II", 40)]), null,
+    "history recorded before the totals were kept stays quiet");
+  assert.equal(win.gamesSince([pt(2, "GOLD", "II", 20, 100, 90), pt(1, "GOLD", "II", 40, 100, 90)]), null,
+    "no games played is nothing to report");
+  assert.equal(win.gamesSince([pt(2, "GOLD", "II", 20, 100, 90), pt(1, "GOLD", "IV", 5, 2, 1)]), null,
+    "a season reset is not minus ninety-eight games");
+});
+
+// lastDelta() answers "what did the most recent check see", which on an account
+// checked twice in an hour is noise.
+test("climb rate is a fortnight's trend, not the last two readings", () => {
+  const win = bootApp();
+  // two divisions is 200 ladder LP, since every division below Master is worth 100
+  const r = win.climbRate([pt(10, "GOLD", "IV", 0), pt(0, "GOLD", "II", 0)]);
+  assert.ok(r);
+  assert.equal(Math.round(r.lpPerDay), 20, "200 LP over ten days");
+
+  assert.equal(win.climbRate([pt(1, "GOLD", "II", 40)]), null, "one point has no slope");
+  assert.equal(win.climbRate([pt(0.1, "GOLD", "II", 20), pt(0, "GOLD", "II", 60)]), null,
+    "a few hours of data extrapolates to nonsense");
+  assert.equal(win.climbRate([pt(400, "GOLD", "IV", 0), pt(380, "GOLD", "I", 300)]), null,
+    "and a trend from last year is not this fortnight's");
+});
+
+test("a goal reports the gap, and only guesses at the time when the account is moving", () => {
+  const win = bootApp();
+  const acc = {
+    stats: { found: true, tier: "DIAMOND", division: "I", lp: 88 },
+    goal: { tier: "MASTER", division: null, lp: null },
+    history: [pt(10, "DIAMOND", "IV", 0), pt(0, "DIAMOND", "I", 88)],
+  };
+  const g = win.goalProgress(acc);
+  assert.equal(g.done, false);
+  assert.ok(g.gap > 0 && g.gap < 100, `gap was ${g.gap}`);
+  assert.ok(g.eta, "climbing, so an estimate is honest");
+  assert.doesNotMatch(g.label, /LP/, "a goal is a rank, not a rank and an LP figure");
+
+  acc.history = [pt(10, "DIAMOND", "I", 90), pt(0, "DIAMOND", "I", 88)];   // going nowhere
+  assert.equal(win.goalProgress(acc).eta, null, "no estimate from a flat fortnight");
+
+  acc.stats = { found: true, tier: "MASTER", division: null, lp: 30 };
+  assert.equal(win.goalProgress(acc).done, true);
+  assert.equal(win.goalProgress({ stats: acc.stats }), null, "no goal, nothing to report");
+});
+
+test("a check records the season totals so the next one can subtract them", () => {
+  const win = bootApp(ladderSeed());
+  const acc = win.filtered().find(a => a.id === "t4");
+  win.commitStats("t4", acc, { found: true, tier: "PLATINUM", division: "II", lp: 50, wins: 40, losses: 30, updatedAt: Date.now() });
+  const last = acc.history[acc.history.length - 1];
+  assert.equal(last.w, 40);
+  assert.equal(last.l, 30);
+});
+
+// "Status: resting" was a label you had to keep up by hand.
+test("opening the login panel records that the account was reached for", () => {
+  const win = bootApp(ladderSeed());
+  const card = () => win.document.querySelector('.card[data-id="t4"]');
+  assert.ok(!win.filtered().find(a => a.id === "t4").lastLoginAt);
+
+  card().querySelector('[data-act="login"]').click();
+  const at = win.filtered().find(a => a.id === "t4").lastLoginAt;
+  assert.ok(at && Date.now() - at < 5000);
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.id === "t4").lastLoginAt, at,
+    "and it survives the reload");
+  assert.match(card().querySelector(".c-foot").textContent, /Opened/);
+
+  card().querySelector('[data-act="login"]').click();   // closing must not re-stamp
+  assert.equal(win.filtered().find(a => a.id === "t4").lastLoginAt, at);
+});
+
+test("sorting by climb puts the account actually moving at the top", () => {
+  const seed = ladderSeed();
+  seed[0].history = [pt(10, "IRON", "IV", 0), pt(0, "IRON", "IV", 5)];      // barely moving
+  seed[1].history = [pt(10, "BRONZE", "IV", 0), pt(0, "BRONZE", "I", 300)]; // climbing hard
+  const win = bootApp(seed);
+  const sort = win.document.getElementById("tSort");
+  sort.value = "climb";
+  sort.dispatchEvent(new win.Event("change"));
+
+  const order = win.filtered().map(a => a.id);
+  assert.ok(order.indexOf(seed[1].id) < order.indexOf(seed[0].id),
+    "the one gaining 30 LP a day outranks the one gaining half of one");
+});
