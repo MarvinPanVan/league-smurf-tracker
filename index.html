@@ -462,6 +462,40 @@
      cost more than the skipping saves. */
   .grid:not(.list)>.hx{content-visibility:auto;contain-intrinsic-size:auto 420px}
 
+  /* ---- wall view ----
+     Sixty accounts on one screen. No chart, no winrate, no timestamp — the
+     portrait, the crest and the rank, which between them are enough to find the
+     account you were thinking of. Clicking a tile hands you back to the card view
+     at that account, because that is where everything you would then do lives. */
+  .grid.wall{grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:11px}
+  .tile{position:relative;isolation:isolate;overflow:hidden;cursor:pointer;
+    padding:14px 9px 12px;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;
+    transition:background .16s ease}
+  .tile:hover{background:#ffffff08}
+  .tile:focus-visible{outline-offset:-3px}
+  .tile::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;
+    border-radius:0 3px 3px 0;background:var(--st,transparent);opacity:.85}
+  .t-pic{width:52px;height:52px;border-radius:15px;position:relative;flex-shrink:0;
+    background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
+    display:flex;align-items:center;justify-content:center;margin-bottom:3px}
+  .t-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:15px}
+  .t-pic b{font-size:19px;font-weight:600;color:var(--faint)}
+  .t-crest{position:absolute;right:-7px;top:-7px;width:21px;height:21px;
+    filter:drop-shadow(0 1px 2px #000000cc)}
+  .t-crest .crest{width:100%;height:100%}
+  .t-lv{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);
+    font-style:normal;font-size:9px;font-weight:700;line-height:14px;padding:0 5px;
+    min-width:20px;text-align:center;border-radius:999px;font-variant-numeric:tabular-nums;
+    color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
+  .t-nm{font-size:12px;font-weight:600;letter-spacing:-.01em;color:var(--text);max-width:100%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:4px}
+  .t-nm .rw-star .ico{width:10px;height:10px}
+  .t-rk{font-size:11.5px;font-weight:700;letter-spacing:-.01em;max-width:100%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .t-lp{font-size:10px;font-weight:600;color:var(--faint);font-variant-numeric:tabular-nums}
+  .grid.wall>.hx:hover{transform:translateY(-2px)}
+  @media (max-width:520px){.grid.wall{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px}}
+
   /* ---- list view ----
      Sixty cards is thirteen screens and no two accounts ever visible together.
      Same facts, one line each, in columns you read straight down. Clicking a row
@@ -1383,6 +1417,7 @@
     <div id="density" class="seg" role="group" aria-label="Layout">
       <button data-density="cards" title="Cards" aria-label="Card view"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
       <button data-density="list" title="List" aria-label="List view"><svg class="ico" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      <button data-density="wall" title="Wall — the whole vault on one screen" aria-label="Wall view"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="9.5" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16" y="9.5" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><rect x="9.5" y="16" width="5" height="5" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/></svg></button>
     </div>
   </div>
   <div id="runbar" class="runbar hidden"><div class="run-fill"></div><span class="run-txt"></span></div>
@@ -1631,6 +1666,8 @@ const ICON={
 };
 function icon(name,cls){return `<svg class="ico${cls?" "+cls:""}" viewBox="0 0 24 24">${ICON[name]}</svg>`}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+// Asked in three places now, and jsdom has no matchMedia unless a test supplies one
+function prefersReducedMotion(){return !!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)}
 function toast(msg,action,fn){const t=$("toast");t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");if(action)document.getElementById("toastBtn").onclick=()=>{t.style.display="none";fn()};t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",action?6000:2200)}
 function timeAgo(ts){if(!ts)return null;const s=Math.floor((Date.now()-ts)/1000);if(s<60)return"just now";const m=Math.floor(s/60);if(m<60)return m+" min ago";const h=Math.floor(m/60);if(h<24)return h+" h ago";const d=Math.floor(h/24);return d+(d===1?" day ago":" days ago")}
 function tierColor(t){return TIER_COLORS[(t||"UNRANKED").toUpperCase()]||TIER_COLORS.UNRANKED}
@@ -1985,7 +2022,7 @@ function celebrate(id,acc){
   toast("Tier up: "+(prev.tier||"?")+" → "+acc.stats.tier);
   notify("Tier up — "+(acc.label||acc.gameName),(prev.tier||"?")+" → "+acc.stats.tier);
   postDiscord("🎉 **"+(acc.label||acc.gameName)+"** tiered up: "+(prev.tier||"?")+" → "+acc.stats.tier);
-  if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  if(prefersReducedMotion())return;
   // ".card" only exists in the card layout, so a tier-up reached in list view got
   // the toast and the notification but never the confetti
   const card=[...$("grid").querySelectorAll(".card,.rw")].find(c=>c.dataset.id===id);
@@ -3202,6 +3239,34 @@ function rowHTML(a,i){
     </div>`:""}
   </div></div>`;
 }
+/* The third layout. Cards are thirteen screens of a sixty-account vault and the
+   list is four; neither ever shows you the collection as a collection. A tile is
+   the portrait, the crest and the rank, and sixty of them fit on one screen.
+   It is for finding, not for working — clicking one drops you back into the card
+   view at that account, which is where everything else lives. */
+function tileHTML(a){
+  const s=a.stats, col=tierColor(s&&s.tier);
+  const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
+  const icon0=iconUrl(s);
+  let rank="Never checked",lp="";
+  if(checking.has(a.id))rank="…";
+  else if(!s)rank="Never checked";
+  else if(s.found===false)rank="Not found";
+  else if(isRanked(a)){const t=s.tier.toUpperCase();
+    rank=t.charAt(0)+t.slice(1).toLowerCase()+(s.division?" "+s.division:"");
+    if(s.lp!=null)lp=s.lp+" LP";
+  }else rank="Unranked";
+  const st=STATUS[a.status]||STATUS.active;
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${a.id}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}" data-id="${a.id}" data-act="zoom" role="button" tabindex="0" title="${esc((a.label||a.gameName)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
+    ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
+    <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}
+      ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
+      ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
+    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}${esc(a.label||a.gameName)}</span>
+    <span class="t-rk" style="color:${col}">${esc(rank)}</span>
+    ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
+  </div></div>`;
+}
 function cardHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
   const stale=!!(s&&s.updatedAt&&Date.now()-s.updatedAt>STALE_MS);
@@ -3392,16 +3457,18 @@ function renderGrid(){
   }else if(list.length===0){
     setHTML(grid,`<div class="hx" data-k="nomatch" style="grid-column:1/-1"><div class="hx-in empty">No accounts match the current filters.</div></div>`);
   }else{
-    const asList=ui.density==="list";
+    const layout=ui.density==="list"?"list":ui.density==="wall"?"wall":"cards";
+    const asList=layout==="list";
     grid.classList.toggle("list",asList);
-    // A row and a card share no structure worth patching into each other, so
-    // switching layout starts from nothing rather than diffing one into the other.
-    const layout=asList?"list":"cards";
+    grid.classList.toggle("wall",layout==="wall");
+    // A row, a card and a tile share no structure worth patching into each other,
+    // so switching layout starts from nothing rather than diffing one into another.
     if(grid.dataset.layout!==layout){grid.textContent="";cardCache.clear();grid.dataset.layout=layout}
     // Grouped only when the list is actually in rank order — under any other sort
     // the headings would be scattered through the list and mean nothing.
     const items=asList&&ui.sort==="rank"?withGroups(list):list;
-    syncGrid(grid,items,items.map((it,i)=>it.group?groupHTML(it):asList?rowHTML(it,i):cardHTML(it,i)));
+    syncGrid(grid,items,items.map((it,i)=>it.group?groupHTML(it)
+      :layout==="wall"?tileHTML(it):asList?rowHTML(it,i):cardHTML(it,i)));
   }
   reveal=null; // consumed by the render above — the next one must not replay it
   renderBulkBar(list); // the "select all shown" box tracks whatever is shown now
@@ -3454,7 +3521,8 @@ function renderCard(id){
   const idx=list.findIndex(a=>a.id===id);
   if(!el||idx<0){renderGrid();return}
   const tmp=document.createElement("div");
-  const html=ui.density==="list"?rowHTML(list[idx],idx):cardHTML(list[idx],idx);
+  const html=ui.density==="list"?rowHTML(list[idx],idx)
+    :ui.density==="wall"?tileHTML(list[idx]):cardHTML(list[idx],idx);
   tmp.innerHTML=html;
   morph(el,tmp.firstElementChild);
   cardCache.set(id,html); // keep the skip-check honest about what this node holds
@@ -4106,7 +4174,7 @@ $("bDashToggle").addEventListener("click",()=>{
     },{threshold:0}).observe(head);
   }
   btn.addEventListener("click",()=>{
-    window.scrollTo({top:0,behavior:window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+    window.scrollTo({top:0,behavior:prefersReducedMotion()?"auto":"smooth"});
     const first=document.querySelector("#tSearch");
     if(first)first.focus({preventScroll:true});   // so the keyboard lands somewhere useful too
   });
@@ -4267,6 +4335,16 @@ $("grid").addEventListener("click",async e=>{
     lastSelectedIdx=idx;
     renderBulkBar();
   }
+  // A tile is for finding an account, not for acting on one. Clicking it hands
+  // you back to the card view at that account and lights it up so it is obvious
+  // which of the sixty you landed on.
+  else if(act==="zoom"){
+    ui.density="cards";cfg.density="cards";saveCfg();
+    flashId=id;render();
+    const card=$("grid").querySelector(`.card[data-id="${id}"]`);
+    if(card)card.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
+    setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
+  }
   else if(act==="more"){const on=!openMore.has(id);on?openMore.add(id):openMore.delete(id);reveal=on?id+":more":null;renderCard(id)}
   else if(act==="fav"){acc.fav=!acc.fav;reveal=acc.fav?id+":fav":null;saveDB();render()}
   else if(act==="copyid")copyText(acc.gameName+"#"+acc.tagLine,"Riot ID");
@@ -4329,7 +4407,7 @@ function startApp(){
   $("appRoot").classList.remove("hidden");
   syncLockTimer();
   migrateStats();
-  if(cfg.density==="list"||cfg.density==="cards")ui.density=cfg.density;
+  if(cfg.density==="list"||cfg.density==="cards"||cfg.density==="wall")ui.density=cfg.density;
   refreshCutoffs(); // fire and forget; redraws only if a floor actually arrived
   $("grid").classList.add("boot");
   render();

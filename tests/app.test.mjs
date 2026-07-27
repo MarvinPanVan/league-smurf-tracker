@@ -2416,3 +2416,56 @@ test("back to top is present and stays out of the way until it is needed", () =>
   assert.ok(btn.classList.contains("hidden"), "hidden at the top of the page");
   assert.equal(btn.getAttribute("aria-label"), "Back to top");
 });
+
+// ---- the wall ----
+
+// Cards are thirteen screens of a sixty-account vault and the list is four;
+// neither ever shows the collection as a collection.
+test("the wall puts one tile per account on screen and drops everything heavy", () => {
+  const win = bootApp(ladderSeed());
+  win.document.querySelector('[data-density="wall"]').click();
+
+  assert.equal(win.document.querySelectorAll(".tile").length, 12, "one tile each");
+  assert.equal(win.document.querySelectorAll(".card").length, 0);
+  assert.equal(win.document.querySelectorAll(".lpc-svg").length, 0, "no charts to pay for");
+  assert.equal(win.document.querySelectorAll(".spk").length, 0);
+  assert.ok(win.document.getElementById("grid").classList.contains("wall"));
+  // the three things a tile is for
+  const tile = win.document.querySelector('.tile[data-id="t9"]');
+  assert.ok(tile.querySelector(".t-crest"), "the tier, as an emblem");
+  assert.match(tile.querySelector(".t-rk").textContent, /Challenger/);
+  assert.ok(tile.querySelector(".t-pic"));
+});
+
+test("clicking a tile hands you back to the card view at that account", () => {
+  const win = bootApp(ladderSeed());
+  win.document.querySelector('[data-density="wall"]').click();
+  win.document.querySelector('.tile[data-id="t4"]').click();
+
+  assert.equal(win.document.querySelectorAll(".tile").length, 0, "back to cards");
+  assert.ok(win.document.querySelector('.card[data-id="t4"]'), "and that account is a card again");
+  assert.ok(win.document.querySelector('.hx.flash[data-id="t4"]'),
+    "lit up, so it is obvious which of the sixty you landed on");
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).density, "cards");
+});
+
+test("the wall is remembered across a reload like the other two layouts", () => {
+  const win = bootApp(ladderSeed());
+  win.document.querySelector('[data-density="wall"]').click();
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).density, "wall");
+
+  const fresh = bootApp(ladderSeed(), w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ density: "wall" })));
+  assert.equal(fresh.document.querySelectorAll(".tile").length, 12, "it comes back as the wall");
+});
+
+// renderCard patches a single node in place during a check run; it has to know
+// which of the three shapes that node is, or a tile gets a card morphed into it.
+test("a single-account re-render keeps the wall's shape", () => {
+  const win = bootApp(ladderSeed());
+  win.document.querySelector('[data-density="wall"]').click();
+  const tile = win.document.querySelector('.tile[data-id="t4"]');
+
+  win.renderCard("t4");
+  assert.equal(win.document.querySelector('.tile[data-id="t4"]'), tile, "same node");
+  assert.equal(win.document.querySelectorAll(".card").length, 0, "and still a tile, not a card");
+});
