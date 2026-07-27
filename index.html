@@ -1866,8 +1866,26 @@ function shortRank(s){
   if(!s||!s.tier)return null;
   const t=s.tier.toUpperCase();
   if(t==="UNRANKED")return"Unranked";
+  return tierLabel(s)+((s.lp!==null&&s.lp!==undefined)?" · "+s.lp+" LP":"");
+}
+/* Master, Grandmaster and Challenger have no divisions: above Master the ladder is
+   only LP. Every parser that reads a *peak* or a *past season* already knew that
+   and nulled the division — the one that reads the current rank did not, and
+   neither did the backend path, the model's JSON or the CSV importer. So a
+   Challenger account could arrive carrying a numeral picked up from whatever
+   happened to sit near its name on the page, and five separate places built the
+   rank label by hand and printed it back faithfully. Now there is one. */
+function hasDivisions(tier){
+  const i=TIER_ORDER.indexOf(String(tier||"").toUpperCase());
+  return i>=0&&i<TIER_ORDER.indexOf("MASTER");
+}
+function normDivision(tier,division){return hasDivisions(tier)?(division||null):null}
+function tierLabel(s){
+  const t=String((s&&s.tier)||"").toUpperCase();
+  if(!t||t==="UNRANKED")return "Unranked";
   const nice=t.charAt(0)+t.slice(1).toLowerCase();
-  return nice+(s.division?" "+s.division:"")+((s.lp!==null&&s.lp!==undefined)?" · "+s.lp+" LP":"");
+  const d=normDivision(t,s.division);
+  return nice+(d?" "+d:"");
 }
 function ladderLP(s){ // absolute position on the ladder, in LP
   if(!s||!s.tier)return null;
@@ -2318,7 +2336,11 @@ function parseRankFlat(text){
   const out={tier:null,division:null,lp:null,wins:null,losses:null,level:null};
   if(m){
     out.tier=m[1].toUpperCase();
-    if(m[2]){const map={"1":"I","2":"II","3":"III","4":"IV"};out.division=map[m[2]]||m[2].toUpperCase()}
+    // The one parser that was missing this. parsePeakText, parseSeasons and
+    // parseLpHistory all carry the same guard; this reads the *current* rank,
+    // which is the one on every card in the vault.
+    if(m[2]){const map={"1":"I","2":"II","3":"III","4":"IV"};
+      out.division=normDivision(out.tier,map[m[2]]||m[2].toUpperCase())}
     out.lp=+m[3];
     const after=text.slice(m.index);
     const wl=after.match(/(\d{1,4})\s*W(?:in)?s?\b\s*[,\/]?\s*(\d{1,4})\s*L(?:ose|oss(?:es)?)?\b/i);
@@ -2677,7 +2699,7 @@ function normPeak(p){
   const tier=String(p.tier||"").toUpperCase();
   if(TIER_ORDER.indexOf(tier)<0)return null;
   const div=String(p.division||"").toUpperCase();
-  return{tier,division:DIV_ORDER[div]!==undefined?div:null,lp:Number(p.lp)||0};
+  return{tier,division:normDivision(tier,DIV_ORDER[div]!==undefined?div:null),lp:Number(p.lp)||0};
 }
 // Same reasoning for the two lists. A season row with no tier used to reach
 // `e.tier.charAt(0)` inside the render and throw, which takes the whole grid down
@@ -2688,7 +2710,7 @@ function normSeasonRow(e){
   if(tier!=="UNRANKED"&&TIER_ORDER.indexOf(tier)<0)return null;
   const div=String(e.division||"").toUpperCase();
   return{season:String(e.season||"—").slice(0,16),tier,
-    division:DIV_ORDER[div]!==undefined?div:null,
+    division:normDivision(e.tier,DIV_ORDER[div]!==undefined?div:null),
     lp:e.lp==null?null:(Number(e.lp)||0)};
 }
 function normSeasons(s){
@@ -2705,7 +2727,7 @@ function normLpAt(p){
   const tier=String(p.tier||"").toUpperCase();
   if(!t||!isFinite(t)||t>Date.now()+86400000||TIER_ORDER.indexOf(tier)<0)return null;
   const div=String(p.division||"").toUpperCase();
-  return{t,tier,division:DIV_ORDER[div]!==undefined?div:null,lp:Number(p.lp)||0};
+  return{t,tier,division:normDivision(tier,DIV_ORDER[div]!==undefined?div:null),lp:Number(p.lp)||0};
 }
 function normChamps(list){
   if(!Array.isArray(list))return null;
@@ -2762,6 +2784,10 @@ function applyStats(acc,s){
   // way the card reads it, and this is the one point all three meet — so the
   // shaping happens here rather than three times over, differently.
   if(s&&s.found!==false){
+    // Above Master there are no divisions. The peak and season parsers already
+    // knew that; the current-rank parser did not, and the backend and the model
+    // are simply whatever they hand back.
+    s.division=normDivision(s.tier,s.division);
     s.seasons=normSeasons(s.seasons);
     s.champs=normChamps(s.champs);
     s.flex=normPeak(s.flex);   // an unranked flex row says nothing; dropping it
@@ -3446,8 +3472,9 @@ function secHTML(a,key,label,n,peek,body){
 function infoBlockHTML(a,rev){
   const {solo,flexHist,champs,flex}=infoParts(a);
   if(!solo.length&&!flexHist.length&&!champs.length&&!flex)return"";
-  const rank=e=>{const t=e.tier==="UNRANKED"?"Unranked":e.tier.charAt(0)+e.tier.slice(1).toLowerCase();
-    return t+(e.division?" "+e.division:"")+(e.lp!=null?" · "+e.lp+" LP":"")};
+  // through tierLabel like everywhere else — the drawer was the fifth place
+  // building this string by hand, and the fifth place printing "Challenger II"
+  const rank=e=>tierLabel(e)+(e.lp!=null?" · "+e.lp+" LP":"");
   const tinted=e=>`<span style="color:${tierColor(e.tier)}">${esc(rank(e))}</span>`;
   const rows=list=>list.map(e=>`<div class="sea"><span class="s-yr">${esc(e.season)}</span>`
     +`<span class="s-rk" style="color:${tierColor(e.tier)}">${esc(rank(e))}</span></div>`).join("");
@@ -3506,12 +3533,21 @@ function focusNoteEditor(root){
   if(ta&&document.activeElement!==ta){ta.focus();try{ta.setSelectionRange(ta.value.length,ta.value.length)}catch(e){}}
 }
 // Manual rank entry, shared by both views rather than living inside the card.
+/* Rendered disabled rather than synced after the fact, so the panel is right the
+   moment it appears. Saving already threw the value away, so nothing was ever
+   stored wrong from here — but a dropdown that quietly ignores you is its own kind
+   of bug, and it is part of what made a division on a Challenger account look like
+   something the app believed in. */
+function divOff(tier){
+  return hasDivisions(tier)?""
+    :' disabled style="opacity:.35" title="No divisions above Master — up there the ladder is only LP"';
+}
 function rankPanelHTML(a,s,rev){
   const pm=a.peakManual, gm=a.goal;
   return `<div class="login${rev||""}">
     <div><span class="k">Current</span><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <select data-f="tier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${s&&(s.tier||"").toUpperCase()===t?"selected":""}>${t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
-      <select data-f="div">${["I","II","III","IV"].map(d=>`<option ${s&&s.division===d?"selected":""}>${d}</option>`).join("")}</select>
+      <select data-f="div"${divOff(s&&s.tier)}>${["I","II","III","IV"].map(d=>`<option ${s&&s.division===d?"selected":""}>${d}</option>`).join("")}</select>
       <input data-f="lp" type="number" min="0" max="2000" placeholder="LP" value="${s&&s.lp!=null?s.lp:""}" style="width:72px">
       <input data-f="w" type="number" min="0" placeholder="W" value="${s&&s.wins!=null?s.wins:""}" style="width:64px">
       <input data-f="l" type="number" min="0" placeholder="L" value="${s&&s.losses!=null?s.losses:""}" style="width:64px">
@@ -3520,7 +3556,7 @@ function rankPanelHTML(a,s,rev){
       <span class="k">Season peak</span>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <select data-f="ptier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${(pm&&(pm.tier||"").toUpperCase())===t?"selected":""}>${t==="UNRANKED"?"— none —":t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
-        <select data-f="pdiv">${["I","II","III","IV"].map(d=>`<option ${pm&&pm.division===d?"selected":""}>${d}</option>`).join("")}</select>
+        <select data-f="pdiv"${divOff(pm&&pm.tier)}>${["I","II","III","IV"].map(d=>`<option ${pm&&pm.division===d?"selected":""}>${d}</option>`).join("")}</select>
         <input data-f="plp" type="number" min="0" max="2000" placeholder="LP" value="${pm&&pm.lp!=null?pm.lp:""}" style="width:72px">
       </div>
       <div style="font-size:11px;color:var(--faint);margin-top:7px;line-height:1.5">Refresh reads op.gg's own "Top tier" peak when the profile has one, and the app also tracks the highest rank it has seen itself. Set a peak here as well if you know better — whichever is genuinely highest is the one shown.</div>
@@ -3529,7 +3565,7 @@ function rankPanelHTML(a,s,rev){
       <span class="k">Goal</span>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <select data-f="gtier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${(gm&&(gm.tier||"").toUpperCase())===t?"selected":""}>${t==="UNRANKED"?"— none —":t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
-        <select data-f="gdiv">${["I","II","III","IV"].map(d=>`<option ${gm&&gm.division===d?"selected":""}>${d}</option>`).join("")}</select>
+        <select data-f="gdiv"${divOff(gm&&gm.tier)}>${["I","II","III","IV"].map(d=>`<option ${gm&&gm.division===d?"selected":""}>${d}</option>`).join("")}</select>
       </div>
       <div style="font-size:11px;color:var(--faint);margin-top:7px;line-height:1.5">The card gets a rail showing how far there is left to go, and — once there is a fortnight of checks to work from — roughly how long at the rate this account has actually been climbing.</div>
     </div>
@@ -3557,8 +3593,8 @@ function rowHTML(a,i){
   if(isChecking)rank="…";
   else if(!s)rank="Never checked";
   else if(s.found===false)rank="Not found";
-  else if(isRanked(a)){const t=s.tier.toUpperCase();
-    rank=t.charAt(0)+t.slice(1).toLowerCase()+(s.division?" "+s.division:"");
+  else if(isRanked(a)){
+    rank=tierLabel(s);
     if(s.lp!=null)lp=s.lp+" LP";
   }else rank="Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
@@ -3622,8 +3658,8 @@ function tileHTML(a){
   if(checking.has(a.id))rank="…";
   else if(!s)rank="Never checked";
   else if(s.found===false)rank="Not found";
-  else if(isRanked(a)){const t=s.tier.toUpperCase();
-    rank=t.charAt(0)+t.slice(1).toLowerCase()+(s.division?" "+s.division:"");
+  else if(isRanked(a)){
+    rank=tierLabel(s);
     if(s.lp!=null)lp=s.lp+" LP";
   }else rank="Unranked";
   const st=STATUS[a.status]||STATUS.active;
@@ -3670,7 +3706,7 @@ function cardHTML(a,i){
   let tierTxt="",lpTxt="";
   if(s&&s.tier){
     const t=s.tier.toUpperCase();
-    tierTxt=t==="UNRANKED"?"Unranked":t.charAt(0)+t.slice(1).toLowerCase()+(s.division?" "+s.division:"");
+    tierTxt=tierLabel(s);
     if(s.lp!==null&&s.lp!==undefined)lpTxt=s.lp+" LP";
   }
   // On an account that isn't ranked yet the level is the whole story, so it gets
@@ -4227,7 +4263,7 @@ function doImportCSV(file){
           login:get("login"),password:get("password"),email:get("email"),notes:get("notes"),
           createdOn:get("createdOn"),birthdate:get("birthdate"),
           fav:get("favorite")==="yes",
-          stats:tier?{found:true,tier,division:get("division")||null,lp:get("lp")?+get("lp"):null,wins:get("wins")?+get("wins"):null,losses:get("losses")?+get("losses"):null,level:get("level")?+get("level"):null,mmr:null,avgRecent:null,asOf:"CSV import",note:null,updatedAt:get("lastUpdated")?new Date(get("lastUpdated")).getTime()||null:null}:null
+          stats:tier?{found:true,tier,division:normDivision(tier,get("division")||null),lp:get("lp")?+get("lp"):null,wins:get("wins")?+get("wins"):null,losses:get("losses")?+get("losses"):null,level:get("level")?+get("level"):null,mmr:null,avgRecent:null,asOf:"CSV import",note:null,updatedAt:get("lastUpdated")?new Date(get("lastUpdated")).getTime()||null:null}:null
         };
       }).filter(Boolean);
       if(!list.length)throw new Error("no rows");
@@ -4840,6 +4876,18 @@ $("bulkClear").addEventListener("click",()=>{selected.clear();render()});
 // The note saves itself as you type — there was never anything for a Save button
 // to decide. A short debounce so a sentence is one write to storage, not thirty.
 let noteSaveT=0;
+// Keeps the division dropdowns in step while the tier above them is being edited.
+$("grid").addEventListener("change",e=>{
+  const f=e.target&&e.target.dataset&&e.target.dataset.f;
+  if(f!=="tier"&&f!=="ptier"&&f!=="gtier")return;
+  const panel=e.target.closest(".login");if(!panel)return;
+  for(const[t,d]of[["tier","div"],["ptier","pdiv"],["gtier","gdiv"]]){
+    const ts=panel.querySelector('[data-f="'+t+'"]'), ds=panel.querySelector('[data-f="'+d+'"]');
+    if(!ts||!ds)continue;
+    const off=!hasDivisions(ts.value);
+    ds.disabled=off;ds.style.opacity=off?".35":"";
+  }
+});
 $("grid").addEventListener("input",e=>{
   if(!e.target||!e.target.dataset||e.target.dataset.f!=="notetext")return;
   noteDraft=e.target.value;
@@ -5001,6 +5049,23 @@ function migrateStats(){
       a.stats.note=a.stats.note.replace(/\s*—.*$/,"")+" — enter it by hand with ✎ Rank";
       touched=true;
     }
+    /* Vaults are already carrying divisions on Master, Grandmaster and Challenger
+       ranks, and they are in the history too, so the charts and the details drawer
+       print them as well. Guarding the display alone would have hidden the value
+       while leaving it in the file, and an export would have carried it straight
+       back out. Re-checking sixty accounts to correct a field that has no business
+       existing is not a fix anybody should have to run, so it is scrubbed on load. */
+    const scrub=e=>{
+      if(!e||!e.tier)return;
+      const d=normDivision(e.tier,e.division);
+      if(d!==(e.division||null)){e.division=d;touched=true}
+    };
+    scrub(a.stats);scrub(a.peakManual);scrub(a.goal);
+    if(a.stats){
+      scrub(a.stats.peak);scrub(a.stats.flex);scrub(a.stats.lpAt);
+      if(a.stats.seasons)for(const k of ["solo","flex"])(a.stats.seasons[k]||[]).forEach(scrub);
+    }
+    (a.history||[]).forEach(scrub);
   }
   if(touched)saveDB();
 }

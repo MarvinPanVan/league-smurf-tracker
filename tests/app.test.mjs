@@ -2894,3 +2894,141 @@ test("the away band stays quiet for a quick tab flick, and once dismissed is gon
   assert.ok(JSON.parse(away.localStorage.getItem("smurf-tracker-cfg")).lastSeenAt > now - 60000,
     "the visit it was reporting on is over the moment it has been read");
 });
+
+// ---- Master, Grandmaster and Challenger have no divisions ----
+
+test("a rank label drops the division above Master and keeps it below", () => {
+  const win = bootApp();
+  assert.equal(win.tierLabel({ tier: "GOLD", division: "II" }), "Gold II");
+  assert.equal(win.tierLabel({ tier: "DIAMOND", division: "I" }), "Diamond I");
+  for (const t of ["MASTER", "GRANDMASTER", "CHALLENGER"])
+    assert.equal(win.tierLabel({ tier: t, division: "II" }), t.charAt(0) + t.slice(1).toLowerCase(),
+      `${t} has no divisions`);
+  assert.equal(win.tierLabel({ tier: "UNRANKED", division: "II" }), "Unranked");
+  assert.equal(win.tierLabel({}), "Unranked");
+  // shortRank builds on it, so it inherits the guard
+  assert.equal(win.shortRank({ tier: "CHALLENGER", division: "III", lp: 1200 }), "Challenger · 1200 LP");
+  assert.equal(win.shortRank({ tier: "SILVER", division: "III", lp: 40 }), "Silver III · 40 LP");
+});
+
+// parsePeakText, parseSeasons and parseLpHistory all carried this guard. The one
+// that reads the *current* rank — the one on every card in the vault — did not.
+test("the current-rank parser refuses a division above Master", () => {
+  const win = bootApp();
+  assert.equal(win.parseRankFlat("Challenger 2 1234 LP").division, null);
+  assert.equal(win.parseRankFlat("Grandmaster III 800 LP").division, null);
+  assert.equal(win.parseRankFlat("Master 1 250 LP").division, null);
+  assert.equal(win.parseRankFlat("Diamond II 45 LP").division, "II", "below Master it is still read");
+  assert.equal(win.parseRankFlat("Challenger 1234 LP").tier, "CHALLENGER");
+  assert.equal(win.parseRankFlat("Challenger 1234 LP").lp, 1234);
+});
+
+// The backend and the model hand back whatever they hand back, and applyStats is
+// the single point all three sources meet.
+test("whatever a source hands back, nothing above Master is stored with a division", () => {
+  const win = bootApp(ladderSeed());
+  const acc = win.filtered().find(a => a.id === "t4");
+  win.commitStats("t4", acc, {
+    found: true, tier: "CHALLENGER", division: "II", lp: 1300, updatedAt: Date.now(),
+    peak: { tier: "GRANDMASTER", division: "I", lp: 900 },
+    seasons: { solo: [{ season: "S2025", tier: "MASTER", division: "IV", lp: 100 }], flex: [] },
+  });
+  assert.equal(acc.stats.division, null);
+  assert.equal(acc.stats.peak.division, null);
+  assert.equal(acc.stats.seasons.solo[0].division, null);
+  assert.equal(acc.history[acc.history.length - 1].division, null, "and it does not reach the history either");
+});
+
+// A vault already on disk carries the bad value, in the history too. Guarding only
+// the display would have hidden it while leaving it in the file — and an export
+// would have carried it straight back out.
+test("a vault that already has the bad divisions is scrubbed when it loads", () => {
+  const now = Date.now();
+  const seed = [{
+    id: "c1", gameName: "Chall", tagLine: "EUW", region: "EUW", status: "active",
+    stats: {
+      found: true, tier: "CHALLENGER", division: "II", lp: 1200, updatedAt: now,
+      peak: { tier: "CHALLENGER", division: "I", lp: 1400 },
+      flex: { tier: "MASTER", division: "III", lp: 30 },
+      seasons: { solo: [{ season: "S2024", tier: "GRANDMASTER", division: "II", lp: 700 }], flex: [] },
+    },
+    peakManual: { tier: "MASTER", division: "IV", lp: 0 },
+    goal: { tier: "CHALLENGER", division: "II", lp: null },
+    history: [
+      { t: now - 86400000, tier: "MASTER", division: "III", lp: 100 },
+      { t: now, tier: "CHALLENGER", division: "II", lp: 1200 },
+    ],
+  }];
+  const win = bootApp(seed);
+  const a = win.filtered()[0];
+  assert.equal(a.stats.division, null);
+  assert.equal(a.stats.peak.division, null);
+  assert.equal(a.stats.flex.division, null);
+  assert.equal(a.stats.seasons.solo[0].division, null);
+  assert.equal(a.peakManual.division, null);
+  assert.equal(a.goal.division, null);
+  assert.ok(a.history.every(h => h.division === null), "the history is where the charts read from");
+
+  // and it is written back, so an export cannot carry it out again
+  const stored = JSON.parse(win.localStorage.getItem("smurf-tracker"))[0];
+  assert.equal(stored.stats.division, null);
+  assert.equal(stored.history[1].division, null);
+});
+
+// The real complaint: it was on screen. Every layout, every string.
+test("no screen prints a division on a Master, Grandmaster or Challenger rank", () => {
+  const win = bootApp(ladderSeed());
+  const bad = /(Master|Grandmaster|Challenger)\s+(IV|III|II|I)\b/;
+  for (const layout of ["cards", "list", "wall"]) {
+    win.document.querySelector(`[data-density="${layout}"]`).click();
+    const text = win.document.getElementById("grid").textContent;
+    assert.doesNotMatch(text, bad, `${layout} view`);
+  }
+  win.document.querySelector('[data-density="cards"]').click();
+  assert.doesNotMatch(win.document.getElementById("ribbon").textContent, bad, "the header ribbon");
+  assert.doesNotMatch(win.document.getElementById("dash").textContent, bad, "the stats panel");
+
+  win.openPalette();
+  assert.doesNotMatch(win.document.getElementById("palList").textContent, bad, "quick find");
+});
+
+test("the rank panel does not offer divisions it will throw away", () => {
+  const win = bootApp(ladderSeed());
+  const open = id => {
+    win.document.querySelector(`.card[data-id="${id}"] [data-act="more"]`).click();
+    win.document.querySelector(`.card[data-id="${id}"] [data-act="rank"]`).click();
+    return win.document.querySelector(`.card[data-id="${id}"] [data-f="div"]`);
+  };
+  assert.equal(open("t9").disabled, true, "Challenger");   // t9 is CHALLENGER
+  assert.equal(open("t4").disabled, false, "Platinum");    // t4 is PLATINUM
+});
+
+test("CSV cannot import a division above Master either", () => {
+  const win = bootApp();
+  assert.equal(win.normDivision("CHALLENGER", "II"), null);
+  assert.equal(win.normDivision("GOLD", "II"), "II");
+  assert.equal(win.normDivision("UNRANKED", "II"), null);
+  assert.equal(win.normDivision("", "II"), null);
+  assert.equal(win.hasDivisions("EMERALD"), true);
+  assert.equal(win.hasDivisions("MASTER"), false);
+});
+
+// The migration scrubs a stored vault before anything renders, which means the
+// two tests above pass whether or not the *display* is guarded. This exercises the
+// builders directly, with a value the migration never got to touch — because data
+// can also arrive mid-session, from a check, an import or a paste.
+test("the markup builders refuse a bad division even when handed one directly", () => {
+  const win = bootApp();
+  const acc = {
+    id: "x", gameName: "Chall", tagLine: "EUW", region: "EUW", status: "active", tags: [],
+    stats: { found: true, tier: "CHALLENGER", division: "II", lp: 1200, wins: 30, losses: 20, updatedAt: Date.now() },
+    history: [{ t: Date.now(), tier: "CHALLENGER", division: "II", lp: 1200 }],
+  };
+  const bad = /Challenger\s+(IV|III|II|I)\b/;
+  assert.doesNotMatch(win.cardHTML(acc, 0), bad, "card");
+  assert.doesNotMatch(win.rowHTML(acc, 0), bad, "row");
+  assert.doesNotMatch(win.tileHTML(acc), bad, "tile");
+  // and the rank still reads as a rank
+  assert.match(win.cardHTML(acc, 0), /Challenger/);
+  assert.match(win.cardHTML(acc, 0), /1200 LP/);
+});
