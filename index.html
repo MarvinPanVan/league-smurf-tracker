@@ -1086,8 +1086,14 @@
   .hint{font-size:11.5px;color:var(--faint);line-height:1.55}
   /* align-items:flex-start so a label that wraps to two lines still starts level
      with its checkbox instead of floating half a line below it */
+  /* Checkbox option rows: the label grows so a long line wraps cleanly.
+     Inline control rows (refresh interval, auto-lock) must not stretch — that
+     shoved the number field into the middle of a wide empty gap. */
   .sub-fld{padding-left:24px;margin-top:9px;display:flex;align-items:flex-start;gap:9px;flex-wrap:wrap}
   .sub-fld>label,.sub-fld>span{flex:1;min-width:0}
+  .sub-fld.inline{align-items:center;gap:10px}
+  .sub-fld.inline>label,.sub-fld.inline>span{flex:none;color:var(--muted);font-size:13px}
+  .sub-fld.inline select,.sub-fld.inline input[type=number]{width:auto;min-width:0;padding:6px 10px;font-size:12.5px}
   .sub-fld input[type=checkbox]{margin-top:3px}
   .chk{display:flex;align-items:center;gap:9px}
   .chk label{font-size:13px;color:var(--text);line-height:1.45}
@@ -1458,9 +1464,9 @@
           <input type="checkbox" id="sAuto" style="width:auto">
           <label for="sAuto">Auto-check stale accounts when opening the app</label>
         </div>
-        <div class="sub-fld">
-          <label for="sAutoEvery" style="font-size:13px;color:var(--muted)">Refresh at most</label>
-          <select id="sAutoEvery" style="width:auto"></select>
+        <div class="sub-fld inline">
+          <label for="sAutoEvery">Refresh at most</label>
+          <select id="sAutoEvery"></select>
         </div>
         <div class="sub-fld">
           <input type="checkbox" id="sAutoRanked" style="width:auto">
@@ -1491,11 +1497,11 @@
           </div>
           <div id="sVaultStatus" class="hint" style="margin-top:2px"></div>
         </div>
-        <div class="sub-fld" style="padding-left:0;margin-top:14px">
-          <label for="sAutoLock" style="font-size:13px;color:var(--text)">Auto-lock after</label>
-          <input type="number" id="sAutoLock" min="0" max="180" style="width:80px">
-          <span style="font-size:13px;color:var(--text)">minutes idle (0 = never)</span>
+        <div class="sub-fld inline" style="padding-left:0;margin-top:14px">
+          <label for="sAutoLock">Auto-lock after</label>
+          <select id="sAutoLock" aria-describedby="sAutoLockHint"></select>
         </div>
+        <div id="sAutoLockHint" class="hint" style="margin-top:6px">Only applies while a master password is set. Off means the vault stays unlocked until you lock it.</div>
       </div>
 
       <div class="grp">
@@ -1786,6 +1792,26 @@ const AUTO_EVERY=[
   {v:168,label:"once a week"},{v:336,label:"every 2 weeks"}
 ];
 const DEFAULT_AUTO_HOURS=72;
+/* Idle minutes before an encrypted vault locks itself. A free number field looked
+   like a spreadsheet cell in Settings and stretched across the panel; presets
+   read as a sentence the way "Refresh at most" does. */
+const AUTO_LOCK=[
+  {v:0,label:"Off — never"},
+  {v:5,label:"5 minutes"},
+  {v:15,label:"15 minutes"},
+  {v:30,label:"30 minutes"},
+  {v:60,label:"1 hour"},
+  {v:120,label:"2 hours"},
+  {v:180,label:"3 hours"}
+];
+function fillAutoLock(sel,current){
+  const mins=Math.max(0,Math.min(180,+current||0));
+  const opts=AUTO_LOCK.slice();
+  if(!opts.some(o=>o.v===mins))opts.push({v:mins,label:mins+" minutes (current)"});
+  opts.sort((a,b)=>a.v-b.v);
+  sel.innerHTML=opts.map(o=>`<option value="${o.v}">${esc(o.label)}</option>`).join("");
+  sel.value=String(mins);
+}
 const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / unused",color:"#7a94ab"},restricted:{label:"Chat/ranked restricted",color:"#f4d688"},banned:{label:"Banned",color:"#d06060"}};
 
 // ---------- state ----------
@@ -4339,7 +4365,7 @@ function submitForm(){
 }
 
 // ---------- settings ----------
-function openSettings(){closeAllPanels();$("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(cfg.autoEveryHours!=null?cfg.autoEveryHours:DEFAULT_AUTO_HOURS);$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";$("sAutoLock").value=cfg.autoLockMin||0;$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";updateVaultStatus();$("settings").classList.remove("hidden")}
+function openSettings(){closeAllPanels();$("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(cfg.autoEveryHours!=null?cfg.autoEveryHours:DEFAULT_AUTO_HOURS);$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";updateVaultStatus();$("settings").classList.remove("hidden")}
 function renderPwMeter(){
   const p=$("fPass").value;
   const {score,label}=passwordStrength(p);
@@ -5616,12 +5642,14 @@ function relock(){
 function boot(){
   $("fRegion").innerHTML=Object.keys(REGIONS).map(r=>`<option value="${r}">${esc(r)} — ${esc(REGIONS[r].full)}</option>`).join("");
   $("sAutoEvery").innerHTML=AUTO_EVERY.map(o=>`<option value="${o.v}">${esc(o.label)}</option>`).join("");
+  fillAutoLock($("sAutoLock"),0);
   $("baRegion").innerHTML=$("fRegion").innerHTML;
   installCrestDefs();
   hasStorage=storageOK();
   if(!hasStorage){$("banner").classList.add("show")}
   try{const c=hasStorage?localStorage.getItem(CFG_KEY):null;if(c)cfg=Object.assign(cfg,JSON.parse(c))}catch(e){}
   if(MODEL_ALIASES[cfg.model]){cfg.model=MODEL_ALIASES[cfg.model];saveCfg()}
+  fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);
   if(cfg.accent)applyAccent(cfg.accent);
   if(cfg.accent2)applyAccent2(cfg.accent2);
   applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);
