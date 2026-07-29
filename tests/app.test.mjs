@@ -3151,6 +3151,51 @@ test("a search of several words matches each of them, not the phrase", () => {
   assert.equal(count("plat"), 1, "and one word still works the way it always did");
 });
 
+// ---- the check-all button during a run ----
+
+/* A run releases `checking` in the gap between accounts, so a button keyed off
+   that alone fell back to "Check all ranks" — and back to enabled — once per
+   account, sixty times over a full vault. Each of those rebuilds also sorted the
+   whole vault to count what the label would have said. */
+test("the check-all button stays put for the whole run", async () => {
+  const win = bootApp(seededAccount());
+  const btn = win.document.getElementById("bCheckAll");
+  btn.click();
+  assert.equal(btn.disabled, true);
+  assert.match(btn.textContent, /Checking/);
+
+  // the moment an account has come back and the next one has not started yet
+  await until(() => /failed/.test(win.document.querySelector(".run-txt").textContent),
+    "the first account to come back");
+  assert.equal(btn.disabled, true, "the run is still under way");
+  assert.match(btn.textContent, /Checking/, "so the label must not fall back");
+
+  await until(() => win.document.getElementById("runbar").classList.contains("hidden"),
+    "the run to finish");
+  assert.equal(btn.disabled, false, "and the button comes back when it is over");
+  assert.match(btn.textContent, /Check all ranks/);
+});
+
+// ---- one render, one pass over the vault ----
+
+/* filtered() sorts, and a full render went through it twice: once in renderGrid,
+   and again in the renderBulkBar() called straight after it — for the very list
+   renderGrid had just handed that same function. This is the hottest path in the
+   app, so everything a render needs out of filtered() comes from one pass now. */
+test("a full render sorts the vault once, not twice", () => {
+  const win = bootApp(ladderSeed());
+  const real = win.filtered;
+  let calls = 0;
+  win.filtered = function (...a) { calls++; return real.apply(this, a); };
+  try {
+    win.render();
+  } finally {
+    win.filtered = real;
+  }
+  assert.ok(calls > 0, "the count is real — a patch that never took would read zero");
+  assert.equal(calls, 1, "one pass over the vault for the whole render");
+});
+
 // ---- the offline cache and a locked vault ----
 
 /* An unencrypted vault reaches startApp() out of boot(), before the load event.

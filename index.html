@@ -648,9 +648,6 @@
   /* Was a rotated square in the tier colour — a shape that says "there is a tier"
      without saying which. The crest says which. */
   .crest{display:block;flex-shrink:0;overflow:visible}
-  .c-crest{position:absolute;right:-7px;top:-7px;width:25px;height:25px;
-    filter:drop-shadow(0 0 7px var(--c)) drop-shadow(0 1px 2px #000000b3)}
-  .c-crest .crest{width:100%;height:100%}
   .c-lvbadge{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);
     min-width:24px;padding:1px 6px;border-radius:999px;text-align:center;
     font-size:10.5px;font-weight:700;line-height:16px;letter-spacing:.01em;
@@ -1189,14 +1186,14 @@
   .grid>.hx:hover::after{opacity:1;transition-duration:.22s}
   /* the inner pane has to paint over the glow layer, not under it */
   .hx-in{position:relative;z-index:1}
-  .c-crest{animation:gemGlow 3.6s ease-in-out infinite}
   @keyframes gemGlow{50%{filter:brightness(1.22)}}
-  /* Three loops never stop on their own: the header mark, the spinner, and the
-     rank crest — which is one animation per card, so sixty of them on a full
-     vault. A hidden tab stops being painted, but the animations are still live
-     objects the compositor keeps ticking, and this app is meant to sit open in a
-     background tab for days. Parked explicitly instead. */
-  body.away .c-crest,body.away .brand-mark::before,body.away .spin,
+  /* Nothing here loops on its own except the header mark, the spinner and the
+     sweep over a card being checked. A hidden tab stops being painted, but the
+     animations are still live objects the compositor keeps ticking, and this app
+     is meant to sit open in a background tab for days. Parked explicitly instead.
+     The crests deliberately have no loop of their own: one animation per card is
+     sixty of them on a full vault, for a glow nobody is looking at. */
+  body.away .brand-mark::before,body.away .spin,
   body.away .hx-in.scanning::after{animation-play-state:paused}
   /* A check run had a progress bar and sixty perfectly still cards. The run knows
      which account it is on at every moment and the card already carries that state
@@ -1228,7 +1225,7 @@
   .confetti i{position:absolute;left:50%;top:40%;width:6px;height:10px;border-radius:2px;animation:pop 1.1s ease-out forwards}
   @keyframes pop{from{transform:translate(0,0) rotate(0)}to{transform:translate(var(--tx),var(--ty)) rotate(var(--rz));opacity:0}}
   @media (prefers-reduced-motion:reduce){
-    .spin,.c-crest,.brand-mark::before,.grid.boot>.hx,.grid.boot .lpc,.hx.flash .lpc,.hx.flash,#toast,.confetti i,
+    .spin,.brand-mark::before,.grid.boot>.hx,.grid.boot .lpc,.hx.flash .lpc,.hx.flash,#toast,.confetti i,
     #form:not(.hidden),#bulkAdd:not(.hidden),#lock:not(.hidden),
     #moreMenu:not(.hidden),#bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show,
     .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in,.sec-b,
@@ -2058,13 +2055,16 @@ function rankChart(hist,cut,mode,key,peakV){
   if(cut){
     // Challenger first, so that when the two floors are too close to label twice
     // it is the higher one that keeps its name.
-    for(const[key,label]of[["chall","CHALL"],["gm","GM"]]){
-      const lp=cut[key];
+    // `which`, not `key`: the chart's own `key` parameter is the account id the
+    // gradient ids are built from, further down, and shadowing it here read as a
+    // bug every time somebody followed that thread.
+    for(const[which,label]of[["chall","CHALL"],["gm","GM"]]){
+      const lp=cut[which];
       if(!lp)continue;
       const v=M_BASE+lp;
       if(v<=lo||v>=hi)continue;
       const yv=py(v), y=yv.toFixed(1);
-      const c=TIER_COLORS[key==="gm"?"GRANDMASTER":"CHALLENGER"];
+      const c=TIER_COLORS[which==="gm"?"GRANDMASTER":"CHALLENGER"];
       lines+=`<line x1="0" x2="${LPC_W}" y1="${y}" y2="${y}" stroke="${c}" stroke-opacity=".75" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>`;
       // Zoomed far enough out — an Iron-to-Challenger history spans the entire
       // ladder — the two floors sit a couple of pixels apart. Both lines are still
@@ -3232,7 +3232,10 @@ function render(){
   $("intro").classList.toggle("hidden",accounts.length>0);
   $("previewBanner").classList.toggle("hidden",!previewMode);
   $("bDeleteAll").disabled=accounts.length===0;
-  renderRibbon();renderDash();renderTagbar();renderChips();renderFilterOptions();renderGrid();renderBulkBar();
+  // No renderBulkBar() after renderGrid(): it ends with one, against the list it
+  // has just built. Calling it again here filtered and sorted the whole vault a
+  // second time to reach the same answer, on the hottest path in the app.
+  renderRibbon();renderDash();renderTagbar();renderChips();renderFilterOptions();renderGrid();
   renderRun();renderFailbar();
   for(const b of $("density").children){
     const on=b.dataset.density===ui.density;
@@ -3717,7 +3720,6 @@ function cardHTML(a,i){
   // while the LP stays a quiet companion — shortRank() glues them into one string.
   let tierTxt="",lpTxt="";
   if(s&&s.tier){
-    const t=s.tier.toUpperCase();
     tierTxt=tierLabel(s);
     if(s.lp!==null&&s.lp!==undefined)lpTxt=s.lp+" LP";
   }
@@ -3930,20 +3932,28 @@ function renderGrid(){
   setHTML($("count"),!accounts.length?"":`<span><b>${list.length}</b> of <b>${accounts.length}</b> shown</span>`
     +(stale?`<button class="warn${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"
         title="Show only the accounts that are out of date">${stale} need${stale===1?"s":""} a refresh</button>`:""));
-  syncCheckAll();
+  syncCheckAll(list);
 }
 // Called on its own during a run, where re-rendering the grid to flip one button
 // would undo the point of rendering a single card.
-function syncCheckAll(){
-  $("bCheckAll").disabled=accounts.length===0||checking.size>0;
-  // The button runs over whatever the filters are showing, not over the vault —
-  // which is the right behaviour and was a trap while it still said "all". With a
-  // search or a tier filter on, "Check all ranks" would quietly refresh three of
-  // sixty accounts. Say which it is.
-  const shown=filtered().filter(a=>a.status!=="banned").length;
-  const inView=accounts.filter(a=>!!a.archived===ui.showArchived&&a.status!=="banned").length;
-  const label=shown&&shown<inView?`Check ${shown} shown`:"Check all ranks";
-  setHTML($("bCheckAll"),checking.size?`<span class="spin">${icon("refresh")}</span> Checking…`:icon("refresh")+" "+label);
+// `shown` is the list renderGrid has just built, handed over rather than asked
+// for again: this used to sort the whole vault on every call purely to count it.
+function syncCheckAll(shown){
+  // A run releases `checking` between accounts, so keying off that alone left the
+  // button flickering enabled-and-back sixty times over a check-all — and made
+  // this rebuild the label sixty times to say "Checking…" either way.
+  const busy=checking.size>0||!!run;
+  $("bCheckAll").disabled=accounts.length===0||busy;
+  if(busy)setHTML($("bCheckAll"),`<span class="spin">${icon("refresh")}</span> Checking…`);
+  else{
+    // The button runs over whatever the filters are showing, not over the vault —
+    // which is the right behaviour and was a trap while it still said "all". With a
+    // search or a tier filter on, "Check all ranks" would quietly refresh three of
+    // sixty accounts. Say which it is.
+    const n=(shown||filtered()).filter(a=>a.status!=="banned").length;
+    const inView=accounts.filter(a=>!!a.archived===ui.showArchived&&a.status!=="banned").length;
+    setHTML($("bCheckAll"),icon("refresh")+" "+(n&&n<inView?`Check ${n} shown`:"Check all ranks"));
+  }
   // "Check all ranks" also re-checks the twenty accounts you did an hour ago. The
   // run you actually mean is almost always the stale ones, so it gets its own
   // button — hidden when it would do exactly the same work as the one beside it.
@@ -3952,7 +3962,7 @@ function syncCheckAll(){
   const sb=$("bCheckStale");
   sb.classList.toggle("hidden",!!run||!stale||stale===live.length);
   sb.textContent="Refresh "+stale+" stale";
-  sb.disabled=checking.size>0;
+  sb.disabled=busy;
 }
 
 // Opening a panel on one card is a change to that card, not to the grid, and it
@@ -4861,7 +4871,7 @@ $("tagbar").addEventListener("click",e=>{const t=e.target.closest("[data-tag]");
 $("tSelectAll").addEventListener("change",e=>{
   const list=filtered();
   if(e.target.checked)list.forEach(a=>selected.add(a.id));else list.forEach(a=>selected.delete(a.id));
-  renderGrid();renderBulkBar();
+  renderGrid(); // which ends by syncing the bulk bar against the same list
 });
 $("bulkStatus").addEventListener("change",e=>{
   const v=e.target.value;if(!v)return;
