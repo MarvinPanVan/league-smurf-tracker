@@ -1367,6 +1367,21 @@ test("a history point is dated by when the LP was reached, not by when we looked
     lpAt: { t: reached, tier: "MASTER", division: null, lp: 129 } });
   assert.equal(acc2.history[0].t, 1234567890, "a mismatched point falls back to the check time");
 
+  // Re-checking an account nobody has played adds no point — and used to drag the
+  // existing one forward to today on its way past, throwing away the reached-date
+  // above and drawing the flat line it exists to prevent.
+  const later = Date.parse("2026-07-29T09:00:00Z");
+  win.applyStats(acc, { found: true, tier: "MASTER", division: null, lp: 129, updatedAt: later,
+    lpAt: { t: reached, tier: "MASTER", division: null, lp: 129 } });
+  assert.equal(acc.history.length, 1, "an unchanged reading is not a second point");
+  assert.equal(acc.history[0].t, reached, "and it keeps the date the LP was reached");
+
+  // with nothing said about when it was reached, the check time is all there is
+  const acc3 = { id: "h3", history: [] };
+  win.applyStats(acc3, { found: true, tier: "GOLD", division: "II", lp: 40, updatedAt: 1000 });
+  win.applyStats(acc3, { found: true, tier: "GOLD", division: "II", lp: 40, updatedAt: 2000 });
+  assert.equal(acc3.history[0].t, 2000, "which does move, since it is the only date there is");
+
   // and a shape that cannot be trusted is dropped rather than bending the chart
   assert.equal(win.normLpAt({ t: Date.now() + 9e9, tier: "GOLD", lp: 5 }), null, "no future dates");
   assert.equal(win.normLpAt({ t: reached, tier: "NOPE", lp: 5 }), null);

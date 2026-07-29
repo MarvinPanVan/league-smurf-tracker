@@ -2896,21 +2896,27 @@ function applyStats(acc,s){
   if(s.found!==false&&ladderLP(s)!==null){
     const hist=acc.history=(acc.history||[]).slice(-59);
     const prev=hist[hist.length-1];
+    // When op.gg told us when this LP was actually reached, that is the date the
+    // point belongs under. A point dated by the day you happened to press Refresh
+    // puts a week of inactivity on the chart as a flat line ending today, which is a
+    // shape the account never had. Only trusted while it still agrees with the rank
+    // we just read, and never in the future of the check itself.
+    const at=s.lpAt;
+    const sameRank=at&&at.tier===(s.tier||"").toUpperCase()&&at.lp===s.lp;
+    const when=(sameRank&&at.t<=s.updatedAt)?at.t:s.updatedAt;
     if(prev&&prev.tier===s.tier&&prev.division===s.division&&prev.lp===s.lp){
-      prev.t=s.updatedAt; // nothing changed — refresh timestamp, don't spam history
+      // Nothing changed, so no second point for the same reading. It used to take
+      // today's date on the way past, which threw away the reached-date worked out
+      // just above and undid the whole point of it: one refresh of an account nobody
+      // had played dragged its last point forward to now.
+      prev.t=when;
     }else{
       // The tier stored here is the one op.gg reported at that moment, and it is
       // never recomputed — an account that was Challenger in March stays
       // Challenger on the chart even though today's floor is somewhere else.
       // The floors of the day go in beside it so a future reading of this point
       // can judge it against its own ladder rather than against a later one.
-      // When op.gg told us when this LP was actually reached, use that date. A
-      // point recorded on the day you happened to press Refresh puts a week of
-      // inactivity on the chart as a flat line ending today, which is a shape the
-      // account never had. Only trusted when it agrees with the rank we just read.
-      const at=s.lpAt;
-      const sameRank=at&&at.tier===(s.tier||"").toUpperCase()&&at.lp===s.lp;
-      const row={t:(sameRank&&at.t<=s.updatedAt)?at.t:s.updatedAt,tier:s.tier,division:s.division,lp:s.lp};
+      const row={t:when,tier:s.tier,division:s.division,lp:s.lp};
       // The season win/loss totals ride along with the point. On their own they are
       // the same two numbers already on the card, but the difference between two
       // consecutive points is something the app could not answer at all before:
@@ -2920,9 +2926,12 @@ function applyStats(acc,s){
       const cut=cutoffsFor(acc.region);
       if(cut&&(cut.gm||cut.chall))row.cut={gm:cut.gm,chall:cut.chall};
       hist.push(row);
-      hist.sort((x,y)=>(+x.t||0)-(+y.t||0)); // a corrected date can land before the previous point
       if(prev&&TIER_ORDER.indexOf((s.tier||"").toUpperCase())>TIER_ORDER.indexOf((prev.tier||"").toUpperCase()))rankedUp=true;
     }
+    // Either branch can date a point earlier than the one before it — a reached-date
+    // that only the second check knew about corrects backwards — and everything
+    // downstream reads the last entry as the newest.
+    hist.sort((x,y)=>(+x.t||0)-(+y.t||0));
   }
   return rankedUp;
 }
