@@ -3024,6 +3024,35 @@ test("games since the last check, and the cases where there is no answer", () =>
     "a season reset is not minus ninety-eight games");
 });
 
+/* gamesSince already knew a season reset from the totals going down. lastDelta,
+   climbRate and the away band did not, so Diamond→Silver across one printed as
+   "▼ −900 LP" and −200 LP/day — a crash that never happened. */
+test("a season reset is a break, not a loss", () => {
+  const win = bootApp();
+  // Diamond I 50 LP → Silver II 20 LP, with season W/L reset from 190/215 to 3/2
+  const before = pt(5, "DIAMOND", "I", 50, 190, 215);
+  const after = pt(0, "SILVER", "II", 20, 3, 2);
+  assert.equal(win.seasonBreak(before, after), true);
+  assert.equal(win.lastDelta({ history: [before, after] }), 0,
+    "the chip does not claim a nine-hundred-LP crash");
+
+  // climb rate measured only after the break — one point on each side of it is
+  // not a trend at all
+  assert.equal(win.climbRate([before, after]), null);
+
+  // and three points that cross a break are not a climb either, even if the LP
+  // numbers happen to rise afterwards
+  assert.equal(win.isClimbing([
+    pt(3, "DIAMOND", "I", 50, 190, 215),
+    pt(2, "SILVER", "IV", 0, 1, 0),
+    pt(1, "SILVER", "IV", 40, 3, 1),
+  ]), false);
+
+  // without W/L there is nothing to detect, so the old comparison stands
+  assert.ok(win.lastDelta({ history: [pt(1, "DIAMOND", "I", 50), pt(0, "SILVER", "II", 20)] }) < 0,
+    "no totals means no break, and the drop is what it is");
+});
+
 // lastDelta() answers "what did the most recent check see", which on an account
 // checked twice in an hour is noise.
 test("climb rate is a fortnight's trend, not the last two readings", () => {

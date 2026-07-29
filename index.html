@@ -2363,24 +2363,36 @@ function normStatus(s){const k=String(s||"").toLowerCase().trim();return STATUS[
    app last looked; this tells you whether the account was doing anything, which is
    the question you were actually asking. Only reads points that carry the totals,
    so it stays quiet on history recorded before those were kept. */
+/* Season totals go with every history point so the next check can subtract them.
+   When they go down, that is not "minus ninety-eight games" — Riot zeroed the
+   counters for a new season, and everything that compares two points has to know
+   the comparison is across that break rather than through it. Detected here once;
+   gamesSince, lastDelta, climbRate, isClimbing and the away summary all ask. */
+function seasonBreak(a,b){
+  if(!a||!b||a.w==null||a.l==null||b.w==null||b.l==null)return false;
+  return b.w<a.w||b.l<a.l;
+}
 function gamesSince(hist){
   if(!hist||hist.length<2)return null;
   const withWL=hist.filter(h=>h.w!=null&&h.l!=null);
   if(withWL.length<2)return null;
   const a=withWL[withWL.length-2], b=withWL[withWL.length-1];
+  if(seasonBreak(a,b))return null;
   const w=b.w-a.w, l=b.l-a.l;
-  // A season reset takes the totals back to zero, so a negative difference is not
-  // "minus four games", it is a different season and nothing to report.
-  if(w<0||l<0||(w===0&&l===0))return null;
+  if(w===0&&l===0)return null;
   return {w,l,n:w+l,from:a.t,to:b.t};
 }
 /* LP a day over the last fortnight. lastDelta() answers "what did the most recent
    check see", which on an account checked twice in an hour is noise; this answers
-   "which way is this account actually going", which is the one you sort by. */
+   "which way is this account actually going", which is the one you sort by.
+   A season break inside the window is a new baseline: measuring Diamond→Silver
+   across one would call a reset "−200 LP/day". */
 function climbRate(hist){
   if(!hist||hist.length<2)return null;
   const cut=Date.now()-14*86400000;
-  const pts=hist.map(h=>({t:+h.t||0,v:ladderLP(h)})).filter(p=>p.t&&p.v!==null&&p.t>=cut);
+  let from=0;
+  for(let i=1;i<hist.length;i++)if(seasonBreak(hist[i-1],hist[i]))from=i;
+  const pts=hist.slice(from).map(h=>({t:+h.t||0,v:ladderLP(h)})).filter(p=>p.t&&p.v!==null&&p.t>=cut);
   if(pts.length<2)return null;
   const first=pts[0], last=pts[pts.length-1];
   const days=(last.t-first.t)/86400000;
@@ -2406,8 +2418,12 @@ function goalProgress(a){
 }
 function isClimbing(hist){
   if(!hist||hist.length<3)return false;
-  const last3=hist.slice(-3).map(ladderLP);
-  return last3.every(v=>v!==null)&&last3[0]<last3[1]&&last3[1]<last3[2];
+  const last3=hist.slice(-3);
+  // three consecutive increases across a season break would be Diamond → Silver →
+  // Silver+1, which is not a climb
+  if(seasonBreak(last3[0],last3[1])||seasonBreak(last3[1],last3[2]))return false;
+  const vals=last3.map(ladderLP);
+  return vals.every(v=>v!==null)&&vals[0]<vals[1]&&vals[1]<vals[2];
 }
 function passwordStrength(p){
   if(!p)return{score:0,label:""};
@@ -3056,11 +3072,16 @@ async function checkAll(ids){
 }
 
 // LP moved since the check before last — what "who is climbing right now" means.
+// LP moved since the check before last — what "who is climbing right now" means.
+// Across a season break there is no "moved": the account is on a new ladder, and
+// treating Diamond→Silver as "▼ −900 LP" is exactly the crash that never happened.
 function lastDelta(a){
   const h=a.history||[];
   if(h.length<2)return 0;
-  const now=ladderLP(h[h.length-1]), prev=ladderLP(h[h.length-2]);
-  return now===null||prev===null?0:now-prev;
+  const cur=h[h.length-1], prev=h[h.length-2];
+  if(seasonBreak(prev,cur))return 0;
+  const now=ladderLP(cur), before=ladderLP(prev);
+  return now===null||before===null?0:now-before;
 }
 
 // ---------- filtering / sorting ----------
@@ -4850,6 +4871,9 @@ function awaySummary(since){
     if(+after.t<=since)continue;                       // nothing new while away
     const before=hist.filter(h=>+h.t<=since).pop();
     if(!before)continue;                               // no reading from before you left
+    // A season can reset while you are away. The LP drop across it is real on the
+    // ladder and meaningless as a "while you were away" move — same rule as lastDelta.
+    if(seasonBreak(before,after))continue;
     const d=ladderLP(after)-ladderLP(before);
     if(!d)continue;
     (d>0?out.up:out.down).push({a,d});
