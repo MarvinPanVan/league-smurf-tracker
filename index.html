@@ -1087,6 +1087,33 @@
   .sub-fld input[type=checkbox]{margin-top:3px}
   .chk{display:flex;align-items:center;gap:9px}
   .chk label{font-size:13px;color:var(--text);line-height:1.45}
+  /* ---- accent preview ----
+     A colour swatch shows the colour; it cannot show what the colour does. And the
+     page that would have answered that sits behind this panel's backdrop — 7px of
+     blur under 82% dim — which is what "both preview live while you pick" was
+     quietly relying on. So the panel carries a small piece of the app instead.
+     Built from the same classes and the same custom properties as the real thing,
+     which is the whole trick: applyAccent() sets those properties on :root, so this
+     follows every drag of the picker without a line of code behind it.
+     inert, so nothing in here can be clicked, tabbed to or read out — it is a
+     picture of controls, not controls. */
+  .acc-prev{margin-top:15px;padding:13px 15px;border:1px solid var(--line);
+    border-radius:var(--r-md);background:var(--panel);pointer-events:none;
+    display:flex;flex-direction:column;gap:11px}
+  .acc-prev-h{display:flex;align-items:center;gap:9px}
+  .acc-prev-t{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em;text-transform:uppercase;
+    font-size:12.5px;color:var(--gold-txt)}
+  .acc-prev-star{color:var(--star);font-size:15px;line-height:1}
+  .acc-prev-rk{font-size:12px;color:var(--gold-txt);margin-left:auto}
+  .acc-prev .bar button{padding:6px 11px;font-size:12px}
+  /* the same three declarations as the real focus rule, since an element nobody is
+     focusing cannot match :focus */
+  .acc-prev input{width:100%;font-size:12px;padding:7px 10px;
+    border-color:color-mix(in srgb,var(--teal) 60%,transparent);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--teal) 13%,transparent);
+    background-color:var(--panel3)}
+  .acc-reset{width:27px;height:27px;padding:0;font-size:13px;color:var(--muted)}
+  .acc-reset:hover{color:var(--text)}
   /* The viewport's scroll container is the root element, not <body>, so locking
      only <body> leaves the page scrolling behind the modal in most browsers. */
   body.modal-open{overflow:hidden}
@@ -1423,17 +1450,32 @@
 
       <div class="grp">
         <div class="grp-h">Appearance</div>
-        <div class="hint" style="margin-bottom:12px">Both preview live while you pick. Closing without saving puts them back.</div>
+        <div class="hint" style="margin-bottom:12px">Both preview live while you pick, on the sample below — the page itself is behind this panel's blur. Closing without saving puts them back.</div>
         <div style="display:flex;gap:22px;flex-wrap:wrap;align-items:center">
           <div style="display:flex;gap:9px;align-items:center">
             <input type="color" id="sAccent" style="width:44px;padding:2px;height:32px" aria-label="Primary accent color">
             <span style="font-size:12px;color:var(--muted);line-height:1.4">Primary<br><span style="color:var(--faint)">title, favorites, scrollbar</span></span>
+            <button id="sAccentReset1" class="acc-reset" type="button" title="Back to the default primary" aria-label="Reset the primary color">↺</button>
           </div>
           <div style="display:flex;gap:9px;align-items:center">
             <input type="color" id="sAccent2" style="width:44px;padding:2px;height:32px" aria-label="Secondary accent color">
             <span style="font-size:12px;color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login, Refresh, Add, focus rings</span></span>
+            <button id="sAccentReset2" class="acc-reset" type="button" title="Back to the default secondary" aria-label="Reset the secondary color">↺</button>
           </div>
           <button id="sAccentReset" type="button">Reset both</button>
+        </div>
+        <div id="accPrev" class="acc-prev" inert aria-hidden="true">
+          <div class="acc-prev-h">
+            <span class="acc-prev-t">Smurf Tracker</span>
+            <span class="acc-prev-star">★</span>
+            <span class="acc-prev-rk">Diamond I · 52 LP</span>
+          </div>
+          <div class="bar">
+            <button class="b-gold" type="button" tabindex="-1">Check all ranks</button>
+            <button class="b-teal" type="button" tabindex="-1">+ Add account</button>
+            <button type="button" tabindex="-1">Refresh</button>
+          </div>
+          <input type="text" value="a field while you are typing in it" tabindex="-1" readonly>
         </div>
       </div>
 
@@ -4523,8 +4565,12 @@ $("sSave").addEventListener("click",async()=>{
   cfg.notify=$("sNotify").checked;
   cfg.discordWebhook=$("sDiscord").value.trim();
   cfg.autoLockMin=Math.max(0,+$("sAutoLock").value||0);
-  cfg.accent=$("sAccent").value;applyAccent(cfg.accent);
-  cfg.accent2=$("sAccent2").value;applyAccent2(cfg.accent2);
+  // null, not the default's own hex, when that is what the picker is sitting on:
+  // "no colour chosen" is a different thing to store than "chose exactly this one",
+  // and it is what lets the default move later without dragging every vault that
+  // never picked anything along behind it.
+  cfg.accent=$("sAccent").value===DEFAULT_ACCENT?null:$("sAccent").value;applyAccent(cfg.accent||DEFAULT_ACCENT);
+  cfg.accent2=$("sAccent2").value===DEFAULT_ACCENT2?null:$("sAccent2").value;applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
   if(cfg.notify&&"Notification"in window&&Notification.permission==="default"){
     const perm=await Notification.requestPermission();
     if(perm!=="granted"){cfg.notify=false;$("sNotify").checked=false;toast("Notifications blocked by the browser")}
@@ -4538,12 +4584,19 @@ $("sAccent").addEventListener("input",e=>previewAccent("primary",e.target.value)
 $("sAccent2").addEventListener("input",e=>previewAccent("secondary",e.target.value));
 $("sAccent").addEventListener("change",e=>commitAccent("primary",e.target.value));
 $("sAccent2").addEventListener("change",e=>commitAccent("secondary",e.target.value));
-$("sAccentReset").addEventListener("click",()=>{
+// A reset is a value you have chosen, so it behaves like choosing one: it previews,
+// Save keeps it, Close puts the old one back. Reset both used to write cfg and save
+// on the spot, which quietly made it the one thing in this panel that Close could
+// not undo — reverting reads cfg, and cfg had just been overwritten.
+function resetAccent(which){
   cancelAccentPreview();
-  $("sAccent").value=DEFAULT_ACCENT;$("sAccent2").value=DEFAULT_ACCENT2;
-  applyAccent(DEFAULT_ACCENT);applyAccent2(DEFAULT_ACCENT2);
-  cfg.accent=null;cfg.accent2=null;saveCfg();toast("Accents reset");
-});
+  const both=which==="both";
+  if(both||which==="primary"){$("sAccent").value=DEFAULT_ACCENT;applyAccent(DEFAULT_ACCENT)}
+  if(both||which==="secondary"){$("sAccent2").value=DEFAULT_ACCENT2;applyAccent2(DEFAULT_ACCENT2)}
+}
+$("sAccentReset1").addEventListener("click",()=>resetAccent("primary"));
+$("sAccentReset2").addEventListener("click",()=>resetAccent("secondary"));
+$("sAccentReset").addEventListener("click",()=>resetAccent("both"));
 $("sVaultSet").addEventListener("click",async()=>{
   const pass=$("sVaultPass").value;
   if(!pass||pass.length<4){toast("Choose a password with at least 4 characters");return}

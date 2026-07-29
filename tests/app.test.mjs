@@ -721,6 +721,78 @@ test("both accents persist, and leaving Settings unsaved puts the previewed colo
   assert.equal(read("--teal"), "#00ff00", "closing without saving reverts");
 });
 
+// the two the app ships with, which the resets have to land back on exactly
+const DEFAULT_ACCENT = "#d8b874", DEFAULT_ACCENT2 = "#2ee0c2";
+
+/* Each colour gets its own way back, because "reset both" is no help when one of
+   the two is the one you have ruined. They preview like the pickers do rather than
+   saving on the spot — which is what Reset both used to do, and it made that button
+   the one control in the panel Close could not undo. */
+test("each accent resets on its own, and a reset is only kept by Save", () => {
+  const win = bootApp();
+  const read = v => win.document.documentElement.style.getPropertyValue(v).trim().toLowerCase();
+  const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg"));
+  const $ = id => win.document.getElementById(id);
+
+  $("bSettings").click();
+  $("sAccent").value = "#ff0000";
+  $("sAccent2").value = "#00ff00";
+  $("sSave").click();
+  assert.equal(read("--gold"), "#ff0000");
+
+  // one colour back, the other left exactly where it was
+  $("bSettings").click();
+  $("sAccentReset1").click();
+  assert.equal(read("--gold"), DEFAULT_ACCENT, "the primary is back to default");
+  assert.equal(read("--teal"), "#00ff00", "and the secondary was not touched");
+  assert.equal($("sAccent").value, DEFAULT_ACCENT, "the picker follows too");
+  assert.equal(cfg().accent, "#ff0000", "nothing is saved yet");
+
+  $("sClose").click();
+  assert.equal(read("--gold"), "#ff0000", "so closing puts the old colour back");
+
+  // the same for the secondary, and this time keep it
+  $("bSettings").click();
+  $("sAccentReset2").click();
+  assert.equal(read("--teal"), DEFAULT_ACCENT2);
+  assert.equal(read("--gold"), "#ff0000", "the primary stays where it was");
+  $("sSave").click();
+  assert.equal(read("--teal"), DEFAULT_ACCENT2, "kept");
+  // a colour nobody chose is stored as no choice, so the default can move later
+  assert.equal(cfg().accent2, null, "the default is stored as no preference");
+  assert.equal(cfg().accent, "#ff0000", "a real choice is still stored as itself");
+
+  // and both at once still works
+  $("bSettings").click();
+  $("sAccentReset").click();
+  assert.equal(read("--gold"), DEFAULT_ACCENT);
+  assert.equal(read("--teal"), DEFAULT_ACCENT2);
+});
+
+/* The panel claimed both colours "preview live while you pick", and they did —
+   on a page sitting behind 7px of blur and 82% dim, where none of it could be
+   seen. The sample is inside the panel, built from the real classes so it needs no
+   code of its own to follow a drag. */
+test("the appearance group carries a sample of the app, out of reach", () => {
+  const win = bootApp();
+  const prev = win.document.getElementById("accPrev");
+  assert.ok(prev, "there is a preview");
+  assert.ok(win.document.getElementById("sAccent").closest(".grp").contains(prev),
+    "it lives with the colour pickers, not somewhere else in Settings");
+
+  // it is a picture of controls, not controls: no clicking, no tabbing, not read out
+  assert.equal(prev.hasAttribute("inert"), true);
+  assert.equal(prev.getAttribute("aria-hidden"), "true");
+  for (const el of prev.querySelectorAll("button,input")) {
+    assert.equal(el.getAttribute("tabindex"), "-1", el.textContent || el.type);
+  }
+
+  // both accents have to be visible in it, or it answers only half the question
+  assert.ok(prev.querySelector(".b-gold"), "something driven by the primary");
+  assert.ok(prev.querySelector(".b-teal"), "and something driven by the secondary");
+  assert.ok(prev.querySelector(".acc-prev-star"), "favorites are a primary thing");
+});
+
 test("a long Riot ID truncates inside an element that can actually ellipsize", () => {
   const win = bootApp();
   addRealAccount(win, "aVeryLongSummonerNameIndeed", "EUW123");
