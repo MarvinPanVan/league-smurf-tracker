@@ -5438,6 +5438,12 @@ function boot(){
     const parsed=raw?JSON.parse(raw):null;
     if(parsed&&parsed.__enc)envelope=parsed;
     else if(Array.isArray(parsed))accounts=parsed;
+    /* An export file is {app, version, accounts}, not a bare array. Dropping that
+       into localStorage — or restoring a backup with a tool that writes the file
+       body straight into the key — used to boot an empty vault: Array.isArray on
+       the object is false, and nothing else looked. The next saveDB writes the
+       array shape back, so this is only a one-time rescue. */
+    else if(parsed&&Array.isArray(parsed.accounts))accounts=parsed.accounts;
   }catch(e){}
   if(envelope)showLockScreen(envelope);
   else startApp();

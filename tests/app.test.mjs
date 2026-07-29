@@ -88,6 +88,21 @@ test("boots clean with an empty vault, no accounts", () => {
   assert.equal(win.document.getElementById("lock").classList.contains("hidden"), true);
 });
 
+/* An export file is {app, version, accounts}, not a bare array. Writing that body
+   straight into the localStorage key used to boot an empty vault — Array.isArray
+   on the object is false, and nothing else looked. */
+test("a backup dropped into localStorage still opens as a vault", () => {
+  const win = bootApp(undefined, w => {
+    w.localStorage.setItem("smurf-tracker", JSON.stringify({
+      app: "smurf-tracker", version: 2, exported: "2026-07-29T00:00:00.000Z",
+      accounts: [{ id: "x1", gameName: "FromBackup", tagLine: "EUW", region: "EUW", status: "active",
+        stats: null, history: [], tags: [] }],
+    }));
+  });
+  assert.equal(win.document.querySelectorAll(".card").length, 1);
+  assert.match(win.document.querySelector(".card").textContent, /FromBackup/);
+});
+
 test("demo data loads 5 accounts and renders without undefined/NaN leaking into the DOM", () => {
   const win = bootApp();
   win.loadDemo();
