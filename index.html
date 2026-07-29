@@ -1330,7 +1330,7 @@
     <div class="mdl-b" style="padding:22px;font-size:13px;color:var(--muted);line-height:1.8">
     <b style="color:var(--text)">Your data stays here.</b> Accounts are saved in this browser on this device — nothing gets uploaded. Clearing browser data wipes the vault, so use <b style="color:var(--text)">Export</b> for backups and <b style="color:var(--text)">Import</b> to restore or merge them.<br>
     <b style="color:var(--text)">Rank checks are free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b style="color:var(--text)">Rank</b> in a card's ⋯ menu to enter it by hand — history, the chart and the stats all work the same either way.<br>
-    <b style="color:var(--text)">Tips:</b> the bar across a card's bottom edge opens <b style="color:var(--text)">Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · search matches names, tags, even ranks (try "gold") · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
+    <b style="color:var(--text)">Tips:</b> the bar across a card's bottom edge opens <b style="color:var(--text)">Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · search matches names, tags, even ranks (try "gold"), and every word you add narrows it further · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
     <b style="color:var(--text)">Quick find:</b> <b style="color:var(--text)">Ctrl+K</b> (or ⌘K) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.<br>
     <b style="color:var(--text)">Search operators:</b> beyond plain words the search box takes <b style="color:var(--text)">tier:diamond</b>, <b style="color:var(--text)">region:euw</b>, <b style="color:var(--text)">&gt;plat</b> and <b style="color:var(--text)">&lt;gold</b> for "at least" and "below", and <b style="color:var(--text)">is:</b> stale · never · flagged · banned · fav · goal. They combine, so <b style="color:var(--text)">&gt;diamond is:stale</b> is one query.<br>
     <b style="color:var(--text)">Three layouts:</b> cards for browsing, the list for working through the vault a row at a time, and the wall for seeing all sixty at once — click any tile to land back on that account's card.<br>
@@ -1668,6 +1668,14 @@ function isChecked(a){return !!(a.stats&&a.stats.updatedAt)}
 function isStale(a){return a.status!=="banned"&&(!isChecked(a)||Date.now()-a.stats.updatedAt>STALE_MS)}
 function isRanked(a){const t=a.stats&&a.stats.found!==false&&(a.stats.tier||"").toUpperCase();return !!(t&&t!=="UNRANKED")}
 function isFailed(a){return !!(a.stats&&(a.stats.found===false||a.stats.note))}
+/* Whether a check has ever brought a reading back. A check that fails before one
+   has ever succeeded leaves a note behind on an otherwise empty stats object, and
+   all three layouts asked "is there a stats object" instead — so the card claimed
+   "Unranked · No ranked games found" about an account nobody had managed to read
+   yet, while the stats panel beside it went on counting the same account under
+   Never checked. Not isChecked(): a CSV import carries a tier with no timestamp,
+   and that is a rank we know. */
+function hasReading(s){return !!(s&&(s.tier||s.level!=null||s.found===false))}
 /* Something about this account needs a human. Set by hand from the card menu, and
    set automatically when a check comes back saying the profile does not exist —
    which almost always means the Riot ID has been changed and nothing about this
@@ -2992,7 +3000,6 @@ function parseQuery(q){
 }
 function filtered(){
   const Q=parseQuery(ui.search);
-  const q=Q.terms.join(" ");
   let list=accounts.filter(a=>{
     if(a.archived&&!ui.showArchived)return false;
     if(ui.showArchived&&!a.archived)return false;
@@ -3027,10 +3034,15 @@ function filtered(){
       if(f==="fav"&&!a.fav)return false;
       if(f==="goal"&&!(a.goal&&a.goal.tier))return false;
     }
-    if(q){
+    if(Q.terms.length){
       const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,a.createdOn,a.birthdate,
         a.flagged?"flagged attention":"",(a.tags||[]).join(" "),a.stats?(a.stats.tier||"")+" "+(shortRank(a.stats)||""):"",(STATUS[a.status]||STATUS.active).label].join(" ").toLowerCase();
-      if(!hay.includes(q))return false;
+      // Each word has to turn up somewhere, not all of them in a row. The fields
+      // are joined into one haystack, so the terms used to be re-joined and looked
+      // for as a literal phrase — which is why "hide bush" found nothing at all on
+      // an account named "Hide on Bush", and why no query could ever combine a
+      // name with a tag, since the two are never adjacent in the haystack.
+      if(!Q.terms.every(t=>hay.includes(t)))return false;
     }
     return true;
   });
@@ -3591,7 +3603,7 @@ function rowHTML(a,i){
   const dv=lastDelta(a);
   let rank="—",lp="";
   if(isChecking)rank="…";
-  else if(!s)rank="Never checked";
+  else if(!hasReading(s))rank="Never checked";
   else if(s.found===false)rank="Not found";
   else if(isRanked(a)){
     rank=tierLabel(s);
@@ -3656,7 +3668,7 @@ function tileHTML(a){
   const icon0=iconUrl(s);
   let rank="Never checked",lp="";
   if(checking.has(a.id))rank="…";
-  else if(!s)rank="Never checked";
+  else if(!hasReading(s))rank="Never checked";
   else if(s.found===false)rank="Not found";
   else if(isRanked(a)){
     rank=tierLabel(s);
@@ -3715,7 +3727,7 @@ function cardHTML(a,i){
   const levelLed=!!(s&&s.found!==false&&!isRanked(a)&&s.level);
   let rankBlock;
   if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
-  else if(!s)rankBlock=`<div class="rk c-unchecked">Never checked</div>`;
+  else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">Never checked</div>`;
   else if(s.found===false)rankBlock=`<div class="wl" style="color:var(--danger)">Not found — check name/tag/region</div>`;
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
     <div class="wl">${s.level>=30?"Unranked this season":"Not level 30 yet"}</div>`;
@@ -3971,6 +3983,11 @@ function closeAllPanels(){
   $("help").classList.add("hidden");
   $("bulkAdd").classList.add("hidden");
   $("moreMenu").classList.add("hidden");
+  // Quick find is a modal like the other two, and every way out of a modal —
+  // Escape, a click on the backdrop, the ✕ — goes through here. Leaving it off
+  // this list meant Ctrl+K was the only thing that would close it again: Escape
+  // shut every other panel on the page and left the palette standing.
+  closePalette();
 }
 function openForm(acc){
   if(!acc&&previewMode){previewMode=false;accounts=[];render()}
@@ -4972,7 +4989,11 @@ $("grid").addEventListener("click",async e=>{
     ui.density="cards";cfg.density="cards";saveCfg();
     flashId=id;render();
     const card=$("grid").querySelector(`.card[data-id="${id}"]`);
-    if(card)card.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
+    // Guarded like the other two places that scroll something into view. Not
+    // being guarded here meant an environment without it threw in the middle of
+    // this handler, which took the timer below down with it — so the card stayed
+    // lit for the rest of the session instead of flashing once.
+    if(card&&card.scrollIntoView)card.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
     setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
   }
   else if(act==="more"){const on=!openMore.has(id);on?openMore.add(id):openMore.delete(id);reveal=on?id+":more":null;renderCard(id)}
@@ -5091,8 +5112,14 @@ function startApp(){
       checkAll(staleAccs.map(a=>a.id));
     }
   }
+  // An unencrypted vault reaches this straight out of boot(), before the load
+  // event. An encrypted one reaches it from the Unlock button, minutes after that
+  // event has been and gone — so waiting for `load` unconditionally meant anyone
+  // with a master password never got the offline cache registered at all.
   if("serviceWorker"in navigator&&location.protocol.startsWith("http")){
-    window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})});
+    const reg=()=>navigator.serviceWorker.register("sw.js").catch(()=>{});
+    if(document.readyState==="complete")reg();
+    else window.addEventListener("load",reg,{once:true});
   }
 }
 async function tryUnlock(){

@@ -3032,3 +3032,159 @@ test("the markup builders refuse a bad division even when handed one directly", 
   assert.match(win.cardHTML(acc, 0), /Challenger/);
   assert.match(win.cardHTML(acc, 0), /1200 LP/);
 });
+
+// ---- what a failed first check is allowed to claim ----
+
+/* A check that fails before one has ever succeeded leaves a note behind on an
+   otherwise empty stats object, and all three layouts asked "is there a stats
+   object" rather than "did anything come back". So the card announced
+   "Unranked · No ranked games found" about an account nobody had managed to read
+   yet — while the stats panel directly above it went on counting the very same
+   account under Never checked. */
+test("a first check that failed leaves the account never checked, not unranked", () => {
+  const win = bootApp([{
+    id: "f1", gameName: "Renamed", tagLine: "EUW", region: "EUW", status: "active", tags: [], history: [],
+    stats: { note: "Auto-fetch failed (timeout) — enter it by hand with ✎ Rank" },
+  }]);
+  const card = win.document.querySelector('.card[data-id="f1"]');
+  assert.match(card.textContent, /Never checked/);
+  assert.doesNotMatch(card.textContent, /Unranked|No ranked games found/);
+  assert.match(card.textContent, /Auto-fetch failed/, "and it still says why");
+
+  // the panel was right all along; the card is what disagreed with it
+  const tile = win.document.querySelector('#dash [data-flag="unchecked"]');
+  assert.ok(tile, "the stats panel counts it as never checked");
+  assert.equal(tile.querySelector(".v").textContent, "1");
+
+  for (const layout of ["list", "wall"]) {
+    win.document.querySelector(`[data-density="${layout}"]`).click();
+    const el = win.document.querySelector('[data-id="f1"] .hx-in');
+    assert.match(el.textContent, /Never checked/, layout);
+    assert.doesNotMatch(el.textContent, /Unranked/, layout);
+  }
+});
+
+// A rank with no timestamp is still a rank — which is why this cannot simply be
+// isChecked(): a CSV with no lastUpdated column imports exactly that.
+test("a rank that arrived without a timestamp is still a rank", () => {
+  const win = bootApp();
+  const acc = { id: "c1", gameName: "FromCsv", tagLine: "EUW", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "III", lp: 22, updatedAt: null } };
+  assert.match(win.cardHTML(acc, 0), /Gold III/);
+  assert.doesNotMatch(win.cardHTML(acc, 0), /Never checked/);
+
+  assert.equal(win.hasReading(acc.stats), true);
+  assert.equal(win.hasReading(null), false);
+  assert.equal(win.hasReading({ note: "Auto-fetch failed" }), false, "a note is not a reading");
+  assert.equal(win.hasReading({ found: false }), true, "but 'the profile is gone' is one");
+  assert.equal(win.hasReading({ level: 23 }), true, "so is a level on an unranked smurf");
+});
+
+// ---- quick find is a modal like the other two ----
+
+/* Every way out of a modal — Escape, a press on the backdrop, the ✕ — goes
+   through closeAllPanels(), which did not know the palette existed. Ctrl+K was
+   the only thing that would close it again, while the palette's own footer sat
+   there advertising "Esc close". */
+test("quick find closes on Escape and on a press on its backdrop", () => {
+  const hidden = win => win.document.getElementById("palette").classList.contains("hidden");
+
+  const a = bootApp(ladderSeed());
+  a.openPalette();
+  assert.equal(hidden(a), false);
+  a.document.dispatchEvent(new a.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(hidden(a), true, "Escape closes it");
+
+  const b = bootApp(ladderSeed());
+  b.openPalette();
+  const overlay = b.document.getElementById("palette");
+  overlay.dispatchEvent(new b.MouseEvent("mousedown", { bubbles: true }));
+  overlay.dispatchEvent(new b.MouseEvent("click", { bubbles: true }));
+  assert.equal(hidden(b), true, "and so does a press that starts and ends on the backdrop");
+
+  // opening it runs the same closer, so this must not close it on the way in
+  const c = bootApp(ladderSeed());
+  c.openPalette();
+  c.openPalette();
+  assert.equal(hidden(c), false, "opening it twice leaves it open");
+});
+
+/* Landing on an account lights it up and scrolls it into view. That scroll was
+   the one of three such calls that went unguarded, so anywhere the method is
+   missing it threw in the middle of the handler — taking the timer that clears
+   the highlight with it, and leaving the card lit for the rest of the session. */
+test("landing on an account from the wall clears its highlight afterwards", async () => {
+  const win = bootApp(ladderSeed());
+  win.document.querySelector('[data-density="wall"]').click();
+  win.document.querySelector('.tile[data-id="t4"]').click();
+  assert.ok(win.document.querySelector('.hx.flash[data-id="t4"]'), "lit up on arrival");
+  await until(() => !win.document.querySelector(".hx.flash"), "the highlight to clear itself");
+});
+
+// ---- searching for more than one word ----
+
+/* The fields are joined into one haystack, and the search terms were re-joined
+   and looked for as a literal phrase — so no query could ever combine two facts
+   about an account unless they happened to sit next to each other in that join. */
+test("a search of several words matches each of them, not the phrase", () => {
+  const now = Date.now();
+  const win = bootApp([
+    { id: "s1", label: "Main smurf", gameName: "Hide on Bush", tagLine: "0001", region: "EUW",
+      status: "active", tags: ["mid"], history: [],
+      stats: { found: true, tier: "PLATINUM", division: "II", lp: 61, level: 214, updatedAt: now } },
+    { id: "s2", label: "ADC acc", gameName: "Bot Diff", tagLine: "EUW", region: "EUW",
+      status: "active", tags: ["adc"], history: [],
+      stats: { found: true, tier: "GOLD", division: "III", lp: 22, level: 167, updatedAt: now } },
+  ]);
+  const count = s => {
+    const box = win.document.getElementById("tSearch");
+    box.value = s;
+    box.dispatchEvent(new win.Event("input"));
+    win.renderFilters();                       // skip the 120ms debounce
+    return win.document.querySelectorAll(".card").length;
+  };
+  assert.equal(count(""), 2);
+  assert.equal(count("hide bush"), 1, "two words of a name that has another word between them");
+  assert.equal(count("main mid"), 1, "a label and a tag, which are never adjacent in the haystack");
+  assert.equal(count("bot gold"), 1, "a name and a rank");
+  assert.equal(count("hide diff"), 0, "a word from each account matches neither");
+  assert.equal(count("plat"), 1, "and one word still works the way it always did");
+});
+
+// ---- the offline cache and a locked vault ----
+
+/* An unencrypted vault reaches startApp() out of boot(), before the load event.
+   An encrypted one gets there from the Unlock button, long after that event has
+   been and gone — so hanging the registration off `load` unconditionally meant
+   setting a master password quietly cost you the offline cache. */
+test("the offline cache is registered even when the vault had to be unlocked first", async () => {
+  const win1 = bootApp();
+  addRealAccount(win1, "Locked Away", "1");
+  win1.document.getElementById("sVaultPass").value = "letmein123";
+  win1.document.getElementById("sVaultSet").click();
+  await until(() => encrypted(win1), "the vault to be written encrypted");
+  const stored = win1.localStorage.getItem("smurf-tracker");
+
+  const dom = new JSDOM(htmlNoScript, { url: "https://example.com/index.html", pretendToBeVisual: true, runScripts: "dangerously" });
+  const win = dom.window;
+  Object.defineProperty(win, "crypto", { value: webcrypto, configurable: true });
+  win.TextEncoder = TextEncoder;
+  win.TextDecoder = TextDecoder;
+  win.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
+  win.fetch = async () => { throw new Error("network disabled in tests") };
+  const asked = [];
+  Object.defineProperty(win.navigator, "serviceWorker", {
+    value: { register: url => { asked.push(url); return Promise.resolve({}) } }, configurable: true });
+  win.localStorage.setItem("smurf-tracker", stored);
+  runScript(win, appScript);
+
+  assert.equal(win.document.getElementById("lock").classList.contains("hidden"), false, "it boots locked");
+  assert.deepEqual(asked, [], "and registers nothing while the vault is shut");
+
+  // the load event is long over by the time anybody types a password
+  await until(() => win.document.readyState === "complete", "the page to finish loading");
+  win.document.getElementById("lockPass").value = "letmein123";
+  win.document.getElementById("lockBtn").click();
+  await until(() => win.document.getElementById("lock").classList.contains("hidden"), "the vault to unlock");
+  assert.deepEqual(asked, ["sw.js"], "unlocking registers it, rather than waiting for an event that has passed");
+});
