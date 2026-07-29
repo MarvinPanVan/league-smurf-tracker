@@ -166,6 +166,21 @@ test("parseRankText: garbage input returns null instead of a bogus match", () =>
   assert.equal(win.parseRankText(null), null);
 });
 
+/* Solo Unranked has no "N LP". The first tier+LP on the page used to win — which on
+   an Unranked account is often Flex, or a season peak — so Refresh stored Gold as
+   the solo rank. Flex is parseFlex's job; current-rank only reads above that heading. */
+test("parseRankText reads Solo, not Flex, and recognises Unranked", () => {
+  const win = bootApp();
+  const r = win.parseRankText("Unranked\n\nRanked Flex\ngold 2 45 LP\n");
+  assert.equal(r.tier, "UNRANKED");
+  assert.equal(r.lp, null);
+  assert.equal(win.parseFlex("Unranked\n\nRanked Flex\ngold 2 45 LP\n").tier, "GOLD",
+    "Flex is still read under its own heading");
+
+  assert.equal(win.parseRankText("Unranked\nLevel 42\n").tier, "UNRANKED");
+  assert.equal(win.parseRankText("just Unranked on a profile with no level").tier, "UNRANKED");
+});
+
 test("parseProfileIcon extracts a stable icon URL from op.gg's CDN image path, ignores unrelated text", () => {
   const win = bootApp();
   const html = '<img src="https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon6.jpg?image=q_auto:good,f_png,w_200&v=1784743313" alt="icon">';
@@ -200,6 +215,47 @@ test("applyStats: dedupes unchanged ranks (refreshes timestamp, no new history r
 
   assert.equal(win.applyStats(acc, { found: true, tier: "PLATINUM", division: "IV", lp: 0, updatedAt: 3 }), true);
   assert.equal(acc.history.length, 2);
+});
+
+/* The AI path never returns seasons/champs/flex, and a truncated proxy page can miss
+   the tables while still reading the rank. Replacing the whole stats object wiped
+   whatever the last full parse had left — the ✎ Rank path already kept them. */
+test("a refresh that only brings the rank keeps the extras it did not replace", () => {
+  const win = bootApp();
+  const seasons = { solo: [{ season: "S2025", tier: "MASTER", division: null, lp: 135 }], flex: [] };
+  const champs = [{ name: "Ashe", wr: 60, games: 25, wins: 15, losses: 10, kda: 2.25 }];
+  const flex = { tier: "GOLD", division: "II", lp: 45 };
+  const peak = { tier: "MASTER", division: null, lp: 200 };
+  const acc = {
+    history: [],
+    stats: {
+      found: true, tier: "DIAMOND", division: "I", lp: 52, wins: 190, losses: 215,
+      level: 764, seasons, champs, flex, peak,
+      icon: "https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",
+      updatedAt: 1,
+    },
+  };
+  // shaped like what the AI path actually hands back — rank, no tables
+  win.applyStats(acc, {
+    found: true, tier: "DIAMOND", division: "I", lp: 60, wins: 192, losses: 216,
+    level: null, peak: null, seasons: null, flex: null, champs: null, icon: null, updatedAt: 2,
+  });
+  assert.equal(acc.stats.lp, 60, "the new rank lands");
+  assert.equal(acc.stats.seasons, seasons, "past seasons survive");
+  assert.equal(acc.stats.champs, champs, "so do champions");
+  assert.equal(acc.stats.flex.tier, "GOLD");
+  assert.equal(acc.stats.peak.tier, "MASTER");
+  assert.equal(acc.stats.level, 764, "and the level, when the new reading has none");
+  assert.match(acc.stats.icon, /profileIcon1/);
+
+  // a reading that does carry them still replaces
+  win.applyStats(acc, {
+    found: true, tier: "DIAMOND", division: "I", lp: 60, updatedAt: 3,
+    seasons: { solo: [{ season: "S2026", tier: "DIAMOND", division: "I", lp: 60 }], flex: [] },
+    champs: [{ name: "Zed", wr: 55, games: 10, wins: 5, losses: 5, kda: null }],
+  });
+  assert.equal(acc.stats.seasons.solo[0].season, "S2026");
+  assert.equal(acc.stats.champs[0].name, "Zed");
 });
 
 test("csvCell quotes values containing commas, quotes or newlines (RFC 4180-ish)", () => {

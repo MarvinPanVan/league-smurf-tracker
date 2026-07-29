@@ -2440,14 +2440,27 @@ function passwordStrength(p){
 // ---------- rank data: parser + fetch cascade ----------
 function parseRankText(raw){
   if(!raw)return null;
-  const first=parseRankFlat(String(raw).replace(/\s+/g," "));
+  // Solo and Flex share the same page. Matching the first "tier N LP" anywhere used
+  // to pick up a Flex rank — or a peak — on an account that is Unranked in Solo.
+  // Everything from "Ranked Flex" onwards belongs to parseFlex; the current-rank
+  // parser only reads what comes before.
+  const soloRaw=String(raw).split(/\bRanked\s*Flex\b/i)[0];
+  const first=parseRankFlat(soloRaw.replace(/\s+/g," "));
   if(first&&first.tier)return first;
   // Some proxies hand back markup dense enough that the tier and its LP end up
   // further apart than the strict pattern tolerates. Stripping to plain words is
   // a second chance, never a downgrade — it only runs when pass one found no
   // tier at all.
-  const second=parseRankFlat(stripMarkup(raw));
-  return(second&&second.tier)?second:(first||second);
+  const second=parseRankFlat(stripMarkup(soloRaw));
+  if(second&&second.tier)return second;
+  const hit=first||second;
+  // Solo Unranked has no "N LP" for the strict pattern to catch. A level alone
+  // used to be enough to return success with no tier, and fetchViaProxy then
+  // filled in UNRANKED — but only when no Flex/peak LP had already matched above.
+  // With Flex cut away, an explicit Unranked (or a level with no rank) is the answer.
+  if(hit&&hit.level!=null){hit.tier=hit.tier||"UNRANKED";return hit}
+  if(/\bUnranked\b/i.test(soloRaw))return{tier:"UNRANKED",division:null,lp:null,wins:null,losses:null,level:null};
+  return hit;
 }
 function parseRankFlat(text){
   const strict=/\b(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)\b[^\dA-Za-z]{0,6}([1-4]|IV|III|II|I)?(?!\d)(?:\s\2(?!\d))?[^\d]{0,6}(\d{1,4})\s*LP\b/i;
@@ -2912,6 +2925,18 @@ function applyStats(acc,s){
     s.flex=normPeak(s.flex);   // an unranked flex row says nothing; dropping it
     s.peak=normPeak(s.peak);   // is what the backend path already did
     s.lpAt=normLpAt(s.lpAt);
+    /* The AI path never asks for seasons, champs or flex, and a truncated proxy
+       page can miss the tables while still reading the current rank. Assigning the
+       whole object used to wipe whatever the last full parse had left — the manual
+       ✎ Rank path already knew to keep them. Same rule here: a reading that has
+       nothing to put in those slots leaves the previous ones standing. */
+    const old=acc.stats||{};
+    if(!s.seasons&&old.seasons)s.seasons=old.seasons;
+    if(!s.champs&&old.champs)s.champs=old.champs;
+    if(!s.flex&&old.flex)s.flex=old.flex;
+    if(!s.peak&&old.peak)s.peak=old.peak;
+    if(!s.icon&&old.icon)s.icon=old.icon;
+    if(s.level==null&&old.level!=null)s.level=old.level;
   }
   acc.stats=s;
   let rankedUp=false;
