@@ -1358,7 +1358,7 @@
     <b style="color:var(--text)">Rank checks are free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b style="color:var(--text)">Rank</b> in a card's ⋯ menu to enter it by hand — history, the chart and the stats all work the same either way.<br>
     <b style="color:var(--text)">Tips:</b> the bar across a card's bottom edge opens <b style="color:var(--text)">Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · search matches names, tags, even ranks (try "gold"), and every word you add narrows it further · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
     <b style="color:var(--text)">Quick find:</b> <b style="color:var(--text)">Ctrl+K</b> (or ⌘K) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.<br>
-    <b style="color:var(--text)">Search operators:</b> beyond plain words the search box takes <b style="color:var(--text)">tier:diamond</b>, <b style="color:var(--text)">region:euw</b>, <b style="color:var(--text)">&gt;plat</b> and <b style="color:var(--text)">&lt;gold</b> for "at least" and "below", and <b style="color:var(--text)">is:</b> stale · never · flagged · banned · fav · goal. They combine, so <b style="color:var(--text)">&gt;diamond is:stale</b> is one query.<br>
+    <b style="color:var(--text)">Search operators:</b> beyond plain words the search box takes <b style="color:var(--text)">tier:diamond</b>, <b style="color:var(--text)">region:euw</b>, <b style="color:var(--text)">&gt;plat</b> and <b style="color:var(--text)">&lt;gold</b> for "at least" and "below" (<b style="color:var(--text)">&lt;=gold</b> takes Gold with it), and <b style="color:var(--text)">is:</b> stale · never · flagged · banned · fav · goal. They combine, so <b style="color:var(--text)">&gt;diamond is:stale</b> is one query.<br>
     <b style="color:var(--text)">Three layouts:</b> cards for browsing, the list for working through the vault a row at a time, and the wall for seeing all sixty at once — click any tile to land back on that account's card.<br>
     <b style="color:var(--text)">Goals:</b> set a target rank in a card's <b style="color:var(--text)">Rank</b> panel and the card grows a rail showing how far there is left, plus a rough estimate once there's a fortnight of checks to work from.<br>
     <b style="color:var(--text)">Extra privacy:</b> set a master password in <b style="color:var(--text)">Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.<br>
@@ -3062,7 +3062,7 @@ function lastDelta(a){
    being enough. The operators are the filters that already exist in the toolbar,
    reachable without leaving the keyboard:
      tier:diamond   region:euw   is:stale|never|flagged|banned|fav|goal
-     >plat  >=plat  <gold        (rank at least / below)
+     >plat  >=plat  <gold  <=gold      (rank at least / below)
    Anything not recognised as an operator stays a plain search term, so a stray
    colon in a note never silently swallows the rest of the query. */
 function parseQuery(q){
@@ -3087,8 +3087,10 @@ function parseQuery(q){
       if(t){
         const i=TIER_ORDER.indexOf(t);
         // ">plat" means "Platinum and up" the way people say it out loud, not
-        // "strictly better than every Platinum".
-        if(m[1][0]===">")out.min=i; else out.max=i;
+        // "strictly better than every Platinum", so > and >= are the same thing.
+        // "<gold" is that mirrored, everything below Gold — but "<=gold" has to
+        // take Gold with it, and it was being read as the same query as "<gold".
+        if(m[1][0]===">")out.min=i; else out.max=m[1]==="<="?i+1:i;
         continue;
       }
     }
@@ -4621,7 +4623,11 @@ document.addEventListener("keydown",e=>{
 $("bMore").addEventListener("click",()=>$("moreMenu").classList.toggle("hidden"));
 $("moreMenu").addEventListener("click",e=>{if(e.target.closest("button"))$("moreMenu").classList.add("hidden")});
 document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.target.closest("#bMore"))$("moreMenu").classList.add("hidden")});
-$("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():$("settings").classList.add("hidden"));
+// Closing has to go through the same door as the ✕ and Escape do. Toggling the panel
+// shut from the ⋯ menu only hid it, which left a colour you had dragged but not saved
+// applied to the whole page — the one close out of four that kept it.
+function closeSettings(){revertAccents();$("settings").classList.add("hidden")}
+$("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
 $("sSave").addEventListener("click",async()=>{
   cfg.apiKey=$("sKey").value.trim();cfg.model=$("sModel").value;cfg.autoCheck=$("sAuto").checked;cfg.autoEveryHours=+$("sAutoEvery").value;cfg.autoRankedOnly=$("sAutoRanked").checked;cfg.backendUrl=$("sBackend").value.trim();
   cfg.notify=$("sNotify").checked;
@@ -4641,7 +4647,7 @@ $("sSave").addEventListener("click",async()=>{
   }
   saveCfg();syncLockTimer();$("settings").classList.add("hidden");toast("Settings saved")
 });
-$("sClose").addEventListener("click",()=>{revertAccents();$("settings").classList.add("hidden")});
+$("sClose").addEventListener("click",closeSettings);
 $("sAccent").addEventListener("input",e=>previewAccent("primary",e.target.value));
 $("sAccent2").addEventListener("input",e=>previewAccent("secondary",e.target.value));
 $("sAccent").addEventListener("change",e=>commitAccent("primary",e.target.value));

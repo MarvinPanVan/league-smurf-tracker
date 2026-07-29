@@ -804,6 +804,18 @@ test("both accents persist, and leaving Settings unsaved puts the previewed colo
   assert.equal(read("--teal"), "#0000ff", "the picker previews live");
   win.document.getElementById("sClose").click();
   assert.equal(read("--teal"), "#00ff00", "closing without saving reverts");
+
+  // the ⋯ menu's Settings entry toggles the panel shut, which is a close as well —
+  // it used to only hide it, leaving an unsaved colour applied to the whole page
+  win.document.getElementById("bSettings").click();
+  picker.value = "#123456";
+  // change rather than input: releasing the picker skips the rate-limit queue that
+  // the preview above has just opened
+  picker.dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert.equal(read("--teal"), "#123456", "the colour is applied but not saved");
+  win.document.getElementById("bSettings").click();
+  assert.equal(win.document.getElementById("settings").classList.contains("hidden"), true);
+  assert.equal(read("--teal"), "#00ff00", "and closing it from the menu reverts too");
 });
 
 // the two the app ships with, which the resets have to land back on exactly
@@ -3104,6 +3116,9 @@ test("search operators filter the way the toolbar does, without leaving the keyb
   assert.equal(count("region:euw"), 12);
   assert.equal(count(">diamond"), 4, "Diamond and up, the way people say it out loud");
   assert.equal(count("<gold"), 3, "Iron, Bronze, Silver");
+  // <= collapsed into < and left its own tier out, so this used to be 3 as well
+  assert.equal(count("<=gold"), 4, "and Gold, when it is asked for");
+  assert.equal(count(">=diamond"), 4, "the mirror of it, where > and >= already agreed");
   assert.equal(count("is:fav"), 1);
   assert.equal(count("is:never"), 1);
   // an unrecognised operator has to stay a plain search term rather than silently
