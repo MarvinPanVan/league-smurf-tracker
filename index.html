@@ -76,28 +76,32 @@
     font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
     font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
     background:var(--bg);background-attachment:fixed}
-  /* Atmosphere: Settings picks one of six looks. Texture stays above the card
-     grid (masked or absent) so sixty rounded tiles never clip a pattern.
+  /* Atmosphere: Settings picks one of six looks. Pattern layers stretch with
+     the document (top/bottom:0) and fade over that full height so they are only
+     gone near the end — a short vh mask left most of a long vault looking empty.
      Accents drive colour where a mode uses colour at all. */
   body[data-atmosphere="spotlight"]{
+    /* Soft glows stay in the viewport on purpose: this mode is a light on the
+       window, not a texture on the page. Dropping attachment earlier let the
+       ellipses vanish into the top of a tall document. */
     background:
-      radial-gradient(125vw 80vh at 12% -25%,color-mix(in srgb,var(--gold) 22%,transparent) 0%,transparent 62%),
-      radial-gradient(105vw 70vh at 92% -18%,color-mix(in srgb,var(--teal) 16%,transparent) 0%,transparent 60%),
-      radial-gradient(90vw 55vh at 50% -30%,#ffffff0a 0%,transparent 58%),
-      var(--bg)}
+      radial-gradient(125vw 80vh at 12% -25%,color-mix(in srgb,var(--gold) 28%,transparent) 0%,transparent 62%),
+      radial-gradient(105vw 70vh at 92% -18%,color-mix(in srgb,var(--teal) 20%,transparent) 0%,transparent 60%),
+      radial-gradient(90vw 55vh at 50% -30%,#ffffff0e 0%,transparent 58%),
+      var(--bg);
+    background-attachment:fixed}
   body[data-atmosphere="spotlight"]::before{content:none}
 
-  /* Aurora washes travel with the masthead too — fixed washes + scrolling cards
-     is the same mismatch Lattice/Stardust had. */
   body[data-atmosphere="aurora"]{background:var(--bg)}
-  body[data-atmosphere="aurora"]::before{content:"";position:absolute;left:0;right:0;top:0;height:min(72vh,720px);
+  body[data-atmosphere="aurora"]::before{content:"";position:absolute;left:0;right:0;top:0;bottom:0;
     z-index:0;pointer-events:none;
     background:
-      radial-gradient(ellipse 70% 65% at 8% -5%,color-mix(in srgb,var(--gold) 38%,transparent) 0%,transparent 70%),
-      radial-gradient(ellipse 65% 60% at 96% 5%,color-mix(in srgb,var(--teal) 32%,transparent) 0%,transparent 68%),
-      radial-gradient(ellipse 55% 45% at 55% -15%,color-mix(in srgb,var(--gold) 12%,transparent) 0%,transparent 65%);
-    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000000cc 42%,#0000 100%);
-    mask-image:linear-gradient(to bottom,#000 0%,#000000cc 42%,#0000 100%)}
+      radial-gradient(ellipse 70% 50vh at 8% 0%,color-mix(in srgb,var(--gold) 38%,transparent) 0%,transparent 70%),
+      radial-gradient(ellipse 65% 45vh at 96% 8%,color-mix(in srgb,var(--teal) 32%,transparent) 0%,transparent 68%),
+      radial-gradient(ellipse 55% 40vh at 55% 0%,color-mix(in srgb,var(--gold) 12%,transparent) 0%,transparent 65%);
+    background-repeat:no-repeat;
+    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 22%,#000000c8 48%,#00000070 72%,#00000030 88%,#0000 97%);
+    mask-image:linear-gradient(to bottom,#000 0%,#000 22%,#000000c8 48%,#00000070 72%,#00000030 88%,#0000 97%)}
 
   /* Quiet film grain + darkened edges — no colour wash, no geometry.
      Vignette stays fixed on the viewport on purpose: it frames the window, not
@@ -106,33 +110,29 @@
   body[data-atmosphere="noir"]::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
     background:radial-gradient(ellipse 78% 68% at 50% 42%,transparent 35%,#000000aa 100%)}
 
-  /* Large soft grid, header-only — technical without chessboarding the cards.
-     Absolute (not fixed): a pattern nailed to the viewport while the cards slide
-     over it is the same odd look the old full-page dots had. */
-  body[data-atmosphere="lattice"]{
-    background:
-      radial-gradient(100vw 60vh at 50% -20%,color-mix(in srgb,var(--gold) 10%,transparent) 0%,transparent 60%),
-      var(--bg)}
-  body[data-atmosphere="lattice"]::before{content:"";position:absolute;left:0;right:0;top:0;height:min(58vh,560px);
+  /* Grid / dots tile the full document; the mask dissolves them slowly. */
+  body[data-atmosphere="lattice"]{background:var(--bg)}
+  body[data-atmosphere="lattice"]::before{content:"";position:absolute;left:0;right:0;top:0;bottom:0;
     z-index:0;pointer-events:none;
     background-image:
+      radial-gradient(100vw 60vh at 50% 0%,color-mix(in srgb,var(--gold) 12%,transparent) 0%,transparent 60%),
       linear-gradient(#ffffff0e 1px,transparent 1px),
       linear-gradient(90deg,#ffffff0e 1px,transparent 1px);
-    background-size:48px 48px;
-    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000000a0 40%,#0000 100%);
-    mask-image:linear-gradient(to bottom,#000 0%,#000000a0 40%,#0000 100%)}
+    background-size:auto,48px 48px,48px 48px;
+    background-repeat:no-repeat,repeat,repeat;
+    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 22%,#000000c8 48%,#00000070 72%,#00000030 88%,#0000 97%);
+    mask-image:linear-gradient(to bottom,#000 0%,#000 22%,#000000c8 48%,#00000070 72%,#00000030 88%,#0000 97%)}
 
-  /* Sparse dots only behind the masthead — travels with the page. */
-  body[data-atmosphere="stardust"]{
-    background:
-      radial-gradient(90vw 50vh at 18% -15%,color-mix(in srgb,var(--gold) 12%,transparent) 0%,transparent 55%),
-      var(--bg)}
-  body[data-atmosphere="stardust"]::before{content:"";position:absolute;left:0;right:0;top:0;height:min(52vh,520px);
+  body[data-atmosphere="stardust"]{background:var(--bg)}
+  body[data-atmosphere="stardust"]::before{content:"";position:absolute;left:0;right:0;top:0;bottom:0;
     z-index:0;pointer-events:none;
-    background-image:radial-gradient(circle at 1px 1px,#ffffff22 1px,transparent 0);
-    background-size:22px 22px;
-    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000000b0 38%,#0000 100%);
-    mask-image:linear-gradient(to bottom,#000 0%,#000000b0 38%,#0000 100%)}
+    background-image:
+      radial-gradient(90vw 50vh at 18% 0%,color-mix(in srgb,var(--gold) 14%,transparent) 0%,transparent 55%),
+      radial-gradient(circle at 1px 1px,#ffffff22 1px,transparent 0);
+    background-size:auto,22px 22px;
+    background-repeat:no-repeat,repeat;
+    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 22%,#000000c8 48%,#00000070 72%,#00000030 88%,#0000 97%);
+    mask-image:linear-gradient(to bottom,#000 0%,#000 22%,#000000c8 48%,#00000070 72%,#00000030 88%,#0000 97%)}
 
   /* Flat — the UI is the design. */
   body[data-atmosphere="void"]{background:var(--bg);background-attachment:fixed}
@@ -1616,7 +1616,7 @@
             <button type="button" role="radio" data-atmosphere="aurora" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="aurora" aria-hidden="true"></span>
               <span class="atm-name">Aurora</span>
-              <span class="atm-tip">Soft colour washes above the cards.</span>
+              <span class="atm-tip">Soft colour washes that fade down the page.</span>
             </button>
             <button type="button" role="radio" data-atmosphere="noir" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="noir" aria-hidden="true"></span>
@@ -1626,12 +1626,12 @@
             <button type="button" role="radio" data-atmosphere="lattice" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="lattice" aria-hidden="true"></span>
               <span class="atm-name">Lattice</span>
-              <span class="atm-tip">A soft grid behind the masthead only.</span>
+              <span class="atm-tip">A soft grid that fades out toward the end of the page.</span>
             </button>
             <button type="button" role="radio" data-atmosphere="stardust" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="stardust" aria-hidden="true"></span>
               <span class="atm-name">Stardust</span>
-              <span class="atm-tip">Sparse dots above the cards — never through them.</span>
+              <span class="atm-tip">Sparse dots that fade out toward the end of the page.</span>
             </button>
             <button type="button" role="radio" data-atmosphere="void" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="void" aria-hidden="true"></span>
