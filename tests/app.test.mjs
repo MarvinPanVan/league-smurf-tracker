@@ -2207,13 +2207,41 @@ test("the modal panels keep every control the app talks to", () => {
   const win = bootApp();
   for (const id of ["sBackend", "sKey", "sModel", "sAuto", "sAutoEvery", "sAutoRanked", "sNotify",
                     "sDiscord", "sVaultPass", "sVaultSet", "sVaultRemove", "sVaultStatus", "sAutoLock",
-                    "sAccent", "sAccent2", "sAccentReset1", "sAccentReset2", "sSave", "sClose"]) {
+                    "sAtmosphere", "sAccent", "sAccent2", "sAccentReset1", "sAccentReset2", "sSave", "sClose"]) {
     const el = win.document.getElementById(id);
     assert.ok(el, `#${id} still exists`);
     assert.ok(win.document.getElementById("settings").contains(el), `#${id} is inside the dialog`);
   }
   assert.ok(win.document.querySelector("#settings [data-close-panel]"), "and the ✕ closer");
   assert.ok(win.document.getElementById("help").contains(win.document.getElementById("bHelpClose")));
+});
+
+test("atmosphere previews live and only sticks after Save", () => {
+  const win = bootApp();
+  const body = win.document.body;
+  const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  assert.equal(body.dataset.atmosphere, "spotlight");
+
+  win.document.getElementById("bSettings").click();
+  win.document.querySelector('#sAtmosphere [data-atmosphere="aurora"]').click();
+  assert.equal(body.dataset.atmosphere, "aurora", "switches for a live compare");
+  assert.equal(cfg().atmosphere, undefined, "nothing written yet");
+
+  win.document.getElementById("sClose").click();
+  assert.equal(body.dataset.atmosphere, "spotlight", "Close puts the saved choice back");
+
+  win.document.getElementById("bSettings").click();
+  win.document.querySelector('#sAtmosphere [data-atmosphere="aurora"]').click();
+  win.document.getElementById("sSave").click();
+  assert.equal(body.dataset.atmosphere, "aurora");
+  assert.equal(cfg().atmosphere, "aurora");
+
+  // default is stored as no preference, same idea as the accent resets
+  win.document.getElementById("bSettings").click();
+  win.document.querySelector('#sAtmosphere [data-atmosphere="spotlight"]').click();
+  win.document.getElementById("sSave").click();
+  assert.equal(body.dataset.atmosphere, "spotlight");
+  assert.equal(cfg().atmosphere, null);
 });
 
 test("the settings body is grouped rather than one flat run of fields", () => {
