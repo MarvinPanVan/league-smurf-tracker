@@ -961,10 +961,9 @@ test("both accents persist, and leaving Settings unsaved puts the previewed colo
 // the two the app ships with, which the resets have to land back on exactly
 const DEFAULT_ACCENT = "#d8b874", DEFAULT_ACCENT2 = "#2ee0c2";
 
-/* Each colour gets its own way back, because "reset both" is no help when one of
-   the two is the one you have ruined. They preview like the pickers do rather than
-   saving on the spot — which is what Reset both used to do, and it made that button
-   the one control in the panel Close could not undo. */
+/* Each colour gets its own way back. They preview like the pickers do rather than
+   saving on the spot — a reset that wrote cfg immediately would be the one control
+   in the panel Close could not undo. */
 test("each accent resets on its own, and a reset is only kept by Save", () => {
   const win = bootApp();
   const read = v => win.document.documentElement.style.getPropertyValue(v).trim().toLowerCase();
@@ -999,23 +998,20 @@ test("each accent resets on its own, and a reset is only kept by Save", () => {
   assert.equal(cfg().accent2, null, "the default is stored as no preference");
   assert.equal(cfg().accent, "#ff0000", "a real choice is still stored as itself");
 
-  // and both at once still works
-  $("bSettings").click();
-  $("sAccentReset").click();
-  assert.equal(read("--gold"), DEFAULT_ACCENT);
-  assert.equal(read("--teal"), DEFAULT_ACCENT2);
+  assert.equal($("sAccentReset"), null, "there is no combined reset — each colour has its own");
 });
 
-/* The panel claimed both colours "preview live while you pick", and they did —
-   on a page sitting behind 7px of blur and 82% dim, where none of it could be
-   seen. The sample is inside the panel, built from the real classes so it needs no
-   code of its own to follow a drag. */
-test("the appearance group carries a sample of the app, out of reach", () => {
+/* The sample used to sit under the swatches, which is exactly where the browser's
+   colour popup opens — so the answer was covered the moment you asked the question.
+   It opens beside the swatches only while a picker is in use, as a miniature of the
+   homepage, built from the real classes so it needs no code of its own to follow a drag. */
+test("picking a colour opens a miniature homepage beside the swatches", () => {
   const win = bootApp();
+  const row = win.document.getElementById("accRow");
   const prev = win.document.getElementById("accPrev");
   assert.ok(prev, "there is a preview");
-  assert.ok(win.document.getElementById("sAccent").closest(".grp").contains(prev),
-    "it lives with the colour pickers, not somewhere else in Settings");
+  assert.ok(row.contains(prev), "it lives with the colour pickers");
+  assert.equal(row.classList.contains("picking"), false, "closed until a colour is being chosen");
 
   // it is a picture of controls, not controls: no clicking, no tabbing, not read out
   assert.equal(prev.hasAttribute("inert"), true);
@@ -1024,10 +1020,17 @@ test("the appearance group carries a sample of the app, out of reach", () => {
     assert.equal(el.getAttribute("tabindex"), "-1", el.textContent || el.type);
   }
 
-  // both accents have to be visible in it, or it answers only half the question
+  win.document.getElementById("bSettings").click();
+  win.document.getElementById("sAccent").focus();
+  assert.equal(row.classList.contains("picking"), true, "focusing a swatch opens it");
+  assert.ok(prev.querySelector(".acc-prev-mark"), "it carries the brand");
+  assert.ok(prev.querySelector(".acc-prev-card"), "and a card from the homepage");
   assert.ok(prev.querySelector(".b-gold"), "something driven by the primary");
   assert.ok(prev.querySelector(".b-teal"), "and something driven by the secondary");
   assert.ok(prev.querySelector(".acc-prev-star"), "favorites are a primary thing");
+
+  win.document.getElementById("sClose").click();
+  assert.equal(row.classList.contains("picking"), false, "closing Settings puts it away");
 });
 
 test("a long Riot ID truncates inside an element that can actually ellipsize", () => {
@@ -2183,7 +2186,7 @@ test("the modal panels keep every control the app talks to", () => {
   const win = bootApp();
   for (const id of ["sBackend", "sKey", "sModel", "sAuto", "sAutoEvery", "sAutoRanked", "sNotify",
                     "sDiscord", "sVaultPass", "sVaultSet", "sVaultRemove", "sVaultStatus", "sAutoLock",
-                    "sAccent", "sAccent2", "sAccentReset", "sSave", "sClose"]) {
+                    "sAccent", "sAccent2", "sAccentReset1", "sAccentReset2", "sSave", "sClose"]) {
     const el = win.document.getElementById(id);
     assert.ok(el, `#${id} still exists`);
     assert.ok(win.document.getElementById("settings").contains(el), `#${id} is inside the dialog`);

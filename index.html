@@ -1090,30 +1090,60 @@
   /* ---- accent preview ----
      A colour swatch shows the colour; it cannot show what the colour does. And the
      page that would have answered that sits behind this panel's backdrop — 7px of
-     blur under 82% dim — which is what "both preview live while you pick" was
-     quietly relying on. So the panel carries a small piece of the app instead.
+     blur under 82% dim. Sitting the sample *under* the pickers was no better: the
+     browser's own colour popup opens over that same spot and covers the answer.
+     So the sample is a miniature of the homepage that opens beside the swatches
+     only while a picker is in use — next to the colour box, not under it.
      Built from the same classes and the same custom properties as the real thing,
      which is the whole trick: applyAccent() sets those properties on :root, so this
      follows every drag of the picker without a line of code behind it.
      inert, so nothing in here can be clicked, tabbed to or read out — it is a
      picture of controls, not controls. */
-  .acc-prev{margin-top:15px;padding:13px 15px;border:1px solid var(--line);
-    border-radius:var(--r-md);background:var(--panel);pointer-events:none;
-    display:flex;flex-direction:column;gap:11px}
-  .acc-prev-h{display:flex;align-items:center;gap:9px}
+  .acc-row{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+  .acc-swatches{display:flex;gap:22px;flex-wrap:wrap;align-items:center;min-width:0}
+  .acc-prev{display:none;width:min(300px,100%);padding:0;border:1px solid var(--line);
+    border-radius:var(--r-md);background:
+      radial-gradient(ellipse 80% 50% at 10% -10%,color-mix(in srgb,var(--gold) 14%,transparent),transparent 55%),
+      radial-gradient(ellipse 60% 40% at 100% 0%,color-mix(in srgb,var(--teal) 10%,transparent),transparent 50%),
+      var(--bg);pointer-events:none;flex-direction:column;overflow:hidden;
+      box-shadow:0 12px 40px -18px #000000a0,inset 0 1px 0 #ffffff0a;
+      animation:accPrevIn .22s cubic-bezier(.22,1,.36,1) both}
+  .acc-row.picking .acc-prev{display:flex}
+  @keyframes accPrevIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+  .acc-prev-top{display:flex;align-items:center;gap:10px;padding:11px 13px;
+    border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--panel) 70%,transparent)}
+  .acc-prev-mark{width:22px;height:22px;border-radius:7px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 26%,transparent),#10131ae6);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 32%,transparent)}
+  .acc-prev-mark i{display:block;width:8px;height:8px;border-radius:2px;transform:rotate(45deg);
+    background:linear-gradient(145deg,var(--star),var(--gold) 55%,var(--gold-mid))}
   .acc-prev-t{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em;text-transform:uppercase;
-    font-size:12.5px;color:var(--gold-txt)}
-  .acc-prev-star{color:var(--star);font-size:15px;line-height:1}
+    font-size:11.5px;color:var(--gold-txt)}
+  .acc-prev-bar{display:flex;gap:6px;padding:10px 13px;flex-wrap:wrap}
+  .acc-prev-bar button{padding:5px 9px;font-size:11px}
+  .acc-prev-card{margin:0 13px 12px;padding:11px 12px;border:1px solid var(--line);
+    border-radius:var(--r-sm);background:var(--panel);
+    box-shadow:inset 0 1px 0 #ffffff08}
+  .acc-prev-card-h{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+  .acc-prev-nm{font-size:13px;font-weight:600;color:var(--text)}
+  .acc-prev-star{color:var(--star);font-size:13px;line-height:1}
   .acc-prev-rk{font-size:12px;color:var(--gold-txt);margin-left:auto}
-  .acc-prev .bar button{padding:6px 11px;font-size:12px}
+  .acc-prev-wl{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .acc-prev-card .bar{gap:6px}
+  .acc-prev-card .bar button{padding:4px 8px;font-size:11px}
   /* the same three declarations as the real focus rule, since an element nobody is
      focusing cannot match :focus */
-  .acc-prev input{width:100%;font-size:12px;padding:7px 10px;
+  .acc-prev-field{padding:0 13px 13px}
+  .acc-prev-field input{width:100%;font-size:11.5px;padding:7px 10px;
     border-color:color-mix(in srgb,var(--teal) 60%,transparent);
     box-shadow:0 0 0 3px color-mix(in srgb,var(--teal) 13%,transparent);
     background-color:var(--panel3)}
   .acc-reset{width:27px;height:27px;padding:0;font-size:13px;color:var(--muted)}
   .acc-reset:hover{color:var(--text)}
+  @media (max-width:620px){
+    .acc-prev{width:100%}
+  }
   /* The viewport's scroll container is the root element, not <body>, so locking
      only <body> leaves the page scrolling behind the modal in most browsers. */
   body.modal-open{overflow:hidden}
@@ -1258,7 +1288,7 @@
     #bulkAdd:not(.hidden),#lock:not(.hidden),
     #moreMenu:not(.hidden),#bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show,
     .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in,.sec-b,
-    .modal::before,.modal:not(.hidden) .mdl{animation:none!important}
+    .modal::before,.modal:not(.hidden) .mdl,.acc-row.picking .acc-prev{animation:none!important}
     .grid>.hx{transition:none}
     .panel-close:hover,.chip:active,.card:hover .c-portrait,.a-login:hover .ico,.acts button:hover .ico,
     .c-drawer:hover .ico{transform:none}
@@ -1450,32 +1480,46 @@
 
       <div class="grp">
         <div class="grp-h">Appearance</div>
-        <div class="hint" style="margin-bottom:12px">Both preview live while you pick, on the sample below — the page itself is behind this panel's blur. Closing without saving puts them back.</div>
-        <div style="display:flex;gap:22px;flex-wrap:wrap;align-items:center">
-          <div style="display:flex;gap:9px;align-items:center">
-            <input type="color" id="sAccent" style="width:44px;padding:2px;height:32px" aria-label="Primary accent color">
-            <span style="font-size:12px;color:var(--muted);line-height:1.4">Primary<br><span style="color:var(--faint)">title, favorites, scrollbar</span></span>
-            <button id="sAccentReset1" class="acc-reset" type="button" title="Back to the default primary" aria-label="Reset the primary color">↺</button>
+        <div class="hint" style="margin-bottom:12px">Click a colour to open a miniature of the homepage beside it — the page itself sits behind this panel's blur. Closing without saving puts them back.</div>
+        <div id="accRow" class="acc-row">
+          <div class="acc-swatches">
+            <div style="display:flex;gap:9px;align-items:center">
+              <input type="color" id="sAccent" style="width:44px;padding:2px;height:32px" aria-label="Primary accent color">
+              <span style="font-size:12px;color:var(--muted);line-height:1.4">Primary<br><span style="color:var(--faint)">title, favorites, scrollbar</span></span>
+              <button id="sAccentReset1" class="acc-reset" type="button" title="Back to the default primary" aria-label="Reset the primary color">↺</button>
+            </div>
+            <div style="display:flex;gap:9px;align-items:center">
+              <input type="color" id="sAccent2" style="width:44px;padding:2px;height:32px" aria-label="Secondary accent color">
+              <span style="font-size:12px;color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login, Refresh, Add, focus rings</span></span>
+              <button id="sAccentReset2" class="acc-reset" type="button" title="Back to the default secondary" aria-label="Reset the secondary color">↺</button>
+            </div>
           </div>
-          <div style="display:flex;gap:9px;align-items:center">
-            <input type="color" id="sAccent2" style="width:44px;padding:2px;height:32px" aria-label="Secondary accent color">
-            <span style="font-size:12px;color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login, Refresh, Add, focus rings</span></span>
-            <button id="sAccentReset2" class="acc-reset" type="button" title="Back to the default secondary" aria-label="Reset the secondary color">↺</button>
+          <div id="accPrev" class="acc-prev" inert aria-hidden="true">
+            <div class="acc-prev-top">
+              <span class="acc-prev-mark" aria-hidden="true"><i></i></span>
+              <span class="acc-prev-t">Smurf Tracker</span>
+            </div>
+            <div class="acc-prev-bar bar">
+              <button class="b-gold" type="button" tabindex="-1">Check all ranks</button>
+              <button class="b-teal" type="button" tabindex="-1">+ Add account</button>
+              <button type="button" tabindex="-1">Refresh</button>
+            </div>
+            <div class="acc-prev-card">
+              <div class="acc-prev-card-h">
+                <span class="acc-prev-nm">Hide on Bush</span>
+                <span class="acc-prev-star">★</span>
+                <span class="acc-prev-rk">Diamond I · 52 LP</span>
+              </div>
+              <div class="acc-prev-wl">190W 215L · 47% WR</div>
+              <div class="bar">
+                <button class="b-teal" type="button" tabindex="-1">Login</button>
+                <button type="button" tabindex="-1">Refresh</button>
+              </div>
+            </div>
+            <div class="acc-prev-field">
+              <input type="text" value="search or filter…" tabindex="-1" readonly>
+            </div>
           </div>
-          <button id="sAccentReset" type="button">Reset both</button>
-        </div>
-        <div id="accPrev" class="acc-prev" inert aria-hidden="true">
-          <div class="acc-prev-h">
-            <span class="acc-prev-t">Smurf Tracker</span>
-            <span class="acc-prev-star">★</span>
-            <span class="acc-prev-rk">Diamond I · 52 LP</span>
-          </div>
-          <div class="bar">
-            <button class="b-gold" type="button" tabindex="-1">Check all ranks</button>
-            <button class="b-teal" type="button" tabindex="-1">+ Add account</button>
-            <button type="button" tabindex="-1">Refresh</button>
-          </div>
-          <input type="text" value="a field while you are typing in it" tabindex="-1" readonly>
         </div>
       </div>
 
@@ -4356,6 +4400,7 @@ function cancelAccentPreview(){clearTimeout(accentTimer);accentTimer=0;accentQue
 // saving has to put the saved colours back.
 function revertAccents(){
   cancelAccentPreview();
+  hideAccPrev();
   applyAccent(cfg.accent||DEFAULT_ACCENT);
   applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
 }
@@ -4734,26 +4779,44 @@ $("sSave").addEventListener("click",async()=>{
   }else if(cfg.notify&&"Notification"in window&&Notification.permission==="denied"){
     cfg.notify=false;$("sNotify").checked=false;toast("Notifications are blocked — allow them in your browser's site settings first");
   }
-  saveCfg();syncLockTimer();$("settings").classList.add("hidden");toast("Settings saved")
+  saveCfg();syncLockTimer();hideAccPrev();$("settings").classList.add("hidden");toast("Settings saved")
 });
 $("sClose").addEventListener("click",closeSettings);
 $("sAccent").addEventListener("input",e=>previewAccent("primary",e.target.value));
 $("sAccent2").addEventListener("input",e=>previewAccent("secondary",e.target.value));
 $("sAccent").addEventListener("change",e=>commitAccent("primary",e.target.value));
 $("sAccent2").addEventListener("change",e=>commitAccent("secondary",e.target.value));
+/* The sample only earns its space while a colour is being chosen — permanently
+   under the swatches it was the first thing the browser's colour popup covered.
+   Beside them, and only then, it stays visible through a drag. */
+function showAccPrev(){$("accRow").classList.add("picking")}
+function hideAccPrev(){$("accRow").classList.remove("picking")}
+let accPrevHide=0;
+function scheduleHideAccPrev(){
+  clearTimeout(accPrevHide);
+  // Opening the native colour popup can blur the input in some browsers; a short
+  // wait keeps the miniature up through the drag instead of flashing off.
+  accPrevHide=setTimeout(()=>{
+    const a=document.activeElement;
+    if(a!==$("sAccent")&&a!==$("sAccent2"))hideAccPrev();
+  },180);
+}
+for(const id of["sAccent","sAccent2"]){
+  $(id).addEventListener("focus",showAccPrev);
+  $(id).addEventListener("click",showAccPrev);
+  $(id).addEventListener("input",showAccPrev);
+  $(id).addEventListener("blur",scheduleHideAccPrev);
+}
 // A reset is a value you have chosen, so it behaves like choosing one: it previews,
-// Save keeps it, Close puts the old one back. Reset both used to write cfg and save
-// on the spot, which quietly made it the one thing in this panel that Close could
-// not undo — reverting reads cfg, and cfg had just been overwritten.
+// Save keeps it, Close puts the old one back.
 function resetAccent(which){
   cancelAccentPreview();
-  const both=which==="both";
-  if(both||which==="primary"){$("sAccent").value=DEFAULT_ACCENT;applyAccent(DEFAULT_ACCENT)}
-  if(both||which==="secondary"){$("sAccent2").value=DEFAULT_ACCENT2;applyAccent2(DEFAULT_ACCENT2)}
+  if(which==="primary"){$("sAccent").value=DEFAULT_ACCENT;applyAccent(DEFAULT_ACCENT)}
+  else{$("sAccent2").value=DEFAULT_ACCENT2;applyAccent2(DEFAULT_ACCENT2)}
+  showAccPrev();
 }
 $("sAccentReset1").addEventListener("click",()=>resetAccent("primary"));
 $("sAccentReset2").addEventListener("click",()=>resetAccent("secondary"));
-$("sAccentReset").addEventListener("click",()=>resetAccent("both"));
 $("sVaultSet").addEventListener("click",async()=>{
   const pass=$("sVaultPass").value;
   if(!pass||pass.length<4){toast("Choose a password with at least 4 characters");return}
