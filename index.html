@@ -5003,11 +5003,10 @@ $("sAccent2").addEventListener("change",e=>commitAccent("secondary",e.target.val
    exactly where that popup opens, so the answer was covered as soon as you asked.
    The native picker is an OS widget (~280×340) that sits on the swatch — the
    miniature has to clear that block, not nestle against the 52px square.
-   The swatch is a toggle: first press opens picker + miniature, second press
-   closes both. Chromium often dismisses the picker (change/blur) before our
-   mousedown runs, so a plain "if preview is showing" check misses and the same
-   click opens the picker again — hence an armed session flag plus a short
-   suppress window that also cancels the following click. */
+   Open on click (same gesture that opens the native dialog), not mousedown —
+   a press-and-drag cancels the click, so the picker stays shut and the miniature
+   must stay shut with it. Close on the next mousedown while armed, with a short
+   suppress so Chromium cannot reopen on the trailing click. */
 let accPrevAnchor=null;
 let accPickerArmed=false;
 let accPrevSuppressUntil=0;
@@ -5089,14 +5088,16 @@ for(const id of["sAccent","sAccent2"]){
     // tick earlier in the same click that was meant to close the picker.
     if(accPickerArmed||$("accPrev").classList.contains("show")){
       closeAccPickerSession(el,e);
-      return;
     }
-    showAccPrev(el); // the press that opens the native picker
+    // else: do not show yet — wait for click, so a press-and-drag that cancels
+    // the native open does not leave the miniature up alone
   },true);
   el.addEventListener("click",e=>{
     if(Date.now()<accPrevSuppressUntil){
-      e.preventDefault();e.stopPropagation();
+      e.preventDefault();e.stopPropagation();return;
     }
+    // A completed click is what opens the native dialog; open the miniature with it.
+    if(!accPickerArmed&&!$("accPrev").classList.contains("show"))showAccPrev(el);
   },true);
   el.addEventListener("input",()=>{if(Date.now()>=accPrevSuppressUntil)showAccPrev(el)});
   // change = the native dialog closed (confirmed). Absorb a same-gesture

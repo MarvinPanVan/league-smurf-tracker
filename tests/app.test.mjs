@@ -1026,8 +1026,13 @@ test("picking a colour opens a miniature homepage beside the colour popup", asyn
   swatch.focus();
   assert.equal(prev.classList.contains("show"), false, "focus alone does not open it");
 
+  // mousedown alone must not open — a press-and-drag cancels the native picker
+  // click, and used to leave the miniature up by itself
   swatch.dispatchEvent(new win.MouseEvent("mousedown", { bubbles: true, cancelable: true }));
-  assert.equal(prev.classList.contains("show"), true, "the press that opens the picker opens it");
+  assert.equal(prev.classList.contains("show"), false, "mousedown alone does not open it");
+
+  swatch.dispatchEvent(new win.MouseEvent("click", { bubbles: true, cancelable: true }));
+  assert.equal(prev.classList.contains("show"), true, "a completed click opens it with the picker");
   // placeAccPrev runs on the next frame
   await new Promise(r => win.requestAnimationFrame(() => win.requestAnimationFrame(r)));
   assert.ok(prev.style.left, "it is positioned on the viewport, not in the form flow");
@@ -1058,7 +1063,7 @@ test("pressing the colour square again closes the miniature and the picker", () 
   const prev = win.document.getElementById("accPrev");
   const swatch = win.document.getElementById("sAccent");
   win.document.getElementById("bSettings").click();
-  swatch.dispatchEvent(new win.MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+  swatch.dispatchEvent(new win.MouseEvent("click", { bubbles: true, cancelable: true }));
   assert.equal(prev.classList.contains("show"), true);
 
   // second press on the same square — must close both, and not reopen the picker
@@ -1080,7 +1085,7 @@ test("a second press still closes after the browser already dismissed the picker
   const swatch = win.document.getElementById("sAccent");
   win.document.getElementById("bSettings").click();
 
-  swatch.dispatchEvent(new win.MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+  swatch.dispatchEvent(new win.MouseEvent("click", { bubbles: true, cancelable: true }));
   assert.equal(prev.classList.contains("show"), true);
 
   // Browser closes the native dialog first (change), then mousedown arrives —
