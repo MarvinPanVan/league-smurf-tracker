@@ -1670,23 +1670,50 @@ test("a narrowed grid always says what narrowed it", async () => {
   assert.equal(win.document.querySelectorAll(".card").length, 2, "and the grid comes back");
 });
 
-// ---- Settings and Help as modal panels ----
+// ---- Settings, Help and the account form as modal panels ----
 
-// They are launched from the header tray and have nothing to do with the grid, so
-// as inline panels they just shoved sixty cards down the page.
-test("Settings and Help open over the page, the account form still opens in it", () => {
+// As inline panels these just shoved sixty cards down the page. The form was the
+// last one left inline, and it is opened from a card's ⋯ menu as often as from the
+// console — so editing an account pushed that very account off the screen.
+test("Settings, Help and the account form all open over the page", () => {
   const win = bootApp(seededAccount());
   const cls = id => win.document.getElementById(id).className;
   assert.match(cls("settings"), /\bmodal\b/);
   assert.match(cls("help"), /\bmodal\b/);
-  // the console's own panels act on the collection right below them and stay put
-  assert.doesNotMatch(cls("form"), /\bmodal\b/);
-  assert.doesNotMatch(cls("bulkAdd"), /\bmodal\b/);
+  assert.match(cls("form"), /\bmodal\b/);
+  assert.doesNotMatch(cls("bulkAdd"), /\bmodal\b/, "bulk add is the one still inline");
 
-  const s = win.document.getElementById("settings");
-  assert.equal(s.getAttribute("role"), "dialog");
-  assert.equal(s.getAttribute("aria-modal"), "true");
-  assert.ok(win.document.getElementById(s.getAttribute("aria-labelledby")), "labelled by a real element");
+  for (const id of ["settings", "help", "form"]) {
+    const el = win.document.getElementById(id);
+    assert.equal(el.getAttribute("role"), "dialog", id);
+    assert.equal(el.getAttribute("aria-modal"), "true", id);
+    assert.ok(win.document.getElementById(el.getAttribute("aria-labelledby")),
+      `${id} is labelled by a real element`);
+  }
+
+  // Save and Cancel are pinned in the footer, outside the part that scrolls —
+  // sixteen fields is taller than a laptop screen.
+  const body = win.document.querySelector("#form .mdl-b");
+  assert.ok(body.contains(win.document.getElementById("fName")), "the fields scroll");
+  assert.equal(body.contains(win.document.getElementById("fSave")), false, "Save does not");
+});
+
+// Behind the backdrop the card being edited is invisible, so the panel itself has
+// to say which account it is holding.
+test("the form's header says whether it is adding or editing, and what", () => {
+  const seed = seededAccount();
+  const win = bootApp(seed);
+  const title = () => win.document.getElementById("formTitle").textContent;
+  const sub = () => win.document.getElementById("formSub").textContent;
+
+  win.document.getElementById("bAdd").click();
+  assert.match(title(), /Add account/i);
+  assert.equal(sub(), "", "nothing to name yet");
+
+  win.openForm(seed[0]);
+  assert.match(title(), /Edit account/i);
+  assert.equal(sub(), "Seeded#1234");
+  assert.equal(win.document.getElementById("fSave").textContent, "Save changes");
 });
 
 // The lock rides a MutationObserver, so it lands on the next microtask rather
@@ -1714,6 +1741,40 @@ test("opening a modal locks the page behind it and releases it again", async () 
   win.document.getElementById("bHelpClose").click();
   await tick();
   assert.equal(locked(), false);
+
+  // the account form is one of these now too
+  win.document.getElementById("bAdd").click();
+  await tick();
+  assert.equal(locked(), true, "the page behind the form is locked as well");
+  assert.equal(win.document.activeElement.id, "fName", "and it lands on the name, not the label");
+  win.document.getElementById("fCancel").click();
+  await tick();
+  assert.equal(locked(), false);
+});
+
+test("the account form closes on Escape and on a press on its backdrop", () => {
+  const hidden = win => win.document.getElementById("form").classList.contains("hidden");
+
+  const a = bootApp(seededAccount());
+  a.document.getElementById("bAdd").click();
+  assert.equal(hidden(a), false);
+  a.document.dispatchEvent(new a.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(hidden(a), true, "Escape closes it");
+
+  const b = bootApp(seededAccount());
+  b.document.getElementById("bAdd").click();
+  const overlay = b.document.getElementById("form");
+  overlay.dispatchEvent(new b.MouseEvent("mousedown", { bubbles: true }));
+  overlay.dispatchEvent(new b.MouseEvent("click", { bubbles: true }));
+  assert.equal(hidden(b), true, "and so does a press that starts and ends on the backdrop");
+
+  // typing in a field must never be mistaken for a press on the way out
+  const c = bootApp(seededAccount());
+  c.document.getElementById("bAdd").click();
+  const name = c.document.getElementById("fName");
+  name.dispatchEvent(new c.MouseEvent("mousedown", { bubbles: true }));
+  c.document.getElementById("form").dispatchEvent(new c.MouseEvent("click", { bubbles: true }));
+  assert.equal(hidden(c), false, "a press that began inside stays open");
 });
 
 test("a modal closes on Escape and on a press that starts and ends on the backdrop", () => {

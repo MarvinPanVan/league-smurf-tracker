@@ -1040,13 +1040,15 @@
   .count a:hover{border-bottom-color:currentColor}
 
   /* ---- modal panels ----
-     Settings and Help are launched from the header tray and have nothing to do
-     with the accounts below them, but as inline panels they shoved the entire
-     grid down the page — open Settings on a full vault and the cards you were
-     looking at are three screens away. They open over the page instead.
-     The account form and bulk add deliberately stay inline: those come from the
-     console and act on the collection directly underneath, so keeping that
-     collection in view is the point. Header tray opens over, console opens in. */
+     As inline panels these shoved the entire grid down the page — open one on a
+     full vault and the cards you were looking at are three screens away. They
+     open over the page instead.
+     The account form was the last one left inline, on the reasoning that it comes
+     from the console and acts on the collection underneath. It doesn't: it is
+     opened just as often from a card's ⋯ menu to edit that card, and pushing the
+     grid down means the account you are editing walks off the screen the moment
+     you start. Sixteen fields is a page of its own either way.
+     Bulk add is the one panel still inline. */
   .modal{position:fixed;inset:0;z-index:60;overflow:auto;overscroll-behavior:contain;
     display:flex;align-items:flex-start;justify-content:center;
     padding:clamp(14px,5vh,60px) clamp(12px,4vw,32px)}
@@ -1124,7 +1126,7 @@
      deferring it would mean .hidden lands a beat after the click, and both the UI
      and the tests read that class straight away. */
   @keyframes panelIn{from{opacity:0;transform:translateY(-10px) scale(.985)}to{opacity:1;transform:none}}
-  #form:not(.hidden),#bulkAdd:not(.hidden),#lock:not(.hidden){
+  #bulkAdd:not(.hidden),#lock:not(.hidden){
     animation:panelIn .3s cubic-bezier(.22,1,.36,1) both}
   /* A modal arrives from further away and settles, rather than sliding down from
      the top edge the way the inline panels do — it is replacing the page's
@@ -1226,7 +1228,7 @@
   @keyframes pop{from{transform:translate(0,0) rotate(0)}to{transform:translate(var(--tx),var(--ty)) rotate(var(--rz));opacity:0}}
   @media (prefers-reduced-motion:reduce){
     .spin,.brand-mark::before,.grid.boot>.hx,.grid.boot .lpc,.hx.flash .lpc,.hx.flash,#toast,.confetti i,
-    #form:not(.hidden),#bulkAdd:not(.hidden),#lock:not(.hidden),
+    #bulkAdd:not(.hidden),#lock:not(.hidden),
     #moreMenu:not(.hidden),#bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show,
     .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in,.sec-b,
     .modal::before,.modal:not(.hidden) .mdl{animation:none!important}
@@ -1458,8 +1460,14 @@
   </div></div>
 
   <!-- add/edit form -->
-  <div id="form" class="hx teal hidden" style="margin-bottom:16px"><div class="hx-in" style="position:relative">
-    <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+  <div id="form" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="formTitle">
+  <div class="mdl hx teal"><div class="hx-in mdl-in" style="position:relative">
+    <div class="mdl-h">
+      <span class="t" id="formTitle">Add account</span>
+      <span class="s" id="formSub"></span>
+      <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+    </div>
+    <div class="mdl-b">
     <div class="formgrid">
       <div class="fld"><label>Label (optional)</label><input id="fLabel" placeholder="e.g. ADC smurf"></div>
       <div class="fld"><label>Region</label>
@@ -1496,12 +1504,14 @@
         </select>
       </div>
       <div class="fld fw"><label>Notes / skins</label><textarea id="fNotes" rows="2" placeholder="e.g. Elementalist Lux, Spirit Blossom Yasuo"></textarea></div>
-      <div class="fw bar">
-        <button id="fSave" class="b-gold">Add account</button>
-        <button id="fCancel">Cancel</button>
-      </div>
     </div>
-  </div></div>
+    </div>
+    <div class="mdl-f">
+      <button id="fSave" class="b-gold">Add account</button>
+      <button id="fCancel">Cancel</button>
+      <span class="sp hint">Everything here stays in this browser.</span>
+    </div>
+  </div></div></div>
 
   <!-- dashboard -->
   <div id="dash"></div>
@@ -4019,8 +4029,14 @@ function openForm(acc){
   $("fTags").value=acc?(acc.tags||[]).join(", "):"";
   $("fNotes").value=acc?acc.notes||"":"";
   $("fSave").textContent=acc?"Save changes":"Add account";
+  $("formTitle").textContent=acc?"Edit account":"Add account";
+  // Which one, in the header: over the page the card being edited is behind the
+  // backdrop, so the panel is the only thing left saying what it is editing.
+  $("formSub").textContent=acc?acc.gameName+"#"+acc.tagLine:"";
   $("form").classList.remove("hidden");
-  $("settings").classList.add("hidden");
+  // Focused before the observer that manages modal focus gets a look in, so it
+  // leaves this alone: the first field is the optional label, and the one you
+  // came here to type is the name.
   $("fName").focus();
 }
 function closeForm(){$("form").classList.add("hidden");editingId=null}
@@ -4442,7 +4458,7 @@ document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListene
 // Driven by an observer rather than by each of the eight places that add or
 // remove .hidden on these two. Wiring it into every call site works right up
 // until the ninth one is added and quietly doesn't lock the page.
-const MODALS=["settings","help","palette"];
+const MODALS=["settings","help","form","palette"];
 let modalReturn=null;
 function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains("hidden"))}
 function syncModals(){
