@@ -1002,16 +1002,15 @@ test("each accent resets on its own, and a reset is only kept by Save", () => {
 });
 
 /* The sample used to sit under the swatches, which is exactly where the browser's
-   colour popup opens — so the answer was covered the moment you asked the question.
-   It opens beside the swatches only while a picker is in use, as a miniature of the
-   homepage, built from the real classes so it needs no code of its own to follow a drag. */
-test("picking a colour opens a miniature homepage beside the swatches", () => {
+   colour popup opens — so the answer was covered the moment you asked. It floats
+   beside the focused swatch as a miniature of the homepage with a card next to it. */
+test("picking a colour opens a miniature homepage beside the colour popup", async () => {
   const win = bootApp();
-  const row = win.document.getElementById("accRow");
   const prev = win.document.getElementById("accPrev");
   assert.ok(prev, "there is a preview");
-  assert.ok(row.contains(prev), "it lives with the colour pickers");
-  assert.equal(row.classList.contains("picking"), false, "closed until a colour is being chosen");
+  assert.equal(win.document.getElementById("settings").contains(prev), true,
+    "it belongs to Settings, outside the scrolling body");
+  assert.equal(prev.classList.contains("show"), false, "closed until a colour is being chosen");
 
   // it is a picture of controls, not controls: no clicking, no tabbing, not read out
   assert.equal(prev.hasAttribute("inert"), true);
@@ -1021,16 +1020,24 @@ test("picking a colour opens a miniature homepage beside the swatches", () => {
   }
 
   win.document.getElementById("bSettings").click();
-  win.document.getElementById("sAccent").focus();
-  assert.equal(row.classList.contains("picking"), true, "focusing a swatch opens it");
+  const swatch = win.document.getElementById("sAccent");
+  swatch.focus();
+  assert.equal(prev.classList.contains("show"), true, "focusing a swatch opens it");
+  // placeAccPrev runs on the next frame
+  await new Promise(r => win.requestAnimationFrame(() => win.requestAnimationFrame(r)));
+  assert.ok(prev.style.left, "it is positioned on the viewport, not in the form flow");
+  assert.ok(prev.querySelector(".acc-prev-home"), "homepage half");
+  assert.ok(prev.querySelector(".acc-prev-card"), "and the card beside it");
   assert.ok(prev.querySelector(".acc-prev-mark"), "it carries the brand");
-  assert.ok(prev.querySelector(".acc-prev-card"), "and a card from the homepage");
   assert.ok(prev.querySelector(".b-gold"), "something driven by the primary");
   assert.ok(prev.querySelector(".b-teal"), "and something driven by the secondary");
   assert.ok(prev.querySelector(".acc-prev-star"), "favorites are a primary thing");
+  // the colour field is the larger hit target next to the reset — reset stays as it is
+  assert.equal(win.getComputedStyle(swatch).width, "52px");
+  assert.equal(win.getComputedStyle(win.document.getElementById("sAccentReset1")).width, "27px");
 
   win.document.getElementById("sClose").click();
-  assert.equal(row.classList.contains("picking"), false, "closing Settings puts it away");
+  assert.equal(prev.classList.contains("show"), false, "closing Settings puts it away");
 });
 
 test("a long Riot ID truncates inside an element that can actually ellipsize", () => {
