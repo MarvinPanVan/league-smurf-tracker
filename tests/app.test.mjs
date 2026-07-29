@@ -1021,11 +1021,20 @@ test("picking a colour opens a miniature homepage beside the colour popup", asyn
 
   win.document.getElementById("bSettings").click();
   const swatch = win.document.getElementById("sAccent");
+  // focus alone must not open it — Chromium returns focus after the native picker
+  // closes, which used to leave the miniature stranded with no picker on screen
   swatch.focus();
-  assert.equal(prev.classList.contains("show"), true, "focusing a swatch opens it");
+  assert.equal(prev.classList.contains("show"), false, "focus alone does not open it");
+
+  swatch.dispatchEvent(new win.MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+  assert.equal(prev.classList.contains("show"), true, "the press that opens the picker opens it");
   // placeAccPrev runs on the next frame
   await new Promise(r => win.requestAnimationFrame(() => win.requestAnimationFrame(r)));
   assert.ok(prev.style.left, "it is positioned on the viewport, not in the form flow");
+  const left = parseFloat(prev.style.left);
+  const swatchRight = swatch.getBoundingClientRect().right;
+  assert.ok(left >= swatchRight + 200,
+    "parked past the native picker block, not flush against the 52px square");
   assert.ok(prev.querySelector(".acc-prev-home"), "homepage half");
   assert.ok(prev.querySelector(".acc-prev-card"), "and the card beside it");
   assert.ok(prev.querySelector(".acc-prev-mark"), "it carries the brand");
@@ -1036,6 +1045,10 @@ test("picking a colour opens a miniature homepage beside the colour popup", asyn
   assert.equal(win.getComputedStyle(swatch).width, "52px");
   assert.equal(win.getComputedStyle(win.document.getElementById("sAccentReset1")).width, "27px");
 
+  // confirming a colour closes the native dialog — the miniature must leave with it
+  swatch.dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert.equal(prev.classList.contains("show"), false, "change means the picker is gone");
+
   win.document.getElementById("sClose").click();
   assert.equal(prev.classList.contains("show"), false, "closing Settings puts it away");
 });
@@ -1045,7 +1058,7 @@ test("pressing the colour square again closes the miniature and the picker", asy
   const prev = win.document.getElementById("accPrev");
   const swatch = win.document.getElementById("sAccent");
   win.document.getElementById("bSettings").click();
-  swatch.focus();
+  swatch.dispatchEvent(new win.MouseEvent("mousedown", { bubbles: true, cancelable: true }));
   assert.equal(prev.classList.contains("show"), true);
 
   // second press on the same square — mousedown is what stops the picker reopening

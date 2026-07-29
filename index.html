@@ -1598,7 +1598,7 @@
 
       <div class="grp">
         <div class="grp-h">Appearance</div>
-        <div class="hint" style="margin-bottom:12px">Click a colour — a miniature of the homepage opens beside the colour popup. Click the square again to close it. Colours and atmosphere preview live; closing without saving puts them back.</div>
+        <div class="hint" style="margin-bottom:12px">Click a colour — a miniature of the homepage opens beside the colour popup (clear of it, not on top of it). It leaves when the popup does. Click the square again to close both. Colours and atmosphere preview live; closing without saving puts them back.</div>
         <div class="acc-swatches">
           <div class="acc-swatch">
             <input type="color" id="sAccent" aria-label="Primary accent color">
@@ -5001,19 +5001,34 @@ $("sAccent").addEventListener("change",e=>commitAccent("primary",e.target.value)
 $("sAccent2").addEventListener("change",e=>commitAccent("secondary",e.target.value));
 /* Floated next to the browser's colour popup. Sitting under the swatches put it
    exactly where that popup opens, so the answer was covered as soon as you asked.
-   Placed against the focused swatch — usually to its right, past where the native
-   picker sits — and only while a colour is being chosen. A second press on the
-   same square puts it all away again (blur closes the browser's popup too). */
+   The native picker is an OS widget (~280×340) that sits on the swatch — the
+   miniature has to clear that block, not nestle against the 52px square.
+   Shown only while the picker is actually up: open on the press that opens it,
+   stay through input drags, leave on change/blur/second-press. Showing on focus
+   alone left it stranded after Escape, because Chromium returns focus to the
+   swatch with the picker already gone. */
 let accPrevAnchor=null;
+const ACC_PICKER_W=280, ACC_PICKER_H=340;
 function placeAccPrev(anchor){
   const prev=$("accPrev");
   if(!anchor||!prev.classList.contains("show"))return;
   const r=anchor.getBoundingClientRect();
-  const pad=12, gap=14;
+  const pad=12, gap=16;
   const w=prev.offsetWidth||560, h=prev.offsetHeight||260;
-  // Prefer just to the right of the swatch — beside the colour popup, not under it.
-  let left=r.right+gap, top=r.top;
-  if(left+w>window.innerWidth-pad)left=Math.max(pad,r.left-w-gap);
+  // Prefer just past the native picker (to its right), never flush to the swatch.
+  let left=r.left+ACC_PICKER_W+gap;
+  let top=r.top;
+  if(left+w>window.innerWidth-pad){
+    // Room on the left of the swatch instead
+    left=Math.max(pad,r.left-w-gap);
+  }
+  if(left+w>window.innerWidth-pad)left=Math.max(pad,window.innerWidth-w-pad);
+  // If we still sit in the picker's horizontal band, drop below (or above) it.
+  const overlapsPickerX=left<r.left+ACC_PICKER_W&&left+w>r.left-4;
+  if(overlapsPickerX){
+    top=r.bottom+ACC_PICKER_H*0.15+gap;
+    if(top+h>window.innerHeight-pad)top=Math.max(pad,r.top-h-gap);
+  }
   if(top+h>window.innerHeight-pad)top=Math.max(pad,window.innerHeight-h-pad);
   if(top<pad)top=pad;
   prev.style.left=Math.round(left)+"px";
@@ -5021,15 +5036,20 @@ function placeAccPrev(anchor){
 }
 function showAccPrev(anchor){
   const prev=$("accPrev");
+  clearTimeout(accPrevHide);
   accPrevAnchor=anchor||null;
   prev.classList.add("show");
   // measure after display:flex so width/height are real
-  requestAnimationFrame(()=>placeAccPrev(anchor||document.activeElement));
+  requestAnimationFrame(()=>placeAccPrev(anchor||accPrevAnchor));
 }
 function hideAccPrev(){
   clearTimeout(accPrevHide);
+  accPrevHide=0;
   accPrevAnchor=null;
-  $("accPrev").classList.remove("show");
+  const prev=$("accPrev");
+  prev.classList.remove("show");
+  prev.style.left="";
+  prev.style.top="";
 }
 let accPrevHide=0;
 function scheduleHideAccPrev(){
@@ -5039,7 +5059,7 @@ function scheduleHideAccPrev(){
   accPrevHide=setTimeout(()=>{
     const a=document.activeElement;
     if(a!==$("sAccent")&&a!==$("sAccent2"))hideAccPrev();
-  },200);
+  },250);
 }
 for(const id of["sAccent","sAccent2"]){
   const el=$(id);
@@ -5048,15 +5068,31 @@ for(const id of["sAccent","sAccent2"]){
       e.preventDefault(); // stop the picker reopening on this press
       hideAccPrev();
       el.blur();
+      return;
     }
+    showAccPrev(el); // the press that opens the native picker
   });
-  el.addEventListener("focus",()=>showAccPrev(el));
   el.addEventListener("input",()=>showAccPrev(el));
+  // change = the native dialog closed (confirmed). Do not wait for blur — Chromium
+  // often keeps focus on the swatch after the picker is already gone.
+  el.addEventListener("change",()=>hideAccPrev());
   el.addEventListener("blur",scheduleHideAccPrev);
 }
 window.addEventListener("resize",()=>{
   if(accPrevAnchor)placeAccPrev(accPrevAnchor);
 });
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&$("accPrev").classList.contains("show"))hideAccPrev();
+});
+// Clicks on the page (not the swatch) mean the native picker is gone — Chromium
+// often leaves focus on the input after Escape, which used to keep the miniature.
+document.addEventListener("pointerdown",e=>{
+  if(!$("accPrev").classList.contains("show"))return;
+  const t=e.target;
+  if(t===$("sAccent")||t===$("sAccent2"))return;
+  if(t&&t.closest&&(t.closest("#sAccentReset1")||t.closest("#sAccentReset2")))return;
+  hideAccPrev();
+},true);
 // A reset is a value you have chosen, so it behaves like choosing one: it previews,
 // Save keeps it, Close puts the old one back.
 function resetAccent(which){
