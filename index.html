@@ -76,14 +76,11 @@
     font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
     font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
     background:var(--bg);background-attachment:fixed}
-  /* Atmosphere: Settings picks one of six looks. Pattern layers stretch with
-     the document (top/bottom:0) and fade over that full height so they are only
-     gone near the end — a short vh mask left most of a long vault looking empty.
-     Accents drive colour where a mode uses colour at all. */
+  /* Atmosphere: Settings picks one of six looks.
+     Spotlight + Aurora = fixed viewport light (stays while you scroll).
+     Lattice + Stardust = page texture that scrolls with the document and fades
+     out near the end. Noir = fixed vignette + grain, no accent colour. */
   body[data-atmosphere="spotlight"]{
-    /* Soft glows stay in the viewport on purpose: this mode is a light on the
-       window, not a texture on the page. Dropping attachment earlier let the
-       ellipses vanish into the top of a tall document. */
     background:
       radial-gradient(125vw 80vh at 12% -25%,color-mix(in srgb,var(--gold) 28%,transparent) 0%,transparent 62%),
       radial-gradient(105vw 70vh at 92% -18%,color-mix(in srgb,var(--teal) 20%,transparent) 0%,transparent 60%),
@@ -92,45 +89,43 @@
     background-attachment:fixed}
   body[data-atmosphere="spotlight"]::before{content:none}
 
-  body[data-atmosphere="aurora"]{background:var(--bg)}
-  body[data-atmosphere="aurora"]::before{content:"";position:absolute;left:0;right:0;top:0;bottom:0;
-    z-index:0;pointer-events:none;
+  /* Same fixed behaviour as Spotlight, but a balanced pair of washes — left and
+     right mirrored — so it does not read as one teal blob and one gold blob. */
+  body[data-atmosphere="aurora"]{
     background:
-      radial-gradient(ellipse 70% 50vh at 8% 0%,color-mix(in srgb,var(--gold) 38%,transparent) 0%,transparent 70%),
-      radial-gradient(ellipse 65% 45vh at 96% 8%,color-mix(in srgb,var(--teal) 32%,transparent) 0%,transparent 68%),
-      radial-gradient(ellipse 55% 40vh at 55% 0%,color-mix(in srgb,var(--gold) 12%,transparent) 0%,transparent 65%);
-    background-repeat:no-repeat;
-    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 22%,#000000c8 48%,#00000070 72%,#00000030 88%,#0000 97%);
-    mask-image:linear-gradient(to bottom,#000 0%,#000 22%,#000000c8 48%,#00000070 72%,#00000030 88%,#0000 97%)}
+      radial-gradient(90vw 70vh at 0% 0%,color-mix(in srgb,var(--gold) 34%,transparent) 0%,transparent 68%),
+      radial-gradient(90vw 70vh at 100% 0%,color-mix(in srgb,var(--teal) 34%,transparent) 0%,transparent 68%),
+      radial-gradient(70vw 50vh at 50% -10%,color-mix(in srgb,var(--gold) 10%,var(--teal) 10%) 0%,transparent 65%),
+      var(--bg);
+    background-attachment:fixed}
+  body[data-atmosphere="aurora"]::before{content:none}
 
-  /* Quiet film grain + darkened edges — no colour wash, no geometry.
-     Vignette stays fixed on the viewport on purpose: it frames the window, not
-     the document. */
-  body[data-atmosphere="noir"]{background:var(--bg);background-attachment:fixed}
+  /* Darkened edges + heavier grain. Easy to miss next to colourful modes — the
+     point is "night", not another wash. */
+  body[data-atmosphere="noir"]{
+    background:
+      radial-gradient(ellipse 70% 55% at 50% 40%,#0c0e14 0%,var(--bg) 72%),
+      var(--bg);
+    background-attachment:fixed}
   body[data-atmosphere="noir"]::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
-    background:radial-gradient(ellipse 78% 68% at 50% 42%,transparent 35%,#000000aa 100%)}
+    background:radial-gradient(ellipse 62% 52% at 50% 38%,transparent 20%,#000000c8 100%)}
 
   /* Grid / dots tile the full document; the mask dissolves them slowly. */
   body[data-atmosphere="lattice"]{background:var(--bg)}
   body[data-atmosphere="lattice"]::before{content:"";position:absolute;left:0;right:0;top:0;bottom:0;
     z-index:0;pointer-events:none;
     background-image:
-      radial-gradient(100vw 60vh at 50% 0%,color-mix(in srgb,var(--gold) 12%,transparent) 0%,transparent 60%),
-      linear-gradient(#ffffff0e 1px,transparent 1px),
-      linear-gradient(90deg,#ffffff0e 1px,transparent 1px);
-    background-size:auto,48px 48px,48px 48px;
-    background-repeat:no-repeat,repeat,repeat;
+      linear-gradient(#ffffff08 1px,transparent 1px),
+      linear-gradient(90deg,#ffffff08 1px,transparent 1px);
+    background-size:48px 48px;
     -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 22%,#000000c8 48%,#00000070 72%,#00000030 88%,#0000 97%);
     mask-image:linear-gradient(to bottom,#000 0%,#000 22%,#000000c8 48%,#00000070 72%,#00000030 88%,#0000 97%)}
 
   body[data-atmosphere="stardust"]{background:var(--bg)}
   body[data-atmosphere="stardust"]::before{content:"";position:absolute;left:0;right:0;top:0;bottom:0;
     z-index:0;pointer-events:none;
-    background-image:
-      radial-gradient(90vw 50vh at 18% 0%,color-mix(in srgb,var(--gold) 14%,transparent) 0%,transparent 55%),
-      radial-gradient(circle at 1px 1px,#ffffff22 1px,transparent 0);
-    background-size:auto,22px 22px;
-    background-repeat:no-repeat,repeat;
+    background-image:radial-gradient(circle at 1px 1px,#ffffff12 1px,transparent 0);
+    background-size:22px 22px;
     -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 22%,#000000c8 48%,#00000070 72%,#00000030 88%,#0000 97%);
     mask-image:linear-gradient(to bottom,#000 0%,#000 22%,#000000c8 48%,#00000070 72%,#00000030 88%,#0000 97%)}
 
@@ -142,7 +137,7 @@
   body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.035;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
   body[data-atmosphere="aurora"]::after{opacity:.045}
-  body[data-atmosphere="noir"]::after{opacity:.07}
+  body[data-atmosphere="noir"]::after{opacity:.11}
   body[data-atmosphere="void"]::after{opacity:.02}
   /* 1220px is a reading measure, and this page stopped being prose a long time
      ago. On a wide screen it forced a sixty-card grid into three columns with
@@ -1616,12 +1611,12 @@
             <button type="button" role="radio" data-atmosphere="aurora" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="aurora" aria-hidden="true"></span>
               <span class="atm-name">Aurora</span>
-              <span class="atm-tip">Soft colour washes that fade down the page.</span>
+              <span class="atm-tip">Stronger mirrored colour washes — stays with the window like Spotlight.</span>
             </button>
             <button type="button" role="radio" data-atmosphere="noir" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="noir" aria-hidden="true"></span>
               <span class="atm-name">Noir</span>
-              <span class="atm-tip">Film grain and a dark vignette — no colour wash.</span>
+              <span class="atm-tip">Darker edges and heavier grain. No accent colour — quiet on purpose.</span>
             </button>
             <button type="button" role="radio" data-atmosphere="lattice" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="lattice" aria-hidden="true"></span>
