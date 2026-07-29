@@ -505,6 +505,91 @@ test("an encrypted vault shows the lock screen on boot, and the right password u
   assert.equal(win2.document.querySelectorAll(".card").length, 1);
 });
 
+// ---- what may write the vault, and when ----
+
+/* relock() drops the password and empties `accounts`, but a rank check already
+   waiting on the network knows nothing about that. It came back afterwards and
+   saved: no password, nothing to save, so a plaintext "[]" went straight over the
+   encrypted envelope. An auto-lock during "Check all ranks" emptied the vault for
+   good — and left it asking for no password, because the lock screen only appears
+   when there is an envelope on disk to unlock. Both ends of check() save, and the
+   guard sits in saveDB(), which is the one thing they have in common. */
+test("a lock in the middle of a check does not let that check overwrite the vault", async () => {
+  const win = bootApp();
+  addRealAccount(win, "Locked", "EUW1");
+  win.document.getElementById("sVaultPass").value = "lockme12345";
+  win.document.getElementById("sVaultSet").click();
+  await until(() => encrypted(win), "the vault to be written encrypted");
+  const envelope = win.localStorage.getItem("smurf-tracker");
+
+  let fail = null;
+  win.fetchViaProxy = () => new Promise((_, rej) => { fail = rej });
+  const inFlight = win.check(win.document.querySelector(".card").dataset.id);
+  await until(() => typeof fail === "function", "the check to reach the network");
+
+  win.relock();
+  assert.equal(win.document.getElementById("lock").classList.contains("hidden"), false, "the vault is locked");
+  fail(new Error("came back too late"));
+  await inFlight;
+
+  assert.equal(encrypted(win), true, "what is on disk is still an envelope");
+  assert.equal(win.localStorage.getItem("smurf-tracker"), envelope, "and byte for byte the same one");
+});
+
+/* Encrypted saves used to overlap, with no order between them: each reads
+   `accounts` and writes it out on opposite sides of a key lookup and AES-GCM, and
+   hardly anything awaits saveDB(). Queued, the one that is already out of date
+   before it starts stops being encrypted at all — which is what this can actually
+   watch, two accounts added in one tick costing one AES-GCM pass instead of two. */
+test("a save that is out of date before it starts is not encrypted at all", async () => {
+  const win = bootApp();
+  win.document.getElementById("sVaultPass").value = "hunter2pass";
+  win.document.getElementById("sVaultSet").click();
+  await until(() => encrypted(win), "the vault to go encrypted");
+
+  const real = win.encryptData;
+  let calls = 0;
+  win.encryptData = (pass, obj) => { calls++; return real(pass, obj) };
+
+  addRealAccount(win, "First", "1111");
+  addRealAccount(win, "Second", "2222");
+  await until(() => calls >= 1, "the vault to be re-encrypted");
+  await new Promise(r => setTimeout(r, 60)); // long enough for a second pass to show up
+
+  assert.equal(calls, 1, "the superseded save encrypts nothing");
+  const back = await win.decryptData("hunter2pass", JSON.parse(win.localStorage.getItem("smurf-tracker")));
+  // joined rather than deep-equal: the array comes out of the jsdom realm, so it
+  // carries a different Array.prototype and fails a strict deep comparison
+  assert.equal(back.map(a => a.gameName).join(", "), "First, Second",
+    "and the one that did run wrote the newer state");
+});
+
+/* saveDB() caught the write failure, toasted, and returned as though it had saved,
+   so every caller went on to its own success message — into the same toast, over
+   the top of the warning. On this path that produced a vault the panel called
+   encrypted while the disk still held the plaintext, with no auto-lock either,
+   since that needs an envelope on disk to lock back to. */
+test("a vault that could not be written does not leave the app claiming a password", async () => {
+  const win = bootApp(undefined, w => {
+    // through the prototype: assigning to localStorage.setItem itself only stores a
+    // value under the key "setItem". boot()'s own storage probe and the settings key
+    // have to keep working, so only the vault is refused.
+    const real = w.Storage.prototype.setItem;
+    w.Storage.prototype.setItem = function (k, v) {
+      if (k === "smurf-tracker") { const e = new Error("quota"); e.name = "QuotaExceededError"; throw e }
+      return real.call(this, k, v);
+    };
+  });
+  win.document.getElementById("sVaultPass").value = "hunter2pass";
+  win.document.getElementById("sVaultSet").click();
+
+  await until(() => /could not write/i.test(win.document.getElementById("toast").textContent),
+    "the failure to be reported");
+  assert.match(win.document.getElementById("sVaultStatus").textContent, /unencrypted/i,
+    "and the panel does not claim otherwise");
+  assert.equal(win.localStorage.getItem("smurf-tracker"), null, "nothing was written");
+});
+
 // ---- op.gg season peak + summoner level ----
 // Both fixtures are shaped like what the proxies actually return: reader-mode
 // markdown (r.jina.ai) and raw tag-dense HTML. The values are the real ones from

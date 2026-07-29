@@ -1771,16 +1771,53 @@ function autoCheckDue(a){
   return Date.now()-a.stats.updatedAt>hrs*3600*1000;
 }
 function storageOK(){try{localStorage.setItem("__t","1");localStorage.removeItem("__t");return true}catch(e){return false}}
-async function saveDB(){
-  if(!hasStorage||previewMode)return;
-  try{
-    if(vaultPassword){
+/* Everything that changes the vault ends in a call to this, and hardly any of the
+   forty callers await it. All three guards below belong here for that reason.
+
+   Locked, because relock() drops the password and empties `accounts` while a rank
+   check may still be waiting on the network. That check resolves afterwards and
+   saves — with no password and nothing left to save — which wrote a plaintext "[]"
+   straight over the encrypted envelope. An auto-lock that landed during "Check all
+   ranks" destroyed the vault, and the app then asked for no password at all,
+   because relock() looks for an envelope on disk and there was none left.
+
+   Serialised, because an encrypted save reads `accounts` and writes it out on
+   opposite sides of a key lookup and AES-GCM. Two of them overlapping have no
+   order between them, so the one that started first can reach setItem last and put
+   its own older snapshot back. Queued end to end there is only one order — and the
+   part that pays for itself, a save that a newer one has already superseded drops
+   out instead of encrypting a state known to be out of date, so two changes in one
+   tick cost one encryption rather than two.
+
+   And it answers, because it used to swallow the error and toast about it, while
+   the caller went on to its own "saved" message — into the same toast, over the
+   top of the warning. */
+let saveSeq=0, saveChain=Promise.resolve();
+function saveDB(){
+  if(!hasStorage||previewMode||vaultLocked())return Promise.resolve(true);
+  // Counted for both kinds of save, so that a plaintext one — removing the password
+  // — also supersedes any encrypted save still queued behind it, which would
+  // otherwise put the envelope back afterwards.
+  const seq=++saveSeq;
+  // Without a password there is nothing to await, so there is nothing to queue
+  // either: this stays written by the time it returns, the way the rest of the app
+  // has always been able to assume of an unencrypted vault.
+  if(!vaultPassword){
+    try{localStorage.setItem(DB_KEY,JSON.stringify(accounts));return Promise.resolve(true)}
+    catch(e){toast("Saving failed — storage error");return Promise.resolve(false)}
+  }
+  saveChain=saveChain.then(async()=>{
+    if(seq!==saveSeq)return true; // superseded while queued; the newer one is next
+    try{
       const envelope=await encryptData(vaultPassword,accounts);
+      // Asked again on the far side: encrypting is the slow part, and both a lock
+      // and a newer save can land inside it.
+      if(vaultLocked()||seq!==saveSeq)return true;
       localStorage.setItem(DB_KEY,JSON.stringify(envelope));
-    }else{
-      localStorage.setItem(DB_KEY,JSON.stringify(accounts));
-    }
-  }catch(e){toast("Saving failed — storage error")}
+      return true;
+    }catch(e){toast("Saving failed — storage error");return false}
+  });
+  return saveChain;
 }
 function saveCfg(){if(!hasStorage)return;try{localStorage.setItem(CFG_KEY,JSON.stringify(cfg))}catch(e){}}
 
@@ -4601,8 +4638,19 @@ $("sVaultSet").addEventListener("click",async()=>{
   const pass=$("sVaultPass").value;
   if(!pass||pass.length<4){toast("Choose a password with at least 4 characters");return}
   if(previewMode){previewMode=false;accounts=[]}
+  const prev=vaultPassword;
   vaultPassword=pass;
-  await saveDB();
+  // If the envelope never reached the disk then the vault there is still the old
+  // one, and claiming otherwise is the worst version of this failure: the panel
+  // says "encrypted", the auto-lock never engages — relock() looks for an envelope
+  // and finds none — and the plaintext everyone believes is now protected sits
+  // exactly where it was.
+  if(!await saveDB()){
+    vaultPassword=prev;
+    updateVaultStatus();
+    toast("Could not write the encrypted vault — the password has not been set");
+    return;
+  }
   $("sVaultPass").value="";
   updateVaultStatus();syncLockTimer();
   toast("Vault password set — remember it, there's no way to recover it if lost");
@@ -4610,8 +4658,16 @@ $("sVaultSet").addEventListener("click",async()=>{
 $("sVaultRemove").addEventListener("click",async()=>{
   if(!vaultPassword){toast("No password is set");return}
   if(!confirm("Remove password protection? Your vault will be saved unencrypted again."))return;
+  const prev=vaultPassword;
   vaultPassword=null;forgetVaultKey();
-  await saveDB();
+  // The same the other way round: a failed write leaves the encrypted vault on the
+  // disk, so protection is still on whatever this panel has been told.
+  if(!await saveDB()){
+    vaultPassword=prev;
+    updateVaultStatus();
+    toast("Could not write the vault — the password is still in place");
+    return;
+  }
   updateVaultStatus();syncLockTimer();
   toast("Password protection removed");
 });
@@ -5238,6 +5294,10 @@ function relock(){
   // The derived key goes with the password: leaving it behind would keep the one
   // thing that opens the vault sitting in memory across a lock.
   vaultPassword=null;forgetVaultKey();accounts=[];
+  // A run has no business carrying on against a vault nobody can read: it finishes
+  // the account it is on and stops, instead of fetching sixty profiles to write
+  // their results into an array that has been emptied.
+  if(run)run.stop=true;
   // Drop every per-card UI state too — otherwise a password that was revealed
   // before the auto-lock would still be on screen after the next unlock.
   [checking,openInfo,openLogin,shownPw,openRank,selected,openMore,openSec].forEach(s=>s.clear());
