@@ -464,17 +464,16 @@
   .atm-mini[data-atm="void"]::after{opacity:.02}
   .atm-name{padding:1px 2px 0;line-height:1.35}
   /* In-flow tip with height/opacity instead of display:none — display cannot
-     ease, so the old one snapped on and off every time the pointer crossed a
-     tile. A short delay both ways stops a skim across the grid from flashing
-     six descriptions in a row. */
+     ease, so the old one snapped on and off. Keep the fade, but open quickly:
+     a long delay felt like lag. */
   .atm-tip{max-height:0;opacity:0;overflow:hidden;margin-top:-5px;padding:0 2px;
     color:var(--faint);font-size:10.5px;font-weight:450;line-height:1.4;
     pointer-events:none;
-    transition:max-height .34s cubic-bezier(.22,1,.36,1),opacity .28s ease,margin-top .28s ease;
-    transition-delay:.16s}
+    transition:max-height .22s cubic-bezier(.22,1,.36,1),opacity .18s ease,margin-top .18s ease;
+    transition-delay:.06s}
   .atm-tile:hover .atm-tip,.atm-tile:focus-visible .atm-tip{
     max-height:4.8em;opacity:1;margin-top:0;padding:0 2px 1px;
-    transition-delay:.12s}
+    transition-delay:.04s}
   @media (prefers-reduced-motion:reduce){
     .atm-tip{transition:none;transition-delay:0s}
   }
