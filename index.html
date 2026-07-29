@@ -84,12 +84,13 @@
       radial-gradient(125vw 80vh at 12% -25%,color-mix(in srgb,var(--gold) 22%,transparent) 0%,transparent 62%),
       radial-gradient(105vw 70vh at 92% -18%,color-mix(in srgb,var(--teal) 16%,transparent) 0%,transparent 60%),
       radial-gradient(90vw 55vh at 50% -30%,#ffffff0a 0%,transparent 58%),
-      var(--bg);
-    background-attachment:fixed}
+      var(--bg)}
   body[data-atmosphere="spotlight"]::before{content:none}
 
-  body[data-atmosphere="aurora"]{background:var(--bg);background-attachment:fixed}
-  body[data-atmosphere="aurora"]::before{content:"";position:fixed;left:0;right:0;top:0;height:min(72vh,720px);
+  /* Aurora washes travel with the masthead too — fixed washes + scrolling cards
+     is the same mismatch Lattice/Stardust had. */
+  body[data-atmosphere="aurora"]{background:var(--bg)}
+  body[data-atmosphere="aurora"]::before{content:"";position:absolute;left:0;right:0;top:0;height:min(72vh,720px);
     z-index:0;pointer-events:none;
     background:
       radial-gradient(ellipse 70% 65% at 8% -5%,color-mix(in srgb,var(--gold) 38%,transparent) 0%,transparent 70%),
@@ -98,18 +99,21 @@
     -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000000cc 42%,#0000 100%);
     mask-image:linear-gradient(to bottom,#000 0%,#000000cc 42%,#0000 100%)}
 
-  /* Quiet film grain + darkened edges — no colour wash, no geometry. */
+  /* Quiet film grain + darkened edges — no colour wash, no geometry.
+     Vignette stays fixed on the viewport on purpose: it frames the window, not
+     the document. */
   body[data-atmosphere="noir"]{background:var(--bg);background-attachment:fixed}
   body[data-atmosphere="noir"]::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
     background:radial-gradient(ellipse 78% 68% at 50% 42%,transparent 35%,#000000aa 100%)}
 
-  /* Large soft grid, header-only — technical without chessboarding the cards. */
+  /* Large soft grid, header-only — technical without chessboarding the cards.
+     Absolute (not fixed): a pattern nailed to the viewport while the cards slide
+     over it is the same odd look the old full-page dots had. */
   body[data-atmosphere="lattice"]{
     background:
       radial-gradient(100vw 60vh at 50% -20%,color-mix(in srgb,var(--gold) 10%,transparent) 0%,transparent 60%),
-      var(--bg);
-    background-attachment:fixed}
-  body[data-atmosphere="lattice"]::before{content:"";position:fixed;left:0;right:0;top:0;height:min(58vh,560px);
+      var(--bg)}
+  body[data-atmosphere="lattice"]::before{content:"";position:absolute;left:0;right:0;top:0;height:min(58vh,560px);
     z-index:0;pointer-events:none;
     background-image:
       linear-gradient(#ffffff0e 1px,transparent 1px),
@@ -118,13 +122,12 @@
     -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000000a0 40%,#0000 100%);
     mask-image:linear-gradient(to bottom,#000 0%,#000000a0 40%,#0000 100%)}
 
-  /* Sparse dots only behind the masthead — the old full-page field, tamed. */
+  /* Sparse dots only behind the masthead — travels with the page. */
   body[data-atmosphere="stardust"]{
     background:
       radial-gradient(90vw 50vh at 18% -15%,color-mix(in srgb,var(--gold) 12%,transparent) 0%,transparent 55%),
-      var(--bg);
-    background-attachment:fixed}
-  body[data-atmosphere="stardust"]::before{content:"";position:fixed;left:0;right:0;top:0;height:min(52vh,520px);
+      var(--bg)}
+  body[data-atmosphere="stardust"]::before{content:"";position:absolute;left:0;right:0;top:0;height:min(52vh,520px);
     z-index:0;pointer-events:none;
     background-image:radial-gradient(circle at 1px 1px,#ffffff22 1px,transparent 0);
     background-size:22px 22px;
@@ -419,15 +422,18 @@
   .seg button.on{background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--gold-txt)}
   .seg button+button{border-left:1px solid var(--line)}
   .seg .ico{width:15px;height:15px}
-  /* Atmosphere picker: six little windows, roughly the size of a colour swatch,
-     so you can see the look before you commit. Tip appears on hover / focus. */
+  /* Atmosphere picker: six little windows. Tip sits in the tile under the name
+     (not a floating box) — absolute tips overflowed the settings body by a few
+     pixels and painted a useless horizontal scrollbar, and they also sat on top
+     of neighbouring labels. */
   .atm-block{margin-top:18px}
   .atm-block .atm-h{font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px}
   .atm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   @media(max-width:520px){.atm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  .atm-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:6px;
+  .atm-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;
     padding:7px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);
     color:var(--muted);font-size:11.5px;font-weight:600;text-align:left;box-shadow:none;
+    overflow:hidden;min-width:0;
     transition:border-color .16s ease,background .16s ease,color .16s ease,box-shadow .16s ease}
   .atm-tile:hover{background:var(--panel3);border-color:var(--line2);color:var(--text)}
   .atm-tile.on{border-color:color-mix(in srgb,var(--gold) 55%,var(--line2));
@@ -435,7 +441,7 @@
     box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 28%,transparent)}
   .atm-tile:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
   .atm-mini{display:block;height:46px;border-radius:7px;border:1px solid #ffffff12;
-    background:var(--bg);overflow:hidden;position:relative;pointer-events:none}
+    background:var(--bg);overflow:hidden;position:relative;pointer-events:none;flex-shrink:0}
   .atm-mini::after{content:"";position:absolute;inset:0;opacity:.04;pointer-events:none;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
   .atm-mini[data-atm="spotlight"]{background:
@@ -461,15 +467,10 @@
     background-size:auto,8px 8px}
   .atm-mini[data-atm="void"]{background:var(--bg)}
   .atm-mini[data-atm="void"]::after{opacity:.02}
-  .atm-name{padding:0 2px;line-height:1.2}
-  .atm-tip{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);
-    width:max(100%,160px);max-width:220px;padding:8px 10px;border-radius:8px;
-    background:#0c0e14f2;border:1px solid var(--line2);color:var(--muted);font-size:11px;font-weight:450;
-    line-height:1.45;text-align:left;box-shadow:var(--sh-2);opacity:0;visibility:hidden;pointer-events:none;
-    z-index:5;transition:opacity .14s ease,visibility .14s ease}
-  .atm-tile:hover .atm-tip,.atm-tile:focus-visible .atm-tip{opacity:1;visibility:visible}
-  /* First row tips flip below so they are not clipped by the modal header */
-  .atm-tile:nth-child(-n+3) .atm-tip{bottom:auto;top:calc(100% + 8px)}
+  .atm-name{padding:1px 2px 0;line-height:1.35}
+  .atm-tip{display:none;padding:0 2px 1px;color:var(--faint);font-size:10.5px;font-weight:450;
+    line-height:1.4}
+  .atm-tile:hover .atm-tip,.atm-tile:focus-visible .atm-tip{display:block}
   /* A run over sixty accounts is minutes long. Where it has got to, which account
      it is on, and how to stop it all have to be on screen the whole time. */
   .runbar{position:relative;height:26px;display:flex;align-items:center;
@@ -1157,7 +1158,7 @@
     font-size:14px;color:var(--gold-txt)}
   .mdl-h .s{font-size:11.5px;color:var(--faint);margin-left:auto;margin-right:34px;
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .mdl-b{flex:1;min-height:0;overflow:auto}
+  .mdl-b{flex:1;min-height:0;overflow:auto;overflow-x:hidden}
   .mdl-f{display:flex;gap:9px;align-items:center;flex-wrap:wrap;flex-shrink:0;
     padding:14px 22px;border-top:1px solid var(--line);background:#0b0e14b8}
   .mdl-f .sp{margin-left:auto}
