@@ -536,6 +536,75 @@ test("a lock in the middle of a check does not let that check overwrite the vaul
   assert.equal(win.localStorage.getItem("smurf-tracker"), envelope, "and byte for byte the same one");
 });
 
+/* Two overlapping checks on the same card: a slow success and a fast failure used
+   to meet in either order. The failure path Object.assigns a note onto whatever
+   stats are there, so a good reading could end up carrying "Auto-fetch failed"
+   forever. Only the latest run may write. */
+test("a check that was superseded cannot overwrite the one that replaced it", async () => {
+  const win = bootApp([{ id: "c1", gameName: "Race", tagLine: "EUW", region: "EUW", status: "active",
+    stats: null, history: [] }]);
+  const id = "c1";
+  let resolveFirst = null, rejectSecond = null;
+  let n = 0;
+  win.fetchViaProxy = () => {
+    const mine = ++n;
+    if (mine === 1) return new Promise(r => { resolveFirst = () => r({
+      found: true, tier: "GOLD", division: "II", lp: 40, wins: 10, losses: 8,
+      level: 30, peak: null, seasons: null, flex: null, champs: null, lpAt: null,
+      icon: null, mmr: null, avgRecent: null, asOf: "test", note: null, updatedAt: Date.now(),
+    }) });
+    return new Promise((_, rej) => { rejectSecond = rej });
+  };
+
+  const first = win.check(id);
+  await until(() => n >= 1, "the first check to reach the network");
+  const second = win.check(id);
+  await until(() => typeof rejectSecond === "function", "the second check to reach the network");
+
+  rejectSecond(new Error("timed out"));
+  await second;
+  resolveFirst();
+  await first;
+
+  const stored = JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.id === id);
+  // the late success must not land either — the second run owned the card, and it failed
+  assert.equal(stored.stats && stored.stats.tier, undefined, "the superseded success wrote nothing");
+  assert.match(stored.stats.note, /Auto-fetch failed/, "the later failure is what stuck");
+});
+
+/* Same race the other way: a failure that started first must not paste its note
+   onto a success that finished after it was superseded. */
+test("a superseded failure cannot paste its note onto a later success", async () => {
+  const win = bootApp([{ id: "c2", gameName: "Race2", tagLine: "EUW", region: "EUW", status: "active",
+    stats: null, history: [] }]);
+  const id = "c2";
+  let rejectFirst = null, resolveSecond = null;
+  let n = 0;
+  win.fetchViaProxy = () => {
+    const mine = ++n;
+    if (mine === 1) return new Promise((_, rej) => { rejectFirst = rej });
+    return new Promise(r => { resolveSecond = () => r({
+      found: true, tier: "PLATINUM", division: "I", lp: 12, wins: 20, losses: 15,
+      level: 50, peak: null, seasons: null, flex: null, champs: null, lpAt: null,
+      icon: null, mmr: null, avgRecent: null, asOf: "test", note: null, updatedAt: Date.now(),
+    }) });
+  };
+
+  const first = win.check(id);
+  await until(() => n >= 1, "first in flight");
+  const second = win.check(id);
+  await until(() => typeof resolveSecond === "function", "second in flight");
+
+  resolveSecond();
+  await second;
+  rejectFirst(new Error("came back too late"));
+  await first;
+
+  const stored = JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.id === id);
+  assert.equal(stored.stats.tier, "PLATINUM");
+  assert.equal(stored.stats.note, null, "the late failure left no note on the good reading");
+});
+
 /* Encrypted saves used to overlap, with no order between them: each reads
    `accounts` and writes it out on opposite sides of a key lookup and AES-GCM, and
    hardly anything awaits saveDB(). Queued, the one that is already out of date
@@ -3154,6 +3223,58 @@ test("Ctrl+K opens quick find, and typing narrows accounts and commands together
 
   win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }));
   assert.ok(pal.classList.contains("hidden"), "and the same key closes it");
+});
+
+/* Focus on Unlock is a BUTTON, so the typing guard does not catch it — f used to
+   flip Favorites under the lock screen, and after unlock the vault looked empty.
+   Ctrl+K in the password field opened Quick find over an empty accounts array. */
+test("shortcuts do nothing on the lock screen", async () => {
+  const win1 = bootApp();
+  addRealAccount(win1, "Hidden", "1");
+  win1.document.getElementById("sVaultPass").value = "lockme12345";
+  win1.document.getElementById("sVaultSet").click();
+  await until(() => encrypted(win1), "encrypted");
+  win1.document.getElementById("sAutoLock").value = "5";
+  win1.document.getElementById("sSave").click();
+  const stored = win1.localStorage.getItem("smurf-tracker");
+  const cfg = win1.localStorage.getItem("smurf-tracker-cfg");
+
+  const win = bootApp(undefined, w => {
+    w.localStorage.setItem("smurf-tracker", stored);
+    if (cfg) w.localStorage.setItem("smurf-tracker-cfg", cfg);
+  });
+  assert.equal(win.document.getElementById("lock").classList.contains("hidden"), false);
+
+  win.document.getElementById("lockBtn").focus();
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "f", bubbles: true }));
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "n", bubbles: true }));
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }));
+
+  assert.ok(win.document.getElementById("palette").classList.contains("hidden"), "Ctrl+K stayed quiet");
+  assert.ok(win.document.getElementById("form").classList.contains("hidden"), "n did not open the form");
+
+  win.document.getElementById("lockPass").value = "lockme12345";
+  win.document.getElementById("lockBtn").click();
+  await until(() => win.document.getElementById("lock").classList.contains("hidden"), "unlock");
+  assert.equal(win.document.getElementById("tFav").getAttribute("aria-pressed"), "false",
+    "and Favorites was not waiting underneath");
+  assert.equal(win.document.querySelectorAll(".card").length, 1);
+});
+
+/* Same while Help is open: / and f used to mutate the page behind the dialog. */
+test("shortcuts do not reach the page behind Help", () => {
+  const win = bootApp(ladderSeed());
+  win.document.getElementById("bHelp").click();
+  assert.equal(win.document.getElementById("help").classList.contains("hidden"), false);
+
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "f", bubbles: true }));
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "/", bubbles: true }));
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "n", bubbles: true }));
+
+  assert.equal(win.document.getElementById("tFav").getAttribute("aria-pressed"), "false");
+  assert.ok(win.document.getElementById("form").classList.contains("hidden"));
+  assert.notEqual(win.document.activeElement, win.document.getElementById("tSearch"),
+    "slash did not steal focus behind the dialog");
 });
 
 test("quick find walks with the arrows and opens with Enter", () => {

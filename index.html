@@ -1740,7 +1740,7 @@ function hasReading(s){return !!(s&&(s.tier||s.level!=null||s.found===false))}
    typed by hand into a freetext box where nothing could count them, filter by
    them, or show them anywhere but inside that one card. */
 function needsAttention(a){return !!a.flagged}
-let checking=new Set(), openInfo=new Set(), openSec=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
+let checking=new Set(), checkGen=new Map(), openInfo=new Set(), openSec=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
 // Which card has its note open, plus the live text. The draft is kept out here
 // on purpose: the grid re-renders wholesale, so a textarea rendered from a.notes
 // would throw away whatever was typed the moment an unrelated card updated.
@@ -3006,11 +3006,18 @@ async function check(id){
   // an account deleted mid-run is not a failed check — but the caller reads the
   // return value as a boolean, so say so rather than returning undefined
   const acc=accounts.find(a=>a.id===id);if(!acc)return true;
+  /* Two clicks, or Refresh while a check-all is already on this card, used to leave
+     both fetches in flight with no idea which finished last. A slow success and a
+     fast failure then met in either order: the failure path Object.assigns a note
+     onto whatever stats are there, so a good reading could end up carrying
+     "Auto-fetch failed" forever. Numbered per account; only the latest run may write. */
+  const gen=(checkGen.get(id)||0)+1;checkGen.set(id,gen);
   checking.add(id);renderCard(id);syncCheckAll();
   let s=null,err="";
   if(cfg.backendUrl){try{s=await fetchViaBackend(acc)}catch(e){err="backend: "+(e.message||"failed")}}
   if(!s&&cfg.apiKey){try{s=await fetchViaClaude(acc)}catch(e){err=err||("api: "+(e.message||"failed"))}}
   if(!s){try{s=await fetchViaProxy(acc)}catch(e){err=err||e.message||"auto-fetch failed"}}
+  if(checkGen.get(id)!==gen)return true; // a newer run owns this card now
   checking.delete(id);
   syncCheckAll();
   if(s){commitStats(id,acc,s);return true}
@@ -3071,7 +3078,6 @@ async function checkAll(ids){
   if(!stop)notify("Check all ranks finished",msg);
 }
 
-// LP moved since the check before last — what "who is climbing right now" means.
 // LP moved since the check before last — what "who is climbing right now" means.
 // Across a season break there is no "moved": the account is on a new ladder, and
 // treating Diamond→Silver as "▼ −900 LP" is exactly the crash that never happened.
@@ -4533,6 +4539,20 @@ $("fGen").addEventListener("click",()=>{
 $("fPass").addEventListener("input",renderPwMeter);
 $("fTogglePass").addEventListener("click",()=>setPassShown($("fPass").classList.contains("mask")));
 document.addEventListener("keydown",e=>{
+  /* The lock screen is a vault nobody can read. Focus on Unlock is a BUTTON, so
+     `typing` is false, and f / n / / used to fire underneath: unlock, and the
+     Favorites filter is on (accounts look "missing") or the add form is open.
+     Ctrl+K in the password field opened Quick find over an empty accounts array
+     and toasted "Nothing in the vault yet". Same idea while Help or Settings is
+     up — the page behind the dialog is not the thing being typed at. */
+  if(vaultLocked()){
+    if(e.key==="Escape")closeAllPanels();
+    return;
+  }
+  if(openModals().some(m=>m.id!=="palette")){
+    if(e.key==="Escape"){closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}}
+    return;
+  }
   const tag=document.activeElement?document.activeElement.tagName:"";
   const typing=tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT";
   // Works while typing, unlike every other shortcut here — Ctrl+K is the one you
@@ -5386,6 +5406,7 @@ function relock(){
   // Drop every per-card UI state too — otherwise a password that was revealed
   // before the auto-lock would still be on screen after the next unlock.
   [checking,openInfo,openLogin,shownPw,openRank,selected,openMore,openSec].forEach(s=>s.clear());
+  checkGen.clear();
   chartRange.clear();
   armedDelete=null;editingId=null;lastSelectedIdx=null;flashId=null;
   // an unsaved note draft is vault content too, and it was surviving the lock
