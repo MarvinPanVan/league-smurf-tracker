@@ -1040,6 +1040,20 @@ test("picking a colour opens a miniature homepage beside the colour popup", asyn
   assert.equal(prev.classList.contains("show"), false, "closing Settings puts it away");
 });
 
+test("pressing the colour square again closes the miniature and the picker", async () => {
+  const win = bootApp();
+  const prev = win.document.getElementById("accPrev");
+  const swatch = win.document.getElementById("sAccent");
+  win.document.getElementById("bSettings").click();
+  swatch.focus();
+  assert.equal(prev.classList.contains("show"), true);
+
+  // second press on the same square — mousedown is what stops the picker reopening
+  swatch.dispatchEvent(new win.MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+  assert.equal(prev.classList.contains("show"), false, "the miniature is gone");
+  assert.notEqual(win.document.activeElement, swatch, "and the swatch is blurred so the picker closes");
+});
+
 test("a long Riot ID truncates inside an element that can actually ellipsize", () => {
   const win = bootApp();
   addRealAccount(win, "aVeryLongSummonerNameIndeed", "EUW123");

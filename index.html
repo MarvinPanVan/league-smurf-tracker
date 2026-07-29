@@ -1496,7 +1496,7 @@
 
       <div class="grp">
         <div class="grp-h">Appearance</div>
-        <div class="hint" style="margin-bottom:12px">Click a colour — a miniature of the homepage opens beside the colour popup. Closing without saving puts them back.</div>
+        <div class="hint" style="margin-bottom:12px">Click a colour — a miniature of the homepage opens beside the colour popup. Click the square again to close it. Closing Settings without saving puts the colours back.</div>
         <div class="acc-swatches">
           <div class="acc-swatch">
             <input type="color" id="sAccent" aria-label="Primary accent color">
@@ -4822,7 +4822,9 @@ $("sAccent2").addEventListener("change",e=>commitAccent("secondary",e.target.val
 /* Floated next to the browser's colour popup. Sitting under the swatches put it
    exactly where that popup opens, so the answer was covered as soon as you asked.
    Placed against the focused swatch — usually to its right, past where the native
-   picker sits — and only while a colour is being chosen. */
+   picker sits — and only while a colour is being chosen. A second press on the
+   same square puts it all away again (blur closes the browser's popup too). */
+let accPrevAnchor=null;
 function placeAccPrev(anchor){
   const prev=$("accPrev");
   if(!anchor||!prev.classList.contains("show"))return;
@@ -4839,12 +4841,14 @@ function placeAccPrev(anchor){
 }
 function showAccPrev(anchor){
   const prev=$("accPrev");
+  accPrevAnchor=anchor||null;
   prev.classList.add("show");
   // measure after display:flex so width/height are real
   requestAnimationFrame(()=>placeAccPrev(anchor||document.activeElement));
 }
 function hideAccPrev(){
   clearTimeout(accPrevHide);
+  accPrevAnchor=null;
   $("accPrev").classList.remove("show");
 }
 let accPrevHide=0;
@@ -4859,14 +4863,19 @@ function scheduleHideAccPrev(){
 }
 for(const id of["sAccent","sAccent2"]){
   const el=$(id);
+  el.addEventListener("mousedown",e=>{
+    if(accPrevAnchor===el&&$("accPrev").classList.contains("show")){
+      e.preventDefault(); // stop the picker reopening on this press
+      hideAccPrev();
+      el.blur();
+    }
+  });
   el.addEventListener("focus",()=>showAccPrev(el));
-  el.addEventListener("click",()=>showAccPrev(el));
   el.addEventListener("input",()=>showAccPrev(el));
   el.addEventListener("blur",scheduleHideAccPrev);
 }
 window.addEventListener("resize",()=>{
-  const a=document.activeElement;
-  if(a===$("sAccent")||a===$("sAccent2"))placeAccPrev(a);
+  if(accPrevAnchor)placeAccPrev(accPrevAnchor);
 });
 // A reset is a value you have chosen, so it behaves like choosing one: it previews,
 // Save keeps it, Close puts the old one back.
