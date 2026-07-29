@@ -1698,18 +1698,24 @@ test("a list row opens from the keyboard", () => {
   }
 });
 
-// The total was computed from a coerced 0 while the label printed the raw value,
-// so a source reporting wins but no losses rendered "10W L".
-test("a missing loss count renders as 0, not as a bare L", () => {
+/* The total was computed from a coerced 0 while the label printed the raw value, so a
+   source reporting wins but no losses rendered "10W L". Coercing both for the display
+   fixed the bare L by inventing the 0 beside it — and a 100% win rate under that. It
+   prints the figure it has and leaves the other one out. */
+test("a missing loss count is left out rather than invented", () => {
   const seed = seededAccount();
   seed[0].stats.wins = 10;
   seed[0].stats.losses = null;
 
   const win = bootApp(seed);
-  assert.match(win.document.querySelector(".wl").textContent, /10W 0L/);
+  const wl = win.document.querySelector(".wl").textContent;
+  assert.match(wl, /10W/);
+  assert.doesNotMatch(wl, /\bL\b/, "no bare L, and no 0L either");
 
   win.document.querySelector('[data-density="list"]').click();
-  assert.match(win.document.querySelector(".rw-wr").textContent, /10W 0L/);
+  const rw = win.document.querySelector(".rw-wr").textContent;
+  assert.match(rw, /10W/);
+  assert.doesNotMatch(rw, /\bL\b/);
 });
 
 // Defaults were spread *under* the file's own fields, so a backup carrying ids
@@ -2578,11 +2584,22 @@ test("no two chart labels in one lane land on the same line", () => {
 test("the ribbon shows the vault's spread and filters when a segment is clicked", () => {
   const win = bootApp(ladderSeed());
   const segs = [...win.document.querySelectorAll(".rib-seg")];
-  assert.equal(segs.length, 11, "ten tiers plus one band for everything unranked");
+  // "Unranked or never checked" was one band for two different things — an answer,
+  // and a job not done yet — which is also the only band that could not show what it
+  // counted when clicked
+  assert.equal(segs.length, 12, "ten tiers, then unranked and never-checked apart");
   assert.equal(segs[0].dataset.tier, "CHALLENGER", "best first, the same order the list sorts in");
-  assert.equal(segs[segs.length - 1].dataset.tier, "UNRANKED");
+  assert.equal(segs[10].dataset.tier, "UNRANKED");
+  assert.equal(segs[11].dataset.flag, "unchecked", "and this one filters the way its stats tile does");
   assert.match(win.document.querySelector(".rib-cap").textContent, /12 accounts across 10 tiers/);
-  assert.match(win.document.querySelector(".rib-cap").textContent, /2 unranked/);
+  assert.match(win.document.querySelector(".rib-cap").textContent, /1 unranked · 1 never checked/);
+
+  segs[10].click();
+  assert.equal(win.document.querySelectorAll(".card").length, 1, "the unranked band shows the one it counted");
+  segs[10].click();
+  win.document.querySelector('.rib-seg[data-flag="unchecked"]').click();
+  assert.equal(win.document.querySelectorAll(".card").length, 1, "and so does the never-checked one");
+  win.document.querySelector('.rib-seg[data-flag="unchecked"]').click();
 
   const master = win.document.querySelector('.rib-seg[data-tier="MASTER"]');
   master.click();
@@ -2592,6 +2609,51 @@ test("the ribbon shows the vault's spread and filters when a segment is clicked"
 
   win.document.querySelector('.rib-seg[data-tier="MASTER"]').click();
   assert.equal(win.document.querySelectorAll(".card").length, 12, "clicking it again clears the filter");
+});
+
+/* The stats panel counts "Unranked" as an answer a check came back with — never
+   checked is a chore, and has a tile of its own right beside it — but the filter
+   behind the gem took every account without a rank, so "Unranked ×1" opened onto two
+   cards. Both now ask the same question. */
+test("the Unranked count and the filter behind it agree", () => {
+  const win = bootApp(ladderSeed());
+  const gem = win.document.querySelector('#dash .gem[data-tier="UNRANKED"]');
+  assert.ok(gem, "the vault has an unranked account, so the gem is there");
+  assert.match(gem.textContent, /×1/, "the never-checked account is not one of these");
+
+  gem.click();
+  assert.equal(win.document.querySelectorAll(".card").length, 1, "and clicking it shows that one");
+  assert.equal(win.document.querySelector(".card").dataset.id, "un");
+
+  // the never-checked account is still reachable, from the tile that counts it
+  gem.click();
+  win.document.querySelector('#dash [data-flag="unchecked"]').click();
+  assert.equal(win.document.querySelectorAll(".card").length, 1);
+  assert.equal(win.document.querySelector(".card").dataset.id, "nv");
+});
+
+/* A blank loss box in ✎ Rank means "not known", which the store keeps and the card
+   used to throw away: five wins and an empty box printed "5W 0L · 100% WR". */
+test("a win rate needs both numbers, and says nothing without them", () => {
+  const win = bootApp([{ id: "w1", gameName: "HalfFilled", tagLine: "EUW", region: "EUW", status: "active",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 40, wins: 5, losses: null, level: 30, updatedAt: Date.now() } }]);
+  const wl = () => win.document.querySelector(".card .wl").textContent;
+  assert.match(wl(), /5W/, "the number that is known still shows");
+  assert.doesNotMatch(wl(), /0L/, "the one that is not is not invented");
+  assert.doesNotMatch(wl(), /%/, "and no rate is worked out from it");
+
+  // both known is the ordinary case, and unchanged
+  const win2 = bootApp([{ id: "w2", gameName: "Filled", tagLine: "EUW", region: "EUW", status: "active",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 40, wins: 6, losses: 4, level: 30, updatedAt: Date.now() } }]);
+  assert.match(win2.document.querySelector(".card .wl").textContent, /6W 4L · 60% WR/);
+
+  // and in the list view, which did the same sum
+  win2.document.querySelector('[data-density="list"]').click();
+  assert.match(win2.document.querySelector(".rw-wr").textContent, /60%/);
+  win.document.querySelector('[data-density="list"]').click();
+  const rw = win.document.querySelector(".rw-wr").textContent;
+  assert.match(rw, /5W/);
+  assert.doesNotMatch(rw, /%/);
 });
 
 // One account is not a distribution; a full-width block of a single colour is a

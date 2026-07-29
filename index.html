@@ -1717,6 +1717,12 @@ function isChecked(a){return !!(a.stats&&a.stats.updatedAt)}
 function isStale(a){return a.status!=="banned"&&(!isChecked(a)||Date.now()-a.stats.updatedAt>STALE_MS)}
 function isRanked(a){const t=a.stats&&a.stats.found!==false&&(a.stats.tier||"").toUpperCase();return !!(t&&t!=="UNRANKED")}
 function isFailed(a){return !!(a.stats&&(a.stats.found===false||a.stats.note))}
+/* "Unranked" is an answer a check came back with, not the absence of one. The stats
+   panel counts it that way on purpose — never-checked accounts are a chore waiting to
+   be done and have a tile of their own — but the filter behind that tile took every
+   account without a rank, never-checked ones included. So "Unranked ×3" filtered the
+   grid down to eight cards, and the two numbers sat one line apart. */
+function isUnrankedAnswer(a){return isChecked(a)&&!isRanked(a)}
 /* Whether a check has ever brought a reading back. A check that fails before one
    has ever succeeded leaves a note behind on an otherwise empty stats object, and
    all three layouts asked "is there a stats object" instead — so the card claimed
@@ -3113,11 +3119,11 @@ function filtered(){
     if(ui.flag==="attention"&&!needsAttention(a))return false;
     if(ui.tier){
       const t=(a.stats&&a.stats.found!==false&&a.stats.tier||"").toUpperCase();
-      if(ui.tier==="UNRANKED"?isRanked(a):t!==ui.tier)return false;
+      if(ui.tier==="UNRANKED"?!isUnrankedAnswer(a):t!==ui.tier)return false;
     }
     if(Q.tier){
       const t=(a.stats&&a.stats.found!==false&&a.stats.tier||"").toUpperCase();
-      if(Q.tier==="UNRANKED"?isRanked(a):t!==Q.tier)return false;
+      if(Q.tier==="UNRANKED"?!isUnrankedAnswer(a):t!==Q.tier)return false;
     }
     if(Q.region&&a.region!==Q.region)return false;
     if(Q.min!=null||Q.max!=null){
@@ -3415,22 +3421,29 @@ function renderRibbon(){
   // Under two accounts there is no distribution to show, only a full-width block
   // of one colour pretending to be information.
   if(pool.length<2){setHTML(el,"");return}
-  const dist={};let other=0;
+  const dist={};let unN=0,neverN=0;
   for(const a of pool){
     if(isRanked(a)){const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1}
-    else other++;
+    else if(isUnrankedAnswer(a))unN++;
+    else neverN++;
   }
   const segs=TIER_ORDER.slice().reverse().filter(t=>dist[t])
     .map(t=>({k:t,n:dist[t],c:TIER_COLORS[t],label:groupLabel(t)}));
-  const tierN=segs.length;   // counted before the unranked segment joins them
-  if(other)segs.push({k:"UNRANKED",n:other,c:TIER_COLORS.UNRANKED,label:"Unranked or never checked"});
+  const tierN=segs.length;   // counted before the two tail segments join them
+  /* The tail was one segment reading "Unranked or never checked", which is two
+     different things: an answer, and a job not done yet. They have separate filters
+     behind them and the stats panel has always counted them apart, so the bar shows
+     them apart too — and either one now shows exactly what it counted when clicked. */
+  if(unN)segs.push({k:"UNRANKED",n:unN,c:TIER_COLORS.UNRANKED,label:"Unranked"});
+  if(neverN)segs.push({flag:"unchecked",n:neverN,c:"var(--faint)",label:"Never checked"});
   if(!segs.length){setHTML(el,"");return}
   const best=pool.filter(isRanked).sort((x,y)=>rankValue(y.stats)-rankValue(x.stats))[0];
-  setHTML(el,`<div class="rib-bar" role="group" aria-label="Accounts by tier">${segs.map(s=>
-      `<button class="rib-seg${ui.tier===s.k?" on":""}" data-tier="${s.k}" style="--c:${s.c};flex:${s.n}"
-        aria-pressed="${ui.tier===s.k}" title="${esc(s.label)} — ${s.n} account${s.n===1?"":"s"} (click to show only these)"
-        aria-label="${esc(s.label)}, ${s.n}"><i>${s.n}</i></button>`).join("")}</div>
-    <div class="rib-cap"><span><b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}${other?` · <b>${other}</b> unranked`:""}</span>`
+  setHTML(el,`<div class="rib-bar" role="group" aria-label="Accounts by tier">${segs.map(s=>{
+      const on=s.flag?ui.flag===s.flag:ui.tier===s.k;
+      return `<button class="rib-seg${on?" on":""}" ${s.flag?`data-flag="${s.flag}"`:`data-tier="${s.k}"`} style="--c:${s.c};flex:${s.n}"
+        aria-pressed="${on}" title="${esc(s.label)} — ${s.n} account${s.n===1?"":"s"} (click to show only these)"
+        aria-label="${esc(s.label)}, ${s.n}"><i>${s.n}</i></button>`}).join("")}</div>
+    <div class="rib-cap"><span><b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}${unN?` · <b>${unN}</b> unranked`:""}${neverN?` · <b>${neverN}</b> never checked`:""}</span>`
     +(best?`<span>best <b style="color:${tierColor(best.stats.tier)}">${esc(shortRank(best.stats))}</b></span>`:"")
     +`</div>`);
 }
@@ -3469,7 +3482,11 @@ function renderDash(){
   // is work waiting to be done; unranked is an answer. They belong apart, and the
   // one that is a chore should not be the quietest thing on the panel.
   const neverN=accounts0.filter(a=>!isChecked(a)).length;
-  const un=accounts0.length-ranked.length-neverN;
+  // Counted directly rather than as "everything left over", which is only the same
+  // number while nothing is both checked and never checked — a CSV import carrying a
+  // tier with no timestamp is both, and made this come out one too low. The filter
+  // behind the tile asks this exact question now, so the two cannot drift apart.
+  const un=accounts0.filter(isUnrankedAnswer).length;
   const staleN=accounts0.filter(a=>a.status!=="banned"&&isStale(a)).length;
   // "over 30d" means a check that happened and has since gone stale. It used to
   // fold never-checked accounts in as well, which double-counts them against the
@@ -3693,16 +3710,22 @@ function rankPanelHTML(a,s,rev){
 // of them. A row is 46 px and puts the same six facts in columns you can read
 // straight down. Clicking one unfolds the chart and the details under it, so
 // nothing is lost — the card view stays for browsing, this is for working.
+/* A blank W or L in the ✎ Rank form is stored as null — not known, as against zero
+   — and both layouts coerced the pair to numbers before dividing. Five wins with the
+   loss box left empty printed as "5W 0L · 100% WR": a record and a rate nobody
+   entered. The figure that is known still shows; the rate waits until there is
+   something to work it out from. */
+function winLoss(s){
+  const w=s&&s.wins!=null?Number(s.wins)||0:null;
+  const l=s&&s.losses!=null?Number(s.losses)||0:null;
+  const total=(w||0)+(l||0);
+  return{w,l,total,wr:(w!=null&&l!=null&&total>0)?Math.round(w/total*100):null};
+}
 function rowHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
   const st=STATUS[a.status]||STATUS.active;
   const open=openInfo.has(a.id);
-  // Coerced once, and printed from these rather than from s.wins/s.losses: a
-  // source that reports wins but no losses used to render "10W L", because the
-  // total was computed from a coerced 0 while the label escaped a raw null.
-  const wins=Number(s&&s.wins)||0, losses=Number(s&&s.losses)||0;
-  const total=s?wins+losses:0;
-  const wr=total>0?Math.round(wins/total*100):null;
+  const {w:wins,l:losses,total,wr}=winLoss(s);
   const dv=lastDelta(a);
   let rank="—",lp="";
   if(isChecking)rank="…";
@@ -3734,7 +3757,8 @@ function rowHTML(a,i){
         ||(!isChecked(a)&&!isChecking?`<button class="rw-check" data-act="check" title="Check this account's rank now">${icon("refresh")} Check</button>`:"")}</span>
       <span class="rw-rank" style="color:${col}"><b>${esc(rank)}</b>${lp?`<em>${esc(lp)}</em>`:""}</span>
       <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${Math.abs(dv)}</span>`:""}</span>
-      <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wins}W ${losses}L</em>`:""}</span>
+      <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wins}W ${losses}L</em>`
+        :total>0?`<em>${wins!=null?wins+"W":losses+"L"}</em>`:""}</span>
       <span class="rw-rg">${esc(a.region)}</span>
       <span class="rw-up${isStale(a)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
@@ -3809,11 +3833,10 @@ function cardHTML(a,i){
     if(dv)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
   }
   if(isClimbing(hist))deltaChip+='<span class="delta d-up" title="LP has gone up 3 checks in a row">🔥 Climbing</span>';
-  // see rowHTML: the printed figures have to be the coerced ones, or a missing
-  // loss count renders as a bare "L" next to a real win count
-  const wins=Number(s&&s.wins)||0, losses=Number(s&&s.losses)||0;
-  const total=s?wins+losses:0;
-  const wr=total>0?Math.round(wins/total*100):null;
+  const {w:wins,l:losses,total,wr}=winLoss(s);
+  // whichever of the two is known — printing both from coerced numbers is what put
+  // an invented "0L" beside a real win count
+  const wlTxt=[wins!=null?`<b>${wins}W</b>`:"",losses!=null?`<b>${losses}L</b>`:""].filter(Boolean).join(" ");
   const dpm="https://dpm.lol/"+encodeURIComponent(a.gameName)+"-"+encodeURIComponent(a.tagLine);
   const opgg="https://op.gg/lol/summoners/"+(REGIONS[a.region]||REGIONS.EUW).opgg+"/"+encodeURIComponent(a.gameName)+"-"+encodeURIComponent(a.tagLine);
   // Tier and LP are rendered separately so the tier can carry the card's type scale
@@ -3834,7 +3857,7 @@ function cardHTML(a,i){
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
     <div class="wl">${s.level>=30?"Unranked this season":"Not level 30 yet"}</div>`;
   else rankBlock=`<div class="rk" style="color:${col}">${isRanked(a)?crest(s.tier,"rk-crest"):""}<span class="rk-t">${esc(tierTxt||"Unranked")}</span>${lpTxt?`<span class="rk-lp">${esc(lpTxt)}</span>`:""}</div>
-    <div class="wl">${total>0?`<b>${wins}W</b> <b>${losses}L</b> · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:"No ranked games found"}</div>`;
+    <div class="wl">${total>0?wlTxt+(wr!==null?` · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:""):"No ranked games found"}</div>`;
   // Peak / Level / MMR are unrelated facts — label them instead of running them
   // together in one muted sentence.
   const microStats=[];
@@ -4985,6 +5008,10 @@ $("count").addEventListener("click",e=>{
   ui.flag=ui.flag===b.dataset.flag?"":b.dataset.flag;render();
 });
 $("ribbon").addEventListener("click",e=>{
+  // the never-checked band filters by flag, the way the stats tile for the same
+  // accounts does — every other band is a tier
+  const flag=e.target.closest("[data-flag]");
+  if(flag){ui.flag=ui.flag===flag.dataset.flag?"":flag.dataset.flag;render();return}
   const seg=e.target.closest("[data-tier]");if(!seg)return;
   ui.tier=ui.tier===seg.dataset.tier?"":seg.dataset.tier;
   render();
