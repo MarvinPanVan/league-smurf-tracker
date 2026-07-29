@@ -1107,6 +1107,8 @@
      shout at a sentence fragment */
   .src{font-size:10px;font-weight:500;letter-spacing:.01em;color:var(--faint);
     padding:2px 8px;border-radius:999px;background:#ffffff0a;border:1px solid #ffffff0f;white-space:nowrap}
+  .src.played{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 35%,transparent);
+    background:color-mix(in srgb,var(--teal) 12%,transparent)}
   .acts{display:flex;gap:5px;flex-wrap:wrap}
   .acts button,.acts a{font-size:11.5px;padding:6px 10px;text-decoration:none}
   /* DPM and OP.GG are the same kind of thing — an outbound profile link — so they
@@ -1504,9 +1506,9 @@
     <div class="mdl-b" style="padding:22px;font-size:13px;color:var(--muted);line-height:1.8">
     <b style="color:var(--text)">Your data stays here.</b> Accounts are saved in this browser on this device — nothing gets uploaded. Clearing browser data wipes the vault, so use <b style="color:var(--text)">Export</b> for backups and <b style="color:var(--text)">Import</b> to restore or merge them.<br>
     <b style="color:var(--text)">Rank checks are free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b style="color:var(--text)">Rank</b> in a card's ⋯ menu to enter it by hand — history, the chart and the stats all work the same either way.<br>
-    <b style="color:var(--text)">Tips:</b> the bar across a card's bottom edge opens <b style="color:var(--text)">Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · search matches names, tags, even ranks (try "gold"), and every word you add narrows it further · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
+    <b style="color:var(--text)">Tips:</b> the bar across a card's bottom edge opens <b style="color:var(--text)">Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · <b style="color:var(--text)">Play today</b> (or <b style="color:var(--text)">p</b>) queues the accounts worth playing and sinks ones you stamp with <b style="color:var(--text)">Mark played</b> · search matches names, tags, even ranks (try "gold"), and every word you add narrows it further · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
     <b style="color:var(--text)">Quick find:</b> <b style="color:var(--text)">Ctrl+K</b> (or ⌘K) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.<br>
-    <b style="color:var(--text)">Search operators:</b> beyond plain words the search box takes <b style="color:var(--text)">tier:diamond</b>, <b style="color:var(--text)">region:euw</b>, <b style="color:var(--text)">&gt;plat</b> and <b style="color:var(--text)">&lt;gold</b> for "at least" and "below" (<b style="color:var(--text)">&lt;=gold</b> takes Gold with it), and <b style="color:var(--text)">is:</b> stale · never · flagged · banned · fav · goal. They combine, so <b style="color:var(--text)">&gt;diamond is:stale</b> is one query.<br>
+    <b style="color:var(--text)">Search operators:</b> beyond plain words the search box takes <b style="color:var(--text)">tier:diamond</b>, <b style="color:var(--text)">region:euw</b>, <b style="color:var(--text)">&gt;plat</b> and <b style="color:var(--text)">&lt;gold</b> for "at least" and "below" (<b style="color:var(--text)">&lt;=gold</b> takes Gold with it), and <b style="color:var(--text)">is:</b> stale · never · flagged · banned · fav · goal · played · cold. They combine, so <b style="color:var(--text)">&gt;diamond is:stale</b> is one query.<br>
     <b style="color:var(--text)">Three layouts:</b> cards for browsing, the list for working through the vault a row at a time, and the wall for seeing all sixty at once — click any tile to land back on that account's card.<br>
     <b style="color:var(--text)">Goals:</b> set a target rank in a card's <b style="color:var(--text)">Rank</b> panel and the card grows a rail showing how far there is left, plus a rough estimate once there's a fortnight of checks to work from.<br>
     <b style="color:var(--text)">Extra privacy:</b> set a master password in <b style="color:var(--text)">Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.<br>
@@ -1805,6 +1807,7 @@
     <select id="tStatus">
       <option value="">All statuses</option>
     </select>
+    <button id="tPlay" aria-pressed="false" title="Accounts worth playing today, ordered as a queue">Play today</button>
     <button id="tFav" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Favorites</button>
     <button id="tArchived" aria-pressed="false" title="Show archived accounts instead of active ones">Archived</button>
     <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;padding:0 4px">
@@ -1941,7 +1944,7 @@ let cfg={apiKey:"",model:"claude-sonnet-5",autoCheck:false,backendUrl:""};
 const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"claude-sonnet-5","claude-3-5-sonnet":"claude-sonnet-5"};
 // Only Sonnet 5 supports the newer dynamic-filtering web search; Haiku needs the basic one.
 const WEB_SEARCH_TOOL={"claude-sonnet-5":"web_search_20260209","claude-haiku-4-5":"web_search_20250305"};
-let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArchived:false,
+let ui={search:"",region:"",tag:null,favOnly:false,playToday:false,sort:"rank",status:"",showArchived:false,
   flag:"",   // "" | "stale" | "unchecked" | "failed" — the states you actually go looking for
   tier:"",   // a single tier, or "UNRANKED"; set by clicking the rank spread
   density:"cards"};
@@ -1974,6 +1977,29 @@ function hasReading(s){return !!(s&&(s.tier||s.level!=null||s.found===false))}
    typed by hand into a freetext box where nothing could count them, filter by
    them, or show them anywhere but inside that one card. */
 function needsAttention(a){return !!a.flagged}
+/* Play Today is a stamp you set by hand after a session — not inferred from
+   opening Login (that stays lastLoginAt) and not from a rank check. Same local
+   calendar day, so "today" means your clock, not UTC. */
+function sameLocalDay(t,now=Date.now()){
+  const a=new Date(t),b=new Date(now);
+  return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
+}
+function playedToday(a){return !!(a.lastPlayedAt&&sameLocalDay(a.lastPlayedAt))}
+function isPlayable(a){return !a.archived&&a.status!=="banned"&&(a.status||"active")!=="resting"}
+function playCold(a){return isPlayable(a)&&(!a.lastPlayedAt||Date.now()-a.lastPlayedAt>7*24*3600*1000)}
+function playQueueCmp(x,y){
+  const fx=needsAttention(x)?1:0,fy=needsAttention(y)?1:0;
+  if(fy!==fx)return fy-fx;
+  const px=playedToday(x)?1:0,py=playedToday(y)?1:0;
+  if(px!==py)return px-py;
+  if(!px&&!py){
+    const cx=playCold(x)?1:0,cy=playCold(y)?1:0;
+    if(cy!==cx)return cy-cx;
+  }
+  const fav=(y.fav?1:0)-(x.fav?1:0);
+  if(fav)return fav;
+  return (x.lastPlayedAt||0)-(y.lastPlayedAt||0);
+}
 let checking=new Set(), checkGen=new Map(), openInfo=new Set(), openSec=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
 // Which card has its note open, plus the live text. The draft is kept out here
 // on purpose: the grid re-renders wholesale, so a textarea rendered from a.notes
@@ -3353,7 +3379,7 @@ function lastDelta(a){
 /* Sixty accounts is the point where "type some letters and see what sticks" stops
    being enough. The operators are the filters that already exist in the toolbar,
    reachable without leaving the keyboard:
-     tier:diamond   region:euw   is:stale|never|flagged|banned|fav|goal
+     tier:diamond   region:euw   is:stale|never|flagged|banned|fav|goal|played|cold
      >plat  >=plat  <gold  <=gold      (rank at least / below)
    Anything not recognised as an operator stays a plain search term, so a stray
    colon in a note never silently swallows the rest of the query. */
@@ -3372,7 +3398,7 @@ function parseQuery(q){
       if(r){out.region=r;continue}
     }
     if((m=/^is:(.+)$/.exec(tok))){
-      if(["stale","never","flagged","banned","fav","goal"].includes(m[1])){out.is.push(m[1]);continue}
+      if(["stale","never","flagged","banned","fav","goal","played","cold"].includes(m[1])){out.is.push(m[1]);continue}
     }
     if((m=/^(>=|>|<=|<)(.+)$/.exec(tok))){
       const t=TIER_ORDER.find(x=>x.toLowerCase().startsWith(m[2]));
@@ -3395,6 +3421,7 @@ function filtered(){
   let list=accounts.filter(a=>{
     if(a.archived&&!ui.showArchived)return false;
     if(ui.showArchived&&!a.archived)return false;
+    if(ui.playToday&&!isPlayable(a))return false;
     if(ui.favOnly&&!a.fav)return false;
     if(ui.region&&a.region!==ui.region)return false;
     if(ui.status&&(a.status||"active")!==ui.status)return false;
@@ -3425,6 +3452,8 @@ function filtered(){
       if(f==="banned"&&a.status!=="banned")return false;
       if(f==="fav"&&!a.fav)return false;
       if(f==="goal"&&!(a.goal&&a.goal.tier))return false;
+      if(f==="played"&&!playedToday(a))return false;
+      if(f==="cold"&&!playCold(a))return false;
     }
     if(Q.terms.length){
       const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,a.createdOn,a.birthdate,
@@ -3438,6 +3467,7 @@ function filtered(){
     }
     return true;
   });
+  if(ui.playToday){list.sort(playQueueCmp);return list}
   const by={
     rank:(x,y)=>rankValue(y.stats)-rankValue(x.stats),
     name:(x,y)=>(x.label||x.gameName).localeCompare(y.label||y.gameName),
@@ -3781,6 +3811,8 @@ function renderDash(){
   const bannedN=accounts0.filter(a=>a.status==="banned").length;
   const attentionN=accounts0.filter(needsAttention).length;
   const archivedN=accounts.length-accounts0.length;
+  const readyN=accounts0.filter(a=>isPlayable(a)&&!playedToday(a)).length;
+  const playableN=accounts0.filter(isPlayable).length;
   let bk="";
   if(hasStorage){
     if(!cfg.lastExport)bk="No backup yet — hit Export once your accounts are in.";
@@ -3807,6 +3839,9 @@ function renderDash(){
     <div class="stat"><div class="k">Season W/L</div><div class="v">${W}W ${L}L <small>· ${wr} WR</small></div>
       <div class="s-note">from ${pool.length} counted account${pool.length===1?"":"s"}</div></div>
     <div class="stat"><div class="k">Regions</div><div class="v" style="font-size:14px">${esc(regTxt)||"—"}</div></div>
+    ${playableN?`<button class="stat stat-b${ui.playToday?" on":""}" data-play-today aria-pressed="${ui.playToday}"><div class="k">Ready today</div>
+      <div class="v"${readyN?' style="color:var(--teal-txt)"':""}>${readyN}</div>
+      <div class="s-note">${readyN?readyN+" still to play · click for the queue":"all playable accounts already stamped today"}</div></button>`:""}
     ${neverN?`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
       <div class="v" style="color:var(--gold-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`:""}
     ${attentionN?`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
@@ -3840,6 +3875,7 @@ function renderChips(){
   if(ui.flag)out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
   if(ui.tier)out.push(["tier",ui.tier==="UNRANKED"?"Unranked":ui.tier.charAt(0)+ui.tier.slice(1).toLowerCase()]);
   if(ui.tag)out.push(["tag","Tag: "+ui.tag]);
+  if(ui.playToday)out.push(["playToday","Play today"]);
   if(ui.favOnly)out.push(["favOnly","Favorites"]);
   if(ui.search)out.push(["search",'"'+ui.search+'"']);
   setHTML($("chips"),!out.length?"":out.map(([k,label])=>
@@ -4060,6 +4096,7 @@ function rowHTML(a,i){
         <button data-act="rank">${icon("pencil")} Rank</button>
         <button data-act="edit">Edit</button>
         ${a.archived?'<button data-act="unarchive">Unarchive</button>':'<button data-act="archive">Archive</button>'}
+        <button data-act="played">${playedToday(a)?"Clear played today":"Mark played"}</button>
         <button data-act="del" class="b-danger">${armedDelete===a.id?"Sure?":"Delete"}</button>
       </div>
       ${openLogin.has(a.id)?`<div class="login">
@@ -4243,18 +4280,20 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&s.asOf?` title="Read from ${esc(s.asOf)}"`:""}>${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
+      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&s.asOf?` title="Read from ${esc(s.asOf)}"`:""}>${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastPlayedAt?`<span class="src${playedToday(a)?" played":""}" title="The last time you marked this account as played">Played ${esc(timeAgo(a.lastPlayedAt))}</span>`:""}${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
       <div class="acts">
         <button data-act="login" class="a-login" title="Show saved login">${icon("user")} ${loginOpen?"Hide login":"Login"}</button>
         <a class="a-dpm" href="${dpm}" target="_blank" rel="noreferrer">DPM ↗</a>
         <a class="btn" href="${opgg}" target="_blank" rel="noreferrer">OP.GG ↗</a>
         <button data-act="check" ${isChecking?"disabled":""} style="color:var(--teal-txt)">${isChecking?"…":icon("refresh")+" Refresh"}</button>
+        ${ui.playToday?`<button data-act="played" title="${playedToday(a)?"Clear the played-today stamp":"Mark that you played on this account"}">${playedToday(a)?"Clear played":"Played"}</button>`:""}
         <button data-act="more" title="More actions" aria-label="More actions">⋯</button>
       </div>
       ${openMore.has(a.id)?`<div class="acts${rv("more")}">
         <button data-act="rank" title="Enter rank manually">${icon("pencil")} Rank</button>
         <button data-act="edit">Edit</button>
         ${a.archived?'<button data-act="unarchive">Unarchive</button>':'<button data-act="archive">Archive</button>'}
+        <button data-act="played" title="Stamp this account as played today — it sinks in the Play today queue">${playedToday(a)?"Clear played today":"Mark played"}</button>
         <button data-act="flag" title="Mark this account as needing a look — it gets a marker and its own filter">${a.flagged?"Clear the flag":"Flag for attention"}</button>
         <button data-act="exstats" title="Leave this account out of the combined stats at the top">${a.excludeStats?"Count in stats":"Exclude from stats"}</button>
         <button data-act="del" class="b-danger" ${armedDelete===a.id?'style="border-color:var(--danger)"':""}>${armedDelete===a.id?"Sure?":"Delete"}</button>
@@ -4842,6 +4881,7 @@ document.addEventListener("keydown",e=>{
   if(e.key==="/"&&!typing){e.preventDefault();$("tSearch").focus()}
   if(e.key==="n"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();openForm(null)}
   if(e.key==="f"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$("tFav").click()}
+  if(e.key==="p"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$("tPlay").click()}
   if(e.key==="Escape"){closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}}
 });
 // mousemove alone fires a hundred times a second while the pointer is moving, and
@@ -5228,13 +5268,14 @@ $("tStatus").addEventListener("change",e=>{ui.status=e.target.value;renderGrid()
 // One place that puts the two toolbar toggles in step with the state they stand
 // for, rather than three copies of the same pair of style assignments.
 function syncToggles(){
-  for(const[id,on]of[["tFav",ui.favOnly],["tArchived",ui.showArchived]]){
+  for(const[id,on]of[["tFav",ui.favOnly],["tPlay",ui.playToday],["tArchived",ui.showArchived]]){
     const b=$(id);
     b.classList.toggle("on",!!on);
     b.setAttribute("aria-pressed",on?"true":"false");
   }
 }
 $("tFav").addEventListener("click",()=>{ui.favOnly=!ui.favOnly;syncToggles();renderFilters()});
+$("tPlay").addEventListener("click",()=>{ui.playToday=!ui.playToday;syncToggles();renderFilters()});
 $("tArchived").addEventListener("click",()=>{ui.showArchived=!ui.showArchived;syncToggles();render()});
 $("bDashToggle").addEventListener("click",()=>{
   cfg.dashCollapsed=!cfg.dashCollapsed;
@@ -5431,7 +5472,7 @@ function runPalette(i){
   // actually show it, and light it up so it is obvious which one you landed on.
   const id=it.a.id;
   if(ui.density==="wall"){ui.density="cards";cfg.density="cards";saveCfg()}
-  ui.search="";ui.tier="";ui.flag="";ui.tag=null;ui.favOnly=false;
+  ui.search="";ui.tier="";ui.flag="";ui.tag=null;ui.favOnly=false;ui.playToday=false;
   if(it.a.archived)ui.showArchived=true;
   $("tSearch").value="";syncToggles();
   flashId=id;render();
@@ -5467,6 +5508,8 @@ $("ribbon").addEventListener("click",e=>{
 });
 $("dash").addEventListener("click",e=>{
   // every count answers "how many"; clicking it answers "which ones"
+  const play=e.target.closest("[data-play-today]");
+  if(play){ui.playToday=!ui.playToday;syncToggles();render();return}
   const flag=e.target.closest("[data-flag]");
   if(flag){ui.flag=ui.flag===flag.dataset.flag?"":flag.dataset.flag;render();return}
   const tier=e.target.closest("[data-tier]");
@@ -5475,9 +5518,10 @@ $("dash").addEventListener("click",e=>{
 $("chips").addEventListener("click",e=>{
   const b=e.target.closest("[data-clear]");if(!b)return;
   const k=b.dataset.clear;
-  if(k==="all")Object.assign(ui,{flag:"",tier:"",tag:null,favOnly:false,search:""});
+  if(k==="all")Object.assign(ui,{flag:"",tier:"",tag:null,favOnly:false,playToday:false,search:""});
   else if(k==="tag")ui.tag=null;
   else if(k==="favOnly")ui.favOnly=false;
+  else if(k==="playToday")ui.playToday=false;
   else ui[k]="";
   if(!ui.search)$("tSearch").value="";
   syncToggles();
@@ -5650,6 +5694,11 @@ $("grid").addEventListener("click",async e=>{
   else if(act==="copybirth")copyText(acc.birthdate,"Date of birth");
   else if(act==="flag"){acc.flagged=!acc.flagged;saveDB();render();
     toast(acc.flagged?"Flagged — it's under Needs attention now":"Flag cleared")}
+  else if(act==="played"){
+    if(playedToday(acc)){delete acc.lastPlayedAt;toast("Cleared played today")}
+    else{acc.lastPlayedAt=Date.now();toast("Marked as played today")}
+    saveDB();render();
+  }
   else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderCard(id)}
   else if(act==="login"){
     const on=!openLogin.has(id);
