@@ -1053,7 +1053,7 @@ test("picking a colour opens a miniature homepage beside the colour popup", asyn
   assert.equal(prev.classList.contains("show"), false, "closing Settings puts it away");
 });
 
-test("pressing the colour square again closes the miniature and the picker", async () => {
+test("pressing the colour square again closes the miniature and the picker", () => {
   const win = bootApp();
   const prev = win.document.getElementById("accPrev");
   const swatch = win.document.getElementById("sAccent");
@@ -1061,10 +1061,37 @@ test("pressing the colour square again closes the miniature and the picker", asy
   swatch.dispatchEvent(new win.MouseEvent("mousedown", { bubbles: true, cancelable: true }));
   assert.equal(prev.classList.contains("show"), true);
 
-  // second press on the same square — mousedown is what stops the picker reopening
-  swatch.dispatchEvent(new win.MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+  // second press on the same square — must close both, and not reopen the picker
+  const md = new win.MouseEvent("mousedown", { bubbles: true, cancelable: true });
+  swatch.dispatchEvent(md);
+  assert.equal(md.defaultPrevented, true, "the press that closes also cancels the native open");
   assert.equal(prev.classList.contains("show"), false, "the miniature is gone");
   assert.notEqual(win.document.activeElement, swatch, "and the swatch is blurred so the picker closes");
+
+  const trailing = new win.MouseEvent("click", { bubbles: true, cancelable: true });
+  swatch.dispatchEvent(trailing);
+  assert.equal(trailing.defaultPrevented, true, "the click after a close toggle is cancelled");
+  assert.equal(prev.classList.contains("show"), false, "and the miniature stays shut");
+});
+
+test("a second press still closes after the browser already dismissed the picker", () => {
+  const win = bootApp();
+  const prev = win.document.getElementById("accPrev");
+  const swatch = win.document.getElementById("sAccent");
+  win.document.getElementById("bSettings").click();
+
+  swatch.dispatchEvent(new win.MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+  assert.equal(prev.classList.contains("show"), true);
+
+  // Browser closes the native dialog first (change), then mousedown arrives —
+  // without a suppress window that mousedown would open everything again.
+  swatch.dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert.equal(prev.classList.contains("show"), false);
+
+  const reopen = new win.MouseEvent("mousedown", { bubbles: true, cancelable: true });
+  swatch.dispatchEvent(reopen);
+  assert.equal(reopen.defaultPrevented, true, "same-gesture reopen is cancelled");
+  assert.equal(prev.classList.contains("show"), false, "stays shut through the suppress window");
 });
 
 test("a long Riot ID truncates inside an element that can actually ellipsize", () => {

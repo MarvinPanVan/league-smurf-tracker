@@ -5003,11 +5003,14 @@ $("sAccent2").addEventListener("change",e=>commitAccent("secondary",e.target.val
    exactly where that popup opens, so the answer was covered as soon as you asked.
    The native picker is an OS widget (~280×340) that sits on the swatch — the
    miniature has to clear that block, not nestle against the 52px square.
-   Shown only while the picker is actually up: open on the press that opens it,
-   stay through input drags, leave on change/blur/second-press. Showing on focus
-   alone left it stranded after Escape, because Chromium returns focus to the
-   swatch with the picker already gone. */
+   The swatch is a toggle: first press opens picker + miniature, second press
+   closes both. Chromium often dismisses the picker (change/blur) before our
+   mousedown runs, so a plain "if preview is showing" check misses and the same
+   click opens the picker again — hence an armed session flag plus a short
+   suppress window that also cancels the following click. */
 let accPrevAnchor=null;
+let accPickerArmed=false;
+let accPrevSuppressUntil=0;
 const ACC_PICKER_W=280, ACC_PICKER_H=340;
 function placeAccPrev(anchor){
   const prev=$("accPrev");
@@ -5035,8 +5038,10 @@ function placeAccPrev(anchor){
   prev.style.top=Math.round(top)+"px";
 }
 function showAccPrev(anchor){
+  if(Date.now()<accPrevSuppressUntil)return;
   const prev=$("accPrev");
   clearTimeout(accPrevHide);
+  accPickerArmed=true;
   accPrevAnchor=anchor||null;
   prev.classList.add("show");
   // measure after display:flex so width/height are real
@@ -5045,11 +5050,23 @@ function showAccPrev(anchor){
 function hideAccPrev(){
   clearTimeout(accPrevHide);
   accPrevHide=0;
+  accPickerArmed=false;
   accPrevAnchor=null;
   const prev=$("accPrev");
   prev.classList.remove("show");
   prev.style.left="";
   prev.style.top="";
+}
+function closeAccPickerSession(el,e){
+  // Kill this press and the click that follows — mousedown preventDefault alone
+  // is not enough for <input type=color> in Chromium.
+  if(e){e.preventDefault();e.stopPropagation()}
+  accPrevSuppressUntil=Date.now()+500;
+  hideAccPrev();
+  if(!el)return;
+  el.blur();
+  el.disabled=true;
+  setTimeout(()=>{el.disabled=false},0);
 }
 let accPrevHide=0;
 function scheduleHideAccPrev(){
@@ -5064,18 +5081,32 @@ function scheduleHideAccPrev(){
 for(const id of["sAccent","sAccent2"]){
   const el=$(id);
   el.addEventListener("mousedown",e=>{
-    if(accPrevAnchor===el&&$("accPrev").classList.contains("show")){
-      e.preventDefault(); // stop the picker reopening on this press
-      hideAccPrev();
-      el.blur();
+    if(Date.now()<accPrevSuppressUntil){
+      e.preventDefault();e.stopPropagation();return;
+    }
+    // Armed OR preview visible: this press is the off half of the toggle.
+    // Armed covers the case where change/blur already hid the miniature a
+    // tick earlier in the same click that was meant to close the picker.
+    if(accPickerArmed||$("accPrev").classList.contains("show")){
+      closeAccPickerSession(el,e);
       return;
     }
     showAccPrev(el); // the press that opens the native picker
+  },true);
+  el.addEventListener("click",e=>{
+    if(Date.now()<accPrevSuppressUntil){
+      e.preventDefault();e.stopPropagation();
+    }
+  },true);
+  el.addEventListener("input",()=>{if(Date.now()>=accPrevSuppressUntil)showAccPrev(el)});
+  // change = the native dialog closed (confirmed). Absorb a same-gesture
+  // mousedown on the swatch that Chromium often delivers right after — without
+  // the short suppress, the click that was meant to close reopens the picker.
+  el.addEventListener("change",()=>{
+    if(Date.now()<accPrevSuppressUntil)return;
+    hideAccPrev();
+    accPrevSuppressUntil=Date.now()+350;
   });
-  el.addEventListener("input",()=>showAccPrev(el));
-  // change = the native dialog closed (confirmed). Do not wait for blur — Chromium
-  // often keeps focus on the swatch after the picker is already gone.
-  el.addEventListener("change",()=>hideAccPrev());
   el.addEventListener("blur",scheduleHideAccPrev);
 }
 window.addEventListener("resize",()=>{
@@ -5087,7 +5118,7 @@ document.addEventListener("keydown",e=>{
 // Clicks on the page (not the swatch) mean the native picker is gone — Chromium
 // often leaves focus on the input after Escape, which used to keep the miniature.
 document.addEventListener("pointerdown",e=>{
-  if(!$("accPrev").classList.contains("show"))return;
+  if(!$("accPrev").classList.contains("show")&&!accPickerArmed)return;
   const t=e.target;
   if(t===$("sAccent")||t===$("sAccent2"))return;
   if(t&&t.closest&&(t.closest("#sAccentReset1")||t.closest("#sAccentReset2")))return;
