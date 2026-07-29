@@ -76,12 +76,10 @@
     font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
     font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
     background:var(--bg);background-attachment:fixed}
-  /* Atmosphere is a Settings choice (spotlight | aurora). Both keep texture off
-     the card grid — no dots — so nothing gets clipped by sixty rounded tiles.
-     Accents drive the colour so the pickers above still preview into the page. */
+  /* Atmosphere: Settings picks one of six looks. Texture stays above the card
+     grid (masked or absent) so sixty rounded tiles never clip a pattern.
+     Accents drive colour where a mode uses colour at all. */
   body[data-atmosphere="spotlight"]{
-    /* Sized in vw/vh, not px: fixed pixel radii shrink into an odd little smudge
-       in one corner once the window is actually wide. Soft masthead spots only. */
     background:
       radial-gradient(125vw 80vh at 12% -25%,color-mix(in srgb,var(--gold) 22%,transparent) 0%,transparent 62%),
       radial-gradient(105vw 70vh at 92% -18%,color-mix(in srgb,var(--teal) 16%,transparent) 0%,transparent 60%),
@@ -89,8 +87,8 @@
       var(--bg);
     background-attachment:fixed}
   body[data-atmosphere="spotlight"]::before{content:none}
+
   body[data-atmosphere="aurora"]{background:var(--bg);background-attachment:fixed}
-  /* Two soft colour washes behind the masthead; faded out before the grid. */
   body[data-atmosphere="aurora"]::before{content:"";position:fixed;left:0;right:0;top:0;height:min(72vh,720px);
     z-index:0;pointer-events:none;
     background:
@@ -100,10 +98,49 @@
     -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000000cc 42%,#0000 100%);
     mask-image:linear-gradient(to bottom,#000 0%,#000000cc 42%,#0000 100%)}
 
+  /* Quiet film grain + darkened edges — no colour wash, no geometry. */
+  body[data-atmosphere="noir"]{background:var(--bg);background-attachment:fixed}
+  body[data-atmosphere="noir"]::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(ellipse 78% 68% at 50% 42%,transparent 35%,#000000aa 100%)}
+
+  /* Large soft grid, header-only — technical without chessboarding the cards. */
+  body[data-atmosphere="lattice"]{
+    background:
+      radial-gradient(100vw 60vh at 50% -20%,color-mix(in srgb,var(--gold) 10%,transparent) 0%,transparent 60%),
+      var(--bg);
+    background-attachment:fixed}
+  body[data-atmosphere="lattice"]::before{content:"";position:fixed;left:0;right:0;top:0;height:min(58vh,560px);
+    z-index:0;pointer-events:none;
+    background-image:
+      linear-gradient(#ffffff0e 1px,transparent 1px),
+      linear-gradient(90deg,#ffffff0e 1px,transparent 1px);
+    background-size:48px 48px;
+    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000000a0 40%,#0000 100%);
+    mask-image:linear-gradient(to bottom,#000 0%,#000000a0 40%,#0000 100%)}
+
+  /* Sparse dots only behind the masthead — the old full-page field, tamed. */
+  body[data-atmosphere="stardust"]{
+    background:
+      radial-gradient(90vw 50vh at 18% -15%,color-mix(in srgb,var(--gold) 12%,transparent) 0%,transparent 55%),
+      var(--bg);
+    background-attachment:fixed}
+  body[data-atmosphere="stardust"]::before{content:"";position:fixed;left:0;right:0;top:0;height:min(52vh,520px);
+    z-index:0;pointer-events:none;
+    background-image:radial-gradient(circle at 1px 1px,#ffffff22 1px,transparent 0);
+    background-size:22px 22px;
+    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000000b0 38%,#0000 100%);
+    mask-image:linear-gradient(to bottom,#000 0%,#000000b0 38%,#0000 100%)}
+
+  /* Flat — the UI is the design. */
+  body[data-atmosphere="void"]{background:var(--bg);background-attachment:fixed}
+  body[data-atmosphere="void"]::before{content:none}
+
   /* barely-there film grain so the large flat areas don't band */
   body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.035;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
   body[data-atmosphere="aurora"]::after{opacity:.045}
+  body[data-atmosphere="noir"]::after{opacity:.07}
+  body[data-atmosphere="void"]::after{opacity:.02}
   /* 1220px is a reading measure, and this page stopped being prose a long time
      ago. On a wide screen it forced a sixty-card grid into three columns with
      390 px of empty margin either side. Prose still gets the narrow measure. */
@@ -382,9 +419,57 @@
   .seg button.on{background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--gold-txt)}
   .seg button+button{border-left:1px solid var(--line)}
   .seg .ico{width:15px;height:15px}
-  .atm-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-  .atm-label{font-size:13px;color:var(--text);min-width:5.5em}
-  .atm-seg button{padding:7px 14px;font-size:12.5px;font-weight:600}
+  /* Atmosphere picker: six little windows, roughly the size of a colour swatch,
+     so you can see the look before you commit. Tip appears on hover / focus. */
+  .atm-block{margin-top:18px}
+  .atm-block .atm-h{font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px}
+  .atm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  @media(max-width:520px){.atm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .atm-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:6px;
+    padding:7px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);
+    color:var(--muted);font-size:11.5px;font-weight:600;text-align:left;box-shadow:none;
+    transition:border-color .16s ease,background .16s ease,color .16s ease,box-shadow .16s ease}
+  .atm-tile:hover{background:var(--panel3);border-color:var(--line2);color:var(--text)}
+  .atm-tile.on{border-color:color-mix(in srgb,var(--gold) 55%,var(--line2));
+    background:color-mix(in srgb,var(--gold) 10%,var(--panel2));color:var(--gold-txt);
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 28%,transparent)}
+  .atm-tile:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  .atm-mini{display:block;height:46px;border-radius:7px;border:1px solid #ffffff12;
+    background:var(--bg);overflow:hidden;position:relative;pointer-events:none}
+  .atm-mini::after{content:"";position:absolute;inset:0;opacity:.04;pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .atm-mini[data-atm="spotlight"]{background:
+    radial-gradient(80% 90% at 18% -10%,color-mix(in srgb,var(--gold) 42%,transparent),transparent 60%),
+    radial-gradient(70% 80% at 92% 0%,color-mix(in srgb,var(--teal) 28%,transparent),transparent 58%),
+    var(--bg)}
+  .atm-mini[data-atm="aurora"]{background:
+    radial-gradient(ellipse 70% 90% at 5% 0%,color-mix(in srgb,var(--gold) 55%,transparent),transparent 70%),
+    radial-gradient(ellipse 65% 85% at 100% 10%,color-mix(in srgb,var(--teal) 48%,transparent),transparent 68%),
+    var(--bg)}
+  .atm-mini[data-atm="noir"]{background:radial-gradient(ellipse 70% 60% at 50% 45%,#12141a 0%,#050608 100%)}
+  .atm-mini[data-atm="noir"]::after{opacity:.12}
+  .atm-mini[data-atm="lattice"]{background-color:var(--bg);
+    background-image:
+      radial-gradient(80% 70% at 50% -20%,color-mix(in srgb,var(--gold) 18%,transparent),transparent 60%),
+      linear-gradient(#ffffff14 1px,transparent 1px),
+      linear-gradient(90deg,#ffffff14 1px,transparent 1px);
+    background-size:auto,14px 14px,14px 14px}
+  .atm-mini[data-atm="stardust"]{background-color:var(--bg);
+    background-image:
+      radial-gradient(70% 60% at 20% -10%,color-mix(in srgb,var(--gold) 22%,transparent),transparent 55%),
+      radial-gradient(circle at 1px 1px,#ffffff30 1px,transparent 0);
+    background-size:auto,8px 8px}
+  .atm-mini[data-atm="void"]{background:var(--bg)}
+  .atm-mini[data-atm="void"]::after{opacity:.02}
+  .atm-name{padding:0 2px;line-height:1.2}
+  .atm-tip{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);
+    width:max(100%,160px);max-width:220px;padding:8px 10px;border-radius:8px;
+    background:#0c0e14f2;border:1px solid var(--line2);color:var(--muted);font-size:11px;font-weight:450;
+    line-height:1.45;text-align:left;box-shadow:var(--sh-2);opacity:0;visibility:hidden;pointer-events:none;
+    z-index:5;transition:opacity .14s ease,visibility .14s ease}
+  .atm-tile:hover .atm-tip,.atm-tile:focus-visible .atm-tip{opacity:1;visibility:visible}
+  /* First row tips flip below so they are not clipped by the modal header */
+  .atm-tile:nth-child(-n+3) .atm-tip{bottom:auto;top:calc(100% + 8px)}
   /* A run over sixty accounts is minutes long. Where it has got to, which account
      it is on, and how to stop it all have to be on screen the whole time. */
   .runbar{position:relative;height:26px;display:flex;align-items:center;
@@ -1506,15 +1591,7 @@
 
       <div class="grp">
         <div class="grp-h">Appearance</div>
-        <div class="hint" style="margin-bottom:12px">Click a colour — a miniature of the homepage opens beside the colour popup. Click the square again to close it. Atmosphere and colours preview live; closing without saving puts them back.</div>
-        <div class="atm-row">
-          <span class="atm-label">Atmosphere</span>
-          <div id="sAtmosphere" class="seg atm-seg" role="group" aria-label="Page atmosphere">
-            <button type="button" data-atmosphere="spotlight" class="on" aria-pressed="true">Spotlight</button>
-            <button type="button" data-atmosphere="aurora" aria-pressed="false">Aurora</button>
-          </div>
-        </div>
-        <div class="hint" style="margin:6px 0 14px">Spotlight = quiet glow behind the title. Aurora = soft colour washes from your accents. Both stay above the cards.</div>
+        <div class="hint" style="margin-bottom:12px">Click a colour — a miniature of the homepage opens beside the colour popup. Click the square again to close it. Colours and atmosphere preview live; closing without saving puts them back.</div>
         <div class="acc-swatches">
           <div class="acc-swatch">
             <input type="color" id="sAccent" aria-label="Primary accent color">
@@ -1525,6 +1602,41 @@
             <input type="color" id="sAccent2" aria-label="Secondary accent color">
             <span style="font-size:12px;color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login, Refresh, Add, focus rings</span></span>
             <button id="sAccentReset2" class="acc-reset" type="button" title="Back to the default secondary" aria-label="Reset the secondary color">↺</button>
+          </div>
+        </div>
+        <div class="atm-block">
+          <div class="atm-h">Atmosphere</div>
+          <div id="sAtmosphere" class="atm-grid" role="radiogroup" aria-label="Page atmosphere">
+            <button type="button" role="radio" data-atmosphere="spotlight" class="atm-tile on" aria-checked="true">
+              <span class="atm-mini" data-atm="spotlight" aria-hidden="true"></span>
+              <span class="atm-name">Spotlight</span>
+              <span class="atm-tip">Quiet glow behind the title from your accents.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="aurora" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="aurora" aria-hidden="true"></span>
+              <span class="atm-name">Aurora</span>
+              <span class="atm-tip">Soft colour washes above the cards.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="noir" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="noir" aria-hidden="true"></span>
+              <span class="atm-name">Noir</span>
+              <span class="atm-tip">Film grain and a dark vignette — no colour wash.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="lattice" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="lattice" aria-hidden="true"></span>
+              <span class="atm-name">Lattice</span>
+              <span class="atm-tip">A soft grid behind the masthead only.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="stardust" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="stardust" aria-hidden="true"></span>
+              <span class="atm-name">Stardust</span>
+              <span class="atm-tip">Sparse dots above the cards — never through them.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="void" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="void" aria-hidden="true"></span>
+              <span class="atm-name">Void</span>
+              <span class="atm-tip">Flat background. The UI is the atmosphere.</span>
+            </button>
           </div>
         </div>
       </div>
@@ -4376,13 +4488,13 @@ function renderPwMeter(){
 function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted."}
 const DEFAULT_ACCENT="#d8b874", DEFAULT_ACCENT2="#2ee0c2";
 const DEFAULT_ATMOSPHERE="spotlight";
-const ATMOSPHERES=new Set(["spotlight","aurora"]);
+const ATMOSPHERES=new Set(["spotlight","aurora","noir","lattice","stardust","void"]);
 function syncAtmosphereUI(mode){
   const seg=$("sAtmosphere");if(!seg)return;
   for(const b of seg.querySelectorAll("[data-atmosphere]")){
     const on=b.dataset.atmosphere===mode;
     b.classList.toggle("on",on);
-    b.setAttribute("aria-pressed",on?"true":"false");
+    b.setAttribute("aria-checked",on?"true":"false");
   }
 }
 function applyAtmosphere(mode){

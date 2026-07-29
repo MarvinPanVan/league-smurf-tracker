@@ -2221,6 +2221,18 @@ test("atmosphere previews live and only sticks after Save", () => {
   const body = win.document.body;
   const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
   assert.equal(body.dataset.atmosphere, "spotlight");
+  const tiles = [...win.document.querySelectorAll("#sAtmosphere [data-atmosphere]")].map(b => b.dataset.atmosphere);
+  assert.deepEqual(tiles, ["spotlight", "aurora", "noir", "lattice", "stardust", "void"]);
+
+  // colours sit above the atmosphere picker in Appearance
+  const appearance = win.document.querySelector("#settings .grp:last-of-type");
+  const accent = appearance.querySelector("#sAccent");
+  const atm = appearance.querySelector("#sAtmosphere");
+  assert.ok(accent && atm, "both live in Appearance");
+  assert.ok(
+    !!(accent.compareDocumentPosition(atm) & win.Node.DOCUMENT_POSITION_FOLLOWING),
+    "atmosphere comes after the colour swatches"
+  );
 
   win.document.getElementById("bSettings").click();
   win.document.querySelector('#sAtmosphere [data-atmosphere="aurora"]').click();
@@ -2231,10 +2243,10 @@ test("atmosphere previews live and only sticks after Save", () => {
   assert.equal(body.dataset.atmosphere, "spotlight", "Close puts the saved choice back");
 
   win.document.getElementById("bSettings").click();
-  win.document.querySelector('#sAtmosphere [data-atmosphere="aurora"]').click();
+  win.document.querySelector('#sAtmosphere [data-atmosphere="noir"]').click();
   win.document.getElementById("sSave").click();
-  assert.equal(body.dataset.atmosphere, "aurora");
-  assert.equal(cfg().atmosphere, "aurora");
+  assert.equal(body.dataset.atmosphere, "noir");
+  assert.equal(cfg().atmosphere, "noir");
 
   // default is stored as no preference, same idea as the accent resets
   win.document.getElementById("bSettings").click();
