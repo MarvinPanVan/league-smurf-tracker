@@ -3987,6 +3987,22 @@ function groupHTML(g){
 }
 function renderGrid(){
   const list=filtered();
+  /* A selection can only be made from what is on screen, and it has no business
+     outliving it. Archiving an account, or flipping to the Archived view, used to
+     leave it selected and out of sight — the bar went on counting it, and Delete
+     selected reached straight past the grid to accounts nobody could see, behind a
+     confirm that names a number rather than the accounts. Select two, click
+     Archived, and "Delete selected" emptied the active view you had just left.
+     Anything that leaves the view leaves the selection with it, which covers the
+     search and the filters as well as the archive toggle. */
+  if(selected.size){
+    const inView=new Set(list.map(a=>a.id));
+    const before=selected.size;
+    selected.forEach(id=>{if(!inView.has(id))selected.delete(id)});
+    // The remembered anchor is a position in a list that has just changed shape, so
+    // shift-clicking against it would sweep a range nobody picked.
+    if(selected.size!==before)lastSelectedIdx=null;
+  }
   const grid=$("grid");
   if(accounts.length===0){
     setHTML(grid,`<div class="hx" data-k="empty" style="grid-column:1/-1"><div class="hx-in empty"><div class="d"><span class="empty-gem"></span></div>No accounts yet. Hit <span style="color:var(--teal-txt)">+ Add account</span> to store your first smurf.<div style="margin-top:12px"><button id="bDemo">👁 Preview with example data</button></div></div></div>`);
@@ -5110,12 +5126,15 @@ $("grid").addEventListener("click",async e=>{
     if(e.shiftKey&&lastSelectedIdx!==null){
       const[from,to]=[lastSelectedIdx,idx].sort((x,y)=>x-y);
       for(let k=from;k<=to;k++)selected.add(list[k].id);
-      renderGrid();
+      lastSelectedIdx=idx;
+      renderGrid(); // ticks the boxes it just filled in and syncs the bar with them
     }else{
       btn.checked?selected.add(id):selected.delete(id);
+      lastSelectedIdx=idx;
+      // the list is right here: renderBulkBar() with nothing to go on filters and
+      // sorts the whole vault again, once per tick of a checkbox
+      renderBulkBar(list);
     }
-    lastSelectedIdx=idx;
-    renderBulkBar();
   }
   // A tile is for finding an account, not for acting on one. Clicking it hands
   // you back to the card view at that account and lights it up so it is obvious

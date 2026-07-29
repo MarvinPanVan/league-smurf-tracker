@@ -1597,6 +1597,44 @@ test("bulk selection works in the list view as well as the cards", () => {
     "and the row does not also unfold — the checkbox is the nearer target");
 });
 
+/* `selected` was never pruned to what is on screen, so a selection outlived the view
+   it was made in: the bar went on counting accounts the grid no longer showed, and
+   the bulk actions — behind a confirm that names a number, not the accounts —
+   reached straight past the grid to them. */
+test("a selection does not outlive the view it was made in", () => {
+  const count = win => win.document.getElementById("bulkCount").textContent;
+  const barHidden = win => win.document.getElementById("bulkbar").classList.contains("hidden");
+
+  // flipping to the Archived view drops a selection made among the active accounts
+  const win = bootApp();
+  addRealAccount(win, "Keeper", "1001");
+  addRealAccount(win, "Alsokeeper", "1002");
+  [...win.document.querySelectorAll(".bulkchk")].forEach(b => b.click());
+  assert.equal(count(win), "2 selected");
+
+  win.document.getElementById("tArchived").click();
+  assert.equal(barHidden(win), true, "nothing on screen is selected, so there is nothing to act on");
+  win.document.getElementById("tArchived").click();
+  assert.equal(barHidden(win), true, "and it does not come back when the view does");
+
+  // and Delete selected cannot reach an account that has just been archived
+  const win2 = bootApp();
+  addRealAccount(win2, "Archived", "2001");
+  addRealAccount(win2, "Active", "2002");
+  [...win2.document.querySelectorAll(".bulkchk")].forEach(b => b.click());
+  assert.equal(count(win2), "2 selected");
+
+  const first = win2.document.querySelector('.card[data-id]');
+  first.querySelector('[data-act="more"]').click();
+  first.querySelector('[data-act="archive"]').click();
+  assert.equal(count(win2), "1 selected", "the archived one left the selection with the view");
+
+  win2.document.getElementById("bulkDelete").click(); // confirm() is stubbed to true
+  win2.document.getElementById("tArchived").click();
+  assert.equal(win2.document.querySelectorAll(".card").length, 1,
+    "the archived account survives a delete it was never on screen for");
+});
+
 // commitNote only ever looked for ".card", which does not exist in the list, so
 // the editor stayed on screen after the edit had already been saved.
 test("the note editor closes after clicking away, in either layout", () => {
