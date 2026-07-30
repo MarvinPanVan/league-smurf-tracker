@@ -4889,7 +4889,7 @@ test("never-checked / chore filters ignore banned and archived accounts", () => 
   assert.doesNotMatch(names.join(" "), /Chianusie|Old|FlagBan/);
 });
 
-test("dash shows Ladder trend instead of Pool LP, with hoverable points", () => {
+test("dash shows Group climb with a working spark tip target", () => {
   const day = 86400000;
   const t1 = 10 * day, t2 = 11 * day;
   const hist = [
@@ -4902,13 +4902,19 @@ test("dash shows Ladder trend instead of Pool LP, with hoverable points", () => 
       history: hist },
   ]);
   const dash = win.document.getElementById("dash").textContent;
-  assert.match(dash, /Ladder trend/);
-  assert.doesNotMatch(dash, /Pool LP/);
+  assert.match(dash, /Group climb/);
+  assert.doesNotMatch(dash, /Pool LP|Ladder trend|hover points/);
   const trend = win.poolLpTrend([{ id: "a", history: hist }]);
-  assert.ok(trend && trend.svg);
-  assert.match(trend.svg, /<circle/);
-  assert.match(trend.note, /ladder LP/i);
-  assert.ok(win.document.querySelector(".spark-wrap .pool-spark, .pool-spark"));
+  assert.ok(trend && trend.svg && trend.headline);
+  assert.match(trend.svg, /data-spark-tip=/);
+  assert.match(trend.note, /Iron→Challenger|counted accounts/);
+  assert.ok(win.document.querySelector(".pool-spark [data-spark-tip]"));
+  // Custom tip is created on first hover binding after render
+  assert.equal(typeof win.bindSparkTip, "function");
+  assert.equal(typeof win.ensureSparkTip, "function");
+  const tip = win.ensureSparkTip();
+  assert.ok(tip);
+  assert.equal(tip.id, "sparkTip");
 });
 
 test("genSyncToken is long enough for the worker", () => {
