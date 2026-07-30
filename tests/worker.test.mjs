@@ -208,6 +208,47 @@ test("Master+ current ranks do not keep a division", () => {
   assert.equal(r.lp, 250);
 });
 
+// Live op.gg body text inserts thousands separators once LP ≥ 1000 ("4,011 LP").
+// Flattening the page used to leave only that form, so Master+ checks 502'd.
+test("comma-formatted LP in body text still parses (live op.gg shape)", () => {
+  const body = "Ranked Solo/Duo challenger 4,011 LP 772 W 650 L Win rate 54 % challenger 4,061 LP Top tier Ranked Flex Unranked";
+  const r = parseRankText(body);
+  assert.equal(r.tier, "CHALLENGER");
+  assert.equal(r.division, null);
+  assert.equal(r.lp, 4011);
+  assert.equal(r.wins, 772);
+  assert.equal(r.losses, 650);
+  assert.deepEqual({ ...parsePeakText(body) }, { tier: "CHALLENGER", division: null, lp: 4061 });
+});
+
+test("meta description rank is preferred and handles doubled divisions", () => {
+  const html = `<meta name="description" content="Kaori#EUW33 / Challenger 1 4011LP / 772Win 650Lose Win rate 54% / Ezreal - 73Win 55Lose Win rate 57%"/>
+<strong>challenger</strong><span>4,011 LP</span>`;
+  const r = parseRankText(html);
+  assert.equal(r.tier, "CHALLENGER");
+  assert.equal(r.lp, 4011);
+  assert.equal(r.wins, 772);
+  assert.equal(r.losses, 650);
+  assert.equal(r.division, null);
+
+  const un = parseRankText(`<meta name="description" content="Hide on bush#KR1 / Lv. 752"/>Unranked Ranked Flex Unranked`);
+  assert.equal(un.tier, "UNRANKED");
+  assert.equal(un.level, 752);
+});
+
+test("season rows tolerate comma LP", () => {
+  const html = `<table><tbody>
+  <tr><th>Season</th><th>Tier</th><th>LP</th></tr>
+  <tr><td><strong>S2025</strong></td><td><span>challenger</span></td><td>1,205</td></tr>
+  <tr><td><strong>S2024 S3</strong></td><td><span>master</span></td><td>513</td></tr>
+</tbody></table>`;
+  const s = parseSeasons(html);
+  assert.equal(s.solo[0].season, "S2025");
+  assert.equal(s.solo[0].tier, "CHALLENGER");
+  assert.equal(s.solo[0].lp, 1205);
+  assert.equal(s.solo[1].lp, 513);
+});
+
 test("level and champion-meta fallbacks match the shapes the app already handles", () => {
   assert.equal(parseLevelText("764 # terminallucidity # final", "terminallucidity", "final"), 764);
   const plain = "Ashe - 15Win 10Lose Win rate 60%, Smolder - 15Win 7Lose Win rate 68%";
@@ -235,4 +276,144 @@ test("the parsers' regexes still contain their escapes", () => {
   assert.doesNotMatch(src, /\(d\{1,4\}\)/, "(\\d{1,4}) lost its backslash");
   assert.doesNotMatch(src, /Tops\*tier/, "Top\\s*tier lost its backslash");
   assert.match(stripRows("<div>a</div><div>b</div>").join("|"), /^a\|b$/, "rows must still split");
+});
+
+import worker from "../cloudflare-worker.js";
+
+test("OPTIONS preflight returns CORS allowing GET and POST", async () => {
+  const res = await worker.fetch(new Request("https://worker.example/", { method: "OPTIONS" }));
+  assert.ok(res.status === 200 || res.status === 204);
+  assert.equal(res.headers.get("Access-Control-Allow-Origin"), "*");
+  assert.match(res.headers.get("Access-Control-Allow-Methods") || "", /POST/);
+  assert.match(res.headers.get("Access-Control-Allow-Methods") || "", /GET/);
+});
+
+test("POST batch rejects empty body, oversized lists, and non-JSON", async () => {
+  const bad = await worker.fetch(new Request("https://worker.example/", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: "{",
+  }));
+  assert.equal(bad.status, 400);
+
+  const empty = await worker.fetch(new Request("https://worker.example/", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accounts: [] }),
+  }));
+  assert.equal(empty.status, 400);
+
+  const tooMany = await worker.fetch(new Request("https://worker.example/", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accounts: Array.from({ length: 21 }, () => ({ name: "a", tag: "b", region: "euw" })) }),
+  }));
+  assert.equal(tooMany.status, 400);
+  const err = await tooMany.json();
+  assert.match(err.error, /max 20/i);
+});
+
+test("POST batch scrapes in parallel and preserves result order / ids", async () => {
+  const orig = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = async (url) => {
+    seen.push(String(url));
+    if (String(url).includes("Missing-EUW")) {
+      return new Response("nope", { status: 404 });
+    }
+    if (String(url).includes("/champions")) {
+      return new Response("<html></html>", { status: 200 });
+    }
+    const html = `<meta name="description" content="One#EUW / Gold 2 45LP / 10Win 5Lose Win rate 66%"/>
+<strong>gold 2</strong><span>45 LP</span>`;
+    return new Response(html, { status: 200 });
+  };
+  try {
+    const res = await worker.fetch(new Request("https://worker.example/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accounts: [
+          { name: "One", tag: "EUW", region: "euw" },
+          { name: "Missing", tag: "EUW", region: "euw" },
+          { name: "", tag: "EUW", region: "euw" },
+        ],
+      }),
+    }));
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("Access-Control-Allow-Origin"), "*");
+    const data = await res.json();
+    assert.equal(data.results.length, 3);
+    assert.equal(data.results[0].ok, true);
+    assert.equal(data.results[0].tier, "GOLD");
+    assert.equal(data.results[0].uncertain, false);
+    assert.equal(data.results[0].source, "meta");
+    assert.equal(data.results[1].ok, true);
+    assert.equal(data.results[1].found, false);
+    assert.equal(data.results[2].ok, false);
+    assert.match(data.results[2].error, /missing name\/tag/);
+    assert.ok(seen.some(u => u.includes("op.gg")));
+  } finally {
+    globalThis.fetch = orig;
+  }
+});
+
+test("GET still returns a single scrape with uncertain/source fields", async () => {
+  const orig = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (String(url).includes("/champions")) return new Response("", { status: 200 });
+    // body-only rank (no meta) → uncertain
+    return new Response(`<strong>platinum 1</strong><span>12 LP</span><div>5W 5L</div>`, { status: 200 });
+  };
+  try {
+    const res = await worker.fetch(new Request("https://worker.example/?name=Body&tag=Only&region=euw"));
+    assert.equal(res.status, 200);
+    const d = await res.json();
+    assert.equal(d.found, true);
+    assert.equal(d.tier, "PLATINUM");
+    assert.equal(d.uncertain, true);
+    assert.equal(d.source, "body");
+  } finally {
+    globalThis.fetch = orig;
+  }
+});
+
+test("unsupported methods return 405 with CORS", async () => {
+  const res = await worker.fetch(new Request("https://worker.example/", { method: "PUT" }));
+  assert.equal(res.status, 405);
+  assert.equal(res.headers.get("Access-Control-Allow-Origin"), "*");
+});
+
+test("200 summoner-not-found page returns found:false instead of 502", async () => {
+  const orig = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = async (url) => {
+    seen.push(String(url));
+    if (String(url).includes("/champions")) return new Response("", { status: 200 });
+    return new Response(`<html><body><h1>Summoner not found</h1><p>This summoner is unregistered.</p></body></html>`, { status: 200 });
+  };
+  try {
+    const res = await worker.fetch(new Request("https://worker.example/?name=Nope&tag=EUW&region=euw"));
+    assert.equal(res.status, 200);
+    const d = await res.json();
+    assert.equal(d.found, false);
+    assert.equal(seen.some(u => u.includes("/champions")), false,
+      "champions subrequest must not run for a missing summoner");
+  } finally {
+    globalThis.fetch = orig;
+  }
+});
+
+test("404 skips champions subrequest", async () => {
+  const orig = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = async (url) => {
+    seen.push(String(url));
+    return new Response("missing", { status: 404 });
+  };
+  try {
+    const res = await worker.fetch(new Request("https://worker.example/?name=Nope&tag=EUW&region=euw"));
+    assert.equal(res.status, 200);
+    assert.equal((await res.json()).found, false);
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0].includes("/champions"), false);
+  } finally {
+    globalThis.fetch = orig;
+  }
 });

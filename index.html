@@ -1337,6 +1337,14 @@
   .a-login:hover .ico{transform:scale(1.16)}
   .acts button:hover .ico{transform:rotate(-12deg)}
   .acts button[data-act="check"]:hover .ico{transform:rotate(180deg)}
+  .pool-spark{display:block;margin-top:4px;opacity:.9}
+  .cmp-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:start}
+  .cmp-vs{align-self:center;color:var(--faint);font-weight:700}
+  .cmp-nm{font-weight:700;margin-bottom:6px}
+  .cmp-rk{font-size:18px;margin-bottom:8px}
+  .cmp-line{font-size:12px;color:var(--muted);margin:3px 0}
+  .toast-log{max-width:420px;font-size:12px;line-height:1.45}
+
   .panel-close{transition:color .16s,background .16s,transform .2s cubic-bezier(.22,1,.36,1)}
   .panel-close:hover{transform:rotate(90deg)}
   .chip{transition:background .15s ease,border-color .15s ease,color .15s ease,transform .14s cubic-bezier(.22,1,.36,1)}
@@ -1551,6 +1559,17 @@
           </div>
           <div class="fw hint">
             Check order: <b>backend URL → API key → free op.gg auto-fetch</b>. With all three empty, checks use the free auto-fetch and cost nothing. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable, but only worth it for power users.
+          </div>
+          <div class="fw hint" id="sDeployHelp" style="margin-top:8px">
+            <b>Deploy the worker:</b> Cloudflare → Workers → Create → paste
+            <code style="user-select:all">cloudflare-worker.js</code> from the repo → Deploy → paste the
+            <code>*.workers.dev</code> URL above. Check-all then uses one batch POST instead of N GETs.
+            Raw file:
+            <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>
+          </div>
+          <div class="fld">
+            <label>Remind me to export after (days)</label>
+            <input id="sExportDays" type="number" min="1" max="365" value="30" style="max-width:120px">
           </div>
         </div>
       </div>
@@ -1859,6 +1878,18 @@
     </div></div>
   </div>
 
+  <!-- Must exist at boot so the shared modal observer / Escape / backdrop wiring
+       sees it — creating it lazily left Compare outside body.modal-open and the
+       focus trap. -->
+  <div id="compareModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Compare">
+    <div class="mdl hx teal"><div class="hx-in mdl-in">
+      <div class="mdl-h"><span class="t">Compare</span>
+        <button class="panel-close" id="cmpClose" data-close-panel title="Close" aria-label="Close">✕</button>
+      </div>
+      <div class="mdl-b" id="cmpBody"></div>
+    </div></div>
+  </div>
+
   <!-- Sixty cards is thirteen screens, and the only way back was to scroll all of
        them again. Kept out of the way until there is actually something to go back
        up to. -->
@@ -1941,7 +1972,20 @@ const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / 
 
 // ---------- state ----------
 let accounts=[];
-let cfg={apiKey:"",model:"claude-sonnet-5",autoCheck:false,backendUrl:""};
+const APP_VERSION="1.7.0";
+const APP_CHANGELOG=[
+  {v:"1.7.0",items:[
+    "Worker batch refresh (one round-trip for Check-all)",
+    "Uncertain parse warning when op.gg meta is missing",
+    "Duplicate Riot ID detection",
+    "Rotation reminder + Played today check-in",
+    "Season reset per account",
+    "Winrate trend, pool LP sparkline, compare two accounts",
+    "Export reminder days + worker deploy help in Settings",
+  ]},
+];
+function clampExportDays(v){const n=Math.round(Number(v));return Math.max(1,Math.min(365,(n>0&&isFinite(n))?n:30))}
+let cfg={apiKey:"",model:"claude-sonnet-5",autoCheck:false,backendUrl:"",exportRemindDays:30};
 // Older releases stored retired model IDs; map them forward so a saved setting
 // doesn't keep sending a model the API no longer serves.
 const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"claude-sonnet-5","claude-3-5-sonnet":"claude-sonnet-5"};
@@ -1956,7 +2000,58 @@ let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArc
 function isChecked(a){return !!(a.stats&&a.stats.updatedAt)}
 function isStale(a){return a.status!=="banned"&&(!isChecked(a)||Date.now()-a.stats.updatedAt>STALE_MS)}
 function isRanked(a){const t=a.stats&&a.stats.found!==false&&(a.stats.tier||"").toUpperCase();return !!(t&&t!=="UNRANKED")}
-function isFailed(a){return !!(a.stats&&(a.stats.found===false||a.stats.note))}
+function isFailed(a){
+  if(!a.stats)return false;
+  // found:false is a completed "Not found" answer (own filter), not a transport failure.
+  // Informational notes (season reset, etc.) must not look like a failed refresh.
+  const n=String(a.stats.note||"");
+  return /auto-fetch failed|failed \(/i.test(n);
+}
+// Shared with the worker: op.gg sometimes serves a 200 "not found" page.
+function isSummonerNotFoundPage(html){
+  return /summoner\s+not\s+found|this\s+summoner\s+is\s+unregistered/i.test(String(html||""))
+    && !parseRankFromMeta(html);
+}
+function isUncertain(a){return !!(a.stats&&a.stats.uncertain)}
+function riotKey(a){return ((a.region||"")+"|"+(a.gameName||"").toLowerCase()+"|"+(a.tagLine||"").toLowerCase())}
+let _dupCache=null,_dupSrc=null;
+function duplicateIds(){
+  if(_dupCache&&_dupSrc===accounts)return _dupCache;
+  const map=new Map();
+  for(const a of accounts){
+    if(a.archived)continue;
+    const k=riotKey(a); if(!k||k==="||")continue;
+    if(!map.has(k))map.set(k,[]);
+    map.get(k).push(a.id);
+  }
+  const dups=new Set();
+  for(const ids of map.values())if(ids.length>1)ids.forEach(id=>dups.add(id));
+  _dupCache=dups;_dupSrc=accounts;
+  return dups;
+}
+function isDuplicate(a){return duplicateIds().has(a.id)}
+function invalidateDupCache(){_dupCache=null;_dupSrc=null}
+function rotationDays(a){
+  const t=a.lastPlayedAt||a.lastLoginAt||(a.stats&&a.stats.updatedAt)||0;
+  if(!t)return null;
+  return Math.floor((Date.now()-t)/86400000);
+}
+function needsRotation(a){
+  if(a.status==="banned"||a.archived)return false;
+  const d=rotationDays(a);
+  return d!=null&&d>=14;
+}
+function wrTrend(a){
+  const h=(a.history||[]).filter(p=>p.w!=null&&p.l!=null);
+  if(h.length<2)return null;
+  const a0=h[Math.max(0,h.length-4)], a1=h[h.length-1];
+  if(seasonBreak(a0,a1))return null;
+  const wr=p=>{const t=(+p.w||0)+(+p.l||0);return t?((+p.w||0)/t)*100:null};
+  const x=wr(a0), y=wr(a1);
+  if(x==null||y==null)return null;
+  const d=Math.round(y-x);
+  return {d, wr:Math.round(y)};
+}
 /* "Unranked" is an answer a check came back with, not the absence of one. The stats
    panel counts it that way on purpose — never-checked accounts are a chore waiting to
    be done and have a tile of their own — but the filter behind that tile took every
@@ -2051,7 +2146,7 @@ function storageOK(){try{localStorage.setItem("__t","1");localStorage.removeItem
    the caller went on to its own "saved" message — into the same toast, over the
    top of the warning. */
 let saveSeq=0, saveChain=Promise.resolve();
-function saveDB(){
+function saveDB(){invalidateDupCache();
   // Locked is a hard no — not a silent success. Import (and anything else that
   // awaits this) used to toast "imported" while the disk never moved, because
   // the lock guard shared the same early-return-true as preview / no-storage.
@@ -2783,13 +2878,49 @@ function passwordStrength(p){
 }
 
 // ---------- rank data: parser + fetch cascade ----------
+// Body text uses thousands separators ("4,011 LP"); meta keeps bare digits ("4011LP").
+const LP_NUM=String.raw`(\d{1,3}(?:,\d{3})+|\d{1,5})`;
+function lpNum(s){return +String(s).replace(/,/g,"")}
+function parseRankFromMeta(raw){
+  if(!raw)return null;
+  const m=String(raw).match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+  if(!m)return null;
+  const d=m[1];
+  // "Diamond 1 1 52LP" doubles the division; "Challenger 1 4011LP" uses a decorative 1.
+  // (?!\d) on the repeat stops it eating the leading 1 of LP values like 1530.
+  const ranked=d.match(new RegExp("\\/\\s*("+TIER_WORD+")(?:\\s+([1-4]))?(?:\\s+\\2(?!\\d))?\\s*"+LP_NUM+"\\s*LP\\b(?:\\s*\\/\\s*(\\d{1,4})Win\\s+(\\d{1,4})Lose)?","i"));
+  if(ranked){
+    const tier=ranked[1].toUpperCase();
+    const mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
+    return{tier,division:(mPlus||!ranked[2])?null:{"1":"I","2":"II","3":"III","4":"IV"}[ranked[2]],
+      lp:lpNum(ranked[3]),wins:ranked[4]!=null?+ranked[4]:null,losses:ranked[5]!=null?+ranked[5]:null,level:null};
+  }
+  const lv=d.match(/\/\s*Lv(?:l)?\.?\s*(\d{1,4})\b/i);
+  if(lv)return{tier:"UNRANKED",division:null,lp:null,wins:null,losses:null,level:+lv[1]};
+  return null;
+}
+function soloHalf(raw){
+  // Queue-filter chips also say "Ranked Flex" next to Solo/Duo / ARAM — only cut
+  // when what follows looks like the flex rank block, not another queue name.
+  const s=String(raw);
+  const re=/\bRanked\s*Flex\b/gi;
+  let m;
+  while((m=re.exec(s))){
+    const after=s.slice(m.index+m[0].length,m.index+m[0].length+100).replace(/\s+/g," ").trim();
+    if(/^(ARAM|Normal|All|Ranked\s*Solo)\b/i.test(after))continue;
+    if(/^Unranked\b/i.test(after)||new RegExp("^("+TIER_WORD+")\\b","i").test(after))return s.slice(0,m.index);
+  }
+  return s;
+}
 function parseRankText(raw){
   if(!raw)return null;
+  // Meta still carries "4011LP" without commas — prefer it before body scraping.
+  const fromMeta=parseRankFromMeta(raw);
+  if(fromMeta)return fromMeta;
   // Solo and Flex share the same page. Matching the first "tier N LP" anywhere used
   // to pick up a Flex rank — or a peak — on an account that is Unranked in Solo.
-  // Everything from "Ranked Flex" onwards belongs to parseFlex; the current-rank
-  // parser only reads what comes before.
-  const soloRaw=String(raw).split(/\bRanked\s*Flex\b/i)[0];
+  // Everything from the real "Ranked Flex" rank block onwards belongs to parseFlex.
+  const soloRaw=soloHalf(raw);
   // Search Unranked / tier-LP on stripped text — raw markup can say "unranked" in
   // an img alt or meta description while the Solo rank is Diamond (worker already
   // flattens via htmlToText before this check).
@@ -2798,7 +2929,7 @@ function parseRankText(raw){
   // is the season peak (Top tier), not the current rank. Flex is already cut away
   // above; this closes the same trap for the peak badge.
   const unIdx=flat.search(/\bUnranked\b/i);
-  const rankAt=flat.search(new RegExp("\\b("+TIER_WORD+")\\b[^\\dA-Za-z]{0,6}([1-4]|IV|III|II|I)?(?!\\d)(?:\\s\\2(?!\\d))?[^\\d]{0,6}(\\d{1,4})\\s*LP\\b","i"));
+  const rankAt=flat.search(new RegExp("\\b("+TIER_WORD+")\\b(?:\\s+([1-4]|IV|III|II|I)(?![\\dA-Za-z,]))?(?:\\s+\\2(?![\\dA-Za-z,]))?\\s*"+LP_NUM+"\\s*LP\\b","i"));
   if(unIdx>=0&&(rankAt<0||unIdx<rankAt)){
     const lv=flat.match(/\bLv(?:l)?\.?\s*(\d{1,4})\b/i)||flat.match(/\bLevel\s*(\d{1,4})\b/i);
     return{tier:"UNRANKED",division:null,lp:null,wins:null,losses:null,level:lv?+lv[1]:null};
@@ -2806,10 +2937,10 @@ function parseRankText(raw){
   const first=parseRankFlat(flat);
   if(first&&first.tier)return first;
   // Some proxies hand back markup dense enough that the tier and its LP end up
-  // further apart than the strict pattern tolerates. Stripping to plain words is
-  // a second chance, never a downgrade — it only runs when pass one found no
-  // tier at all.
-  const second=parseRankFlat(stripMarkup(soloRaw));
+  // further apart than the strict pattern tolerates. Flattening via stripRows
+  // (word order with row joins) is a second chance — stripMarkup alone is the
+  // same as `flat` above and used to be a no-op.
+  const second=parseRankFlat(stripRows(soloRaw).join(" "));
   if(second&&second.tier)return second;
   const hit=first||second;
   // Solo Unranked has no "N LP" for the strict pattern to catch. A level alone
@@ -2821,7 +2952,8 @@ function parseRankText(raw){
   return hit;
 }
 function parseRankFlat(text){
-  const strict=/\b(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)\b[^\dA-Za-z]{0,6}([1-4]|IV|III|II|I)?(?!\d)(?:\s\2(?!\d))?[^\d]{0,6}(\d{1,4})\s*LP\b/i;
+  // Division must not eat the leading digit of "4,011 LP" (comma as thousands sep).
+  const strict=new RegExp("\\b(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)\\b(?:\\s+([1-4]|IV|III|II|I)(?![\\dA-Za-z,]))?(?:\\s+\\2(?![\\dA-Za-z,]))?\\s*"+LP_NUM+"\\s*LP\\b","i");
   const m=text.match(strict);
   const out={tier:null,division:null,lp:null,wins:null,losses:null,level:null};
   if(m){
@@ -2831,7 +2963,7 @@ function parseRankFlat(text){
     // which is the one on every card in the vault.
     if(m[2]){const map={"1":"I","2":"II","3":"III","4":"IV"};
       out.division=normDivision(out.tier,map[m[2]]||m[2].toUpperCase())}
-    out.lp=+m[3];
+    out.lp=lpNum(m[3]);
     const after=text.slice(m.index);
     const wl=after.match(/(\d{1,4})\s*W(?:in)?s?\b\s*[,\/]?\s*(\d{1,4})\s*L(?:ose|oss(?:es)?)?\b/i);
     if(wl){out.wins=+wl[1];out.losses=+wl[2]}
@@ -2901,7 +3033,7 @@ function seasonTables(html){
 function parseSeasonTables(raw){
   const html=String(raw);
   if(!/<table/i.test(html))return null;
-  const rowRe=new RegExp("^(S\\d{4}(?:\\s*S\\d)?)\\s+("+TIER_WORD+")(?:\\s+([1-4])(?!\\d))?\\s+(\\d{1,4})$","i");
+  const rowRe=new RegExp("^(S\\d{4}(?:\\s*S\\d)?)\\s+("+TIER_WORD+")(?:\\s+([1-4])(?!\\d))?\\s+"+LP_NUM+"$","i");
   const map={"1":"I","2":"II","3":"III","4":"IV"};
   const out={solo:[],flex:[]};
   let n=0;
@@ -2917,7 +3049,7 @@ function parseSeasonTables(raw){
       if(!m)continue;
       const tier=m[2].toUpperCase();
       const mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
-      out[bucket].push({season:m[1].replace(/\s+/g," "),tier,division:(mPlus||!m[3])?null:map[m[3]],lp:+m[4]});
+      out[bucket].push({season:m[1].replace(/\s+/g," "),tier,division:(mPlus||!m[3])?null:map[m[3]],lp:lpNum(m[4])});
     }
   }
   return(out.solo.length||out.flex.length)?out:null;
@@ -2931,7 +3063,7 @@ function parseSeasonLines(raw){
   if(!raw)return null;
   // The division is optional and must not be allowed to eat the first digit of the
   // LP: without the lookahead, "S2025 master 135" reads as division 1, 35 LP.
-  const rowRe=new RegExp("(S\\d{4}(?:\\s*S\\d)?)\\s*\\|?\\s*(?:\\|\\s*)?("+TIER_WORD+")(?:\\s+([1-4])(?!\\d))?\\s*\\|?\\s*(\\d{1,4})\\s*\\|?\\s*$","i");
+  const rowRe=new RegExp("(S\\d{4}(?:\\s*S\\d)?)\\s*\\|?\\s*(?:\\|\\s*)?("+TIER_WORD+")(?:\\s+([1-4])(?!\\d))?\\s*\\|?\\s*"+LP_NUM+"\\s*\\|?\\s*$","i");
   const out={solo:[],flex:[]};
   let bucket=null;
   for(const line of stripRows(raw)){
@@ -2944,7 +3076,7 @@ function parseSeasonLines(raw){
     const map={"1":"I","2":"II","3":"III","4":"IV"};
     const tier=m[2].toUpperCase();
     const mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
-    out[bucket].push({season:m[1].replace(/\s+/g," "),tier,division:(mPlus||!m[3])?null:map[m[3]],lp:+m[4]});
+    out[bucket].push({season:m[1].replace(/\s+/g," "),tier,division:(mPlus||!m[3])?null:map[m[3]],lp:lpNum(m[4])});
   }
   return(out.solo.length||out.flex.length)?out:null;
 }
@@ -2957,12 +3089,12 @@ function parseFlex(raw){
     if(!/^ranked\s*flex$/i.test(lines[i]))continue;
     const near=lines.slice(i+1,i+4).join(" ");
     if(/^\s*unranked/i.test(near))return{tier:"UNRANKED",division:null,lp:null};
-    const m=near.match(new RegExp("\\b("+TIER_WORD+")\\b(?:\\s+([1-4]|IV|III|II|I)(?![\\dA-Za-z]))?\\s*(\\d{1,4})\\s*LP\\b","i"));
+    const m=near.match(new RegExp("\\b("+TIER_WORD+")\\b(?:\\s+([1-4]|IV|III|II|I)(?![\\dA-Za-z,]))?\\s*"+LP_NUM+"\\s*LP\\b","i"));
     if(m){
       const map={"1":"I","2":"II","3":"III","4":"IV"};
       const tier=m[1].toUpperCase();
       const mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
-      return{tier,division:(mPlus||!m[2])?null:(map[m[2]]||m[2].toUpperCase()),lp:+m[3]};
+      return{tier,division:(mPlus||!m[2])?null:(map[m[2]]||m[2].toUpperCase()),lp:lpNum(m[3])};
     }
   }
   return null;
@@ -3040,17 +3172,18 @@ function parsePeakText(raw){
   const text=stripMarkup(raw);
   const i=text.search(/Top\s*tier/i);
   if(i<0)return null;
-  const before=text.slice(Math.max(0,i-140),i);
+  const before=text.slice(Math.max(0,i-160),i);
   // The division is optional, and it must not be allowed to eat the first digit of
   // the LP: without the lookahead, "master 393 LP" parses as division 3, 93 LP.
-  const re=/\b(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)\b(?:\s+([1-4]|IV|III|II|I)(?![\dA-Za-z]))?\s*(\d{1,4})\s*LP\b/ig;
+  // Thousands separators ("4,061 LP") are real on live op.gg pages.
+  const re=new RegExp("\\b(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)\\b(?:\\s+([1-4]|IV|III|II|I)(?![\\dA-Za-z,]))?\\s*"+LP_NUM+"\\s*LP\\b","ig");
   let m,last=null;
   while((m=re.exec(before)))last=m;
   if(!last)return null;
   const tier=last[1].toUpperCase();
   const mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
   const map={"1":"I","2":"II","3":"III","4":"IV"};
-  return{tier,division:(mPlus||!last[2])?null:(map[last[2]]||last[2].toUpperCase()),lp:+last[3]};
+  return{tier,division:(mPlus||!last[2])?null:(map[last[2]]||last[2].toUpperCase()),lp:lpNum(last[3])};
 }
 // The summoner level is stacked on the profile icon as a bare number with no
 // label anywhere near it, which is why the "Lv." patterns never found it. There
@@ -3142,15 +3275,22 @@ async function fetchViaProxy(acc){
     const idx=(lastGoodProxy+k)%proxies.length;
     try{
       const text=await fetchWithTimeout(proxies[idx].make(target),10000);
+      // Same contract as the worker: a missing Riot ID is found:false, not a failed parse.
+      if(isSummonerNotFoundPage(text)){
+        lastGoodProxy=idx;
+        return {found:false,updatedAt:Date.now(),asOf:"auto-fetch (op.gg via "+proxies[idx].name+")"};
+      }
       const parsed=parseRankText(text);
       if(parsed){
         lastGoodProxy=idx; // start here next time — skips dead proxies on bulk checks
+        const uncertain=!parseRankFromMeta(text);
         return {found:true,tier:parsed.tier||"UNRANKED",division:parsed.division||null,lp:parsed.lp,wins:parsed.wins,losses:parsed.losses,
           level:parsed.level!=null?parsed.level:parseLevelText(text,acc),
           peak:parsePeakText(text),
           seasons:parseSeasons(text),flex:parseFlex(text),champs:parseChampions(text),
           lpAt:parseLpHistory(text),
-          icon:parseProfileIcon(text),mmr:null,avgRecent:null,asOf:"auto-fetch (op.gg via "+proxies[idx].name+")",note:null,updatedAt:Date.now()};
+          icon:parseProfileIcon(text),mmr:null,avgRecent:null,uncertain,source:uncertain?"body":"meta",
+          asOf:"auto-fetch (op.gg via "+proxies[idx].name+")",note:null,updatedAt:Date.now()};
       }
       lastErr="page loaded but no rank found — name/tag/region correct?";
     }catch(e){lastErr=e.name==="AbortError"?"timeout":(e.message||"fetch blocked")}
@@ -3192,6 +3332,16 @@ function refreshCutoffs(){
   Promise.all(regions.map(r=>ensureCutoffs(r).catch(()=>false)))
     .then(res=>{if(res.some(Boolean))renderGrid()});
 }
+function mapBackendPayload(d){
+  if(!d||typeof d!=="object")throw new Error("empty backend payload");
+  if(d.ok===false&&d.found!==false)throw new Error(d.error||"backend row failed");
+  if(d.found===false)return {found:false,updatedAt:Date.now()};
+  // Require an explicit found:true (or a tier) so a half-empty error object is not
+  // promoted to UNRANKED success.
+  if(d.found!==true&&!d.tier)throw new Error("backend row missing rank");
+  const uncertain=!!d.uncertain;
+  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),seasons:d.seasons||null,flex:normPeak(d.flex),champs:Array.isArray(d.champs)?d.champs.slice(0,10):null,lpAt:normLpAt(d.lpAt),icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,uncertain,source:d.source||null,updatedAt:Date.now()};
+}
 async function fetchViaBackend(acc){
   const r=REGIONS[acc.region]||REGIONS.EUW;
   let url;
@@ -3200,9 +3350,32 @@ async function fetchViaBackend(acc){
   url.searchParams.set("tag",acc.tagLine);
   url.searchParams.set("region",r.opgg);
   const text=await fetchWithTimeout(url.href,12000);
-  const d=JSON.parse(text);
-  if(d.found===false)return {found:false,updatedAt:Date.now()};
-  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),seasons:d.seasons||null,flex:normPeak(d.flex),champs:Array.isArray(d.champs)?d.champs.slice(0,10):null,lpAt:normLpAt(d.lpAt),icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,updatedAt:Date.now()};
+  return mapBackendPayload(JSON.parse(text));
+}
+// One POST for up to 20 accounts — Check-all used to wait ~1s × N on sequential GETs.
+async function fetchViaBackendBatch(list){
+  if(!cfg.backendUrl||!list.length)return null;
+  let url;
+  try{url=new URL(cfg.backendUrl)}catch(e){return null}
+  const accounts=list.map(a=>{
+    const r=REGIONS[a.region]||REGIONS.EUW;
+    return{name:a.gameName,tag:a.tagLine,region:r.opgg,id:a.id};
+  });
+  const c=new AbortController();const t=setTimeout(()=>c.abort(),45000);
+  try{
+    const res=await fetch(url.href,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({accounts:accounts.map(({name,tag,region})=>({name,tag,region}))}),signal:c.signal});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    const data=await res.json();
+    if(!data||!Array.isArray(data.results))throw new Error("bad batch response");
+    const byKey=new Map();
+    data.results.forEach((r,i)=>{
+      const a=accounts[i];
+      if(!a)return;
+      byKey.set(a.id,r);
+    });
+    return byKey;
+  }finally{clearTimeout(t)}
 }
 // the backend and the AI path hand us a peak we didn't build ourselves, and it
 // goes straight into a rank comparison — normalise it or drop it
@@ -3285,11 +3458,20 @@ Rules: use null for any value you cannot find. If unranked this season, tier "UN
   const a=text.indexOf("{"),b=text.lastIndexOf("}");
   if(a===-1||b===-1)throw new Error("No JSON in response");
   const parsed=JSON.parse(text.slice(a,b+1));
+  const modelName=cfg.model.includes("haiku")?"Haiku":"Sonnet";
+  const asOf=(parsed.asOf?parsed.asOf+" · ":"")+"AI ("+modelName+")";
+  // Same gate as the worker payload — half-empty model JSON must not become a
+  // silent UNRANKED success.
+  if(parsed.found===false)return {found:false,updatedAt:Date.now(),asOf};
+  if(parsed.found!==true&&!parsed.tier)throw new Error("AI returned incomplete rank data");
+  parsed.found=true;
   parsed.icon=safeIconUrl(parsed.icon);
   parsed.peak=normPeak(parsed.peak);
   parsed.updatedAt=Date.now();
-  const modelName=cfg.model.includes("haiku")?"Haiku":"Sonnet";
-  parsed.asOf=(parsed.asOf?parsed.asOf+" · ":"")+"AI ("+modelName+")";
+  parsed.asOf=asOf;
+  parsed.uncertain=false;
+  parsed.source="ai";
+  parsed.note=parsed.note||null;
   return parsed;
 }
 function applyStats(acc,s){
@@ -3297,7 +3479,21 @@ function applyStats(acc,s){
   // configures, and a model's JSON. Only the first is guaranteed to be shaped the
   // way the card reads it, and this is the one point all three meet — so the
   // shaping happens here rather than three times over, differently.
-  if(s&&s.found!==false){
+  if(s&&s.found===false){
+    // A miss is an answer about the Riot ID, not a wipe of the vault's memory of
+    // seasons/champs/peak. Replacing the whole stats object used to blank the
+    // details drawer the moment a name was mistyped.
+    const old=acc.stats||{};
+    s={
+      found:false,updatedAt:s.updatedAt||Date.now(),
+      tier:null,division:null,lp:null,wins:null,losses:null,lpAt:null,
+      mmr:null,avgRecent:null,uncertain:false,source:null,note:null,
+      level:old.level!=null?old.level:null,
+      peak:old.peak||null,seasons:old.seasons||null,flex:old.flex||null,
+      champs:old.champs||null,icon:old.icon||null,
+      asOf:s.asOf||null,
+    };
+  }else if(s&&s.found!==false){
     // Above Master there are no divisions. The peak and season parsers already
     // knew that; the current-rank parser did not, and the backend and the model
     // are simply whatever they hand back.
@@ -3439,7 +3635,10 @@ function commitStats(id,acc,s){
   // Only this card changed. Going through render() re-sorted the grid after every
   // single check, so during Check all ranks the whole board reshuffled once per
   // account — the order settles on the next full render instead.
-  renderCard(id);renderDash();renderRibbon();
+  renderCard(id);
+  // Ribbon + dash rebuild the whole vault — skip both while Check-all is in flight;
+  // the final render() after the run refreshes them.
+  if(!run){renderRibbon();renderDash()}
   {
     // Within a tier the LP number is comparable end to end; across a tier it is
     // not — 90 LP to 12 LP is a promotion, and counting down through it would
@@ -3455,9 +3654,8 @@ function commitStats(id,acc,s){
   setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
 }
 async function check(id){
-  // an account deleted mid-run is not a failed check — but the caller reads the
-  // return value as a boolean, so say so rather than returning undefined
-  const acc=accounts.find(a=>a.id===id);if(!acc)return true;
+  // Deleted mid-run is neither a refresh nor a failure — null matches "superseded".
+  const acc=accounts.find(a=>a.id===id);if(!acc)return null;
   /* Two clicks, or Refresh while a check-all is already on this card, used to leave
      both fetches in flight with no idea which finished last. A slow success and a
      fast failure then met in either order: the failure path Object.assigns a note
@@ -3469,18 +3667,20 @@ async function check(id){
   if(cfg.backendUrl){try{s=await fetchViaBackend(acc)}catch(e){err="backend: "+(e.message||"failed")}}
   if(!s&&cfg.apiKey){try{s=await fetchViaClaude(acc)}catch(e){err=err||("api: "+(e.message||"failed"))}}
   if(!s){try{s=await fetchViaProxy(acc)}catch(e){err=err||e.message||"auto-fetch failed"}}
-  if(checkGen.get(id)!==gen)return null; // a newer run owns this card now — not a success
+  // Only the owner may clear the spinner — a newer Refresh already put itself in
+  // `checking`, and deleting blindly would steal its "Checking…" state.
+  if(checkGen.get(id)!==gen)return null;
   checking.delete(id);
   syncCheckAll();
-  // Re-check immediately before writing — a manual ✎ Rank (or another check)
-  // can bump the gen between the gate above and here.
   if(checkGen.get(id)!==gen)return null;
-  if(s){commitStats(id,acc,s);return true}
-  else{
-    if(checkGen.get(id)!==gen)return null;
-    acc.stats=Object.assign({},acc.stats||{},{note:"Auto-fetch failed ("+err+") — enter it by hand with ✎ Rank"});
-    saveDB();renderCard(id);return false;
+  if(s){
+    commitStats(id,acc,s);
+    // found:false is a finished answer, not a successful refresh and not a retryable fail.
+    return s.found===false?"missing":true;
   }
+  if(checkGen.get(id)!==gen)return null;
+  acc.stats=Object.assign({},acc.stats||{},{note:"Auto-fetch failed ("+err+") — enter it by hand with ✎ Rank"});
+  saveDB();renderCard(id);return false;
 }
 // Sixty accounts at roughly a second each is minutes of waiting, and the only
 // sign of life used to be the word "Checking…" on a button — no idea how far it
@@ -3512,27 +3712,83 @@ async function checkAll(ids){
   // a click listener, which passes an Event — truthy, and with no .map on it.
   const list=(Array.isArray(ids)?ids.map(id=>accounts.find(a=>a.id===id)).filter(Boolean):filtered()).filter(a=>a.status!=="banned");
   if(!list.length){toast("Nothing to refresh");return}
-  run={total:list.length,done:0,ok:0,failed:[],current:null,stop:false};
+  run={total:list.length,done:0,ok:0,missing:0,failed:[],current:null,stop:false};
   lastFails=null;renderFailbar();renderRun();syncCheckAll();
+  const done=new Set();
+  // Worker batch when a backend is set — chunks of 20, then sequential for misses.
+  if(cfg.backendUrl){
+    for(let i=0;i<list.length;i+=20){
+      if(run.stop)break;
+      const chunk=list.slice(i,i+20).filter(a=>!done.has(a.id));
+      if(!chunk.length)continue;
+      run.current="batch "+(i+1)+"–"+(i+chunk.length);renderRun();
+      // Claim ownership before the network wait — bumping only at commit let a
+      // finished Refresh be overwritten by a slower batch response.
+      const gens=new Map();
+      for(const acc of chunk){
+        const gen=(checkGen.get(acc.id)||0)+1;checkGen.set(acc.id,gen);gens.set(acc.id,gen);
+        checking.add(acc.id);renderCard(acc.id);
+      }
+      let map=null;
+      try{map=await fetchViaBackendBatch(chunk)}catch(e){map=null}
+      const release=(id,gen)=>{if(checkGen.get(id)===gen)checking.delete(id)};
+      if(!map){
+        // POST dead / old worker — drop only claims we still own, then sequential.
+        for(const [id,gen] of gens)release(id,gen);
+        break;
+      }
+      const batchNow=Date.now();
+      for(const acc of chunk){
+        if(run.stop)break;
+        const gen=gens.get(acc.id);
+        // A newer Refresh owns this card — leave it alone, and do not sequential-retry.
+        // Still advance the progress bar so a mid-run Refresh cannot leave it short.
+        if(checkGen.get(acc.id)!==gen){done.add(acc.id);run.done++;renderRun();continue}
+        const row=map.get(acc.id);
+        if(!row){release(acc.id,gen);continue}
+        if(row.ok===false&&row.found!==false){release(acc.id,gen);continue}
+        let s=null;
+        try{s=mapBackendPayload(row)}catch(e){release(acc.id,gen);continue}
+        if(checkGen.get(acc.id)!==gen){done.add(acc.id);run.done++;renderRun();continue}
+        s.updatedAt=batchNow; // one stamp per chunk so pool sparkline can bucket
+        commitStats(acc.id,acc,s);
+        release(acc.id,gen);
+        done.add(acc.id);
+        if(s.found===false)run.missing++;
+        else run.ok++;
+        run.done++;renderRun();
+      }
+      for(const [id,gen] of gens)release(id,gen);
+      // Soft-empty chunk (all transport skips / superseded): try the next POST chunk.
+      // Only a dead POST (`!map`) aborts batching entirely.
+    }
+  }
   for(const acc of list){
     if(run.stop)break;
+    if(done.has(acc.id))continue;
     run.current=acc.label||acc.gameName;renderRun();
-    // null = superseded by a newer check on this card — not a failure, and not a
-    // refresh this pass can take credit for either.
+    // null = superseded/deleted; "missing" = found:false; false = transport fail; true = refreshed.
     const result=await check(acc.id);
     if(result===false)run.failed.push({id:acc.id,name:acc.label||acc.gameName});
-    else if(result!==null)run.ok++;
+    else if(result===true)run.ok++;
+    else if(result==="missing")run.missing++;
     run.done++;renderRun();
     if(run.stop)break;
-    await new Promise(r=>setTimeout(r,800));
+    await new Promise(r=>setTimeout(r,cfg.backendUrl?200:800));
   }
-  const {done,ok,failed,stop}=run;
+  const {done:nDone,ok,missing,failed,stop}=run;
   run=null;lastFails=failed.length?failed:null;
   render(); // the sort order was deliberately left alone during the run
   renderRun();renderFailbar();
-  const msg=stop?"Stopped after "+done+" of "+list.length
-    :failed.length?ok+" refreshed, "+failed.length+" failed"
-    :"Refreshed "+ok+" account"+(ok===1?"":"s");
+  let msg;
+  if(stop)msg="Stopped after "+nDone+" of "+list.length;
+  else{
+    const parts=[];
+    if(ok)parts.push(ok+" refreshed");
+    if(missing)parts.push(missing+" not found");
+    if(failed.length)parts.push(failed.length+" failed");
+    msg=parts.length?parts.join(", "):"Nothing changed";
+  }
   toast(msg);
   if(!stop)notify("Check all ranks finished",msg);
 }
@@ -3548,6 +3804,99 @@ function lastDelta(a){
   const now=ladderLP(cur), before=ladderLP(prev);
   return now===null||before===null?0:now-before;
 }
+function markPlayed(id){
+  const a=accounts.find(x=>x.id===id); if(!a)return;
+  openMore.delete(id);
+  a.lastPlayedAt=Date.now();
+  saveDB(); renderCard(id); renderDash(); toast("Marked played today");
+}
+function seasonReset(id){
+  const a=accounts.find(x=>x.id===id); if(!a||!a.stats){toast("Nothing to reset");return}
+  openMore.delete(id);
+  const s=a.stats;
+  const seasons=normSeasons(s.seasons)||{solo:[],flex:[]};
+  if(s.tier&&s.tier!=="UNRANKED"){
+    seasons.solo=[{season:"prev",tier:s.tier,division:s.division||null,lp:s.lp??0}].concat(seasons.solo).slice(0,20);
+  }
+  if(s.peak&&s.peak.tier) a.peakManual=a.peakManual||{...s.peak};
+  a.history=a.history||[];
+  if(a.history.length){
+    a.history.push({t:Date.now(),tier:"UNRANKED",division:null,lp:null,w:0,l:0});
+  }
+  // Clear live ladder fields explicitly — spreading old stats left flex/lpAt around.
+  a.stats={
+    found:true,tier:"UNRANKED",division:null,lp:null,wins:0,losses:0,level:s.level??null,
+    peak:null,seasons,flex:null,champs:null,lpAt:null,icon:s.icon||null,
+    mmr:null,avgRecent:null,uncertain:false,source:null,asOf:"season-reset",
+    note:null,updatedAt:Date.now(),seasonResetAt:Date.now()
+  };
+  a.goal=null;
+  saveDB(); renderCard(id); renderDash(); renderRibbon();
+  toast("Season reset — previous rank kept in Past seasons");
+}
+function poolLpSpark(pool){
+  // One reading per account per day, then average across accounts — otherwise two
+  // refreshes on one smurf the same day double-weight it against a quieter one.
+  const DAY=86400000;
+  const byT=new Map(); // day -> Map(accountKey -> lp)
+  for(const a of pool){
+    const key=a.id||a.gameName||Math.random();
+    for(const h of (a.history||[]).slice(-12)){
+      const v=ladderLP(h); if(v==null)continue;
+      const t=Math.floor((+h.t||0)/DAY)*DAY;
+      if(!byT.has(t))byT.set(t,new Map());
+      byT.get(t).set(key,v); // last point that day wins
+    }
+  }
+  const pts=[...byT.entries()].sort((x,y)=>x[0]-y[0]).map(([,m])=>{
+    let sum=0,n=0; for(const v of m.values()){sum+=v;n++}
+    return n?sum/n:null;
+  }).filter(v=>v!=null);
+  if(pts.length<2)return "";
+  const min=Math.min(...pts), max=Math.max(...pts), span=Math.max(1,max-min);
+  const w=180,h=36,pad=2;
+  const poly=pts.map((v,i)=>{
+    const x=pad+(i/(pts.length-1))*(w-pad*2);
+    const y=h-pad-((v-min)/span)*(h-pad*2);
+    return x.toFixed(1)+","+y.toFixed(1);
+  }).join(" ");
+  return `<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/></svg>`;
+}
+let compareIds=[];
+function openCompare(id){
+  if(compareIds.includes(id))compareIds=compareIds.filter(x=>x!==id);
+  else {
+    compareIds.push(id);
+    if(compareIds.length>2)compareIds=compareIds.slice(-2);
+  }
+  if(compareIds.length<2){toast("Pick one more account to compare ("+compareIds.length+"/2)");render();return}
+  render(); // refresh compare labels on every card before the modal covers them
+  renderCompare();
+}
+function renderCompare(){
+  const a=accounts.find(x=>x.id===compareIds[0]), b=accounts.find(x=>x.id===compareIds[1]);
+  if(!a||!b){compareIds=[];return}
+  const cell=(acc)=>{
+    const s=acc.stats||{};
+    const tr=wrTrend(acc);
+    const peak=peakInfo(acc).peak;
+    return `<div class="cmp-col">
+      <div class="cmp-nm">${esc(acc.label||acc.gameName)}</div>
+      <div class="cmp-rk" style="color:${tierColor(s.tier)}">${esc(shortRank(s)||"—")}</div>
+      <div class="cmp-line">${esc(s.wins!=null?s.wins+"W":"—")} / ${esc(s.losses!=null?s.losses+"L":"—")}</div>
+      <div class="cmp-line">Peak ${esc(peak||"—")}</div>
+      <div class="cmp-line">WR trend ${tr?(tr.d>0?"+":"")+tr.d+" pp":"—"}</div>
+      <div class="cmp-line">Last played ${acc.lastPlayedAt?timeAgo(acc.lastPlayedAt):(acc.lastLoginAt?timeAgo(acc.lastLoginAt):(s.updatedAt?timeAgo(s.updatedAt):"never"))}</div>
+    </div>`;
+  };
+  const modal=$("compareModal");
+  if(!modal){compareIds=[];return}
+  modal.classList.remove("hidden");
+  setHTML($("cmpBody"),`<div class="cmp-grid">${cell(a)}<div class="cmp-vs">vs</div>${cell(b)}</div>
+    <button class="btn" id="cmpClear" style="margin-top:12px">Clear selection</button>`);
+  $("cmpClear").onclick=()=>{closeCompare()};
+}
+
 
 // ---------- filtering / sorting ----------
 /* Sixty accounts is the point where "type some letters and see what sticks" stops
@@ -3604,6 +3953,8 @@ function filtered(){
     if(ui.flag==="failed"&&!isFailed(a))return false;
     if(ui.flag==="attention"&&!needsAttention(a))return false;
     if(ui.flag==="missing"&&!(a.stats&&a.stats.found===false))return false;
+    if(ui.flag==="dup"&&!isDuplicate(a))return false;
+    if(ui.flag==="rotate"&&!needsRotation(a))return false;
     if(ui.tier){
       const t=(a.stats&&a.stats.found!==false&&a.stats.tier||"").toUpperCase();
       if(ui.tier==="UNRANKED"?!isUnrankedAnswer(a):t!==ui.tier)return false;
@@ -3834,6 +4185,12 @@ function pruneCardState(){
     for(const id of [...s])if(!live.has(id))s.delete(id);
   for(const k of [...openSec])if(!live.has(k.slice(0,k.lastIndexOf("|"))))openSec.delete(k);
   for(const id of [...chartRange.keys()])if(!live.has(id))chartRange.delete(id);
+  for(const id of [...checkGen.keys()])if(!live.has(id))checkGen.delete(id);
+  if(compareIds.some(id=>!live.has(id))){
+    compareIds=compareIds.filter(id=>live.has(id));
+    const m=$("compareModal");
+    if(m&&compareIds.length<2)m.classList.add("hidden");
+  }
   if(armedDelete&&!live.has(armedDelete))armedDelete=null;
   if(editingNote&&!live.has(editingNote)){editingNote=null;noteDraft=""}
   if(flashId&&!live.has(flashId))flashId=null;
@@ -4005,12 +4362,16 @@ function renderDash(){
   const veryStaleN=accounts0.filter(a=>a.status!=="banned"&&isChecked(a)&&Date.now()-a.stats.updatedAt>30*24*3600*1000).length;
   const bannedN=accounts0.filter(a=>a.status==="banned").length;
   const attentionN=accounts0.filter(needsAttention).length;
+  const failedN=accounts0.filter(isFailed).length;
   const archivedN=accounts.length-accounts0.length;
   let bk="";
   if(hasStorage){
+    const remindDays=clampExportDays(cfg.exportRemindDays);
     if(!cfg.lastExport)bk="No backup yet — hit Export once your accounts are in.";
-    else if(Date.now()-cfg.lastExport>30*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago — consider exporting.";
+    else if(Date.now()-cfg.lastExport>remindDays*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago — consider exporting.";
   }
+  const dupN=duplicateIds().size;
+  const rotN=accounts0.filter(needsRotation).length;
   // These are filter toggles, not links — they say so to a screen reader as well
   // as by lighting up.
   const gem=(tier,label,n,colour)=>`<button class="gem gem-b${ui.tier===tier?" on":""}" data-tier="${tier}" aria-pressed="${ui.tier===tier}" title="Show only these">`
@@ -4036,6 +4397,14 @@ function renderDash(){
       <div class="v" style="color:var(--gold-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`:""}
     ${attentionN?`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
       <div class="v" style="color:var(--danger)">${attentionN}</div><div class="s-note">flagged by you, or the profile no longer exists</div></button>`:""}
+    ${failedN?`<button class="stat stat-b${ui.flag==="failed"?" on":""}" data-flag="failed" aria-pressed="${ui.flag==="failed"}"><div class="k">Last check failed</div>
+      <div class="v" style="color:var(--danger)">${failedN}</div><div class="s-note">auto-fetch failed — enter rank by hand or retry</div></button>`:""}
+    ${dupN?`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
+      <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`:""}
+    ${rotN?`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
+      <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`:""}
+    <div class="stat"><div class="k">Pool LP</div><div class="v" style="font-size:12px">${poolLpSpark(pool)||"—"}</div>
+      <div class="s-note">recent ladder across counted accounts</div></div>
     <button class="stat stat-b${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"><div class="k">Needs refresh</div>
       <div class="v"${staleN?' style="color:var(--danger)"':""}>${staleN}</div>
       <div class="s-note">older than 3 days${veryStaleN?" · "+veryStaleN+" over 30d":""}</div></button>
@@ -4059,7 +4428,7 @@ function renderTagbar(){
 // A number in a dashboard always raises "which ones?", so the stats panel sets
 // these — and they have to be visible and removable, or the grid just looks
 // mysteriously short.
-const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Needs attention",missing:"Not found"};
+const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Needs attention",missing:"Not found",dup:"Duplicate IDs",rotate:"Due to rotate"};
 function renderChips(){
   const out=[];
   if(ui.flag)out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
@@ -4361,6 +4730,16 @@ function cardHTML(a,i){
     if(dv)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
   }
   if(isClimbing(hist))deltaChip+='<span class="delta d-up" title="LP has gone up 3 checks in a row">🔥 Climbing</span>';
+  if(isDuplicate(a))deltaChip+='<span class="delta" title="Another card shares this Riot ID + region">Duplicate ID</span>';
+  if(isUncertain(a))deltaChip+='<span class="delta" title="Parsed without op.gg meta description">Uncertain</span>';
+  {
+    const d=rotationDays(a);
+    if(needsRotation(a))deltaChip+='<span class="delta" title="No play/check in 14+ days">Rotate'+(d!=null?(" · "+d+"d"):"")+'</span>';
+  }
+  {
+    const tr=wrTrend(a);
+    if(tr&&Math.abs(tr.d)>=3)deltaChip+='<span class="delta '+(tr.d>0?"d-up":"d-down")+'" title="Winrate vs ~4 checks ago">'+(tr.d>0?"▲":"▼")+" WR "+(tr.d>0?"+":"")+tr.d+'</span>';
+  }
   const {w:wins,l:losses,total,wr}=winLoss(s);
   // whichever of the two is known — printing both from coerced numbers is what put
   // an invented "0L" beside a real win count
@@ -4461,7 +4840,13 @@ function cardHTML(a,i){
       // climb towards should not be shown an empty progress bar.
       const g=goalProgress(a);
       if(!g)return "";
-      const from=ladderLP((a.history||[])[0])??g.cur;
+      // Anchor at the start of the current climb window (after the last season
+      // break), not history[0] — otherwise a year-old Iron point makes Diamond
+      // look 95% done while you are still 400 LP away.
+      const hist=a.history||[];
+      let fromIdx=0;
+      for(let i=1;i<hist.length;i++)if(seasonBreak(hist[i-1],hist[i]))fromIdx=i;
+      const from=ladderLP(hist[fromIdx])??g.cur;
       const span=Math.max(g.target-Math.min(from,g.cur),1);
       const pct=g.done?100:Math.max(0,Math.min(100,Math.round((g.cur-Math.min(from,g.cur))/span*100)));
       const gcol=tierColor(a.goal.tier);
@@ -4490,7 +4875,7 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&s.asOf?` title="Read from ${esc(s.asOf)}"`:""}>${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
+      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
       <div class="acts">
         <button data-act="login" class="a-login" title="Show saved login">${icon("user")} ${loginOpen?"Hide login":"Login"}</button>
         <a class="a-dpm" href="${dpm}" target="_blank" rel="noreferrer">DPM ↗</a>
@@ -4502,6 +4887,9 @@ function cardHTML(a,i){
         <button data-act="rank" title="Enter rank manually">${icon("pencil")} Rank</button>
         <button data-act="edit">Edit</button>
         ${a.archived?'<button data-act="unarchive">Unarchive</button>':'<button data-act="archive">Archive</button>'}
+        <button data-act="played" title="Mark that you played on this account today">Played today</button>
+        <button data-act="compare" title="Pick two accounts to compare">${compareIds.includes(a.id)?"Unselect compare":"Compare…"}</button>
+        <button data-act="seasonreset" title="Archive current rank into past seasons and clear live LP for a new season">Season reset</button>
         <button data-act="flag" title="Mark this account as needing a look — it gets a marker and its own filter">${a.flagged?"Clear the flag":"Flag for attention"}</button>
         <button data-act="exstats" title="Leave this account out of the combined stats at the top">${a.excludeStats?"Count in stats":"Exclude from stats"}</button>
         <button data-act="del" class="b-danger" ${armedDelete===a.id?'style="border-color:var(--danger)"':""}>${armedDelete===a.id?"Sure?":"Delete"}</button>
@@ -4643,13 +5031,22 @@ function syncCheckAll(shown){
 // Falls back to a full render whenever the card isn't where we expect it.
 function renderCard(id){
   const grid=$("grid");
-  const el=[...grid.children].find(c=>c.dataset.id===id);
-  const list=filtered();
-  const idx=list.findIndex(a=>a.id===id);
-  if(!el||idx<0){renderGrid();return}
+  const el=grid.querySelector(`[data-id="${idSel(id)}"]`);
+  const acc=accounts.find(a=>a.id===id);
+  if(!el||!acc){renderGrid();return}
+  let html;
+  if(run){
+    // Sort order is frozen during Check-all — skip filtered()/sort on every patch.
+    html=ui.density==="list"?rowHTML(acc,0)
+      :ui.density==="wall"?tileHTML(acc):cardHTML(acc,0);
+  }else{
+    const list=filtered();
+    const idx=list.findIndex(a=>a.id===id);
+    if(idx<0){renderGrid();return}
+    html=ui.density==="list"?rowHTML(list[idx],idx)
+      :ui.density==="wall"?tileHTML(list[idx]):cardHTML(list[idx],idx);
+  }
   const tmp=document.createElement("div");
-  const html=ui.density==="list"?rowHTML(list[idx],idx)
-    :ui.density==="wall"?tileHTML(list[idx]):cardHTML(list[idx],idx);
   tmp.innerHTML=html;
   morph(el,tmp.firstElementChild);
   cardCache.set(id,html); // keep the skip-check honest about what this node holds
@@ -4676,6 +5073,16 @@ function closeAllPanels(){
   // this list meant Ctrl+K was the only thing that would close it again: Escape
   // shut every other panel on the page and left the palette standing.
   closePalette();
+  closeCompare();
+}
+function closeCompare(){
+  const had=compareIds.length>0;
+  compareIds=[];
+  const m=$("compareModal");
+  if(m)m.classList.add("hidden");
+  // Escape / backdrop used to clear the selection without re-rendering, so cards
+  // kept showing "Unselect compare" until something else refreshed the grid.
+  if(had)render();
 }
 function openForm(acc){
   if(!acc&&previewMode){previewMode=false;accounts=[];render()}
@@ -4744,7 +5151,7 @@ function openSettings(){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";updateVaultStatus();$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));updateVaultStatus();$("settings").classList.remove("hidden")
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -5212,7 +5619,7 @@ document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListene
 // Driven by an observer rather than by each of the eight places that add or
 // remove .hidden on these two. Wiring it into every call site works right up
 // until the ninth one is added and quietly doesn't lock the page.
-const MODALS=["settings","help","form","palette"];
+const MODALS=["settings","help","form","palette","compareModal","bulkAdd"];
 let modalReturn=null;
 function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains("hidden"))}
 function syncModals(){
@@ -5325,6 +5732,7 @@ $("sSave").addEventListener("click",async()=>{
   cfg.accent2=$("sAccent2").value===DEFAULT_ACCENT2?null:$("sAccent2").value;applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
   cfg.atmosphere=applyAtmosphere(document.body.dataset.atmosphere||DEFAULT_ATMOSPHERE);
   if(cfg.atmosphere===DEFAULT_ATMOSPHERE)cfg.atmosphere=null; // same idea as accents: no preference vs explicit default
+  cfg.exportRemindDays=clampExportDays($("sExportDays")&&$("sExportDays").value);
   saveCfg();syncLockTimer();hideAccPrev();$("settings").classList.add("hidden");toast("Settings saved"+notifyNote)
 });
 let settingsSaveGen=0;
@@ -6043,6 +6451,11 @@ $("grid").addEventListener("click",async e=>{
   else if(act==="copypw")copyText(acc.password,"Password",true);
   else if(act==="copymail")copyText(acc.email,"Email");
   else if(act==="copybirth")copyText(acc.birthdate,"Date of birth");
+  else if(act==="played"){markPlayed(id)}
+  else if(act==="compare"){openMore.delete(id);openCompare(id)}
+  else if(act==="seasonreset"){
+    if(!confirm("Reset this account for a new season? Current rank moves into Past seasons."))return;
+    seasonReset(id)}
   else if(act==="flag"){acc.flagged=!acc.flagged;saveDB();render();
     toast(acc.flagged?"Flagged — it's under Needs attention now":"Flag cleared")}
   else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderCard(id)}
@@ -6082,7 +6495,8 @@ $("grid").addEventListener("click",async e=>{
     const s={found:true,tier,division:(isU||mPlus)?null:g("div").value,lp:isU?null:(+g("lp").value||0),
       wins:g("w").value===""?null:+g("w").value,losses:g("l").value===""?null:+g("l").value,
       level:old.level!=null?old.level:null,peak:old.peak||null,
-      seasons:old.seasons||null,flex:old.flex||null,champs:old.champs||null,icon:old.icon||null,mmr:old.mmr||null,avgRecent:null,asOf:"manual entry",note:null,updatedAt:Date.now()};
+      seasons:old.seasons||null,flex:old.flex||null,champs:old.champs||null,icon:old.icon||null,mmr:old.mmr||null,avgRecent:null,
+      uncertain:false,source:null,asOf:"manual entry",note:null,updatedAt:Date.now()};
     const ptier=g("ptier")?g("ptier").value:"UNRANKED";
     if(ptier==="UNRANKED")delete acc.peakManual;
     else acc.peakManual={tier:ptier,division:TIER_ORDER.indexOf(ptier)>=TIER_ORDER.indexOf("MASTER")?null:g("pdiv").value,lp:+g("plp").value||0};
@@ -6145,6 +6559,13 @@ function migrateStats(){
   }
   if(touched)saveDB();
 }
+function showChangelogIfNeeded(){
+  if(cfg.lastChangelog===APP_VERSION)return;
+  const entry=APP_CHANGELOG.find(e=>e.v===APP_VERSION);
+  cfg.lastChangelog=APP_VERSION;saveCfg();
+  if(!entry||!entry.items||!entry.items.length)return;
+  toast("v"+entry.v+": "+entry.items.slice(0,2).join(" · ")+(entry.items.length>2?"…":""));
+}
 function startApp(){
   $("appRoot").classList.remove("hidden");
   syncLockTimer();
@@ -6156,6 +6577,7 @@ function startApp(){
   renderAwayBand();
   setTimeout(()=>$("grid").classList.remove("boot"),1200);
   if(!cfg.seenHelp&&accounts.length===0)$("help").classList.remove("hidden");
+  showChangelogIfNeeded();
   if(cfg.autoCheck){
     const staleAccs=accounts.filter(autoCheckDue);
     if(staleAccs.length){
@@ -6280,6 +6702,8 @@ function boot(){
       if(!ok){cfg.backendUrl="";cfgDirty=true}
       else if(ok!==cfg.backendUrl){cfg.backendUrl=ok;cfgDirty=true}
     }
+    const days=clampExportDays(cfg.exportRemindDays);
+    if(cfg.exportRemindDays!==days){cfg.exportRemindDays=days;cfgDirty=true}
     if(cfgDirty)saveCfg();
   }
   fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);

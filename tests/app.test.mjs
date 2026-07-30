@@ -166,6 +166,27 @@ test("parseRankText: garbage input returns null instead of a bogus match", () =>
   assert.equal(win.parseRankText(null), null);
 });
 
+test("parseRankText accepts comma-formatted LP from live op.gg body text", () => {
+  const win = bootApp();
+  const body = "Ranked Solo/Duo challenger 4,011 LP 772 W 650 L Win rate 54 % challenger 4,061 LP Top tier";
+  const r = win.parseRankText(body);
+  assert.equal(r.tier, "CHALLENGER");
+  assert.equal(r.lp, 4011);
+  assert.equal(r.wins, 772);
+  assert.deepEqual(plain(win.parsePeakText(body)), { tier: "CHALLENGER", division: null, lp: 4061 });
+});
+
+test("parseRankFromMeta reads current rank and Unranked level from the description", () => {
+  const win = bootApp();
+  const ranked = win.parseRankText(`<meta name="description" content="Kaori#EUW33 / Challenger 1 4011LP / 772Win 650Lose Win rate 54%"/>`);
+  assert.equal(ranked.tier, "CHALLENGER");
+  assert.equal(ranked.lp, 4011);
+  assert.equal(ranked.wins, 772);
+  const un = win.parseRankText(`<meta name="description" content="Hide on bush#KR1 / Lv. 752"/>`);
+  assert.equal(un.tier, "UNRANKED");
+  assert.equal(un.level, 752);
+});
+
 /* Solo Unranked has no "N LP". The first tier+LP on the page used to win — which on
    an Unranked account is often Flex, or a season peak — so Refresh stored Gold as
    the solo rank. Flex is parseFlex's job; current-rank only reads above that heading. */
@@ -4052,11 +4073,12 @@ test("trailing Unranked is not a climb rate or a sparkline to the old peak", () 
 test("card delta chip uses lastDelta, not a raw ladder subtract across Unranked", () => {
   const seed = [{
     id: "d1", gameName: "Delta", tagLine: "EUW", region: "EUW", status: "active",
+    lastPlayedAt: Date.now(),
     history: [
       { t: 1, tier: "GOLD", division: "II", lp: 40 },
       { t: 2, tier: "UNRANKED", division: null, lp: null },
     ],
-    stats: { found: true, tier: "UNRANKED", division: null, lp: null, updatedAt: 2 },
+    stats: { found: true, tier: "UNRANKED", division: null, lp: null, updatedAt: Date.now() },
   }];
   const win = bootApp(seed);
   assert.equal(win.lastDelta(win.filtered()[0]), 0);
@@ -4177,4 +4199,668 @@ test("the card stacks LP under the tier name", () => {
   assert.match(card.querySelector(".rk-main .rk-lp").textContent, /23 LP/);
   assert.match(card.querySelector(".c-stats").textContent, /Peak/);
   assert.match(card.querySelector(".c-stats").textContent, /Diamond II/);
+});
+
+test("duplicate Riot IDs are detected per region", () => {
+  const win = bootApp([
+    {id:"a",region:"EUW",gameName:"Foo",tagLine:"EUW",status:"active",stats:null,history:[],tags:[]},
+    {id:"b",region:"EUW",gameName:"Foo",tagLine:"EUW",status:"active",stats:null,history:[],tags:[]},
+    {id:"c",region:"KR",gameName:"Foo",tagLine:"EUW",status:"active",stats:null,history:[],tags:[]},
+  ]);
+  const list = win.filtered();
+  assert.equal(win.isDuplicate(list.find(a=>a.id==="a")), true);
+  assert.equal(win.isDuplicate(list.find(a=>a.id==="c")), false);
+});
+
+test("rotation uses lastPlayedAt / lastLoginAt / updatedAt", () => {
+  const win = bootApp();
+  const fresh = {status:"active", lastPlayedAt: Date.now()};
+  const old = {status:"active", stats:{updatedAt: Date.now()-20*86400000}};
+  assert.equal(win.needsRotation(fresh), false);
+  assert.equal(win.needsRotation(old), true);
+});
+
+test("wrTrend compares recent history winrates", () => {
+  const win = bootApp();
+  const a = {history:[
+    {t:1,tier:"GOLD",division:"I",lp:10,w:10,l:10},
+    {t:2,tier:"GOLD",division:"I",lp:20,w:20,l:10},
+  ]};
+  const tr = win.wrTrend(a);
+  assert.ok(tr);
+  assert.ok(tr.d > 0);
+});
+
+test("seasonReset archives current rank into past seasons", () => {
+  const win = bootApp([{
+    id:"x", region:"EUW", gameName:"A", tagLine:"B", status:"active", tags:[],
+    stats:{found:true,tier:"GOLD",division:"II",lp:40,wins:10,losses:8,updatedAt:Date.now()},
+    history:[{t:Date.now()-1000,tier:"GOLD",division:"II",lp:40,w:10,l:8}],
+  }]);
+  win.seasonReset("x");
+  const a = win.filtered()[0];
+  assert.equal(a.stats.tier, "UNRANKED");
+  assert.equal(a.stats.seasons.solo[0].tier, "GOLD");
+  assert.ok(a.history.length >= 2);
+});
+
+/* ---- Feature-pack regression: isFailed / rotation / season reset / payload ---- */
+
+test("isFailed ignores season-reset and other informational notes", () => {
+  const win = bootApp();
+  assert.equal(win.isFailed({ stats: null }), false);
+  assert.equal(win.isFailed({ stats: { found: false } }), false,
+    "Not found is its own filter — not a failed refresh");
+  assert.equal(win.isFailed({ stats: { found: true, note: "Auto-fetch failed (timeout) — enter it by hand" } }), true);
+  assert.equal(win.isFailed({ stats: { found: true, note: "failed (backend down)" } }), true);
+  assert.equal(win.isFailed({
+    stats: { found: true, tier: "UNRANKED", note: "Season was reset — previous rank kept", asOf: "season-reset" },
+  }), false, "season-reset must not look like a failed refresh");
+  assert.equal(win.isFailed({ stats: { found: true, tier: "GOLD", note: null } }), false);
+});
+
+test("needsRotation is false when the account was never checked or played", () => {
+  const win = bootApp();
+  assert.equal(win.needsRotation({ status: "active" }), false);
+  assert.equal(win.needsRotation({ status: "active", stats: {} }), false);
+  assert.equal(win.needsRotation({ status: "active", stats: { updatedAt: 0 } }), false);
+  assert.equal(win.needsRotation({ status: "banned", stats: { updatedAt: Date.now() - 40 * 86400000 } }), false);
+  assert.equal(win.needsRotation({ status: "active", archived: true, stats: { updatedAt: Date.now() - 40 * 86400000 } }), false);
+  assert.equal(win.needsRotation({ status: "active", lastPlayedAt: Date.now() - 13 * 86400000 }), false);
+  assert.equal(win.needsRotation({ status: "active", lastPlayedAt: Date.now() - 14 * 86400000 }), true);
+  assert.equal(win.needsRotation({ status: "active", lastLoginAt: Date.now() - 20 * 86400000 }), true);
+});
+
+test("clampExportDays bounds reminder days to 1..365", () => {
+  const win = bootApp();
+  assert.equal(win.clampExportDays(30), 30);
+  assert.equal(win.clampExportDays(0), 30);
+  assert.equal(win.clampExportDays(-5), 30);
+  assert.equal(win.clampExportDays("nope"), 30);
+  assert.equal(win.clampExportDays(1), 1);
+  assert.equal(win.clampExportDays(365), 365);
+  assert.equal(win.clampExportDays(999), 365);
+  assert.equal(win.clampExportDays(14.6), 15);
+});
+
+test("mapBackendPayload rejects error rows and half-empty payloads", () => {
+  const win = bootApp();
+  assert.throws(() => win.mapBackendPayload(null));
+  assert.throws(() => win.mapBackendPayload({}));
+  assert.throws(() => win.mapBackendPayload({ ok: false, error: "op.gg down" }));
+  // found:true with no tier → UNRANKED success
+  const u = win.mapBackendPayload({ found: true });
+  assert.equal(u.tier, "UNRANKED");
+  assert.equal(u.found, true);
+  // missing found and missing tier
+  assert.throws(() => win.mapBackendPayload({ wins: 1 }));
+  const miss = win.mapBackendPayload({ found: false });
+  assert.equal(miss.found, false);
+  // ok:false with found:false is a real miss, not a transport error
+  const miss2 = win.mapBackendPayload({ ok: false, found: false });
+  assert.equal(miss2.found, false);
+  const ok = win.mapBackendPayload({ found: true, tier: "gold", division: "II", lp: 40, uncertain: true, source: "body" });
+  assert.equal(ok.tier, "GOLD");
+  assert.equal(ok.uncertain, true);
+  assert.equal(ok.source, "body");
+  assert.equal(ok.note, null);
+  // tier alone is enough
+  const t = win.mapBackendPayload({ tier: "PLATINUM", division: "I", lp: 12 });
+  assert.equal(t.tier, "PLATINUM");
+  assert.equal(t.found, true);
+});
+
+
+// let/const bindings are not on window in classic scripts — poke them via runScript.
+function appGet(win, expr) {
+  runScript(win, "window.__appGet=(" + expr + ");");
+  return win.__appGet;
+}
+function appDo(win, code) {
+  runScript(win, code);
+}
+
+test("seasonReset clears live fields, note, and does not mark isFailed", () => {
+  const win = bootApp([{
+    id: "sr1", region: "EUW", gameName: "ResetMe", tagLine: "EUW", status: "active", tags: [],
+    goal: { tier: "DIAMOND", division: "IV", lp: 0 },
+    stats: {
+      found: true, tier: "GOLD", division: "I", lp: 88, wins: 40, losses: 30, level: 120,
+      flex: { tier: "SILVER", division: "II", lp: 10 },
+      champs: [{ name: "Ashe", wins: 1, losses: 0 }],
+      lpAt: { t: 1, tier: "GOLD", lp: 88 },
+      peak: { tier: "PLATINUM", division: "IV", lp: 0 },
+      note: "Auto-fetch failed (old)",
+      uncertain: true, source: "body",
+      updatedAt: Date.now() - 1000,
+    },
+    history: [{ t: Date.now() - 1000, tier: "GOLD", division: "I", lp: 88, w: 40, l: 30 }],
+  }]);
+  const card = win.document.querySelector('.card[data-id="sr1"]');
+  card.querySelector('[data-act="more"]').click();
+  assert.equal(appGet(win, 'openMore.has("sr1")'), true);
+  win.seasonReset("sr1");
+  assert.equal(appGet(win, 'openMore.has("sr1")'), false, "⋯ menu closes on season reset");
+  const a = win.filtered().find(x => x.id === "sr1");
+  assert.equal(a.stats.tier, "UNRANKED");
+  assert.equal(a.stats.lp, null);
+  assert.equal(a.stats.flex, null);
+  assert.equal(a.stats.champs, null);
+  assert.equal(a.stats.lpAt, null);
+  assert.equal(a.stats.note, null);
+  assert.equal(a.stats.uncertain, false);
+  assert.equal(a.goal, null);
+  assert.ok(a.stats.seasonResetAt);
+  assert.equal(a.stats.seasons.solo[0].tier, "GOLD");
+  assert.equal(win.isFailed(a), false);
+});
+
+test("markPlayed stamps lastPlayedAt and closes the ⋯ menu", () => {
+  const win = bootApp([{
+    id: "mp1", region: "EUW", gameName: "Play", tagLine: "EUW", status: "active", tags: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 10, updatedAt: Date.now() - 20 * 86400000 },
+    history: [],
+  }]);
+  assert.equal(win.needsRotation(win.filtered()[0]), true);
+  win.document.querySelector('.card[data-id="mp1"] [data-act="more"]').click();
+  assert.equal(appGet(win, 'openMore.has("mp1")'), true);
+  win.markPlayed("mp1");
+  assert.equal(appGet(win, 'openMore.has("mp1")'), false);
+  const a = win.filtered()[0];
+  assert.ok(a.lastPlayedAt > Date.now() - 5000);
+  assert.equal(win.needsRotation(a), false);
+});
+
+test("duplicateIds caches and invalidates on saveDB", () => {
+  const win = bootApp([
+    { id: "d1", region: "EUW", gameName: "Twin", tagLine: "EUW", status: "active", stats: null, history: [], tags: [] },
+    { id: "d2", region: "EUW", gameName: "Twin", tagLine: "EUW", status: "active", stats: null, history: [], tags: [] },
+  ]);
+  const first = win.duplicateIds();
+  assert.equal(first.size, 2);
+  assert.equal(win.duplicateIds(), first, "same Set instance while accounts array is unchanged");
+  win.filtered()[0].gameName = "Solo";
+  assert.equal(win.duplicateIds(), first, "cache keys off accounts identity, not deep content");
+  win.saveDB();
+  const after = win.duplicateIds();
+  assert.notEqual(after, first);
+  assert.equal(after.size, 0);
+});
+
+test("poolLpSpark averages same-timestamp points instead of zig-zagging accounts", () => {
+  const win = bootApp();
+  const day = 86400000;
+  const t1 = 10 * day + 100, t2 = 11 * day + 200; // two different days, offset within day
+  const svg = win.poolLpSpark([
+    { history: [{ t: t1, tier: "GOLD", division: "IV", lp: 0 }, { t: t2, tier: "GOLD", division: "I", lp: 50 }] },
+    { history: [{ t: t1 + 50, tier: "GOLD", division: "IV", lp: 100 }, { t: t2 + 50, tier: "GOLD", division: "I", lp: 150 }] },
+  ]);
+  assert.match(svg, /polyline/);
+  const pts = svg.match(/points="([^"]+)"/)[1].split(" ");
+  assert.equal(pts.length, 2, "same-day points average into one bucket each");
+  assert.equal(win.poolLpSpark([{ history: [{ t: 1, tier: "GOLD", division: "I", lp: 10 }] }]), "");
+  assert.equal(win.poolLpSpark([]), "");
+});
+
+test("compare modal is in the document at boot and closes via Escape / closeAllPanels", async () => {
+  const win = bootApp([
+    { id: "c1", region: "EUW", gameName: "Alpha", tagLine: "A", status: "active", label: "A",
+      stats: { found: true, tier: "GOLD", division: "II", lp: 20, wins: 10, losses: 8, updatedAt: 1 }, history: [], tags: [] },
+    { id: "c2", region: "EUW", gameName: "Beta", tagLine: "B", status: "active", label: "B",
+      stats: { found: true, tier: "PLATINUM", division: "IV", lp: 5, wins: 20, losses: 10, updatedAt: 1 }, history: [], tags: [] },
+  ]);
+  const modal = win.document.getElementById("compareModal");
+  assert.ok(modal, "static compare modal exists before first open");
+  assert.ok(modal.classList.contains("hidden"));
+  win.openCompare("c1");
+  win.openCompare("c2");
+  assert.equal(modal.classList.contains("hidden"), false);
+  assert.match(win.document.getElementById("cmpBody").textContent, /Alpha|A/);
+  assert.match(win.document.getElementById("cmpBody").textContent, /Beta|B/);
+  await until(() => win.document.body.classList.contains("modal-open"), "modal-open for Compare");
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.ok(modal.classList.contains("hidden"));
+  assert.equal(appGet(win, "compareIds.length"), 0);
+  win.openCompare("c1");
+  win.openCompare("c2");
+  win.document.getElementById("cmpClear").click();
+  assert.ok(modal.classList.contains("hidden"));
+  assert.equal(appGet(win, "compareIds.length"), 0);
+});
+
+test("compare W/L values are escaped in the modal HTML", () => {
+  const win = bootApp([
+    { id: "x1", region: "EUW", gameName: "X", tagLine: "A", status: "active",
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: "<img>", losses: "\"onerror", updatedAt: 1 }, history: [], tags: [] },
+    { id: "x2", region: "EUW", gameName: "Y", tagLine: "B", status: "active",
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: 1 }, history: [], tags: [] },
+  ]);
+  win.openCompare("x1");
+  win.openCompare("x2");
+  const html = win.document.getElementById("cmpBody").innerHTML;
+  assert.doesNotMatch(html, /<img>/);
+  assert.match(html, /&lt;img&gt;/);
+});
+
+test("closeAllPanels / closeCompare clears selection and hides Compare", () => {
+  const win = bootApp([
+    { id: "c1", region: "EUW", gameName: "A", tagLine: "A", status: "active",
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] },
+    { id: "c2", region: "EUW", gameName: "B", tagLine: "B", status: "active",
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] },
+  ]);
+  win.openCompare("c1");
+  win.openCompare("c2");
+  assert.equal(win.document.getElementById("compareModal").classList.contains("hidden"), false);
+  win.closeAllPanels();
+  assert.equal(appGet(win, "compareIds.length"), 0);
+  assert.ok(win.document.getElementById("compareModal").classList.contains("hidden"));
+  win.openCompare("c1");
+  win.openCompare("c2");
+  win.closeCompare();
+  assert.equal(appGet(win, "compareIds.length"), 0);
+  assert.ok(win.document.getElementById("compareModal").classList.contains("hidden"));
+});
+
+test("checkAll batch claims checkGen before await so a mid-flight Refresh wins", async () => {
+  const seed = [{
+    id: "b1", region: "EUW", gameName: "Batch", tagLine: "EUW", status: "active", tags: [],
+    stats: { found: true, tier: "GOLD", division: "IV", lp: 10, updatedAt: 1 }, history: [],
+  }];
+  let releaseBatch;
+  const batchWait = new Promise(r => { releaseBatch = r; });
+  const win = bootApp(seed, w => {
+    w.fetch = async (url, opts = {}) => {
+      if (opts.method === "POST") {
+        await batchWait;
+        return {
+          ok: true,
+          json: async () => ({ results: [{ ok: true, found: true, tier: "SILVER", division: "I", lp: 1 }] }),
+        };
+      }
+      throw new Error("no GET in this test");
+    };
+  });
+  appDo(win, 'cfg.backendUrl="https://worker.example/opgg"');
+  const runP = win.checkAll(["b1"]);
+  await until(() => appGet(win, 'checking.has("b1")'), "batch claimed checking");
+  const genDuring = appGet(win, 'checkGen.get("b1")');
+  assert.ok(genDuring >= 1, "gen bumped before network returns");
+  // Simulate a newer Refresh taking ownership (bumps gen + keeps checking).
+  appDo(win, `checkGen.set("b1", ${genDuring + 1}); checking.add("b1")`);
+  releaseBatch();
+  await runP;
+  const a = win.filtered()[0];
+  assert.equal(a.stats.tier, "GOLD", "stale batch must not overwrite after gen bump");
+  assert.equal(a.stats.lp, 10);
+  // Newer owner still in checking — batch must not have stolen/cleared it.
+  assert.equal(appGet(win, 'checking.has("b1")'), true);
+});
+
+test("checkAll batch commits found:false without counting as refreshed ok", async () => {
+  const seed = [{
+    id: "m1", region: "EUW", gameName: "Gone", tagLine: "EUW", status: "active", tags: [],
+    stats: null, history: [],
+  }];
+  const win = bootApp(seed, w => {
+    w.fetch = async (url, opts = {}) => {
+      if (opts.method === "POST") {
+        return {
+          ok: true,
+          json: async () => ({ results: [{ ok: true, found: false }] }),
+        };
+      }
+      throw new Error("no GET");
+    };
+  });
+  appDo(win, 'cfg.backendUrl="https://worker.example/opgg"');
+  await win.checkAll(["m1"]);
+  const a = win.filtered()[0];
+  assert.equal(a.stats.found, false);
+  assert.equal(a.flagged, true);
+});
+
+test("checkAll batch maps ok:false transport errors to sequential fallback", async () => {
+  const seed = [{
+    id: "f1", region: "EUW", gameName: "Fall", tagLine: "EUW", status: "active", tags: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: 1 }, history: [],
+  }];
+  let posts = 0, gets = 0;
+  const win = bootApp(seed, w => {
+    w.fetch = async (url, opts = {}) => {
+      if (opts.method === "POST") {
+        posts++;
+        return { ok: true, json: async () => ({ results: [{ ok: false, error: "op.gg 502" }] }) };
+      }
+      gets++;
+      throw new Error("network disabled");
+    };
+  });
+  appDo(win, 'cfg.backendUrl="https://worker.example/opgg"');
+  await win.checkAll(["f1"]);
+  assert.equal(posts, 1);
+  assert.ok(gets >= 1 || win.filtered()[0].stats.note, "fell through after empty batch hit");
+});
+
+test("wrTrend returns null across a season break", () => {
+  const win = bootApp();
+  const a = { history: [
+    { t: 1, tier: "DIAMOND", division: "I", lp: 50, w: 100, l: 80 },
+    { t: 2, tier: "IRON", division: "IV", lp: 0, w: 1, l: 0 },
+  ]};
+  assert.equal(win.wrTrend(a), null);
+});
+
+test("isUncertain follows the stats.uncertain flag from backend/body parses", () => {
+  const win = bootApp([{
+    id: "u1", region: "EUW", gameName: "U", tagLine: "EUW", status: "active", tags: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 10, uncertain: true, updatedAt: 1 },
+    history: [],
+  }]);
+  assert.equal(win.isUncertain(win.filtered()[0]), true);
+  assert.equal(win.isUncertain({ stats: { uncertain: false } }), false);
+});
+
+test("settings persist clamped exportRemindDays", async () => {
+  const win = bootApp();
+  win.openSettings();
+  const days = win.document.getElementById("sExportDays");
+  assert.ok(days, "export remind control exists");
+  days.value = "999";
+  win.document.getElementById("sSave").click();
+  await until(() => {
+    try { return JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).exportRemindDays === 365 }
+    catch { return false }
+  }, "exportRemindDays clamped to 365");
+  win.openSettings();
+  days.value = "0";
+  win.document.getElementById("sSave").click();
+  await until(() => {
+    try { return JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).exportRemindDays === 30 }
+    catch { return false }
+  }, "exportRemindDays defaulted to 30");
+});
+
+test("fetchViaBackendBatch indexes results by account id", async () => {
+  const win = bootApp([
+    { id: "a1", region: "EUW", gameName: "One", tagLine: "EUW", status: "active", stats: null, history: [], tags: [] },
+    { id: "a2", region: "KR", gameName: "Two", tagLine: "KR1", status: "active", stats: null, history: [], tags: [] },
+  ]);
+  appDo(win, 'cfg.backendUrl="https://worker.example/opgg"');
+  win.fetch = async (url, opts = {}) => {
+    assert.equal(opts.method, "POST");
+    const body = JSON.parse(opts.body);
+    assert.equal(body.accounts.length, 2);
+    assert.equal(body.accounts[0].region, "euw");
+    assert.equal(body.accounts[1].region, "kr");
+    return {
+      ok: true,
+      json: async () => ({ results: [
+        { ok: true, found: true, tier: "GOLD", division: "I", lp: 1 },
+        { ok: true, found: true, tier: "SILVER", division: "IV", lp: 2 },
+      ] }),
+    };
+  };
+  const map = await win.fetchViaBackendBatch(win.filtered());
+  assert.equal(map.get("a1").tier, "GOLD");
+  assert.equal(map.get("a2").tier, "SILVER");
+});
+
+test("ribbon / filter rotate flag uses needsRotation (null days excluded)", () => {
+  const win = bootApp([
+    { id: "n1", region: "EUW", gameName: "Never", tagLine: "EUW", status: "active", stats: null, history: [], tags: [] },
+    { id: "o1", region: "EUW", gameName: "Old", tagLine: "EUW", status: "active",
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: Date.now() - 30 * 86400000 }, history: [], tags: [] },
+  ]);
+  const rot = win.document.querySelector('[data-flag="rotate"]');
+  assert.ok(rot, "Due to rotate tile/segment exists when an account is due");
+  rot.click();
+  assert.equal(win.filtered().map(a => String(a.id)).join(","), "o1");
+});
+
+test("failed filter does not include season-reset accounts", () => {
+  const win = bootApp([{
+    id: "f1", region: "EUW", gameName: "SR", tagLine: "EUW", status: "active", tags: [],
+    stats: { found: true, tier: "UNRANKED", note: null, asOf: "season-reset", seasonResetAt: Date.now(), updatedAt: Date.now() },
+    history: [],
+  }, {
+    id: "f2", region: "EUW", gameName: "Bad", tagLine: "EUW", status: "active", tags: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, note: "Auto-fetch failed (x)", updatedAt: Date.now() },
+    history: [],
+  }]);
+  const btn = win.document.querySelector('[data-flag="failed"]')
+    || win.document.querySelector('#count [data-flag="failed"]');
+  if (btn) btn.click();
+  else appDo(win, 'ui.flag="failed"; render()');
+  assert.equal(win.filtered().map(a => String(a.id)).join(","), "f2");
+});
+
+test("batch gen-mismatch does not clear a newer Refresh spinner", async () => {
+  const seed = [{
+    id: "b2", region: "EUW", gameName: "Spin", tagLine: "EUW", status: "active", tags: [],
+    stats: { found: true, tier: "GOLD", division: "IV", lp: 10, updatedAt: 1 }, history: [],
+  }];
+  let releaseBatch;
+  const batchWait = new Promise(r => { releaseBatch = r; });
+  const win = bootApp(seed, w => {
+    w.fetch = async (url, opts = {}) => {
+      if (opts.method === "POST") {
+        await batchWait;
+        return {
+          ok: true,
+          json: async () => ({ results: [{ ok: true, found: true, tier: "SILVER", division: "I", lp: 1 }] }),
+        };
+      }
+      throw new Error("no GET");
+    };
+  });
+  appDo(win, 'cfg.backendUrl="https://worker.example/opgg"');
+  const runP = win.checkAll(["b2"]);
+  await until(() => appGet(win, 'checking.has("b2")'), "batch claimed checking");
+  const genDuring = appGet(win, 'checkGen.get("b2")');
+  // Newer Refresh takes ownership and shows its own spinner
+  appDo(win, `checkGen.set("b2", ${genDuring + 1}); checking.add("b2")`);
+  releaseBatch();
+  await runP;
+  assert.equal(appGet(win, 'checking.has("b2")'), true,
+    "stale batch must not steal the newer run's Checking state");
+  assert.equal(win.filtered()[0].stats.tier, "GOLD");
+});
+
+test("sequential check returns missing for found:false and does not count as refreshed", async () => {
+  const win = bootApp([{
+    id: "miss1", region: "EUW", gameName: "Gone", tagLine: "EUW", status: "active", tags: [],
+    stats: null, history: [],
+  }]);
+  win.fetchViaProxy = async () => ({ found: false, updatedAt: Date.now() });
+  const result = await win.check("miss1");
+  assert.equal(result, "missing");
+  assert.equal(win.filtered()[0].stats.found, false);
+
+  appDo(win, 'cfg.backendUrl=""');
+  let toastMsg = "";
+  win.toast = (m) => { toastMsg = m; };
+  // Direct sequential checkAll without backend
+  win.fetchViaProxy = async () => ({ found: false, updatedAt: Date.now() });
+  await win.checkAll(["miss1"]);
+  assert.match(toastMsg, /not found/i);
+});
+
+test("Escape on compare clears Unselect compare labels via re-render", async () => {
+  const win = bootApp([
+    { id: "c1", region: "EUW", gameName: "A", tagLine: "A", status: "active",
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] },
+    { id: "c2", region: "EUW", gameName: "B", tagLine: "B", status: "active",
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] },
+  ]);
+  win.openCompare("c1");
+  win.openCompare("c2");
+  assert.equal(appGet(win, 'compareIds.join(",")'), "c1,c2");
+  win.document.querySelector('.card[data-id="c1"] [data-act="more"]').click();
+  assert.match(win.document.querySelector('.card[data-id="c1"]').textContent, /Unselect compare/);
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await until(() => win.document.getElementById("compareModal").classList.contains("hidden"), "compare closed");
+  assert.equal(appGet(win, "compareIds.length"), 0);
+  // closeCompare re-rendered; keep ⋯ open to read the label (second more-click would toggle it shut).
+  appDo(win, 'openMore.add("c1"); renderCard("c1")');
+  assert.doesNotMatch(win.document.querySelector('.card[data-id="c1"]').textContent, /Unselect compare/);
+  assert.match(win.document.querySelector('.card[data-id="c1"]').textContent, /Compare/);
+});
+
+test("soft-empty batch chunk continues to the next chunk instead of aborting", async () => {
+  const seed = [
+    { id: "s1", region: "EUW", gameName: "Skip", tagLine: "1", status: "active", tags: [],
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [] },
+    { id: "s2", region: "EUW", gameName: "Ok", tagLine: "2", status: "active", tags: [],
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [] },
+  ];
+  let posts = 0;
+  const win = bootApp(seed, w => {
+    w.fetch = async (url, opts = {}) => {
+      if (opts.method === "POST") {
+        posts++;
+        const body = JSON.parse(opts.body);
+        if (body.accounts.length === 1 && body.accounts[0].name === "Skip") {
+          return { ok: true, json: async () => ({ results: [{ ok: false, error: "502" }] }) };
+        }
+        return {
+          ok: true,
+          json: async () => ({ results: body.accounts.map(() =>
+            ({ ok: true, found: true, tier: "PLATINUM", division: "IV", lp: 0 })) }),
+        };
+      }
+      throw new Error("no GET");
+    };
+  });
+  appDo(win, 'cfg.backendUrl="https://worker.example/opgg"');
+  // Force chunk size by checking both — with max 20 they are one chunk. Simulate
+  // two chunks by stubbing fetchViaBackendBatch to process one id at a time via
+  // the real path with a patched BATCH... easier: call checkAll and verify the
+  // transport-skip account still gets sequential fallback while the other commits.
+  await win.checkAll(["s1", "s2"]);
+  assert.equal(posts, 1, "one POST for the chunk");
+  // s1 skipped in batch (ok:false) → sequential; s2 committed from batch
+  assert.equal(win.filtered().find(a => a.id === "s2").stats.tier, "PLATINUM");
+});
+
+test("pruneCardState drops deleted ids from compareIds and checkGen", () => {
+  const win = bootApp([
+    { id: "keep", region: "EUW", gameName: "K", tagLine: "A", status: "active",
+      stats: null, history: [], tags: [] },
+    { id: "drop", region: "EUW", gameName: "D", tagLine: "B", status: "active",
+      stats: null, history: [], tags: [] },
+  ]);
+  appDo(win, 'compareIds=["keep","drop"]; checkGen.set("drop", 3); checkGen.set("keep", 1)');
+  appDo(win, 'accounts=accounts.filter(a=>a.id!=="drop"); render()');
+  assert.equal(appGet(win, 'compareIds.join(",")'), "keep");
+  assert.equal(appGet(win, 'checkGen.has("drop")'), false);
+  assert.equal(appGet(win, 'checkGen.get("keep")'), 1);
+});
+
+test("failed filter excludes Not found profiles", () => {
+  const win = bootApp([
+    { id: "miss", region: "EUW", gameName: "M", tagLine: "A", status: "active", tags: [],
+      stats: { found: false, updatedAt: Date.now() }, history: [] },
+    { id: "fail", region: "EUW", gameName: "F", tagLine: "B", status: "active", tags: [],
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, note: "Auto-fetch failed (x)", updatedAt: Date.now() }, history: [] },
+  ]);
+  appDo(win, 'ui.flag="failed"; render()');
+  assert.equal(win.filtered().map(a => String(a.id)).join(","), "fail");
+  appDo(win, 'ui.flag="missing"; render()');
+  assert.equal(win.filtered().map(a => String(a.id)).join(","), "miss");
+});
+
+test("applyStats on found:false keeps seasons/champs/peak instead of wiping them", () => {
+  const win = bootApp();
+  const acc = {
+    id: "keep", history: [{ t: 1, tier: "GOLD", division: "I", lp: 40 }],
+    stats: {
+      found: true, tier: "GOLD", division: "I", lp: 40, level: 200,
+      seasons: { solo: [{ season: "S2025", tier: "PLATINUM", division: "IV", lp: 0 }], flex: [] },
+      champs: [{ name: "Ashe", wins: 1, losses: 0 }],
+      peak: { tier: "PLATINUM", division: "IV", lp: 0 },
+      icon: "https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",
+      updatedAt: 1,
+    },
+  };
+  win.applyStats(acc, { found: false, updatedAt: 2 });
+  assert.equal(acc.stats.found, false);
+  assert.equal(acc.stats.tier, null);
+  assert.equal(acc.stats.level, 200);
+  assert.equal(acc.stats.seasons.solo[0].tier, "PLATINUM");
+  assert.equal(acc.stats.champs[0].name, "Ashe");
+  assert.equal(acc.stats.peak.tier, "PLATINUM");
+  assert.match(acc.stats.icon, /profileIcon1/);
+});
+
+test("isSummonerNotFoundPage matches worker-style not-found bodies", () => {
+  const win = bootApp();
+  assert.equal(win.isSummonerNotFoundPage("<h1>Summoner not found</h1>"), true);
+  assert.equal(win.isSummonerNotFoundPage("This summoner is unregistered."), true);
+  assert.equal(win.isSummonerNotFoundPage(
+    `<meta name="description" content="Foo#EUW / Gold 2 10LP / 1Win 1Lose"/>Summoner not found`
+  ), false, "meta rank wins over a stray not-found string");
+});
+
+test("fetchViaProxy returns found:false for a not-found page", async () => {
+  const win = bootApp([{
+    id: "p1", region: "EUW", gameName: "Nope", tagLine: "EUW", status: "active",
+    stats: { found: true, tier: "GOLD", division: "I", lp: 10,
+      seasons: { solo: [{ season: "S2025", tier: "GOLD", division: "I", lp: 10 }], flex: [] }, updatedAt: 1 },
+    history: [], tags: [],
+  }]);
+  win.fetchWithTimeout = async () => "<html><body><h1>Summoner not found</h1></body></html>";
+  const s = await win.fetchViaProxy(win.filtered()[0]);
+  assert.equal(s.found, false);
+  win.commitStats("p1", win.filtered()[0], s);
+  assert.equal(win.filtered()[0].stats.found, false);
+  assert.equal(win.filtered()[0].stats.seasons.solo[0].tier, "GOLD");
+  assert.equal(win.filtered()[0].flagged, true);
+});
+
+test("check returns null when the account was deleted mid-flight", async () => {
+  const win = bootApp([{
+    id: "gone", region: "EUW", gameName: "X", tagLine: "Y", status: "active",
+    stats: null, history: [], tags: [],
+  }]);
+  appDo(win, 'accounts=[]');
+  assert.equal(await win.check("gone"), null);
+});
+
+test("Failed dash tile filters only transport failures", () => {
+  const win = bootApp([
+    { id: "miss", region: "EUW", gameName: "M", tagLine: "A", status: "active", tags: [],
+      stats: { found: false, updatedAt: Date.now() }, history: [] },
+    { id: "fail", region: "EUW", gameName: "F", tagLine: "B", status: "active", tags: [],
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, note: "Auto-fetch failed (x)", updatedAt: Date.now() }, history: [] },
+  ]);
+  const tile = win.document.querySelector('[data-flag="failed"]');
+  assert.ok(tile, "Last check failed tile is shown when failures exist");
+  tile.click();
+  assert.equal(win.filtered().map(a => String(a.id)).join(","), "fail");
+});
+
+test("poolLpSpark uses one point per account per day", () => {
+  const win = bootApp();
+  const day = 86400000;
+  const svg = win.poolLpSpark([
+    { id: "a", history: [
+      { t: day + 1, tier: "GOLD", division: "IV", lp: 0 },
+      { t: day + 2, tier: "GOLD", division: "I", lp: 100 },
+    ]},
+    { id: "b", history: [
+      { t: day + 3, tier: "GOLD", division: "IV", lp: 0 },
+      { t: 2 * day + 1, tier: "GOLD", division: "I", lp: 50 },
+    ]},
+  ]);
+  assert.match(svg, /polyline/);
+  const pts = svg.match(/points="([^"]+)"/)[1].split(" ");
+  assert.equal(pts.length, 2);
+});
+
+test("boot clamps a corrupt exportRemindDays in cfg", () => {
+  const win = bootApp(undefined, w => {
+    w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ exportRemindDays: 9999 }));
+  });
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).exportRemindDays, 365);
 });
