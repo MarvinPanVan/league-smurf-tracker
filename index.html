@@ -1819,18 +1819,30 @@
   </div>
 
   <!-- bulk add -->
-  <div id="bulkAdd" class="hx teal hidden" style="margin-bottom:16px"><div class="hx-in" style="position:relative">
-    <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+  <!-- Over the page, like the account form it is the plural of. Inline it sat
+       above the dashboard and the console and shoved the entire grid down; it is
+       also listed in MODALS, which locks page scrolling — and a scroll lock on a
+       panel that scrolls with the page is how you get a panel nobody can reach. -->
+  <div id="bulkAdd" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="bulkAddTitle">
+  <div class="mdl narrow hx teal"><div class="hx-in mdl-in" style="position:relative">
+    <div class="mdl-h">
+      <span class="t" id="bulkAddTitle">Bulk add</span>
+      <span class="s">One per line — logins and notes come afterwards</span>
+      <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+    </div>
+    <div class="mdl-b">
     <div class="formgrid">
-      <div class="fw" style="font-size:13px;color:var(--muted)">One account per line, format <code>Name#TAG</code>. All get the region below — edit individually afterward for logins/notes.</div>
+      <div class="fw hint">One account per line, format <code>Name#TAG</code>. All get the region below — edit individually afterward for logins/notes.</div>
       <div class="fld"><label>Region for all</label><select id="baRegion"></select></div>
       <div class="fld fw"><label>Accounts</label><textarea id="baList" rows="6" placeholder="Hide on Bush#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
-      <div class="fw bar">
-        <button id="baSave" class="b-gold">Add all</button>
-        <button id="baCancel">Cancel</button>
-      </div>
     </div>
-  </div></div>
+    </div>
+    <div class="mdl-f">
+      <button id="baSave" class="b-gold">Add all</button>
+      <button id="baCancel">Cancel</button>
+      <span class="sp hint">Everything here stays in this browser.</span>
+    </div>
+  </div></div></div>
 
   <!-- add/edit form -->
   <div id="form" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="formTitle">
@@ -2053,8 +2065,18 @@ const AUTO_LOCK=[
   {v:120,label:"2 hours"},
   {v:180,label:"3 hours"}
 ];
+/* One clamp for the dropdown and for what is stored. They used to differ: the
+   dropdown pinned anything over three hours to 180 while cfg.autoLockMin kept the
+   larger number, so Settings showed a timer that was not the one running — until
+   a Save happened to write the shown value back over it. A day is the ceiling; a
+   longer "auto"-lock is the Off setting with extra steps. */
+const AUTO_LOCK_MAX=1440;
+function clampAutoLock(v){
+  const n=Math.round(Number(v));
+  return Number.isFinite(n)&&n>0?Math.min(n,AUTO_LOCK_MAX):0;
+}
 function fillAutoLock(sel,current){
-  const mins=Math.max(0,Math.min(180,+current||0));
+  const mins=clampAutoLock(current);
   const opts=AUTO_LOCK.slice();
   if(!opts.some(o=>o.v===mins))opts.push({v:mins,label:mins+" minutes (current)"});
   opts.sort((a,b)=>a.v-b.v);
@@ -2065,8 +2087,16 @@ const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / 
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.8.3";
+const APP_VERSION="1.8.4";
 const APP_CHANGELOG=[
+  {v:"1.8.4",items:[
+    "Bulk add opens over the page — inline, it locked scrolling and hid itself",
+    "Sync: a pull adopts the cloud revision instead of stamping a newer local one",
+    "Ribbon matches the dash Rank spread on banned accounts, with its own segment",
+    "Open Rank panel keeps the disabled division select through a re-render",
+    "Auto-lock dropdown shows the timer that is running; /vault URL built on the path",
+    "Changes that could not be written are no longer reported as saved",
+  ]},
   {v:"1.8.3",items:[
     "Archived view + chore tiles: exit Archive so filters are not empty",
     "Dash tile counts follow toolbar filters; Never checked uses hasReading",
@@ -2268,8 +2298,16 @@ function storageOK(){try{localStorage.setItem("__t","1");localStorage.removeItem
    And it answers, because it used to swallow the error and toast about it, while
    the caller went on to its own "saved" message — into the same toast, over the
    top of the warning. */
+/* `keepRev` is for the one caller whose write is not a new revision: a Pull has
+   just adopted the cloud's revision, and bumping it here would leave this device
+   permanently "newer" than the copy it just took — which is exactly what made the
+   equal-rev no-op pull unreachable and had an untouched device warning about
+   losing local changes on its next pull. Every other write is a real change and
+   stamps a real revision. */
 let saveSeq=0, saveChain=Promise.resolve();
-function saveDB(){invalidateDupCache();
+function saveDB(opts){invalidateDupCache();
+  const keepRev=!!(opts&&opts.keepRev);
+  const stampRev=()=>{if(!keepRev)touchVaultRev()};
   // Locked is a hard no — not a silent success. Import (and anything else that
   // awaits this) used to toast "imported" while the disk never moved, because
   // the lock guard shared the same early-return-true as preview / no-storage.
@@ -2283,7 +2321,7 @@ function saveDB(){invalidateDupCache();
   // either: this stays written by the time it returns, the way the rest of the app
   // has always been able to assume of an unencrypted vault.
   if(!vaultPassword){
-    try{localStorage.setItem(DB_KEY,JSON.stringify(accounts));touchVaultRev();return Promise.resolve(true)}
+    try{localStorage.setItem(DB_KEY,JSON.stringify(accounts));stampRev();return Promise.resolve(true)}
     catch(e){toast("Saving failed — storage error");return Promise.resolve(false)}
   }
   saveChain=saveChain.then(async()=>{
@@ -2295,11 +2333,22 @@ function saveDB(){invalidateDupCache();
       if(vaultLocked()||seq!==saveSeq)return true;
       localStorage.setItem(DB_KEY,JSON.stringify(envelope));
       currentEnvelope=envelope;
-      touchVaultRev();
+      stampRev();
       return true;
     }catch(e){toast("Saving failed — storage error");return false}
   });
   return saveChain;
+}
+/* Report a change only once it is actually on disk. saveDB() answers, and it
+   toasts its own "Saving failed — storage error" — but a caller that fires its
+   own "Archived" into the same toast a line later paints straight over that
+   warning, and the user is told a change was kept when it was not. Set / remove
+   master password already awaited the answer; this is the same discipline for
+   the fifteen other callers that report success. */
+function saveThen(msg,action,fn){
+  const p=saveDB();
+  p.then(ok=>{if(ok&&msg)toast(msg,action,fn)});
+  return p;
 }
 function touchVaultRev(){
   // Monotonic local revision for LWW device sync — bumped on every successful save.
@@ -2836,9 +2885,19 @@ function validBackendUrl(u){
     return url.href.replace(/\/+$/,"");
   }catch(e){return null}
 }
+/* validBackendUrl hands back a full href, so gluing "/vault" onto the end of it
+   turns "https://w.workers.dev/?token=x" into ".../?token=x/vault" — a path the
+   worker never sees and a sync that fails with no useful message. Append to the
+   path, and keep any query the user put there. */
 function vaultSyncUrl(){
   const base=validBackendUrl(cfg.backendUrl);
-  return base?base+"/vault":"";
+  if(!base)return"";
+  try{
+    const u=new URL(base);
+    u.pathname=u.pathname.replace(/\/+$/,"")+"/vault";
+    u.hash="";
+    return u.href;
+  }catch(e){return""}
 }
 function genSyncToken(){
   const b=crypto.getRandomValues(new Uint8Array(24));
@@ -2973,7 +3032,10 @@ async function pullVaultSync(force){
     cfg.vaultRev=remoteAt||Date.now();
     cfg.lastSyncAt=Date.now();
     saveCfg();
-    const ok=await saveDB();
+    // keepRev: this vault *is* the cloud's revision now. Stamping a fresh one
+    // would make the next pull think this device had changed since the sync it
+    // just performed.
+    const ok=await saveDB({keepRev:true});
     if(vaultLocked())return;
     if(!ok){toast("Pulled into memory but could not write to storage");render();updateSyncStatus();return}
     render();
@@ -4093,7 +4155,7 @@ function markPlayed(id){
   const a=accounts.find(x=>x.id===id); if(!a)return;
   openMore.delete(id);
   a.lastPlayedAt=Date.now();
-  saveDB(); renderCard(id); renderDash(); toast("Marked played today");
+  renderCard(id); renderDash(); saveThen("Marked played today");
 }
 function seasonReset(id){
   const a=accounts.find(x=>x.id===id); if(!a||!a.stats){toast("Nothing to reset");return}
@@ -4116,8 +4178,8 @@ function seasonReset(id){
     note:null,updatedAt:Date.now(),seasonResetAt:Date.now()
   };
   a.goal=null;
-  saveDB(); renderCard(id); renderDash(); renderRibbon();
-  toast("Season reset — previous rank kept in Past seasons");
+  renderCard(id); renderDash(); renderRibbon();
+  saveThen("Season reset — previous rank kept in Past seasons");
 }
 function poolLpTrend(pool){
   // Average absolute ladder position across the counted pool (same scale as the
@@ -4360,6 +4422,18 @@ function setTierFilter(tier){
   }
   render();
 }
+// The ribbon's Banned segment. Drives the same ui.status the toolbar dropdown
+// does, so the two never disagree — renderFilterOptions puts the select back in
+// step on the render below.
+function setStatusFilter(status){
+  const next=ui.status===status?"":status;
+  ui.status=next;
+  if(next){
+    ui.flag="";ui.tier="";
+    if(ui.showArchived){ui.showArchived=false;syncToggles()}
+  }
+  render();
+}
 function filtered(){
   const Q=parseQuery(ui.search);
   let list=accounts.filter(a=>{
@@ -4410,11 +4484,30 @@ let awayDelta=new Map();
 // written. Nothing above this point had to change for it.
 function nodeKey(n){return n.nodeType===1?(n.getAttribute("data-k")||n.getAttribute("data-id")||null):null}
 function sameKind(a,b){return a.nodeType===b.nodeType&&(a.nodeType!==1||a.tagName===b.tagName)}
+/* A field inside a ✎ Rank panel that is currently open. rankPanelHTML is always
+   generated from the *saved* stats, so a remorph while the panel is open is a
+   render of a state the user has already moved past. */
+const RANK_FIELD=/^(tier|div|lp|w|l|ptier|pdiv|plp|gtier|gdiv)$/;
+function isLiveRankField(el){
+  const rf=el.getAttribute&&el.getAttribute("data-f");
+  if(!rf||!RANK_FIELD.test(rf))return false;
+  const card=el.closest("[data-id]");
+  return !!(card&&openRank.has(card.dataset.id));
+}
 function morph(from,to){
   if(from.nodeType!==1){if(from.nodeValue!==to.nodeValue)from.nodeValue=to.nodeValue;return}
+  const tag=from.tagName;
+  /* Checked before the attributes, not after. Protecting only the value left the
+     division select's `disabled` up for grabs: pick Master (no divisions up
+     there, so the change listener disables it), then let anything at all
+     re-render the card — a refresh landing, the flash timeout — and the attribute
+     sync put the enabled version from the saved Gold rank straight back. */
+  if((tag==="INPUT"||tag==="SELECT")&&isLiveRankField(from)){
+    if(tag==="SELECT")morphChildren(from,to);   // new tiers may have appeared
+    return;
+  }
   for(const at of Array.from(from.attributes))if(!to.hasAttribute(at.name))from.removeAttribute(at.name);
   for(const at of Array.from(to.attributes))if(from.getAttribute(at.name)!==at.value)from.setAttribute(at.name,at.value);
-  const tag=from.tagName;
   if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"){
     // Checkboxes must still sync when focused — shift-select re-renders while the
     // box that was just clicked still has focus, and bailing here left the DOM
@@ -4422,18 +4515,10 @@ function morph(from,to){
     if(from.type==="checkbox"||from.type==="radio"){from.checked=to.checked;return}
     // Whatever the user is currently typing in is left completely alone, so a
     // render triggered mid-keystroke can't eat the character or move the caret.
+    // (Unsaved ✎ Rank fields are handled above, before the attributes: focus
+    // alone is not enough, since clicking another control inside the panel would
+    // otherwise let the next render wipe the draft back to the saved stats.)
     if(document.activeElement===from)return;
-    // Unsaved ✎ Rank fields must survive remorphs from Refresh / other panels on
-    // the same card. Focus alone is not enough — clicking another control inside
-    // the panel used to let the next render wipe the draft back to saved stats.
-    const rf=from.getAttribute("data-f");
-    if(rf&&/^(tier|div|lp|w|l|ptier|pdiv|plp|gtier|gdiv)$/.test(rf)){
-      const card=from.closest("[data-id]");
-      if(card&&openRank.has(card.dataset.id)){
-        if(tag==="SELECT")morphChildren(from,to);
-        return;
-      }
-    }
     // Live value lives in the property, not the attribute — once a field is
     // dirty the attribute stops driving it, so it has to be set directly.
     if(tag==="TEXTAREA"){if(from.value!==to.textContent)from.value=to.textContent}
@@ -4674,13 +4759,19 @@ function renderRibbon(){
   // Under two accounts there is no distribution to show, only a full-width block
   // of one colour pretending to be information.
   if(pool.length<2){setHTML(el,"");return}
-  const dist={};let unN=0,neverN=0,missN=0;
+  const dist={};let unN=0,neverN=0,missN=0,bannedN=0;
   for(const a of pool){
+    /* Banned first, and out of the tier counts entirely. The dashboard's Rank
+       spread asks the same question and has always answered it with isLive(),
+       so a banned Bronze account made the two disagree about how many tiers the
+       vault spans — and gave the ribbon a Bronze segment the gem row did not
+       have. It gets its own tail segment instead of vanishing, so the segments
+       still add up to the total in the caption. */
+    if(!isLive(a)){bannedN++;continue}
     // Same predicate as the dash "Never checked" tile / filter.
     if(neverChecked(a)){neverN++;continue}
     if(isRanked(a)){const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1}
     else if(isUnrankedAnswer(a))unN++;
-    else if(!isLive(a))continue;
     else if(a.stats&&a.stats.found===false)missN++;
   }
   const segs=TIER_ORDER.slice().reverse().filter(t=>dist[t])
@@ -4696,14 +4787,21 @@ function renderRibbon(){
   // attention would pull in every hand-flagged account and disagree with the N.
   if(missN)segs.push({flag:"missing",n:missN,c:"var(--danger)",label:"Not found"});
   if(neverN)segs.push({flag:"unchecked",n:neverN,c:"var(--faint)",label:"Never checked"});
+  // Filtered by status rather than by a chore flag — "banned" is a state of the
+  // account, and the toolbar's status dropdown is the control that already means it.
+  if(bannedN)segs.push({status:"banned",n:bannedN,c:STATUS.banned.color,label:"Banned"});
   if(!segs.length){setHTML(el,"");return}
-  const best=pool.filter(isRanked).sort((x,y)=>rankValue(y.stats)-rankValue(x.stats))[0];
+  // Best of the accounts still in play: a banned Challenger is not the best
+  // account in the vault, it is a gravestone.
+  const best=pool.filter(a=>isLive(a)&&isRanked(a)).sort((x,y)=>rankValue(y.stats)-rankValue(x.stats))[0];
+  const segAttr=s=>s.flag?`data-flag="${s.flag}"`:s.status?`data-status="${s.status}"`:`data-tier="${s.k}"`;
+  const segOn=s=>s.flag?ui.flag===s.flag:s.status?ui.status===s.status:ui.tier===s.k;
   setHTML(el,`<div class="rib-bar" role="group" aria-label="Accounts by tier">${segs.map(s=>{
-      const on=s.flag?ui.flag===s.flag:ui.tier===s.k;
-      return `<button class="rib-seg${on?" on":""}" ${s.flag?`data-flag="${s.flag}"`:`data-tier="${s.k}"`} style="--c:${s.c};flex:${s.n}"
+      const on=segOn(s);
+      return `<button class="rib-seg${on?" on":""}" ${segAttr(s)} style="--c:${s.c};flex:${s.n}"
         aria-pressed="${on}" title="${esc(s.label)} — ${s.n} account${s.n===1?"":"s"} (click to show only these)"
         aria-label="${esc(s.label)}, ${s.n}"><i>${s.n}</i></button>`}).join("")}</div>
-    <div class="rib-cap"><span><b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}${unN?` · <b>${unN}</b> unranked`:""}${missN?` · <b>${missN}</b> not found`:""}${neverN?` · <b>${neverN}</b> never checked`:""}</span>`
+    <div class="rib-cap"><span><b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}${unN?` · <b>${unN}</b> unranked`:""}${missN?` · <b>${missN}</b> not found`:""}${neverN?` · <b>${neverN}</b> never checked`:""}${bannedN?` · <b>${bannedN}</b> banned`:""}</span>`
     +(best?`<span>best <b style="color:${tierColor(best.stats.tier)}">${esc(shortRank(best.stats))}</b></span>`:"")
     +`</div>`);
 }
@@ -6143,7 +6241,7 @@ $("sSave").addEventListener("click",async()=>{
   cfg.backendUrl=backendOk;$("sBackend").value=backendOk;
   cfg.notify=wantNotify;
   cfg.discordWebhook=whOk;$("sDiscord").value=whOk;
-  cfg.autoLockMin=Math.max(0,+$("sAutoLock").value||0);
+  cfg.autoLockMin=clampAutoLock($("sAutoLock").value);
   // null, not the default's own hex, when that is what the picker is sitting on:
   // "no colour chosen" is a different thing to store than "chose exactly this one",
   // and it is what lets the default move later without dragging every vault that
@@ -6371,8 +6469,8 @@ $("bImport").addEventListener("click",()=>$("fileIn").click());
 $("bDeleteAll").addEventListener("click",()=>{
   if(accounts.length===0)return;
   if(!confirm("Delete all "+accounts.length+" account"+(accounts.length===1?"":"s")+" in this vault? This can't be undone — export a backup first if you're not sure."))return;
-  accounts=[];selected.clear();lastSelectedId=null;saveDB();render();
-  toast("Vault cleared");
+  accounts=[];selected.clear();lastSelectedId=null;render();
+  saveThen("Vault cleared");
 });
 $("bExitPreview").addEventListener("click",()=>{previewMode=false;accounts=[];render()});
 $("fileIn").addEventListener("change",e=>{if(e.target.files[0])doImport(e.target.files[0]);e.target.value=""});
@@ -6383,6 +6481,10 @@ $("bBulkAdd").addEventListener("click",()=>{
   closeAllPanels();
   $("baList").value="";
   $("bulkAdd").classList.remove("hidden");
+  // Before the modal observer gets a look in, the same way openForm does: the
+  // first focusable field is the region select, and the one you came here to
+  // fill is the list.
+  $("baList").focus();
 });
 $("baCancel").addEventListener("click",()=>$("bulkAdd").classList.add("hidden"));
 $("baSave").addEventListener("click",()=>{
@@ -6400,8 +6502,8 @@ $("baSave").addEventListener("click",()=>{
     accounts.push({id:uid(),fav:false,stats:null,label:"",region,gameName,tagLine,status:"active",login:"",password:"",email:"",tags:[],notes:"",history:[]});
     added++;
   }
-  saveDB();render();$("bulkAdd").classList.add("hidden");
-  toast(added+" added"+(skipped?", "+skipped+" duplicate"+(skipped===1?"":"s")+" skipped":"")+(bad?", "+bad+" line"+(bad===1?"":"s")+" couldn't be parsed":""));
+  render();$("bulkAdd").classList.add("hidden");
+  saveThen(added+" added"+(skipped?", "+skipped+" duplicate"+(skipped===1?"":"s")+" skipped":"")+(bad?", "+bad+" line"+(bad===1?"":"s")+" couldn't be parsed":""));
 });
 // Wrapped, not passed directly: addEventListener hands the listener a MouseEvent,
 // which checkAll would take as its `ids` list and immediately call .map() on — so
@@ -6683,6 +6785,8 @@ $("count").addEventListener("click",e=>{
 $("ribbon").addEventListener("click",e=>{
   const flag=e.target.closest("[data-flag]");
   if(flag){setChoreFlag(flag.dataset.flag);return}
+  const st=e.target.closest("[data-status]");
+  if(st){setStatusFilter(st.dataset.status);return}
   const seg=e.target.closest("[data-tier]");if(!seg)return;
   setTierFilter(seg.dataset.tier);
 });
@@ -6729,24 +6833,24 @@ $("bulkStatus").addEventListener("change",e=>{
   const v=e.target.value;if(!v)return;
   const n=selected.size;
   accounts.forEach(a=>{if(selected.has(a.id))a.status=v});
-  saveDB();render();
-  toast("Status set to "+(STATUS[v]||STATUS.active).label+" for "+n+" account"+(n===1?"":"s"));
+  render();
+  saveThen("Status set to "+(STATUS[v]||STATUS.active).label+" for "+n+" account"+(n===1?"":"s"));
   e.target.value="";
 });
 $("bulkTagBtn").addEventListener("click",()=>{
   const t=$("bulkTag").value.trim();if(!t)return;
   const n=selected.size;
   accounts.forEach(a=>{if(selected.has(a.id)){a.tags=a.tags||[];if(!a.tags.includes(t))a.tags.push(t)}});
-  saveDB();render();$("bulkTag").value="";
-  toast('Tag "'+t+'" added to '+n+" account"+(n===1?"":"s"));
+  render();$("bulkTag").value="";
+  saveThen('Tag "'+t+'" added to '+n+" account"+(n===1?"":"s"));
 });
 $("bulkTag").addEventListener("keydown",e=>{if(e.key==="Enter")$("bulkTagBtn").click()});
 $("bulkDelete").addEventListener("click",()=>{
   const n=selected.size;
   if(!confirm("Delete "+n+" selected account"+(n===1?"":"s")+"? This can't be undone."))return;
   accounts=accounts.filter(a=>!selected.has(a.id));
-  selected.clear();lastSelectedId=null;saveDB();render();
-  toast(n+" account"+(n===1?"":"s")+" deleted");
+  selected.clear();lastSelectedId=null;render();
+  saveThen(n+" account"+(n===1?"":"s")+" deleted");
 });
 $("bulkClear").addEventListener("click",()=>{selected.clear();lastSelectedId=null;render()});
 
@@ -6888,10 +6992,10 @@ $("grid").addEventListener("click",async e=>{
     if(!confirm("Reset this account for a new season? Current rank moves into Past seasons."))return;
     seasonReset(id)}
   else if(act==="flag"){
-    acc.flagged=!acc.flagged;saveDB();
+    acc.flagged=!acc.flagged;
     if(ui.flag==="attention")render();
     else{renderCard(id);renderDash();renderChips()}
-    toast(acc.flagged?"Flagged — it's under Needs attention now":"Flag cleared")}
+    saveThen(acc.flagged?"Flagged — it's under Needs attention now":"Flag cleared")}
   else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderCard(id)}
   else if(act==="login"){
     const on=!openLogin.has(id);
@@ -6904,9 +7008,9 @@ $("grid").addEventListener("click",async e=>{
     renderCard(id);
   }
   else if(act==="edit")openForm(acc);
-  else if(act==="exstats"){acc.excludeStats=!acc.excludeStats;saveDB();renderCard(id);renderDash();toast(acc.excludeStats?"Left out of the combined stats":"Counted in the combined stats again")}
-  else if(act==="archive"){acc.archived=true;saveDB();render();toast("Archived — toggle \"Archived\" in the toolbar to see it again")}
-  else if(act==="unarchive"){acc.archived=false;saveDB();render();toast("Restored to active accounts")}
+  else if(act==="exstats"){acc.excludeStats=!acc.excludeStats;renderCard(id);renderDash();saveThen(acc.excludeStats?"Left out of the combined stats":"Counted in the combined stats again")}
+  else if(act==="archive"){acc.archived=true;render();saveThen("Archived — toggle \"Archived\" in the toolbar to see it again")}
+  else if(act==="unarchive"){acc.archived=false;render();saveThen("Restored to active accounts")}
   else if(act==="noteedit"){
     if(editingNote===id)return;
     commitNote();            // only one editor open at a time
@@ -6949,12 +7053,16 @@ $("grid").addEventListener("click",async e=>{
       const idx=accounts.findIndex(a=>a.id===id);const removed=accounts[idx];
       accounts=accounts.filter(a=>a.id!==id);armedDelete=null;
       selected.delete(id);if(lastSelectedId===id)lastSelectedId=null;
-      saveDB();render();
+      render();
       // Undo must not fire after an auto-lock — that would put passwords back into
       // memory (and the hidden DOM) while the lock screen is up.
-      toast("Account deleted","Undo",()=>{
+      // And no Undo offered for a deletion that never reached the disk: the
+      // account is still in the file, so there is nothing to undo and the offer
+      // would paint over the storage warning.
+      saveThen("Account deleted","Undo",()=>{
         if(vaultLocked())return;
-        accounts.splice(Math.min(idx,accounts.length),0,removed);saveDB();render();
+        accounts.splice(Math.min(idx,accounts.length),0,removed);render();
+        saveThen("Account restored");
       });
     }
     else{armedDelete=id;renderGrid();setTimeout(()=>{if(armedDelete===id){armedDelete=null;renderGrid()}},3000)}
@@ -7159,6 +7267,9 @@ function boot(){
     }
     const days=clampExportDays(cfg.exportRemindDays);
     if(cfg.exportRemindDays!==days){cfg.exportRemindDays=days;cfgDirty=true}
+    // So the timer that actually runs is the one the dropdown will show.
+    const lock=clampAutoLock(cfg.autoLockMin);
+    if((cfg.autoLockMin||0)!==lock){cfg.autoLockMin=lock;cfgDirty=true}
     if(cfgDirty)saveCfg();
   }
   fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);

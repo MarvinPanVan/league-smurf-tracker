@@ -347,7 +347,7 @@ test("CSV export -> import round-trips a formula-looking password unchanged", as
 
   const file = new win.File([csv], "rt.csv", { type: "text/csv" });
   win.doImportCSV(file);
-  await new Promise(r => setTimeout(r, 150));
+  await until(() => win.localStorage.getItem("smurf-tracker"), "the CSV import to be written");
 
   const stored = JSON.parse(win.localStorage.getItem("smurf-tracker"));
   assert.equal(stored.length, 1);
@@ -360,7 +360,7 @@ test("a third-party CSV whose password starts with an apostrophe is left untouch
   const csv = "gameName,tagLine,region,password\r\nForeign,1234,EUW,'quoted";
   const file = new win.File([csv], "foreign.csv", { type: "text/csv" });
   win.doImportCSV(file);
-  await new Promise(r => setTimeout(r, 150));
+  await until(() => win.localStorage.getItem("smurf-tracker"), "the CSV import to be written");
 
   const stored = JSON.parse(win.localStorage.getItem("smurf-tracker"));
   assert.equal(stored[0].password, "'quoted");
@@ -465,8 +465,7 @@ test("CSV import adds accounts from a well-formed export-shaped file", async () 
     + "Test,CSV Import,4242,EUW,active,GOLD,II,50,10,5,100,user1,pass1,a@b.com,tag1|tag2,notes here,yes,";
   const file = new win.File([csv], "test.csv", { type: "text/csv" });
   win.doImportCSV(file);
-  await new Promise(r => setTimeout(r, 100));
-  assert.equal(win.document.querySelectorAll(".card").length, 1);
+  await until(() => win.document.querySelectorAll(".card").length === 1, "the imported account to render");
   assert.match(win.document.getElementById("grid").textContent, /CSV Import/);
 });
 
@@ -1960,7 +1959,7 @@ test("the Check all label says how many it would actually refresh", async () => 
   const search = win.document.getElementById("tSearch");
   search.value = "Beta";
   search.dispatchEvent(new win.Event("input", { bubbles: true }));
-  await new Promise(r => setTimeout(r, 200));
+  await until(() => win.document.querySelectorAll(".card").length === 1, "the search to narrow the grid");
   assert.equal(label(), "Check 1 shown");
 });
 
@@ -2087,7 +2086,7 @@ test("import assigns fresh ids and pins region and status to known values", asyn
     { id: "same", gameName: "Xavier", tagLine: "1", region: "Europe West", status: "not-a-status" },
     { id: "same", gameName: "Yvonne", tagLine: "2", region: "kr", status: "banned" },
   ] })], { type: "application/json" }));
-  await new Promise(r => setTimeout(r, 150));
+  await until(() => win.document.querySelectorAll(".card").length === 2, "both imported accounts to render");
 
   const ids = [...win.document.querySelectorAll(".card")].map(c => c.dataset.id);
   assert.equal(ids.length, 2);
@@ -2246,8 +2245,7 @@ test("a narrowed grid always says what narrowed it", async () => {
   const search = win.document.getElementById("tSearch");
   search.value = "Alpha";
   search.dispatchEvent(new win.Event("input", { bubbles: true }));
-  await new Promise(r => setTimeout(r, 200));
-  assert.equal(win.document.querySelectorAll(".card").length, 1);
+  await until(() => win.document.querySelectorAll(".card").length === 1, "the search to narrow the grid");
   assert.deepEqual(chips(), ['"Alpha"'], "the search says so");
 
   win.document.getElementById("tFav").click();
@@ -2269,9 +2267,12 @@ test("Settings, Help and the account form all open over the page", () => {
   assert.match(cls("settings"), /\bmodal\b/);
   assert.match(cls("help"), /\bmodal\b/);
   assert.match(cls("form"), /\bmodal\b/);
-  assert.doesNotMatch(cls("bulkAdd"), /\bmodal\b/, "bulk add is the one still inline");
+  // Bulk add was the last one left inline, and it was also listed in MODALS —
+  // which locks page scrolling. A scroll lock on a panel that scrolls with the
+  // page is a panel you cannot reach; see the regression test below.
+  assert.match(cls("bulkAdd"), /\bmodal\b/, "bulk add is over the page too now");
 
-  for (const id of ["settings", "help", "form"]) {
+  for (const id of ["settings", "help", "form", "bulkAdd"]) {
     const el = win.document.getElementById(id);
     assert.equal(el.getAttribute("role"), "dialog", id);
     assert.equal(el.getAttribute("aria-modal"), "true", id);
@@ -2548,7 +2549,7 @@ test("select-all tracks whatever the filters are showing", async () => {
   const search = win.document.getElementById("tSearch");
   search.value = "Alpha";
   search.dispatchEvent(new win.Event("input", { bubbles: true }));
-  await new Promise(r => setTimeout(r, 200));
+  await until(() => win.document.querySelectorAll(".card").length === 1, "the search to narrow the grid");
   assert.equal(box.checked, true);
 
   // clear the selection: the box has to follow, or its next click clears nothing
@@ -5012,6 +5013,215 @@ test("pullVaultSync is a no-op when vaultRev already matches", async () => {
   await win.pullVaultSync(false);
   assert.equal(win.document.querySelectorAll(".card").length, before);
   assert.match(win.document.getElementById("toast").textContent, /Already in sync/i);
+});
+
+/* The no-op pull above only ever passed because the test set cfg.vaultRev by
+   hand. After a *real* pull it could never happen: pullVaultSync adopted the
+   cloud's revision and then called saveDB(), whose touchVaultRev() raised it to
+   Date.now() again. So every pull left the device permanently "newer" than the
+   copy it had just taken — the second pull warned "Local vault is newer than
+   cloud — Pull would overwrite it", and once the other device pushed, this one
+   was told it had changed since the last sync and asked to confirm losing work
+   it had never done. */
+test("a pull adopts the cloud revision instead of stamping a newer local one", async () => {
+  const REMOTE = 1700000000000;
+  const win = bootApp([{ id: "a1", region: "EUW", gameName: "Local", tagLine: "1", status: "active",
+    tags: [], history: [], stats: null }]);
+  runScript(win, `
+    vaultPassword = "test-pass-1234";
+    cfg.backendUrl = "https://example.workers.dev";
+    cfg.syncToken = "sync-token-abcdef12";
+    cfg.vaultRev = 100;
+    cfg.lastSyncAt = 100;   // synced before and untouched since, so the pull is uncontested
+  `);
+  const envelope = await win.encryptData("test-pass-1234", [
+    { id: "b1", region: "EUW", gameName: "FromCloud", tagLine: "2", status: "active",
+      tags: [], history: [], stats: null },
+  ]);
+  let gets = 0, puts = 0;
+  win.fetch = async (url, opts = {}) => {
+    if ((opts.method || "GET").toUpperCase() !== "GET") { puts++; return new Response("{}", { status: 200 }) }
+    gets++;
+    return new Response(JSON.stringify({ updatedAt: REMOTE, envelope }), { status: 200 });
+  };
+
+  await win.pullVaultSync(false);
+  await until(() => /pulled/i.test(win.document.getElementById("toast").textContent), "the pull to land");
+  assert.match(win.document.querySelector(".card").textContent, /FromCloud/);
+  runScript(win, "window.__rev = cfg.vaultRev; window.__sync = cfg.lastSyncAt;");
+  assert.equal(win.__rev, REMOTE, "the local revision is the cloud's, not a fresh Date.now()");
+  assert.ok(win.__sync >= REMOTE, "and the sync stamp is not behind it");
+
+  // Which is what makes the second pull a genuine no-op rather than a conflict.
+  await win.pullVaultSync(false);
+  assert.match(win.document.getElementById("toast").textContent, /Already in sync/i);
+  assert.equal(gets, 2);
+  assert.equal(puts, 0, "a pull never writes to the cloud");
+});
+
+/* Appending "/vault" to the href turned a backend URL carrying a query string
+   into ".../?token=x/vault" — a path the worker never routes, failing with no
+   useful message. */
+test("the vault sync URL is built on the path, not glued to the href", () => {
+  const win = bootApp();
+  const url = u => { runScript(win, `cfg.backendUrl=${JSON.stringify(u)};`); return win.vaultSyncUrl() };
+  assert.equal(url("https://example.workers.dev"), "https://example.workers.dev/vault");
+  assert.equal(url("https://example.workers.dev/"), "https://example.workers.dev/vault");
+  assert.equal(url("https://example.workers.dev/api"), "https://example.workers.dev/api/vault");
+  assert.equal(url("https://example.workers.dev/?token=x"), "https://example.workers.dev/vault?token=x");
+  assert.equal(url(""), "");
+});
+
+/* Settings pinned anything over three hours to 180 in the dropdown while
+   cfg.autoLockMin kept the larger number — so the panel showed a timer that was
+   not the one running, until a Save happened to write the shown value back. */
+test("the auto-lock dropdown shows the timer that is actually running", () => {
+  const win = bootApp(undefined, w => {
+    w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ autoLockMin: 600 }));
+  });
+  const sel = win.document.getElementById("sAutoLock");
+  win.openSettings();
+  runScript(win, "window.__lock = cfg.autoLockMin;");
+  assert.equal(String(win.__lock), sel.value, "stored and shown are the same number");
+  assert.equal(win.__lock, 600, "and a ten-hour timer is not silently retimed to three");
+  assert.match([...sel.options].find(o => o.value === "600").textContent, /current/i);
+  // absurd values still get pinned to something a person could have meant
+  assert.equal(win.clampAutoLock(99999), 1440);
+  assert.equal(win.clampAutoLock(-5), 0);
+  assert.equal(win.clampAutoLock("nonsense"), 0);
+});
+
+/* saveDB() toasts "Saving failed — storage error" and answers false, but the
+   callers reporting their own success fired it into the same toast a line later
+   — so a change that never reached the disk was announced as done. */
+test("a change that could not be written is not reported as saved", async () => {
+  const win = bootApp(seededAccount(), w => {
+    const real = w.Storage.prototype.setItem;
+    w.Storage.prototype.setItem = function (k, v) {
+      if (k === "smurf-tracker") { const e = new Error("quota"); e.name = "QuotaExceededError"; throw e }
+      return real.call(this, k, v);
+    };
+  });
+  const card = win.document.querySelector(".card");
+  card.querySelector('[data-act="more"]').click();
+  win.document.querySelector('[data-act="archive"]').click();
+  await until(() => /failed/i.test(win.document.getElementById("toast").textContent),
+    "the storage failure to be reported");
+  assert.doesNotMatch(win.document.getElementById("toast").textContent, /Archived/,
+    "and not painted over with a success message");
+});
+
+/* The bug this guards is not "bulkAdd was the wrong shape" — it is that MODALS
+   and the markup can drift apart at all. Being in MODALS puts body.modal-open on
+   the page, and that kills scrolling on <html> and <body>. For a .modal that is
+   right: it is fixed over the viewport and scrolls itself. For a panel sitting in
+   the document flow it is a trap — the page freezes wherever it was, and the panel
+   you just opened is somewhere off-screen with no way to scroll to it. Assert the
+   invariant rather than the instance, so the next panel added to MODALS is caught
+   by this and not by somebody wondering why the page stopped scrolling. */
+test("every panel that locks page scrolling is fixed over the page", () => {
+  const win = bootApp(seededAccount());
+  // openModals() reads MODALS, which is a const and not reachable from out here.
+  for (const el of win.document.querySelectorAll(".hx, .modal")) el.classList.remove("hidden");
+  const locking = win.openModals();
+  assert.ok(locking.length >= 5, "several panels are in MODALS");
+  for (const el of locking) {
+    assert.match(el.className, /\bmodal\b/,
+      `#${el.id} is in MODALS, so body.modal-open stops the page scrolling while it is open — `
+      + "it has to be fixed over the viewport, or it scrolls away with the page and cannot be reached");
+  }
+});
+
+test("bulk add opens over the page, focused on the list", () => {
+  const win = bootApp(seededAccount());
+  const panel = win.document.getElementById("bulkAdd");
+  assert.equal(panel.classList.contains("hidden"), true);
+  win.document.getElementById("bBulkAdd").click();
+  assert.equal(panel.classList.contains("hidden"), false);
+  assert.ok(win.openModals().some(m => m.id === "bulkAdd"), "and it counts as a modal");
+  // the region select is the first focusable field; the textarea is the one you came for
+  assert.equal(win.document.activeElement.id, "baList");
+  // Save/Cancel are pinned in the footer, outside the part that scrolls
+  assert.ok(win.document.querySelector("#bulkAdd .mdl-f #baSave"));
+  assert.ok(win.document.querySelector("#bulkAdd .mdl-b #baList"));
+  // and it still adds accounts
+  win.document.getElementById("baList").value = "Pasted One#EUW\nPasted Two#EUW";
+  win.document.getElementById("baSave").click();
+  assert.equal(win.document.querySelectorAll(".card").length, 3);
+  assert.equal(panel.classList.contains("hidden"), true);
+});
+
+/* renderRibbon counted a banned account as a live tier while renderDash's Rank
+   spread has always used isLive(). A banned Bronze smurf therefore gave the
+   header a Bronze segment the gem row underneath did not have, and made the
+   caption claim a tier more than the vault actually spans. */
+test("the ribbon and the dash Rank spread agree about banned accounts", () => {
+  const st = (tier, division) => ({ found: true, tier, division, lp: 50, wins: 10, losses: 8,
+    level: 100, updatedAt: Date.now() });
+  const win = bootApp([
+    { id: "live1", gameName: "Alive", tagLine: "1", region: "EUW", status: "active",
+      tags: [], history: [], stats: st("GOLD", "II") },
+    { id: "dead1", gameName: "Perma", tagLine: "2", region: "EUW", status: "banned",
+      tags: [], history: [], stats: st("BRONZE", "I") },
+  ]);
+  const tiers = sel => [...win.document.querySelectorAll(sel)].map(b => b.dataset.tier);
+  assert.deepEqual(tiers("#ribbon .rib-seg[data-tier]"), tiers("#dash .gem-b"),
+    "the header bar and the gem row answer the same question");
+  assert.deepEqual(tiers("#ribbon .rib-seg[data-tier]"), ["GOLD"]);
+  assert.match(win.document.querySelector(".rib-cap").textContent, /across 1 tier\b/);
+
+  // Not silently dropped either — it gets a segment of its own, so the segments
+  // still add up to the total the caption prints.
+  const banned = win.document.querySelector('#ribbon .rib-seg[data-status="banned"]');
+  assert.ok(banned, "banned accounts get their own segment");
+  assert.equal(banned.textContent, "1");
+  assert.match(win.document.querySelector(".rib-cap").textContent, /1<\/b> banned|1 banned/);
+
+  // and clicking it shows exactly what it counted, through the status filter the
+  // toolbar dropdown already drives
+  banned.click();
+  assert.equal(win.document.getElementById("tStatus").value, "banned");
+  const shown = [...win.document.querySelectorAll(".card")];
+  assert.equal(shown.length, 1);
+  assert.match(shown[0].textContent, /Perma/);
+});
+
+test("a banned Challenger is not the vault's best account", () => {
+  const st = (tier, division) => ({ found: true, tier, division, lp: 50, updatedAt: Date.now() });
+  const win = bootApp([
+    { id: "live1", gameName: "Alive", tagLine: "1", region: "EUW", status: "active",
+      tags: [], history: [], stats: st("GOLD", "II") },
+    { id: "dead1", gameName: "Perma", tagLine: "2", region: "EUW", status: "banned",
+      tags: [], history: [], stats: st("CHALLENGER", null) },
+  ]);
+  const cap = win.document.querySelector(".rib-cap").textContent;
+  assert.match(cap, /best\s*Gold/i);
+  assert.doesNotMatch(cap, /Challenger/i, "a gravestone is not a personal best");
+});
+
+/* Master and above have no divisions, so picking one in the ✎ Rank panel disables
+   the division select through the change listener. rankPanelHTML is always built
+   from the *saved* stats, though, and morph synced attributes before it reached
+   the "leave an open panel alone" guard — so the enabled version from the saved
+   Diamond rank came straight back on the next re-render, and the panel offered a
+   division for a tier that has none. */
+test("an open Rank panel keeps its disabled division select through a re-render", () => {
+  const win = bootApp(seededAccount());
+  const card = win.document.querySelector(".card");
+  const id = card.dataset.id;
+  card.querySelector('[data-act="more"]').click();
+  win.document.querySelector('[data-act="rank"]').click();
+  const q = f => win.document.querySelector(`.card [data-f="${f}"]`);
+  assert.equal(q("div").disabled, false, "Diamond has divisions");
+
+  const tier = q("tier");
+  tier.value = "MASTER";
+  tier.dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert.equal(q("div").disabled, true, "picking Master disables it");
+
+  win.renderCard(id); // a refresh landing, the flash timeout, anything at all
+  assert.equal(q("tier").value, "MASTER", "the unsaved tier survives, as it always did");
+  assert.equal(q("div").disabled, true, "and so does the state that tier drives");
 });
 
 test("ribbon never-checked count matches the dash tile for tier-without-timestamp", () => {
