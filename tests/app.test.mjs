@@ -181,6 +181,34 @@ test("parseRankText reads Solo, not Flex, and recognises Unranked", () => {
   assert.equal(win.parseRankText("just Unranked on a profile with no level").tier, "UNRANKED");
 });
 
+test("parseRankText does not take the season peak as the current rank on an Unranked account", () => {
+  const win = bootApp();
+  const r = win.parseRankText("Unranked\nmaster 393 LP Top tier\nRanked Flex\ngold 2 45 LP\n");
+  assert.equal(r.tier, "UNRANKED");
+  assert.equal(r.lp, null);
+  assert.equal(win.parsePeakText("Unranked\nmaster 393 LP Top tier\n").tier, "MASTER");
+});
+
+test("validDiscordWebhook only accepts real Discord webhook https URLs", () => {
+  const win = bootApp();
+  assert.equal(win.validDiscordWebhook(""), "");
+  assert.equal(win.validDiscordWebhook("https://discord.com/api/webhooks/123/abc-def"),
+    "https://discord.com/api/webhooks/123/abc-def");
+  assert.equal(win.validDiscordWebhook("https://discordapp.com/api/webhooks/123/abc"),
+    "https://discordapp.com/api/webhooks/123/abc");
+  assert.equal(win.validDiscordWebhook("https://example.com/api/webhooks/123/abc"), null);
+  assert.equal(win.validDiscordWebhook("http://discord.com/api/webhooks/123/abc"), null);
+  assert.equal(win.validDiscordWebhook("not a url"), null);
+});
+
+test("validBackendUrl requires an absolute http(s) link", () => {
+  const win = bootApp();
+  assert.equal(win.validBackendUrl(""), "");
+  assert.equal(win.validBackendUrl("https://x.workers.dev/"), "https://x.workers.dev");
+  assert.equal(win.validBackendUrl("/relative"), null);
+  assert.equal(win.validBackendUrl("not a url"), null);
+});
+
 test("parseProfileIcon extracts a stable icon URL from op.gg's CDN image path, ignores unrelated text", () => {
   const win = bootApp();
   const html = '<img src="https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon6.jpg?image=q_auto:good,f_png,w_200&v=1784743313" alt="icon">';

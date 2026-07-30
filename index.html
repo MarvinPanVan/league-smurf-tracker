@@ -2524,6 +2524,31 @@ function postDiscord(content){
   if(!cfg.discordWebhook)return;
   fetch(cfg.discordWebhook,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({content})}).catch(()=>{});
 }
+// Tier-up posts go to whatever URL is in Settings. Accepting any string meant a
+// typo — or a paste of the wrong kind of link — quietly POSTed the account name
+// somewhere that was not Discord. https + discord's webhook path only.
+function validDiscordWebhook(u){
+  if(!u)return"";
+  try{
+    const url=new URL(u);
+    if(url.protocol!=="https:")return null;
+    if(!/^(?:canary\.|ptb\.)?discord(?:app)?\.com$/i.test(url.hostname))return null;
+    if(!/^\/api\/webhooks\/\d+\/[\w-]+\/?$/.test(url.pathname))return null;
+    return url.origin+url.pathname.replace(/\/$/,"");
+  }catch(e){return null}
+}
+// Same idea for the backend: a relative path or a garbage string used to build a
+// request against the Pages host itself. Absolute http(s) only; query params are
+// added via URLSearchParams so a URL that already has some is not broken by a
+// second "?".
+function validBackendUrl(u){
+  if(!u)return"";
+  try{
+    const url=new URL(u);
+    if(url.protocol!=="https:"&&url.protocol!=="http:")return null;
+    return url.href.replace(/\/+$/,"");
+  }catch(e){return null}
+}
 function celebrate(id,acc){
   const prev=acc.history[acc.history.length-2]||{};
   toast("Tier up: "+(prev.tier||"?")+" → "+acc.stats.tier);
@@ -2679,7 +2704,17 @@ function parseRankText(raw){
   // Everything from "Ranked Flex" onwards belongs to parseFlex; the current-rank
   // parser only reads what comes before.
   const soloRaw=String(raw).split(/\bRanked\s*Flex\b/i)[0];
-  const first=parseRankFlat(soloRaw.replace(/\s+/g," "));
+  const flat=soloRaw.replace(/\s+/g," ");
+  // "Unranked" before any "tier N LP" means Solo is Unranked — a later LP figure
+  // is the season peak (Top tier), not the current rank. Flex is already cut away
+  // above; this closes the same trap for the peak badge.
+  const unIdx=flat.search(/\bUnranked\b/i);
+  const rankAt=flat.search(new RegExp("\\b("+TIER_WORD+")\\b[^\\dA-Za-z]{0,6}([1-4]|IV|III|II|I)?(?!\\d)(?:\\s\\2(?!\\d))?[^\\d]{0,6}(\\d{1,4})\\s*LP\\b","i"));
+  if(unIdx>=0&&(rankAt<0||unIdx<rankAt)){
+    const lv=flat.match(/\bLv(?:l)?\.?\s*(\d{1,4})\b/i)||flat.match(/\bLevel\s*(\d{1,4})\b/i);
+    return{tier:"UNRANKED",division:null,lp:null,wins:null,losses:null,level:lv?+lv[1]:null};
+  }
+  const first=parseRankFlat(flat);
   if(first&&first.tier)return first;
   // Some proxies hand back markup dense enough that the tier and its LP end up
   // further apart than the strict pattern tolerates. Stripping to plain words is
@@ -3052,8 +3087,12 @@ function refreshCutoffs(){
 }
 async function fetchViaBackend(acc){
   const r=REGIONS[acc.region]||REGIONS.EUW;
-  const url=cfg.backendUrl.replace(/\/+$/,"")+"?name="+encodeURIComponent(acc.gameName)+"&tag="+encodeURIComponent(acc.tagLine)+"&region="+encodeURIComponent(r.opgg);
-  const text=await fetchWithTimeout(url,12000);
+  let url;
+  try{url=new URL(cfg.backendUrl)}catch(e){throw new Error("invalid backend URL")}
+  url.searchParams.set("name",acc.gameName);
+  url.searchParams.set("tag",acc.tagLine);
+  url.searchParams.set("region",r.opgg);
+  const text=await fetchWithTimeout(url.href,12000);
   const d=JSON.parse(text);
   if(d.found===false)return {found:false,updatedAt:Date.now()};
   return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),seasons:d.seasons||null,flex:normPeak(d.flex),champs:Array.isArray(d.champs)?d.champs.slice(0,10):null,lpAt:normLpAt(d.lpAt),icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,updatedAt:Date.now()};
@@ -4970,9 +5009,20 @@ document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.targ
 function closeSettings(){revertAccents();revertAtmosphere();$("settings").classList.add("hidden")}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
 $("sSave").addEventListener("click",async()=>{
-  cfg.apiKey=$("sKey").value.trim();cfg.model=$("sModel").value;cfg.autoCheck=$("sAuto").checked;cfg.autoEveryHours=+$("sAutoEvery").value;cfg.autoRankedOnly=$("sAutoRanked").checked;cfg.backendUrl=$("sBackend").value.trim();
+  cfg.apiKey=$("sKey").value.trim();cfg.model=$("sModel").value;cfg.autoCheck=$("sAuto").checked;cfg.autoEveryHours=+$("sAutoEvery").value;cfg.autoRankedOnly=$("sAutoRanked").checked;
+  const backend=$("sBackend").value.trim();
+  if(backend){
+    const ok=validBackendUrl(backend);
+    if(!ok){toast("Backend URL must be a full http(s) link");return}
+    cfg.backendUrl=ok;$("sBackend").value=ok;
+  }else cfg.backendUrl="";
   cfg.notify=$("sNotify").checked;
-  cfg.discordWebhook=$("sDiscord").value.trim();
+  const wh=$("sDiscord").value.trim();
+  if(wh){
+    const ok=validDiscordWebhook(wh);
+    if(!ok){toast("Discord webhook must be an https://discord.com/api/webhooks/… URL");return}
+    cfg.discordWebhook=ok;$("sDiscord").value=ok;
+  }else cfg.discordWebhook="";
   cfg.autoLockMin=Math.max(0,+$("sAutoLock").value||0);
   // null, not the default's own hex, when that is what the picker is sitting on:
   // "no colour chosen" is a different thing to store than "chose exactly this one",

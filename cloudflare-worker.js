@@ -128,16 +128,32 @@ export function stripRows(raw) {
     .split("\n").map(l => l.trim()).filter(Boolean);
 }
 
-// The current rank. Two passes: the strict pattern on the flattened text, then —
-// only if that found no tier — the same pattern on the row-stripped version, for
-// pages dense enough that the tier and its LP end up further apart than the
-// pattern tolerates. Never a downgrade, since pass two only runs after a miss.
+// The current rank. Solo and Flex share the page — everything from "Ranked Flex"
+// onwards belongs to parseFlex. Two passes on the Solo half: the strict pattern
+// on the flattened text, then — only if that found no tier — the same pattern on
+// the row-stripped version, for pages dense enough that the tier and its LP end
+// up further apart than the pattern tolerates. Never a downgrade, since pass two
+// only runs after a miss.
 export function parseRankText(raw) {
   if (!raw) return null;
-  const first = parseRankFlat(String(raw).replace(/\s+/g, " "));
+  const soloRaw = String(raw).split(/\bRanked\s*Flex\b/i)[0];
+  const flat = soloRaw.replace(/\s+/g, " ");
+  // "Unranked" before any "tier N LP" means Solo is Unranked — a later LP figure
+  // is the season peak (Top tier), not the current rank.
+  const unIdx = flat.search(/\bUnranked\b/i);
+  const rankAt = flat.search(new RegExp("\\b(" + TIER_WORD + ")\\b[^\\dA-Za-z]{0,6}([1-4]|IV|III|II|I)?(?!\\d)(?:\\s\\2(?!\\d))?[^\\d]{0,6}(\\d{1,4})\\s*LP\\b", "i"));
+  if (unIdx >= 0 && (rankAt < 0 || unIdx < rankAt)) {
+    const lv = flat.match(/\bLv(?:l)?\.?\s*(\d{1,4})\b/i) || flat.match(/\bLevel\s*(\d{1,4})\b/i);
+    return { tier: "UNRANKED", division: null, lp: null, wins: null, losses: null, level: lv ? +lv[1] : null };
+  }
+  const first = parseRankFlat(flat);
   if (first && first.tier) return first;
-  const second = parseRankFlat(stripRows(raw).join(" "));
-  return (second && second.tier) ? second : (first || second);
+  const second = parseRankFlat(stripRows(soloRaw).join(" "));
+  if (second && second.tier) return second;
+  const hit = first || second;
+  if (hit && hit.level != null) { hit.tier = hit.tier || "UNRANKED"; return hit; }
+  if (/\bUnranked\b/i.test(soloRaw)) return { tier: "UNRANKED", division: null, lp: null, wins: null, losses: null, level: null };
+  return hit;
 }
 
 function parseRankFlat(text) {
@@ -146,7 +162,8 @@ function parseRankFlat(text) {
   const out = { tier: null, division: null, lp: null, wins: null, losses: null, level: null };
   if (m) {
     out.tier = m[1].toUpperCase();
-    if (m[2]) out.division = DIV_MAP[m[2]] || m[2].toUpperCase();
+    // Above Master there are no divisions — same guard the peak/season parsers carry.
+    if (m[2] && !MASTER_PLUS.includes(out.tier)) out.division = DIV_MAP[m[2]] || m[2].toUpperCase();
     out.lp = +m[3];
     const after = text.slice(m.index);
     const wl = after.match(/(\d{1,4})\s*W(?:in)?s?\b\s*[,\/]?\s*(\d{1,4})\s*L(?:ose|oss(?:es)?)?\b/i);
