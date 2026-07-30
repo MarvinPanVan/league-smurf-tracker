@@ -1586,6 +1586,21 @@ test("the rank spread filters by tier, and toggles back off", () => {
   assert.equal(doc.querySelectorAll(".card").length, 2, "clicking the same tier again clears it");
 });
 
+test("rank spread gems are ordered highest tier first", () => {
+  const mk = (id, tier) => ({
+    id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier, division: "IV", lp: 0, wins: 1, losses: 1, updatedAt: Date.now() },
+  });
+  const win = bootApp([
+    mk("g", "GOLD"), mk("p", "PLATINUM"), mk("e", "EMERALD"), mk("d", "DIAMOND"),
+    { id: "u", gameName: "u", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+      stats: { found: true, tier: "UNRANKED", division: null, lp: null, updatedAt: Date.now() } },
+  ]);
+  const tiers = [...win.document.querySelectorAll("#dash .dist .gem[data-tier]")].map(g => g.dataset.tier);
+  assert.deepEqual(tiers, ["DIAMOND", "EMERALD", "PLATINUM", "GOLD", "UNRANKED"],
+    "best rank on the left, Unranked last");
+});
+
 test("an account with no rank leads with its level, not with the word Unranked", () => {
   const stats = { found: true, tier: "UNRANKED", division: null, lp: null, level: 97, updatedAt: Date.now() };
   const win = bootApp([{ id: "u1", gameName: "Leveling", tagLine: "EUW", region: "EUW", status: "active", stats }]);
