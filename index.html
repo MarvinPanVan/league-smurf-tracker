@@ -424,11 +424,17 @@
   @media (prefers-reduced-motion:reduce){.cmd,.tools{transition:none}}
   /* layout switch: two states, so a segmented control rather than a menu */
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2)}
-  .seg button{border:0;border-radius:0;padding:7px 10px;background:none;color:var(--faint)}
-  .seg button:hover{background:#ffffff0d;border:0;color:var(--muted)}
-  .seg button.on{background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--gold-txt)}
+  /* Neutralize the global button:active translateY — on these icon-only segments
+     it reads as the glyph shrinking/growing by a pixel on press/hover flicker. */
+  .seg button{border:0;border-radius:0;padding:7px 10px;background:none;color:var(--faint);
+    box-shadow:none;transform:none}
+  .seg button:hover{background:#ffffff0d;border:0;color:var(--muted);transform:none;box-shadow:none}
+  .seg button:active{transform:none}
+  .seg button.on{background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--gold-txt);transform:none}
   .seg button+button{border-left:1px solid var(--line)}
-  .seg .ico{width:15px;height:15px}
+  /* block + fixed px: the global .ico is inline-block with vertical-align:-.15em,
+     which reflows a hair when the segment's background/colour changes on hover. */
+  .seg .ico{width:15px;height:15px;display:block;vertical-align:unset;flex-shrink:0}
   /* Atmosphere picker: six little windows. Tip sits in the tile under the name
      (not a floating box) — absolute tips overflowed the settings body by a few
      pixels and painted a useless horizontal scrollbar, and they also sat on top
