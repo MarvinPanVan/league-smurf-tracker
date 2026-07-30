@@ -190,6 +190,33 @@ test("the flex rank is read, and not confused with the solo one", () => {
   assert.equal(parseFlex("<div>Ranked Solo/Duo</div><div><strong>gold 2</strong>45 LP</div>"), null);
 });
 
+test("Solo Unranked is not replaced by Flex or by the season peak", () => {
+  // The same trap the app's parser already closed: the first "tier N LP" on the
+  // page used to be Flex (or the Top tier peak) on an account with no Solo rank.
+  const page = "Unranked\nmaster 393 LP Top tier\nRanked Flex\ngold 2 45 LP\n";
+  const r = parseRankText(page);
+  assert.equal(r.tier, "UNRANKED");
+  assert.equal(r.lp, null);
+  assert.equal(parseFlex(page).tier, "GOLD");
+  assert.equal(parsePeakText(page).tier, "MASTER");
+});
+
+test("Master+ current ranks do not keep a division", () => {
+  const r = parseRankText("master 1 250 LP 10W 5L");
+  assert.equal(r.tier, "MASTER");
+  assert.equal(r.division, null);
+  assert.equal(r.lp, 250);
+});
+
+test("level and champion-meta fallbacks match the shapes the app already handles", () => {
+  assert.equal(parseLevelText("764 # terminallucidity # final", "terminallucidity", "final"), 764);
+  const plain = "Ashe - 15Win 10Lose Win rate 60%, Smolder - 15Win 7Lose Win rate 68%";
+  const c = parseChampionsMeta(plain);
+  assert.equal(c.length, 2);
+  assert.equal(c[0].name, "Ashe");
+  assert.equal(c[0].kda, null);
+});
+
 test("champion rows parse into name, winrate, games and KDA", () => {
   const c = parseChampions(PROFILE_HTML);
   assert.equal(c.length, 2);

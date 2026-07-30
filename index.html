@@ -1956,7 +1956,7 @@ function isFailed(a){return !!(a.stats&&(a.stats.found===false||a.stats.note))}
    be done and have a tile of their own — but the filter behind that tile took every
    account without a rank, never-checked ones included. So "Unranked ×3" filtered the
    grid down to eight cards, and the two numbers sat one line apart. */
-function isUnrankedAnswer(a){return isChecked(a)&&!isRanked(a)}
+function isUnrankedAnswer(a){return isChecked(a)&&a.stats.found!==false&&!isRanked(a)}
 /* Whether a check has ever brought a reading back. A check that fails before one
    has ever succeeded leaves a note behind on an otherwise empty stats object, and
    all three layouts asked "is there a stats object" instead — so the card claimed
@@ -1988,7 +1988,7 @@ let dashJustOpened=false; // same one-shot idea, for the stats panel
 let hasStorage=true;
 let vaultPassword=null;
 let previewMode=false;
-let lastSelectedIdx=null;
+let lastSelectedId=null;
 let lastActivity=Date.now();
 let currentEnvelope=null;
 
@@ -2001,8 +2001,11 @@ function autoCheckDue(a){
   if(a.status==="banned"||a.archived)return false;
   // Ranked-only skips accounts *known* to have no rank. An account that has never
   // been checked is not one of those — it still needs its first check to find out,
-  // and skipping it would leave it stuck outside the filter forever.
-  if(cfg.autoRankedOnly&&a.stats){
+  // and skipping it would leave it stuck outside the filter forever. A failed
+  // first fetch leaves a note-only stats object with no tier; that is still "never
+  // read", not "known unranked", so hasReading() gates the skip rather than the
+  // bare presence of a stats object.
+  if(cfg.autoRankedOnly&&hasReading(a.stats)){
     const t=(a.stats.tier||"").toUpperCase();
     if(a.stats.found===false||!t||t==="UNRANKED")return false;
   }
@@ -2524,6 +2527,31 @@ function postDiscord(content){
   if(!cfg.discordWebhook)return;
   fetch(cfg.discordWebhook,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({content})}).catch(()=>{});
 }
+// Tier-up posts go to whatever URL is in Settings. Accepting any string meant a
+// typo — or a paste of the wrong kind of link — quietly POSTed the account name
+// somewhere that was not Discord. https + discord's webhook path only.
+function validDiscordWebhook(u){
+  if(!u)return"";
+  try{
+    const url=new URL(u);
+    if(url.protocol!=="https:")return null;
+    if(!/^(?:canary\.|ptb\.)?discord(?:app)?\.com$/i.test(url.hostname))return null;
+    if(!/^\/api\/webhooks\/\d+\/[\w-]+\/?$/.test(url.pathname))return null;
+    return url.origin+url.pathname.replace(/\/$/,"");
+  }catch(e){return null}
+}
+// Same idea for the backend: a relative path or a garbage string used to build a
+// request against the Pages host itself. Absolute http(s) only; query params are
+// added via URLSearchParams so a URL that already has some is not broken by a
+// second "?".
+function validBackendUrl(u){
+  if(!u)return"";
+  try{
+    const url=new URL(u);
+    if(url.protocol!=="https:"&&url.protocol!=="http:")return null;
+    return url.href.replace(/\/+$/,"");
+  }catch(e){return null}
+}
 function celebrate(id,acc){
   const prev=acc.history[acc.history.length-2]||{};
   toast("Tier up: "+(prev.tier||"?")+" → "+acc.stats.tier);
@@ -2679,7 +2707,17 @@ function parseRankText(raw){
   // Everything from "Ranked Flex" onwards belongs to parseFlex; the current-rank
   // parser only reads what comes before.
   const soloRaw=String(raw).split(/\bRanked\s*Flex\b/i)[0];
-  const first=parseRankFlat(soloRaw.replace(/\s+/g," "));
+  const flat=soloRaw.replace(/\s+/g," ");
+  // "Unranked" before any "tier N LP" means Solo is Unranked — a later LP figure
+  // is the season peak (Top tier), not the current rank. Flex is already cut away
+  // above; this closes the same trap for the peak badge.
+  const unIdx=flat.search(/\bUnranked\b/i);
+  const rankAt=flat.search(new RegExp("\\b("+TIER_WORD+")\\b[^\\dA-Za-z]{0,6}([1-4]|IV|III|II|I)?(?!\\d)(?:\\s\\2(?!\\d))?[^\\d]{0,6}(\\d{1,4})\\s*LP\\b","i"));
+  if(unIdx>=0&&(rankAt<0||unIdx<rankAt)){
+    const lv=flat.match(/\bLv(?:l)?\.?\s*(\d{1,4})\b/i)||flat.match(/\bLevel\s*(\d{1,4})\b/i);
+    return{tier:"UNRANKED",division:null,lp:null,wins:null,losses:null,level:lv?+lv[1]:null};
+  }
+  const first=parseRankFlat(flat);
   if(first&&first.tier)return first;
   // Some proxies hand back markup dense enough that the tier and its LP end up
   // further apart than the strict pattern tolerates. Stripping to plain words is
@@ -3052,8 +3090,12 @@ function refreshCutoffs(){
 }
 async function fetchViaBackend(acc){
   const r=REGIONS[acc.region]||REGIONS.EUW;
-  const url=cfg.backendUrl.replace(/\/+$/,"")+"?name="+encodeURIComponent(acc.gameName)+"&tag="+encodeURIComponent(acc.tagLine)+"&region="+encodeURIComponent(r.opgg);
-  const text=await fetchWithTimeout(url,12000);
+  let url;
+  try{url=new URL(cfg.backendUrl)}catch(e){throw new Error("invalid backend URL")}
+  url.searchParams.set("name",acc.gameName);
+  url.searchParams.set("tag",acc.tagLine);
+  url.searchParams.set("region",r.opgg);
+  const text=await fetchWithTimeout(url.href,12000);
   const d=JSON.parse(text);
   if(d.found===false)return {found:false,updatedAt:Date.now()};
   return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),seasons:d.seasons||null,flex:normPeak(d.flex),champs:Array.isArray(d.champs)?d.champs.slice(0,10):null,lpAt:normLpAt(d.lpAt),icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,updatedAt:Date.now()};
@@ -3175,23 +3217,32 @@ function applyStats(acc,s){
   acc.stats=s;
   let rankedUp=false;
   if(s.found!==false&&ladderLP(s)!==null){
-    const hist=acc.history=(acc.history||[]).slice(-59);
+    const hist=acc.history=acc.history||[];
     const prev=hist[hist.length-1];
     // When op.gg told us when this LP was actually reached, that is the date the
     // point belongs under. A point dated by the day you happened to press Refresh
     // puts a week of inactivity on the chart as a flat line ending today, which is a
     // shape the account never had. Only trusted while it still agrees with the rank
-    // we just read, and never in the future of the check itself.
+    // we just read (tier, division and LP), and never in the future of the check itself.
     const at=s.lpAt;
-    const sameRank=at&&at.tier===(s.tier||"").toUpperCase()&&at.lp===s.lp;
-    const when=(sameRank&&at.t<=s.updatedAt)?at.t:s.updatedAt;
+    const sameRank=at&&at.tier===(s.tier||"").toUpperCase()&&at.lp===s.lp
+      &&(at.division||null)===(s.division||null);
+    let when=(sameRank&&at.t<=s.updatedAt)?at.t:s.updatedAt;
     if(prev&&prev.tier===s.tier&&prev.division===s.division&&prev.lp===s.lp){
-      // Nothing changed, so no second point for the same reading. It used to take
-      // today's date on the way past, which threw away the reached-date worked out
-      // just above and undid the whole point of it: one refresh of an account nobody
-      // had played dragged its last point forward to now.
-      prev.t=when;
+      // Nothing changed in the rank itself. Slide the stamp earlier only while it
+      // still sits after the point before this one — a reached-date behind that
+      // would reorder the chart so the current rank is no longer last.
+      const floor=hist.length>=2?(+hist[hist.length-2].t||0):0;
+      if(when>floor)prev.t=when;
+      // Same reading can still gain games: keep W/L in step so "Since last check"
+      // and season-break detection see the totals the card is showing.
+      if(s.wins!=null)prev.w=Number(s.wins)||0;
+      if(s.losses!=null)prev.l=Number(s.losses)||0;
     }else{
+      // A reached-date older than the previous distinct point cannot be filed
+      // under that day without putting the new rank behind history. Fall back to
+      // the check time so the chart's last point stays the current one.
+      if(prev&&when<=(+prev.t||0))when=s.updatedAt;
       // The tier stored here is the one op.gg reported at that moment, and it is
       // never recomputed — an account that was Challenger in March stays
       // Challenger on the chart even though today's floor is somewhere else.
@@ -3207,11 +3258,13 @@ function applyStats(acc,s){
       const cut=cutoffsFor(acc.region);
       if(cut&&(cut.gm||cut.chall))row.cut={gm:cut.gm,chall:cut.chall};
       hist.push(row);
+      // Trim only when something was actually added — a no-op refresh used to
+      // slice the oldest point off a full history for no reason.
+      if(hist.length>60)hist.splice(0,hist.length-60);
       if(prev&&TIER_ORDER.indexOf((s.tier||"").toUpperCase())>TIER_ORDER.indexOf((prev.tier||"").toUpperCase()))rankedUp=true;
     }
-    // Either branch can date a point earlier than the one before it — a reached-date
-    // that only the second check knew about corrects backwards — and everything
-    // downstream reads the last entry as the newest.
+    // Reached-dates can still correct a stamp slightly earlier within its slot;
+    // keep the array ordered so everything downstream can trust the last entry.
     hist.sort((x,y)=>(+x.t||0)-(+y.t||0));
   }
   return rankedUp;
@@ -3246,7 +3299,7 @@ function commitStats(id,acc,s){
   // Only this card changed. Going through render() re-sorted the grid after every
   // single check, so during Check all ranks the whole board reshuffled once per
   // account — the order settles on the next full render instead.
-  renderCard(id);renderDash();
+  renderCard(id);renderDash();renderRibbon();
   {
     // Within a tier the LP number is comparable end to end; across a tier it is
     // not — 90 LP to 12 LP is a promotion, and counting down through it would
@@ -4158,9 +4211,11 @@ function cardHTML(a,i){
       const mBase=TIER_ORDER.indexOf("MASTER")*TIER_SPAN;
       if(cut&&cur!==null&&cur>=mBase){
         const lp=cur-mBase;
-        if(cut.chall&&lp<cut.chall)microStats.push([lp>=(cut.gm||Infinity)?"To Challenger":"To Grandmaster",
-          (lp>=(cut.gm||Infinity)?cut.chall-lp:cut.gm-lp)+" LP"]);
-        else if(cut.chall)microStats.push(["Above","Challenger floor"]);
+        // gm can be missing when the ladder scrape only found Challenger — treating
+        // null as 0 made Master cards claim "To Grandmaster −400 LP".
+        if(cut.gm!=null&&lp<cut.gm)microStats.push(["To Grandmaster",(cut.gm-lp)+" LP"]);
+        else if(cut.chall!=null&&lp<cut.chall)microStats.push(["To Challenger",(cut.chall-lp)+" LP"]);
+        else if(cut.chall!=null)microStats.push(["Above","Challenger floor"]);
       }
     }
     {
@@ -4321,7 +4376,7 @@ function renderGrid(){
     selected.forEach(id=>{if(!inView.has(id))selected.delete(id)});
     // The remembered anchor is a position in a list that has just changed shape, so
     // shift-clicking against it would sweep a range nobody picked.
-    if(selected.size!==before)lastSelectedIdx=null;
+    if(selected.size!==before)lastSelectedId=null;
   }
   const grid=$("grid");
   if(accounts.length===0){
@@ -4413,6 +4468,10 @@ function renderCard(id){
 // ---------- form ----------
 function closeAllPanels(){
   revertAccents(); // Settings previews colours live; leaving it must not keep them
+  revertAtmosphere(); // same for the atmosphere tiles — Escape/✕ used to keep the preview
+  // Dismissing first-run Help via ✕ or Escape must count as "seen", the same as Got it —
+  // otherwise an empty vault re-opens the modal on every reload.
+  if(!$("help").classList.contains("hidden")&&!cfg.seenHelp){cfg.seenHelp=true;saveCfg()}
   $("form").classList.add("hidden");
   $("settings").classList.add("hidden");
   $("help").classList.add("hidden");
@@ -4970,9 +5029,25 @@ document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.targ
 function closeSettings(){revertAccents();revertAtmosphere();$("settings").classList.add("hidden")}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
 $("sSave").addEventListener("click",async()=>{
-  cfg.apiKey=$("sKey").value.trim();cfg.model=$("sModel").value;cfg.autoCheck=$("sAuto").checked;cfg.autoEveryHours=+$("sAutoEvery").value;cfg.autoRankedOnly=$("sAutoRanked").checked;cfg.backendUrl=$("sBackend").value.trim();
+  // Validate the two free-text URLs before touching cfg — a bail after partial
+  // assignment left the session with the new API key / auto-check values even
+  // though Save had "failed", and Close could not put them back.
+  const backend=$("sBackend").value.trim();
+  let backendOk="";
+  if(backend){
+    backendOk=validBackendUrl(backend);
+    if(!backendOk){toast("Backend URL must be a full http(s) link");return}
+  }
+  const wh=$("sDiscord").value.trim();
+  let whOk="";
+  if(wh){
+    whOk=validDiscordWebhook(wh);
+    if(!whOk){toast("Discord webhook must be an https://discord.com/api/webhooks/… URL");return}
+  }
+  cfg.apiKey=$("sKey").value.trim();cfg.model=$("sModel").value;cfg.autoCheck=$("sAuto").checked;cfg.autoEveryHours=+$("sAutoEvery").value;cfg.autoRankedOnly=$("sAutoRanked").checked;
+  cfg.backendUrl=backendOk;$("sBackend").value=backendOk;
   cfg.notify=$("sNotify").checked;
-  cfg.discordWebhook=$("sDiscord").value.trim();
+  cfg.discordWebhook=whOk;$("sDiscord").value=whOk;
   cfg.autoLockMin=Math.max(0,+$("sAutoLock").value||0);
   // null, not the default's own hex, when that is what the picker is sitting on:
   // "no colour chosen" is a different thing to store than "chose exactly this one",
@@ -4982,13 +5057,14 @@ $("sSave").addEventListener("click",async()=>{
   cfg.accent2=$("sAccent2").value===DEFAULT_ACCENT2?null:$("sAccent2").value;applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
   cfg.atmosphere=applyAtmosphere(document.body.dataset.atmosphere||DEFAULT_ATMOSPHERE);
   if(cfg.atmosphere===DEFAULT_ATMOSPHERE)cfg.atmosphere=null; // same idea as accents: no preference vs explicit default
+  let notifyNote="";
   if(cfg.notify&&"Notification"in window&&Notification.permission==="default"){
     const perm=await Notification.requestPermission();
-    if(perm!=="granted"){cfg.notify=false;$("sNotify").checked=false;toast("Notifications blocked by the browser")}
+    if(perm!=="granted"){cfg.notify=false;$("sNotify").checked=false;notifyNote=" — notifications blocked by the browser"}
   }else if(cfg.notify&&"Notification"in window&&Notification.permission==="denied"){
-    cfg.notify=false;$("sNotify").checked=false;toast("Notifications are blocked — allow them in your browser's site settings first");
+    cfg.notify=false;$("sNotify").checked=false;notifyNote=" — notifications are blocked in the browser's site settings";
   }
-  saveCfg();syncLockTimer();hideAccPrev();$("settings").classList.add("hidden");toast("Settings saved")
+  saveCfg();syncLockTimer();hideAccPrev();$("settings").classList.add("hidden");toast("Settings saved"+notifyNote)
 });
 $("sClose").addEventListener("click",closeSettings);
 $("sAtmosphere").addEventListener("click",e=>{
@@ -5334,11 +5410,20 @@ $("awayBand").addEventListener("click",e=>{
   $("awayBand").classList.add("hidden");
 });
 // Stamped when the tab goes away rather than on a timer, so "last seen" means the
-// last moment this page was actually in front of somebody.
+// last moment this page was actually in front of somebody. Coming back must
+// rebuild the away band — startApp only runs on a full load, so a backgrounded
+// tab never showed it. Do not stamp while an unread band is still up: a short
+// tab-switch would otherwise erase the visit it was reporting.
 document.addEventListener("visibilitychange",()=>{
-  if(document.hidden&&!vaultLocked()){cfg.lastSeenAt=Date.now();saveCfg()}
+  if(document.hidden){
+    if(!vaultLocked()&&$("awayBand").classList.contains("hidden")){cfg.lastSeenAt=Date.now();saveCfg()}
+  }else if(!vaultLocked()){
+    renderAwayBand();
+  }
 });
-window.addEventListener("pagehide",()=>{if(!vaultLocked()){cfg.lastSeenAt=Date.now();saveCfg()}});
+window.addEventListener("pagehide",()=>{
+  if(!vaultLocked()&&$("awayBand").classList.contains("hidden")){cfg.lastSeenAt=Date.now();saveCfg()}
+});
 function vaultLocked(){return !$("lock").classList.contains("hidden")}
 
 /* ---------- quick find ----------
@@ -5432,7 +5517,10 @@ function runPalette(i){
   const id=it.a.id;
   if(ui.density==="wall"){ui.density="cards";cfg.density="cards";saveCfg()}
   ui.search="";ui.tier="";ui.flag="";ui.tag=null;ui.favOnly=false;
-  if(it.a.archived)ui.showArchived=true;
+  ui.region="";ui.status="";
+  // Palette results are the live vault only — jumping from the Archived view
+  // still has to leave that view, or the card it landed on is filtered out.
+  ui.showArchived=!!it.a.archived;
   $("tSearch").value="";syncToggles();
   flashId=id;render();
   const card=$("grid").querySelector(`[data-id="${id}"]`);
@@ -5614,14 +5702,22 @@ $("grid").addEventListener("click",async e=>{
   if(act==="select"){
     const list=filtered();
     const idx=list.findIndex(x=>x.id===id);
-    if(e.shiftKey&&lastSelectedIdx!==null){
-      const[from,to]=[lastSelectedIdx,idx].sort((x,y)=>x-y);
-      for(let k=from;k<=to;k++)selected.add(list[k].id);
-      lastSelectedIdx=idx;
+    // Anchor by id, not by the index it had when last clicked — a sort or search
+    // that keeps the selection still reshuffles the list, and shift-clicking
+    // against a stale index selected the wrong range (or list[k] was undefined).
+    if(e.shiftKey&&lastSelectedId!=null){
+      const anchor=list.findIndex(x=>x.id===lastSelectedId);
+      if(anchor>=0&&idx>=0){
+        const[from,to]=[anchor,idx].sort((x,y)=>x-y);
+        for(let k=from;k<=to;k++)selected.add(list[k].id);
+      }else{
+        btn.checked?selected.add(id):selected.delete(id);
+      }
+      lastSelectedId=id;
       renderGrid(); // ticks the boxes it just filled in and syncs the bar with them
     }else{
       btn.checked?selected.add(id):selected.delete(id);
-      lastSelectedIdx=idx;
+      lastSelectedId=id;
       // the list is right here: renderBulkBar() with nothing to go on filters and
       // sorts the whole vault again, once per tick of a checkbox
       renderBulkBar(list);
@@ -5813,7 +5909,7 @@ function relock(){
   [checking,openInfo,openLogin,shownPw,openRank,selected,openMore,openSec].forEach(s=>s.clear());
   checkGen.clear();
   chartRange.clear();
-  armedDelete=null;editingId=null;lastSelectedIdx=null;flashId=null;
+  armedDelete=null;editingId=null;lastSelectedId=null;flashId=null;
   // an unsaved note draft is vault content too, and it was surviving the lock
   editingNote=null;noteDraft="";
   // Empty the grid rather than only hiding it. Locking used to leave every card
