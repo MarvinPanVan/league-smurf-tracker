@@ -1,7 +1,8 @@
 // Smurf Tracker offline cache. Only useful when the app is hosted over http(s)
 // (e.g. GitHub Pages) — service workers cannot register on file:// pages, so
 // opening the HTML file directly just skips all of this, which is fine.
-const CACHE = "smurf-tracker-cache-v53";
+// Bump SW cache so the comment/asset fix reaches hosted installs.
+const CACHE = "smurf-tracker-cache-v54";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", e => {
@@ -25,7 +26,7 @@ self.addEventListener("fetch", e => {
   // whatever rank it had the first time it was ever fetched.
   if (new URL(e.request.url).origin !== self.location.origin) return;
 
-  // Network-first so a redeployed app.html actually reaches people, with the
+  // Network-first so a redeployed index.html actually reaches people, with the
   // cache as the offline fallback rather than the default answer.
   e.respondWith(
     fetch(e.request)

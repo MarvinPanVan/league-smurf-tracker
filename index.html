@@ -2134,6 +2134,16 @@ const ICON={
 };
 function icon(name,cls){return `<svg class="ico${cls?" "+cls:""}" viewBox="0 0 24 24">${ICON[name]}</svg>`}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+// data-id and querySelector both need the id to be inert. esc() for attributes;
+// CSS.escape for selectors — a poisoned id in localStorage used to break out of
+// data-id="…" on first paint, and a quote in an id made querySelector throw.
+function idAttr(id){return esc(id)}
+function idSel(id){
+  try{return CSS.escape(String(id))}catch(e){return String(id).replace(/\\/g,"\\\\").replace(/"/g,'\\"')}
+}
+// Boot/import can land any id string. Anything that is not a plain token gets a
+// fresh uid() so attributes and selectors stay safe without relying on esc alone.
+function safeAccountId(id){return typeof id==="string"&&/^[A-Za-z0-9._:-]+$/.test(id)?id:uid()}
 // Asked in three places now, and jsdom has no matchMedia unless a test supplies one
 function prefersReducedMotion(){return !!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)}
 function toast(msg,action,fn){const t=$("toast");t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");if(action)document.getElementById("toastBtn").onclick=()=>{t.style.display="none";fn()};t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",action?6000:2200)}
@@ -2572,7 +2582,7 @@ function celebrate(id,acc){
   // The crest is now a different emblem than it was a second ago, which is the
   // most literal statement of what just happened this app can make. Worth half a
   // second of everyone's attention.
-  for(const c of $("grid").querySelectorAll(`[data-id="${id}"] .rk-crest,[data-id="${id}"] .rw-crest,[data-id="${id}"] .t-crest`)){
+  for(const c of $("grid").querySelectorAll(`[data-id="${idSel(id)}"] .rk-crest,[data-id="${idSel(id)}"] .rw-crest,[data-id="${idSel(id)}"] .t-crest`)){
     if(c.animate)c.animate(
       [{transform:"scale(.4) rotate(-25deg)",opacity:0},
        {transform:"scale(1.35) rotate(6deg)",opacity:1,offset:.55},
@@ -3315,6 +3325,25 @@ function applyStats(acc,s){
     // Reached-dates can still correct a stamp slightly earlier within its slot;
     // keep the array ordered so everything downstream can trust the last entry.
     hist.sort((x,y)=>(+x.t||0)-(+y.t||0));
+  }else if(s&&s.found!==false&&(s.tier||"").toUpperCase()==="UNRANKED"){
+    // Unranked has no ladder LP, so the ranked branch above never ran — and the
+    // chart kept ending on the old Diamond point as if the account were still
+    // there. Record the Unranked reading so lastDelta/away/sparklines see the break.
+    const hist=acc.history=acc.history||[];
+    const prev=hist[hist.length-1];
+    let when=s.updatedAt||Date.now();
+    if(prev&&(prev.tier||"").toUpperCase()==="UNRANKED"){
+      if(when>(+prev.t||0)||hist.length<2)prev.t=when;
+      if(s.wins!=null)prev.w=Number(s.wins)||0;
+      if(s.losses!=null)prev.l=Number(s.losses)||0;
+    }else{
+      if(prev&&when<=(+prev.t||0))when=(+prev.t||0)+1;
+      const row={t:when,tier:"UNRANKED",division:null,lp:null};
+      if(s.wins!=null)row.w=Number(s.wins)||0;
+      if(s.losses!=null)row.l=Number(s.losses)||0;
+      hist.push(row);
+      if(hist.length>60)hist.splice(0,hist.length-60);
+    }
   }
   return rankedUp;
 }
@@ -3356,7 +3385,7 @@ function commitStats(id,acc,s){
     const afterTier=acc.stats&&(acc.stats.tier||"").toUpperCase();
     const afterLP=acc.stats&&acc.stats.lp!=null?Number(acc.stats.lp):null;
     if(beforeTier&&afterTier===beforeTier){
-      const el=$("grid").querySelector(`[data-id="${id}"] .rk-lp`);
+      const el=$("grid").querySelector(`[data-id="${idSel(id)}"] .rk-lp`);
       rollNumber(el,beforeLP,afterLP," LP");
     }
   }
@@ -3378,15 +3407,15 @@ async function check(id){
   if(cfg.backendUrl){try{s=await fetchViaBackend(acc)}catch(e){err="backend: "+(e.message||"failed")}}
   if(!s&&cfg.apiKey){try{s=await fetchViaClaude(acc)}catch(e){err=err||("api: "+(e.message||"failed"))}}
   if(!s){try{s=await fetchViaProxy(acc)}catch(e){err=err||e.message||"auto-fetch failed"}}
-  if(checkGen.get(id)!==gen)return true; // a newer run owns this card now
+  if(checkGen.get(id)!==gen)return null; // a newer run owns this card now — not a success
   checking.delete(id);
   syncCheckAll();
   // Re-check immediately before writing — a manual ✎ Rank (or another check)
   // can bump the gen between the gate above and here.
-  if(checkGen.get(id)!==gen)return true;
+  if(checkGen.get(id)!==gen)return null;
   if(s){commitStats(id,acc,s);return true}
   else{
-    if(checkGen.get(id)!==gen)return true;
+    if(checkGen.get(id)!==gen)return null;
     acc.stats=Object.assign({},acc.stats||{},{note:"Auto-fetch failed ("+err+") — enter it by hand with ✎ Rank"});
     saveDB();renderCard(id);return false;
   }
@@ -3426,7 +3455,10 @@ async function checkAll(ids){
   for(const acc of list){
     if(run.stop)break;
     run.current=acc.label||acc.gameName;renderRun();
-    if(!(await check(acc.id)))run.failed.push({id:acc.id,name:acc.label||acc.gameName});
+    // null = superseded by a newer check on this card — not a failure, and not a
+    // refresh this pass can take credit for either.
+    const result=await check(acc.id);
+    if(result===false)run.failed.push({id:acc.id,name:acc.label||acc.gameName});
     run.done++;renderRun();
     if(run.stop)break;
     await new Promise(r=>setTimeout(r,800));
@@ -3551,6 +3583,9 @@ function filtered(){
     // the only number that matters on an account that isn't ranked yet
     level:(x,y)=>((y.stats&&y.stats.level)||0)-((x.stats&&x.stats.level)||0),
     change:(x,y)=>lastDelta(y)-lastDelta(x),
+    // "Sort by movement" on the away band — the away window's delta, not the
+    // last two checks. Falls back to lastDelta once that map has been cleared.
+    away:(x,y)=>(awayDelta.get(y.id)||0)-(awayDelta.get(x.id)||0),
     // "LP change" is whatever the last check happened to see, which on an account
     // checked twice in an hour is noise. This is the fortnight's actual trend.
     climb:(x,y)=>{
@@ -3561,6 +3596,7 @@ function filtered(){
   list.sort((x,y)=>(y.fav?1:0)-(x.fav?1:0)||by(x,y));
   return list;
 }
+let awayDelta=new Map();
 
 // ---------- DOM patching ----------
 // Regenerating a card's markup is cheap; throwing its DOM away is not. Replacing
@@ -4135,7 +4171,7 @@ function rowHTML(a,i){
   }else rank="Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
-  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${a.id}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${a.id}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${idAttr(a.id)}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
     <div class="rw-main" data-act="info" role="button" tabindex="0" aria-expanded="${open}">
       <!-- No stopPropagation here: every click on a card is handled by one
            delegated listener on #grid, and closest("[data-act]") already stops at
@@ -4200,7 +4236,7 @@ function tileHTML(a){
     if(s.lp!=null)lp=s.lp+" LP";
   }else rank="Unranked";
   const st=STATUS[a.status]||STATUS.active;
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${a.id}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${a.id}" data-act="zoom" role="button" tabindex="0" title="${esc((a.label||a.gameName)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc((a.label||a.gameName)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
@@ -4295,7 +4331,7 @@ function cardHTML(a,i){
   // worth spotting get one.
   const railed=a.status&&a.status!=="active";
   const icon0=iconUrl(s);
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${a.id}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${a.id}"${railed?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${railed?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <div class="c-head">
       <div class="c-portrait">
@@ -4415,7 +4451,7 @@ function groupHTML(g){
   const mark=g.group==="FAV"?icon("star","lgrp-star")
     :CRESTS[g.group]?crest(g.group,"lgrp-crest")
     :`<span class="lgrp-dot" style="background:${c}"></span>`;
-  return `<div class="lgrp" data-id="${g.id}" role="presentation">${mark}`
+  return `<div class="lgrp" data-id="${idAttr(g.id)}" role="presentation">${mark}`
     +`<span class="lgrp-n" style="color:${c}">${esc(groupLabel(g.group))}</span>`
     +`<span class="lgrp-ln"></span><span class="lgrp-k">${g.n}</span></div>`;
 }
@@ -5359,7 +5395,7 @@ $("bImport").addEventListener("click",()=>$("fileIn").click());
 $("bDeleteAll").addEventListener("click",()=>{
   if(accounts.length===0)return;
   if(!confirm("Delete all "+accounts.length+" account"+(accounts.length===1?"":"s")+" in this vault? This can't be undone — export a backup first if you're not sure."))return;
-  accounts=[];selected.clear();saveDB();render();
+  accounts=[];selected.clear();lastSelectedId=null;saveDB();render();
   toast("Vault cleared");
 });
 $("bExitPreview").addEventListener("click",()=>{previewMode=false;accounts=[];render()});
@@ -5403,7 +5439,11 @@ function renderFilters(){renderChips();renderGrid()}
 let searchT;
 $("tSearch").addEventListener("input",e=>{ui.search=e.target.value;clearTimeout(searchT);searchT=setTimeout(renderFilters,120)});
 $("tRegion").addEventListener("change",e=>{ui.region=e.target.value;renderGrid()});
-$("tSort").addEventListener("change",e=>{ui.sort=e.target.value;renderGrid()});
+$("tSort").addEventListener("change",e=>{
+  ui.sort=e.target.value;
+  if(ui.sort!=="away")awayDelta=new Map();
+  renderGrid();
+});
 $("tStatus").addEventListener("change",e=>{ui.status=e.target.value;renderGrid()});
 // One place that puts the two toolbar toggles in step with the state they stand
 // for, rather than three copies of the same pair of style assignments.
@@ -5470,11 +5510,14 @@ function awaySummary(since){
   const out={up:[],down:[]};
   for(const a of accounts){
     if(a.archived)continue;
-    const hist=(a.history||[]).filter(h=>+h.t&&ladderLP(h)!==null);
+    // Keep Unranked markers in the list so "after" can be recognised as not a
+    // climb — but only score pairs that both have a ladder position.
+    const hist=(a.history||[]).filter(h=>+h.t);
     if(hist.length<2)continue;
     const after=hist[hist.length-1];
     if(+after.t<=since)continue;                       // nothing new while away
-    const before=hist.filter(h=>+h.t<=since).pop();
+    if(ladderLP(after)===null)continue;                // currently unranked / no LP
+    const before=hist.filter(h=>+h.t<=since&&ladderLP(h)!==null).pop();
     if(!before)continue;                               // no reading from before you left
     // A season can reset while you are away. The LP drop across it is real on the
     // ladder and meaningless as a "while you were away" move — same rule as lastDelta.
@@ -5506,7 +5549,18 @@ function renderAwayBand(){
 }
 $("awayBand").addEventListener("click",e=>{
   if(e.target.closest("#awayShow")){
-    const sort=$("tSort");sort.value="change";ui.sort="change";render();
+    // Build the sort from the same window the band just reported — ui.sort=change
+    // (lastDelta) is a different question and sorted the wrong accounts after a
+    // week of auto-checks.
+    const since=cfg.lastSeenAt||0;
+    const sum=awaySummary(since);
+    awayDelta=new Map();
+    if(sum){
+      for(const x of sum.up)awayDelta.set(x.a.id,x.d);
+      for(const x of sum.down)awayDelta.set(x.a.id,x.d);
+    }
+    ui.sort="away";
+    render();
   }
   // Dismissed for good, not until the next render: the visit it was reporting on
   // is over the moment it has been read.
@@ -5627,7 +5681,7 @@ function runPalette(i){
   ui.showArchived=!!it.a.archived;
   $("tSearch").value="";syncToggles();
   flashId=id;render();
-  const card=$("grid").querySelector(`[data-id="${id}"]`);
+  const card=$("grid").querySelector(`[data-id="${idSel(id)}"]`);
   if(card&&card.scrollIntoView)card.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
   setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1600);
 }
@@ -5834,7 +5888,7 @@ $("grid").addEventListener("click",async e=>{
   else if(act==="zoom"){
     ui.density="cards";cfg.density="cards";saveCfg();
     flashId=id;render();
-    const card=$("grid").querySelector(`.card[data-id="${id}"]`);
+    const card=$("grid").querySelector(`.card[data-id="${idSel(id)}"]`);
     // Guarded like the other two places that scroll something into view. Not
     // being guarded here meant an environment without it threw in the middle of
     // this handler, which took the timer below down with it — so the card stayed
@@ -5989,7 +6043,7 @@ async function tryUnlock(){
   $("lockBtn").disabled=true;
   try{
     const data=await decryptData(pass,currentEnvelope);
-    accounts=Array.isArray(data)?data:[];
+    accounts=(Array.isArray(data)?data:[]).map(a=>{if(a)a.id=safeAccountId(a.id);return a}).filter(Boolean);
     vaultPassword=pass;
     $("lockErr").style.display="none";
     $("lock").classList.add("hidden");
@@ -6072,13 +6126,13 @@ function boot(){
     const raw=hasStorage?localStorage.getItem(DB_KEY):null;
     const parsed=raw?JSON.parse(raw):null;
     if(parsed&&parsed.__enc)envelope=parsed;
-    else if(Array.isArray(parsed))accounts=parsed;
+    else if(Array.isArray(parsed))accounts=parsed.map(a=>{if(a)a.id=safeAccountId(a.id);return a}).filter(Boolean);
     /* An export file is {app, version, accounts}, not a bare array. Dropping that
        into localStorage — or restoring a backup with a tool that writes the file
        body straight into the key — used to boot an empty vault: Array.isArray on
        the object is false, and nothing else looked. The next saveDB writes the
        array shape back, so this is only a one-time rescue. */
-    else if(parsed&&Array.isArray(parsed.accounts))accounts=parsed.accounts;
+    else if(parsed&&Array.isArray(parsed.accounts))accounts=parsed.accounts.map(a=>{if(a)a.id=safeAccountId(a.id);return a}).filter(Boolean);
   }catch(e){}
   if(envelope)showLockScreen(envelope);
   else startApp();

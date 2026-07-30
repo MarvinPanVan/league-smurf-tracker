@@ -1658,6 +1658,23 @@ test("Flex Unranked clears a previous Flex rank instead of keeping it", () => {
   assert.equal(acc.stats.flex, null, "an explicit Unranked flex answer must not revive the old Gold");
 });
 
+test("going Unranked records a history break instead of leaving the old rank as current", () => {
+  const win = bootApp();
+  const acc = { id: "ur", history: [] };
+  win.applyStats(acc, { found: true, tier: "DIAMOND", division: "I", lp: 50, updatedAt: 1000 });
+  win.applyStats(acc, { found: true, tier: "UNRANKED", division: null, lp: null, updatedAt: 2000 });
+  assert.equal(acc.history.length, 2);
+  assert.equal(acc.history[1].tier, "UNRANKED");
+  assert.equal(win.lastDelta(acc), 0, "Unranked end is not a −N LP crash");
+});
+
+test("safeAccountId rejects attribute-breaking ids", () => {
+  const win = bootApp();
+  assert.equal(win.safeAccountId("abc-123"), "abc-123");
+  assert.notEqual(win.safeAccountId('"><img src=x onerror=alert(1)>'), '"><img src=x onerror=alert(1)>');
+  assert.match(win.idAttr('a"b'), /&quot;/);
+});
+
 test("rank panel number fields escape non-numeric stats", () => {
   const win = bootApp();
   const html = win.rankPanelHTML({ peakManual: null, goal: null },
