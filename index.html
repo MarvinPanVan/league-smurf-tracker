@@ -4549,7 +4549,8 @@ function renderDash(){
   // as by lighting up.
   const gem=(tier,label,n,colour)=>`<button class="gem gem-b${ui.tier===tier?" on":""}" data-tier="${tier}" aria-pressed="${ui.tier===tier}" title="Show only these">`
     +`<i class="d" style="background:${colour}"></i>${label} <b>×${n}</b></button>`;
-  const gems=TIER_ORDER.filter(t=>dist[t]).map(t=>gem(t,t.charAt(0)+t.slice(1).toLowerCase(),dist[t],TIER_COLORS[t])).join("")
+  // Highest tier first — same order as the header ribbon and the default list sort.
+  const gems=TIER_ORDER.slice().reverse().filter(t=>dist[t]).map(t=>gem(t,t.charAt(0)+t.slice(1).toLowerCase(),dist[t],TIER_COLORS[t])).join("")
     +(un>0?gem("UNRANKED","Unranked",un,TIER_COLORS.UNRANKED):"");
   setHTML(el,`
   <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
