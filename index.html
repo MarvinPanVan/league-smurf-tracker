@@ -206,13 +206,14 @@
   .rib-seg{flex-grow:1;flex-basis:0;min-width:20px;padding:0;border:0;border-radius:4px;
     background:color-mix(in srgb,var(--c) 62%,#0b0e14);box-shadow:none;
     display:flex;align-items:center;justify-content:center;overflow:hidden;
-    transition:background .16s ease,transform .16s cubic-bezier(.22,1,.36,1),box-shadow .16s ease}
+    transform:none;transition:background .16s ease,box-shadow .16s ease,filter .16s ease}
   .rib-seg:first-child{border-radius:999px 4px 4px 999px}
   .rib-seg:last-child{border-radius:4px 999px 999px 4px}
   .rib-seg:only-child{border-radius:999px}
   .rib-seg i{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.02em;
     color:#0b0e14;opacity:.72;font-variant-numeric:tabular-nums}
-  .rib-seg:hover{background:var(--c);transform:translateY(-1px);border:0}
+  .rib-seg:hover{background:var(--c);transform:none;border:0;filter:brightness(1.06)}
+  .rib-seg:active{transform:none}
   .rib-seg:hover i{opacity:.95}
   /* the selected tier reads as the only lit one, so the bar doubles as a readout
      of which filter is on */
@@ -608,7 +609,7 @@
      stops lying about the page length as soon as a card has been seen once.
      Only the card grid: a list row is cheap enough that the bookkeeping would
      cost more than the skipping saves. */
-  .grid:not(.list)>.hx{content-visibility:auto;contain-intrinsic-size:auto 420px}
+  .grid:not(.list):not(.wall)>.hx{content-visibility:auto;contain-intrinsic-size:auto 420px}
 
   /* ---- wall view ----
      Sixty accounts on one screen. No chart, no winrate, no timestamp — the
@@ -1524,7 +1525,7 @@
       <span class="brand-mark" aria-hidden="true"></span>
       <div>
         <h1 class="hex-display">Smurf Tracker</h1>
-        <div class="brand-sub">Summoner Vault <b>Local only</b></div>
+        <div class="brand-sub">Summoner Vault <b>Private by default</b></div>
       </div>
     </div>
     <!-- The header ran brand on the left, two buttons on the right and a whole
@@ -1576,7 +1577,7 @@
       <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     </div>
     <div class="mdl-b" style="padding:22px;font-size:13px;color:var(--muted);line-height:1.8">
-    <b style="color:var(--text)">Your data stays here.</b> Accounts are saved in this browser on this device — nothing gets uploaded. Clearing browser data wipes the vault, so use <b style="color:var(--text)">Export</b> for backups and <b style="color:var(--text)">Import</b> to restore or merge them.<br>
+    <b style="color:var(--text)">Your data stays here by default.</b> Accounts are saved in this browser on this device. Optional Device sync (Settings) uploads only an encrypted vault blob to your own Worker; Discord/API/rank proxies leave the browser when you enable them. Clearing browser data wipes the vault, so use <b style="color:var(--text)">Export</b> for backups and <b style="color:var(--text)">Import</b> to restore or merge them.<br>
     <b style="color:var(--text)">Rank checks are free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b style="color:var(--text)">Rank</b> in a card's ⋯ menu to enter it by hand — history, the chart and the stats all work the same either way.<br>
     <b style="color:var(--text)">Tips:</b> the bar across a card's bottom edge opens <b style="color:var(--text)">Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · search matches names, tags, even ranks (try "gold"), and every word you add narrows it further · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
     <b style="color:var(--text)">Quick find:</b> <b style="color:var(--text)">Ctrl+K</b> (or ⌘K) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.<br>
@@ -1770,7 +1771,7 @@
         <span class="acc-prev-mark" aria-hidden="true"><i></i></span>
         <div class="acc-prev-brand">
           <div class="acc-prev-t">Smurf Tracker</div>
-          <div class="acc-prev-sub">Summoner Vault <b>Local only</b></div>
+          <div class="acc-prev-sub">Summoner Vault <b>Private by default</b></div>
         </div>
       </div>
       <div class="acc-prev-rib" aria-hidden="true">
@@ -2094,11 +2095,9 @@ function isChecked(a){return !!(a.stats&&a.stats.updatedAt)}
 function isStale(a){return a.status!=="banned"&&(!isChecked(a)||Date.now()-a.stats.updatedAt>STALE_MS)}
 function isRanked(a){const t=a.stats&&a.stats.found!==false&&(a.stats.tier||"").toUpperCase();return !!(t&&t!=="UNRANKED")}
 function isFailed(a){
-  if(!a.stats)return false;
-  // found:false is a completed "Not found" answer (own filter), not a transport failure.
-  // Informational notes (season reset, etc.) must not look like a failed refresh.
-  const n=String(a.stats.note||"");
-  return /auto-fetch failed|failed \(/i.test(n);
+  if(!a.stats||a.stats.found===false)return false;
+  // Transport failure note only — "failed (" alone matched too many informational notes.
+  return /auto-fetch failed/i.test(String(a.stats.note||""));
 }
 // Shared with the worker: op.gg sometimes serves a 200 "not found" page.
 function isSummonerNotFoundPage(html){
@@ -2106,7 +2105,9 @@ function isSummonerNotFoundPage(html){
     && !parseRankFromMeta(html);
 }
 function isUncertain(a){return !!(a.stats&&a.stats.uncertain)}
-function riotKey(a){return ((a.region||"")+"|"+(a.gameName||"").toLowerCase()+"|"+(a.tagLine||"").toLowerCase())}
+function riotKey(a){
+  return ((a.region||"")+"|"+String(a.gameName||"").trim().toLowerCase()+"|"+String(a.tagLine||"").trim().toLowerCase());
+}
 let _dupCache=null,_dupSrc=null;
 function duplicateIds(){
   if(_dupCache&&_dupSrc===accounts)return _dupCache;
@@ -2367,6 +2368,8 @@ function safeAccountId(id){return typeof id==="string"&&/^[A-Za-z0-9._:-]+$/.tes
 function sanitizeAccount(a){
   if(!a||typeof a!=="object")return null;
   a.id=safeAccountId(a.id);
+  if(typeof a.gameName==="string")a.gameName=a.gameName.trim();
+  if(typeof a.tagLine==="string")a.tagLine=a.tagLine.trim();
   if(!Array.isArray(a.tags))a.tags=[];
   if(!Array.isArray(a.history))a.history=[];
   if(a.stats&&a.stats.seasons&&typeof a.stats.seasons==="object"){
@@ -2815,6 +2818,7 @@ function genSyncToken(){
   const b=crypto.getRandomValues(new Uint8Array(24));
   return b64(b).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 }
+let syncBusy=false;
 function updateSyncStatus(){
   const el=$("sSyncStatus"); if(!el)return;
   const parts=[];
@@ -2827,6 +2831,7 @@ function updateSyncStatus(){
   el.textContent=parts.join(" ");
 }
 async function pushVaultSync(){
+  if(syncBusy){toast("Sync already in progress");return}
   const token=($("sSyncToken")&&$("sSyncToken").value.trim())||cfg.syncToken||"";
   if(token)cfg.syncToken=token;
   const url=vaultSyncUrl();
@@ -2834,10 +2839,14 @@ async function pushVaultSync(){
   if(!cfg.syncToken||cfg.syncToken.length<16){toast("Sync token must be at least 16 characters");return}
   if(!vaultPassword){toast("Set a master password — sync only stores ciphertext");return}
   if(vaultLocked()){toast("Unlock the vault first");return}
+  syncBusy=true;
   try{
+    // Content revision only — stamping Date.now() here let a stale device overwrite
+    // a newer cloud vault because "now" always beat the remote timestamp.
+    if(!(Number(cfg.vaultRev)>0))touchVaultRev();
+    const updatedAt=Number(cfg.vaultRev);
     const envelope=await encryptData(vaultPassword,accounts);
-    const updatedAt=Math.max(Number(cfg.vaultRev)||0,Date.now());
-    cfg.vaultRev=updatedAt; saveCfg();
+    if(vaultLocked())return;
     const res=await fetch(url,{
       method:"PUT",
       headers:{"Content-Type":"application/json","Authorization":"Bearer "+cfg.syncToken},
@@ -2846,8 +2855,10 @@ async function pushVaultSync(){
     const text=await res.text();
     let data=null; try{data=JSON.parse(text)}catch(e){}
     if(res.status===409){
-      toast("Remote vault is newer — Pull first, or Push again after resolving","Pull",()=>pullVaultSync(true));
-      updateSyncStatus();
+      toast("Remote vault is newer — Pull first, or Push again after resolving","Pull…",()=>{
+        if(confirm("Replace this device's vault with the newer cloud copy?\nLocal changes since your last sync may be lost."))
+          pullVaultSync(true);
+      });
       return;
     }
     if(res.status===503&&data&&data.code==="no_kv"){
@@ -2860,8 +2871,10 @@ async function pushVaultSync(){
     updateSyncStatus();
     toast("Vault pushed to cloud");
   }catch(e){toast("Push failed: "+(e.message||"network"))}
+  finally{syncBusy=false;updateSyncStatus()}
 }
 async function pullVaultSync(force){
+  if(syncBusy){toast("Sync already in progress");return}
   const token=($("sSyncToken")&&$("sSyncToken").value.trim())||cfg.syncToken||"";
   if(token)cfg.syncToken=token;
   const url=vaultSyncUrl();
@@ -2869,6 +2882,7 @@ async function pullVaultSync(force){
   if(!cfg.syncToken||cfg.syncToken.length<16){toast("Sync token must be at least 16 characters");return}
   if(!vaultPassword){toast("Set a master password — needed to decrypt the cloud vault");return}
   if(vaultLocked()){toast("Unlock the vault first");return}
+  syncBusy=true;
   try{
     const res=await fetch(url,{headers:{"Authorization":"Bearer "+cfg.syncToken}});
     const text=await res.text();
@@ -2882,25 +2896,42 @@ async function pullVaultSync(force){
     if(!data||!data.envelope||!data.envelope.__enc){toast("Cloud record is not an encrypted vault");return}
     const remoteAt=Number(data.updatedAt)||0;
     const localAt=Number(cfg.vaultRev)||0;
-    if(!force&&localAt>remoteAt&&accounts.length){
-      toast("Local vault is newer than cloud — Pull would overwrite it","Pull anyway",()=>pullVaultSync(true));
-      return;
+    const lastSync=Number(cfg.lastSyncAt)||0;
+    if(!force&&accounts.length){
+      if(localAt>remoteAt){
+        toast("Local vault is newer than cloud — Pull would overwrite it","Pull…",()=>{
+          if(confirm("Replace this device's vault with the older cloud copy?\nThis cannot be undone from here — Export first if unsure."))
+            pullVaultSync(true);
+        });
+        return;
+      }
+      // Remote newer, but this device also saved after the last successful sync.
+      if(remoteAt>localAt&&localAt>lastSync){
+        toast("Cloud is newer, but this device changed after last sync","Pull…",()=>{
+          if(confirm("Replace this device's vault with the cloud copy?\nLocal changes since last sync will be lost."))
+            pullVaultSync(true);
+        });
+        return;
+      }
     }
     let next;
     try{next=await decryptData(vaultPassword,data.envelope)}
     catch(e){toast("Wrong master password for this cloud vault (or corrupt data)");return}
+    if(vaultLocked())return;
     if(!Array.isArray(next)){toast("Cloud vault did not contain an account list");return}
-    accounts=next;
+    accounts=next.map(sanitizeAccount).filter(Boolean);
     currentEnvelope=data.envelope;
-    cfg.vaultRev=Math.max(remoteAt,Date.now());
+    cfg.vaultRev=remoteAt||Date.now();
     cfg.lastSyncAt=Date.now();
     saveCfg();
-    // Write through saveDB so local disk matches what we just pulled.
-    await saveDB();
-    render(); renderDash(); renderRibbon();
+    const ok=await saveDB();
+    if(vaultLocked())return;
+    if(!ok){toast("Pulled into memory but could not write to storage");render();updateSyncStatus();return}
+    render();
     updateSyncStatus();
     toast("Vault pulled ("+accounts.length+" accounts)");
   }catch(e){toast("Pull failed: "+(e.message||"network"))}
+  finally{syncBusy=false;updateSyncStatus()}
 }
 function celebrate(id,acc){
   const prev=acc.history[acc.history.length-2]||{};
@@ -3829,7 +3860,10 @@ function commitStats(id,acc,s){
   const beforeTier=acc.stats&&(acc.stats.tier||"").toUpperCase();
   const up=applyStats(acc,s);
   openRank.delete(id);
-  flashId=id;saveDB();
+  flashId=id;
+  // Check-all used to rewrite the whole vault to disk once per account. Defer
+  // while a run is in flight; checkAll flushes once at the end.
+  if(run)run.dirty=true; else saveDB();
   // Only this card changed. Going through render() re-sorted the grid after every
   // single check, so during Check all ranks the whole board reshuffled once per
   // account — the order settles on the next full render instead.
@@ -3878,7 +3912,10 @@ async function check(id){
   }
   if(checkGen.get(id)!==gen)return null;
   acc.stats=Object.assign({},acc.stats||{},{note:"Auto-fetch failed ("+err+") — enter it by hand with ✎ Rank"});
-  saveDB();renderCard(id);return false;
+  if(run)run.dirty=true; else saveDB();
+  renderCard(id);
+  if(!run){renderDash();renderRibbon()}
+  return false;
 }
 // Sixty accounts at roughly a second each is minutes of waiting, and the only
 // sign of life used to be the word "Checking…" on a button — no idea how far it
@@ -3910,7 +3947,7 @@ async function checkAll(ids){
   // a click listener, which passes an Event — truthy, and with no .map on it.
   const list=(Array.isArray(ids)?ids.map(id=>accounts.find(a=>a.id===id)).filter(Boolean):filtered()).filter(a=>a.status!=="banned");
   if(!list.length){toast("Nothing to refresh");return}
-  run={total:list.length,done:0,ok:0,missing:0,failed:[],current:null,stop:false};
+  run={total:list.length,done:0,ok:0,missing:0,failed:[],current:null,stop:false,dirty:false};
   lastFails=null;renderFailbar();renderRun();syncCheckAll();
   const done=new Set();
   // Worker batch when a backend is set — chunks of 20, then sequential for misses.
@@ -3974,8 +4011,9 @@ async function checkAll(ids){
     if(run.stop)break;
     await new Promise(r=>setTimeout(r,cfg.backendUrl?200:800));
   }
-  const {done:nDone,ok,missing,failed,stop}=run;
+  const {done:nDone,ok,missing,failed,stop,dirty}=run;
   run=null;lastFails=failed.length?failed:null;
+  if(dirty)saveDB();
   render(); // the sort order was deliberately left alone during the run
   renderRun();renderFailbar();
   let msg;
@@ -4034,23 +4072,42 @@ function seasonReset(id){
 }
 function poolLpTrend(pool){
   // Average absolute ladder position across the counted pool (same scale as the
-  // LP chart: Iron→Challenger). One point per day. Answers "did the pool climb
-  // or drop as a group?", not per-account LP.
+  // LP chart: Iron→Challenger). One point per day. Carry each account's last
+  // known LP forward so days with different check coverage don't invent climbs.
   const DAY=86400000;
-  const byT=new Map();
-  for(const a of pool){
-    const key=a.id||a.gameName||Math.random();
+  const keys=[];
+  const series=new Map(); // key -> sorted [{t,v}]
+  for(const a of pool||[]){
+    const key=a.id||a.gameName||("anon-"+keys.length);
+    const pts=[];
     for(const h of (a.history||[]).slice(-12)){
       const v=ladderLP(h); if(v==null)continue;
-      const t=Math.floor((+h.t||0)/DAY)*DAY;
-      if(!byT.has(t))byT.set(t,new Map());
-      byT.get(t).set(key,v);
+      pts.push({t:Math.floor((+h.t||0)/DAY)*DAY,v});
     }
+    if(!pts.length)continue;
+    pts.sort((x,y)=>x.t-y.t);
+    // last point per day
+    const byDay=new Map();
+    for(const p of pts)byDay.set(p.t,p.v);
+    const dayPts=[...byDay.entries()].sort((x,y)=>x[0]-y[0]).map(([t,v])=>({t,v}));
+    keys.push(key); series.set(key,dayPts);
   }
-  const days=[...byT.entries()].sort((x,y)=>x[0]-y[0]).map(([t,m])=>{
-    let sum=0,n=0; for(const v of m.values()){sum+=v;n++}
-    return {t,avg:n?sum/n:null,n};
-  }).filter(d=>d.avg!=null);
+  if(keys.length<1)return null;
+  const allT=new Set();
+  for(const days of series.values())for(const p of days)allT.add(p.t);
+  const timeline=[...allT].sort((a,b)=>a-b);
+  if(timeline.length<2)return null;
+  const last=new Map();
+  const days=[];
+  for(const t of timeline){
+    for(const key of keys){
+      const hist=series.get(key);
+      while(hist.length&&hist[0].t<=t){last.set(key,hist[0].v);hist.shift()}
+    }
+    if(last.size<1)continue;
+    let sum=0; for(const v of last.values())sum+=v;
+    days.push({t,avg:sum/last.size,n:last.size});
+  }
   if(days.length<2)return null;
   const pts=days.map(d=>d.avg);
   const min=Math.min(...pts), max=Math.max(...pts), span=Math.max(1,max-min);
@@ -4061,7 +4118,7 @@ function poolLpTrend(pool){
     return {x,y,d:days[i],v};
   });
   const poly=coords.map(c=>c.x.toFixed(1)+","+c.y.toFixed(1)).join(" ");
-  const first=Math.round(pts[0]), last=Math.round(pts[pts.length-1]), delta=last-first;
+  const delta=Math.round(pts[pts.length-1]-pts[0]);
   const fmtDay=t=>new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
   const from=fmtDay(days[0].t), to=fmtDay(days[days.length-1].t);
   const dots=coords.map(c=>{
@@ -4070,8 +4127,6 @@ function poolLpTrend(pool){
       +`<circle class="pool-dot" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.2"></circle>`;
   }).join("");
   const svg=`<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="100%" height="28" preserveAspectRatio="none" role="img" aria-label="Average ladder position of counted accounts from ${esc(from)} to ${esc(to)}"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/>${dots}</svg>`;
-  // Headline is the delta — the spark is only the shape. Ladder LP = absolute
-  // Iron→Challenger scale used by the account charts (not "LP in current division").
   const sign=delta>0?"↑ +":delta<0?"↓ ":"→ ";
   const headline=sign+Math.abs(delta);
   const note=from+" → "+to+" · avg of counted accounts (Iron→Challenger scale)";
@@ -4525,7 +4580,10 @@ function mergeChampions(pool){
     const e=agg[c.name]||(agg[c.name]={name:c.name,games:0,wins:0,accs:0});
     // the real win count when a source gave one, rather than re-deriving it from a
     // rounded percentage
-    e.games+=g;e.wins+=c.wins!=null?Number(c.wins):Math.round((Number(c.wr)||0)/100*g);e.accs++;
+    let w=c.wins!=null?Number(c.wins):Math.round((Number(c.wr)||0)/100*g);
+    if(!Number.isFinite(w)||w<0)w=0;
+    if(w>g)w=g;
+    e.games+=g;e.wins+=w;e.accs++;
   }));
   return Object.values(agg).sort((x,y)=>y.games-x.games).slice(0,8)
     .map(c=>({name:c.name,games:c.games,accs:c.accs,wins:c.wins,losses:c.games-c.wins,
@@ -4544,12 +4602,12 @@ function renderRibbon(){
   if(pool.length<2){setHTML(el,"");return}
   const dist={};let unN=0,neverN=0,missN=0;
   for(const a of pool){
+    // Same predicate as the dash "Never checked" tile / filter — not "no tier".
+    if(isLive(a)&&!isChecked(a)){neverN++;continue}
     if(isRanked(a)){const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1}
     else if(isUnrankedAnswer(a))unN++;
-    // Banned accounts are finished — chore segments only count live ones.
     else if(!isLive(a))continue;
     else if(a.stats&&a.stats.found===false)missN++;
-    else neverN++;
   }
   const segs=TIER_ORDER.slice().reverse().filter(t=>dist[t])
     .map(t=>({k:t,n:dist[t],c:TIER_COLORS[t],label:groupLabel(t)}));
@@ -4586,11 +4644,11 @@ function renderDash(){
   const el=$("dash");
   const accounts0=accounts.filter(a=>!a.archived);
   syncDashToggle();
-  if(accounts0.length===0){el.innerHTML="";return}
+  if(accounts0.length===0){hideSparkTip();el.innerHTML="";return}
   // The affordance itself now lives in the header tray beside the other chrome,
   // rather than floating alone on a row of its own above the console.
-  if(cfg.dashCollapsed){el.innerHTML="";return}
-  const ranked=accounts0.filter(a=>a.stats&&a.stats.found!==false&&a.stats.tier&&a.stats.tier.toUpperCase()!=="UNRANKED");
+  if(cfg.dashCollapsed){hideSparkTip();el.innerHTML="";return}
+  const ranked=accounts0.filter(a=>isLive(a)&&a.stats&&a.stats.found!==false&&a.stats.tier&&a.stats.tier.toUpperCase()!=="UNRANKED");
   // Combined numbers come from a pool you control: one silver account you never
   // play would otherwise drag the whole vault's winrate down and call itself a
   // summary. Everything below the floor, and anything explicitly excluded, is out.
@@ -6271,6 +6329,7 @@ $("bDashToggle").addEventListener("click",()=>{
   // one-shot: renderDash also runs on every account change, and the panel must
   // not re-animate then — only when the user actually opened it
   dashJustOpened=!cfg.dashCollapsed;
+  if(cfg.dashCollapsed)hideSparkTip();
   saveCfg();renderDash();
 });
 // The ribbon filters by tier exactly the way the dashboard's gem row does, so it
