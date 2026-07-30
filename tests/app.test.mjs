@@ -1637,6 +1637,43 @@ test("a history point is dated by when the LP was reached, not by when we looked
   assert.equal(win.normLpAt(null), null);
 });
 
+test("an lpAt older than the previous point does not reorder the chart", () => {
+  const win = bootApp();
+  const acc = { id: "ord", history: [] };
+  win.applyStats(acc, { found: true, tier: "GOLD", division: "II", lp: 40, updatedAt: 2000 });
+  win.applyStats(acc, { found: true, tier: "PLATINUM", division: "IV", lp: 0, updatedAt: 3000,
+    lpAt: { t: 1000, tier: "PLATINUM", division: "IV", lp: 0 } });
+  assert.equal(acc.history.length, 2);
+  assert.equal(acc.history[0].tier, "GOLD", "older history stays first");
+  assert.equal(acc.history[1].tier, "PLATINUM", "current rank stays last");
+  assert.equal(acc.history[1].t, 3000, "unreachable reached-date falls back to the check time");
+});
+
+test("same LP at a new division is a new history point, and W/L updates on a dedupe", () => {
+  const win = bootApp();
+  const acc = { id: "div", history: [] };
+  win.applyStats(acc, { found: true, tier: "GOLD", division: "IV", lp: 0, wins: 10, losses: 8, updatedAt: 1000 });
+  win.applyStats(acc, { found: true, tier: "GOLD", division: "I", lp: 0, wins: 20, losses: 12, updatedAt: 2000,
+    lpAt: { t: 500, tier: "GOLD", division: null, lp: 0 } }); // mismatched division → not sameRank
+  assert.equal(acc.history.length, 2, "Gold IV 0 and Gold I 0 are different ranks");
+  assert.equal(acc.history[1].division, "I");
+
+  win.applyStats(acc, { found: true, tier: "GOLD", division: "I", lp: 0, wins: 25, losses: 14, updatedAt: 3000 });
+  assert.equal(acc.history.length, 2, "unchanged rank still dedupes");
+  assert.equal(acc.history[1].w, 25, "W/L on the point keep up with the card");
+  assert.equal(acc.history[1].l, 14);
+});
+
+test("a full history is not trimmed by a no-op refresh", () => {
+  const win = bootApp();
+  const hist = Array.from({ length: 60 }, (_, i) =>
+    ({ t: i + 1, tier: "GOLD", division: "II", lp: i }));
+  const acc = { id: "cap", history: hist.slice() };
+  win.applyStats(acc, { found: true, tier: "GOLD", division: "II", lp: 59, updatedAt: 1000 });
+  assert.equal(acc.history.length, 60, "dedupe must not slice the oldest point off");
+  assert.equal(acc.history[0].t, 1);
+});
+
 test("the level rides the portrait instead of standing in the stats row", () => {
   const win = bootApp(seededAccount());
   const card = win.document.querySelector(".card");
@@ -1750,9 +1787,21 @@ test("ranked-only skips accounts known to have no rank, but not ones never check
   // a never-checked account has no rank *yet*; skipping it would leave it stuck
   // outside the filter permanently, with no way in
   assert.equal(win.autoCheckDue(acc(null, 0)), true, "it still needs its first check");
+  // a failed first fetch leaves a note-only stats object — still never read
+  assert.equal(win.autoCheckDue({ status: "active",
+    stats: { note: "Auto-fetch failed (timeout) — enter it by hand with ✎ Rank" } }), true,
+    "a note without a reading is not 'known unranked'");
 
   setAutoCheck(win, { hours: 1, rankedOnly: false });
   assert.equal(win.autoCheckDue(acc("UNRANKED", 9)), true, "off again, unranked is back in");
+});
+
+test("Not found is not Unranked", () => {
+  const win = bootApp();
+  const missing = { stats: { found: false, updatedAt: Date.now() } };
+  const unranked = { stats: { found: true, tier: "UNRANKED", updatedAt: Date.now() } };
+  assert.equal(win.isUnrankedAnswer(unranked), true);
+  assert.equal(win.isUnrankedAnswer(missing), false, "a missing Riot ID belongs under attention, not Unranked");
 });
 
 // ---- combined stats ----
@@ -2314,6 +2363,14 @@ test("atmosphere previews live and only sticks after Save", () => {
 
   win.document.getElementById("sClose").click();
   assert.equal(body.dataset.atmosphere, "spotlight", "Close puts the saved choice back");
+
+  // Escape / ✕ go through closeAllPanels, which used to keep the preview while
+  // only the dedicated Close button reverted it — Save then persisted the wrong one.
+  win.document.getElementById("bSettings").click();
+  win.document.querySelector('#sAtmosphere [data-atmosphere="aurora"]').click();
+  assert.equal(body.dataset.atmosphere, "aurora");
+  win.closeAllPanels();
+  assert.equal(body.dataset.atmosphere, "spotlight", "Escape must put the saved choice back too");
 
   win.document.getElementById("bSettings").click();
   win.document.querySelector('#sAtmosphere [data-atmosphere="noir"]').click();

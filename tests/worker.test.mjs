@@ -208,6 +208,15 @@ test("Master+ current ranks do not keep a division", () => {
   assert.equal(r.lp, 250);
 });
 
+test("level and champion-meta fallbacks match the shapes the app already handles", () => {
+  assert.equal(parseLevelText("764 # terminallucidity # final", "terminallucidity", "final"), 764);
+  const plain = "Ashe - 15Win 10Lose Win rate 60%, Smolder - 15Win 7Lose Win rate 68%";
+  const c = parseChampionsMeta(plain);
+  assert.equal(c.length, 2);
+  assert.equal(c[0].name, "Ashe");
+  assert.equal(c[0].kda, null);
+});
+
 test("champion rows parse into name, winrate, games and KDA", () => {
   const c = parseChampions(PROFILE_HTML);
   assert.equal(c.length, 2);

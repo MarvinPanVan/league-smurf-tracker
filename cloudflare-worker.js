@@ -28,57 +28,65 @@ const CORS = {
 export default {
   async fetch(request) {
     if (request.method === "OPTIONS") return new Response(null, { headers: CORS });
+    // Browser callers only ever GET. Anything else used to still scrape op.gg,
+    // and an uncaught throw below became Cloudflare's default 500 with no CORS
+    // headers — which the app then misread as a CORS failure on the fallback path.
+    if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
 
-    const url = new URL(request.url);
-    const name = url.searchParams.get("name");
-    const tag = url.searchParams.get("tag");
-    const region = (url.searchParams.get("region") || "euw").toLowerCase();
-
-    if (!name || !tag) return json({ error: "missing name/tag" }, 400);
-
-    const base = `https://op.gg/lol/summoners/${encodeURIComponent(region)}/${encodeURIComponent(name)}-${encodeURIComponent(tag)}`;
-    const get = u => fetch(u, { headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" } });
-
-    // The per-champion season totals are not on the profile page — they live on
-    // /champions. Both are requested at once, so the extra data costs no extra
-    // wall time, and a failure on the second one is not allowed to sink the check.
-    let res, champHtml = null;
     try {
-      const [main, champs] = await Promise.allSettled([get(base), get(base + "/champions")]);
-      if (main.status === "rejected") throw main.reason || new Error("unreachable");
-      res = main.value;
-      if (champs.status === "fulfilled" && champs.value.ok) champHtml = await champs.value.text();
+      const url = new URL(request.url);
+      const name = url.searchParams.get("name");
+      const tag = url.searchParams.get("tag");
+      const region = (url.searchParams.get("region") || "euw").toLowerCase();
+
+      if (!name || !tag) return json({ error: "missing name/tag" }, 400);
+
+      const base = `https://op.gg/lol/summoners/${encodeURIComponent(region)}/${encodeURIComponent(name)}-${encodeURIComponent(tag)}`;
+      const get = u => fetch(u, { headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" } });
+
+      // The per-champion season totals are not on the profile page — they live on
+      // /champions. Both are requested at once, so the extra data costs no extra
+      // wall time, and a failure on the second one is not allowed to sink the check.
+      let res, champHtml = null;
+      try {
+        const [main, champs] = await Promise.allSettled([get(base), get(base + "/champions")]);
+        if (main.status === "rejected") throw main.reason || new Error("unreachable");
+        res = main.value;
+        if (champs.status === "fulfilled" && champs.value.ok) champHtml = await champs.value.text();
+      } catch (e) {
+        return json({ error: "fetch failed: " + (e && e.message) }, 502);
+      }
+
+      if (res.status === 404) return json({ found: false }, 200);
+      if (!res.ok) return json({ error: "op.gg HTTP " + res.status }, 502);
+
+      const html = await res.text();
+      const parsed = parseRankText(htmlToText(html));
+
+      if (!parsed) return json({ error: "no rank data parsed from page" }, 502);
+
+      return json({
+        found: true,
+        tier: parsed.tier || "UNRANKED",
+        division: parsed.division || null,
+        lp: parsed.lp,
+        wins: parsed.wins,
+        losses: parsed.losses,
+        level: parsed.level != null ? parsed.level : parseLevelText(html, name, tag),
+        peak: parsePeakText(html),
+        seasons: parseSeasons(html),
+        flex: parseFlex(html),
+        // full table with KDA when /champions came back, the profile's own top five
+        // (wins/losses/win rate, no KDA) when it didn't
+        champs: (champHtml && parseChampionTable(champHtml)) || parseChampionsMeta(html) || parseChampions(html),
+        lpAt: parseLpHistory(html), // when this LP was actually reached, per op.gg
+        icon: parseProfileIcon(html), // needs the raw HTML — htmlToText() already stripped the <img> tags out
+        mmr: null,
+        avgRecent: null,
+      }, 200);
     } catch (e) {
-      return json({ error: "fetch failed: " + (e && e.message) }, 502);
+      return json({ error: "worker error: " + (e && e.message) }, 500);
     }
-
-    if (res.status === 404) return json({ found: false }, 200);
-    if (!res.ok) return json({ error: "op.gg HTTP " + res.status }, 502);
-
-    const html = await res.text();
-    const parsed = parseRankText(htmlToText(html));
-
-    if (!parsed) return json({ error: "no rank data parsed from page" }, 502);
-
-    return json({
-      found: true,
-      tier: parsed.tier || "UNRANKED",
-      division: parsed.division || null,
-      lp: parsed.lp,
-      wins: parsed.wins,
-      losses: parsed.losses,
-      level: parsed.level != null ? parsed.level : parseLevelText(html, name, tag),
-      peak: parsePeakText(html),
-      seasons: parseSeasons(html),
-      flex: parseFlex(html),
-      // full table with KDA when /champions came back, the profile's own top five
-      // (wins/losses/win rate, no KDA) when it didn't
-      champs: (champHtml && parseChampionTable(champHtml)) || parseChampionsMeta(html) || parseChampions(html),
-      lpAt: parseLpHistory(html), // when this LP was actually reached, per op.gg
-      icon: parseProfileIcon(html), // needs the raw HTML — htmlToText() already stripped the <img> tags out
-      mmr: null,
-      avgRecent: null,
-    }, 200);
   },
 };
 
@@ -189,7 +197,10 @@ function reEsc(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 export function parseLevelText(raw, name, tag) {
   if (!raw || !name) return null;
   const text = htmlToText(raw);
-  const re = new RegExp("(\\d{1,4})\\s{0,3}" + reEsc(name) + "\\s*#\\s*" + reEsc(tag || "") + "\\b", "i");
+  // Same window as the app: reader-mode proxies leave a markdown heading marker
+  // between the level and the Riot ID ("764 # name#tag"), and the "#" around the
+  // tag is optional once the tags are gone.
+  const re = new RegExp("(\\d{1,4})[\\s#>]{0,4}" + reEsc(name) + "\\s*#?\\s*" + reEsc(tag || "") + "\\b", "i");
   const m = text.match(re);
   if (!m) return null;
   const lv = +m[1];
@@ -346,11 +357,14 @@ export function parseChampionTable(raw) {
 export function parseChampionsMeta(raw) {
   if (!raw) return null;
   const m = String(raw).match(/<meta\s+name="description"\s+content="([^"]*)"/i);
-  if (!m) return null;
+  // Reader-mode proxies print the description as plain text with no <meta> tag —
+  // same fallback the app uses, so the backend path does not go quiet where the
+  // proxy path would still find five champions.
+  const src = m ? m[1] : String(raw).slice(0, 4000);
   const out = [];
   const re = /([A-Za-z0-9'.\- ]{2,26}?)\s*-\s*(\d{1,4})Win\s+(\d{1,4})Lose\s+Win rate\s+(\d{1,3})%/gi;
   let r;
-  while ((r = re.exec(m[1]))) {
+  while ((r = re.exec(src))) {
     const name = r[1].replace(/\s+/g, " ").trim();
     if (!name || out.some(c => c.name === name)) continue;
     out.push({ name, wins: +r[2], losses: +r[3], games: +r[2] + +r[3], wr: +r[4], kda: null });
