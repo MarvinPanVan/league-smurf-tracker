@@ -9,6 +9,13 @@
 // -> {"results":[{"name":"...","tag":"...","region":"euw","ok":true,...} | {"ok":false,"error":"..."}]}
 //    Parallel scrapes on the worker so Check-all does one round-trip instead of N.
 //
+// Device sync (encrypted vault blob only — not a scrape cache):
+//   Bind a KV namespace as VAULT (or SMURF_VAULT) on the worker.
+//   GET  /vault   Authorization: Bearer <sync-token>
+//   PUT  /vault   Authorization: Bearer <sync-token>
+//        body: {"updatedAt": <ms>, "envelope": {"__enc":true,"salt","iv","data"}}
+//   Last-write-wins on updatedAt; older PUT → 409 with the stored record.
+//
 // -> HTTP 4xx/5xx on transient failures (missing params, op.gg unreachable, page didn't parse) —
 //    the app falls back to the free proxy chain / manual entry on any non-2xx response.
 //
@@ -18,21 +25,24 @@
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const BATCH_MAX = 20;
+const VAULT_MAX_BYTES = 1_500_000; // ~1.5 MB ciphertext envelope
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { headers: CORS });
     try {
+      const url = new URL(request.url);
+      if (isVaultPath(url.pathname)) return await handleVault(request, env);
+
       if (request.method === "POST") return await handleBatch(request);
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
 
-      const url = new URL(request.url);
       const name = url.searchParams.get("name");
       const tag = url.searchParams.get("tag");
       const region = (url.searchParams.get("region") || "euw").toLowerCase();
@@ -46,6 +56,83 @@ export default {
     }
   },
 };
+
+export function isVaultPath(pathname) {
+  const p = String(pathname || "").replace(/\/+$/, "") || "/";
+  return p === "/vault" || p.endsWith("/vault");
+}
+
+export async function vaultKeyFromToken(token) {
+  const raw = new TextEncoder().encode(String(token || ""));
+  const dig = await crypto.subtle.digest("SHA-256", raw);
+  const hex = [...new Uint8Array(dig)].map(b => b.toString(16).padStart(2, "0")).join("");
+  return "vault:" + hex;
+}
+
+function vaultStore(env) {
+  return (env && (env.VAULT || env.SMURF_VAULT)) || null;
+}
+
+function bearerToken(request) {
+  const h = request.headers.get("Authorization") || "";
+  const m = h.match(/^Bearer\s+(\S+)/i);
+  return m ? m[1] : "";
+}
+
+function isEncEnvelope(e) {
+  return !!(e && e.__enc === true && typeof e.salt === "string" && typeof e.iv === "string" && typeof e.data === "string");
+}
+
+export async function handleVault(request, env) {
+  const store = vaultStore(env);
+  if (!store) {
+    return json({
+      error: "vault sync not configured — bind a KV namespace as VAULT (or SMURF_VAULT) on this worker",
+      code: "no_kv",
+    }, 503);
+  }
+  const token = bearerToken(request);
+  if (!token || token.length < 16) return json({ error: "missing or short sync token" }, 401);
+
+  const key = await vaultKeyFromToken(token);
+
+  if (request.method === "GET") {
+    const raw = await store.get(key);
+    if (!raw) return json({ error: "no vault for this token" }, 404);
+    let rec;
+    try { rec = JSON.parse(raw); } catch (e) { return json({ error: "corrupt vault record" }, 500); }
+    return json(rec, 200);
+  }
+
+  if (request.method === "PUT") {
+    let body;
+    try { body = await request.json(); }
+    catch (e) { return json({ error: "invalid JSON body" }, 400); }
+    const updatedAt = Number(body && body.updatedAt);
+    if (!Number.isFinite(updatedAt) || updatedAt <= 0) return json({ error: "missing updatedAt" }, 400);
+    if (!isEncEnvelope(body && body.envelope)) {
+      return json({ error: "envelope must be an encrypted vault ({__enc,salt,iv,data})" }, 400);
+    }
+    const rec = { updatedAt, envelope: {
+      __enc: true, salt: body.envelope.salt, iv: body.envelope.iv, data: body.envelope.data,
+    }};
+    const serialized = JSON.stringify(rec);
+    if (serialized.length > VAULT_MAX_BYTES) return json({ error: "vault too large" }, 413);
+
+    const existingRaw = await store.get(key);
+    if (existingRaw) {
+      let existing;
+      try { existing = JSON.parse(existingRaw); } catch (e) { existing = null; }
+      if (existing && Number(existing.updatedAt) > updatedAt) {
+        return json({ error: "conflict — remote is newer", code: "conflict", remote: existing }, 409);
+      }
+    }
+    await store.put(key, serialized);
+    return json({ ok: true, updatedAt }, 200);
+  }
+
+  return json({ error: "method not allowed" }, 405);
+}
 
 async function handleBatch(request) {
   let body;

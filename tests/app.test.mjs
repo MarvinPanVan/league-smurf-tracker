@@ -2448,7 +2448,7 @@ test("atmosphere previews live and only sticks after Save", () => {
 test("the settings body is grouped rather than one flat run of fields", () => {
   const win = bootApp();
   const groups = [...win.document.querySelectorAll("#settings .grp-h")].map(g => g.textContent.trim());
-  assert.deepEqual(groups, ["Rank checks", "Automatic refresh", "Alerts", "Security", "Appearance"]);
+  assert.deepEqual(groups, ["Rank checks", "Device sync", "Automatic refresh", "Alerts", "Security", "Appearance"]);
   // header and footer sit outside the scrolling middle, so Save is always reachable
   const body = win.document.querySelector("#settings .mdl-b");
   assert.ok(body, "there is a scroll region");
@@ -4863,4 +4863,59 @@ test("boot clamps a corrupt exportRemindDays in cfg", () => {
     w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ exportRemindDays: 9999 }));
   });
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).exportRemindDays, 365);
+});
+
+test("never-checked / chore filters ignore banned and archived accounts", () => {
+  const win = bootApp([
+    { id: "live", region: "EUW", gameName: "Live", tagLine: "1", status: "active", tags: [], history: [], stats: null },
+    { id: "ban", region: "EUW", gameName: "Chianusie", tagLine: "EUW", status: "banned", tags: [], history: [],
+      stats: { note: "Auto-fetch failed (backend: HTTP 404) — enter it by hand with Rank." } },
+    { id: "arch", region: "EUW", gameName: "Old", tagLine: "2", status: "active", archived: true, tags: [], history: [], stats: null },
+    { id: "flagban", region: "EUW", gameName: "FlagBan", tagLine: "3", status: "banned", flagged: true, tags: [], history: [],
+      stats: { found: true, tier: "GOLD", division: "IV", lp: 0, updatedAt: 1 } },
+  ]);
+  assert.equal(win.isLive({ archived: false, status: "active" }), true);
+  assert.equal(win.isLive({ archived: false, status: "banned" }), false);
+  assert.equal(win.needsAttention({ flagged: true, status: "banned", archived: false }), false);
+
+  const never = win.document.querySelector('#dash [data-flag="unchecked"] .v');
+  assert.ok(never, "never-checked tile present");
+  assert.equal(never.textContent.trim(), "1", "only the live unchecked account counts");
+
+  win.document.querySelector('#dash [data-flag="unchecked"]').click();
+  const names = [...win.document.querySelectorAll(".card .c-name, .rw-nm")].map(n => n.textContent);
+  assert.equal(win.document.querySelectorAll(".card, .rw").length, 1);
+  assert.match(names.join(" "), /Live/);
+  assert.doesNotMatch(names.join(" "), /Chianusie|Old|FlagBan/);
+});
+
+test("dash shows Ladder trend instead of Pool LP, with hoverable points", () => {
+  const day = 86400000;
+  const t1 = 10 * day, t2 = 11 * day;
+  const hist = [
+    { t: t1, tier: "GOLD", division: "IV", lp: 0, w: 5, l: 5 },
+    { t: t2, tier: "GOLD", division: "II", lp: 50, w: 10, l: 10 },
+  ];
+  const win = bootApp([
+    { id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [],
+      stats: { found: true, tier: "GOLD", division: "II", lp: 50, wins: 10, losses: 10, updatedAt: t2 },
+      history: hist },
+  ]);
+  const dash = win.document.getElementById("dash").textContent;
+  assert.match(dash, /Ladder trend/);
+  assert.doesNotMatch(dash, /Pool LP/);
+  const trend = win.poolLpTrend([{ id: "a", history: hist }]);
+  assert.ok(trend && trend.svg);
+  assert.match(trend.svg, /<circle/);
+  assert.match(trend.note, /ladder LP/i);
+  assert.ok(win.document.querySelector(".spark-wrap .pool-spark, .pool-spark"));
+});
+
+test("genSyncToken is long enough for the worker", () => {
+  const win = bootApp();
+  const t = win.genSyncToken();
+  assert.ok(t.length >= 16);
+  assert.equal(win.vaultSyncUrl(), "");
+  runScript(win, 'cfg.backendUrl="https://example.workers.dev";');
+  assert.equal(win.vaultSyncUrl(), "https://example.workers.dev/vault");
 });

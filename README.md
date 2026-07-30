@@ -41,6 +41,16 @@ The app tries your backend URL first, then an optional Anthropic API key (power-
 
 A worker also gets you the things the free proxies can't reach reliably: the per-champion season table (it lives on op.gg's `/champions` sub-page, which the worker fetches in parallel) and the timestamp op.gg records for when your current LP was actually reached, so a check made a week later dates the point correctly instead of stamping it "now".
 
+### Device sync (optional)
+
+Same worker can store an **encrypted** vault blob so phone and PC share accounts:
+
+1. In the worker: **Settings → Variables → KV namespace bindings** → bind a namespace as `VAULT` (or `SMURF_VAULT`) → redeploy.
+2. In the app: set a **master password**, paste the Backend URL, **Generate** a sync token, then **Push to cloud** / **Pull from cloud**.
+3. Use the **same token + same master password** on every device. Last write wins; if the other side is newer you get a conflict hint.
+
+Only ciphertext is uploaded. There is no scrape/rank cache on the worker — don't spam op.gg.
+
 ## Development
 
 The test suite in [`tests/`](tests/) uses jsdom + Node's built-in test runner and boots the actual `index.html` in a simulated browser — no logic is duplicated into the tests, so a test failing means the shipped file is wrong. It covers the op.gg parsers against real page markup, rank sorting and the ladder maths, XSS escaping, the vault encryption round-trip, DOM patching identity, the filter/stats interplay, and a regression test for every bug that has been found and fixed.

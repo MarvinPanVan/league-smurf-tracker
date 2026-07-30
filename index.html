@@ -6,8 +6,8 @@
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080c">
 <title>Smurf Tracker — Summoner Vault</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2307080c'/%3E%3Crect x='9' y='9' width='14' height='14' rx='4' fill='%23d8b874' transform='rotate(45 16 16)'/%3E%3C/svg%3E">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2307080c'/%3E%3Crect x='9' y='9' width='14' height='14' rx='4' fill='%23d8b874' transform='rotate(45 16 16)'/%3E%3C/svg%3E">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -331,11 +331,15 @@
 
   /* ---- dashboard ---- */
   .dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr))}
-  .stat{padding:16px 20px;position:relative}
+  .stat{padding:16px 20px;position:relative;overflow:hidden;min-width:0}
   .stat+.stat::before{content:"";position:absolute;left:0;top:15px;bottom:15px;width:1px;background:var(--line)}
   .stat .k{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:7px}
   .stat .v{font-size:20px;font-weight:600;color:var(--text);line-height:1.25;letter-spacing:-.015em;font-variant-numeric:tabular-nums}
   .stat .v small{font-size:11.5px;color:var(--muted);font-weight:400;letter-spacing:0}
+  .stat .v.spark-wrap{font-size:12px;line-height:1.2;overflow:hidden;max-width:100%;width:100%}
+  .pool-spark{display:block;width:100%;max-width:100%;height:36px;margin-top:2px;opacity:.9;overflow:hidden}
+  .pool-spark circle{fill:var(--teal);stroke:var(--panel);stroke-width:1.5;cursor:help}
+  .pool-spark .pool-hit{fill:transparent;stroke:none;cursor:help}
   .dash-toggle{display:flex;justify-content:flex-end;margin-bottom:14px}
   .ghost-toggle{font-size:11.5px;padding:6px 13px;border-radius:999px;color:var(--muted);
     background:#ffffff09;border:1px solid var(--line);box-shadow:none}
@@ -717,8 +721,22 @@
     .rw-wr,.rw-up{display:none}
   }
   @media (max-width:720px){
-    .rw-main{grid-template-columns:auto 36px minmax(110px,1.5fr) minmax(90px,1fr) 54px 16px;gap:10px}
+    .rw-main{grid-template-columns:auto 36px minmax(110px,1.5fr) minmax(90px,1fr) 54px 16px;gap:10px;
+      min-height:52px;padding:12px 12px;align-items:center}
     .rw-spark,.rw-tags{display:none}
+    .rw-check{opacity:1} /* thumb-friendly: always show Refresh on phones */
+    .rw-pic{width:36px;height:36px}
+    .acts{flex-wrap:wrap;gap:6px}
+    .acts button,.a-login{min-height:40px;padding:8px 12px}
+    .card{padding:14px}
+    .tools{gap:8px}
+    .cmd{min-height:44px}
+    .dash{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+    .stat{padding:14px 14px}
+    .bulkchk{opacity:1} /* selection without needing hover */
+  }
+  @supports (padding:max(0px)){
+    body{padding-bottom:max(12px,env(safe-area-inset-bottom))}
   }
   .card{position:relative;padding:17px;display:flex;flex-direction:column;gap:11px;
     overflow:hidden;isolation:isolate}
@@ -1337,7 +1355,6 @@
   .a-login:hover .ico{transform:scale(1.16)}
   .acts button:hover .ico{transform:rotate(-12deg)}
   .acts button[data-act="check"]:hover .ico{transform:rotate(180deg)}
-  .pool-spark{display:block;margin-top:4px;opacity:.9}
   .cmp-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:start}
   .cmp-vs{align-self:center;color:var(--faint);font-weight:700}
   .cmp-nm{font-weight:700;margin-bottom:6px}
@@ -1564,6 +1581,7 @@
             <b>Deploy the worker:</b> Cloudflare → Workers → Create → paste
             <code style="user-select:all">cloudflare-worker.js</code> from the repo → Deploy → paste the
             <code>*.workers.dev</code> URL above. Check-all then uses one batch POST instead of N GETs.
+            For device sync, also bind a KV namespace named <code>VAULT</code> (Settings → Variables → KV bindings).
             Raw file:
             <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>
           </div>
@@ -1572,6 +1590,27 @@
             <input id="sExportDays" type="number" min="1" max="365" value="30" style="max-width:120px">
           </div>
         </div>
+      </div>
+
+      <div class="grp">
+        <div class="grp-h">Device sync</div>
+        <div class="fw hint" style="margin-bottom:10px">
+          Pushes the <b>encrypted</b> vault blob to your worker (KV). Same sync token on phone and PC.
+          Last write wins. Needs a master password (Security below) and Backend URL + KV binding above.
+          No scrape cache — you are responsible for not hammering op.gg.
+        </div>
+        <div class="fld fw">
+          <label>Sync token (same on every device — treat like a password)</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <input type="text" id="sSyncToken" class="mask" placeholder="Generate or paste a long token" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="flex:1;min-width:170px">
+            <button type="button" id="sSyncGen">Generate</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+          <button type="button" id="sSyncPush">Push to cloud</button>
+          <button type="button" id="sSyncPull">Pull from cloud</button>
+        </div>
+        <div id="sSyncStatus" class="hint" style="margin-top:8px"></div>
       </div>
 
       <div class="grp">
@@ -1676,7 +1715,7 @@
     <div class="mdl-f">
       <button id="sSave" class="b-gold">Save settings</button>
       <button id="sClose">Close</button>
-      <span class="sp hint">Nothing here is uploaded anywhere.</span>
+      <span class="sp hint">Stays in this browser unless you use Device sync.</span>
     </div>
   </div></div>
   <!-- Floated beside the browser's colour popup, not inside the scrolling body —
@@ -1972,8 +2011,15 @@ const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / 
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.7.0";
+const APP_VERSION="1.8.0";
 const APP_CHANGELOG=[
+  {v:"1.8.0",items:[
+    "Encrypted vault sync between devices via worker + sync token (KV)",
+    "Dashboard: Ladder trend (was Pool LP) — clipped, labeled, hoverable points",
+    "Never checked / chore filters ignore banned and archived accounts",
+    "Mobile thumb-friendly list and tap targets",
+    "Real PWA PNG icons",
+  ]},
   {v:"1.7.0",items:[
     "Worker batch refresh (one round-trip for Check-all)",
     "Uncertain parse warning when op.gg meta is missing",
@@ -1985,7 +2031,7 @@ const APP_CHANGELOG=[
   ]},
 ];
 function clampExportDays(v){const n=Math.round(Number(v));return Math.max(1,Math.min(365,(n>0&&isFinite(n))?n:30))}
-let cfg={apiKey:"",model:"claude-sonnet-5",autoCheck:false,backendUrl:"",exportRemindDays:30};
+let cfg={apiKey:"",model:"claude-sonnet-5",autoCheck:false,backendUrl:"",exportRemindDays:30,syncToken:"",vaultRev:0,lastSyncAt:0};
 // Older releases stored retired model IDs; map them forward so a saved setting
 // doesn't keep sending a model the API no longer serves.
 const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"claude-sonnet-5","claude-3-5-sonnet":"claude-sonnet-5"};
@@ -2074,7 +2120,10 @@ function hasReading(s){return !!(s&&(s.tier||s.level!=null||s.found===false))}
    This exists because the vault filled up with notes reading "verify Riot ID",
    typed by hand into a freetext box where nothing could count them, filter by
    them, or show them anywhere but inside that one card. */
-function needsAttention(a){return !!a.flagged}
+function needsAttention(a){return !!a.flagged&&a.status!=="banned"&&!a.archived}
+/* Active vault accounts — chore counts (never checked, failed, …) ignore banned
+   and archived, which are already dealt with and only clutter those tiles. */
+function isLive(a){return !a.archived&&a.status!=="banned"}
 let checking=new Set(), checkGen=new Map(), openInfo=new Set(), openSec=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
 // Which card has its note open, plus the live text. The draft is kept out here
 // on purpose: the grid re-renders wholesale, so a textarea rendered from a.notes
@@ -2160,7 +2209,7 @@ function saveDB(){invalidateDupCache();
   // either: this stays written by the time it returns, the way the rest of the app
   // has always been able to assume of an unencrypted vault.
   if(!vaultPassword){
-    try{localStorage.setItem(DB_KEY,JSON.stringify(accounts));return Promise.resolve(true)}
+    try{localStorage.setItem(DB_KEY,JSON.stringify(accounts));touchVaultRev();return Promise.resolve(true)}
     catch(e){toast("Saving failed — storage error");return Promise.resolve(false)}
   }
   saveChain=saveChain.then(async()=>{
@@ -2171,10 +2220,17 @@ function saveDB(){invalidateDupCache();
       // and a newer save can land inside it.
       if(vaultLocked()||seq!==saveSeq)return true;
       localStorage.setItem(DB_KEY,JSON.stringify(envelope));
+      currentEnvelope=envelope;
+      touchVaultRev();
       return true;
     }catch(e){toast("Saving failed — storage error");return false}
   });
   return saveChain;
+}
+function touchVaultRev(){
+  // Monotonic local revision for LWW device sync — bumped on every successful save.
+  cfg.vaultRev=Math.max(Number(cfg.vaultRev)||0,Date.now());
+  saveCfg();
 }
 function saveCfg(){if(!hasStorage)return;try{localStorage.setItem(CFG_KEY,JSON.stringify(cfg))}catch(e){}}
 
@@ -2703,6 +2759,101 @@ function validBackendUrl(u){
     if(url.protocol!=="https:"&&url.protocol!=="http:")return null;
     return url.href.replace(/\/+$/,"");
   }catch(e){return null}
+}
+function vaultSyncUrl(){
+  const base=validBackendUrl(cfg.backendUrl);
+  return base?base+"/vault":"";
+}
+function genSyncToken(){
+  const b=crypto.getRandomValues(new Uint8Array(24));
+  return b64(b).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function updateSyncStatus(){
+  const el=$("sSyncStatus"); if(!el)return;
+  const parts=[];
+  if(!cfg.backendUrl)parts.push("Set a Backend URL first.");
+  else if(!cfg.syncToken)parts.push("Generate or paste a sync token.");
+  else if(!vaultPassword)parts.push("Set a master password — only ciphertext is synced.");
+  else parts.push("Ready to push/pull.");
+  if(cfg.lastSyncAt)parts.push("Last sync "+timeAgo(cfg.lastSyncAt)+".");
+  if(cfg.vaultRev)parts.push("Local rev "+new Date(cfg.vaultRev).toLocaleString()+".");
+  el.textContent=parts.join(" ");
+}
+async function pushVaultSync(){
+  const token=($("sSyncToken")&&$("sSyncToken").value.trim())||cfg.syncToken||"";
+  if(token)cfg.syncToken=token;
+  const url=vaultSyncUrl();
+  if(!url){toast("Set a Backend URL in Settings first");return}
+  if(!cfg.syncToken||cfg.syncToken.length<16){toast("Sync token must be at least 16 characters");return}
+  if(!vaultPassword){toast("Set a master password — sync only stores ciphertext");return}
+  if(vaultLocked()){toast("Unlock the vault first");return}
+  try{
+    const envelope=await encryptData(vaultPassword,accounts);
+    const updatedAt=Math.max(Number(cfg.vaultRev)||0,Date.now());
+    cfg.vaultRev=updatedAt; saveCfg();
+    const res=await fetch(url,{
+      method:"PUT",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+cfg.syncToken},
+      body:JSON.stringify({updatedAt,envelope})
+    });
+    const text=await res.text();
+    let data=null; try{data=JSON.parse(text)}catch(e){}
+    if(res.status===409){
+      toast("Remote vault is newer — Pull first, or Push again after resolving","Pull",()=>pullVaultSync(true));
+      updateSyncStatus();
+      return;
+    }
+    if(res.status===503&&data&&data.code==="no_kv"){
+      toast("Worker has no KV — bind a namespace as VAULT and redeploy");
+      return;
+    }
+    if(!res.ok){toast("Push failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
+    currentEnvelope=envelope;
+    cfg.lastSyncAt=Date.now(); saveCfg();
+    updateSyncStatus();
+    toast("Vault pushed to cloud");
+  }catch(e){toast("Push failed: "+(e.message||"network"))}
+}
+async function pullVaultSync(force){
+  const token=($("sSyncToken")&&$("sSyncToken").value.trim())||cfg.syncToken||"";
+  if(token)cfg.syncToken=token;
+  const url=vaultSyncUrl();
+  if(!url){toast("Set a Backend URL in Settings first");return}
+  if(!cfg.syncToken||cfg.syncToken.length<16){toast("Sync token must be at least 16 characters");return}
+  if(!vaultPassword){toast("Set a master password — needed to decrypt the cloud vault");return}
+  if(vaultLocked()){toast("Unlock the vault first");return}
+  try{
+    const res=await fetch(url,{headers:{"Authorization":"Bearer "+cfg.syncToken}});
+    const text=await res.text();
+    let data=null; try{data=JSON.parse(text)}catch(e){}
+    if(res.status===404){toast("No cloud vault for this token yet — Push first");return}
+    if(res.status===503&&data&&data.code==="no_kv"){
+      toast("Worker has no KV — bind a namespace as VAULT and redeploy");
+      return;
+    }
+    if(!res.ok){toast("Pull failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
+    if(!data||!data.envelope||!data.envelope.__enc){toast("Cloud record is not an encrypted vault");return}
+    const remoteAt=Number(data.updatedAt)||0;
+    const localAt=Number(cfg.vaultRev)||0;
+    if(!force&&localAt>remoteAt&&accounts.length){
+      toast("Local vault is newer than cloud — Pull would overwrite it","Pull anyway",()=>pullVaultSync(true));
+      return;
+    }
+    let next;
+    try{next=await decryptData(vaultPassword,data.envelope)}
+    catch(e){toast("Wrong master password for this cloud vault (or corrupt data)");return}
+    if(!Array.isArray(next)){toast("Cloud vault did not contain an account list");return}
+    accounts=next;
+    currentEnvelope=data.envelope;
+    cfg.vaultRev=Math.max(remoteAt,Date.now());
+    cfg.lastSyncAt=Date.now();
+    saveCfg();
+    // Write through saveDB so local disk matches what we just pulled.
+    await saveDB();
+    render(); renderDash(); renderRibbon();
+    updateSyncStatus();
+    toast("Vault pulled ("+accounts.length+" accounts)");
+  }catch(e){toast("Pull failed: "+(e.message||"network"))}
 }
 function celebrate(id,acc){
   const prev=acc.history[acc.history.length-2]||{};
@@ -3834,34 +3985,53 @@ function seasonReset(id){
   saveDB(); renderCard(id); renderDash(); renderRibbon();
   toast("Season reset — previous rank kept in Past seasons");
 }
-function poolLpSpark(pool){
-  // One reading per account per day, then average across accounts — otherwise two
-  // refreshes on one smurf the same day double-weight it against a quieter one.
+function poolLpTrend(pool){
+  // Average ladder LP across the counted pool, one point per day. Answers
+  // "are we climbing as a group?" — not per-account LP and not a full chart.
   const DAY=86400000;
-  const byT=new Map(); // day -> Map(accountKey -> lp)
+  const byT=new Map();
   for(const a of pool){
     const key=a.id||a.gameName||Math.random();
     for(const h of (a.history||[]).slice(-12)){
       const v=ladderLP(h); if(v==null)continue;
       const t=Math.floor((+h.t||0)/DAY)*DAY;
       if(!byT.has(t))byT.set(t,new Map());
-      byT.get(t).set(key,v); // last point that day wins
+      byT.get(t).set(key,v);
     }
   }
-  const pts=[...byT.entries()].sort((x,y)=>x[0]-y[0]).map(([,m])=>{
+  const days=[...byT.entries()].sort((x,y)=>x[0]-y[0]).map(([t,m])=>{
     let sum=0,n=0; for(const v of m.values()){sum+=v;n++}
-    return n?sum/n:null;
-  }).filter(v=>v!=null);
-  if(pts.length<2)return "";
+    return {t,avg:n?sum/n:null,n};
+  }).filter(d=>d.avg!=null);
+  if(days.length<2)return null;
+  const pts=days.map(d=>d.avg);
   const min=Math.min(...pts), max=Math.max(...pts), span=Math.max(1,max-min);
-  const w=180,h=36,pad=2;
-  const poly=pts.map((v,i)=>{
+  // viewBox only — fixed width/height attributes overflowed into the next tile.
+  const w=160,h=32,pad=3;
+  const coords=pts.map((v,i)=>{
     const x=pad+(i/(pts.length-1))*(w-pad*2);
     const y=h-pad-((v-min)/span)*(h-pad*2);
-    return x.toFixed(1)+","+y.toFixed(1);
-  }).join(" ");
-  return `<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/></svg>`;
+    return {x,y,d:days[i],v};
+  });
+  const poly=coords.map(c=>c.x.toFixed(1)+","+c.y.toFixed(1)).join(" ");
+  const delta=Math.round(pts[pts.length-1]-pts[0]);
+  const tipLines=days.map(d=>{
+    const when=new Date(d.t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+    return when+": ~"+Math.round(d.avg)+" ladder LP ("+d.n+" acc)";
+  });
+  const tip=tipLines.join("\n");
+  const dots=coords.map(c=>{
+    const when=new Date(c.d.t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+    const label=when+": ~"+Math.round(c.v)+" ladder LP ("+c.d.n+" acc)";
+    return `<circle class="pool-hit" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="7"><title>${esc(label)}</title></circle>`
+      +`<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.2"><title>${esc(label)}</title></circle>`;
+  }).join("");
+  const svg=`<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="100%" height="36" preserveAspectRatio="none" role="img" aria-label="Average ladder LP over recent days"><title>${esc(tip)}</title><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/>${dots}</svg>`;
+  const note=(delta>0?"↑ +":delta<0?"↓ ":"→ ")+Math.abs(delta)+" avg ladder LP · hover points for days";
+  return {svg, note, tip};
 }
+// Back-compat for tests that still call the old name.
+function poolLpSpark(pool){const t=poolLpTrend(pool);return t?t.svg:""}
 let compareIds=[];
 function openCompare(id){
   if(compareIds.includes(id))compareIds=compareIds.filter(x=>x!==id);
@@ -3948,11 +4118,11 @@ function filtered(){
     if(ui.region&&a.region!==ui.region)return false;
     if(ui.status&&(a.status||"active")!==ui.status)return false;
     if(ui.tag&&!(a.tags||[]).includes(ui.tag))return false;
-    if(ui.flag==="stale"&&!isStale(a))return false;
-    if(ui.flag==="unchecked"&&isChecked(a))return false;
-    if(ui.flag==="failed"&&!isFailed(a))return false;
+    if(ui.flag==="stale"&&(!isLive(a)||!isStale(a)))return false;
+    if(ui.flag==="unchecked"&&(!isLive(a)||isChecked(a)))return false;
+    if(ui.flag==="failed"&&(!isLive(a)||!isFailed(a)))return false;
     if(ui.flag==="attention"&&!needsAttention(a))return false;
-    if(ui.flag==="missing"&&!(a.stats&&a.stats.found===false))return false;
+    if(ui.flag==="missing"&&(!isLive(a)||!(a.stats&&a.stats.found===false)))return false;
     if(ui.flag==="dup"&&!isDuplicate(a))return false;
     if(ui.flag==="rotate"&&!needsRotation(a))return false;
     if(ui.tier){
@@ -3971,8 +4141,8 @@ function filtered(){
       if(Q.max!=null&&i>=Q.max)return false;
     }
     for(const f of Q.is){
-      if(f==="stale"&&!isStale(a))return false;
-      if(f==="never"&&isChecked(a))return false;
+      if(f==="stale"&&(!isLive(a)||!isStale(a)))return false;
+      if(f==="never"&&(!isLive(a)||isChecked(a)))return false;
       if(f==="flagged"&&!needsAttention(a))return false;
       if(f==="banned"&&a.status!=="banned")return false;
       if(f==="fav"&&!a.fav)return false;
@@ -4288,6 +4458,8 @@ function renderRibbon(){
   for(const a of pool){
     if(isRanked(a)){const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1}
     else if(isUnrankedAnswer(a))unN++;
+    // Banned accounts are finished — chore segments only count live ones.
+    else if(!isLive(a))continue;
     else if(a.stats&&a.stats.found===false)missN++;
     else neverN++;
   }
@@ -4349,20 +4521,20 @@ function renderDash(){
   // "Unranked/unchecked ×54" lumped together a result and a chore. Never checked
   // is work waiting to be done; unranked is an answer. They belong apart, and the
   // one that is a chore should not be the quietest thing on the panel.
-  const neverN=accounts0.filter(a=>!isChecked(a)).length;
+  const neverN=accounts0.filter(a=>isLive(a)&&!isChecked(a)).length;
   // Counted directly rather than as "everything left over", which is only the same
   // number while nothing is both checked and never checked — a CSV import carrying a
   // tier with no timestamp is both, and made this come out one too low. The filter
   // behind the tile asks this exact question now, so the two cannot drift apart.
   const un=accounts0.filter(isUnrankedAnswer).length;
-  const staleN=accounts0.filter(a=>a.status!=="banned"&&isStale(a)).length;
+  const staleN=accounts0.filter(a=>isLive(a)&&isStale(a)).length;
   // "over 30d" means a check that happened and has since gone stale. It used to
   // fold never-checked accounts in as well, which double-counts them against the
   // "Never checked" tile right beside it and reads as an age nobody measured.
-  const veryStaleN=accounts0.filter(a=>a.status!=="banned"&&isChecked(a)&&Date.now()-a.stats.updatedAt>30*24*3600*1000).length;
+  const veryStaleN=accounts0.filter(a=>isLive(a)&&isChecked(a)&&Date.now()-a.stats.updatedAt>30*24*3600*1000).length;
   const bannedN=accounts0.filter(a=>a.status==="banned").length;
   const attentionN=accounts0.filter(needsAttention).length;
-  const failedN=accounts0.filter(isFailed).length;
+  const failedN=accounts0.filter(a=>isLive(a)&&isFailed(a)).length;
   const archivedN=accounts.length-accounts0.length;
   let bk="";
   if(hasStorage){
@@ -4372,6 +4544,7 @@ function renderDash(){
   }
   const dupN=duplicateIds().size;
   const rotN=accounts0.filter(needsRotation).length;
+  const poolTrend=poolLpTrend(pool);
   // These are filter toggles, not links — they say so to a screen reader as well
   // as by lighting up.
   const gem=(tier,label,n,colour)=>`<button class="gem gem-b${ui.tier===tier?" on":""}" data-tier="${tier}" aria-pressed="${ui.tier===tier}" title="Show only these">`
@@ -4403,8 +4576,11 @@ function renderDash(){
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`:""}
     ${rotN?`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
       <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`:""}
-    <div class="stat"><div class="k">Pool LP</div><div class="v" style="font-size:12px">${poolLpSpark(pool)||"—"}</div>
-      <div class="s-note">recent ladder across counted accounts</div></div>
+    <div class="stat" title="${esc(poolTrend?poolTrend.tip:"Need at least two days of rank history on counted accounts")}">
+      <div class="k">Ladder trend</div>
+      <div class="v spark-wrap">${poolTrend?poolTrend.svg:"—"}</div>
+      <div class="s-note">${poolTrend?esc(poolTrend.note):"avg ladder LP of counted accounts — needs history"}</div>
+    </div>
     <button class="stat stat-b${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"><div class="k">Needs refresh</div>
       <div class="v"${staleN?' style="color:var(--danger)"':""}>${staleN}</div>
       <div class="s-note">older than 3 days${veryStaleN?" · "+veryStaleN+" over 30d":""}</div></button>
@@ -5151,7 +5327,7 @@ function openSettings(){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));updateVaultStatus();$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";updateVaultStatus();updateSyncStatus();$("settings").classList.remove("hidden")
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -5733,10 +5909,18 @@ $("sSave").addEventListener("click",async()=>{
   cfg.atmosphere=applyAtmosphere(document.body.dataset.atmosphere||DEFAULT_ATMOSPHERE);
   if(cfg.atmosphere===DEFAULT_ATMOSPHERE)cfg.atmosphere=null; // same idea as accents: no preference vs explicit default
   cfg.exportRemindDays=clampExportDays($("sExportDays")&&$("sExportDays").value);
+  if($("sSyncToken"))cfg.syncToken=$("sSyncToken").value.trim();
   saveCfg();syncLockTimer();hideAccPrev();$("settings").classList.add("hidden");toast("Settings saved"+notifyNote)
 });
 let settingsSaveGen=0;
 $("sClose").addEventListener("click",closeSettings);
+if($("sSyncGen"))$("sSyncGen").addEventListener("click",()=>{
+  const t=genSyncToken();
+  $("sSyncToken").value=t;cfg.syncToken=t;saveCfg();updateSyncStatus();toast("Sync token generated — copy it to your other devices");
+});
+if($("sSyncPush"))$("sSyncPush").addEventListener("click",()=>pushVaultSync());
+if($("sSyncPull"))$("sSyncPull").addEventListener("click",()=>pullVaultSync(false));
+if($("sSyncToken"))$("sSyncToken").addEventListener("change",()=>{cfg.syncToken=$("sSyncToken").value.trim();saveCfg();updateSyncStatus()});
 $("sAtmosphere").addEventListener("click",e=>{
   const b=e.target.closest("[data-atmosphere]");if(!b)return;
   applyAtmosphere(b.dataset.atmosphere); // preview only — Save keeps it, Close reverts

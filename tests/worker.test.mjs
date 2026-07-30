@@ -417,3 +417,77 @@ test("404 skips champions subrequest", async () => {
     globalThis.fetch = orig;
   }
 });
+
+function mockKv() {
+  const map = new Map();
+  return {
+    async get(k) { return map.has(k) ? map.get(k) : null; },
+    async put(k, v) { map.set(k, v); },
+    _map: map,
+  };
+}
+
+test("vault sync requires KV binding", async () => {
+  const res = await worker.fetch(new Request("https://worker.example/vault", {
+    method: "GET",
+    headers: { Authorization: "Bearer " + "x".repeat(20) },
+  }), {});
+  assert.equal(res.status, 503);
+  assert.equal((await res.json()).code, "no_kv");
+});
+
+test("vault sync PUT/GET last-write-wins and rejects plaintext", async () => {
+  const kv = mockKv();
+  const env = { VAULT: kv };
+  const token = "sync-token-abcdef12";
+  const envelope = { __enc: true, salt: "s", iv: "i", data: "d" };
+
+  const bad = await worker.fetch(new Request("https://worker.example/vault", {
+    method: "PUT",
+    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+    body: JSON.stringify({ updatedAt: 100, envelope: { accounts: [] } }),
+  }), env);
+  assert.equal(bad.status, 400);
+
+  const put1 = await worker.fetch(new Request("https://worker.example/vault", {
+    method: "PUT",
+    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+    body: JSON.stringify({ updatedAt: 1000, envelope }),
+  }), env);
+  assert.equal(put1.status, 200);
+
+  const get1 = await worker.fetch(new Request("https://worker.example/vault", {
+    headers: { Authorization: "Bearer " + token },
+  }), env);
+  assert.equal(get1.status, 200);
+  assert.equal((await get1.json()).updatedAt, 1000);
+
+  const older = await worker.fetch(new Request("https://worker.example/vault", {
+    method: "PUT",
+    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+    body: JSON.stringify({ updatedAt: 500, envelope: { ...envelope, data: "older" } }),
+  }), env);
+  assert.equal(older.status, 409);
+  const conflict = await older.json();
+  assert.equal(conflict.code, "conflict");
+  assert.equal(conflict.remote.updatedAt, 1000);
+
+  const newer = await worker.fetch(new Request("https://worker.example/vault", {
+    method: "PUT",
+    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+    body: JSON.stringify({ updatedAt: 2000, envelope: { ...envelope, data: "newer" } }),
+  }), env);
+  assert.equal(newer.status, 200);
+  const get2 = await (await worker.fetch(new Request("https://worker.example/vault", {
+    headers: { Authorization: "Bearer " + token },
+  }), env)).json();
+  assert.equal(get2.updatedAt, 2000);
+  assert.equal(get2.envelope.data, "newer");
+});
+
+test("OPTIONS preflight allows PUT and Authorization for vault sync", async () => {
+  const res = await worker.fetch(new Request("https://worker.example/", { method: "OPTIONS" }));
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("Access-Control-Allow-Methods") || "", /PUT/);
+  assert.match(res.headers.get("Access-Control-Allow-Headers") || "", /Authorization/i);
+});
