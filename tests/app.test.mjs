@@ -4243,3 +4243,390 @@ test("seasonReset archives current rank into past seasons", () => {
   assert.equal(a.stats.seasons.solo[0].tier, "GOLD");
   assert.ok(a.history.length >= 2);
 });
+
+/* ---- Feature-pack regression: isFailed / rotation / season reset / payload ---- */
+
+test("isFailed ignores season-reset and other informational notes", () => {
+  const win = bootApp();
+  assert.equal(win.isFailed({ stats: null }), false);
+  assert.equal(win.isFailed({ stats: { found: false } }), true);
+  assert.equal(win.isFailed({ stats: { found: true, note: "Auto-fetch failed (timeout) — enter it by hand" } }), true);
+  assert.equal(win.isFailed({ stats: { found: true, note: "failed (backend down)" } }), true);
+  assert.equal(win.isFailed({
+    stats: { found: true, tier: "UNRANKED", note: "Season was reset — previous rank kept", asOf: "season-reset" },
+  }), false, "season-reset must not look like a failed refresh");
+  assert.equal(win.isFailed({ stats: { found: true, tier: "GOLD", note: null } }), false);
+});
+
+test("needsRotation is false when the account was never checked or played", () => {
+  const win = bootApp();
+  assert.equal(win.needsRotation({ status: "active" }), false);
+  assert.equal(win.needsRotation({ status: "active", stats: {} }), false);
+  assert.equal(win.needsRotation({ status: "active", stats: { updatedAt: 0 } }), false);
+  assert.equal(win.needsRotation({ status: "banned", stats: { updatedAt: Date.now() - 40 * 86400000 } }), false);
+  assert.equal(win.needsRotation({ status: "active", archived: true, stats: { updatedAt: Date.now() - 40 * 86400000 } }), false);
+  assert.equal(win.needsRotation({ status: "active", lastPlayedAt: Date.now() - 13 * 86400000 }), false);
+  assert.equal(win.needsRotation({ status: "active", lastPlayedAt: Date.now() - 14 * 86400000 }), true);
+  assert.equal(win.needsRotation({ status: "active", lastLoginAt: Date.now() - 20 * 86400000 }), true);
+});
+
+test("clampExportDays bounds reminder days to 1..365", () => {
+  const win = bootApp();
+  assert.equal(win.clampExportDays(30), 30);
+  assert.equal(win.clampExportDays(0), 30);
+  assert.equal(win.clampExportDays(-5), 30);
+  assert.equal(win.clampExportDays("nope"), 30);
+  assert.equal(win.clampExportDays(1), 1);
+  assert.equal(win.clampExportDays(365), 365);
+  assert.equal(win.clampExportDays(999), 365);
+  assert.equal(win.clampExportDays(14.6), 15);
+});
+
+test("mapBackendPayload rejects error rows and half-empty payloads", () => {
+  const win = bootApp();
+  assert.throws(() => win.mapBackendPayload(null));
+  assert.throws(() => win.mapBackendPayload({}));
+  assert.throws(() => win.mapBackendPayload({ ok: false, error: "op.gg down" }));
+  // found:true with no tier → UNRANKED success
+  const u = win.mapBackendPayload({ found: true });
+  assert.equal(u.tier, "UNRANKED");
+  assert.equal(u.found, true);
+  // missing found and missing tier
+  assert.throws(() => win.mapBackendPayload({ wins: 1 }));
+  const miss = win.mapBackendPayload({ found: false });
+  assert.equal(miss.found, false);
+  // ok:false with found:false is a real miss, not a transport error
+  const miss2 = win.mapBackendPayload({ ok: false, found: false });
+  assert.equal(miss2.found, false);
+  const ok = win.mapBackendPayload({ found: true, tier: "gold", division: "II", lp: 40, uncertain: true, source: "body" });
+  assert.equal(ok.tier, "GOLD");
+  assert.equal(ok.uncertain, true);
+  assert.equal(ok.source, "body");
+  assert.equal(ok.note, null);
+  // tier alone is enough
+  const t = win.mapBackendPayload({ tier: "PLATINUM", division: "I", lp: 12 });
+  assert.equal(t.tier, "PLATINUM");
+  assert.equal(t.found, true);
+});
+
+
+// let/const bindings are not on window in classic scripts — poke them via runScript.
+function appGet(win, expr) {
+  runScript(win, "window.__appGet=(" + expr + ");");
+  return win.__appGet;
+}
+function appDo(win, code) {
+  runScript(win, code);
+}
+
+test("seasonReset clears live fields, note, and does not mark isFailed", () => {
+  const win = bootApp([{
+    id: "sr1", region: "EUW", gameName: "ResetMe", tagLine: "EUW", status: "active", tags: [],
+    goal: { tier: "DIAMOND", division: "IV", lp: 0 },
+    stats: {
+      found: true, tier: "GOLD", division: "I", lp: 88, wins: 40, losses: 30, level: 120,
+      flex: { tier: "SILVER", division: "II", lp: 10 },
+      champs: [{ name: "Ashe", wins: 1, losses: 0 }],
+      lpAt: { t: 1, tier: "GOLD", lp: 88 },
+      peak: { tier: "PLATINUM", division: "IV", lp: 0 },
+      note: "Auto-fetch failed (old)",
+      uncertain: true, source: "body",
+      updatedAt: Date.now() - 1000,
+    },
+    history: [{ t: Date.now() - 1000, tier: "GOLD", division: "I", lp: 88, w: 40, l: 30 }],
+  }]);
+  const card = win.document.querySelector('.card[data-id="sr1"]');
+  card.querySelector('[data-act="more"]').click();
+  assert.equal(appGet(win, 'openMore.has("sr1")'), true);
+  win.seasonReset("sr1");
+  assert.equal(appGet(win, 'openMore.has("sr1")'), false, "⋯ menu closes on season reset");
+  const a = win.filtered().find(x => x.id === "sr1");
+  assert.equal(a.stats.tier, "UNRANKED");
+  assert.equal(a.stats.lp, null);
+  assert.equal(a.stats.flex, null);
+  assert.equal(a.stats.champs, null);
+  assert.equal(a.stats.lpAt, null);
+  assert.equal(a.stats.note, null);
+  assert.equal(a.stats.uncertain, false);
+  assert.equal(a.goal, null);
+  assert.ok(a.stats.seasonResetAt);
+  assert.equal(a.stats.seasons.solo[0].tier, "GOLD");
+  assert.equal(win.isFailed(a), false);
+});
+
+test("markPlayed stamps lastPlayedAt and closes the ⋯ menu", () => {
+  const win = bootApp([{
+    id: "mp1", region: "EUW", gameName: "Play", tagLine: "EUW", status: "active", tags: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 10, updatedAt: Date.now() - 20 * 86400000 },
+    history: [],
+  }]);
+  assert.equal(win.needsRotation(win.filtered()[0]), true);
+  win.document.querySelector('.card[data-id="mp1"] [data-act="more"]').click();
+  assert.equal(appGet(win, 'openMore.has("mp1")'), true);
+  win.markPlayed("mp1");
+  assert.equal(appGet(win, 'openMore.has("mp1")'), false);
+  const a = win.filtered()[0];
+  assert.ok(a.lastPlayedAt > Date.now() - 5000);
+  assert.equal(win.needsRotation(a), false);
+});
+
+test("duplicateIds caches and invalidates on saveDB", () => {
+  const win = bootApp([
+    { id: "d1", region: "EUW", gameName: "Twin", tagLine: "EUW", status: "active", stats: null, history: [], tags: [] },
+    { id: "d2", region: "EUW", gameName: "Twin", tagLine: "EUW", status: "active", stats: null, history: [], tags: [] },
+  ]);
+  const first = win.duplicateIds();
+  assert.equal(first.size, 2);
+  assert.equal(win.duplicateIds(), first, "same Set instance while accounts array is unchanged");
+  win.filtered()[0].gameName = "Solo";
+  assert.equal(win.duplicateIds(), first, "cache keys off accounts identity, not deep content");
+  win.saveDB();
+  const after = win.duplicateIds();
+  assert.notEqual(after, first);
+  assert.equal(after.size, 0);
+});
+
+test("poolLpSpark averages same-timestamp points instead of zig-zagging accounts", () => {
+  const win = bootApp();
+  const t1 = 1_000, t2 = 2_000;
+  const svg = win.poolLpSpark([
+    { history: [{ t: t1, tier: "GOLD", division: "IV", lp: 0 }, { t: t2, tier: "GOLD", division: "I", lp: 50 }] },
+    { history: [{ t: t1, tier: "GOLD", division: "IV", lp: 100 }, { t: t2, tier: "GOLD", division: "I", lp: 150 }] },
+  ]);
+  assert.match(svg, /polyline/);
+  const pts = svg.match(/points="([^"]+)"/)[1].split(" ");
+  assert.equal(pts.length, 2, "two shared timestamps → two averaged points, not four interleaved");
+  assert.equal(win.poolLpSpark([{ history: [{ t: 1, tier: "GOLD", division: "I", lp: 10 }] }]), "");
+  assert.equal(win.poolLpSpark([]), "");
+});
+
+test("compare modal is in the document at boot and closes via Escape / closeAllPanels", async () => {
+  const win = bootApp([
+    { id: "c1", region: "EUW", gameName: "Alpha", tagLine: "A", status: "active", label: "A",
+      stats: { found: true, tier: "GOLD", division: "II", lp: 20, wins: 10, losses: 8, updatedAt: 1 }, history: [], tags: [] },
+    { id: "c2", region: "EUW", gameName: "Beta", tagLine: "B", status: "active", label: "B",
+      stats: { found: true, tier: "PLATINUM", division: "IV", lp: 5, wins: 20, losses: 10, updatedAt: 1 }, history: [], tags: [] },
+  ]);
+  const modal = win.document.getElementById("compareModal");
+  assert.ok(modal, "static compare modal exists before first open");
+  assert.ok(modal.classList.contains("hidden"));
+  win.openCompare("c1");
+  win.openCompare("c2");
+  assert.equal(modal.classList.contains("hidden"), false);
+  assert.match(win.document.getElementById("cmpBody").textContent, /Alpha|A/);
+  assert.match(win.document.getElementById("cmpBody").textContent, /Beta|B/);
+  await until(() => win.document.body.classList.contains("modal-open"), "modal-open for Compare");
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.ok(modal.classList.contains("hidden"));
+  assert.equal(appGet(win, "compareIds.length"), 0);
+  win.openCompare("c1");
+  win.openCompare("c2");
+  win.document.getElementById("cmpClear").click();
+  assert.ok(modal.classList.contains("hidden"));
+  assert.equal(appGet(win, "compareIds.length"), 0);
+});
+
+test("compare W/L values are escaped in the modal HTML", () => {
+  const win = bootApp([
+    { id: "x1", region: "EUW", gameName: "X", tagLine: "A", status: "active",
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: "<img>", losses: "\"onerror", updatedAt: 1 }, history: [], tags: [] },
+    { id: "x2", region: "EUW", gameName: "Y", tagLine: "B", status: "active",
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: 1 }, history: [], tags: [] },
+  ]);
+  win.openCompare("x1");
+  win.openCompare("x2");
+  const html = win.document.getElementById("cmpBody").innerHTML;
+  assert.doesNotMatch(html, /<img>/);
+  assert.match(html, /&lt;img&gt;/);
+});
+
+test("closeAllPanels / closeCompare clears selection and hides Compare", () => {
+  const win = bootApp([
+    { id: "c1", region: "EUW", gameName: "A", tagLine: "A", status: "active",
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] },
+    { id: "c2", region: "EUW", gameName: "B", tagLine: "B", status: "active",
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] },
+  ]);
+  win.openCompare("c1");
+  win.openCompare("c2");
+  assert.equal(win.document.getElementById("compareModal").classList.contains("hidden"), false);
+  win.closeAllPanels();
+  assert.equal(appGet(win, "compareIds.length"), 0);
+  assert.ok(win.document.getElementById("compareModal").classList.contains("hidden"));
+  win.openCompare("c1");
+  win.openCompare("c2");
+  win.closeCompare();
+  assert.equal(appGet(win, "compareIds.length"), 0);
+  assert.ok(win.document.getElementById("compareModal").classList.contains("hidden"));
+});
+
+test("checkAll batch claims checkGen before await so a mid-flight Refresh wins", async () => {
+  const seed = [{
+    id: "b1", region: "EUW", gameName: "Batch", tagLine: "EUW", status: "active", tags: [],
+    stats: { found: true, tier: "GOLD", division: "IV", lp: 10, updatedAt: 1 }, history: [],
+  }];
+  let releaseBatch;
+  const batchWait = new Promise(r => { releaseBatch = r; });
+  const win = bootApp(seed, w => {
+    w.fetch = async (url, opts = {}) => {
+      if (opts.method === "POST") {
+        await batchWait;
+        return {
+          ok: true,
+          json: async () => ({ results: [{ ok: true, found: true, tier: "SILVER", division: "I", lp: 1 }] }),
+        };
+      }
+      throw new Error("no GET in this test");
+    };
+  });
+  appDo(win, 'cfg.backendUrl="https://worker.example/opgg"');
+  const runP = win.checkAll(["b1"]);
+  await until(() => appGet(win, 'checking.has("b1")'), "batch claimed checking");
+  const genDuring = appGet(win, 'checkGen.get("b1")');
+  assert.ok(genDuring >= 1, "gen bumped before network returns");
+  appDo(win, `checkGen.set("b1", ${genDuring + 1})`);
+  releaseBatch();
+  await runP;
+  const a = win.filtered()[0];
+  assert.equal(a.stats.tier, "GOLD", "stale batch must not overwrite after gen bump");
+  assert.equal(a.stats.lp, 10);
+  assert.equal(appGet(win, 'checking.has("b1")'), false);
+});
+
+test("checkAll batch commits found:false without counting as refreshed ok", async () => {
+  const seed = [{
+    id: "m1", region: "EUW", gameName: "Gone", tagLine: "EUW", status: "active", tags: [],
+    stats: null, history: [],
+  }];
+  const win = bootApp(seed, w => {
+    w.fetch = async (url, opts = {}) => {
+      if (opts.method === "POST") {
+        return {
+          ok: true,
+          json: async () => ({ results: [{ ok: true, found: false }] }),
+        };
+      }
+      throw new Error("no GET");
+    };
+  });
+  appDo(win, 'cfg.backendUrl="https://worker.example/opgg"');
+  await win.checkAll(["m1"]);
+  const a = win.filtered()[0];
+  assert.equal(a.stats.found, false);
+  assert.equal(a.flagged, true);
+});
+
+test("checkAll batch maps ok:false transport errors to sequential fallback", async () => {
+  const seed = [{
+    id: "f1", region: "EUW", gameName: "Fall", tagLine: "EUW", status: "active", tags: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: 1 }, history: [],
+  }];
+  let posts = 0, gets = 0;
+  const win = bootApp(seed, w => {
+    w.fetch = async (url, opts = {}) => {
+      if (opts.method === "POST") {
+        posts++;
+        return { ok: true, json: async () => ({ results: [{ ok: false, error: "op.gg 502" }] }) };
+      }
+      gets++;
+      throw new Error("network disabled");
+    };
+  });
+  appDo(win, 'cfg.backendUrl="https://worker.example/opgg"');
+  await win.checkAll(["f1"]);
+  assert.equal(posts, 1);
+  assert.ok(gets >= 1 || win.filtered()[0].stats.note, "fell through after empty batch hit");
+});
+
+test("wrTrend returns null across a season break", () => {
+  const win = bootApp();
+  const a = { history: [
+    { t: 1, tier: "DIAMOND", division: "I", lp: 50, w: 100, l: 80 },
+    { t: 2, tier: "IRON", division: "IV", lp: 0, w: 1, l: 0 },
+  ]};
+  assert.equal(win.wrTrend(a), null);
+});
+
+test("isUncertain follows the stats.uncertain flag from backend/body parses", () => {
+  const win = bootApp([{
+    id: "u1", region: "EUW", gameName: "U", tagLine: "EUW", status: "active", tags: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 10, uncertain: true, updatedAt: 1 },
+    history: [],
+  }]);
+  assert.equal(win.isUncertain(win.filtered()[0]), true);
+  assert.equal(win.isUncertain({ stats: { uncertain: false } }), false);
+});
+
+test("settings persist clamped exportRemindDays", async () => {
+  const win = bootApp();
+  win.openSettings();
+  const days = win.document.getElementById("sExportDays");
+  assert.ok(days, "export remind control exists");
+  days.value = "999";
+  win.document.getElementById("sSave").click();
+  await until(() => {
+    try { return JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).exportRemindDays === 365 }
+    catch { return false }
+  }, "exportRemindDays clamped to 365");
+  win.openSettings();
+  days.value = "0";
+  win.document.getElementById("sSave").click();
+  await until(() => {
+    try { return JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).exportRemindDays === 30 }
+    catch { return false }
+  }, "exportRemindDays defaulted to 30");
+});
+
+test("fetchViaBackendBatch indexes results by account id", async () => {
+  const win = bootApp([
+    { id: "a1", region: "EUW", gameName: "One", tagLine: "EUW", status: "active", stats: null, history: [], tags: [] },
+    { id: "a2", region: "KR", gameName: "Two", tagLine: "KR1", status: "active", stats: null, history: [], tags: [] },
+  ]);
+  appDo(win, 'cfg.backendUrl="https://worker.example/opgg"');
+  win.fetch = async (url, opts = {}) => {
+    assert.equal(opts.method, "POST");
+    const body = JSON.parse(opts.body);
+    assert.equal(body.accounts.length, 2);
+    assert.equal(body.accounts[0].region, "euw");
+    assert.equal(body.accounts[1].region, "kr");
+    return {
+      ok: true,
+      json: async () => ({ results: [
+        { ok: true, found: true, tier: "GOLD", division: "I", lp: 1 },
+        { ok: true, found: true, tier: "SILVER", division: "IV", lp: 2 },
+      ] }),
+    };
+  };
+  const map = await win.fetchViaBackendBatch(win.filtered());
+  assert.equal(map.get("a1").tier, "GOLD");
+  assert.equal(map.get("a2").tier, "SILVER");
+});
+
+test("ribbon / filter rotate flag uses needsRotation (null days excluded)", () => {
+  const win = bootApp([
+    { id: "n1", region: "EUW", gameName: "Never", tagLine: "EUW", status: "active", stats: null, history: [], tags: [] },
+    { id: "o1", region: "EUW", gameName: "Old", tagLine: "EUW", status: "active",
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: Date.now() - 30 * 86400000 }, history: [], tags: [] },
+  ]);
+  const rot = win.document.querySelector('[data-flag="rotate"]');
+  assert.ok(rot, "Due to rotate tile/segment exists when an account is due");
+  rot.click();
+  assert.equal(win.filtered().map(a => String(a.id)).join(","), "o1");
+});
+
+test("failed filter does not include season-reset accounts", () => {
+  const win = bootApp([{
+    id: "f1", region: "EUW", gameName: "SR", tagLine: "EUW", status: "active", tags: [],
+    stats: { found: true, tier: "UNRANKED", note: null, asOf: "season-reset", seasonResetAt: Date.now(), updatedAt: Date.now() },
+    history: [],
+  }, {
+    id: "f2", region: "EUW", gameName: "Bad", tagLine: "EUW", status: "active", tags: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, note: "Auto-fetch failed (x)", updatedAt: Date.now() },
+    history: [],
+  }]);
+  const btn = win.document.querySelector('[data-flag="failed"]')
+    || win.document.querySelector('#count [data-flag="failed"]');
+  if (btn) btn.click();
+  else appDo(win, 'ui.flag="failed"; render()');
+  assert.equal(win.filtered().map(a => String(a.id)).join(","), "f2");
+});

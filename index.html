@@ -1878,6 +1878,18 @@
     </div></div>
   </div>
 
+  <!-- Must exist at boot so the shared modal observer / Escape / backdrop wiring
+       sees it — creating it lazily left Compare outside body.modal-open and the
+       focus trap. -->
+  <div id="compareModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Compare">
+    <div class="mdl hx teal"><div class="hx-in mdl-in">
+      <div class="mdl-h"><span class="t">Compare</span>
+        <button class="panel-close" id="cmpClose" data-close-panel title="Close" aria-label="Close">✕</button>
+      </div>
+      <div class="mdl-b" id="cmpBody"></div>
+    </div></div>
+  </div>
+
   <!-- Sixty cards is thirteen screens, and the only way back was to scroll all of
        them again. Kept out of the way until there is actually something to go back
        up to. -->
@@ -1972,6 +1984,7 @@ const APP_CHANGELOG=[
     "Export reminder days + worker deploy help in Settings",
   ]},
 ];
+function clampExportDays(v){const n=Math.round(Number(v));return Math.max(1,Math.min(365,(n>0&&isFinite(n))?n:30))}
 let cfg={apiKey:"",model:"claude-sonnet-5",autoCheck:false,backendUrl:"",exportRemindDays:30};
 // Older releases stored retired model IDs; map them forward so a saved setting
 // doesn't keep sending a model the API no longer serves.
@@ -1987,10 +2000,18 @@ let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArc
 function isChecked(a){return !!(a.stats&&a.stats.updatedAt)}
 function isStale(a){return a.status!=="banned"&&(!isChecked(a)||Date.now()-a.stats.updatedAt>STALE_MS)}
 function isRanked(a){const t=a.stats&&a.stats.found!==false&&(a.stats.tier||"").toUpperCase();return !!(t&&t!=="UNRANKED")}
-function isFailed(a){return !!(a.stats&&(a.stats.found===false||a.stats.note))}
+function isFailed(a){
+  if(!a.stats)return false;
+  if(a.stats.found===false)return true;
+  // Informational notes (season reset, etc.) must not look like a failed refresh.
+  const n=String(a.stats.note||"");
+  return /auto-fetch failed|failed \(/i.test(n);
+}
 function isUncertain(a){return !!(a.stats&&a.stats.uncertain)}
 function riotKey(a){return ((a.region||"")+"|"+(a.gameName||"").toLowerCase()+"|"+(a.tagLine||"").toLowerCase())}
+let _dupCache=null,_dupSrc=null;
 function duplicateIds(){
+  if(_dupCache&&_dupSrc===accounts)return _dupCache;
   const map=new Map();
   for(const a of accounts){
     if(a.archived)continue;
@@ -2000,9 +2021,11 @@ function duplicateIds(){
   }
   const dups=new Set();
   for(const ids of map.values())if(ids.length>1)ids.forEach(id=>dups.add(id));
+  _dupCache=dups;_dupSrc=accounts;
   return dups;
 }
 function isDuplicate(a){return duplicateIds().has(a.id)}
+function invalidateDupCache(){_dupCache=null;_dupSrc=null}
 function rotationDays(a){
   const t=a.lastPlayedAt||a.lastLoginAt||(a.stats&&a.stats.updatedAt)||0;
   if(!t)return null;
@@ -2011,7 +2034,7 @@ function rotationDays(a){
 function needsRotation(a){
   if(a.status==="banned"||a.archived)return false;
   const d=rotationDays(a);
-  return d==null||d>=14;
+  return d!=null&&d>=14;
 }
 function wrTrend(a){
   const h=(a.history||[]).filter(p=>p.w!=null&&p.l!=null);
@@ -2118,7 +2141,7 @@ function storageOK(){try{localStorage.setItem("__t","1");localStorage.removeItem
    the caller went on to its own "saved" message — into the same toast, over the
    top of the warning. */
 let saveSeq=0, saveChain=Promise.resolve();
-function saveDB(){
+function saveDB(){invalidateDupCache();
   // Locked is a hard no — not a silent success. Import (and anything else that
   // awaits this) used to toast "imported" while the disk never moved, because
   // the lock guard shared the same early-return-true as preview / no-storage.
@@ -3299,7 +3322,12 @@ function refreshCutoffs(){
     .then(res=>{if(res.some(Boolean))renderGrid()});
 }
 function mapBackendPayload(d){
+  if(!d||typeof d!=="object")throw new Error("empty backend payload");
+  if(d.ok===false&&d.found!==false)throw new Error(d.error||"backend row failed");
   if(d.found===false)return {found:false,updatedAt:Date.now()};
+  // Require an explicit found:true (or a tier) so a half-empty error object is not
+  // promoted to UNRANKED success.
+  if(d.found!==true&&!d.tier)throw new Error("backend row missing rank");
   const uncertain=!!d.uncertain;
   return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),seasons:d.seasons||null,flex:normPeak(d.flex),champs:Array.isArray(d.champs)?d.champs.slice(0,10):null,lpAt:normLpAt(d.lpAt),icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,uncertain,source:d.source||null,updatedAt:Date.now()};
 }
@@ -3653,27 +3681,40 @@ async function checkAll(ids){
   if(cfg.backendUrl){
     for(let i=0;i<list.length;i+=20){
       if(run.stop)break;
-      const chunk=list.slice(i,i+20);
+      const chunk=list.slice(i,i+20).filter(a=>!done.has(a.id));
+      if(!chunk.length)continue;
       run.current="batch "+(i+1)+"–"+(i+chunk.length);renderRun();
+      // Claim ownership before the network wait — bumping only at commit let a
+      // finished Refresh be overwritten by a slower batch response.
+      const gens=new Map();
+      for(const acc of chunk){
+        const gen=(checkGen.get(acc.id)||0)+1;checkGen.set(acc.id,gen);gens.set(acc.id,gen);
+        checking.add(acc.id);renderCard(acc.id);
+      }
       let map=null;
       try{map=await fetchViaBackendBatch(chunk)}catch(e){map=null}
-      if(!map)break;
+      if(!map){
+        for(const id of gens.keys())checking.delete(id);
+        break;
+      }
       let hit=0;
       for(const acc of chunk){
         if(run.stop)break;
+        const gen=gens.get(acc.id);
+        if(checkGen.get(acc.id)!==gen){checking.delete(acc.id);continue}
         const row=map.get(acc.id);
-        if(!row)continue;
-        if(row.found===false){
-          commitStats(acc.id,acc,mapBackendPayload(row));
-          done.add(acc.id);run.ok++;run.done++;hit++;renderRun();
-          continue;
-        }
-        if(row.ok===false)continue;
-        try{
-          commitStats(acc.id,acc,mapBackendPayload(row));
-          done.add(acc.id);run.ok++;run.done++;hit++;renderRun();
-        }catch(e){/* sequential fallback */}
+        if(!row){checking.delete(acc.id);continue}
+        if(row.ok===false&&row.found!==false){checking.delete(acc.id);continue}
+        let s=null;
+        try{s=mapBackendPayload(row)}catch(e){checking.delete(acc.id);continue}
+        if(checkGen.get(acc.id)!==gen){checking.delete(acc.id);continue}
+        commitStats(acc.id,acc,s);
+        checking.delete(acc.id);
+        done.add(acc.id);
+        if(s.found!==false)run.ok++;
+        run.done++;hit++;renderRun();
       }
+      for(const id of gens.keys())checking.delete(id);
       if(!hit)break; // worker likely old / no POST — fall through
     }
   }
@@ -3714,42 +3755,53 @@ function lastDelta(a){
 }
 function markPlayed(id){
   const a=accounts.find(x=>x.id===id); if(!a)return;
+  openMore.delete(id);
   a.lastPlayedAt=Date.now();
   saveDB(); renderCard(id); renderDash(); toast("Marked played today");
 }
 function seasonReset(id){
   const a=accounts.find(x=>x.id===id); if(!a||!a.stats){toast("Nothing to reset");return}
+  openMore.delete(id);
   const s=a.stats;
+  const seasons=normSeasons(s.seasons)||{solo:[],flex:[]};
   if(s.tier&&s.tier!=="UNRANKED"){
-    const row={season:"prev",tier:s.tier,division:s.division||null,lp:s.lp??0};
-    a.stats.seasons=a.stats.seasons||{solo:[],flex:[]};
-    a.stats.seasons.solo=[row].concat(a.stats.seasons.solo||[]).slice(0,20);
+    seasons.solo=[{season:"prev",tier:s.tier,division:s.division||null,lp:s.lp??0}].concat(seasons.solo).slice(0,20);
   }
   if(s.peak&&s.peak.tier) a.peakManual=a.peakManual||{...s.peak};
   a.history=a.history||[];
   if(a.history.length){
     a.history.push({t:Date.now(),tier:"UNRANKED",division:null,lp:null,w:0,l:0});
   }
-  a.stats={...s,tier:"UNRANKED",division:null,lp:null,wins:0,losses:0,peak:null,champs:null,uncertain:false,
-    note:"Season reset — pull a fresh rank when placed",updatedAt:Date.now()};
+  // Clear live ladder fields explicitly — spreading old stats left flex/lpAt around.
+  a.stats={
+    found:true,tier:"UNRANKED",division:null,lp:null,wins:0,losses:0,level:s.level??null,
+    peak:null,seasons,flex:null,champs:null,lpAt:null,icon:s.icon||null,
+    mmr:null,avgRecent:null,uncertain:false,source:null,asOf:"season-reset",
+    note:null,updatedAt:Date.now(),seasonResetAt:Date.now()
+  };
   a.goal=null;
   saveDB(); renderCard(id); renderDash(); renderRibbon();
   toast("Season reset — previous rank kept in Past seasons");
 }
 function poolLpSpark(pool){
-  const pts=[];
+  // Average ladder LP across the combined pool at each history timestamp bucket,
+  // not a zig-zag of every account's points interleaved.
+  const byT=new Map();
   for(const a of pool){
     for(const h of (a.history||[]).slice(-12)){
-      const v=ladderLP(h); if(v!=null)pts.push({t:+h.t||0,v});
+      const v=ladderLP(h); if(v==null)continue;
+      const t=+h.t||0;
+      if(!byT.has(t))byT.set(t,{sum:0,n:0});
+      const b=byT.get(t); b.sum+=v; b.n++;
     }
   }
-  pts.sort((x,y)=>x.t-y.t);
+  const pts=[...byT.entries()].sort((x,y)=>x[0]-y[0]).map(([,b])=>b.sum/b.n);
   if(pts.length<2)return "";
-  const vs=pts.map(p=>p.v), min=Math.min(...vs), max=Math.max(...vs), span=Math.max(1,max-min);
+  const min=Math.min(...pts), max=Math.max(...pts), span=Math.max(1,max-min);
   const w=180,h=36,pad=2;
-  const poly=pts.map((p,i)=>{
+  const poly=pts.map((v,i)=>{
     const x=pad+(i/(pts.length-1))*(w-pad*2);
-    const y=h-pad-((p.v-min)/span)*(h-pad*2);
+    const y=h-pad-((v-min)/span)*(h-pad*2);
     return x.toFixed(1)+","+y.toFixed(1);
   }).join(" ");
   return `<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/></svg>`;
@@ -3774,28 +3826,20 @@ function renderCompare(){
     return `<div class="cmp-col">
       <div class="cmp-nm">${esc(acc.label||acc.gameName)}</div>
       <div class="cmp-rk" style="color:${tierColor(s.tier)}">${esc(shortRank(s)||"—")}</div>
-      <div class="cmp-line">${s.wins!=null?s.wins+"W":"—"} / ${s.losses!=null?s.losses+"L":"—"}</div>
+      <div class="cmp-line">${esc(s.wins!=null?s.wins+"W":"—")} / ${esc(s.losses!=null?s.losses+"L":"—")}</div>
       <div class="cmp-line">Peak ${esc(peak||"—")}</div>
       <div class="cmp-line">WR trend ${tr?(tr.d>0?"+":"")+tr.d+" pp":"—"}</div>
       <div class="cmp-line">Last played ${acc.lastPlayedAt?timeAgo(acc.lastPlayedAt):(acc.lastLoginAt?timeAgo(acc.lastLoginAt):(s.updatedAt?timeAgo(s.updatedAt):"never"))}</div>
     </div>`;
   };
-  let modal=$("compareModal");
-  if(!modal){
-    modal=document.createElement("div");
-    modal.id="compareModal";
-    modal.className="modal";
-    modal.innerHTML=`<div class="mdl hx teal"><div class="hx-in mdl-in"><div class="mdl-h"><span class="t">Compare</span>
-      <button class="panel-close" id="cmpClose" aria-label="Close">✕</button></div>
-      <div class="mdl-b" id="cmpBody"></div></div></div>`;
-    document.body.appendChild(modal);
-    modal.addEventListener("click",e=>{if(e.target===modal||e.target.id==="cmpClose"){modal.classList.add("hidden");compareIds=[];render()}});
-  }
+  const modal=$("compareModal");
+  if(!modal){compareIds=[];return}
   modal.classList.remove("hidden");
   setHTML($("cmpBody"),`<div class="cmp-grid">${cell(a)}<div class="cmp-vs">vs</div>${cell(b)}</div>
     <button class="btn" id="cmpClear" style="margin-top:12px">Clear selection</button>`);
-  $("cmpClear").onclick=()=>{compareIds=[];modal.classList.add("hidden");render()};
+  $("cmpClear").onclick=()=>{closeCompare();render()};
 }
+
 
 // ---------- filtering / sorting ----------
 /* Sixty accounts is the point where "type some letters and see what sticks" stops
@@ -4258,7 +4302,7 @@ function renderDash(){
   const archivedN=accounts.length-accounts0.length;
   let bk="";
   if(hasStorage){
-    const remindDays=Math.max(1,Number(cfg.exportRemindDays)||30);
+    const remindDays=clampExportDays(cfg.exportRemindDays);
     if(!cfg.lastExport)bk="No backup yet — hit Export once your accounts are in.";
     else if(Date.now()-cfg.lastExport>remindDays*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago — consider exporting.";
   }
@@ -4948,6 +4992,12 @@ function closeAllPanels(){
   // this list meant Ctrl+K was the only thing that would close it again: Escape
   // shut every other panel on the page and left the palette standing.
   closePalette();
+  closeCompare();
+}
+function closeCompare(){
+  compareIds=[];
+  const m=$("compareModal");
+  if(m)m.classList.add("hidden");
 }
 function openForm(acc){
   if(!acc&&previewMode){previewMode=false;accounts=[];render()}
@@ -5016,7 +5066,7 @@ function openSettings(){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(Math.max(1,Number(cfg.exportRemindDays)||30));updateVaultStatus();$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));updateVaultStatus();$("settings").classList.remove("hidden")
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -5484,7 +5534,7 @@ document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListene
 // Driven by an observer rather than by each of the eight places that add or
 // remove .hidden on these two. Wiring it into every call site works right up
 // until the ninth one is added and quietly doesn't lock the page.
-const MODALS=["settings","help","form","palette"];
+const MODALS=["settings","help","form","palette","compareModal","bulkAdd"];
 let modalReturn=null;
 function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains("hidden"))}
 function syncModals(){
@@ -5597,7 +5647,7 @@ $("sSave").addEventListener("click",async()=>{
   cfg.accent2=$("sAccent2").value===DEFAULT_ACCENT2?null:$("sAccent2").value;applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
   cfg.atmosphere=applyAtmosphere(document.body.dataset.atmosphere||DEFAULT_ATMOSPHERE);
   if(cfg.atmosphere===DEFAULT_ATMOSPHERE)cfg.atmosphere=null; // same idea as accents: no preference vs explicit default
-  cfg.exportRemindDays=Math.max(1,Math.min(365,+$("sExportDays").value||30));
+  cfg.exportRemindDays=clampExportDays($("sExportDays")&&$("sExportDays").value);
   saveCfg();syncLockTimer();hideAccPrev();$("settings").classList.add("hidden");toast("Settings saved"+notifyNote)
 });
 let settingsSaveGen=0;
@@ -6316,11 +6366,11 @@ $("grid").addEventListener("click",async e=>{
   else if(act==="copypw")copyText(acc.password,"Password",true);
   else if(act==="copymail")copyText(acc.email,"Email");
   else if(act==="copybirth")copyText(acc.birthdate,"Date of birth");
-  else if(act==="played"){markPlayed(id);openMore.delete(id)}
-  else if(act==="compare"){openCompare(id);openMore.delete(id);renderCard(id)}
+  else if(act==="played"){markPlayed(id)}
+  else if(act==="compare"){openMore.delete(id);openCompare(id)}
   else if(act==="seasonreset"){
     if(!confirm("Reset this account for a new season? Current rank moves into Past seasons."))return;
-    seasonReset(id);openMore.delete(id)}
+    seasonReset(id)}
   else if(act==="flag"){acc.flagged=!acc.flagged;saveDB();render();
     toast(acc.flagged?"Flagged — it's under Needs attention now":"Flag cleared")}
   else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderCard(id)}

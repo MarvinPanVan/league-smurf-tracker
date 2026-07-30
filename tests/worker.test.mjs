@@ -277,3 +277,105 @@ test("the parsers' regexes still contain their escapes", () => {
   assert.doesNotMatch(src, /Tops\*tier/, "Top\\s*tier lost its backslash");
   assert.match(stripRows("<div>a</div><div>b</div>").join("|"), /^a\|b$/, "rows must still split");
 });
+
+import worker from "../cloudflare-worker.js";
+
+test("OPTIONS preflight returns CORS allowing GET and POST", async () => {
+  const res = await worker.fetch(new Request("https://worker.example/", { method: "OPTIONS" }));
+  assert.ok(res.status === 200 || res.status === 204);
+  assert.equal(res.headers.get("Access-Control-Allow-Origin"), "*");
+  assert.match(res.headers.get("Access-Control-Allow-Methods") || "", /POST/);
+  assert.match(res.headers.get("Access-Control-Allow-Methods") || "", /GET/);
+});
+
+test("POST batch rejects empty body, oversized lists, and non-JSON", async () => {
+  const bad = await worker.fetch(new Request("https://worker.example/", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: "{",
+  }));
+  assert.equal(bad.status, 400);
+
+  const empty = await worker.fetch(new Request("https://worker.example/", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accounts: [] }),
+  }));
+  assert.equal(empty.status, 400);
+
+  const tooMany = await worker.fetch(new Request("https://worker.example/", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accounts: Array.from({ length: 21 }, () => ({ name: "a", tag: "b", region: "euw" })) }),
+  }));
+  assert.equal(tooMany.status, 400);
+  const err = await tooMany.json();
+  assert.match(err.error, /max 20/i);
+});
+
+test("POST batch scrapes in parallel and preserves result order / ids", async () => {
+  const orig = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = async (url) => {
+    seen.push(String(url));
+    if (String(url).includes("Missing-EUW")) {
+      return new Response("nope", { status: 404 });
+    }
+    if (String(url).includes("/champions")) {
+      return new Response("<html></html>", { status: 200 });
+    }
+    const html = `<meta name="description" content="One#EUW / Gold 2 45LP / 10Win 5Lose Win rate 66%"/>
+<strong>gold 2</strong><span>45 LP</span>`;
+    return new Response(html, { status: 200 });
+  };
+  try {
+    const res = await worker.fetch(new Request("https://worker.example/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accounts: [
+          { name: "One", tag: "EUW", region: "euw" },
+          { name: "Missing", tag: "EUW", region: "euw" },
+          { name: "", tag: "EUW", region: "euw" },
+        ],
+      }),
+    }));
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("Access-Control-Allow-Origin"), "*");
+    const data = await res.json();
+    assert.equal(data.results.length, 3);
+    assert.equal(data.results[0].ok, true);
+    assert.equal(data.results[0].tier, "GOLD");
+    assert.equal(data.results[0].uncertain, false);
+    assert.equal(data.results[0].source, "meta");
+    assert.equal(data.results[1].ok, true);
+    assert.equal(data.results[1].found, false);
+    assert.equal(data.results[2].ok, false);
+    assert.match(data.results[2].error, /missing name\/tag/);
+    assert.ok(seen.some(u => u.includes("op.gg")));
+  } finally {
+    globalThis.fetch = orig;
+  }
+});
+
+test("GET still returns a single scrape with uncertain/source fields", async () => {
+  const orig = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (String(url).includes("/champions")) return new Response("", { status: 200 });
+    // body-only rank (no meta) → uncertain
+    return new Response(`<strong>platinum 1</strong><span>12 LP</span><div>5W 5L</div>`, { status: 200 });
+  };
+  try {
+    const res = await worker.fetch(new Request("https://worker.example/?name=Body&tag=Only&region=euw"));
+    assert.equal(res.status, 200);
+    const d = await res.json();
+    assert.equal(d.found, true);
+    assert.equal(d.tier, "PLATINUM");
+    assert.equal(d.uncertain, true);
+    assert.equal(d.source, "body");
+  } finally {
+    globalThis.fetch = orig;
+  }
+});
+
+test("unsupported methods return 405 with CORS", async () => {
+  const res = await worker.fetch(new Request("https://worker.example/", { method: "PUT" }));
+  assert.equal(res.status, 405);
+  assert.equal(res.headers.get("Access-Control-Allow-Origin"), "*");
+});
