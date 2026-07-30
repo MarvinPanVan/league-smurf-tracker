@@ -4155,12 +4155,26 @@ test("peakInfo prefers a higher past Solo season when Top tier is missing", () =
   assert.ok(p.peakV > win.ladderLP(a.stats));
 });
 
-test("peakInfo stays quiet when the account is already at its high", () => {
+test("peakInfo names the current rank when that is the season high", () => {
   const win = bootApp();
   const a = {
     history: [{ t: 1, tier: "GOLD", division: "IV", lp: 10 }, { t: 2, tier: "GOLD", division: "II", lp: 40 }],
     stats: { found: true, tier: "GOLD", division: "II", lp: 40 },
   };
-  assert.equal(win.peakInfo(a).peak, null);
-  assert.equal(win.peakInfo(a).peakV, null);
+  const p = win.peakInfo(a);
+  assert.equal(p.peak, "Gold II · 40 LP", "at your high is still a peak");
+  assert.equal(p.peakV, null, "but the chart does not draw a ceiling on top of itself");
+});
+
+test("the card stacks LP under the tier name", () => {
+  const win = bootApp([{
+    id: "rk1", gameName: "RankLook", tagLine: "EUW", region: "EUW", status: "active",
+    stats: { found: true, tier: "DIAMOND", division: "II", lp: 23, updatedAt: 1 },
+    history: [{ t: 1, tier: "DIAMOND", division: "II", lp: 23 }],
+  }]);
+  const card = win.document.querySelector('.card[data-id="rk1"]');
+  assert.ok(card.querySelector(".rk-main .rk-t"), "tier in the main stack");
+  assert.match(card.querySelector(".rk-main .rk-lp").textContent, /23 LP/);
+  assert.match(card.querySelector(".c-stats").textContent, /Peak/);
+  assert.match(card.querySelector(".c-stats").textContent, /Diamond II/);
 });

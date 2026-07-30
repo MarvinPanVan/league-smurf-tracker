@@ -811,23 +811,28 @@
     background:radial-gradient(125% 78% at 0% 0%,
       color-mix(in srgb,var(--tier) 15%,transparent),transparent 60%)}
   .c-deltas{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
-  .rk{font-size:23px;font-weight:600;letter-spacing:-.035em;line-height:1.15;white-space:nowrap;
-    overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:9px;min-width:0}
-  .rk-t{overflow:hidden;text-overflow:ellipsis}
+  /* Rank is the headline; LP is a labelled companion under it — not a smaller
+     word jammed onto the same baseline with a leftover margin. */
+  .rk{display:flex;align-items:center;gap:11px;min-width:0;white-space:nowrap;
+    overflow:hidden}
+  .rk-main{display:flex;flex-direction:column;gap:3px;min-width:0;line-height:1}
+  .rk-t{font-size:24px;font-weight:600;letter-spacing:-.035em;line-height:1.05;
+    overflow:hidden;text-overflow:ellipsis}
   /* No coloured glow. A 9px halo in the tier's own full-saturation colour around
      a 27px shape stops reading as a lit emblem and starts reading as a lit square
      box — the glow is larger than the thing it is meant to be lighting. The crest
      carries its own highlight in the gradient; all it needs from here is enough
      shadow to sit off the panel. */
-  .rk-crest{width:27px;height:27px;flex-shrink:0;
+  .rk-crest{width:28px;height:28px;flex-shrink:0;
     filter:drop-shadow(0 1px 2px #000000a6)}
-  .rk-lp{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-.015em;margin-left:10px;
-    font-variant-numeric:tabular-nums;opacity:.82}
+  .rk-lp{font-size:13px;font-weight:600;letter-spacing:.04em;margin:0;
+    font-variant-numeric:tabular-nums;color:var(--muted);opacity:1}
   .c-unchecked{font-size:17px;color:var(--faint);letter-spacing:-.02em}
   /* on an account with no rank yet, the level is the headline — it was set in
      10 px caps underneath a 23 px "Unranked" that answered nothing */
-  .c-lvl{font-size:15px;color:var(--faint);letter-spacing:.02em;font-weight:500}
-  .c-lvl .rk-lp{font-size:26px;color:var(--text);opacity:1;margin-left:8px;letter-spacing:-.03em}
+  .c-lvl{font-size:15px;color:var(--faint);letter-spacing:.02em;font-weight:500;
+    display:flex;align-items:baseline;gap:8px}
+  .c-lvl .rk-lp{font-size:26px;color:var(--text);letter-spacing:-.03em}
   .wl{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:4px}
   .wl b{color:var(--text);font-weight:500}
   /* winrate carries the verdict, so it gets the only colour on the line */
@@ -4228,21 +4233,26 @@ function winLoss(s){
   const total=(w||0)+(l||0);
   return{w,l,total,wr:(w!=null&&l!=null&&total>0)?Math.round(w/total*100):null};
 }
-/* Highest known ladder point for the peak rail on charts — shared by cards and
-   the expanded list row so one layout does not draw a peak the other suppresses.
-   Sources, all fallible on their own: op.gg's "Top tier" badge, this app's check
-   history, past Solo seasons on the profile, and a manual override. Peak is only
-   shown when it is genuinely above the current rank — sitting at your season high
-   is not a second number to print. */
+/* Highest known ladder point — shared by the Peak microstat and the chart ceiling.
+   Sources: op.gg Top tier, check history, past Solo seasons, manual override, and
+   the current rank itself (season high is often where you are right now).
+   The microstat always names that high. The chart dashed line only draws when the
+   peak sits *above* current — a ceiling on top of "you are here" is noise. */
 function peakInfo(a){
   const s=a.stats, hist=a.history||[];
   let bestE=null,bestV=-1;
   const seasons=((s&&s.seasons&&s.seasons.solo)||[]);
-  const cands=hist.concat(seasons,[s&&s.peak,a.peakManual].filter(Boolean));
-  for(const h of cands){const v=ladderLP(h);if(v!==null&&v>bestV){bestV=v;bestE=h}}
+  const cands=hist.concat(seasons,[s&&s.peak,a.peakManual,s].filter(Boolean));
+  for(const h of cands){
+    if(!h||typeof h!=="object")continue;
+    if(h.found===false)continue;
+    const t=(h.tier||"").toUpperCase();
+    if(!t||t==="UNRANKED")continue;
+    const v=ladderLP(h);if(v!==null&&v>bestV){bestV=v;bestE=h}
+  }
+  if(!bestE)return{peak:null,peakV:null};
   const cur=ladderLP(s);
-  if(bestE&&(cur===null||bestV>cur))return{peak:shortRank(bestE),peakV:bestV};
-  return{peak:null,peakV:null};
+  return{peak:shortRank(bestE),peakV:(cur===null||bestV>cur)?bestV:null};
 }
 function rowHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
@@ -4357,8 +4367,9 @@ function cardHTML(a,i){
   const wlTxt=[wins!=null?`<b>${wins}W</b>`:"",losses!=null?`<b>${losses}L</b>`:""].filter(Boolean).join(" ");
   const dpm="https://dpm.lol/"+encodeURIComponent(a.gameName)+"-"+encodeURIComponent(a.tagLine);
   const opgg="https://op.gg/lol/summoners/"+(REGIONS[a.region]||REGIONS.EUW).opgg+"/"+encodeURIComponent(a.gameName)+"-"+encodeURIComponent(a.tagLine);
-  // Tier and LP are rendered separately so the tier can carry the card's type scale
-  // while the LP stays a quiet companion — shortRank() glues them into one string.
+  // Tier and LP are separate on purpose: the tier carries the card's type scale,
+  // the LP sits under it as the companion figure — shortRank() glues them for
+  // places that need one string (list, palette, Peak).
   let tierTxt="",lpTxt="";
   if(s&&s.tier){
     tierTxt=tierLabel(s);
@@ -4374,7 +4385,9 @@ function cardHTML(a,i){
   else if(s.found===false)rankBlock=`<div class="wl" style="color:var(--danger)">Not found — check name/tag/region</div>`;
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
     <div class="wl">${s.level>=30?"Unranked this season":"Not level 30 yet"}</div>`;
-  else rankBlock=`<div class="rk" style="color:${col}">${isRanked(a)?crest(s.tier,"rk-crest"):""}<span class="rk-t">${esc(tierTxt||"Unranked")}</span>${lpTxt?`<span class="rk-lp">${esc(lpTxt)}</span>`:""}</div>
+  else if(!isRanked(a))rankBlock=`<div class="rk" style="color:${col}"><span class="rk-main"><span class="rk-t">Unranked</span></span></div>
+    <div class="wl">${total>0?wlTxt+(wr!==null?` · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:""):"No ranked games found"}</div>`;
+  else rankBlock=`<div class="rk" style="color:${col}">${crest(s.tier,"rk-crest")}<span class="rk-main"><span class="rk-t">${esc(tierTxt)}</span>${lpTxt?`<span class="rk-lp">${esc(lpTxt)}</span>`:""}</span></div>
     <div class="wl">${total>0?wlTxt+(wr!==null?` · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:""):"No ranked games found"}</div>`;
   // Peak / Level / MMR are unrelated facts — label them instead of running them
   // together in one muted sentence.
