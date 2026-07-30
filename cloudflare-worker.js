@@ -61,7 +61,7 @@ async function handleBatch(request) {
     if (!name || !tag) return { name, tag, region, ok: false, error: "missing name/tag" };
     try {
       const result = await scrapeOne(String(name), String(tag), region);
-      if (result.error) return { name, tag, region, ok: false, error: result.error, found: result.body && result.body.found };
+      if (result.error) return { name, tag, region, ok: false, error: result.error };
       return { name, tag, region, ok: true, ...result.body };
     } catch (e) {
       return { name, tag, region, ok: false, error: (e && e.message) || "failed" };
@@ -81,12 +81,9 @@ function opggGet(u) {
 
 async function scrapeOne(name, tag, region) {
   const base = `https://op.gg/lol/summoners/${encodeURIComponent(region)}/${encodeURIComponent(name)}-${encodeURIComponent(tag)}`;
-  let res, champHtml = null;
+  let res;
   try {
-    const [main, champs] = await Promise.allSettled([opggGet(base), opggGet(base + "/champions")]);
-    if (main.status === "rejected") throw main.reason || new Error("unreachable");
-    res = main.value;
-    if (champs.status === "fulfilled" && champs.value.ok) champHtml = await champs.value.text();
+    res = await opggGet(base);
   } catch (e) {
     return { error: "fetch failed: " + (e && e.message), status: 502 };
   }
@@ -106,6 +103,14 @@ async function scrapeOne(name, tag, region) {
   const fromMeta = parseRankFromMeta(html);
   const parsed = fromMeta || parseRankText(html);
   if (!parsed) return { error: "no rank data parsed from page", status: 502 };
+
+  // Champions only after a successful profile parse — a miss used to still burn a
+  // subrequest (×20 in a batch), which sits close to Workers' subrequest limit.
+  let champHtml = null;
+  try {
+    const champs = await opggGet(base + "/champions");
+    if (champs.ok) champHtml = await champs.text();
+  } catch (e) { /* optional */ }
 
   // Meta is the clean SSR signal. Body-only matches are marked uncertain so the
   // app can warn without failing the check.

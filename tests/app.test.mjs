@@ -4683,7 +4683,7 @@ test("sequential check returns missing for found:false and does not count as ref
   // Direct sequential checkAll without backend
   win.fetchViaProxy = async () => ({ found: false, updatedAt: Date.now() });
   await win.checkAll(["miss1"]);
-  assert.match(toastMsg, /Refreshed 0/i);
+  assert.match(toastMsg, /not found/i);
 });
 
 test("Escape on compare clears Unselect compare labels via re-render", async () => {
@@ -4768,4 +4768,99 @@ test("failed filter excludes Not found profiles", () => {
   assert.equal(win.filtered().map(a => String(a.id)).join(","), "fail");
   appDo(win, 'ui.flag="missing"; render()');
   assert.equal(win.filtered().map(a => String(a.id)).join(","), "miss");
+});
+
+test("applyStats on found:false keeps seasons/champs/peak instead of wiping them", () => {
+  const win = bootApp();
+  const acc = {
+    id: "keep", history: [{ t: 1, tier: "GOLD", division: "I", lp: 40 }],
+    stats: {
+      found: true, tier: "GOLD", division: "I", lp: 40, level: 200,
+      seasons: { solo: [{ season: "S2025", tier: "PLATINUM", division: "IV", lp: 0 }], flex: [] },
+      champs: [{ name: "Ashe", wins: 1, losses: 0 }],
+      peak: { tier: "PLATINUM", division: "IV", lp: 0 },
+      icon: "https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",
+      updatedAt: 1,
+    },
+  };
+  win.applyStats(acc, { found: false, updatedAt: 2 });
+  assert.equal(acc.stats.found, false);
+  assert.equal(acc.stats.tier, null);
+  assert.equal(acc.stats.level, 200);
+  assert.equal(acc.stats.seasons.solo[0].tier, "PLATINUM");
+  assert.equal(acc.stats.champs[0].name, "Ashe");
+  assert.equal(acc.stats.peak.tier, "PLATINUM");
+  assert.match(acc.stats.icon, /profileIcon1/);
+});
+
+test("isSummonerNotFoundPage matches worker-style not-found bodies", () => {
+  const win = bootApp();
+  assert.equal(win.isSummonerNotFoundPage("<h1>Summoner not found</h1>"), true);
+  assert.equal(win.isSummonerNotFoundPage("This summoner is unregistered."), true);
+  assert.equal(win.isSummonerNotFoundPage(
+    `<meta name="description" content="Foo#EUW / Gold 2 10LP / 1Win 1Lose"/>Summoner not found`
+  ), false, "meta rank wins over a stray not-found string");
+});
+
+test("fetchViaProxy returns found:false for a not-found page", async () => {
+  const win = bootApp([{
+    id: "p1", region: "EUW", gameName: "Nope", tagLine: "EUW", status: "active",
+    stats: { found: true, tier: "GOLD", division: "I", lp: 10,
+      seasons: { solo: [{ season: "S2025", tier: "GOLD", division: "I", lp: 10 }], flex: [] }, updatedAt: 1 },
+    history: [], tags: [],
+  }]);
+  win.fetchWithTimeout = async () => "<html><body><h1>Summoner not found</h1></body></html>";
+  const s = await win.fetchViaProxy(win.filtered()[0]);
+  assert.equal(s.found, false);
+  win.commitStats("p1", win.filtered()[0], s);
+  assert.equal(win.filtered()[0].stats.found, false);
+  assert.equal(win.filtered()[0].stats.seasons.solo[0].tier, "GOLD");
+  assert.equal(win.filtered()[0].flagged, true);
+});
+
+test("check returns null when the account was deleted mid-flight", async () => {
+  const win = bootApp([{
+    id: "gone", region: "EUW", gameName: "X", tagLine: "Y", status: "active",
+    stats: null, history: [], tags: [],
+  }]);
+  appDo(win, 'accounts=[]');
+  assert.equal(await win.check("gone"), null);
+});
+
+test("Failed dash tile filters only transport failures", () => {
+  const win = bootApp([
+    { id: "miss", region: "EUW", gameName: "M", tagLine: "A", status: "active", tags: [],
+      stats: { found: false, updatedAt: Date.now() }, history: [] },
+    { id: "fail", region: "EUW", gameName: "F", tagLine: "B", status: "active", tags: [],
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, note: "Auto-fetch failed (x)", updatedAt: Date.now() }, history: [] },
+  ]);
+  const tile = win.document.querySelector('[data-flag="failed"]');
+  assert.ok(tile, "Last check failed tile is shown when failures exist");
+  tile.click();
+  assert.equal(win.filtered().map(a => String(a.id)).join(","), "fail");
+});
+
+test("poolLpSpark uses one point per account per day", () => {
+  const win = bootApp();
+  const day = 86400000;
+  const svg = win.poolLpSpark([
+    { id: "a", history: [
+      { t: day + 1, tier: "GOLD", division: "IV", lp: 0 },
+      { t: day + 2, tier: "GOLD", division: "I", lp: 100 },
+    ]},
+    { id: "b", history: [
+      { t: day + 3, tier: "GOLD", division: "IV", lp: 0 },
+      { t: 2 * day + 1, tier: "GOLD", division: "I", lp: 50 },
+    ]},
+  ]);
+  assert.match(svg, /polyline/);
+  const pts = svg.match(/points="([^"]+)"/)[1].split(" ");
+  assert.equal(pts.length, 2);
+});
+
+test("boot clamps a corrupt exportRemindDays in cfg", () => {
+  const win = bootApp(undefined, w => {
+    w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ exportRemindDays: 9999 }));
+  });
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).exportRemindDays, 365);
 });

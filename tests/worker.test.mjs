@@ -382,7 +382,9 @@ test("unsupported methods return 405 with CORS", async () => {
 
 test("200 summoner-not-found page returns found:false instead of 502", async () => {
   const orig = globalThis.fetch;
+  const seen = [];
   globalThis.fetch = async (url) => {
+    seen.push(String(url));
     if (String(url).includes("/champions")) return new Response("", { status: 200 });
     return new Response(`<html><body><h1>Summoner not found</h1><p>This summoner is unregistered.</p></body></html>`, { status: 200 });
   };
@@ -391,6 +393,26 @@ test("200 summoner-not-found page returns found:false instead of 502", async () 
     assert.equal(res.status, 200);
     const d = await res.json();
     assert.equal(d.found, false);
+    assert.equal(seen.some(u => u.includes("/champions")), false,
+      "champions subrequest must not run for a missing summoner");
+  } finally {
+    globalThis.fetch = orig;
+  }
+});
+
+test("404 skips champions subrequest", async () => {
+  const orig = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = async (url) => {
+    seen.push(String(url));
+    return new Response("missing", { status: 404 });
+  };
+  try {
+    const res = await worker.fetch(new Request("https://worker.example/?name=Nope&tag=EUW&region=euw"));
+    assert.equal(res.status, 200);
+    assert.equal((await res.json()).found, false);
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0].includes("/champions"), false);
   } finally {
     globalThis.fetch = orig;
   }
