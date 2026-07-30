@@ -2783,13 +2783,49 @@ function passwordStrength(p){
 }
 
 // ---------- rank data: parser + fetch cascade ----------
+// Body text uses thousands separators ("4,011 LP"); meta keeps bare digits ("4011LP").
+const LP_NUM=String.raw`(\d{1,3}(?:,\d{3})+|\d{1,5})`;
+function lpNum(s){return +String(s).replace(/,/g,"")}
+function parseRankFromMeta(raw){
+  if(!raw)return null;
+  const m=String(raw).match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+  if(!m)return null;
+  const d=m[1];
+  // "Diamond 1 1 52LP" doubles the division; "Challenger 1 4011LP" uses a decorative 1.
+  // (?!\d) on the repeat stops it eating the leading 1 of LP values like 1530.
+  const ranked=d.match(new RegExp("\\/\\s*("+TIER_WORD+")(?:\\s+([1-4]))?(?:\\s+\\2(?!\\d))?\\s*"+LP_NUM+"\\s*LP\\b(?:\\s*\\/\\s*(\\d{1,4})Win\\s+(\\d{1,4})Lose)?","i"));
+  if(ranked){
+    const tier=ranked[1].toUpperCase();
+    const mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
+    return{tier,division:(mPlus||!ranked[2])?null:{"1":"I","2":"II","3":"III","4":"IV"}[ranked[2]],
+      lp:lpNum(ranked[3]),wins:ranked[4]!=null?+ranked[4]:null,losses:ranked[5]!=null?+ranked[5]:null,level:null};
+  }
+  const lv=d.match(/\/\s*Lv(?:l)?\.?\s*(\d{1,4})\b/i);
+  if(lv)return{tier:"UNRANKED",division:null,lp:null,wins:null,losses:null,level:+lv[1]};
+  return null;
+}
+function soloHalf(raw){
+  // Queue-filter chips also say "Ranked Flex" next to Solo/Duo / ARAM — only cut
+  // when what follows looks like the flex rank block, not another queue name.
+  const s=String(raw);
+  const re=/\bRanked\s*Flex\b/gi;
+  let m;
+  while((m=re.exec(s))){
+    const after=s.slice(m.index+m[0].length,m.index+m[0].length+100).replace(/\s+/g," ").trim();
+    if(/^(ARAM|Normal|All|Ranked\s*Solo)\b/i.test(after))continue;
+    if(/^Unranked\b/i.test(after)||new RegExp("^("+TIER_WORD+")\\b","i").test(after))return s.slice(0,m.index);
+  }
+  return s;
+}
 function parseRankText(raw){
   if(!raw)return null;
+  // Meta still carries "4011LP" without commas — prefer it before body scraping.
+  const fromMeta=parseRankFromMeta(raw);
+  if(fromMeta)return fromMeta;
   // Solo and Flex share the same page. Matching the first "tier N LP" anywhere used
   // to pick up a Flex rank — or a peak — on an account that is Unranked in Solo.
-  // Everything from "Ranked Flex" onwards belongs to parseFlex; the current-rank
-  // parser only reads what comes before.
-  const soloRaw=String(raw).split(/\bRanked\s*Flex\b/i)[0];
+  // Everything from the real "Ranked Flex" rank block onwards belongs to parseFlex.
+  const soloRaw=soloHalf(raw);
   // Search Unranked / tier-LP on stripped text — raw markup can say "unranked" in
   // an img alt or meta description while the Solo rank is Diamond (worker already
   // flattens via htmlToText before this check).
@@ -2798,7 +2834,7 @@ function parseRankText(raw){
   // is the season peak (Top tier), not the current rank. Flex is already cut away
   // above; this closes the same trap for the peak badge.
   const unIdx=flat.search(/\bUnranked\b/i);
-  const rankAt=flat.search(new RegExp("\\b("+TIER_WORD+")\\b[^\\dA-Za-z]{0,6}([1-4]|IV|III|II|I)?(?!\\d)(?:\\s\\2(?!\\d))?[^\\d]{0,6}(\\d{1,4})\\s*LP\\b","i"));
+  const rankAt=flat.search(new RegExp("\\b("+TIER_WORD+")\\b(?:\\s+([1-4]|IV|III|II|I)(?![\\dA-Za-z,]))?(?:\\s+\\2(?![\\dA-Za-z,]))?\\s*"+LP_NUM+"\\s*LP\\b","i"));
   if(unIdx>=0&&(rankAt<0||unIdx<rankAt)){
     const lv=flat.match(/\bLv(?:l)?\.?\s*(\d{1,4})\b/i)||flat.match(/\bLevel\s*(\d{1,4})\b/i);
     return{tier:"UNRANKED",division:null,lp:null,wins:null,losses:null,level:lv?+lv[1]:null};
@@ -2821,7 +2857,8 @@ function parseRankText(raw){
   return hit;
 }
 function parseRankFlat(text){
-  const strict=/\b(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)\b[^\dA-Za-z]{0,6}([1-4]|IV|III|II|I)?(?!\d)(?:\s\2(?!\d))?[^\d]{0,6}(\d{1,4})\s*LP\b/i;
+  // Division must not eat the leading digit of "4,011 LP" (comma as thousands sep).
+  const strict=new RegExp("\\b(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)\\b(?:\\s+([1-4]|IV|III|II|I)(?![\\dA-Za-z,]))?(?:\\s+\\2(?![\\dA-Za-z,]))?\\s*"+LP_NUM+"\\s*LP\\b","i");
   const m=text.match(strict);
   const out={tier:null,division:null,lp:null,wins:null,losses:null,level:null};
   if(m){
@@ -2831,7 +2868,7 @@ function parseRankFlat(text){
     // which is the one on every card in the vault.
     if(m[2]){const map={"1":"I","2":"II","3":"III","4":"IV"};
       out.division=normDivision(out.tier,map[m[2]]||m[2].toUpperCase())}
-    out.lp=+m[3];
+    out.lp=lpNum(m[3]);
     const after=text.slice(m.index);
     const wl=after.match(/(\d{1,4})\s*W(?:in)?s?\b\s*[,\/]?\s*(\d{1,4})\s*L(?:ose|oss(?:es)?)?\b/i);
     if(wl){out.wins=+wl[1];out.losses=+wl[2]}
@@ -2901,7 +2938,7 @@ function seasonTables(html){
 function parseSeasonTables(raw){
   const html=String(raw);
   if(!/<table/i.test(html))return null;
-  const rowRe=new RegExp("^(S\\d{4}(?:\\s*S\\d)?)\\s+("+TIER_WORD+")(?:\\s+([1-4])(?!\\d))?\\s+(\\d{1,4})$","i");
+  const rowRe=new RegExp("^(S\\d{4}(?:\\s*S\\d)?)\\s+("+TIER_WORD+")(?:\\s+([1-4])(?!\\d))?\\s+"+LP_NUM+"$","i");
   const map={"1":"I","2":"II","3":"III","4":"IV"};
   const out={solo:[],flex:[]};
   let n=0;
@@ -2917,7 +2954,7 @@ function parseSeasonTables(raw){
       if(!m)continue;
       const tier=m[2].toUpperCase();
       const mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
-      out[bucket].push({season:m[1].replace(/\s+/g," "),tier,division:(mPlus||!m[3])?null:map[m[3]],lp:+m[4]});
+      out[bucket].push({season:m[1].replace(/\s+/g," "),tier,division:(mPlus||!m[3])?null:map[m[3]],lp:lpNum(m[4])});
     }
   }
   return(out.solo.length||out.flex.length)?out:null;
@@ -2931,7 +2968,7 @@ function parseSeasonLines(raw){
   if(!raw)return null;
   // The division is optional and must not be allowed to eat the first digit of the
   // LP: without the lookahead, "S2025 master 135" reads as division 1, 35 LP.
-  const rowRe=new RegExp("(S\\d{4}(?:\\s*S\\d)?)\\s*\\|?\\s*(?:\\|\\s*)?("+TIER_WORD+")(?:\\s+([1-4])(?!\\d))?\\s*\\|?\\s*(\\d{1,4})\\s*\\|?\\s*$","i");
+  const rowRe=new RegExp("(S\\d{4}(?:\\s*S\\d)?)\\s*\\|?\\s*(?:\\|\\s*)?("+TIER_WORD+")(?:\\s+([1-4])(?!\\d))?\\s*\\|?\\s*"+LP_NUM+"\\s*\\|?\\s*$","i");
   const out={solo:[],flex:[]};
   let bucket=null;
   for(const line of stripRows(raw)){
@@ -2944,7 +2981,7 @@ function parseSeasonLines(raw){
     const map={"1":"I","2":"II","3":"III","4":"IV"};
     const tier=m[2].toUpperCase();
     const mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
-    out[bucket].push({season:m[1].replace(/\s+/g," "),tier,division:(mPlus||!m[3])?null:map[m[3]],lp:+m[4]});
+    out[bucket].push({season:m[1].replace(/\s+/g," "),tier,division:(mPlus||!m[3])?null:map[m[3]],lp:lpNum(m[4])});
   }
   return(out.solo.length||out.flex.length)?out:null;
 }
@@ -2957,12 +2994,12 @@ function parseFlex(raw){
     if(!/^ranked\s*flex$/i.test(lines[i]))continue;
     const near=lines.slice(i+1,i+4).join(" ");
     if(/^\s*unranked/i.test(near))return{tier:"UNRANKED",division:null,lp:null};
-    const m=near.match(new RegExp("\\b("+TIER_WORD+")\\b(?:\\s+([1-4]|IV|III|II|I)(?![\\dA-Za-z]))?\\s*(\\d{1,4})\\s*LP\\b","i"));
+    const m=near.match(new RegExp("\\b("+TIER_WORD+")\\b(?:\\s+([1-4]|IV|III|II|I)(?![\\dA-Za-z,]))?\\s*"+LP_NUM+"\\s*LP\\b","i"));
     if(m){
       const map={"1":"I","2":"II","3":"III","4":"IV"};
       const tier=m[1].toUpperCase();
       const mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
-      return{tier,division:(mPlus||!m[2])?null:(map[m[2]]||m[2].toUpperCase()),lp:+m[3]};
+      return{tier,division:(mPlus||!m[2])?null:(map[m[2]]||m[2].toUpperCase()),lp:lpNum(m[3])};
     }
   }
   return null;
@@ -3040,17 +3077,18 @@ function parsePeakText(raw){
   const text=stripMarkup(raw);
   const i=text.search(/Top\s*tier/i);
   if(i<0)return null;
-  const before=text.slice(Math.max(0,i-140),i);
+  const before=text.slice(Math.max(0,i-160),i);
   // The division is optional, and it must not be allowed to eat the first digit of
   // the LP: without the lookahead, "master 393 LP" parses as division 3, 93 LP.
-  const re=/\b(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)\b(?:\s+([1-4]|IV|III|II|I)(?![\dA-Za-z]))?\s*(\d{1,4})\s*LP\b/ig;
+  // Thousands separators ("4,061 LP") are real on live op.gg pages.
+  const re=new RegExp("\\b(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)\\b(?:\\s+([1-4]|IV|III|II|I)(?![\\dA-Za-z,]))?\\s*"+LP_NUM+"\\s*LP\\b","ig");
   let m,last=null;
   while((m=re.exec(before)))last=m;
   if(!last)return null;
   const tier=last[1].toUpperCase();
   const mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
   const map={"1":"I","2":"II","3":"III","4":"IV"};
-  return{tier,division:(mPlus||!last[2])?null:(map[last[2]]||last[2].toUpperCase()),lp:+last[3]};
+  return{tier,division:(mPlus||!last[2])?null:(map[last[2]]||last[2].toUpperCase()),lp:lpNum(last[3])};
 }
 // The summoner level is stacked on the profile icon as a bare number with no
 // label anywhere near it, which is why the "Lv." patterns never found it. There

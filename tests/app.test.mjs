@@ -166,6 +166,27 @@ test("parseRankText: garbage input returns null instead of a bogus match", () =>
   assert.equal(win.parseRankText(null), null);
 });
 
+test("parseRankText accepts comma-formatted LP from live op.gg body text", () => {
+  const win = bootApp();
+  const body = "Ranked Solo/Duo challenger 4,011 LP 772 W 650 L Win rate 54 % challenger 4,061 LP Top tier";
+  const r = win.parseRankText(body);
+  assert.equal(r.tier, "CHALLENGER");
+  assert.equal(r.lp, 4011);
+  assert.equal(r.wins, 772);
+  assert.deepEqual(plain(win.parsePeakText(body)), { tier: "CHALLENGER", division: null, lp: 4061 });
+});
+
+test("parseRankFromMeta reads current rank and Unranked level from the description", () => {
+  const win = bootApp();
+  const ranked = win.parseRankText(`<meta name="description" content="Kaori#EUW33 / Challenger 1 4011LP / 772Win 650Lose Win rate 54%"/>`);
+  assert.equal(ranked.tier, "CHALLENGER");
+  assert.equal(ranked.lp, 4011);
+  assert.equal(ranked.wins, 772);
+  const un = win.parseRankText(`<meta name="description" content="Hide on bush#KR1 / Lv. 752"/>`);
+  assert.equal(un.tier, "UNRANKED");
+  assert.equal(un.level, 752);
+});
+
 /* Solo Unranked has no "N LP". The first tier+LP on the page used to win — which on
    an Unranked account is often Flex, or a season peak — so Refresh stored Gold as
    the solo rank. Flex is parseFlex's job; current-rank only reads above that heading. */

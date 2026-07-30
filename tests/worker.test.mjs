@@ -208,6 +208,47 @@ test("Master+ current ranks do not keep a division", () => {
   assert.equal(r.lp, 250);
 });
 
+// Live op.gg body text inserts thousands separators once LP ≥ 1000 ("4,011 LP").
+// Flattening the page used to leave only that form, so Master+ checks 502'd.
+test("comma-formatted LP in body text still parses (live op.gg shape)", () => {
+  const body = "Ranked Solo/Duo challenger 4,011 LP 772 W 650 L Win rate 54 % challenger 4,061 LP Top tier Ranked Flex Unranked";
+  const r = parseRankText(body);
+  assert.equal(r.tier, "CHALLENGER");
+  assert.equal(r.division, null);
+  assert.equal(r.lp, 4011);
+  assert.equal(r.wins, 772);
+  assert.equal(r.losses, 650);
+  assert.deepEqual({ ...parsePeakText(body) }, { tier: "CHALLENGER", division: null, lp: 4061 });
+});
+
+test("meta description rank is preferred and handles doubled divisions", () => {
+  const html = `<meta name="description" content="Kaori#EUW33 / Challenger 1 4011LP / 772Win 650Lose Win rate 54% / Ezreal - 73Win 55Lose Win rate 57%"/>
+<strong>challenger</strong><span>4,011 LP</span>`;
+  const r = parseRankText(html);
+  assert.equal(r.tier, "CHALLENGER");
+  assert.equal(r.lp, 4011);
+  assert.equal(r.wins, 772);
+  assert.equal(r.losses, 650);
+  assert.equal(r.division, null);
+
+  const un = parseRankText(`<meta name="description" content="Hide on bush#KR1 / Lv. 752"/>Unranked Ranked Flex Unranked`);
+  assert.equal(un.tier, "UNRANKED");
+  assert.equal(un.level, 752);
+});
+
+test("season rows tolerate comma LP", () => {
+  const html = `<table><tbody>
+  <tr><th>Season</th><th>Tier</th><th>LP</th></tr>
+  <tr><td><strong>S2025</strong></td><td><span>challenger</span></td><td>1,205</td></tr>
+  <tr><td><strong>S2024 S3</strong></td><td><span>master</span></td><td>513</td></tr>
+</tbody></table>`;
+  const s = parseSeasons(html);
+  assert.equal(s.solo[0].season, "S2025");
+  assert.equal(s.solo[0].tier, "CHALLENGER");
+  assert.equal(s.solo[0].lp, 1205);
+  assert.equal(s.solo[1].lp, 513);
+});
+
 test("level and champion-meta fallbacks match the shapes the app already handles", () => {
   assert.equal(parseLevelText("764 # terminallucidity # final", "terminallucidity", "final"), 764);
   const plain = "Ashe - 15Win 10Lose Win rate 60%, Smolder - 15Win 7Lose Win rate 68%";
