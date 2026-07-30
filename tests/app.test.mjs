@@ -4073,11 +4073,12 @@ test("trailing Unranked is not a climb rate or a sparkline to the old peak", () 
 test("card delta chip uses lastDelta, not a raw ladder subtract across Unranked", () => {
   const seed = [{
     id: "d1", gameName: "Delta", tagLine: "EUW", region: "EUW", status: "active",
+    lastPlayedAt: Date.now(),
     history: [
       { t: 1, tier: "GOLD", division: "II", lp: 40 },
       { t: 2, tier: "UNRANKED", division: null, lp: null },
     ],
-    stats: { found: true, tier: "UNRANKED", division: null, lp: null, updatedAt: 2 },
+    stats: { found: true, tier: "UNRANKED", division: null, lp: null, updatedAt: Date.now() },
   }];
   const win = bootApp(seed);
   assert.equal(win.lastDelta(win.filtered()[0]), 0);
@@ -4198,4 +4199,47 @@ test("the card stacks LP under the tier name", () => {
   assert.match(card.querySelector(".rk-main .rk-lp").textContent, /23 LP/);
   assert.match(card.querySelector(".c-stats").textContent, /Peak/);
   assert.match(card.querySelector(".c-stats").textContent, /Diamond II/);
+});
+
+test("duplicate Riot IDs are detected per region", () => {
+  const win = bootApp([
+    {id:"a",region:"EUW",gameName:"Foo",tagLine:"EUW",status:"active",stats:null,history:[],tags:[]},
+    {id:"b",region:"EUW",gameName:"Foo",tagLine:"EUW",status:"active",stats:null,history:[],tags:[]},
+    {id:"c",region:"KR",gameName:"Foo",tagLine:"EUW",status:"active",stats:null,history:[],tags:[]},
+  ]);
+  const list = win.filtered();
+  assert.equal(win.isDuplicate(list.find(a=>a.id==="a")), true);
+  assert.equal(win.isDuplicate(list.find(a=>a.id==="c")), false);
+});
+
+test("rotation uses lastPlayedAt / lastLoginAt / updatedAt", () => {
+  const win = bootApp();
+  const fresh = {status:"active", lastPlayedAt: Date.now()};
+  const old = {status:"active", stats:{updatedAt: Date.now()-20*86400000}};
+  assert.equal(win.needsRotation(fresh), false);
+  assert.equal(win.needsRotation(old), true);
+});
+
+test("wrTrend compares recent history winrates", () => {
+  const win = bootApp();
+  const a = {history:[
+    {t:1,tier:"GOLD",division:"I",lp:10,w:10,l:10},
+    {t:2,tier:"GOLD",division:"I",lp:20,w:20,l:10},
+  ]};
+  const tr = win.wrTrend(a);
+  assert.ok(tr);
+  assert.ok(tr.d > 0);
+});
+
+test("seasonReset archives current rank into past seasons", () => {
+  const win = bootApp([{
+    id:"x", region:"EUW", gameName:"A", tagLine:"B", status:"active", tags:[],
+    stats:{found:true,tier:"GOLD",division:"II",lp:40,wins:10,losses:8,updatedAt:Date.now()},
+    history:[{t:Date.now()-1000,tier:"GOLD",division:"II",lp:40,w:10,l:8}],
+  }]);
+  win.seasonReset("x");
+  const a = win.filtered()[0];
+  assert.equal(a.stats.tier, "UNRANKED");
+  assert.equal(a.stats.seasons.solo[0].tier, "GOLD");
+  assert.ok(a.history.length >= 2);
 });

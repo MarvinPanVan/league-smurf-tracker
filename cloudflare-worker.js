@@ -2,14 +2,13 @@
 // Deploy this, paste the worker's URL into the app's Settings > "Backend URL".
 //
 // GET /?name=<gameName>&tag=<tagLine>&region=<euw|eune|na|kr|...>
-// -> {"found":true,"tier":"GOLD","division":"II","lp":45,"wins":30,"losses":25,
-//     "level":247,"peak":{"tier":"PLATINUM","division":"IV","lp":12},
-//     "seasons":{"solo":[{"season":"S2025","tier":"MASTER","division":null,"lp":135}],"flex":[]},
-//     "flex":{"tier":"UNRANKED","division":null,"lp":null},
-//     "champs":[{"name":"Ashe","wr":60,"games":25,"kda":2.25,"k":6,"d":6.8,"a":9.3}],
-//     "icon":"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon123.jpg",
-//     "mmr":null,"avgRecent":null}
+// -> {"found":true,"tier":"GOLD","division":"II","lp":45,...,"uncertain":false,"source":"meta"}
 // -> {"found":false}  (summoner genuinely doesn't exist)
+//
+// POST /  body: {"accounts":[{"name":"...","tag":"...","region":"euw"}, ...]}  (max 20)
+// -> {"results":[{"name":"...","tag":"...","region":"euw","ok":true,...} | {"ok":false,"error":"..."}]}
+//    Parallel scrapes on the worker so Check-all does one round-trip instead of N.
+//
 // -> HTTP 4xx/5xx on transient failures (missing params, op.gg unreachable, page didn't parse) —
 //    the app falls back to the free proxy chain / manual entry on any non-2xx response.
 //
@@ -18,89 +17,114 @@
 // ever uses the default export, so the extra named exports cost nothing.
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+const BATCH_MAX = 20;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
 export default {
   async fetch(request) {
     if (request.method === "OPTIONS") return new Response(null, { headers: CORS });
-    // Browser callers only ever GET. Anything else used to still scrape op.gg,
-    // and an uncaught throw below became Cloudflare's default 500 with no CORS
-    // headers — which the app then misread as a CORS failure on the fallback path.
-    if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
-
     try {
+      if (request.method === "POST") return await handleBatch(request);
+      if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+
       const url = new URL(request.url);
       const name = url.searchParams.get("name");
       const tag = url.searchParams.get("tag");
       const region = (url.searchParams.get("region") || "euw").toLowerCase();
-
       if (!name || !tag) return json({ error: "missing name/tag" }, 400);
 
-      const base = `https://op.gg/lol/summoners/${encodeURIComponent(region)}/${encodeURIComponent(name)}-${encodeURIComponent(tag)}`;
-      // Bound every op.gg fetch — a hung upstream used to pin the whole Worker
-      // isolate until the platform's own limit, with the client waiting on us.
-      const get = u => {
-        const c = new AbortController();
-        const t = setTimeout(() => c.abort(), 12000);
-        return fetch(u, {
-          headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" },
-          signal: c.signal,
-        }).finally(() => clearTimeout(t));
-      };
-
-      // The per-champion season totals are not on the profile page — they live on
-      // /champions. Both are requested at once, so the extra data costs no extra
-      // wall time, and a failure on the second one is not allowed to sink the check.
-      let res, champHtml = null;
-      try {
-        const [main, champs] = await Promise.allSettled([get(base), get(base + "/champions")]);
-        if (main.status === "rejected") throw main.reason || new Error("unreachable");
-        res = main.value;
-        if (champs.status === "fulfilled" && champs.value.ok) champHtml = await champs.value.text();
-      } catch (e) {
-        return json({ error: "fetch failed: " + (e && e.message) }, 502);
-      }
-
-      if (res.status === 404) return json({ found: false }, 200);
-      if (!res.ok) return json({ error: "op.gg HTTP " + res.status }, 502);
-
-      const html = await res.text();
-      // Pass the raw page — htmlToText() would strip the <meta description>
-      // that still carries "4011LP" without commas, and the body alone prints
-      // "4,011 LP", which older digit-only patterns missed entirely.
-      const parsed = parseRankText(html);
-
-      if (!parsed) return json({ error: "no rank data parsed from page" }, 502);
-
-      return json({
-        found: true,
-        tier: parsed.tier || "UNRANKED",
-        division: parsed.division || null,
-        lp: parsed.lp,
-        wins: parsed.wins,
-        losses: parsed.losses,
-        level: parsed.level != null ? parsed.level : parseLevelText(html, name, tag),
-        peak: parsePeakText(html),
-        seasons: parseSeasons(html),
-        flex: parseFlex(html),
-        // full table with KDA when /champions came back, the profile's own top five
-        // (wins/losses/win rate, no KDA) when it didn't
-        champs: (champHtml && parseChampionTable(champHtml)) || parseChampionsMeta(html) || parseChampions(html),
-        lpAt: parseLpHistory(html), // when this LP was actually reached, per op.gg
-        icon: parseProfileIcon(html), // needs the raw HTML — htmlToText() already stripped the <img> tags out
-        mmr: null,
-        avgRecent: null,
-      }, 200);
+      const result = await scrapeOne(name, tag, region);
+      if (result.error && result.status) return json({ error: result.error }, result.status);
+      return json(result.body, 200);
     } catch (e) {
       return json({ error: "worker error: " + (e && e.message) }, 500);
     }
   },
 };
+
+async function handleBatch(request) {
+  let body;
+  try { body = await request.json(); }
+  catch (e) { return json({ error: "invalid JSON body" }, 400); }
+  const list = Array.isArray(body && body.accounts) ? body.accounts : null;
+  if (!list || !list.length) return json({ error: "missing accounts[]" }, 400);
+  if (list.length > BATCH_MAX) return json({ error: "max " + BATCH_MAX + " accounts per batch" }, 400);
+
+  const results = await Promise.all(list.map(async (a) => {
+    const name = a && a.name, tag = a && a.tag;
+    const region = String((a && a.region) || "euw").toLowerCase();
+    if (!name || !tag) return { name, tag, region, ok: false, error: "missing name/tag" };
+    try {
+      const result = await scrapeOne(String(name), String(tag), region);
+      if (result.error) return { name, tag, region, ok: false, error: result.error, found: result.body && result.body.found };
+      return { name, tag, region, ok: true, ...result.body };
+    } catch (e) {
+      return { name, tag, region, ok: false, error: (e && e.message) || "failed" };
+    }
+  }));
+  return json({ results }, 200);
+}
+
+function opggGet(u) {
+  const c = new AbortController();
+  const t = setTimeout(() => c.abort(), 12000);
+  return fetch(u, {
+    headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" },
+    signal: c.signal,
+  }).finally(() => clearTimeout(t));
+}
+
+async function scrapeOne(name, tag, region) {
+  const base = `https://op.gg/lol/summoners/${encodeURIComponent(region)}/${encodeURIComponent(name)}-${encodeURIComponent(tag)}`;
+  let res, champHtml = null;
+  try {
+    const [main, champs] = await Promise.allSettled([opggGet(base), opggGet(base + "/champions")]);
+    if (main.status === "rejected") throw main.reason || new Error("unreachable");
+    res = main.value;
+    if (champs.status === "fulfilled" && champs.value.ok) champHtml = await champs.value.text();
+  } catch (e) {
+    return { error: "fetch failed: " + (e && e.message), status: 502 };
+  }
+
+  if (res.status === 404) return { body: { found: false } };
+  if (!res.ok) return { error: "op.gg HTTP " + res.status, status: 502 };
+
+  const html = await res.text();
+  const fromMeta = parseRankFromMeta(html);
+  const parsed = fromMeta || parseRankText(html);
+  if (!parsed) return { error: "no rank data parsed from page", status: 502 };
+
+  // Meta is the clean SSR signal. Body-only matches are marked uncertain so the
+  // app can warn without failing the check.
+  const source = fromMeta ? "meta" : "body";
+
+  return {
+    body: {
+      found: true,
+      tier: parsed.tier || "UNRANKED",
+      division: parsed.division || null,
+      lp: parsed.lp,
+      wins: parsed.wins,
+      losses: parsed.losses,
+      level: parsed.level != null ? parsed.level : parseLevelText(html, name, tag),
+      peak: parsePeakText(html),
+      seasons: parseSeasons(html),
+      flex: parseFlex(html),
+      champs: (champHtml && parseChampionTable(champHtml)) || parseChampionsMeta(html) || parseChampions(html),
+      lpAt: parseLpHistory(html),
+      icon: parseProfileIcon(html),
+      mmr: null,
+      avgRecent: null,
+      uncertain: !fromMeta,
+      source,
+    },
+  };
+}
 
 function json(obj, status) {
   return new Response(JSON.stringify(obj), {
