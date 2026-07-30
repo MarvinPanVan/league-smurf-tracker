@@ -1799,6 +1799,7 @@
       <option value="name">Sort: Name</option>
       <option value="level">Sort: Level</option>
       <option value="change">Sort: LP change</option>
+      <option value="away">Sort: While away</option>
       <option value="climb">Sort: Climbing fastest</option>
       <option value="updated">Sort: Last updated</option>
     </select>
@@ -1942,7 +1943,7 @@ const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"
 // Only Sonnet 5 supports the newer dynamic-filtering web search; Haiku needs the basic one.
 const WEB_SEARCH_TOOL={"claude-sonnet-5":"web_search_20260209","claude-haiku-4-5":"web_search_20250305"};
 let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArchived:false,
-  flag:"",   // "" | "stale" | "unchecked" | "failed" — the states you actually go looking for
+  flag:"",   // "" | "stale" | "unchecked" | "failed" | "attention" | "missing"
   tier:"",   // a single tier, or "UNRANKED"; set by clicking the rank spread
   density:"cards"};
 // The three questions a vault of sixty accounts raises, as functions, because the
@@ -2009,9 +2010,18 @@ function autoCheckDue(a){
     const t=(a.stats.tier||"").toUpperCase();
     if(a.stats.found===false||!t||t==="UNRANKED")return false;
   }
-  const hrs=cfg.autoEveryHours!=null?cfg.autoEveryHours:DEFAULT_AUTO_HOURS;
+  const hrs=coerceAutoEvery(cfg.autoEveryHours);
   if(!a.stats||!a.stats.updatedAt)return true;
   return Date.now()-a.stats.updatedAt>hrs*3600*1000;
+}
+/* A corrupt or hand-edited cfg can leave autoEveryHours as "" / NaN / 0.
+   `+"" === 0`, so every open would fire a check-all. Require a positive finite
+   interval; anything else falls back to the default. */
+function coerceAutoEvery(h){
+  const n=Number(h);
+  // Reject 0 / NaN / negative — `+"" === 0` used to make every open fire a check-all.
+  // Any positive finite value is fine (presets in the UI; tests may use others).
+  return Number.isFinite(n)&&n>0?n:DEFAULT_AUTO_HOURS;
 }
 function storageOK(){try{localStorage.setItem("__t","1");localStorage.removeItem("__t");return true}catch(e){return false}}
 /* Everything that changes the vault ends in a call to this, and hardly any of the
@@ -2037,7 +2047,11 @@ function storageOK(){try{localStorage.setItem("__t","1");localStorage.removeItem
    top of the warning. */
 let saveSeq=0, saveChain=Promise.resolve();
 function saveDB(){
-  if(!hasStorage||previewMode||vaultLocked())return Promise.resolve(true);
+  // Locked is a hard no — not a silent success. Import (and anything else that
+  // awaits this) used to toast "imported" while the disk never moved, because
+  // the lock guard shared the same early-return-true as preview / no-storage.
+  if(vaultLocked())return Promise.resolve(false);
+  if(!hasStorage||previewMode)return Promise.resolve(true);
   // Counted for both kinds of save, so that a plaintext one — removing the password
   // — also supersedes any encrypted save still queued behind it, which would
   // otherwise put the envelope back afterwards.
@@ -2144,9 +2158,23 @@ function idSel(id){
 // Boot/import can land any id string. Anything that is not a plain token gets a
 // fresh uid() so attributes and selectors stay safe without relying on esc alone.
 function safeAccountId(id){return typeof id==="string"&&/^[A-Za-z0-9._:-]+$/.test(id)?id:uid()}
+/* Boot, unlock and import all used to trust tags/history were arrays. A corrupt
+   backup with those fields as objects survived into migrateStats / render and
+   threw mid-grid. Same normalisation everywhere an account enters memory. */
+function sanitizeAccount(a){
+  if(!a||typeof a!=="object")return null;
+  a.id=safeAccountId(a.id);
+  if(!Array.isArray(a.tags))a.tags=[];
+  if(!Array.isArray(a.history))a.history=[];
+  if(a.stats&&a.stats.seasons&&typeof a.stats.seasons==="object"){
+    if(!Array.isArray(a.stats.seasons.solo))a.stats.seasons.solo=[];
+    if(!Array.isArray(a.stats.seasons.flex))a.stats.seasons.flex=[];
+  }
+  return a;
+}
 // Asked in three places now, and jsdom has no matchMedia unless a test supplies one
 function prefersReducedMotion(){return !!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)}
-function toast(msg,action,fn){const t=$("toast");t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");if(action)document.getElementById("toastBtn").onclick=()=>{t.style.display="none";fn()};t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",action?6000:2200)}
+function toast(msg,action,fn){const t=$("toast");t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");if(action)document.getElementById("toastBtn").onclick=()=>{dismissToast();fn()};t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>dismissToast(),action?6000:2200)}
 function dismissToast(){
   const t=$("toast");if(!t)return;
   t.style.display="none";clearTimeout(t._h);
@@ -2289,6 +2317,9 @@ const RANGES=[["d","Daily"],["w","Weekly"],["m","Monthly"]];
    what lets syncGrid leave an unchanged row alone. */
 const SPK_W=124, SPK_H=30;
 function sparkline(hist,col){
+  // An Unranked end is a break, not another LP point — drawing the old climb up
+  // to the last ranked check would look like the account is still there.
+  if(hist&&hist.length&&(hist[hist.length-1].tier||"").toUpperCase()==="UNRANKED")return"";
   const vals=(hist||[]).map(ladderLP).filter(v=>v!==null).slice(-16);
   if(vals.length<2)return "";
   const lo=Math.min(...vals), hi=Math.max(...vals), span=hi-lo;
@@ -2612,14 +2643,23 @@ function celebrate(id,acc){
 async function copyText(v,label,sensitive){
   let ok=false;
   try{await navigator.clipboard.writeText(v);ok=true}
-  catch(e){try{const ta=document.createElement("textarea");ta.value=v;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);ok=true}catch(e2){}}
+  catch(e){
+    try{
+      const ta=document.createElement("textarea");ta.value=v;ta.style.position="fixed";ta.style.opacity="0";
+      document.body.appendChild(ta);ta.select();
+      ok=!!document.execCommand("copy");
+      document.body.removeChild(ta);
+    }catch(e2){}
+  }
   toast(ok?label+" copied"+(sensitive?" — clears from clipboard in 30s":""):"Copy failed — copy manually");
   if(ok&&sensitive){
     lastCopiedSecret=v;
     setTimeout(async()=>{
       try{
         if(lastCopiedSecret!==v)return;
-        if((await navigator.clipboard.readText())===v)await navigator.clipboard.writeText("");
+        // Write empty directly — requiring a successful readText first failed on
+        // browsers that allow write but not read, and left the password sitting.
+        await navigator.clipboard.writeText("");
         if(lastCopiedSecret===v)lastCopiedSecret=null;
       }catch(e){}
     },30000);
@@ -2686,6 +2726,9 @@ function gamesSince(hist){
    across one would call a reset "−200 LP/day". */
 function climbRate(hist){
   if(!hist||hist.length<2)return null;
+  // Trailing Unranked means the account is off the ladder — a rate built on the
+  // ranked points before that would still look like a climb.
+  if((hist[hist.length-1].tier||"").toUpperCase()==="UNRANKED")return null;
   const cut=Date.now()-14*86400000;
   let from=0;
   for(let i=1;i<hist.length;i++)if(seasonBreak(hist[i-1],hist[i]))from=i;
@@ -2742,7 +2785,10 @@ function parseRankText(raw){
   // Everything from "Ranked Flex" onwards belongs to parseFlex; the current-rank
   // parser only reads what comes before.
   const soloRaw=String(raw).split(/\bRanked\s*Flex\b/i)[0];
-  const flat=soloRaw.replace(/\s+/g," ");
+  // Search Unranked / tier-LP on stripped text — raw markup can say "unranked" in
+  // an img alt or meta description while the Solo rank is Diamond (worker already
+  // flattens via htmlToText before this check).
+  const flat=stripMarkup(soloRaw);
   // "Unranked" before any "tier N LP" means Solo is Unranked — a later LP figure
   // is the season peak (Top tier), not the current rank. Flex is already cut away
   // above; this closes the same trap for the peak badge.
@@ -2824,6 +2870,12 @@ function stripRows(raw){
     .replace(/!\[[^\]]*\]\([^)]*\)/g," ")      // images: their URLs carry tier names
     .replace(/\[([^\]]*)\]\([^)]*\)/g," $1 ")  // links: keep the label, drop the URL
     .replace(/[*`_]+/g," ")
+    .replace(/&nbsp;/gi," ")
+    .replace(/&lt;/gi,"<")
+    .replace(/&gt;/gi,">")
+    .replace(/&quot;/gi,'"')
+    .replace(/&#39;/gi,"'")
+    .replace(/&amp;/gi,"&")
     .replace(/[ \t ]+/g," ")
     .split("\n").map(l=>l.trim()).filter(Boolean);
 }
@@ -2963,13 +3015,15 @@ function parseCutoffs(raw){
     .replace(/\[([^\]]*)\]\([^)]*\)/g," $1 ")
     .replace(/[*`_]+/g," ")
     .replace(/[ \t ]+/g," ");
-  const grab=w=>{
+  const grab=(w,min)=>{
     const m=text.match(new RegExp(w+"[^\\n]{0,40}?([\\d][\\d,. ]{2,8})\\s*LP","i"));
     if(!m)return null;
     const n=+m[1].replace(/[,. ]/g,"");
-    return n>=200&&n<=20000?n:null;   // a plausible floor, not a stray table number
+    // Floors below these are almost always an ad ("Challenger Coaching · 250 LP")
+    // or a table cell — real GM/Challenger cuts sit well above.
+    return n>=min&&n<=20000?n:null;
   };
-  const chall=grab("challenger"), gm=grab("grandmaster");
+  const chall=grab("challenger",800), gm=grab("grandmaster",400);
   return(chall||gm)?{chall,gm}:null;
 }
 // op.gg does publish a season peak after all: it prints the highest rank reached
@@ -3042,7 +3096,9 @@ function parseLpHistory(raw){
 // the URL instead means it is asked for once per session.
 const deadIcons=new Set();
 function iconUrl(s){
-  const u=s&&s.icon;
+  // Backend / AI / paste paths already go through safeIconUrl on write; history
+  // and older vaults may still carry a non-https icon into <img src>.
+  const u=safeIconUrl(s&&s.icon);
   return u&&!deadIcons.has(u)?u:null;
 }
 function markIconDead(img){
@@ -3150,7 +3206,8 @@ function normPeak(p){
   const tier=String(p.tier||"").toUpperCase();
   if(TIER_ORDER.indexOf(tier)<0)return null;
   const div=String(p.division||"").toUpperCase();
-  return{tier,division:normDivision(tier,DIV_ORDER[div]!==undefined?div:null),lp:Number(p.lp)||0};
+  return{tier,division:normDivision(tier,DIV_ORDER[div]!==undefined?div:null),
+    lp:p.lp==null||p.lp===""?null:(Number(p.lp)||0)};
 }
 // Same reasoning for the two lists. A season row with no tier used to reach
 // `e.tier.charAt(0)` inside the render and throw, which takes the whole grid down
@@ -3178,7 +3235,8 @@ function normLpAt(p){
   const tier=String(p.tier||"").toUpperCase();
   if(!t||!isFinite(t)||t>Date.now()+86400000||TIER_ORDER.indexOf(tier)<0)return null;
   const div=String(p.division||"").toUpperCase();
-  return{t,tier,division:normDivision(tier,DIV_ORDER[div]!==undefined?div:null),lp:Number(p.lp)||0};
+  return{t,tier,division:normDivision(tier,DIV_ORDER[div]!==undefined?div:null),
+    lp:p.lp==null||p.lp===""?null:(Number(p.lp)||0)};
 }
 function normChamps(list){
   if(!Array.isArray(list))return null;
@@ -3287,11 +3345,10 @@ function applyStats(acc,s){
       &&(at.division||null)===(s.division||null);
     let when=(sameRank&&at.t<=s.updatedAt)?at.t:s.updatedAt;
     if(prev&&prev.tier===s.tier&&prev.division===s.division&&prev.lp===s.lp){
-      // Nothing changed in the rank itself. Slide the stamp earlier only while it
-      // still sits after the point before this one — a reached-date behind that
-      // would reorder the chart so the current rank is no longer last.
+      // Only slide the stamp *earlier* when lpAt corrected a reached-date. A later
+      // refresh without lpAt used to drag the point forward to "now" and undo it.
       const floor=hist.length>=2?(+hist[hist.length-2].t||0):0;
-      if(when>floor)prev.t=when;
+      if(sameRank&&when<(+prev.t||0)&&when>floor)prev.t=when;
       // Same reading can still gain games: keep W/L in step so "Since last check"
       // and season-break detection see the totals the card is showing.
       if(s.wins!=null)prev.w=Number(s.wins)||0;
@@ -3450,7 +3507,7 @@ async function checkAll(ids){
   // a click listener, which passes an Event — truthy, and with no .map on it.
   const list=(Array.isArray(ids)?ids.map(id=>accounts.find(a=>a.id===id)).filter(Boolean):filtered()).filter(a=>a.status!=="banned");
   if(!list.length){toast("Nothing to refresh");return}
-  run={total:list.length,done:0,failed:[],current:null,stop:false};
+  run={total:list.length,done:0,ok:0,failed:[],current:null,stop:false};
   lastFails=null;renderFailbar();renderRun();syncCheckAll();
   for(const acc of list){
     if(run.stop)break;
@@ -3459,15 +3516,15 @@ async function checkAll(ids){
     // refresh this pass can take credit for either.
     const result=await check(acc.id);
     if(result===false)run.failed.push({id:acc.id,name:acc.label||acc.gameName});
+    else if(result!==null)run.ok++;
     run.done++;renderRun();
     if(run.stop)break;
     await new Promise(r=>setTimeout(r,800));
   }
-  const {done,failed,stop}=run;
+  const {done,ok,failed,stop}=run;
   run=null;lastFails=failed.length?failed:null;
   render(); // the sort order was deliberately left alone during the run
   renderRun();renderFailbar();
-  const ok=done-failed.length;
   const msg=stop?"Stopped after "+done+" of "+list.length
     :failed.length?ok+" refreshed, "+failed.length+" failed"
     :"Refreshed "+ok+" account"+(ok===1?"":"s");
@@ -3541,6 +3598,7 @@ function filtered(){
     if(ui.flag==="unchecked"&&isChecked(a))return false;
     if(ui.flag==="failed"&&!isFailed(a))return false;
     if(ui.flag==="attention"&&!needsAttention(a))return false;
+    if(ui.flag==="missing"&&!(a.stats&&a.stats.found===false))return false;
     if(ui.tier){
       const t=(a.stats&&a.stats.found!==false&&a.stats.tier||"").toUpperCase();
       if(ui.tier==="UNRANKED"?!isUnrankedAnswer(a):t!==ui.tier)return false;
@@ -3622,6 +3680,17 @@ function morph(from,to){
     // Whatever the user is currently typing in is left completely alone, so a
     // render triggered mid-keystroke can't eat the character or move the caret.
     if(document.activeElement===from)return;
+    // Unsaved ✎ Rank fields must survive remorphs from Refresh / other panels on
+    // the same card. Focus alone is not enough — clicking another control inside
+    // the panel used to let the next render wipe the draft back to saved stats.
+    const rf=from.getAttribute("data-f");
+    if(rf&&/^(tier|div|lp|w|l|ptier|pdiv|plp|gtier|gdiv)$/.test(rf)){
+      const card=from.closest("[data-id]");
+      if(card&&openRank.has(card.dataset.id)){
+        if(tag==="SELECT")morphChildren(from,to);
+        return;
+      }
+    }
     // Live value lives in the property, not the attribute — once a field is
     // dirty the attribute stops driving it, so it has to be set directly.
     if(tag==="TEXTAREA"){if(from.value!==to.textContent)from.value=to.textContent}
@@ -3763,6 +3832,7 @@ function pruneCardState(){
   if(armedDelete&&!live.has(armedDelete))armedDelete=null;
   if(editingNote&&!live.has(editingNote)){editingNote=null;noteDraft=""}
   if(flashId&&!live.has(flashId))flashId=null;
+  if(lastSelectedId&&!live.has(lastSelectedId))lastSelectedId=null;
 }
 function render(){
   pruneCardState();
@@ -3867,7 +3937,10 @@ function renderRibbon(){
      behind them and the stats panel has always counted them apart, so the bar shows
      them apart too — and either one now shows exactly what it counted when clicked. */
   if(unN)segs.push({k:"UNRANKED",n:unN,c:TIER_COLORS.UNRANKED,label:"Unranked"});
-  if(missN)segs.push({flag:"attention",n:missN,c:"var(--danger)",label:"Not found"});
+  // Dedicated flag — not "attention". Auto-flagging a missing profile also marks
+  // Needs attention, but the ribbon count is only found===false; filtering by
+  // attention would pull in every hand-flagged account and disagree with the N.
+  if(missN)segs.push({flag:"missing",n:missN,c:"var(--danger)",label:"Not found"});
   if(neverN)segs.push({flag:"unchecked",n:neverN,c:"var(--faint)",label:"Never checked"});
   if(!segs.length){setHTML(el,"");return}
   const best=pool.filter(isRanked).sort((x,y)=>rankValue(y.stats)-rankValue(x.stats))[0];
@@ -3876,7 +3949,7 @@ function renderRibbon(){
       return `<button class="rib-seg${on?" on":""}" ${s.flag?`data-flag="${s.flag}"`:`data-tier="${s.k}"`} style="--c:${s.c};flex:${s.n}"
         aria-pressed="${on}" title="${esc(s.label)} — ${s.n} account${s.n===1?"":"s"} (click to show only these)"
         aria-label="${esc(s.label)}, ${s.n}"><i>${s.n}</i></button>`}).join("")}</div>
-    <div class="rib-cap"><span><b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}${unN?` · <b>${unN}</b> unranked`:""}${neverN?` · <b>${neverN}</b> never checked`:""}</span>`
+    <div class="rib-cap"><span><b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}${unN?` · <b>${unN}</b> unranked`:""}${missN?` · <b>${missN}</b> not found`:""}${neverN?` · <b>${neverN}</b> never checked`:""}</span>`
     +(best?`<span>best <b style="color:${tierColor(best.stats.tier)}">${esc(shortRank(best.stats))}</b></span>`:"")
     +`</div>`);
 }
@@ -3981,7 +4054,7 @@ function renderTagbar(){
 // A number in a dashboard always raises "which ones?", so the stats panel sets
 // these — and they have to be visible and removable, or the grid just looks
 // mysteriously short.
-const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Needs attention"};
+const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Needs attention",missing:"Not found"};
 function renderChips(){
   const out=[];
   if(ui.flag)out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
@@ -4155,6 +4228,17 @@ function winLoss(s){
   const total=(w||0)+(l||0);
   return{w,l,total,wr:(w!=null&&l!=null&&total>0)?Math.round(w/total*100):null};
 }
+/* Highest known ladder point for the peak rail on charts — shared by cards and
+   the expanded list row so one layout does not draw a peak the other suppresses. */
+function peakInfo(a){
+  const s=a.stats, hist=a.history||[];
+  let bestE=null,bestV=-1;
+  const cands=hist.concat([s&&s.peak,a.peakManual].filter(Boolean));
+  for(const h of cands){const v=ladderLP(h);if(v!==null&&v>bestV){bestV=v;bestE=h}}
+  const cur=ladderLP(s);
+  if(bestE&&(cur===null||bestV>cur))return{peak:shortRank(bestE),peakV:bestV};
+  return{peak:null,peakV:null};
+}
 function rowHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
   const st=STATUS[a.status]||STATUS.active;
@@ -4198,7 +4282,7 @@ function rowHTML(a,i){
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     ${open?`<div class="rw-open">
-      ${rankChart(a.history||[],cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(a.history||[]),a.id)}
+      ${rankChart(a.history||[],cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(a.history||[]),a.id,peakInfo(a).peakV)}
       ${infoBlockHTML(a)||""}
       ${noteBlockHTML(a)}
       <div class="acts">
@@ -4252,18 +4336,13 @@ function cardHTML(a,i){
   const hist=a.history||[];
   const st=STATUS[a.status]||STATUS.active;
   let peak=null,peakV=null;
-  {let bestE=null,bestV=-1;
-   // Three sources, all fallible on their own, so they simply compete and the
-   // genuinely highest wins: op.gg's own "Top tier" badge (missing on profiles
-   // that never had one), the history this app observed (blind to anything
-   // before the account was added or between checks), and a manual override.
-   const cands=hist.concat([s&&s.peak,a.peakManual].filter(Boolean));
-   for(const h of cands){const v=ladderLP(h);if(v!==null&&v>bestV){bestV=v;bestE=h}}
-   const cur=ladderLP(s);
-   if(bestE&&(cur===null||bestV>cur)){peak=shortRank(bestE);peakV=bestV}}
+  {const p=peakInfo(a);peak=p.peak;peakV=p.peakV}
   let deltaChip="";
-  if(hist.length>=2){
-    const dv=(ladderLP(hist[hist.length-1])||0)-(ladderLP(hist[hist.length-2])||0);
+  // Same rule as the list row: lastDelta() already knows about season breaks and
+  // Unranked ends. Subtracting raw ladderLP() here invented crash chips the list
+  // correctly suppressed.
+  {
+    const dv=lastDelta(a);
     if(dv)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
   }
   if(isClimbing(hist))deltaChip+='<span class="delta d-up" title="LP has gone up 3 checks in a row">🔥 Climbing</span>';
@@ -4647,7 +4726,7 @@ function openSettings(){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(cfg.autoEveryHours!=null?cfg.autoEveryHours:DEFAULT_AUTO_HOURS);$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";updateVaultStatus();$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";updateVaultStatus();$("settings").classList.remove("hidden")
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -4782,6 +4861,7 @@ function notify(title,body){
 
 // ---------- export / import ----------
 function doExport(){
+  if(previewMode){toast("Exit preview before exporting — this is example data, not your vault");return}
   const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),accounts};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   const a=document.createElement("a");
@@ -4802,6 +4882,7 @@ function csvCell(v){
   return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
 }
 function doExportCSV(){
+  if(previewMode){toast("Exit preview before exporting — this is example data, not your vault");return}
   const cols=["label","gameName","tagLine","region","status","tier","division","lp","wins","losses","level","login","password","email","createdOn","birthdate","tags","notes","favorite","lastUpdated"];
   const rows=accounts.map(a=>{
     const s=a.stats||{};
@@ -4822,6 +4903,7 @@ function doExportCSV(){
   toast("CSV exported");
 }
 function doImport(file){
+  if(vaultLocked()){toast("Unlock the vault before importing");return}
   if(previewMode){previewMode=false;accounts=[]}
   const rd=new FileReader();
   rd.onload=async()=>{
@@ -4829,6 +4911,8 @@ function doImport(file){
       const p=JSON.parse(rd.result);
       const list=Array.isArray(p)?p:p.accounts;
       if(!Array.isArray(list))throw new Error("no accounts array");
+      const key=a=>(a.gameName+"#"+a.tagLine+"@"+a.region).toLowerCase();
+      const fileSeen=new Set();
       const cleaned=list.filter(a=>a&&a.gameName&&a.tagLine)
         // id last, not first: spreading the file's own fields over the defaults
         // meant the uid() was thrown away whenever the backup carried an id, so
@@ -4837,19 +4921,13 @@ function doImport(file){
         .map(a=>{
           const row=Object.assign({fav:false,stats:null,tags:[],history:[],status:"active",label:"",login:"",password:"",email:"",notes:"",region:"EUW"},a,
             {id:uid(),region:normRegion(a.region),status:normStatus(a.status)});
-          // A corrupt backup with history/tags as objects used to overwrite the
-          // array defaults and then throw inside migrateStats on the next boot.
-          if(!Array.isArray(row.tags))row.tags=[];
-          if(!Array.isArray(row.history))row.history=[];
-          if(row.stats&&row.stats.seasons&&typeof row.stats.seasons==="object"){
-            if(!Array.isArray(row.stats.seasons.solo))row.stats.seasons.solo=[];
-            if(!Array.isArray(row.stats.seasons.flex))row.stats.seasons.flex=[];
-          }
-          return row;
-        });
+          return sanitizeAccount(row);
+        })
+        // Same Riot ID twice in one file used to land as two rows with different
+        // ids — merge and replace both treated them as distinct.
+        .filter(a=>{const k=key(a);if(fileSeen.has(k))return false;fileSeen.add(k);return true});
       const merge=accounts.length>0&&confirm("OK = MERGE backup into current vault (adds only new accounts)\nCancel = replace everything instead");
       if(merge){
-        const key=a=>(a.gameName+"#"+a.tagLine+"@"+a.region).toLowerCase();
         const seen=new Set(accounts.map(key));
         const add=cleaned.filter(a=>!seen.has(key(a)));
         accounts=accounts.concat(add);
@@ -4893,6 +4971,7 @@ function parseCSV(text){
   return rows.filter(r=>r.length>1||r[0]);
 }
 function doImportCSV(file){
+  if(vaultLocked()){toast("Unlock the vault before importing");return}
   if(previewMode){previewMode=false;accounts=[]}
   const rd=new FileReader();
   rd.onload=async()=>{
@@ -4903,6 +4982,8 @@ function doImportCSV(file){
       // Only un-escape the apostrophe csvCell() adds when this is one of our own exports —
       // a third-party CSV whose password genuinely starts with ' must come through untouched.
       const ownExport=header.includes("gameName")&&header.includes("favorite")&&header.includes("lastUpdated");
+      const key=a=>(a.gameName+"#"+a.tagLine+"@"+a.region).toLowerCase();
+      const fileSeen=new Set();
       const list=rows.slice(1).map(r=>{
         const get=name=>{
           const i=header.indexOf(name);
@@ -4912,19 +4993,19 @@ function doImportCSV(file){
         const gameName=get("gameName"),tagLine=get("tagLine");
         if(!gameName||!tagLine)return null;
         const tier=get("tier");
-        return{
+        return sanitizeAccount({
           id:uid(),tags:get("tags")?get("tags").split("|").filter(Boolean):[],history:[],
           label:get("label"),region:normRegion(get("region")),gameName,tagLine,status:normStatus(get("status")),
           login:get("login"),password:get("password"),email:get("email"),notes:get("notes"),
           createdOn:get("createdOn"),birthdate:get("birthdate"),
           fav:get("favorite")==="yes",
           stats:tier?{found:true,tier,division:normDivision(tier,get("division")||null),lp:get("lp")?+get("lp"):null,wins:get("wins")?+get("wins"):null,losses:get("losses")?+get("losses"):null,level:get("level")?+get("level"):null,mmr:null,avgRecent:null,asOf:"CSV import",note:null,updatedAt:get("lastUpdated")?new Date(get("lastUpdated")).getTime()||null:null}:null
-        };
-      }).filter(Boolean);
+        });
+      }).filter(Boolean)
+        .filter(a=>{const k=key(a);if(fileSeen.has(k))return false;fileSeen.add(k);return true});
       if(!list.length)throw new Error("no rows");
       const merge=accounts.length>0&&confirm("OK = MERGE CSV into current vault (adds only new accounts)\nCancel = replace everything instead");
       if(merge){
-        const key=a=>(a.gameName+"#"+a.tagLine+"@"+a.region).toLowerCase();
         const seen=new Set(accounts.map(key));
         const add=list.filter(a=>!seen.has(key(a)));
         accounts=accounts.concat(add);
@@ -4976,6 +5057,14 @@ function loadDemo(){
 $("bAdd").addEventListener("click",()=>$("form").classList.contains("hidden")?openForm(null):closeForm());
 $("fSave").addEventListener("click",submitForm);
 $("fCancel").addEventListener("click",closeForm);
+// Enter in a field submits the form — except inside the notes textarea, where it
+// still means a newline.
+$("form").addEventListener("keydown",e=>{
+  if(e.key!=="Enter")return;
+  if(e.target&&e.target.tagName==="TEXTAREA")return;
+  e.preventDefault();
+  submitForm();
+});
 // A CSS-masked text field only stays secret where the browser implements
 // text-security. Anywhere it doesn't, a stored password would sit on screen in
 // clear — so those browsers get a real password field back, prompt and all.
@@ -5012,11 +5101,19 @@ document.addEventListener("keydown",e=>{
      and toasted "Nothing in the vault yet". Same idea while Help or Settings is
      up — the page behind the dialog is not the thing being typed at. */
   if(vaultLocked()){
-    if(e.key==="Escape")closeAllPanels();
+    if(e.key==="Escape"){
+      if($("accPrev").classList.contains("show")){hideAccPrev();return}
+      closeAllPanels();
+    }
     return;
   }
   if(openModals().some(m=>m.id!=="palette")){
-    if(e.key==="Escape"){closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}}
+    if(e.key==="Escape"){
+      // Colour miniature alone — Escape used to close Settings while the picker
+      // was the thing being dismissed.
+      if($("accPrev").classList.contains("show")){hideAccPrev();return}
+      closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}
+    }
     return;
   }
   const tag=document.activeElement?document.activeElement.tagName:"";
@@ -5031,7 +5128,10 @@ document.addEventListener("keydown",e=>{
   if(e.key==="/"&&!typing){e.preventDefault();$("tSearch").focus()}
   if(e.key==="n"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();openForm(null)}
   if(e.key==="f"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$("tFav").click()}
-  if(e.key==="Escape"){closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}}
+  if(e.key==="Escape"){
+    if($("accPrev").classList.contains("show")){hideAccPrev();return}
+    closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}
+  }
 });
 // mousemove alone fires a hundred times a second while the pointer is moving, and
 // all any of these do is stamp a clock. A second's resolution is far finer than
@@ -5109,10 +5209,14 @@ function syncModals(){
     }
     const el=open[0];
     if(!el.contains(document.activeElement)){
-      // the first real field, not the ✕ — landing on Close reads as "are you sure
-      // you meant to open this". Help has no fields, so it falls through to it.
-      const first=el.querySelector("input:not([type=hidden]),select,textarea")||el.querySelector("button");
-      if(first)first.focus();
+      // Help's primary action is Got it — landing on ✕ reads as "leave", not "read".
+      if(el.id==="help"){const got=$("bHelpClose");if(got)got.focus()}
+      else{
+        // the first real field, not the ✕ — landing on Close reads as "are you sure
+        // you meant to open this".
+        const first=el.querySelector("input:not([type=hidden]),select,textarea")||el.querySelector("button");
+        if(first)first.focus();
+      }
     }
   }else if(modalReturn){
     // Back to whatever opened it, so the keyboard doesn't restart at the top of
@@ -5189,7 +5293,8 @@ $("sSave").addEventListener("click",async()=>{
     wantNotify=false;$("sNotify").checked=false;notifyNote=" — notifications are blocked in the browser's site settings";
   }
   if(saveGen!==settingsSaveGen)return;
-  cfg.apiKey=$("sKey").value.trim();cfg.model=$("sModel").value;cfg.autoCheck=$("sAuto").checked;cfg.autoEveryHours=+$("sAutoEvery").value;cfg.autoRankedOnly=$("sAutoRanked").checked;
+  cancelAccentPreview();
+  cfg.apiKey=$("sKey").value.trim();cfg.model=$("sModel").value;cfg.autoCheck=$("sAuto").checked;cfg.autoEveryHours=coerceAutoEvery($("sAutoEvery").value);cfg.autoRankedOnly=$("sAutoRanked").checked;
   cfg.backendUrl=backendOk;$("sBackend").value=backendOk;
   cfg.notify=wantNotify;
   cfg.discordWebhook=whOk;$("sDiscord").value=whOk;
@@ -5560,6 +5665,7 @@ $("awayBand").addEventListener("click",e=>{
       for(const x of sum.down)awayDelta.set(x.a.id,x.d);
     }
     ui.sort="away";
+    $("tSort").value="away";
     render();
   }
   // Dismissed for good, not until the next render: the visit it was reporting on
@@ -5700,23 +5806,37 @@ $("palList").addEventListener("click",e=>{
 });
 $("count").addEventListener("click",e=>{
   const b=e.target.closest("[data-flag]");if(!b)return;
-  ui.flag=ui.flag===b.dataset.flag?"":b.dataset.flag;render();
+  ui.flag=ui.flag===b.dataset.flag?"":b.dataset.flag;
+  if(ui.flag)ui.tier=""; // "show only these" is one filter at a time
+  render();
 });
 $("ribbon").addEventListener("click",e=>{
-  // the never-checked band filters by flag, the way the stats tile for the same
-  // accounts does — every other band is a tier
+  // the never-checked / not-found bands filter by flag; every other band is a tier
   const flag=e.target.closest("[data-flag]");
-  if(flag){ui.flag=ui.flag===flag.dataset.flag?"":flag.dataset.flag;render();return}
+  if(flag){
+    ui.flag=ui.flag===flag.dataset.flag?"":flag.dataset.flag;
+    if(ui.flag)ui.tier="";
+    render();return;
+  }
   const seg=e.target.closest("[data-tier]");if(!seg)return;
   ui.tier=ui.tier===seg.dataset.tier?"":seg.dataset.tier;
+  if(ui.tier)ui.flag="";
   render();
 });
 $("dash").addEventListener("click",e=>{
   // every count answers "how many"; clicking it answers "which ones"
   const flag=e.target.closest("[data-flag]");
-  if(flag){ui.flag=ui.flag===flag.dataset.flag?"":flag.dataset.flag;render();return}
+  if(flag){
+    ui.flag=ui.flag===flag.dataset.flag?"":flag.dataset.flag;
+    if(ui.flag)ui.tier="";
+    render();return;
+  }
   const tier=e.target.closest("[data-tier]");
-  if(tier){ui.tier=ui.tier===tier.dataset.tier?"":tier.dataset.tier;render()}
+  if(tier){
+    ui.tier=ui.tier===tier.dataset.tier?"":tier.dataset.tier;
+    if(ui.tier)ui.flag="";
+    render();
+  }
 });
 $("chips").addEventListener("click",e=>{
   const b=e.target.closest("[data-clear]");if(!b)return;
@@ -5771,7 +5891,7 @@ $("bulkDelete").addEventListener("click",()=>{
   const n=selected.size;
   if(!confirm("Delete "+n+" selected account"+(n===1?"":"s")+"? This can't be undone."))return;
   accounts=accounts.filter(a=>!selected.has(a.id));
-  selected.clear();saveDB();render();
+  selected.clear();lastSelectedId=null;saveDB();render();
   toast(n+" account"+(n===1?"":"s")+" deleted");
 });
 $("bulkClear").addEventListener("click",()=>{selected.clear();lastSelectedId=null;render()});
@@ -5959,7 +6079,9 @@ $("grid").addEventListener("click",async e=>{
   else if(act==="del"){
     if(armedDelete===id){
       const idx=accounts.findIndex(a=>a.id===id);const removed=accounts[idx];
-      accounts=accounts.filter(a=>a.id!==id);armedDelete=null;saveDB();render();
+      accounts=accounts.filter(a=>a.id!==id);armedDelete=null;
+      selected.delete(id);if(lastSelectedId===id)lastSelectedId=null;
+      saveDB();render();
       // Undo must not fire after an auto-lock — that would put passwords back into
       // memory (and the hidden DOM) while the lock screen is up.
       toast("Account deleted","Undo",()=>{
@@ -6043,9 +6165,10 @@ async function tryUnlock(){
   $("lockBtn").disabled=true;
   try{
     const data=await decryptData(pass,currentEnvelope);
-    accounts=(Array.isArray(data)?data:[]).map(a=>{if(a)a.id=safeAccountId(a.id);return a}).filter(Boolean);
+    accounts=(Array.isArray(data)?data:[]).map(sanitizeAccount).filter(Boolean);
     vaultPassword=pass;
     $("lockErr").style.display="none";
+    $("lockPass").value="";
     $("lock").classList.add("hidden");
     lastActivity=Date.now();
     startApp();
@@ -6074,16 +6197,22 @@ function relock(){
     const parsed=raw?JSON.parse(raw):null;
     if(parsed&&parsed.__enc)envelope=parsed;
   }catch(e){}
-  if(!envelope)return;
+  // Disk may briefly lack an envelope (quota mid-write, failed set-password). Prefer
+  // the envelope we unlocked with over fail-opening with secrets still in memory.
+  if(!envelope)envelope=currentEnvelope;
   // The derived key goes with the password: leaving it behind would keep the one
   // thing that opens the vault sitting in memory across a lock.
   vaultPassword=null;forgetVaultKey();accounts=[];
   dismissToast(); // drop Delete→Undo before it can rehydrate secrets into a locked vault
   // Clear a copied account password if we still know what it was — lock does not
-  // mean "leave the last password on the clipboard for thirty seconds".
+  // mean "leave the last password on the clipboard for thirty seconds". Write
+  // empty directly; requiring a successful read first left the secret hanging on
+  // browsers that allow write but not read.
   if(lastCopiedSecret){
-    const v=lastCopiedSecret;lastCopiedSecret=null;
-    try{navigator.clipboard.readText().then(t=>{if(t===v)navigator.clipboard.writeText("")}).catch(()=>{})}catch(e){}
+    const v=lastCopiedSecret;
+    try{
+      navigator.clipboard.writeText("").then(()=>{if(lastCopiedSecret===v)lastCopiedSecret=null}).catch(()=>{});
+    }catch(e){}
   }
   // A run has no business carrying on against a vault nobody can read: it finishes
   // the account it is on and stops, instead of fetching sixty profiles to write
@@ -6105,7 +6234,7 @@ function relock(){
   closeAllPanels();
   $("appRoot").classList.add("hidden");
   syncLockTimer(); // nothing left to lock until the vault is opened again
-  showLockScreen(envelope);
+  if(envelope)showLockScreen(envelope);
 }
 function boot(){
   $("fRegion").innerHTML=Object.keys(REGIONS).map(r=>`<option value="${r}">${esc(r)} — ${esc(REGIONS[r].full)}</option>`).join("");
@@ -6117,6 +6246,22 @@ function boot(){
   if(!hasStorage){$("banner").classList.add("show")}
   try{const c=hasStorage?localStorage.getItem(CFG_KEY):null;if(c)cfg=Object.assign(cfg,JSON.parse(c))}catch(e){}
   if(MODEL_ALIASES[cfg.model]){cfg.model=MODEL_ALIASES[cfg.model];saveCfg()}
+  {
+    let cfgDirty=false;
+    const every=coerceAutoEvery(cfg.autoEveryHours);
+    if(cfg.autoEveryHours!==every){cfg.autoEveryHours=every;cfgDirty=true}
+    if(cfg.discordWebhook){
+      const ok=validDiscordWebhook(cfg.discordWebhook);
+      if(!ok){cfg.discordWebhook="";cfgDirty=true}
+      else if(ok!==cfg.discordWebhook){cfg.discordWebhook=ok;cfgDirty=true}
+    }
+    if(cfg.backendUrl){
+      const ok=validBackendUrl(cfg.backendUrl);
+      if(!ok){cfg.backendUrl="";cfgDirty=true}
+      else if(ok!==cfg.backendUrl){cfg.backendUrl=ok;cfgDirty=true}
+    }
+    if(cfgDirty)saveCfg();
+  }
   fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);
   if(cfg.accent)applyAccent(cfg.accent);
   if(cfg.accent2)applyAccent2(cfg.accent2);
@@ -6126,13 +6271,13 @@ function boot(){
     const raw=hasStorage?localStorage.getItem(DB_KEY):null;
     const parsed=raw?JSON.parse(raw):null;
     if(parsed&&parsed.__enc)envelope=parsed;
-    else if(Array.isArray(parsed))accounts=parsed.map(a=>{if(a)a.id=safeAccountId(a.id);return a}).filter(Boolean);
+    else if(Array.isArray(parsed))accounts=parsed.map(sanitizeAccount).filter(Boolean);
     /* An export file is {app, version, accounts}, not a bare array. Dropping that
        into localStorage — or restoring a backup with a tool that writes the file
        body straight into the key — used to boot an empty vault: Array.isArray on
        the object is false, and nothing else looked. The next saveDB writes the
        array shape back, so this is only a one-time rescue. */
-    else if(parsed&&Array.isArray(parsed.accounts))accounts=parsed.accounts.map(a=>{if(a)a.id=safeAccountId(a.id);return a}).filter(Boolean);
+    else if(parsed&&Array.isArray(parsed.accounts))accounts=parsed.accounts.map(sanitizeAccount).filter(Boolean);
   }catch(e){}
   if(envelope)showLockScreen(envelope);
   else startApp();

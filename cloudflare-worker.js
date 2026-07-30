@@ -42,7 +42,16 @@ export default {
       if (!name || !tag) return json({ error: "missing name/tag" }, 400);
 
       const base = `https://op.gg/lol/summoners/${encodeURIComponent(region)}/${encodeURIComponent(name)}-${encodeURIComponent(tag)}`;
-      const get = u => fetch(u, { headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" } });
+      // Bound every op.gg fetch — a hung upstream used to pin the whole Worker
+      // isolate until the platform's own limit, with the client waiting on us.
+      const get = u => {
+        const c = new AbortController();
+        const t = setTimeout(() => c.abort(), 12000);
+        return fetch(u, {
+          headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" },
+          signal: c.signal,
+        }).finally(() => clearTimeout(t));
+      };
 
       // The per-champion season totals are not on the profile page — they live on
       // /champions. Both are requested at once, so the extra data costs no extra
@@ -108,12 +117,12 @@ export function htmlToText(html) {
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&amp;/g, "&")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&amp;/gi, "&")
     .replace(/\s+/g, " ")
     .trim();
 }

@@ -231,7 +231,7 @@ test("esc() neutralizes HTML so pasted/typed data can't inject markup", () => {
   assert.equal(win.esc(`"quoted" & 'stuff'`), "&quot;quoted&quot; &amp; &#39;stuff&#39;");
 });
 
-test("applyStats: dedupes unchanged ranks (refreshes timestamp, no new history row) and flags tier-ups", () => {
+test("applyStats: dedupes unchanged ranks (keeps stamp, no new history row) and flags tier-ups", () => {
   const win = bootApp();
   const acc = { history: [] };
   assert.equal(win.applyStats(acc, { found: true, tier: "GOLD", division: "II", lp: 40, updatedAt: 1 }), false);
@@ -239,7 +239,7 @@ test("applyStats: dedupes unchanged ranks (refreshes timestamp, no new history r
 
   assert.equal(win.applyStats(acc, { found: true, tier: "GOLD", division: "II", lp: 40, updatedAt: 2 }), false);
   assert.equal(acc.history.length, 1, "unchanged rank must not push a new history entry");
-  assert.equal(acc.history[0].t, 2, "unchanged rank must still refresh the timestamp");
+  assert.equal(acc.history[0].t, 1, "a no-op refresh without lpAt must not drag the stamp forward");
 
   assert.equal(win.applyStats(acc, { found: true, tier: "PLATINUM", division: "IV", lp: 0, updatedAt: 3 }), true);
   assert.equal(acc.history.length, 2);
@@ -1335,6 +1335,8 @@ test("the GM and Challenger floors are read off the ladder page's medal alt text
     + '<li><img alt="grandmaster" src="y.png"><strong>1,785 LP</strong> 747 Summoners</li>';
   assert.deepEqual({ ...win.parseCutoffs(html) }, { chall: 2417, gm: 1785 });
   assert.equal(win.parseCutoffs("Rank Up in 3 Days! Challenger Coaching"), null, "an ad is not a floor");
+  assert.equal(win.parseCutoffs("![challenger](x) **250 LP** coaching"), null,
+    "an implausibly low Challenger figure is an ad, not a ladder floor");
 });
 
 test("the chart draws the GM/Challenger floors only where the view reaches them", () => {
@@ -1626,10 +1628,11 @@ test("a history point is dated by when the LP was reached, not by when we looked
   assert.equal(acc.history[0].t, reached, "and it keeps the date the LP was reached");
 
   // with nothing said about when it was reached, the check time is all there is
+  // on the *first* write — a later no-op refresh must not drag that stamp forward.
   const acc3 = { id: "h3", history: [] };
   win.applyStats(acc3, { found: true, tier: "GOLD", division: "II", lp: 40, updatedAt: 1000 });
   win.applyStats(acc3, { found: true, tier: "GOLD", division: "II", lp: 40, updatedAt: 2000 });
-  assert.equal(acc3.history[0].t, 2000, "which does move, since it is the only date there is");
+  assert.equal(acc3.history[0].t, 1000, "a no-op refresh without lpAt keeps the original stamp");
 
   // and a shape that cannot be trusted is dropped rather than bending the chart
   assert.equal(win.normLpAt({ t: Date.now() + 9e9, tier: "GOLD", lp: 5 }), null, "no future dates");
@@ -1815,7 +1818,7 @@ test("ranked-only skips accounts known to have no rank, but not ones never check
   const acc = (tier, ageHours) => ({ status: "active",
     stats: tier ? { found: true, tier, updatedAt: now - ageHours * 3600e3 } : null });
 
-  setAutoCheck(win, { hours: 1, rankedOnly: true });
+  setAutoCheck(win, { hours: 0.5, rankedOnly: true });
   assert.equal(win.autoCheckDue(acc("GOLD", 9)), true);
   assert.equal(win.autoCheckDue(acc("UNRANKED", 9)), false, "an unranked account answers the same every time");
   // a never-checked account has no rank *yet*; skipping it would leave it stuck
@@ -1826,7 +1829,7 @@ test("ranked-only skips accounts known to have no rank, but not ones never check
     stats: { note: "Auto-fetch failed (timeout) — enter it by hand with ✎ Rank" } }), true,
     "a note without a reading is not 'known unranked'");
 
-  setAutoCheck(win, { hours: 1, rankedOnly: false });
+  setAutoCheck(win, { hours: 0.5, rankedOnly: false });
   assert.equal(win.autoCheckDue(acc("UNRANKED", 9)), true, "off again, unranked is back in");
 });
 
@@ -4029,4 +4032,110 @@ test("the offline cache is registered even when the vault had to be unlocked fir
   win.document.getElementById("lockBtn").click();
   await until(() => win.document.getElementById("lock").classList.contains("hidden"), "the vault to unlock");
   assert.deepEqual(asked, ["sw.js"], "unlocking registers it, rather than waiting for an event that has passed");
+});
+
+// ---- next-round regressions ----
+
+test("trailing Unranked is not a climb rate or a sparkline to the old peak", () => {
+  const win = bootApp();
+  const now = Date.now();
+  const hist = [
+    { t: now - 3 * 86400000, tier: "GOLD", division: "II", lp: 40 },
+    { t: now - 86400000, tier: "GOLD", division: "I", lp: 80 },
+    { t: now, tier: "UNRANKED", division: null, lp: null },
+  ];
+  assert.equal(win.climbRate(hist), null);
+  assert.equal(win.sparkline(hist, "#e6c15a"), "");
+});
+
+test("card delta chip uses lastDelta, not a raw ladder subtract across Unranked", () => {
+  const seed = [{
+    id: "d1", gameName: "Delta", tagLine: "EUW", region: "EUW", status: "active",
+    history: [
+      { t: 1, tier: "GOLD", division: "II", lp: 40 },
+      { t: 2, tier: "UNRANKED", division: null, lp: null },
+    ],
+    stats: { found: true, tier: "UNRANKED", division: null, lp: null, updatedAt: 2 },
+  }];
+  const win = bootApp(seed);
+  assert.equal(win.lastDelta(win.filtered()[0]), 0);
+  assert.equal(win.document.querySelector(".delta"), null, "no invented crash chip on the card");
+});
+
+test("Not found on the ribbon filters missing profiles, not every flagged account", () => {
+  const seed = [
+    { id: "m1", gameName: "Gone", tagLine: "EUW", region: "EUW", status: "active",
+      flagged: true, stats: { found: false, updatedAt: 1 }, history: [] },
+    { id: "m2", gameName: "Hand", tagLine: "EUW", region: "EUW", status: "active",
+      flagged: true, stats: { found: true, tier: "GOLD", division: "II", lp: 10, updatedAt: 1 }, history: [] },
+    { id: "m3", gameName: "Fine", tagLine: "EUW", region: "EUW", status: "active",
+      stats: { found: true, tier: "SILVER", division: "I", lp: 20, updatedAt: 1 }, history: [] },
+  ];
+  const win = bootApp(seed);
+  const miss = win.document.querySelector('.rib-seg[data-flag="missing"]');
+  assert.ok(miss, "Not found is its own band");
+  assert.equal(miss.querySelector("i").textContent, "1");
+  miss.click();
+  assert.equal(win.document.querySelectorAll(".card").length, 1);
+  assert.equal(win.document.querySelector(".card").dataset.id, "m1");
+});
+
+test("preview mode refuses to export example data", () => {
+  const win = bootApp();
+  win.document.getElementById("bDemo").click();
+  assert.equal(win.document.getElementById("previewBanner").classList.contains("hidden"), false);
+  let clicked = false;
+  const orig = win.HTMLAnchorElement.prototype.click;
+  win.HTMLAnchorElement.prototype.click = function () { clicked = true; return orig.call(this); };
+  try {
+    win.doExport();
+    assert.equal(clicked, false, "no download starts");
+    assert.match(win.document.getElementById("toast").textContent, /preview/i);
+  } finally {
+    win.HTMLAnchorElement.prototype.click = orig;
+  }
+});
+
+test("a corrupt autoEveryHours does not make every account due", () => {
+  const win = bootApp([{
+    id: "a1", gameName: "Fresh", tagLine: "EUW", region: "EUW", status: "active",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 40, updatedAt: Date.now() - 3600000 },
+    history: [],
+  }], w => {
+    w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ autoCheck: false, autoEveryHours: "" }));
+  });
+  assert.equal(win.coerceAutoEvery(""), 72);
+  assert.equal(win.autoCheckDue(win.filtered()[0]), false,
+    "one hour old is not stale under the default 3-day cadence");
+});
+
+test("Escape on the colour miniature leaves Settings open", () => {
+  const win = bootApp();
+  win.document.getElementById("bSettings").click();
+  win.document.getElementById("sAccent").dispatchEvent(new win.Event("click", { bubbles: true }));
+  // force the miniature open the way showAccPrev does
+  const prev = win.document.getElementById("accPrev");
+  prev.classList.add("show");
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(prev.classList.contains("show"), false, "miniature hides");
+  assert.equal(win.document.getElementById("settings").classList.contains("hidden"), false,
+    "Settings stays open");
+});
+
+test("rank panel draft survives a remorph while open", () => {
+  const win = bootApp([{
+    id: "r1", gameName: "Draft", tagLine: "EUW", region: "EUW", status: "active",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 40, updatedAt: 1 }, history: [],
+  }]);
+  const card = win.document.querySelector('.card[data-id="r1"]');
+  assert.ok(card);
+  card.querySelector('[data-act="more"]').click();
+  card.querySelector('[data-act="rank"]').click();
+  const lp = win.document.querySelector('[data-f="lp"]');
+  assert.ok(lp, "rank panel opened");
+  lp.value = "99";
+  lp.dispatchEvent(new win.Event("input", { bubbles: true }));
+  win.renderCard("r1");
+  assert.equal(win.document.querySelector('[data-f="lp"]').value, "99",
+    "Refresh remorph must not wipe an unsaved Rank edit");
 });

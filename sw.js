@@ -2,8 +2,9 @@
 // (e.g. GitHub Pages) — service workers cannot register on file:// pages, so
 // opening the HTML file directly just skips all of this, which is fine.
 // Bump SW cache so the comment/asset fix reaches hosted installs.
-const CACHE = "smurf-tracker-cache-v54";
-const ASSETS = ["./", "./index.html", "./manifest.json"];
+const CACHE = "smurf-tracker-cache-v55";
+// index.html is the shell; "./" was a redundant second cache of the same document.
+const ASSETS = ["./index.html", "./manifest.json"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
@@ -37,6 +38,7 @@ self.addEventListener("fetch", e => {
         }
         return res;
       })
-      .catch(() => caches.match(e.request).then(cached => cached || Promise.reject(new Error("offline and not cached"))))
+      .catch(() => caches.match(e.request).then(cached =>
+        cached || caches.match("./index.html").then(shell => shell || Promise.reject(new Error("offline and not cached")))))
   );
 });
