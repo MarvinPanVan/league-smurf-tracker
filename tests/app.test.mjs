@@ -1906,10 +1906,10 @@ test("the floor narrows what the dashboard counts, and says how many it left out
   const sel = () => win.document.getElementById("dashMin");
   const summary = () => win.document.querySelector(".dash-ex").textContent.replace(/s+/g, " ").trim();
 
-  assert.match(summary(), /^4 of 4 ranked$/);
+  assert.match(summary(), /^3 of 3 ranked$/, "demo's banned ranked account is left out of combined counts");
   sel().value = "PLATINUM";
   sel().dispatchEvent(new win.Event("change", { bubbles: true }));
-  assert.match(summary(), /^1 of 4 ranked · 3 left out$/);
+  assert.match(summary(), /^1 of 3 ranked · 2 left out$/);
 });
 
 test("combined champion stats are weighted by games, not by winrate", () => {
@@ -4267,7 +4267,8 @@ test("isFailed ignores season-reset and other informational notes", () => {
   assert.equal(win.isFailed({ stats: { found: false } }), false,
     "Not found is its own filter — not a failed refresh");
   assert.equal(win.isFailed({ stats: { found: true, note: "Auto-fetch failed (timeout) — enter it by hand" } }), true);
-  assert.equal(win.isFailed({ stats: { found: true, note: "failed (backend down)" } }), true);
+  assert.equal(win.isFailed({ stats: { found: true, note: "failed (backend down)" } }), false,
+    "generic 'failed (' is not a transport-fail marker anymore");
   assert.equal(win.isFailed({
     stats: { found: true, tier: "UNRANKED", note: "Season was reset — previous rank kept", asOf: "season-reset" },
   }), false, "season-reset must not look like a failed refresh");
@@ -4939,4 +4940,39 @@ test("genSyncToken is long enough for the worker", () => {
   assert.equal(win.vaultSyncUrl(), "");
   runScript(win, 'cfg.backendUrl="https://example.workers.dev";');
   assert.equal(win.vaultSyncUrl(), "https://example.workers.dev/vault");
+});
+
+test("pushVaultSync sends content vaultRev, not a fresh Date.now stamp", async () => {
+  const win = bootApp([{ id: "a1", region: "EUW", gameName: "A", tagLine: "1", status: "active",
+    tags: [], history: [], stats: null }]);
+  runScript(win, `
+    vaultPassword = "test-pass-1234";
+    cfg.backendUrl = "https://example.workers.dev";
+    cfg.syncToken = "sync-token-abcdef12";
+    cfg.vaultRev = 1234567890000;
+  `);
+  let body = null;
+  win.fetch = async (url, opts) => {
+    assert.match(String(url), /\/vault$/);
+    assert.equal(opts.method, "PUT");
+    body = JSON.parse(opts.body);
+    return new win.Response(JSON.stringify({ ok: true, updatedAt: body.updatedAt }), { status: 200 });
+  };
+  await win.pushVaultSync();
+  assert.equal(body.updatedAt, 1234567890000, "must not stamp Date.now() over the content rev");
+  assert.ok(body.envelope && body.envelope.__enc);
+});
+
+test("ribbon never-checked count matches the dash tile for tier-without-timestamp", () => {
+  const win = bootApp([
+    { id: "a", region: "EUW", gameName: "HasTier", tagLine: "1", status: "active", tags: [], history: [],
+      stats: { found: true, tier: "GOLD", division: "II", lp: 10 } }, // no updatedAt
+    { id: "b", region: "EUW", gameName: "Empty", tagLine: "2", status: "active", tags: [], history: [], stats: null },
+    { id: "c", region: "EUW", gameName: "Ok", tagLine: "3", status: "active", tags: [], history: [],
+      stats: { found: true, tier: "SILVER", division: "I", lp: 0, updatedAt: Date.now() } },
+  ]);
+  const dashNever = win.document.querySelector('#dash [data-flag="unchecked"] .v');
+  assert.ok(dashNever);
+  assert.equal(dashNever.textContent.trim(), "2");
+  assert.match(win.document.querySelector(".rib-cap").textContent, /2 never checked/);
 });
