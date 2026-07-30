@@ -2362,7 +2362,7 @@ function groupColor(k){
 // but never how far, or through which ranks. This draws the ladder itself —
 // a coloured band per tier, division hairlines when the view is tight enough for
 // them to mean anything, and every check as its own hoverable point.
-function rankChart(hist,cut,mode,key,peakV){
+function rankChart(hist,cut,mode,key,peakV,peakLabel){
   let pts=(hist||[]).map(h=>({h,v:ladderLP(h)})).filter(p=>p.v!==null);
   // A brand new account has exactly one check, and showing it nothing at all was
   // the least useful answer available — one point still says where on the ladder
@@ -2474,7 +2474,7 @@ function rankChart(hist,cut,mode,key,peakV){
     // current rank is the common case, and there the caption is right at the top
     // and swallowed the label every time, leaving a dashed line explaining nothing.
     if(!cutYs.some(cy=>Math.abs(y-cy)<11))
-      labels+=`<span class="lpc-peak" style="top:${(y-9.5).toFixed(1)}px">Peak</span>`;
+      labels+=`<span class="lpc-peak" style="top:${(y-9.5).toFixed(1)}px" title="${esc(peakLabel||"Season peak")}">Peak</span>`;
     cutYs.push(y);   // and an LP numeral must not land on it either
   }
 
@@ -4229,11 +4229,16 @@ function winLoss(s){
   return{w,l,total,wr:(w!=null&&l!=null&&total>0)?Math.round(w/total*100):null};
 }
 /* Highest known ladder point for the peak rail on charts — shared by cards and
-   the expanded list row so one layout does not draw a peak the other suppresses. */
+   the expanded list row so one layout does not draw a peak the other suppresses.
+   Sources, all fallible on their own: op.gg's "Top tier" badge, this app's check
+   history, past Solo seasons on the profile, and a manual override. Peak is only
+   shown when it is genuinely above the current rank — sitting at your season high
+   is not a second number to print. */
 function peakInfo(a){
   const s=a.stats, hist=a.history||[];
   let bestE=null,bestV=-1;
-  const cands=hist.concat([s&&s.peak,a.peakManual].filter(Boolean));
+  const seasons=((s&&s.seasons&&s.seasons.solo)||[]);
+  const cands=hist.concat(seasons,[s&&s.peak,a.peakManual].filter(Boolean));
   for(const h of cands){const v=ladderLP(h);if(v!==null&&v>bestV){bestV=v;bestE=h}}
   const cur=ladderLP(s);
   if(bestE&&(cur===null||bestV>cur))return{peak:shortRank(bestE),peakV:bestV};
@@ -4282,7 +4287,7 @@ function rowHTML(a,i){
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     ${open?`<div class="rw-open">
-      ${rankChart(a.history||[],cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(a.history||[]),a.id,peakInfo(a).peakV)}
+      ${(()=>{const p=peakInfo(a);return rankChart(a.history||[],cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(a.history||[]),a.id,p.peakV,p.peak)})()}
       ${infoBlockHTML(a)||""}
       ${noteBlockHTML(a)}
       <div class="acts">
@@ -4453,7 +4458,7 @@ function cardHTML(a,i){
         <div class="goal-bar"><i style="width:${pct}%;background:${gcol}"></i></div>
       </div>`;
     })()}
-    ${rankChart(hist,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(hist),a.id,peakV)}
+    ${rankChart(hist,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(hist),a.id,peakV,peak)}
     ${microStats.length?`<div class="c-stats">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(a.tags||[]).length?`<div class="ctags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""}
@@ -5445,12 +5450,14 @@ document.addEventListener("pointerdown",e=>{
   if(t&&t.closest&&(t.closest("#sAccentReset1")||t.closest("#sAccentReset2")))return;
   hideAccPrev();
 },true);
-// A reset is a value you have chosen, so it behaves like choosing one: it previews,
-// Save keeps it, Close puts the old one back.
+// Reset is undo, not "pick a colour" — opening the miniature beside the native
+// picker made ↺ look like it had opened the colour dialog.
 function resetAccent(which){
   cancelAccentPreview();
-  if(which==="primary"){$("sAccent").value=DEFAULT_ACCENT;applyAccent(DEFAULT_ACCENT);showAccPrev($("sAccent"))}
-  else{$("sAccent2").value=DEFAULT_ACCENT2;applyAccent2(DEFAULT_ACCENT2);showAccPrev($("sAccent2"))}
+  hideAccPrev();
+  accPrevSuppressUntil=Date.now()+350;
+  if(which==="primary"){$("sAccent").value=DEFAULT_ACCENT;applyAccent(DEFAULT_ACCENT)}
+  else{$("sAccent2").value=DEFAULT_ACCENT2;applyAccent2(DEFAULT_ACCENT2)}
 }
 $("sAccentReset1").addEventListener("click",()=>resetAccent("primary"));
 $("sAccentReset2").addEventListener("click",()=>resetAccent("secondary"));

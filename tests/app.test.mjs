@@ -1011,6 +1011,7 @@ test("each accent resets on its own, and a reset is only kept by Save", () => {
   assert.equal(read("--teal"), "#00ff00", "and the secondary was not touched");
   assert.equal($("sAccent").value, DEFAULT_ACCENT, "the picker follows too");
   assert.equal(cfg().accent, "#ff0000", "nothing is saved yet");
+  assert.equal($("accPrev").classList.contains("show"), false, "reset does not open the colour miniature");
 
   $("sClose").click();
   assert.equal(read("--gold"), "#ff0000", "so closing puts the old colour back");
@@ -4138,4 +4139,28 @@ test("rank panel draft survives a remorph while open", () => {
   win.renderCard("r1");
   assert.equal(win.document.querySelector('[data-f="lp"]').value, "99",
     "Refresh remorph must not wipe an unsaved Rank edit");
+});
+
+test("peakInfo prefers a higher past Solo season when Top tier is missing", () => {
+  const win = bootApp();
+  const a = {
+    history: [{ t: 1, tier: "GOLD", division: "II", lp: 40 }],
+    stats: {
+      found: true, tier: "GOLD", division: "II", lp: 40,
+      seasons: { solo: [{ season: "S2025", tier: "PLATINUM", division: "I", lp: 20 }], flex: [] },
+    },
+  };
+  const p = win.peakInfo(a);
+  assert.equal(p.peak, "Platinum I · 20 LP");
+  assert.ok(p.peakV > win.ladderLP(a.stats));
+});
+
+test("peakInfo stays quiet when the account is already at its high", () => {
+  const win = bootApp();
+  const a = {
+    history: [{ t: 1, tier: "GOLD", division: "IV", lp: 10 }, { t: 2, tier: "GOLD", division: "II", lp: 40 }],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 40 },
+  };
+  assert.equal(win.peakInfo(a).peak, null);
+  assert.equal(win.peakInfo(a).peakV, null);
 });
