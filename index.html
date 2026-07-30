@@ -2056,8 +2056,15 @@ const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / 
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.8.1";
+const APP_VERSION="1.8.2";
 const APP_CHANGELOG=[
+  {v:"1.8.2",items:[
+    "Sync LWW fix: Push uses content rev (no Date.now overwrite of newer cloud)",
+    "Pull conflict confirms; sanitize + save-failure handling",
+    "Dash: banned out of Season W/L; ribbon never-checked matches filter",
+    "Check-all: one disk write at end; fail path refreshes dash tiles",
+    "Wall scroll height, Group climb forward-fill, rib-seg hover isolation",
+  ]},
   {v:"1.8.1",items:[
     "Group climb: real hover tip + plain-language note (was broken SVG title)",
   ]},
