@@ -336,10 +336,18 @@
   .stat .k{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:7px}
   .stat .v{font-size:20px;font-weight:600;color:var(--text);line-height:1.25;letter-spacing:-.015em;font-variant-numeric:tabular-nums}
   .stat .v small{font-size:11.5px;color:var(--muted);font-weight:400;letter-spacing:0}
-  .stat .v.spark-wrap{font-size:12px;line-height:1.2;overflow:hidden;max-width:100%;width:100%}
-  .pool-spark{display:block;width:100%;max-width:100%;height:36px;margin-top:2px;opacity:.9;overflow:hidden}
-  .pool-spark circle{fill:var(--teal);stroke:var(--panel);stroke-width:1.5;cursor:help}
-  .pool-spark .pool-hit{fill:transparent;stroke:none;cursor:help}
+  .stat .v.spark-wrap{font-size:12px;line-height:1.2;overflow:visible;max-width:100%;width:100%;position:relative}
+  .pool-spark{display:block;width:100%;max-width:100%;height:28px;margin-top:4px;opacity:.85;overflow:visible;cursor:crosshair}
+  .pool-spark circle.pool-dot{fill:var(--teal);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
+  .pool-spark .pool-hit{fill:transparent;stroke:none;cursor:pointer}
+  .spark-tip{
+    position:fixed;z-index:80;pointer-events:none;
+    padding:6px 9px;border-radius:8px;font-size:11.5px;line-height:1.35;
+    color:var(--text);background:var(--panel3);border:1px solid var(--line2);
+    box-shadow:0 8px 24px #00000088;max-width:220px;white-space:pre-line;
+    opacity:0;transform:translateY(4px);transition:opacity .12s ease,transform .12s ease;
+  }
+  .spark-tip.on{opacity:1;transform:none}
   .dash-toggle{display:flex;justify-content:flex-end;margin-bottom:14px}
   .ghost-toggle{font-size:11.5px;padding:6px 13px;border-radius:999px;color:var(--muted);
     background:#ffffff09;border:1px solid var(--line);box-shadow:none}
@@ -3986,8 +3994,9 @@ function seasonReset(id){
   toast("Season reset — previous rank kept in Past seasons");
 }
 function poolLpTrend(pool){
-  // Average ladder LP across the counted pool, one point per day. Answers
-  // "are we climbing as a group?" — not per-account LP and not a full chart.
+  // Average absolute ladder position across the counted pool (same scale as the
+  // LP chart: Iron→Challenger). One point per day. Answers "did the pool climb
+  // or drop as a group?", not per-account LP.
   const DAY=86400000;
   const byT=new Map();
   for(const a of pool){
@@ -4006,32 +4015,72 @@ function poolLpTrend(pool){
   if(days.length<2)return null;
   const pts=days.map(d=>d.avg);
   const min=Math.min(...pts), max=Math.max(...pts), span=Math.max(1,max-min);
-  // viewBox only — fixed width/height attributes overflowed into the next tile.
-  const w=160,h=32,pad=3;
+  const w=160,h=28,pad=4;
   const coords=pts.map((v,i)=>{
     const x=pad+(i/(pts.length-1))*(w-pad*2);
     const y=h-pad-((v-min)/span)*(h-pad*2);
     return {x,y,d:days[i],v};
   });
   const poly=coords.map(c=>c.x.toFixed(1)+","+c.y.toFixed(1)).join(" ");
-  const delta=Math.round(pts[pts.length-1]-pts[0]);
-  const tipLines=days.map(d=>{
-    const when=new Date(d.t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
-    return when+": ~"+Math.round(d.avg)+" ladder LP ("+d.n+" acc)";
-  });
-  const tip=tipLines.join("\n");
+  const first=Math.round(pts[0]), last=Math.round(pts[pts.length-1]), delta=last-first;
+  const fmtDay=t=>new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  const from=fmtDay(days[0].t), to=fmtDay(days[days.length-1].t);
   const dots=coords.map(c=>{
-    const when=new Date(c.d.t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
-    const label=when+": ~"+Math.round(c.v)+" ladder LP ("+c.d.n+" acc)";
-    return `<circle class="pool-hit" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="7"><title>${esc(label)}</title></circle>`
-      +`<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.2"><title>${esc(label)}</title></circle>`;
+    const label=fmtDay(c.d.t)+"\n~"+Math.round(c.v)+" ladder LP\n"+c.d.n+" counted account"+(c.d.n===1?"":"s");
+    return `<circle class="pool-hit" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="8" data-spark-tip="${esc(label)}"></circle>`
+      +`<circle class="pool-dot" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.2"></circle>`;
   }).join("");
-  const svg=`<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="100%" height="36" preserveAspectRatio="none" role="img" aria-label="Average ladder LP over recent days"><title>${esc(tip)}</title><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/>${dots}</svg>`;
-  const note=(delta>0?"↑ +":delta<0?"↓ ":"→ ")+Math.abs(delta)+" avg ladder LP · hover points for days";
-  return {svg, note, tip};
+  const svg=`<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="100%" height="28" preserveAspectRatio="none" role="img" aria-label="Average ladder position of counted accounts from ${esc(from)} to ${esc(to)}"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/>${dots}</svg>`;
+  // Headline is the delta — the spark is only the shape. Ladder LP = absolute
+  // Iron→Challenger scale used by the account charts (not "LP in current division").
+  const sign=delta>0?"↑ +":delta<0?"↓ ":"→ ";
+  const headline=sign+Math.abs(delta);
+  const note=from+" → "+to+" · avg of counted accounts (Iron→Challenger scale)";
+  return {svg, note, tip:note, headline, delta};
 }
 // Back-compat for tests that still call the old name.
 function poolLpSpark(pool){const t=poolLpTrend(pool);return t?t.svg:""}
+function ensureSparkTip(){
+  let tip=$("sparkTip");
+  if(tip)return tip;
+  tip=document.createElement("div");
+  tip.id="sparkTip";
+  tip.className="spark-tip";
+  tip.setAttribute("role","tooltip");
+  document.body.appendChild(tip);
+  return tip;
+}
+function hideSparkTip(){
+  const tip=$("sparkTip");
+  if(tip)tip.classList.remove("on");
+}
+function bindSparkTip(root){
+  if(!root||root._sparkBound)return;
+  root._sparkBound=true;
+  const show=(el,clientX,clientY)=>{
+    const text=el.getAttribute("data-spark-tip");
+    if(!text)return;
+    const tip=ensureSparkTip();
+    tip.textContent=text;
+    tip.classList.add("on");
+    const pad=12, tw=tip.offsetWidth||160, th=tip.offsetHeight||40;
+    let x=clientX+pad, y=clientY-th-8;
+    if(x+tw>window.innerWidth-8)x=clientX-tw-pad;
+    if(y<8)y=clientY+pad;
+    tip.style.left=x+"px";
+    tip.style.top=y+"px";
+  };
+  root.addEventListener("pointerover",e=>{
+    const hit=e.target.closest&&e.target.closest("[data-spark-tip]");
+    if(hit)show(hit,e.clientX,e.clientY);
+  });
+  root.addEventListener("pointermove",e=>{
+    const hit=e.target.closest&&e.target.closest("[data-spark-tip]");
+    if(hit)show(hit,e.clientX,e.clientY);
+    else hideSparkTip();
+  });
+  root.addEventListener("pointerleave",hideSparkTip);
+}
 let compareIds=[];
 function openCompare(id){
   if(compareIds.includes(id))compareIds=compareIds.filter(x=>x!==id);
@@ -4576,10 +4625,13 @@ function renderDash(){
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`:""}
     ${rotN?`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
       <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`:""}
-    <div class="stat" title="${esc(poolTrend?poolTrend.tip:"Need at least two days of rank history on counted accounts")}">
-      <div class="k">Ladder trend</div>
-      <div class="v spark-wrap">${poolTrend?poolTrend.svg:"—"}</div>
-      <div class="s-note">${poolTrend?esc(poolTrend.note):"avg ladder LP of counted accounts — needs history"}</div>
+    <div class="stat" id="ladderTrendStat">
+      <div class="k">Group climb</div>
+      ${poolTrend
+        ?`<div class="v">${esc(poolTrend.headline)} <small>ladder</small></div>
+          <div class="v spark-wrap">${poolTrend.svg}</div>
+          <div class="s-note">${esc(poolTrend.note)}</div>`
+        :`<div class="v">—</div><div class="s-note">needs ≥2 days of history on counted accounts</div>`}
     </div>
     <button class="stat stat-b${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"><div class="k">Needs refresh</div>
       <div class="v"${staleN?' style="color:var(--danger)"':""}>${staleN}</div>
@@ -4594,6 +4646,7 @@ function renderDash(){
   </div></div>
   ${bk?`<div style="font-size:12px;color:var(--muted);margin:-4px 0 16px">${bk}</div>`:""}`);
   dashJustOpened=false; // consumed by the render above
+  bindSparkTip(el);
 }
 
 function renderTagbar(){
