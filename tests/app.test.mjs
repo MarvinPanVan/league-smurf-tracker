@@ -5119,6 +5119,26 @@ test("a change that could not be written is not reported as saved", async () => 
    you just opened is somewhere off-screen with no way to scroll to it. Assert the
    invariant rather than the instance, so the next panel added to MODALS is caught
    by this and not by somebody wondering why the page stopped scrolling. */
+/* A version number typed into the footer by hand is a version number that goes
+   stale on the next release. It is filled from APP_VERSION, which is also what
+   the changelog toast and cfg.lastChangelog key off — so all three can only ever
+   agree. */
+test("the footer prints the running version, with its changelog on hover", () => {
+  const win = bootApp();
+  const el = win.document.getElementById("appVer");
+  assert.ok(el, "the footer has a version slot");
+  assert.match(el.textContent, /^v\d+\.\d+\.\d+$/, "and it is filled in");
+
+  // the same string the app identifies itself by everywhere else
+  runScript(win, "window.__v = APP_VERSION; window.__log = JSON.stringify(APP_CHANGELOG);");
+  assert.equal(el.textContent, "v" + win.__v);
+
+  const entry = JSON.parse(win.__log).find(e => e.v === win.__v);
+  assert.ok(entry, "the running version has a changelog entry of its own");
+  assert.match(el.getAttribute("title"), new RegExp("New in v" + win.__v.replace(/\./g, "\\.")));
+  for (const item of entry.items) assert.ok(el.title.includes(item), `hover lists: ${item}`);
+});
+
 test("every panel that locks page scrolling is fixed over the page", () => {
   const win = bootApp(seededAccount());
   // openModals() reads MODALS, which is a const and not reachable from out here.

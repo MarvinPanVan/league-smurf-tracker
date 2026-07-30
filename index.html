@@ -1202,6 +1202,10 @@
   .count{margin-top:30px;text-align:center;font-size:12px;color:var(--faint)}
   .count a{color:var(--gold-txt);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
   .count a:hover{border-bottom-color:currentColor}
+  /* The version, hovering for what changed in it. Tabular figures so it doesn't
+     jiggle between releases, and a help cursor because there is something to read. */
+  .ver{font-variant-numeric:tabular-nums;letter-spacing:.02em}
+  .ver[title]{cursor:help;border-bottom:1px dotted var(--line2)}
 
   /* ---- modal panels ----
      As inline panels these shoved the entire grid down the page — open one on a
@@ -1961,7 +1965,9 @@
   <!-- cards -->
   <div id="grid" class="grid"></div>
 
-  <div class="count" style="margin-top:8px">© 2026 MarvinPanVan · Smurf Tracker — not affiliated with Riot Games · Discord: marvinpanvan</div>
+  <!-- Filled from APP_VERSION at boot rather than typed in here, so the number in
+       the footer can never disagree with the one the changelog toast announces. -->
+  <div class="count" style="margin-top:8px">© 2026 MarvinPanVan · Smurf Tracker — not affiliated with Riot Games · Discord: marvinpanvan · <span id="appVer" class="ver"></span></div>
   <div class="count" style="margin-top:4px;font-size:11px">Free for personal use. Do not resell, rebrand, publish modified versions, or use for anything malicious. <a href="https://github.com/MarvinPanVan/league-smurf-tracker/blob/main/LICENSE" target="_blank" rel="noreferrer" style="color:var(--gold-txt)">Terms</a></div>
 
   <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
@@ -7101,6 +7107,19 @@ function migrateStats(){
   }
   if(touched)saveDB();
 }
+/* "Which version am I actually running" was unanswerable from the page — it only
+   ever appeared in the one-shot toast after an update, and only for whoever
+   happened to be looking. The footer is where a build number belongs, and the
+   changelog for that version hangs off it as a tooltip so the number says what it
+   means rather than just identifying itself. */
+function renderVersion(){
+  const el=$("appVer");if(!el)return;
+  el.textContent="v"+APP_VERSION;
+  const entry=APP_CHANGELOG.find(e=>e.v===APP_VERSION);
+  const items=(entry&&entry.items)||[];
+  if(items.length)el.title="New in v"+APP_VERSION+":\n• "+items.join("\n• ");
+  else el.removeAttribute("title");
+}
 function showChangelogIfNeeded(){
   if(cfg.lastChangelog===APP_VERSION)return;
   const entry=APP_CHANGELOG.find(e=>e.v===APP_VERSION);
@@ -7247,6 +7266,7 @@ function boot(){
   fillAutoLock($("sAutoLock"),0);
   $("baRegion").innerHTML=$("fRegion").innerHTML;
   installCrestDefs();
+  renderVersion();
   hasStorage=storageOK();
   if(!hasStorage){$("banner").classList.add("show")}
   try{const c=hasStorage?localStorage.getItem(CFG_KEY):null;if(c)cfg=Object.assign(cfg,JSON.parse(c))}catch(e){}
