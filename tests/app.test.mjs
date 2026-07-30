@@ -1646,7 +1646,24 @@ test("an lpAt older than the previous point does not reorder the chart", () => {
   assert.equal(acc.history.length, 2);
   assert.equal(acc.history[0].tier, "GOLD", "older history stays first");
   assert.equal(acc.history[1].tier, "PLATINUM", "current rank stays last");
-  assert.equal(acc.history[1].t, 3000, "unreachable reached-date falls back to the check time");
+  assert.equal(acc.history[1].t, 2001, "unreachable reached-date advances just past the previous point");
+});
+
+test("Flex Unranked clears a previous Flex rank instead of keeping it", () => {
+  const win = bootApp();
+  const acc = { id: "fx", history: [], stats: { found: true, tier: "GOLD", division: "II", lp: 10,
+    flex: { tier: "GOLD", division: "III", lp: 20 }, updatedAt: 1 } };
+  win.applyStats(acc, { found: true, tier: "GOLD", division: "II", lp: 10, updatedAt: 2,
+    flex: { tier: "UNRANKED", division: null, lp: null } });
+  assert.equal(acc.stats.flex, null, "an explicit Unranked flex answer must not revive the old Gold");
+});
+
+test("rank panel number fields escape non-numeric stats", () => {
+  const win = bootApp();
+  const html = win.rankPanelHTML({ peakManual: null, goal: null },
+    { tier: "GOLD", division: "II", lp: '"><img src=x onerror=alert(1)>', wins: 1, losses: 2 });
+  assert.doesNotMatch(html, /onerror/, "lp must not break out of the value attribute");
+  assert.match(html, /value=""/, "non-numeric lp becomes an empty value");
 });
 
 test("same LP at a new division is a new history point, and W/L updates on a dedupe", () => {

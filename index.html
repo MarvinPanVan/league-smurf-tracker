@@ -2137,6 +2137,11 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;",
 // Asked in three places now, and jsdom has no matchMedia unless a test supplies one
 function prefersReducedMotion(){return !!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)}
 function toast(msg,action,fn){const t=$("toast");t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");if(action)document.getElementById("toastBtn").onclick=()=>{t.style.display="none";fn()};t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",action?6000:2200)}
+function dismissToast(){
+  const t=$("toast");if(!t)return;
+  t.style.display="none";clearTimeout(t._h);
+  const b=document.getElementById("toastBtn");if(b)b.onclick=null;
+}
 /* Both dates are stored as the plain "YYYY-MM-DD" the date input hands over, and
    they are read back the same way. Parsing them into a Date only to format them is
    how a birthday becomes a day earlier for anyone west of Greenwich. */
@@ -2294,16 +2299,22 @@ function sparkline(hist,col){
 // apart from unranked: one is a fact about the account, the other about us.
 function listGroup(a){
   if(isRanked(a))return (a.stats.tier||"").toUpperCase();
-  return isChecked(a)?"UNRANKED":"UNCHECKED";
+  if(isUnrankedAnswer(a))return"UNRANKED";
+  // A missing Riot ID is checked (found:false + updatedAt) but is not Unranked —
+  // dumping it under that heading made the list disagree with the Unranked filter.
+  if(a.stats&&a.stats.found===false)return"MISSING";
+  return"UNCHECKED";
 }
 function groupLabel(k){
   if(k==="FAV")return "Favorites";
   if(k==="UNCHECKED")return "Never checked";
   if(k==="UNRANKED")return "Unranked";
+  if(k==="MISSING")return "Not found";
   return k.charAt(0)+k.slice(1).toLowerCase();
 }
 function groupColor(k){
   if(k==="FAV")return "var(--gold-txt)";
+  if(k==="MISSING")return"var(--danger)";
   return k==="UNCHECKED"?"#5d6577":tierColor(k);
 }
 // The old sparkline plotted LP with no scale at all: it showed the number moving
@@ -2594,13 +2605,27 @@ async function copyText(v,label,sensitive){
   catch(e){try{const ta=document.createElement("textarea");ta.value=v;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);ok=true}catch(e2){}}
   toast(ok?label+" copied"+(sensitive?" — clears from clipboard in 30s":""):"Copy failed — copy manually");
   if(ok&&sensitive){
+    lastCopiedSecret=v;
     setTimeout(async()=>{
-      try{if((await navigator.clipboard.readText())===v)await navigator.clipboard.writeText("")}catch(e){}
+      try{
+        if(lastCopiedSecret!==v)return;
+        if((await navigator.clipboard.readText())===v)await navigator.clipboard.writeText("");
+        if(lastCopiedSecret===v)lastCopiedSecret=null;
+      }catch(e){}
     },30000);
   }
 }
+let lastCopiedSecret=null;
 function uid(){return Date.now()+"-"+Math.random().toString(36).slice(2,7)}
-function cryptoInt(max){const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%max}
+function cryptoInt(max){
+  // Rejection sampling — a raw `% max` is slightly biased whenever max does not
+  // divide 2^32, and the password generator was described as fully crypto-random.
+  if(max<=0)return 0;
+  const a=new Uint32Array(1);
+  const limit=Math.floor(0x100000000/max)*max;
+  do{crypto.getRandomValues(a)}while(a[0]>=limit);
+  return a[0]%max;
+}
 function genPassword(len){
   // guarantees at least one upper/lower/digit/symbol so it can never come out as "just letters" by chance,
   // then fills the rest and shuffles — still fully crypto-random, just never in a weak shape
@@ -2766,6 +2791,14 @@ function stripMarkup(raw){
     .replace(/!\[[^\]]*\]\([^)]*\)/g," ")      // markdown images: the URLs contain tier names
     .replace(/\[([^\]]*)\]\([^)]*\)/g," $1 ")  // markdown links: keep the label, drop the URL
     .replace(/[*_`|]+/g," ")
+    // Same entity decode the worker already does — proxy HTML often keeps &nbsp;
+    // between tier and LP, which used to make the strict pattern miss entirely.
+    .replace(/&nbsp;/gi," ")
+    .replace(/&lt;/gi,"<")
+    .replace(/&gt;/gi,">")
+    .replace(/&quot;/gi,'"')
+    .replace(/&#39;/gi,"'")
+    .replace(/&amp;/gi,"&")
     .replace(/\s+/g," ");
 }
 // Same idea as stripMarkup, but row boundaries survive — the season tables and the
@@ -3196,10 +3229,22 @@ function applyStats(acc,s){
     // knew that; the current-rank parser did not, and the backend and the model
     // are simply whatever they hand back.
     s.division=normDivision(s.tier,s.division);
+    // Hostile/corrupt JSON (import, backend, AI) used to land non-numbers in
+    // `value="${s.lp}"` and break out of the attribute. Coerce here, once.
+    const numOrNull=v=>{if(v==null||v==="")return null;const n=Number(v);return Number.isFinite(n)?n:null};
+    if(s.lp!=null)s.lp=numOrNull(s.lp);
+    if(s.wins!=null)s.wins=numOrNull(s.wins);
+    if(s.losses!=null)s.losses=numOrNull(s.losses);
+    if(s.level!=null)s.level=numOrNull(s.level);
     s.seasons=normSeasons(s.seasons);
     s.champs=normChamps(s.champs);
-    s.flex=normPeak(s.flex);   // an unranked flex row says nothing; dropping it
-    s.peak=normPeak(s.peak);   // is what the backend path already did
+    // Flex Unranked is an answer, not "missing". normPeak drops UNRANKED to null,
+    // and the keep-old fallback below used to revive the previous Gold as if Flex
+    // had never been read. Only keep the previous flex when this reading said
+    // nothing about flex at all.
+    const flexRaw=s.flex;
+    s.flex=normPeak(s.flex);
+    s.peak=normPeak(s.peak);
     s.lpAt=normLpAt(s.lpAt);
     /* The AI path never asks for seasons, champs or flex, and a truncated proxy
        page can miss the tables while still reading the current rank. Assigning the
@@ -3209,7 +3254,10 @@ function applyStats(acc,s){
     const old=acc.stats||{};
     if(!s.seasons&&old.seasons)s.seasons=old.seasons;
     if(!s.champs&&old.champs)s.champs=old.champs;
-    if(!s.flex&&old.flex)s.flex=old.flex;
+    if(!s.flex&&old.flex){
+      const said=flexRaw&&typeof flexRaw==="object";
+      if(!said)s.flex=old.flex;
+    }
     if(!s.peak&&old.peak)s.peak=old.peak;
     if(!s.icon&&old.icon)s.icon=old.icon;
     if(s.level==null&&old.level!=null)s.level=old.level;
@@ -3240,9 +3288,10 @@ function applyStats(acc,s){
       if(s.losses!=null)prev.l=Number(s.losses)||0;
     }else{
       // A reached-date older than the previous distinct point cannot be filed
-      // under that day without putting the new rank behind history. Fall back to
-      // the check time so the chart's last point stays the current one.
-      if(prev&&when<=(+prev.t||0))when=s.updatedAt;
+      // under that day without putting the new rank behind history. Advance one
+      // millisecond past the previous stamp so order is preserved even when
+      // updatedAt itself is also somehow earlier (manual entry mid-flight).
+      if(prev&&when<=(+prev.t||0))when=(+prev.t||0)+1;
       // The tier stored here is the one op.gg reported at that moment, and it is
       // never recomputed — an account that was Challenger in March stays
       // Challenger on the chart even though today's floor is somewhere else.
@@ -3332,8 +3381,12 @@ async function check(id){
   if(checkGen.get(id)!==gen)return true; // a newer run owns this card now
   checking.delete(id);
   syncCheckAll();
+  // Re-check immediately before writing — a manual ✎ Rank (or another check)
+  // can bump the gen between the gate above and here.
+  if(checkGen.get(id)!==gen)return true;
   if(s){commitStats(id,acc,s);return true}
   else{
+    if(checkGen.get(id)!==gen)return true;
     acc.stats=Object.assign({},acc.stats||{},{note:"Auto-fetch failed ("+err+") — enter it by hand with ✎ Rank"});
     saveDB();renderCard(id);return false;
   }
@@ -3526,13 +3579,16 @@ function morph(from,to){
   for(const at of Array.from(to.attributes))if(from.getAttribute(at.name)!==at.value)from.setAttribute(at.name,at.value);
   const tag=from.tagName;
   if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"){
-    // Whatever the user is currently in is left completely alone, so a render
-    // triggered while they type can't eat the keystroke or move the caret.
+    // Checkboxes must still sync when focused — shift-select re-renders while the
+    // box that was just clicked still has focus, and bailing here left the DOM
+    // unticked while `selected` still held the id.
+    if(from.type==="checkbox"||from.type==="radio"){from.checked=to.checked;return}
+    // Whatever the user is currently typing in is left completely alone, so a
+    // render triggered mid-keystroke can't eat the character or move the caret.
     if(document.activeElement===from)return;
     // Live value lives in the property, not the attribute — once a field is
     // dirty the attribute stops driving it, so it has to be set directly.
-    if(from.type==="checkbox"||from.type==="radio")from.checked=to.checked;
-    else if(tag==="TEXTAREA"){if(from.value!==to.textContent)from.value=to.textContent}
+    if(tag==="TEXTAREA"){if(from.value!==to.textContent)from.value=to.textContent}
     else if(tag!=="SELECT"&&from.value!==to.value)from.value=to.value;
     if(tag!=="SELECT")return;
     // A <select>'s value is only meaningful once its options exist, so it is set
@@ -3760,10 +3816,11 @@ function renderRibbon(){
   // Under two accounts there is no distribution to show, only a full-width block
   // of one colour pretending to be information.
   if(pool.length<2){setHTML(el,"");return}
-  const dist={};let unN=0,neverN=0;
+  const dist={};let unN=0,neverN=0,missN=0;
   for(const a of pool){
     if(isRanked(a)){const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1}
     else if(isUnrankedAnswer(a))unN++;
+    else if(a.stats&&a.stats.found===false)missN++;
     else neverN++;
   }
   const segs=TIER_ORDER.slice().reverse().filter(t=>dist[t])
@@ -3774,6 +3831,7 @@ function renderRibbon(){
      behind them and the stats panel has always counted them apart, so the bar shows
      them apart too — and either one now shows exactly what it counted when clicked. */
   if(unN)segs.push({k:"UNRANKED",n:unN,c:TIER_COLORS.UNRANKED,label:"Unranked"});
+  if(missN)segs.push({flag:"attention",n:missN,c:"var(--danger)",label:"Not found"});
   if(neverN)segs.push({flag:"unchecked",n:neverN,c:"var(--faint)",label:"Never checked"});
   if(!segs.length){setHTML(el,"");return}
   const best=pool.filter(isRanked).sort((x,y)=>rankValue(y.stats)-rankValue(x.stats))[0];
@@ -4015,20 +4073,21 @@ function divOff(tier){
 }
 function rankPanelHTML(a,s,rev){
   const pm=a.peakManual, gm=a.goal;
+  const numVal=v=>{const n=Number(v);return Number.isFinite(n)?esc(String(n)):""};
   return `<div class="login${rev||""}">
     <div><span class="k">Current</span><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <select data-f="tier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${s&&(s.tier||"").toUpperCase()===t?"selected":""}>${t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
       <select data-f="div"${divOff(s&&s.tier)}>${["I","II","III","IV"].map(d=>`<option ${s&&s.division===d?"selected":""}>${d}</option>`).join("")}</select>
-      <input data-f="lp" type="number" min="0" max="2000" placeholder="LP" value="${s&&s.lp!=null?s.lp:""}" style="width:72px">
-      <input data-f="w" type="number" min="0" placeholder="W" value="${s&&s.wins!=null?s.wins:""}" style="width:64px">
-      <input data-f="l" type="number" min="0" placeholder="L" value="${s&&s.losses!=null?s.losses:""}" style="width:64px">
+      <input data-f="lp" type="number" min="0" max="2000" placeholder="LP" value="${s&&s.lp!=null?numVal(s.lp):""}" style="width:72px">
+      <input data-f="w" type="number" min="0" placeholder="W" value="${s&&s.wins!=null?numVal(s.wins):""}" style="width:64px">
+      <input data-f="l" type="number" min="0" placeholder="L" value="${s&&s.losses!=null?numVal(s.losses):""}" style="width:64px">
     </div></div>
     <div style="border-top:1px solid var(--line);padding-top:10px">
       <span class="k">Season peak</span>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <select data-f="ptier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${(pm&&(pm.tier||"").toUpperCase())===t?"selected":""}>${t==="UNRANKED"?"— none —":t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
         <select data-f="pdiv"${divOff(pm&&pm.tier)}>${["I","II","III","IV"].map(d=>`<option ${pm&&pm.division===d?"selected":""}>${d}</option>`).join("")}</select>
-        <input data-f="plp" type="number" min="0" max="2000" placeholder="LP" value="${pm&&pm.lp!=null?pm.lp:""}" style="width:72px">
+        <input data-f="plp" type="number" min="0" max="2000" placeholder="LP" value="${pm&&pm.lp!=null?numVal(pm.lp):""}" style="width:72px">
       </div>
       <div style="font-size:11px;color:var(--faint);margin-top:7px;line-height:1.5">Refresh reads op.gg's own "Top tier" peak when the profile has one, and the app also tracks the highest rank it has seen itself. Set a peak here as well if you know better — whichever is genuinely highest is the one shown.</div>
     </div>
@@ -4469,9 +4528,11 @@ function renderCard(id){
 function closeAllPanels(){
   revertAccents(); // Settings previews colours live; leaving it must not keep them
   revertAtmosphere(); // same for the atmosphere tiles — Escape/✕ used to keep the preview
+  settingsSaveGen++; // cancel a Save that is waiting on the notification prompt
   // Dismissing first-run Help via ✕ or Escape must count as "seen", the same as Got it —
   // otherwise an empty vault re-opens the modal on every reload.
   if(!$("help").classList.contains("hidden")&&!cfg.seenHelp){cfg.seenHelp=true;saveCfg()}
+  editingId=null; // form ✕ / backdrop used to leave this set while the form was hidden
   $("form").classList.add("hidden");
   $("settings").classList.add("hidden");
   $("help").classList.add("hidden");
@@ -4543,7 +4604,15 @@ function submitForm(){
 }
 
 // ---------- settings ----------
-function openSettings(){closeAllPanels();$("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(cfg.autoEveryHours!=null?cfg.autoEveryHours:DEFAULT_AUTO_HOURS);$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";updateVaultStatus();$("settings").classList.remove("hidden")}
+function openSettings(){
+  closeAllPanels();
+  // Permission can be revoked in site settings while cfg still says on — don't
+  // show the box checked for alerts that cannot fire.
+  if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
+    cfg.notify=false;saveCfg();
+  }
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(cfg.autoEveryHours!=null?cfg.autoEveryHours:DEFAULT_AUTO_HOURS);$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";updateVaultStatus();$("settings").classList.remove("hidden")
+}
 function renderPwMeter(){
   const p=$("fPass").value;
   const {score,label}=passwordStrength(p);
@@ -4719,7 +4788,7 @@ function doExportCSV(){
 function doImport(file){
   if(previewMode){previewMode=false;accounts=[]}
   const rd=new FileReader();
-  rd.onload=()=>{
+  rd.onload=async()=>{
     try{
       const p=JSON.parse(rd.result);
       const list=Array.isArray(p)?p:p.accounts;
@@ -4729,18 +4798,33 @@ function doImport(file){
         // meant the uid() was thrown away whenever the backup carried an id, so
         // importing the same file twice produced accounts sharing an id — and
         // every per-card lookup goes through find(a=>a.id===id).
-        .map(a=>Object.assign({fav:false,stats:null,tags:[],history:[],status:"active",label:"",login:"",password:"",email:"",notes:"",region:"EUW"},a,
-          {id:uid(),region:normRegion(a.region),status:normStatus(a.status)}));
+        .map(a=>{
+          const row=Object.assign({fav:false,stats:null,tags:[],history:[],status:"active",label:"",login:"",password:"",email:"",notes:"",region:"EUW"},a,
+            {id:uid(),region:normRegion(a.region),status:normStatus(a.status)});
+          // A corrupt backup with history/tags as objects used to overwrite the
+          // array defaults and then throw inside migrateStats on the next boot.
+          if(!Array.isArray(row.tags))row.tags=[];
+          if(!Array.isArray(row.history))row.history=[];
+          if(row.stats&&row.stats.seasons&&typeof row.stats.seasons==="object"){
+            if(!Array.isArray(row.stats.seasons.solo))row.stats.seasons.solo=[];
+            if(!Array.isArray(row.stats.seasons.flex))row.stats.seasons.flex=[];
+          }
+          return row;
+        });
       const merge=accounts.length>0&&confirm("OK = MERGE backup into current vault (adds only new accounts)\nCancel = replace everything instead");
       if(merge){
         const key=a=>(a.gameName+"#"+a.tagLine+"@"+a.region).toLowerCase();
         const seen=new Set(accounts.map(key));
         const add=cleaned.filter(a=>!seen.has(key(a)));
-        accounts=accounts.concat(add);saveDB();render();
+        accounts=accounts.concat(add);
+        if(!await saveDB()){toast("Import saved in memory but could not write to storage");render();return}
+        render();
         toast(add.length+" added, "+(cleaned.length-add.length)+" duplicates skipped");
       }else{
         if(accounts.length>0&&!confirm("REPLACE the whole vault ("+accounts.length+" → "+cleaned.length+" accounts)?"))return;
-        accounts=cleaned;saveDB();render();toast("Backup imported ("+cleaned.length+" accounts)");
+        accounts=cleaned;
+        if(!await saveDB()){toast("Import saved in memory but could not write to storage");render();return}
+        render();toast("Backup imported ("+cleaned.length+" accounts)");
       }
     }catch(e){toast("Import failed: not a valid backup file")}
   };
@@ -4775,7 +4859,7 @@ function parseCSV(text){
 function doImportCSV(file){
   if(previewMode){previewMode=false;accounts=[]}
   const rd=new FileReader();
-  rd.onload=()=>{
+  rd.onload=async()=>{
     try{
       const rows=parseCSV(rd.result);
       if(rows.length<2)throw new Error("empty");
@@ -4807,11 +4891,15 @@ function doImportCSV(file){
         const key=a=>(a.gameName+"#"+a.tagLine+"@"+a.region).toLowerCase();
         const seen=new Set(accounts.map(key));
         const add=list.filter(a=>!seen.has(key(a)));
-        accounts=accounts.concat(add);saveDB();render();
+        accounts=accounts.concat(add);
+        if(!await saveDB()){toast("Import saved in memory but could not write to storage");render();return}
+        render();
         toast(add.length+" added, "+(list.length-add.length)+" duplicates skipped");
       }else{
         if(accounts.length>0&&!confirm("REPLACE the whole vault ("+accounts.length+" → "+list.length+" accounts)?"))return;
-        accounts=list;saveDB();render();toast("CSV imported ("+list.length+" accounts)");
+        accounts=list;
+        if(!await saveDB()){toast("Import saved in memory but could not write to storage");render();return}
+        render();toast("CSV imported ("+list.length+" accounts)");
       }
     }catch(e){toast("CSV import failed: not a valid export file")}
   };
@@ -4873,7 +4961,13 @@ $("fGen").addEventListener("click",()=>{
   toast("Password generated — shown in clear so you can note it");
 });
 $("fPass").addEventListener("input",renderPwMeter);
-$("fTogglePass").addEventListener("click",()=>setPassShown($("fPass").classList.contains("mask")));
+$("fTogglePass").addEventListener("click",()=>{
+  // On browsers without text-security the field is type=password and never gets
+  // the .mask class — reading .mask always looked "shown", so the eye could only
+  // hide and never reveal again.
+  const hidden=CAN_MASK?$("fPass").classList.contains("mask"):$("fPass").type==="password";
+  setPassShown(hidden);
+});
 document.addEventListener("keydown",e=>{
   /* The lock screen is a vault nobody can read. Focus on Unlock is a BUTTON, so
      `typing` is false, and f / n / / used to fire underneath: unlock, and the
@@ -5026,7 +5120,7 @@ document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.targ
 // Closing has to go through the same door as the ✕ and Escape do. Toggling the panel
 // shut from the ⋯ menu only hid it, which left a colour you had dragged but not saved
 // applied to the whole page — the one close out of four that kept it.
-function closeSettings(){revertAccents();revertAtmosphere();$("settings").classList.add("hidden")}
+function closeSettings(){revertAccents();revertAtmosphere();settingsSaveGen++;$("settings").classList.add("hidden")}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
 $("sSave").addEventListener("click",async()=>{
   // Validate the two free-text URLs before touching cfg — a bail after partial
@@ -5044,9 +5138,24 @@ $("sSave").addEventListener("click",async()=>{
     whOk=validDiscordWebhook(wh);
     if(!whOk){toast("Discord webhook must be an https://discord.com/api/webhooks/… URL");return}
   }
+  // Ask for notification permission before mutating cfg. Chrome's prompt does not
+  // block the page — Escape during it used to close Settings while Save still
+  // wrote everything afterwards. A generation token cancels that late write.
+  let wantNotify=$("sNotify").checked;
+  let notifyNote="";
+  const saveGen=++settingsSaveGen;
+  if(wantNotify&&"Notification"in window&&Notification.permission==="default"){
+    const perm=await Notification.requestPermission();
+    if(saveGen!==settingsSaveGen)return; // a newer Save, or we gave up
+    if($("settings").classList.contains("hidden"))return; // closed during the prompt
+    if(perm!=="granted"){wantNotify=false;$("sNotify").checked=false;notifyNote=" — notifications blocked by the browser"}
+  }else if(wantNotify&&"Notification"in window&&Notification.permission==="denied"){
+    wantNotify=false;$("sNotify").checked=false;notifyNote=" — notifications are blocked in the browser's site settings";
+  }
+  if(saveGen!==settingsSaveGen)return;
   cfg.apiKey=$("sKey").value.trim();cfg.model=$("sModel").value;cfg.autoCheck=$("sAuto").checked;cfg.autoEveryHours=+$("sAutoEvery").value;cfg.autoRankedOnly=$("sAutoRanked").checked;
   cfg.backendUrl=backendOk;$("sBackend").value=backendOk;
-  cfg.notify=$("sNotify").checked;
+  cfg.notify=wantNotify;
   cfg.discordWebhook=whOk;$("sDiscord").value=whOk;
   cfg.autoLockMin=Math.max(0,+$("sAutoLock").value||0);
   // null, not the default's own hex, when that is what the picker is sitting on:
@@ -5057,15 +5166,9 @@ $("sSave").addEventListener("click",async()=>{
   cfg.accent2=$("sAccent2").value===DEFAULT_ACCENT2?null:$("sAccent2").value;applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
   cfg.atmosphere=applyAtmosphere(document.body.dataset.atmosphere||DEFAULT_ATMOSPHERE);
   if(cfg.atmosphere===DEFAULT_ATMOSPHERE)cfg.atmosphere=null; // same idea as accents: no preference vs explicit default
-  let notifyNote="";
-  if(cfg.notify&&"Notification"in window&&Notification.permission==="default"){
-    const perm=await Notification.requestPermission();
-    if(perm!=="granted"){cfg.notify=false;$("sNotify").checked=false;notifyNote=" — notifications blocked by the browser"}
-  }else if(cfg.notify&&"Notification"in window&&Notification.permission==="denied"){
-    cfg.notify=false;$("sNotify").checked=false;notifyNote=" — notifications are blocked in the browser's site settings";
-  }
   saveCfg();syncLockTimer();hideAccPrev();$("settings").classList.add("hidden");toast("Settings saved"+notifyNote)
 });
+let settingsSaveGen=0;
 $("sClose").addEventListener("click",closeSettings);
 $("sAtmosphere").addEventListener("click",e=>{
   const b=e.target.closest("[data-atmosphere]");if(!b)return;
@@ -5233,6 +5336,7 @@ $("sVaultSet").addEventListener("click",async()=>{
 });
 $("sVaultRemove").addEventListener("click",async()=>{
   if(!vaultPassword){toast("No password is set");return}
+  if(previewMode){toast("Exit preview before removing vault protection");return}
   if(!confirm("Remove password protection? Your vault will be saved unencrypted again."))return;
   const prev=vaultPassword;
   vaultPassword=null;forgetVaultKey();
@@ -5616,7 +5720,7 @@ $("bulkDelete").addEventListener("click",()=>{
   selected.clear();saveDB();render();
   toast(n+" account"+(n===1?"":"s")+" deleted");
 });
-$("bulkClear").addEventListener("click",()=>{selected.clear();render()});
+$("bulkClear").addEventListener("click",()=>{selected.clear();lastSelectedId=null;render()});
 
 // the note editor lives inside the grid, which re-renders from scratch — so its
 // two listeners are delegated like everything else on a card
@@ -5682,10 +5786,11 @@ document.addEventListener("pointerdown",e=>{
 $("grid").addEventListener("keydown",e=>{
   // A list row carries role="button" and tabindex="0" but is a <div>, so the
   // browser gives it none of a button's key handling — it could be tabbed to and
-  // then not opened. Only when the row itself has focus: the checkbox inside it
-  // has its own meaning for Space.
+  // then not opened. Same for wall tiles. Only when the row/tile itself has focus:
+  // the checkbox inside a row has its own meaning for Space.
   const row=e.target&&e.target.classList&&e.target.classList.contains("rw-main")?e.target:null;
-  if(row&&(e.key==="Enter"||e.key===" ")){e.preventDefault();row.click();return}
+  const tile=e.target&&e.target.classList&&e.target.classList.contains("tile")?e.target:null;
+  if((row||tile)&&(e.key==="Enter"||e.key===" ")){e.preventDefault();(row||tile).click();return}
   const ta=e.target;
   if(!ta||!ta.dataset||ta.dataset.f!=="notetext")return;
   if(e.key==="Escape"){
@@ -5773,6 +5878,10 @@ $("grid").addEventListener("click",async e=>{
   else if(act==="sec"){const k=id+"|"+btn.dataset.s;openSec.has(k)?openSec.delete(k):openSec.add(k);renderCard(id)}
   else if(act==="rank"){const on=!openRank.has(id);on?openRank.add(id):openRank.delete(id);reveal=on?id+":rank":null;renderCard(id)}
   else if(act==="rankapply"){
+    // Bump the check generation so an in-flight Refresh cannot overwrite a manual
+    // entry that landed while it was still waiting on the network.
+    checkGen.set(id,(checkGen.get(id)||0)+1);
+    checking.delete(id);
     const g=f=>card.querySelector('[data-f="'+f+'"]');
     const tier=g("tier").value, isU=tier==="UNRANKED", mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
     const old=acc.stats||{};
@@ -5794,7 +5903,16 @@ $("grid").addEventListener("click",async e=>{
   }
   else if(act==="check")check(id);
   else if(act==="del"){
-    if(armedDelete===id){const idx=accounts.findIndex(a=>a.id===id);const removed=accounts[idx];accounts=accounts.filter(a=>a.id!==id);armedDelete=null;saveDB();render();toast("Account deleted","Undo",()=>{accounts.splice(Math.min(idx,accounts.length),0,removed);saveDB();render()})}
+    if(armedDelete===id){
+      const idx=accounts.findIndex(a=>a.id===id);const removed=accounts[idx];
+      accounts=accounts.filter(a=>a.id!==id);armedDelete=null;saveDB();render();
+      // Undo must not fire after an auto-lock — that would put passwords back into
+      // memory (and the hidden DOM) while the lock screen is up.
+      toast("Account deleted","Undo",()=>{
+        if(vaultLocked())return;
+        accounts.splice(Math.min(idx,accounts.length),0,removed);saveDB();render();
+      });
+    }
     else{armedDelete=id;renderGrid();setTimeout(()=>{if(armedDelete===id){armedDelete=null;renderGrid()}},3000)}
   }
 });
@@ -5825,9 +5943,9 @@ function migrateStats(){
     scrub(a.stats);scrub(a.peakManual);scrub(a.goal);
     if(a.stats){
       scrub(a.stats.peak);scrub(a.stats.flex);scrub(a.stats.lpAt);
-      if(a.stats.seasons)for(const k of ["solo","flex"])(a.stats.seasons[k]||[]).forEach(scrub);
+      if(a.stats.seasons)for(const k of ["solo","flex"])(Array.isArray(a.stats.seasons[k])?a.stats.seasons[k]:[]).forEach(scrub);
     }
-    (a.history||[]).forEach(scrub);
+    (Array.isArray(a.history)?a.history:[]).forEach(scrub);
   }
   if(touched)saveDB();
 }
@@ -5864,9 +5982,11 @@ function startApp(){
   }
 }
 async function tryUnlock(){
-  if(!currentEnvelope)return;
+  if(!currentEnvelope||unlocking)return;
   const pass=$("lockPass").value;
   if(!pass)return;
+  unlocking=true;
+  $("lockBtn").disabled=true;
   try{
     const data=await decryptData(pass,currentEnvelope);
     accounts=Array.isArray(data)?data:[];
@@ -5878,8 +5998,12 @@ async function tryUnlock(){
   }catch(e){
     $("lockErr").style.display="block";
     $("lockPass").value="";$("lockPass").focus();
+  }finally{
+    unlocking=false;
+    $("lockBtn").disabled=false;
   }
 }
+let unlocking=false;
 $("lockBtn").addEventListener("click",tryUnlock);
 $("lockPass").addEventListener("keydown",e=>{if(e.key==="Enter")tryUnlock()});
 function showLockScreen(envelope){
@@ -5900,6 +6024,13 @@ function relock(){
   // The derived key goes with the password: leaving it behind would keep the one
   // thing that opens the vault sitting in memory across a lock.
   vaultPassword=null;forgetVaultKey();accounts=[];
+  dismissToast(); // drop Delete→Undo before it can rehydrate secrets into a locked vault
+  // Clear a copied account password if we still know what it was — lock does not
+  // mean "leave the last password on the clipboard for thirty seconds".
+  if(lastCopiedSecret){
+    const v=lastCopiedSecret;lastCopiedSecret=null;
+    try{navigator.clipboard.readText().then(t=>{if(t===v)navigator.clipboard.writeText("")}).catch(()=>{})}catch(e){}
+  }
   // A run has no business carrying on against a vault nobody can read: it finishes
   // the account it is on and stops, instead of fetching sixty profiles to write
   // their results into an array that has been emptied.
