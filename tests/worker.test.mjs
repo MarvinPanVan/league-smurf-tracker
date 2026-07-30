@@ -379,3 +379,19 @@ test("unsupported methods return 405 with CORS", async () => {
   assert.equal(res.status, 405);
   assert.equal(res.headers.get("Access-Control-Allow-Origin"), "*");
 });
+
+test("200 summoner-not-found page returns found:false instead of 502", async () => {
+  const orig = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (String(url).includes("/champions")) return new Response("", { status: 200 });
+    return new Response(`<html><body><h1>Summoner not found</h1><p>This summoner is unregistered.</p></body></html>`, { status: 200 });
+  };
+  try {
+    const res = await worker.fetch(new Request("https://worker.example/?name=Nope&tag=EUW&region=euw"));
+    assert.equal(res.status, 200);
+    const d = await res.json();
+    assert.equal(d.found, false);
+  } finally {
+    globalThis.fetch = orig;
+  }
+});

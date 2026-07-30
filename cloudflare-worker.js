@@ -95,6 +95,14 @@ async function scrapeOne(name, tag, region) {
   if (!res.ok) return { error: "op.gg HTTP " + res.status, status: 502 };
 
   const html = await res.text();
+  // op.gg sometimes serves a 200 "summoner not found" page instead of HTTP 404.
+  // Treating that as a parse failure made the app retry proxies and leave a
+  // failure note on a Riot ID that simply does not exist.
+  if (/summoner\s+not\s+found|this\s+summoner\s+is\s+unregistered/i.test(html)
+      && !parseRankFromMeta(html)) {
+    return { body: { found: false } };
+  }
+
   const fromMeta = parseRankFromMeta(html);
   const parsed = fromMeta || parseRankText(html);
   if (!parsed) return { error: "no rank data parsed from page", status: 502 };

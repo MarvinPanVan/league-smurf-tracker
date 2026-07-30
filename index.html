@@ -2002,7 +2002,7 @@ function isStale(a){return a.status!=="banned"&&(!isChecked(a)||Date.now()-a.sta
 function isRanked(a){const t=a.stats&&a.stats.found!==false&&(a.stats.tier||"").toUpperCase();return !!(t&&t!=="UNRANKED")}
 function isFailed(a){
   if(!a.stats)return false;
-  if(a.stats.found===false)return true;
+  // found:false is a completed "Not found" answer (own filter), not a transport failure.
   // Informational notes (season reset, etc.) must not look like a failed refresh.
   const n=String(a.stats.note||"");
   return /auto-fetch failed|failed \(/i.test(n);
@@ -3601,7 +3601,10 @@ function commitStats(id,acc,s){
   // Only this card changed. Going through render() re-sorted the grid after every
   // single check, so during Check all ranks the whole board reshuffled once per
   // account — the order settles on the next full render instead.
-  renderCard(id);renderDash();renderRibbon();
+  renderCard(id);renderRibbon();
+  // The dash rebuilds pool sparks / champ merges for the whole vault — skip it
+  // while Check-all is in flight; the final render() after the run refreshes it.
+  if(!run)renderDash();
   {
     // Within a tier the LP number is comparable end to end; across a tier it is
     // not — 90 LP to 12 LP is a promotion, and counting down through it would
@@ -3631,18 +3634,20 @@ async function check(id){
   if(cfg.backendUrl){try{s=await fetchViaBackend(acc)}catch(e){err="backend: "+(e.message||"failed")}}
   if(!s&&cfg.apiKey){try{s=await fetchViaClaude(acc)}catch(e){err=err||("api: "+(e.message||"failed"))}}
   if(!s){try{s=await fetchViaProxy(acc)}catch(e){err=err||e.message||"auto-fetch failed"}}
-  if(checkGen.get(id)!==gen)return null; // a newer run owns this card now — not a success
+  // Only the owner may clear the spinner — a newer Refresh already put itself in
+  // `checking`, and deleting blindly would steal its "Checking…" state.
+  if(checkGen.get(id)!==gen)return null;
   checking.delete(id);
   syncCheckAll();
-  // Re-check immediately before writing — a manual ✎ Rank (or another check)
-  // can bump the gen between the gate above and here.
   if(checkGen.get(id)!==gen)return null;
-  if(s){commitStats(id,acc,s);return true}
-  else{
-    if(checkGen.get(id)!==gen)return null;
-    acc.stats=Object.assign({},acc.stats||{},{note:"Auto-fetch failed ("+err+") — enter it by hand with ✎ Rank"});
-    saveDB();renderCard(id);return false;
+  if(s){
+    commitStats(id,acc,s);
+    // found:false is a finished answer, not a successful refresh and not a retryable fail.
+    return s.found===false?"missing":true;
   }
+  if(checkGen.get(id)!==gen)return null;
+  acc.stats=Object.assign({},acc.stats||{},{note:"Auto-fetch failed ("+err+") — enter it by hand with ✎ Rank"});
+  saveDB();renderCard(id);return false;
 }
 // Sixty accounts at roughly a second each is minutes of waiting, and the only
 // sign of life used to be the word "Checking…" on a button — no idea how far it
@@ -3693,40 +3698,44 @@ async function checkAll(ids){
       }
       let map=null;
       try{map=await fetchViaBackendBatch(chunk)}catch(e){map=null}
+      const release=(id,gen)=>{if(checkGen.get(id)===gen)checking.delete(id)};
       if(!map){
-        for(const id of gens.keys())checking.delete(id);
+        // POST dead / old worker — drop only claims we still own, then sequential.
+        for(const [id,gen] of gens)release(id,gen);
         break;
       }
-      let hit=0;
+      const batchNow=Date.now();
       for(const acc of chunk){
         if(run.stop)break;
         const gen=gens.get(acc.id);
-        if(checkGen.get(acc.id)!==gen){checking.delete(acc.id);continue}
+        // A newer Refresh owns this card — leave it alone, and do not sequential-retry.
+        if(checkGen.get(acc.id)!==gen){done.add(acc.id);continue}
         const row=map.get(acc.id);
-        if(!row){checking.delete(acc.id);continue}
-        if(row.ok===false&&row.found!==false){checking.delete(acc.id);continue}
+        if(!row){release(acc.id,gen);continue}
+        if(row.ok===false&&row.found!==false){release(acc.id,gen);continue}
         let s=null;
-        try{s=mapBackendPayload(row)}catch(e){checking.delete(acc.id);continue}
-        if(checkGen.get(acc.id)!==gen){checking.delete(acc.id);continue}
+        try{s=mapBackendPayload(row)}catch(e){release(acc.id,gen);continue}
+        if(checkGen.get(acc.id)!==gen){done.add(acc.id);continue}
+        s.updatedAt=batchNow; // one stamp per chunk so pool sparkline can bucket
         commitStats(acc.id,acc,s);
-        checking.delete(acc.id);
+        release(acc.id,gen);
         done.add(acc.id);
         if(s.found!==false)run.ok++;
-        run.done++;hit++;renderRun();
+        run.done++;renderRun();
       }
-      for(const id of gens.keys())checking.delete(id);
-      if(!hit)break; // worker likely old / no POST — fall through
+      for(const [id,gen] of gens)release(id,gen);
+      // Soft-empty chunk (all transport skips / superseded): try the next POST chunk.
+      // Only a dead POST (`!map`) aborts batching entirely.
     }
   }
   for(const acc of list){
     if(run.stop)break;
     if(done.has(acc.id))continue;
     run.current=acc.label||acc.gameName;renderRun();
-    // null = superseded by a newer check on this card — not a failure, and not a
-    // refresh this pass can take credit for either.
+    // null = superseded; "missing" = found:false; false = transport fail; true = refreshed.
     const result=await check(acc.id);
     if(result===false)run.failed.push({id:acc.id,name:acc.label||acc.gameName});
-    else if(result!==null)run.ok++;
+    else if(result===true)run.ok++;
     run.done++;renderRun();
     if(run.stop)break;
     await new Promise(r=>setTimeout(r,cfg.backendUrl?200:800));
@@ -3784,13 +3793,15 @@ function seasonReset(id){
   toast("Season reset — previous rank kept in Past seasons");
 }
 function poolLpSpark(pool){
-  // Average ladder LP across the combined pool at each history timestamp bucket,
-  // not a zig-zag of every account's points interleaved.
+  // Average ladder LP across the combined pool per day — exact timestamps almost
+  // never collide across accounts, so day buckets are what make this a pool curve
+  // instead of a zig-zag of every check interleaved.
   const byT=new Map();
+  const DAY=86400000;
   for(const a of pool){
     for(const h of (a.history||[]).slice(-12)){
       const v=ladderLP(h); if(v==null)continue;
-      const t=+h.t||0;
+      const t=Math.floor((+h.t||0)/DAY)*DAY;
       if(!byT.has(t))byT.set(t,{sum:0,n:0});
       const b=byT.get(t); b.sum+=v; b.n++;
     }
@@ -3814,6 +3825,7 @@ function openCompare(id){
     if(compareIds.length>2)compareIds=compareIds.slice(-2);
   }
   if(compareIds.length<2){toast("Pick one more account to compare ("+compareIds.length+"/2)");render();return}
+  render(); // refresh compare labels on every card before the modal covers them
   renderCompare();
 }
 function renderCompare(){
@@ -3837,7 +3849,7 @@ function renderCompare(){
   modal.classList.remove("hidden");
   setHTML($("cmpBody"),`<div class="cmp-grid">${cell(a)}<div class="cmp-vs">vs</div>${cell(b)}</div>
     <button class="btn" id="cmpClear" style="margin-top:12px">Clear selection</button>`);
-  $("cmpClear").onclick=()=>{closeCompare();render()};
+  $("cmpClear").onclick=()=>{closeCompare()};
 }
 
 
@@ -4128,6 +4140,12 @@ function pruneCardState(){
     for(const id of [...s])if(!live.has(id))s.delete(id);
   for(const k of [...openSec])if(!live.has(k.slice(0,k.lastIndexOf("|"))))openSec.delete(k);
   for(const id of [...chartRange.keys()])if(!live.has(id))chartRange.delete(id);
+  for(const id of [...checkGen.keys()])if(!live.has(id))checkGen.delete(id);
+  if(compareIds.some(id=>!live.has(id))){
+    compareIds=compareIds.filter(id=>live.has(id));
+    const m=$("compareModal");
+    if(m&&compareIds.length<2)m.classList.add("hidden");
+  }
   if(armedDelete&&!live.has(armedDelete))armedDelete=null;
   if(editingNote&&!live.has(editingNote)){editingNote=null;noteDraft=""}
   if(flashId&&!live.has(flashId))flashId=null;
@@ -4803,7 +4821,7 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&s.asOf?` title="Read from ${esc(s.asOf)}"`:""}>${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
+      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
       <div class="acts">
         <button data-act="login" class="a-login" title="Show saved login">${icon("user")} ${loginOpen?"Hide login":"Login"}</button>
         <a class="a-dpm" href="${dpm}" target="_blank" rel="noreferrer">DPM ↗</a>
@@ -4995,9 +5013,13 @@ function closeAllPanels(){
   closeCompare();
 }
 function closeCompare(){
+  const had=compareIds.length>0;
   compareIds=[];
   const m=$("compareModal");
   if(m)m.classList.add("hidden");
+  // Escape / backdrop used to clear the selection without re-rendering, so cards
+  // kept showing "Unselect compare" until something else refreshed the grid.
+  if(had)render();
 }
 function openForm(acc){
   if(!acc&&previewMode){previewMode=false;accounts=[];render()}
