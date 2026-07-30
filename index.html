@@ -11,9 +11,10 @@
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;450;500;600;700&display=swap');
-
   :root{
     /* surfaces — cool neutral dark, no more navy wash */
     --bg:#07080c; --panel:#0f1116; --panel2:#161922; --panel3:#1e222d;
@@ -1481,6 +1482,7 @@
     #moreMenu:not(.hidden),#bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show,
     .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in,.sec-b,
     .modal::before,.modal:not(.hidden) .mdl,.acc-prev.show{animation:none!important}
+    .hx-in.scanning::after{animation:none!important;content:none}
     .grid>.hx{transition:none}
     .panel-close:hover,.chip:active,.card:hover .c-portrait,.a-login:hover .ico,.acts button:hover .ico,
     .c-drawer:hover .ico{transform:none}
@@ -1505,7 +1507,9 @@
     .console{position:static}
   }
   @media (max-width:560px){.formgrid{grid-template-columns:1fr;padding:18px}.card{padding:15px}
-    .c-drawer{margin:1px -15px -15px}}
+    .c-drawer{margin:1px -15px -15px}
+    .cmp-grid{grid-template-columns:1fr;gap:8px}
+    .cmp-vs{text-align:center;padding:4px 0}}
 </style>
 </head>
 <body data-atmosphere="spotlight">
@@ -1537,7 +1541,8 @@
       <div style="position:relative">
         <button id="bMore" title="Export, import, settings">⋯</button>
         <div id="moreMenu" class="hx teal hidden" style="position:absolute;right:0;top:calc(100% + 8px);z-index:20;min-width:206px"><div class="hx-in" style="padding:7px;display:flex;flex-direction:column;gap:1px">
-          <button id="bExport" style="justify-content:flex-start;width:100%">Export backup (JSON)</button>
+          <button id="bExport" style="justify-content:flex-start;width:100%" title="Downloads plaintext JSON — includes login passwords">Export backup (JSON, plaintext)</button>
+          <button id="bExportEnc" style="justify-content:flex-start;width:100%" title="AES-encrypted backup — needs your master password to open">Export encrypted backup…</button>
           <button id="bExportCsv" style="justify-content:flex-start;width:100%">Export as CSV</button>
           <button id="bImport" style="justify-content:flex-start;width:100%">Import backup</button>
           <button id="bImportCsv" style="justify-content:flex-start;width:100%">Import CSV</button>
@@ -1702,6 +1707,10 @@
           <select id="sAutoLock" aria-describedby="sAutoLockHint"></select>
         </div>
         <div id="sAutoLockHint" class="hint" style="margin-top:6px">Only applies while a master password is set. Off means the vault stays unlocked until you lock it.</div>
+        <div class="sub-fld" style="padding-left:0;margin-top:12px">
+          <button type="button" id="sLockNow" class="b-danger" title="Lock the vault now — needs the master password to open again">Lock now</button>
+          <div class="hint" style="margin-top:6px">Locks this tab immediately. Other open tabs keep their own unlock state until you reload them.</div>
+        </div>
       </div>
 
       <div class="grp">
@@ -2056,8 +2065,15 @@ const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / 
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.8.2";
+const APP_VERSION="1.8.3";
 const APP_CHANGELOG=[
+  {v:"1.8.3",items:[
+    "Archived view + chore tiles: exit Archive so filters are not empty",
+    "Dash tile counts follow toolbar filters; Never checked uses hasReading",
+    "Sync: GET-before-PUT, equal-rev no-op pull, password-change cloud warning",
+    "Manual Lock now; plaintext export labeling + encrypted export option",
+    "Multi-tab storage lock; lighter flag/compare updates; SW/fonts polish",
+  ]},
   {v:"1.8.2",items:[
     "Sync LWW fix: Push uses content rev (no Date.now overwrite of newer cloud)",
     "Pull conflict confirms; sanitize + save-failure handling",
@@ -2106,6 +2122,9 @@ function isFailed(a){
   // Transport failure note only — "failed (" alone matched too many informational notes.
   return /auto-fetch failed/i.test(String(a.stats.note||""));
 }
+/* "Never checked" = no reading yet. A CSV tier without updatedAt is a reading
+   (hasReading), not a chore — isChecked alone wrongly counted those as never. */
+function neverChecked(a){return isLive(a)&&!hasReading(a.stats)}
 // Shared with the worker: op.gg sometimes serves a 200 "not found" page.
 function isSummonerNotFoundPage(html){
   return /summoner\s+not\s+found|this\s+summoner\s+is\s+unregistered/i.test(String(html||""))
@@ -2852,6 +2871,22 @@ async function pushVaultSync(){
     // a newer cloud vault because "now" always beat the remote timestamp.
     if(!(Number(cfg.vaultRev)>0))touchVaultRev();
     const updatedAt=Number(cfg.vaultRev);
+    // GET-before-PUT: catch a newer cloud copy before encrypt+upload (and before
+    // the worker's 409), so two devices racing don't burn a round-trip for nothing.
+    try{
+      const peek=await fetch(url,{headers:{"Authorization":"Bearer "+cfg.syncToken}});
+      if(peek.ok){
+        let remote=null; try{remote=await peek.json()}catch(e){}
+        const remoteAt=Number(remote&&remote.updatedAt)||0;
+        if(remoteAt>updatedAt){
+          toast("Remote vault is newer — Pull first, or Push again after resolving","Pull…",()=>{
+            if(confirm("Replace this device's vault with the newer cloud copy?\nLocal changes since your last sync may be lost."))
+              pullVaultSync(true);
+          });
+          return;
+        }
+      }
+    }catch(e){/* network blip — fall through to PUT; worker still enforces LWW */}
     const envelope=await encryptData(vaultPassword,accounts);
     if(vaultLocked())return;
     const res=await fetch(url,{
@@ -2904,6 +2939,13 @@ async function pullVaultSync(force){
     const remoteAt=Number(data.updatedAt)||0;
     const localAt=Number(cfg.vaultRev)||0;
     const lastSync=Number(cfg.lastSyncAt)||0;
+    // Same revision already on disk — nothing to apply (avoids a rewrite + rev bump).
+    if(!force&&remoteAt>0&&remoteAt===localAt&&accounts.length){
+      cfg.lastSyncAt=Date.now(); saveCfg();
+      updateSyncStatus();
+      toast("Already in sync with cloud");
+      return;
+    }
     if(!force&&accounts.length){
       if(localAt>remoteAt){
         toast("Local vault is newer than cloud — Pull would overwrite it","Pull…",()=>{
@@ -4184,13 +4226,16 @@ function bindSparkTip(root){
 }
 let compareIds=[];
 function openCompare(id){
+  const prev=[...compareIds];
   if(compareIds.includes(id))compareIds=compareIds.filter(x=>x!==id);
   else {
     compareIds.push(id);
     if(compareIds.length>2)compareIds=compareIds.slice(-2);
   }
-  if(compareIds.length<2){toast("Pick one more account to compare ("+compareIds.length+"/2)");render();return}
-  render(); // refresh compare labels on every card before the modal covers them
+  // Only the cards whose compare label flipped need a patch — not the whole grid.
+  const touched=new Set([id,...prev,...compareIds]);
+  for(const tid of touched)renderCard(tid);
+  if(compareIds.length<2){toast("Pick one more account to compare ("+compareIds.length+"/2)");return}
   renderCompare();
 }
 function renderCompare(){
@@ -4259,17 +4304,68 @@ function parseQuery(q){
   }
   return out;
 }
+// forceActive: dash tiles always count the live vault even while browsing Archive.
+function passesBaseFilters(a,Q,{forceActive=false}={}){
+  Q=Q||parseQuery(ui.search);
+  if(forceActive){if(a.archived)return false}
+  else{
+    if(a.archived&&!ui.showArchived)return false;
+    if(ui.showArchived&&!a.archived)return false;
+  }
+  if(ui.favOnly&&!a.fav)return false;
+  if(ui.region&&a.region!==ui.region)return false;
+  if(ui.status&&(a.status||"active")!==ui.status)return false;
+  if(ui.tag&&!(a.tags||[]).includes(ui.tag))return false;
+  if(Q.tier){
+    const t=(a.stats&&a.stats.found!==false&&a.stats.tier||"").toUpperCase();
+    if(Q.tier==="UNRANKED"?!isUnrankedAnswer(a):t!==Q.tier)return false;
+  }
+  if(Q.region&&a.region!==Q.region)return false;
+  if(Q.min!=null||Q.max!=null){
+    const i=isRanked(a)?TIER_ORDER.indexOf((a.stats.tier||"").toUpperCase()):-1;
+    if(i<0)return false;
+    if(Q.min!=null&&i<Q.min)return false;
+    if(Q.max!=null&&i>=Q.max)return false;
+  }
+  for(const f of Q.is){
+    if(f==="stale"&&(!isLive(a)||!isStale(a)))return false;
+    if(f==="never"&&!neverChecked(a))return false;
+    if(f==="flagged"&&!needsAttention(a))return false;
+    if(f==="banned"&&a.status!=="banned")return false;
+    if(f==="fav"&&!a.fav)return false;
+    if(f==="goal"&&!(a.goal&&a.goal.tier))return false;
+  }
+  if(Q.terms.length){
+    const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,a.createdOn,a.birthdate,
+      a.flagged?"flagged attention":"",(a.tags||[]).join(" "),a.stats?(a.stats.tier||"")+" "+(shortRank(a.stats)||""):"",(STATUS[a.status]||STATUS.active).label].join(" ").toLowerCase();
+    if(!Q.terms.every(t=>hay.includes(t)))return false;
+  }
+  return true;
+}
+function setChoreFlag(flag){
+  const next=ui.flag===flag?"":flag;
+  ui.flag=next;
+  if(next){
+    ui.tier="";
+    if(ui.showArchived){ui.showArchived=false;syncToggles()}
+  }
+  render();
+}
+function setTierFilter(tier){
+  const next=ui.tier===tier?"":tier;
+  ui.tier=next;
+  if(next){
+    ui.flag="";
+    if(ui.showArchived){ui.showArchived=false;syncToggles()}
+  }
+  render();
+}
 function filtered(){
   const Q=parseQuery(ui.search);
   let list=accounts.filter(a=>{
-    if(a.archived&&!ui.showArchived)return false;
-    if(ui.showArchived&&!a.archived)return false;
-    if(ui.favOnly&&!a.fav)return false;
-    if(ui.region&&a.region!==ui.region)return false;
-    if(ui.status&&(a.status||"active")!==ui.status)return false;
-    if(ui.tag&&!(a.tags||[]).includes(ui.tag))return false;
+    if(!passesBaseFilters(a,Q))return false;
     if(ui.flag==="stale"&&(!isLive(a)||!isStale(a)))return false;
-    if(ui.flag==="unchecked"&&(!isLive(a)||isChecked(a)))return false;
+    if(ui.flag==="unchecked"&&!neverChecked(a))return false;
     if(ui.flag==="failed"&&(!isLive(a)||!isFailed(a)))return false;
     if(ui.flag==="attention"&&!needsAttention(a))return false;
     if(ui.flag==="missing"&&(!isLive(a)||!(a.stats&&a.stats.found===false)))return false;
@@ -4278,35 +4374,6 @@ function filtered(){
     if(ui.tier){
       const t=(a.stats&&a.stats.found!==false&&a.stats.tier||"").toUpperCase();
       if(ui.tier==="UNRANKED"?!isUnrankedAnswer(a):t!==ui.tier)return false;
-    }
-    if(Q.tier){
-      const t=(a.stats&&a.stats.found!==false&&a.stats.tier||"").toUpperCase();
-      if(Q.tier==="UNRANKED"?!isUnrankedAnswer(a):t!==Q.tier)return false;
-    }
-    if(Q.region&&a.region!==Q.region)return false;
-    if(Q.min!=null||Q.max!=null){
-      const i=isRanked(a)?TIER_ORDER.indexOf((a.stats.tier||"").toUpperCase()):-1;
-      if(i<0)return false;                       // unranked is not "above Gold"
-      if(Q.min!=null&&i<Q.min)return false;
-      if(Q.max!=null&&i>=Q.max)return false;
-    }
-    for(const f of Q.is){
-      if(f==="stale"&&(!isLive(a)||!isStale(a)))return false;
-      if(f==="never"&&(!isLive(a)||isChecked(a)))return false;
-      if(f==="flagged"&&!needsAttention(a))return false;
-      if(f==="banned"&&a.status!=="banned")return false;
-      if(f==="fav"&&!a.fav)return false;
-      if(f==="goal"&&!(a.goal&&a.goal.tier))return false;
-    }
-    if(Q.terms.length){
-      const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,a.createdOn,a.birthdate,
-        a.flagged?"flagged attention":"",(a.tags||[]).join(" "),a.stats?(a.stats.tier||"")+" "+(shortRank(a.stats)||""):"",(STATUS[a.status]||STATUS.active).label].join(" ").toLowerCase();
-      // Each word has to turn up somewhere, not all of them in a row. The fields
-      // are joined into one haystack, so the terms used to be re-joined and looked
-      // for as a literal phrase — which is why "hide bush" found nothing at all on
-      // an account named "Hide on Bush", and why no query could ever combine a
-      // name with a tag, since the two are never adjacent in the haystack.
-      if(!Q.terms.every(t=>hay.includes(t)))return false;
     }
     return true;
   });
@@ -4609,8 +4676,8 @@ function renderRibbon(){
   if(pool.length<2){setHTML(el,"");return}
   const dist={};let unN=0,neverN=0,missN=0;
   for(const a of pool){
-    // Same predicate as the dash "Never checked" tile / filter — not "no tier".
-    if(isLive(a)&&!isChecked(a)){neverN++;continue}
+    // Same predicate as the dash "Never checked" tile / filter.
+    if(neverChecked(a)){neverN++;continue}
     if(isRanked(a)){const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1}
     else if(isUnrankedAnswer(a))unN++;
     else if(!isLive(a))continue;
@@ -4649,16 +4716,16 @@ function syncDashToggle(){
 }
 function renderDash(){
   const el=$("dash");
-  const accounts0=accounts.filter(a=>!a.archived);
+  const Q=parseQuery(ui.search);
+  // Chore counts use the same toolbar filters as the grid (region/tag/search/…),
+  // but always from the active vault — archived view is exited when a tile is clicked.
+  const countPool=accounts.filter(a=>passesBaseFilters(a,Q,{forceActive:true}));
+  const allActive=accounts.filter(a=>!a.archived);
+  const filterHint=[ui.region&&ui.region,ui.status&&ui.status,ui.tag&&("#"+ui.tag),ui.favOnly&&"★",ui.search&&("“"+ui.search+"”")].filter(Boolean).join(" · ");
   syncDashToggle();
-  if(accounts0.length===0){hideSparkTip();el.innerHTML="";return}
-  // The affordance itself now lives in the header tray beside the other chrome,
-  // rather than floating alone on a row of its own above the console.
+  if(!allActive.length){hideSparkTip();el.innerHTML="";return}
   if(cfg.dashCollapsed){hideSparkTip();el.innerHTML="";return}
-  const ranked=accounts0.filter(a=>isLive(a)&&a.stats&&a.stats.found!==false&&a.stats.tier&&a.stats.tier.toUpperCase()!=="UNRANKED");
-  // Combined numbers come from a pool you control: one silver account you never
-  // play would otherwise drag the whole vault's winrate down and call itself a
-  // summary. Everything below the floor, and anything explicitly excluded, is out.
+  const ranked=countPool.filter(a=>isLive(a)&&a.stats&&a.stats.found!==false&&a.stats.tier&&a.stats.tier.toUpperCase()!=="UNRANKED");
   const pool=ranked.filter(inCombined);
   const excludedN=ranked.length-pool.length;
   let W=0,L=0;
@@ -4668,35 +4735,25 @@ function renderDash(){
   pool.forEach(a=>{if(rankValue(a.stats)>rankValue(best&&best.stats))best=a});
   const topChamps=mergeChampions(pool);
   const bestTxt=best&&rankValue(best.stats)>=0?esc(best.label||best.gameName)+" <small>"+esc(shortRank(best.stats)||"")+"</small>":"—";
-  const regCount={};accounts0.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
+  const regCount={};allActive.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
   const regTxt=Object.entries(regCount).map(([r,n])=>r+" "+n).join(" · ");
   const dist={};ranked.forEach(a=>{const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1});
-  // "Unranked/unchecked ×54" lumped together a result and a chore. Never checked
-  // is work waiting to be done; unranked is an answer. They belong apart, and the
-  // one that is a chore should not be the quietest thing on the panel.
-  const neverN=accounts0.filter(a=>isLive(a)&&!isChecked(a)).length;
-  // Counted directly rather than as "everything left over", which is only the same
-  // number while nothing is both checked and never checked — a CSV import carrying a
-  // tier with no timestamp is both, and made this come out one too low. The filter
-  // behind the tile asks this exact question now, so the two cannot drift apart.
-  const un=accounts0.filter(isUnrankedAnswer).length;
-  const staleN=accounts0.filter(a=>isLive(a)&&isStale(a)).length;
-  // "over 30d" means a check that happened and has since gone stale. It used to
-  // fold never-checked accounts in as well, which double-counts them against the
-  // "Never checked" tile right beside it and reads as an age nobody measured.
-  const veryStaleN=accounts0.filter(a=>isLive(a)&&isChecked(a)&&Date.now()-a.stats.updatedAt>30*24*3600*1000).length;
-  const bannedN=accounts0.filter(a=>a.status==="banned").length;
-  const attentionN=accounts0.filter(needsAttention).length;
-  const failedN=accounts0.filter(a=>isLive(a)&&isFailed(a)).length;
-  const archivedN=accounts.length-accounts0.length;
+  const neverN=countPool.filter(neverChecked).length;
+  const un=countPool.filter(isUnrankedAnswer).length;
+  const staleN=countPool.filter(a=>isLive(a)&&isStale(a)).length;
+  const veryStaleN=countPool.filter(a=>isLive(a)&&isChecked(a)&&Date.now()-a.stats.updatedAt>30*24*3600*1000).length;
+  const bannedN=allActive.filter(a=>a.status==="banned").length;
+  const attentionN=countPool.filter(needsAttention).length;
+  const failedN=countPool.filter(a=>isLive(a)&&isFailed(a)).length;
+  const archivedN=accounts.length-allActive.length;
   let bk="";
   if(hasStorage){
     const remindDays=clampExportDays(cfg.exportRemindDays);
     if(!cfg.lastExport)bk="No backup yet — hit Export once your accounts are in.";
     else if(Date.now()-cfg.lastExport>remindDays*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago — consider exporting.";
   }
-  const dupN=duplicateIds().size;
-  const rotN=accounts0.filter(needsRotation).length;
+  const dupN=countPool.filter(isDuplicate).length;
+  const rotN=countPool.filter(needsRotation).length;
   const poolTrend=poolLpTrend(pool);
   // These are filter toggles, not links — they say so to a screen reader as well
   // as by lighting up.
@@ -4711,11 +4768,11 @@ function renderDash(){
     <div class="dash-filter">
       <span class="k">Counting</span>
       <select id="dashMin">${COMBINED_FLOORS.map(f=>`<option value="${f.v}"${(cfg.statsMinTier||"")===f.v?" selected":""}>${esc(f.label)}</option>`).join("")}</select>
-      <span class="dash-ex">${pool.length} of ${ranked.length} ranked${excludedN?" · "+excludedN+" left out":""}</span>
+      <span class="dash-ex">${pool.length} of ${ranked.length} ranked${excludedN?" · "+excludedN+" left out":""}${filterHint?" · "+esc(filterHint):""}</span>
     </div>
   </div>
   <div class="dash">
-    <div class="stat"><div class="k">Accounts</div><div class="v">${accounts0.length} <small>· ${accounts0.filter(a=>a.fav).length} ★${bannedN?" · "+bannedN+" banned":""}${archivedN?" · "+archivedN+" archived":""}</small></div></div>
+    <div class="stat"><div class="k">Accounts</div><div class="v">${allActive.length} <small>· ${allActive.filter(a=>a.fav).length} ★${bannedN?" · "+bannedN+" banned":""}${archivedN?" · "+archivedN+" archived":""}</small></div></div>
     <div class="stat"><div class="k">Best account</div><div class="v" style="font-size:14px">${bestTxt}</div></div>
     <div class="stat"><div class="k">Season W/L</div><div class="v">${W}W ${L}L <small>· ${wr} WR</small></div>
       <div class="s-note">from ${pool.length} counted account${pool.length===1?"":"s"}</div></div>
@@ -5619,17 +5676,36 @@ function notify(title,body){
 }
 
 // ---------- export / import ----------
-function doExport(){
-  if(previewMode){toast("Exit preview before exporting — this is example data, not your vault");return}
-  const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),accounts};
-  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+function downloadBlob(blob,filename){
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download="smurf-backup-"+new Date().toISOString().slice(0,10)+".json";
+  a.download=filename;
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+}
+function doExport(){
+  if(previewMode){toast("Exit preview before exporting — this is example data, not your vault");return}
+  const hasSecrets=accounts.some(a=>a.password||a.login||a.email);
+  if(hasSecrets&&!confirm("This downloads a PLAINTEXT JSON backup.\nLogin passwords and emails are readable in the file.\n\nContinue?"))return;
+  const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),plaintext:true,accounts};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  downloadBlob(blob,"smurf-backup-plaintext-"+new Date().toISOString().slice(0,10)+".json");
   cfg.lastExport=Date.now();saveCfg();
-  toast("Backup exported");
+  toast("Plaintext backup exported — keep it private");
+}
+async function doExportEnc(){
+  if(previewMode){toast("Exit preview before exporting — this is example data, not your vault");return}
+  if(!vaultPassword){toast("Set a master password in Settings first — encrypted export needs it");return}
+  if(vaultLocked()){toast("Unlock the vault first");return}
+  try{
+    const envelope=await encryptData(vaultPassword,accounts);
+    if(vaultLocked())return;
+    const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),encrypted:true,envelope};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    downloadBlob(blob,"smurf-backup-encrypted-"+new Date().toISOString().slice(0,10)+".json");
+    cfg.lastExport=Date.now();saveCfg();
+    toast("Encrypted backup exported — same master password opens it");
+  }catch(e){toast("Encrypted export failed: "+(e.message||"error"))}
 }
 function csvCell(v){
   let s=String(v==null?"":v);
@@ -5668,7 +5744,17 @@ function doImport(file){
   rd.onload=async()=>{
     try{
       const p=JSON.parse(rd.result);
-      const list=Array.isArray(p)?p:p.accounts;
+      let list=null;
+      // Encrypted export: {encrypted:true,envelope:{__enc,…}} — or a bare envelope.
+      const envelope=(p&&p.envelope&&p.envelope.__enc)?p.envelope
+        :(p&&p.__enc)?p:null;
+      if(envelope){
+        if(!vaultPassword){toast("Set a master password first — this backup is encrypted");return}
+        try{list=await decryptData(vaultPassword,envelope)}
+        catch(e){toast("Wrong master password for this encrypted backup");return}
+      }else{
+        list=Array.isArray(p)?p:p.accounts;
+      }
       if(!Array.isArray(list))throw new Error("no accounts array");
       const key=a=>(a.gameName+"#"+a.tagLine+"@"+a.region).toLowerCase();
       const fileSeen=new Set();
@@ -6229,6 +6315,10 @@ $("sVaultSet").addEventListener("click",async()=>{
   if(!pass||pass.length<4){toast("Choose a password with at least 4 characters");return}
   if(previewMode){previewMode=false;accounts=[]}
   const prev=vaultPassword;
+  const changing=!!prev&&prev!==pass;
+  if(changing&&cfg.syncToken&&cfg.backendUrl){
+    if(!confirm("You're changing the master password.\nThe cloud vault is still encrypted with the old one until you Push again from this device.\nOther devices must use the new password after that Push.\n\nContinue?"))return;
+  }
   vaultPassword=pass;
   // If the envelope never reached the disk then the vault there is still the old
   // one, and claiming otherwise is the worst version of this failure: the panel
@@ -6243,7 +6333,17 @@ $("sVaultSet").addEventListener("click",async()=>{
   }
   $("sVaultPass").value="";
   updateVaultStatus();syncLockTimer();
-  toast("Vault password set — remember it, there's no way to recover it if lost");
+  toast(changing
+    ?"Password changed — Push to cloud so other devices get the new ciphertext"
+    :"Vault password set — remember it, there's no way to recover it if lost");
+});
+if($("sLockNow"))$("sLockNow").addEventListener("click",()=>{
+  if(!vaultPassword){toast("Set a master password first — there's nothing to lock");return}
+  if(vaultLocked()){toast("Already locked");return}
+  if(!confirm("Lock the vault now? You'll need the master password to open it again."))return;
+  $("settings").classList.add("hidden");
+  relock();
+  toast("Vault locked");
 });
 $("sVaultRemove").addEventListener("click",async()=>{
   if(!vaultPassword){toast("No password is set");return}
@@ -6265,6 +6365,7 @@ $("sVaultRemove").addEventListener("click",async()=>{
 $("bHelp").addEventListener("click",()=>{const willShow=$("help").classList.contains("hidden");closeAllPanels();if(willShow)$("help").classList.remove("hidden")});
 $("bHelpClose").addEventListener("click",()=>{$("help").classList.add("hidden");cfg.seenHelp=true;saveCfg()});
 $("bExport").addEventListener("click",doExport);
+if($("bExportEnc"))$("bExportEnc").addEventListener("click",()=>{doExportEnc()});
 $("bExportCsv").addEventListener("click",doExportCSV);
 $("bImport").addEventListener("click",()=>$("fileIn").click());
 $("bDeleteAll").addEventListener("click",()=>{
@@ -6310,16 +6411,16 @@ $("bCheckAll").addEventListener("click",()=>checkAll());
 // problem the chips exist to solve: searching or hitting Favorites went through
 // renderGrid alone, so the grid went short with nothing on screen explaining it
 // and nothing to click to undo it.
-function renderFilters(){renderChips();renderGrid()}
+function renderFilters(){renderChips();renderGrid();renderDash()}
 let searchT;
 $("tSearch").addEventListener("input",e=>{ui.search=e.target.value;clearTimeout(searchT);searchT=setTimeout(renderFilters,120)});
-$("tRegion").addEventListener("change",e=>{ui.region=e.target.value;renderGrid()});
+$("tRegion").addEventListener("change",e=>{ui.region=e.target.value;renderFilters()});
 $("tSort").addEventListener("change",e=>{
   ui.sort=e.target.value;
   if(ui.sort!=="away")awayDelta=new Map();
   renderGrid();
 });
-$("tStatus").addEventListener("change",e=>{ui.status=e.target.value;renderGrid()});
+$("tStatus").addEventListener("change",e=>{ui.status=e.target.value;renderFilters()});
 // One place that puts the two toolbar toggles in step with the state they stand
 // for, rather than three copies of the same pair of style assignments.
 function syncToggles(){
@@ -6577,37 +6678,19 @@ $("palList").addEventListener("click",e=>{
 });
 $("count").addEventListener("click",e=>{
   const b=e.target.closest("[data-flag]");if(!b)return;
-  ui.flag=ui.flag===b.dataset.flag?"":b.dataset.flag;
-  if(ui.flag)ui.tier=""; // "show only these" is one filter at a time
-  render();
+  setChoreFlag(b.dataset.flag);
 });
 $("ribbon").addEventListener("click",e=>{
-  // the never-checked / not-found bands filter by flag; every other band is a tier
   const flag=e.target.closest("[data-flag]");
-  if(flag){
-    ui.flag=ui.flag===flag.dataset.flag?"":flag.dataset.flag;
-    if(ui.flag)ui.tier="";
-    render();return;
-  }
+  if(flag){setChoreFlag(flag.dataset.flag);return}
   const seg=e.target.closest("[data-tier]");if(!seg)return;
-  ui.tier=ui.tier===seg.dataset.tier?"":seg.dataset.tier;
-  if(ui.tier)ui.flag="";
-  render();
+  setTierFilter(seg.dataset.tier);
 });
 $("dash").addEventListener("click",e=>{
-  // every count answers "how many"; clicking it answers "which ones"
   const flag=e.target.closest("[data-flag]");
-  if(flag){
-    ui.flag=ui.flag===flag.dataset.flag?"":flag.dataset.flag;
-    if(ui.flag)ui.tier="";
-    render();return;
-  }
+  if(flag){setChoreFlag(flag.dataset.flag);return}
   const tier=e.target.closest("[data-tier]");
-  if(tier){
-    ui.tier=ui.tier===tier.dataset.tier?"":tier.dataset.tier;
-    if(ui.tier)ui.flag="";
-    render();
-  }
+  if(tier)setTierFilter(tier.dataset.tier);
 });
 $("chips").addEventListener("click",e=>{
   const b=e.target.closest("[data-clear]");if(!b)return;
@@ -6623,7 +6706,7 @@ $("chips").addEventListener("click",e=>{
 $("density").addEventListener("click",e=>{
   const b=e.target.closest("[data-density]");if(!b)return;
   ui.density=b.dataset.density;cfg.density=ui.density;saveCfg();
-  openInfo.clear(); // "expanded" means different things in the two layouts
+  openInfo.clear(); // "expanded" means different things across the three layouts
   render();
 });
 $("bCheckStale").addEventListener("click",()=>
@@ -6788,7 +6871,12 @@ $("grid").addEventListener("click",async e=>{
     setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
   }
   else if(act==="more"){const on=!openMore.has(id);on?openMore.add(id):openMore.delete(id);reveal=on?id+":more":null;renderCard(id)}
-  else if(act==="fav"){acc.fav=!acc.fav;reveal=acc.fav?id+":fav":null;saveDB();render()}
+  else if(act==="fav"){
+    acc.fav=!acc.fav;reveal=acc.fav?id+":fav":null;saveDB();
+    // Favs pin to the top of every sort — rebuild the grid order, not just this card.
+    if(ui.favOnly)render();
+    else{renderGrid();renderDash()}
+  }
   else if(act==="copyid")copyText(acc.gameName+"#"+acc.tagLine,"Riot ID");
   else if(act==="copylogin")copyText(acc.login,"Username");
   else if(act==="copypw")copyText(acc.password,"Password",true);
@@ -6799,7 +6887,10 @@ $("grid").addEventListener("click",async e=>{
   else if(act==="seasonreset"){
     if(!confirm("Reset this account for a new season? Current rank moves into Past seasons."))return;
     seasonReset(id)}
-  else if(act==="flag"){acc.flagged=!acc.flagged;saveDB();render();
+  else if(act==="flag"){
+    acc.flagged=!acc.flagged;saveDB();
+    if(ui.flag==="attention")render();
+    else{renderCard(id);renderDash();renderChips()}
     toast(acc.flagged?"Flagged — it's under Needs attention now":"Flag cleared")}
   else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderCard(id)}
   else if(act==="login"){
@@ -7021,6 +7112,27 @@ function relock(){
   syncLockTimer(); // nothing left to lock until the vault is opened again
   if(envelope)showLockScreen(envelope);
 }
+// Another tab wrote the vault — lock (or reload plaintext) so this tab cannot
+// keep editing a stale in-memory copy and then overwrite the other tab's save.
+window.addEventListener("storage",e=>{
+  if(!e||e.key!==DB_KEY||e.storageArea!==localStorage)return;
+  if(previewMode)return;
+  if(vaultPassword&&!vaultLocked()){
+    relock();
+    toast("Vault changed in another tab — unlock to reload");
+    return;
+  }
+  if(!vaultPassword&&!vaultLocked()){
+    try{
+      const parsed=e.newValue?JSON.parse(e.newValue):null;
+      if(parsed&&parsed.__enc){showLockScreen(parsed);return}
+      accounts=Array.isArray(parsed)?parsed.map(sanitizeAccount).filter(Boolean)
+        :(parsed&&Array.isArray(parsed.accounts)?parsed.accounts.map(sanitizeAccount).filter(Boolean):[]);
+      render();
+      toast("Vault updated from another tab");
+    }catch(err){/* ignore corrupt cross-tab payloads */}
+  }
+});
 function boot(){
   $("fRegion").innerHTML=Object.keys(REGIONS).map(r=>`<option value="${r}">${esc(r)} — ${esc(REGIONS[r].full)}</option>`).join("");
   $("sAutoEvery").innerHTML=AUTO_EVERY.map(o=>`<option value="${o.v}">${esc(o.label)}</option>`).join("");

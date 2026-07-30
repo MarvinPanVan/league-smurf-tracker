@@ -2,7 +2,7 @@
 // (e.g. GitHub Pages) — service workers cannot register on file:// pages, so
 // opening the HTML file directly just skips all of this, which is fine.
 // Bump SW cache so the comment/asset fix reaches hosted installs.
-const CACHE = "smurf-tracker-cache-v64";
+const CACHE = "smurf-tracker-cache-v65";
 // index.html is the shell; "./" was a redundant second cache of the same document.
 const ASSETS = [
   "./index.html",
@@ -13,7 +13,13 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  // addAll fails the whole install if one asset 404s; cache what we can so a
+  // missing icon never leaves the shell uncached.
+  e.waitUntil(
+    caches.open(CACHE).then(c =>
+      Promise.all(ASSETS.map(u => c.add(u).catch(() => undefined)))
+    )
+  );
   self.skipWaiting();
 });
 

@@ -4952,27 +4952,81 @@ test("pushVaultSync sends content vaultRev, not a fresh Date.now stamp", async (
     cfg.vaultRev = 1234567890000;
   `);
   let body = null;
-  win.fetch = async (url, opts) => {
+  let puts = 0;
+  win.fetch = async (url, opts = {}) => {
     assert.match(String(url), /\/vault$/);
-    assert.equal(opts.method, "PUT");
+    const method = (opts.method || "GET").toUpperCase();
+    if (method === "GET") {
+      // Node's Response — jsdom's window.Response is not a constructor here.
+      return new Response(JSON.stringify({ updatedAt: 1, envelope: { __enc: true } }), { status: 200 });
+    }
+    assert.equal(method, "PUT");
+    puts++;
     body = JSON.parse(opts.body);
-    return new win.Response(JSON.stringify({ ok: true, updatedAt: body.updatedAt }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, updatedAt: body.updatedAt }), { status: 200 });
   };
   await win.pushVaultSync();
+  assert.equal(puts, 1);
   assert.equal(body.updatedAt, 1234567890000, "must not stamp Date.now() over the content rev");
   assert.ok(body.envelope && body.envelope.__enc);
+  assert.match(win.document.getElementById("toast").textContent, /pushed/i);
+});
+
+test("pushVaultSync aborts when GET sees a newer remote vault", async () => {
+  const win = bootApp([{ id: "a1", region: "EUW", gameName: "A", tagLine: "1", status: "active",
+    tags: [], history: [], stats: null }]);
+  runScript(win, `
+    vaultPassword = "test-pass-1234";
+    cfg.backendUrl = "https://example.workers.dev";
+    cfg.syncToken = "sync-token-abcdef12";
+    cfg.vaultRev = 100;
+  `);
+  let puts = 0;
+  win.fetch = async (url, opts = {}) => {
+    const method = (opts.method || "GET").toUpperCase();
+    if (method === "GET") {
+      return new Response(JSON.stringify({ updatedAt: 999, envelope: { __enc: true } }), { status: 200 });
+    }
+    puts++;
+    return new Response("{}", { status: 200 });
+  };
+  await win.pushVaultSync();
+  assert.equal(puts, 0, "must not PUT over a newer cloud vault");
+  assert.match(win.document.getElementById("toast").textContent, /newer/i);
+});
+
+test("pullVaultSync is a no-op when vaultRev already matches", async () => {
+  const win = bootApp([{ id: "a1", region: "EUW", gameName: "A", tagLine: "1", status: "active",
+    tags: [], history: [], stats: null }]);
+  runScript(win, `
+    vaultPassword = "test-pass-1234";
+    cfg.backendUrl = "https://example.workers.dev";
+    cfg.syncToken = "sync-token-abcdef12";
+    cfg.vaultRev = 555;
+  `);
+  const before = win.document.querySelectorAll(".card").length;
+  win.fetch = async () => new Response(JSON.stringify({
+    updatedAt: 555,
+    envelope: { __enc: true, salt: "x", iv: "y", data: "z" },
+  }), { status: 200 });
+  await win.pullVaultSync(false);
+  assert.equal(win.document.querySelectorAll(".card").length, before);
+  assert.match(win.document.getElementById("toast").textContent, /Already in sync/i);
 });
 
 test("ribbon never-checked count matches the dash tile for tier-without-timestamp", () => {
   const win = bootApp([
     { id: "a", region: "EUW", gameName: "HasTier", tagLine: "1", status: "active", tags: [], history: [],
-      stats: { found: true, tier: "GOLD", division: "II", lp: 10 } }, // no updatedAt
+      stats: { found: true, tier: "GOLD", division: "II", lp: 10 } }, // no updatedAt — still a reading
     { id: "b", region: "EUW", gameName: "Empty", tagLine: "2", status: "active", tags: [], history: [], stats: null },
     { id: "c", region: "EUW", gameName: "Ok", tagLine: "3", status: "active", tags: [], history: [],
       stats: { found: true, tier: "SILVER", division: "I", lp: 0, updatedAt: Date.now() } },
   ]);
   const dashNever = win.document.querySelector('#dash [data-flag="unchecked"] .v');
   assert.ok(dashNever);
-  assert.equal(dashNever.textContent.trim(), "2");
-  assert.match(win.document.querySelector(".rib-cap").textContent, /2 never checked/);
+  assert.equal(dashNever.textContent.trim(), "1", "CSV tier without updatedAt is not never-checked");
+  assert.match(win.document.querySelector(".rib-cap").textContent, /1 never checked/);
+  assert.equal(win.neverChecked({ status: "active", archived: false,
+    stats: { found: true, tier: "GOLD", division: "II", lp: 10 } }), false);
+  assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
