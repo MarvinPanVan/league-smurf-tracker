@@ -422,19 +422,48 @@
   body.scrolled .console{border-radius:0 0 var(--r-md) var(--r-md)}
   .cmd,.tools{transition:padding .18s cubic-bezier(.22,1,.36,1)}
   @media (prefers-reduced-motion:reduce){.cmd,.tools{transition:none}}
-  /* layout switch: two states, so a segmented control rather than a menu */
-  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2)}
-  /* Neutralize the global button:active translateY — on these icon-only segments
-     it reads as the glyph shrinking/growing by a pixel on press/hover flicker. */
-  .seg button{border:0;border-radius:0;padding:7px 10px;background:none;color:var(--faint);
-    box-shadow:none;transform:none}
-  .seg button:hover{background:#ffffff0d;border:0;color:var(--muted);transform:none;box-shadow:none}
-  .seg button:active{transform:none}
-  .seg button.on{background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--gold-txt);transform:none}
-  .seg button+button{border-left:1px solid var(--line)}
-  /* block + fixed px: the global .ico is inline-block with vertical-align:-.15em,
-     which reflows a hair when the segment's background/colour changes on hover. */
-  .seg .ico{width:15px;height:15px;display:block;vertical-align:unset;flex-shrink:0}
+  /* layout switch: segmented control. Kept fully isolated from the global
+     button chrome — that rule transitions border-color + translateY on hover,
+     which made the dividers flash and the icons look like they squeezed. */
+  .seg{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:9px;
+    overflow:hidden;background:var(--panel2);flex-shrink:0}
+  .seg button{
+    box-sizing:border-box;width:36px;height:32px;padding:0;margin:0;gap:0;
+    border:0;border-radius:0;border-color:transparent;
+    background:transparent;color:var(--faint);
+    box-shadow:none;transform:none;outline:none;-webkit-tap-highlight-color:transparent;
+    /* only paint/color — never border or transform (those inherit from button{}) */
+    transition:background .16s ease,color .16s ease;
+  }
+  /* Dividers via inset shadow so global button:hover { border-color } cannot recolor them */
+  .seg button+button{box-shadow:inset 1px 0 0 var(--line);border-left:0}
+  .seg button:hover,.seg button:focus-visible{
+    background:#ffffff0d;border:0;border-color:transparent;color:var(--muted);
+    box-shadow:none;transform:none;outline:none;
+  }
+  .seg button+button:hover,.seg button+button:focus-visible{
+    box-shadow:inset 1px 0 0 var(--line);
+  }
+  .seg button:active,.seg button:focus{border:0;border-color:transparent;box-shadow:none;transform:none;outline:none}
+  .seg button+button:active,.seg button+button:focus{box-shadow:inset 1px 0 0 var(--line)}
+  .seg button.on{
+    background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--gold-txt);
+    border:0;border-color:transparent;box-shadow:none;transform:none;
+  }
+  .seg button+button.on{box-shadow:inset 1px 0 0 var(--line)}
+  .seg button.on:hover,.seg button.on:focus-visible{
+    background:color-mix(in srgb,var(--gold) 28%,transparent);color:var(--gold-txt);
+    border:0;transform:none;outline:none;
+  }
+  .seg button+button.on:hover,.seg button+button.on:focus-visible{box-shadow:inset 1px 0 0 var(--line)}
+  /* keyboard focus stays inside the segment — outer :focus-visible outline was
+     clipped by overflow:hidden and read as a flashing border */
+  .seg button:focus-visible{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--teal) 55%,transparent)}
+  .seg button+button:focus-visible{
+    box-shadow:inset 1px 0 0 var(--line),inset 0 0 0 1px color-mix(in srgb,var(--teal) 55%,transparent);
+  }
+  .seg .ico{width:15px;height:15px;display:block;flex:0 0 15px;margin:0;pointer-events:none;
+    overflow:visible;vertical-align:unset}
   /* Atmosphere picker: six little windows. Tip sits in the tile under the name
      (not a floating box) — absolute tips overflowed the settings body by a few
      pixels and painted a useless horizontal scrollbar, and they also sat on top
@@ -1462,6 +1491,7 @@
     .acts button,.acts a,.lbtns button{font-size:13px;padding:9px 13px}
     .star{font-size:21px;padding:2px 6px 2px 0}
     button,.btn{padding:10px 15px}
+    .seg button{width:40px;height:36px;padding:0} /* keep fixed; don't inherit the fat button padding */
     input,select,textarea{font-size:16px}
   }
   @media (max-width:760px){
