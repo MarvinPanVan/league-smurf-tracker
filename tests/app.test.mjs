@@ -5362,22 +5362,28 @@ test("the tag list is folded behind its own count", () => {
   assert.equal(appGet(win, "cfg.tagsOpen"), true, "and the choice is remembered");
 });
 
-/* The one thing this bar must never become is a filter you cannot see. */
-test("a tag that is filtering stays visible while the list is folded", () => {
+/* Folding the list away must not fold a live filter away with it. The handle
+   itself says only "one is on"; which one, and the way to switch it off, is the
+   console's own filter-chip row — the same place every other filter reports. */
+test("folding the tag list away never hides a live tag filter", () => {
   const win = bootApp(tagged());
   const bar = () => win.document.getElementById("tagbar");
-  bar().querySelector("[data-tagtoggle]").click();       // open
-  bar().querySelector('[data-tag="jungle"]').click();     // filter by it
+  const handle = () => bar().querySelector("[data-tagtoggle]");
+
+  handle().click();                                       // open
+  bar().querySelector('[data-tag="jungle"]').click();      // filter by it
   assert.equal(win.document.querySelectorAll(".card").length, 1);
 
-  bar().querySelector("[data-tagtoggle]").click();       // fold it away again
-  const chips = [...bar().querySelectorAll("[data-tag]")];
-  assert.deepEqual(chips.map(c => c.dataset.tag), ["jungle"], "the active one is still out");
-  assert.equal(chips[0].getAttribute("aria-pressed"), "true");
+  handle().click();                                       // fold it away again
+  assert.equal(bar().querySelectorAll("[data-tag]").length, 0, "no chips out here any more");
+  assert.ok(handle().classList.contains("lit"), "but the handle says a tag is filtering");
 
-  chips[0].click();                                       // and can be switched off from there
+  const chip = [...win.document.querySelectorAll("#chips [data-clear]")]
+    .find(c => /jungle/.test(c.textContent));
+  assert.ok(chip, "and the console names it, folded or not");
+  chip.click();                                           // switched off from there
   assert.equal(win.document.querySelectorAll(".card").length, 2);
-  assert.equal(bar().querySelectorAll("[data-tag]").length, 0, "which folds it away with the rest");
+  assert.equal(handle().classList.contains("lit"), false, "handle goes quiet again");
 });
 
 test("a vault with no tags gets no tag bar at all", () => {
