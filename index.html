@@ -584,7 +584,21 @@
     background:color-mix(in srgb,var(--star) 12%,transparent)}
   .tools button.on:hover{color:var(--star);border-color:color-mix(in srgb,var(--star) 80%,transparent);
     background:color-mix(in srgb,var(--star) 20%,transparent)}
-  .tagbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}
+  .tagbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+  /* No tags in this view, no band and no 18px of air under it either */
+  .tagbar:empty{display:none;margin:0}
+  /* The disclosure reads as the quiet thing it is — the chips beside it are the
+     ones that carry state. Same chevron-rotates-when-open language as the stats
+     panel's toggle, at chip scale so the row stays one height. */
+  .tag-toggle{font-size:11.5px;font-weight:500;gap:6px;padding:5px 11px;border-radius:999px;
+    color:var(--faint);background:none;border:1px solid var(--line);box-shadow:none}
+  .tag-toggle:hover{color:var(--text);border-color:var(--line2);background:#ffffff0a}
+  .tag-toggle b{font-weight:600;font-variant-numeric:tabular-nums;color:var(--muted);
+    padding:0 6px;border-radius:999px;background:#ffffff0d;line-height:1.5}
+  .tag-toggle:hover b{color:var(--text)}
+  .tag-toggle .ico{width:12px;height:12px;transition:transform .22s cubic-bezier(.22,1,.36,1)}
+  .tag-toggle.open .ico{transform:rotate(180deg)}
+  @media (prefers-reduced-motion:reduce){.tag-toggle .ico{transition:none}}
   .chip{font-size:12px;font-weight:500;padding:5px 12px;border:1px solid var(--line);border-radius:999px;
     background:var(--panel2);color:var(--muted);cursor:pointer;
     transition:background .15s ease,border-color .15s ease,color .15s ease}
@@ -2158,8 +2172,13 @@ const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / 
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.8.7";
+const APP_VERSION="1.8.8";
 const APP_CHANGELOG=[
+  {v:"1.8.8",items:[
+    "The tag list folds behind its own count instead of taking a row on every screen",
+    "A tag that is filtering stays visible while the list is folded",
+    "No tags in the view, no tag band at all",
+  ]},
   {v:"1.8.7",items:[
     "op.gg joins dpm.lol under Look up — one kind of thing, one place",
     "A chart point too near the top opens its tip downward, clear of D/W/M",
@@ -5028,10 +5047,26 @@ function renderDash(){
   bindSparkTip(el);
 }
 
+/* Every tag in the vault, as a row of chips above the grid. On a vault with one
+   tag on one account that is a single word floating in its own band, and on a
+   vault with twenty it is a wall — either way it was taking a full row on every
+   screen to answer a question nobody had asked yet.
+   Folded behind its own count instead. The chip for whatever tag is currently
+   filtering stays out where you can see it and switch it off, because a filter
+   you cannot see is the one thing this bar must never become. */
 function renderTagbar(){
   const all=[...new Set(accounts.filter(a=>!!a.archived===ui.showArchived).flatMap(a=>a.tags||[]))].sort((a,b)=>a.localeCompare(b));
   if(ui.tag&&!all.includes(ui.tag))ui.tag=null;
-  setHTML($("tagbar"),all.map(t=>`<span class="chip ${ui.tag===t?"on":""}" data-k="${esc(t)}" data-tag="${esc(t)}">${esc(t)}</span>`).join(""));
+  const el=$("tagbar");
+  if(!all.length){setHTML(el,"");return}
+  const open=!!cfg.tagsOpen;
+  const shown=open?all:(ui.tag?[ui.tag]:[]);
+  const chip=t=>`<button class="chip${ui.tag===t?" on":""}" data-k="tag:${esc(t)}" data-tag="${esc(t)}"
+    aria-pressed="${ui.tag===t}">${esc(t)}</button>`;
+  setHTML(el,`<button class="tag-toggle${open?" open":""}" data-k="tagtoggle" data-tagtoggle
+      aria-expanded="${open}" title="${open?"Hide the tag list":"Show every tag in the vault"}">`
+    +icon("chevron")+`<span>Tags</span><b>${all.length}</b></button>`
+    +shown.map(chip).join(""));
 }
 // A number in a dashboard always raises "which ones?", so the stats panel sets
 // these — and they have to be visible and removable, or the grid just looks
@@ -7114,7 +7149,14 @@ $("failbar").addEventListener("click",e=>{
 $("dash").addEventListener("change",e=>{
   if(e.target&&e.target.id==="dashMin"){cfg.statsMinTier=e.target.value;saveCfg();renderDash()}
 });
-$("tagbar").addEventListener("click",e=>{const t=e.target.closest("[data-tag]");if(!t)return;ui.tag=ui.tag===t.dataset.tag?null:t.dataset.tag;render()});
+$("tagbar").addEventListener("click",e=>{
+  if(e.target.closest("[data-tagtoggle]")){
+    cfg.tagsOpen=!cfg.tagsOpen;saveCfg();renderTagbar();return;
+  }
+  const t=e.target.closest("[data-tag]");if(!t)return;
+  ui.tag=ui.tag===t.dataset.tag?null:t.dataset.tag;
+  render();
+});
 $("tSelectAll").addEventListener("change",e=>{
   const list=filtered();
   if(e.target.checked)list.forEach(a=>selected.add(a.id));else list.forEach(a=>selected.delete(a.id));

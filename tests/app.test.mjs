@@ -5336,6 +5336,57 @@ test("a point too high for a tip above it flips the tip below", () => {
   assert.equal(tips[0].classList.contains("hi"), false, "a low point still opens upward");
 });
 
+/* ---- the tag bar ----
+   A full row above the grid listing every tag in the vault: one floating word on
+   a vault with one tag, a wall on a vault with twenty, and on every screen either
+   way. */
+const tagged = () => [
+  { id: "t1", gameName: "One", tagLine: "1", region: "EUW", status: "active", history: [], stats: null, tags: ["jungle", "ranked-ready"] },
+  { id: "t2", gameName: "Two", tagLine: "2", region: "EUW", status: "active", history: [], stats: null, tags: ["adc"] },
+];
+
+test("the tag list is folded behind its own count", () => {
+  const win = bootApp(tagged());
+  const bar = win.document.getElementById("tagbar");
+  const toggle = bar.querySelector("[data-tagtoggle]");
+  assert.ok(toggle, "there is a disclosure");
+  assert.match(toggle.textContent, /Tags/);
+  assert.equal(toggle.querySelector("b").textContent, "3", "and it says how many there are");
+  assert.equal(bar.querySelectorAll("[data-tag]").length, 0, "no chips until asked for");
+  assert.equal(toggle.getAttribute("aria-expanded"), "false");
+
+  toggle.click();
+  assert.deepEqual([...bar.querySelectorAll("[data-tag]")].map(c => c.dataset.tag),
+    ["adc", "jungle", "ranked-ready"], "all of them, sorted");
+  assert.equal(bar.querySelector("[data-tagtoggle]").getAttribute("aria-expanded"), "true");
+  assert.equal(appGet(win, "cfg.tagsOpen"), true, "and the choice is remembered");
+});
+
+/* The one thing this bar must never become is a filter you cannot see. */
+test("a tag that is filtering stays visible while the list is folded", () => {
+  const win = bootApp(tagged());
+  const bar = () => win.document.getElementById("tagbar");
+  bar().querySelector("[data-tagtoggle]").click();       // open
+  bar().querySelector('[data-tag="jungle"]').click();     // filter by it
+  assert.equal(win.document.querySelectorAll(".card").length, 1);
+
+  bar().querySelector("[data-tagtoggle]").click();       // fold it away again
+  const chips = [...bar().querySelectorAll("[data-tag]")];
+  assert.deepEqual(chips.map(c => c.dataset.tag), ["jungle"], "the active one is still out");
+  assert.equal(chips[0].getAttribute("aria-pressed"), "true");
+
+  chips[0].click();                                       // and can be switched off from there
+  assert.equal(win.document.querySelectorAll(".card").length, 2);
+  assert.equal(bar().querySelectorAll("[data-tag]").length, 0, "which folds it away with the rest");
+});
+
+test("a vault with no tags gets no tag bar at all", () => {
+  const win = bootApp([{ id: "n1", gameName: "None", tagLine: "1", region: "EUW",
+    status: "active", history: [], stats: null, tags: [] }]);
+  assert.equal(win.document.getElementById("tagbar").children.length, 0,
+    "nothing rendered, so the :empty rule can collapse the band");
+});
+
 test("every panel that locks page scrolling is fixed over the page", () => {
   const win = bootApp(seededAccount());
   // openModals() reads MODALS, which is a const and not reachable from out here.
