@@ -1175,8 +1175,50 @@
      shout at a sentence fragment */
   .src{font-size:10px;font-weight:500;letter-spacing:.01em;color:var(--faint);
     padding:2px 8px;border-radius:999px;background:#ffffff0a;border:1px solid #ffffff0f;white-space:nowrap}
-  .acts{display:flex;gap:5px;flex-wrap:wrap}
-  .acts button,.acts a{font-size:11.5px;padding:6px 10px;text-decoration:none}
+  /* 11.5px type in 6px of padding is a 26px target, and there were five of them
+     in a row. Mobile already got 40px; the desktop was left with whatever the
+     text happened to measure. */
+  .acts{display:flex;gap:7px;flex-wrap:wrap}
+  .acts button,.acts a{font-size:12px;padding:7px 12px;min-height:32px;text-decoration:none}
+  .c-more{min-width:34px;padding:7px 10px;font-size:15px;line-height:1;color:var(--muted)}
+  .c-more.on{background:var(--panel3);border-color:var(--line2);color:var(--text)}
+
+  /* ---- the card's ⋯ menu: one fixed element, shared by every card ---- */
+  .card-menu{position:fixed;z-index:70;width:232px;max-width:calc(100vw - 16px)}
+  .cm-in{padding:6px;display:flex;flex-direction:column;gap:1px;
+    max-height:min(70vh,420px);overflow:auto}
+  .card-menu .cm-h{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--faint);padding:7px 11px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .card-menu button,.card-menu .cm-link{width:100%;justify-content:flex-start;gap:9px;
+    font-size:12.5px;font-weight:450;padding:9px 11px;min-height:36px;border-radius:var(--r-sm);
+    background:none;border:1px solid transparent;box-shadow:none;color:var(--muted);
+    text-decoration:none;display:inline-flex;align-items:center;cursor:pointer}
+  .card-menu button:hover,.card-menu .cm-link:hover{background:#ffffff0f;border-color:transparent;color:var(--text)}
+  .card-menu button:focus-visible,.card-menu .cm-link:focus-visible{outline-offset:-2px}
+  .card-menu button.b-danger{color:var(--danger)}
+  .card-menu button.b-danger:hover{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
+  .cm-sep{height:1px;margin:5px 9px;background:var(--line)}
+  .card-menu:not(.hidden){animation:menuIn .14s cubic-bezier(.22,1,.36,1) both}
+  @keyframes menuIn{from{opacity:0;transform:translateY(4px) scale(.985)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.card-menu:not(.hidden){animation:none}}
+
+  /* ---- ✎ Rank panel ---- */
+  .rk-head{display:flex;align-items:center;gap:9px}
+  .rk-head .k{flex:1;min-width:0;margin-bottom:0}
+  .rk-x{width:26px;height:26px;min-height:0;padding:0;font-size:12px;flex-shrink:0;
+    background:none;border-color:transparent;color:var(--faint)}
+  .rk-x:hover{background:#ffffff12;border-color:transparent;color:var(--text)}
+  .rk-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .rk-cur{margin-top:-2px}
+  .rk-note{font-size:11px;color:var(--faint);margin-top:8px;line-height:1.5}
+  .rk-none{color:var(--faint);font-weight:450}
+  /* the two folds run the full width of the panel — .login pads by 12, so they
+     pull back out by exactly that and re-pad their own contents to match */
+  .rankpanel .sec{border-top:1px solid var(--line);margin:0 -12px}
+  .rankpanel .sec:first-of-type{margin-top:2px}
+  .rankpanel .sec-h{padding:11px 12px}
+  .rankpanel .sec-b{padding:2px 12px 12px}
+  .rk-save{display:flex}
   /* DPM and OP.GG are the same kind of thing — an outbound profile link — so they
      look the same. The gold tint implied a hierarchy that isn't there. */
   .a-dpm{border:1px solid var(--line);color:var(--text);font-weight:500;background:var(--panel2)}
@@ -2093,8 +2135,16 @@ const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / 
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.8.4";
+const APP_VERSION="1.8.5";
 const APP_CHANGELOG=[
+  {v:"1.8.5",items:[
+    "The card's ⋯ is a real menu now — it floats, and the card no longer reflows",
+    "Picking from it closes it, so one missclick costs one click to undo",
+    "Login and Rank are alternatives instead of stacking up on the same card",
+    "Rank opens on Current only; season peak and goal fold away with their prose",
+    "Escape clears what a card unfolded; every panel has a ✕",
+    "Card footer is four buttons, all at a 32px target; dpm.lol moved into the menu",
+  ]},
   {v:"1.8.4",items:[
     "Bulk add opens over the page — inline, it locked scrolling and hid itself",
     "Sync: a pull adopts the cloud revision instead of stamping a newer local one",
@@ -4659,6 +4709,9 @@ function syncGrid(grid,list,htmls){
 // life of the tab and an armed Delete could outlive the row it was armed on.
 function pruneCardState(){
   const live=new Set(accounts.map(a=>a.id));
+  // The ⋯ menu is a floating element outside the grid, so nothing else takes it
+  // down when the account it belongs to stops existing.
+  for(const id of openMore)if(!live.has(id)){closeCardMenu();break}
   for(const s of [selected,openInfo,openLogin,shownPw,openRank,openMore,checking])
     for(const id of [...s])if(!live.has(id))s.delete(id);
   for(const k of [...openSec])if(!live.has(k.slice(0,k.lastIndexOf("|"))))openSec.delete(k);
@@ -4969,7 +5022,7 @@ function secHTML(a,key,label,n,peek,body){
   const on=openSec.has(a.id+"|"+key);
   return `<div class="sec${on?" on":""}" data-k="sec-${key}">`
     +`<button class="sec-h" data-act="sec" data-s="${key}" aria-expanded="${on}">`
-      +`<span class="sec-n">${esc(label)}<i>${n}</i></span>`
+      +`<span class="sec-n">${esc(label)}${n===""||n==null?"":`<i>${n}</i>`}</span>`
       +`<span class="sec-p">${peek}</span>`
       +`<svg class="ico" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>`
     +`</button>`
@@ -5049,35 +5102,41 @@ function divOff(tier){
   return hasDivisions(tier)?""
     :' disabled style="opacity:.35" title="No divisions above Master — up there the ladder is only LP"';
 }
+/* Three stacked sections with a paragraph of prose each made this the tallest
+   thing on a card — and it opened from inside the ⋯ menu, so it was routinely
+   opened by accident. Current is what you came for and stays open; the peak and
+   the goal are set once and then left alone, so they fold behind their own
+   headings using the same .sec the details drawer has always used. Their
+   explanations move inside the fold, where they cost nothing until asked for. */
 function rankPanelHTML(a,s,rev){
   const pm=a.peakManual, gm=a.goal;
   const numVal=v=>{const n=Number(v);return Number.isFinite(n)?esc(String(n)):""};
-  return `<div class="login${rev||""}">
-    <div><span class="k">Current</span><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+  const tierOpts=(sel,noneLabel)=>["UNRANKED"].concat(TIER_ORDER)
+    .map(t=>`<option value="${t}" ${(sel&&(sel.tier||"").toUpperCase())===t?"selected":""}>${t==="UNRANKED"?noneLabel:t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("");
+  const divOpts=sel=>["I","II","III","IV"].map(d=>`<option ${sel&&sel.division===d?"selected":""}>${d}</option>`).join("");
+  const peakBody=`<div class="rk-row">`
+    +`<select data-f="ptier">${tierOpts(pm,"— none —")}</select>`
+    +`<select data-f="pdiv"${divOff(pm&&pm.tier)}>${divOpts(pm)}</select>`
+    +`<input data-f="plp" type="number" min="0" max="2000" placeholder="LP" value="${pm&&pm.lp!=null?numVal(pm.lp):""}" style="width:72px">`
+    +`</div><div class="rk-note">Refresh reads op.gg's own "Top tier" peak when the profile has one, and the app also tracks the highest rank it has seen itself. Set a peak here as well if you know better — whichever is genuinely highest is the one shown.</div>`;
+  const goalBody=`<div class="rk-row">`
+    +`<select data-f="gtier">${tierOpts(gm,"— none —")}</select>`
+    +`<select data-f="gdiv"${divOff(gm&&gm.tier)}>${divOpts(gm)}</select>`
+    +`</div><div class="rk-note">The card gets a rail showing how far there is left to go, and — once there is a fortnight of checks to work from — roughly how long at the rate this account has actually been climbing.</div>`;
+  const tint=e=>e&&e.tier?`<span style="color:${tierColor(e.tier)}">${esc(shortRank(e)||"")}</span>`:`<span class="rk-none">not set</span>`;
+  return `<div class="login rankpanel${rev||""}">
+    <div class="rk-head"><span class="k">Enter rank by hand</span>
+      <button class="rk-x" data-act="rank" title="Close" aria-label="Close the rank panel">✕</button></div>
+    <div class="rk-cur"><div class="rk-row">
       <select data-f="tier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${s&&(s.tier||"").toUpperCase()===t?"selected":""}>${t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
-      <select data-f="div"${divOff(s&&s.tier)}>${["I","II","III","IV"].map(d=>`<option ${s&&s.division===d?"selected":""}>${d}</option>`).join("")}</select>
+      <select data-f="div"${divOff(s&&s.tier)}>${divOpts(s)}</select>
       <input data-f="lp" type="number" min="0" max="2000" placeholder="LP" value="${s&&s.lp!=null?numVal(s.lp):""}" style="width:72px">
       <input data-f="w" type="number" min="0" placeholder="W" value="${s&&s.wins!=null?numVal(s.wins):""}" style="width:64px">
       <input data-f="l" type="number" min="0" placeholder="L" value="${s&&s.losses!=null?numVal(s.losses):""}" style="width:64px">
     </div></div>
-    <div style="border-top:1px solid var(--line);padding-top:10px">
-      <span class="k">Season peak</span>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <select data-f="ptier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${(pm&&(pm.tier||"").toUpperCase())===t?"selected":""}>${t==="UNRANKED"?"— none —":t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
-        <select data-f="pdiv"${divOff(pm&&pm.tier)}>${["I","II","III","IV"].map(d=>`<option ${pm&&pm.division===d?"selected":""}>${d}</option>`).join("")}</select>
-        <input data-f="plp" type="number" min="0" max="2000" placeholder="LP" value="${pm&&pm.lp!=null?numVal(pm.lp):""}" style="width:72px">
-      </div>
-      <div style="font-size:11px;color:var(--faint);margin-top:7px;line-height:1.5">Refresh reads op.gg's own "Top tier" peak when the profile has one, and the app also tracks the highest rank it has seen itself. Set a peak here as well if you know better — whichever is genuinely highest is the one shown.</div>
-    </div>
-    <div style="border-top:1px solid var(--line);padding-top:10px">
-      <span class="k">Goal</span>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <select data-f="gtier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${(gm&&(gm.tier||"").toUpperCase())===t?"selected":""}>${t==="UNRANKED"?"— none —":t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
-        <select data-f="gdiv"${divOff(gm&&gm.tier)}>${["I","II","III","IV"].map(d=>`<option ${gm&&gm.division===d?"selected":""}>${d}</option>`).join("")}</select>
-      </div>
-      <div style="font-size:11px;color:var(--faint);margin-top:7px;line-height:1.5">The card gets a rail showing how far there is left to go, and — once there is a fortnight of checks to work from — roughly how long at the rate this account has actually been climbing.</div>
-    </div>
-    <div><button data-act="rankapply" style="color:var(--teal-txt)">Save</button></div>
+    ${secHTML(a,"rkpeak","Season peak","",tint(pm),peakBody)}
+    ${secHTML(a,"rkgoal","Goal","",tint(gm),goalBody)}
+    <div class="rk-save"><button data-act="rankapply" class="b-teal">Save</button></div>
   </div>`;
 }
 
@@ -5371,24 +5430,16 @@ function cardHTML(a,i){
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
       <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
+      <!-- Three buttons, not five, and the ⋯ no longer unfolds a second toolbar
+           into the card: it opens one shared floating menu (see cardMenuHTML).
+           DPM moved in there with the rest — it is an outbound link you follow
+           occasionally, not one of the three things you do on a card. -->
       <div class="acts">
         <button data-act="login" class="a-login" title="Show saved login">${icon("user")} ${loginOpen?"Hide login":"Login"}</button>
-        <a class="a-dpm" href="${dpm}" target="_blank" rel="noreferrer">DPM ↗</a>
         <a class="btn" href="${opgg}" target="_blank" rel="noreferrer">OP.GG ↗</a>
         <button data-act="check" ${isChecking?"disabled":""} style="color:var(--teal-txt)">${isChecking?"…":icon("refresh")+" Refresh"}</button>
-        <button data-act="more" title="More actions" aria-label="More actions">⋯</button>
+        <button data-act="more" class="c-more${openMore.has(a.id)?" on":""}" aria-haspopup="menu" aria-expanded="${openMore.has(a.id)}" title="More actions" aria-label="More actions">⋯</button>
       </div>
-      ${openMore.has(a.id)?`<div class="acts${rv("more")}">
-        <button data-act="rank" title="Enter rank manually">${icon("pencil")} Rank</button>
-        <button data-act="edit">Edit</button>
-        ${a.archived?'<button data-act="unarchive">Unarchive</button>':'<button data-act="archive">Archive</button>'}
-        <button data-act="played" title="Mark that you played on this account today">Played today</button>
-        <button data-act="compare" title="Pick two accounts to compare">${compareIds.includes(a.id)?"Unselect compare":"Compare…"}</button>
-        <button data-act="seasonreset" title="Archive current rank into past seasons and clear live LP for a new season">Season reset</button>
-        <button data-act="flag" title="Mark this account as needing a look — it gets a marker and its own filter">${a.flagged?"Clear the flag":"Flag for attention"}</button>
-        <button data-act="exstats" title="Leave this account out of the combined stats at the top">${a.excludeStats?"Count in stats":"Exclude from stats"}</button>
-        <button data-act="del" class="b-danger" ${armedDelete===a.id?'style="border-color:var(--danger)"':""}>${armedDelete===a.id?"Sure?":"Delete"}</button>
-      </div>`:""}
     </div>
     ${openInfo.has(a.id)?infoBlockHTML(a,rv("info")):""}
     ${hasInfo(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="Past seasons, flex rank, champions">
@@ -5398,6 +5449,159 @@ function cardHTML(a,i){
       <span class="c-dl" aria-hidden="true"></span>
     </button>`)(openInfo.has(a.id)):""}
   </div></div>`;
+}
+
+/* ---------- the card's ⋯ menu ----------
+   One floating element shared by every card, rather than a second row of buttons
+   folded into each one.
+
+   Inline it was a toolbar wearing a menu's clothes: it shoved the card's own
+   content down the moment it appeared, it stayed open until you found the ⋯
+   again, and Rank lives in it — so a single missclick opened a second, much
+   larger panel underneath, and undoing one wrong click cost two right ones in two
+   different places.
+
+   It cannot simply become a popover *inside* the card either: .card is
+   overflow:hidden (the tier tint and the status rail need it), so anything
+   anchored to a footer button is cut off at the card's edge. Same answer as the
+   colour miniature and the chart tooltip — one fixed element on the body,
+   positioned against whatever asked for it. The card's markup never changes when
+   the menu opens, so the card never reflows at all. */
+let cardMenuAnchor=null;
+function cardMenuHTML(a){
+  const dpm="https://dpm.lol/"+encodeURIComponent(a.gameName)+"-"+encodeURIComponent(a.tagLine);
+  const sep=`<div class="cm-sep" role="separator"></div>`;
+  // Grouped by what they are, and ordered by how often you reach for them:
+  // edit the account · look it up elsewhere · mark its state · manage it in the
+  // vault · destroy it. Delete is last, alone, and red — it used to sit between
+  // "Exclude from stats" and the edge, at the same size as everything else.
+  return `<div class="hx-in cm-in">`
+    +`<div class="cm-h">${esc(a.label||a.gameName)}</div>`
+    +`<button data-act="rank" role="menuitem">${icon("pencil")} Rank…</button>`
+    +`<button data-act="edit" role="menuitem">Edit account…</button>`
+    +sep
+    +`<a class="cm-link" href="${dpm}" target="_blank" rel="noreferrer" role="menuitem">dpm.lol ↗</a>`
+    +sep
+    +`<button data-act="played" role="menuitem" title="Mark that you played on this account today">Played today</button>`
+    +`<button data-act="flag" role="menuitem">${a.flagged?"Clear the flag":"Flag for attention"}</button>`
+    +`<button data-act="compare" role="menuitem">${compareIds.includes(a.id)?"Unselect compare":"Compare…"}</button>`
+    +sep
+    +`<button data-act="${a.archived?"unarchive":"archive"}" role="menuitem">${a.archived?"Unarchive":"Archive"}</button>`
+    +`<button data-act="exstats" role="menuitem">${a.excludeStats?"Count in stats":"Exclude from stats"}</button>`
+    +`<button data-act="seasonreset" role="menuitem">Season reset…</button>`
+    +sep
+    +`<button data-act="del" class="b-danger" role="menuitem">${armedDelete===a.id?"Sure? Click again":"Delete account"}</button>`
+  +`</div>`;
+}
+function ensureCardMenu(){
+  let el=$("cardMenu");
+  if(el)return el;
+  el=document.createElement("div");
+  el.id="cardMenu";
+  el.className="card-menu hx teal hidden";
+  el.setAttribute("role","menu");
+  document.body.appendChild(el);
+  // The same delegated handler the grid uses — the menu carries the account's
+  // data-id, so every branch resolves exactly as it does from inside a card.
+  el.addEventListener("click",onCardClick);
+  return el;
+}
+function renderCardMenu(){
+  const id=[...openMore][0];
+  const el=$("cardMenu");
+  if(!id){if(el){el.classList.add("hidden");el.removeAttribute("data-id")}return}
+  const a=accounts.find(x=>x.id===id);
+  if(!a){closeCardMenu();return}
+  const m=ensureCardMenu();
+  m.dataset.id=id;
+  setHTML(m,cardMenuHTML(a));
+  m.classList.remove("hidden");
+  placeCardMenu();
+}
+function placeCardMenu(){
+  const m=$("cardMenu");
+  if(!m||m.classList.contains("hidden"))return;
+  const anchor=cardMenuAnchor;
+  if(!anchor||!anchor.isConnected)return;
+  const r=anchor.getBoundingClientRect(), pad=8, gap=6;
+  /* offsetWidth/offsetHeight, not getBoundingClientRect: what is computed here is
+     written to style.left/top, and those are CSS pixels. offsetWidth is the same
+     unit; a client rect is post-transform screen pixels. Browser zoom scales the
+     CSS pixel itself so the two agree there — they only diverge under an actual
+     ancestor transform, and then it is the CSS-pixel pair that stays right. */
+  const w=m.offsetWidth||232, h=m.offsetHeight||300;
+  // Right-aligned to the ⋯ and opening upward: the footer sits at the bottom of
+  // the card, so upward is where the room is. Flips down only when it isn't.
+  let left=r.right-w, top=r.top-h-gap;
+  if(top<pad)top=r.bottom+gap;
+  if(top+h>window.innerHeight-pad)top=Math.max(pad,window.innerHeight-h-pad);
+  if(left<pad)left=pad;
+  if(left+w>window.innerWidth-pad)left=Math.max(pad,window.innerWidth-w-pad);
+  m.style.left=Math.round(left)+"px";
+  m.style.top=Math.round(top)+"px";
+}
+/* Tracking listeners exist only while the menu is open — this app sits in a
+   background tab for days, and a permanent scroll listener is exactly the idle
+   cost the rest of this file works to avoid. */
+function cardMenuTrack(){
+  const a=cardMenuAnchor;
+  if(!a||!a.isConnected){closeCardMenu();return}
+  const r=a.getBoundingClientRect();
+  if(r.bottom<0||r.top>window.innerHeight){closeCardMenu();return}
+  placeCardMenu();
+}
+function bindCardMenuTracking(on){
+  if(on){
+    window.addEventListener("scroll",cardMenuTrack,true);
+    window.addEventListener("resize",cardMenuTrack);
+  }else{
+    window.removeEventListener("scroll",cardMenuTrack,true);
+    window.removeEventListener("resize",cardMenuTrack);
+  }
+}
+function openCardMenu(id,anchor){
+  const others=[...openMore].filter(x=>x!==id);
+  openMore.clear();openMore.add(id);
+  cardMenuAnchor=anchor||null;
+  for(const x of others)if(accounts.some(a=>a.id===x))renderCard(x);
+  renderCard(id);          // presses the ⋯ and flips aria-expanded
+  renderCardMenu();
+  if(window.requestAnimationFrame)requestAnimationFrame(placeCardMenu); // measure once laid out
+  bindCardMenuTracking(true);
+}
+function closeCardMenu(){
+  if(!openMore.size&&!cardMenuAnchor)return false;
+  const ids=[...openMore];
+  openMore.clear();cardMenuAnchor=null;
+  const el=$("cardMenu");
+  if(el){el.classList.add("hidden");el.removeAttribute("data-id")}
+  bindCardMenuTracking(false);
+  for(const id of ids)if(accounts.some(a=>a.id===id))renderCard(id);
+  return true;
+}
+/* One panel per card. Login and ✎ Rank are alternatives — both are "a panel on
+   this card's body" — and they had entirely independent toggles, so opening one
+   never put the other away. Details is deliberately not in here: in the list
+   layout it is the container the other two are rendered *inside*. */
+function togglePanel(id,which){
+  const sets={login:openLogin,rank:openRank};
+  const on=!sets[which].has(id);
+  for(const k in sets)sets[k].delete(id);
+  if(on)sets[which].add(id);
+  shownPw.delete(id);
+  return on;
+}
+// Escape's "put this card back the way it was", and what a click on the page
+// outside any card falls through to.
+function closeCardPanels(){
+  let touched=closeCardMenu();
+  const ids=new Set([...openLogin,...openRank,...openInfo]);
+  if(ids.size){
+    openLogin.clear();openRank.clear();openInfo.clear();shownPw.clear();
+    touched=true;
+    for(const id of ids)if(accounts.some(a=>a.id===id))renderCard(id);
+  }
+  return touched;
 }
 
 /* The rank-sorted list as a flat sequence with a heading before each new tier.
@@ -5465,7 +5669,10 @@ function renderGrid(){
     grid.classList.toggle("wall",layout==="wall");
     // A row, a card and a tile share no structure worth patching into each other,
     // so switching layout starts from nothing rather than diffing one into another.
-    if(grid.dataset.layout!==layout){grid.textContent="";cardCache.clear();grid.dataset.layout=layout}
+    // Switching layout throws every card node away, taking the ⋯ menu's anchor
+    // with it — and the menu is a floating element that would otherwise be left
+    // hanging over a grid it no longer points into.
+    if(grid.dataset.layout!==layout){closeCardMenu();grid.textContent="";cardCache.clear();grid.dataset.layout=layout}
     // Grouped only when the list is actually in rank order — under any other sort
     // the headings would be scattered through the list and mean nothing.
     const items=asList&&ui.sort==="rank"?withGroups(list):list;
@@ -5473,6 +5680,9 @@ function renderGrid(){
       :layout==="wall"?tileHTML(it):asList?rowHTML(it,i):cardHTML(it,i)));
   }
   reveal=null; // consumed by the render above — the next one must not replay it
+  // A filter or a search can take the menu's own card off screen while the menu
+  // is still open beside it.
+  if(openMore.size&&(!cardMenuAnchor||!cardMenuAnchor.isConnected))closeCardMenu();
   renderBulkBar(list); // the "select all shown" box tracks whatever is shown now
   // patching keeps a focused textarea alive, so this is normally a no-op — it
   // only matters if the note block was structurally replaced rather than patched
@@ -5551,6 +5761,10 @@ function renderCard(id){
 
 // ---------- form ----------
 function closeAllPanels(){
+  // The card's ⋯ menu floats on the body, so nothing else takes it down — and a
+  // menu left hanging over a modal that has just opened on top of it is the one
+  // thing on this page that could still be above everything and belong to nothing.
+  closeCardMenu();
   revertAccents(); // Settings previews colours live; leaving it must not keep them
   revertAtmosphere(); // same for the atmosphere tiles — Escape/✕ used to keep the preview
   settingsSaveGen++; // cancel a Save that is waiting on the notification prompt
@@ -6079,6 +6293,10 @@ document.addEventListener("keydown",e=>{
   if(e.key==="f"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$("tFav").click()}
   if(e.key==="Escape"){
     if($("accPrev").classList.contains("show")){hideAccPrev();return}
+    // Whatever a card has unfolded goes first — that is what is in front of you,
+    // and hunting down the button that opened each panel was the complaint.
+    // Only once the cards are tidy does Escape mean "close the page's panels".
+    if(closeCardPanels())return;
     closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}
   }
 });
@@ -6936,12 +7154,22 @@ $("grid").addEventListener("keydown",e=>{
     ta.blur();           // which commits, like clicking away does
   }
 });
-$("grid").addEventListener("click",async e=>{
+/* Named and shared, because the ⋯ menu is no longer inside the grid: it is one
+   floating element on the body carrying the account's data-id, and it binds this
+   exact listener. Every branch below resolves the same either way. */
+async function onCardClick(e){
   if(e.target.id==="bDemo"){loadDemo();return}
   const btn=e.target.closest("[data-act]");if(!btn)return;
   const card=e.target.closest("[data-id]");if(!card)return;
   const id=card.dataset.id, acc=accounts.find(a=>a.id===id);if(!acc)return;
   const act=btn.dataset.act;
+  /* Picking anything in a menu closes the menu. That is the whole difference
+     between a menu and the toolbar this used to be — a missclick now costs one
+     click to undo instead of two, because the thing you mis-picked from has
+     already put itself away.
+     Delete is the exception: it arms rather than acting, and "Sure? Click again"
+     has to stay on screen to be clickable. */
+  if(act!=="more"&&act!=="del"&&e.target.closest("#cardMenu"))closeCardMenu();
   if(act==="select"){
     const list=filtered();
     const idx=list.findIndex(x=>x.id===id);
@@ -6980,7 +7208,7 @@ $("grid").addEventListener("click",async e=>{
     if(card&&card.scrollIntoView)card.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
     setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
   }
-  else if(act==="more"){const on=!openMore.has(id);on?openMore.add(id):openMore.delete(id);reveal=on?id+":more":null;renderCard(id)}
+  else if(act==="more"){openMore.has(id)?closeCardMenu():openCardMenu(id,btn)}
   else if(act==="fav"){
     acc.fav=!acc.fav;reveal=acc.fav?id+":fav":null;saveDB();
     // Favs pin to the top of every sort — rebuild the grid order, not just this card.
@@ -7004,9 +7232,8 @@ $("grid").addEventListener("click",async e=>{
     saveThen(acc.flagged?"Flagged — it's under Needs attention now":"Flag cleared")}
   else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderCard(id)}
   else if(act==="login"){
-    const on=!openLogin.has(id);
-    on?openLogin.add(id):openLogin.delete(id);
-    shownPw.delete(id);reveal=on?id+":login":null;
+    const on=togglePanel(id,"login");   // puts ✎ Rank away if it was open
+    reveal=on?id+":login":null;
     // Reaching for the credentials is the closest thing this app can observe to
     // actually using the account. "Status: resting" was a label you had to keep up
     // by hand; this is the same fact, kept by itself.
@@ -7027,7 +7254,7 @@ $("grid").addEventListener("click",async e=>{
   else if(act==="range"){chartRange.set(id,btn.dataset.r);renderCard(id)}
   else if(act==="info"){const on=!openInfo.has(id);on?openInfo.add(id):openInfo.delete(id);reveal=on?id+":info":null;renderCard(id)}
   else if(act==="sec"){const k=id+"|"+btn.dataset.s;openSec.has(k)?openSec.delete(k):openSec.add(k);renderCard(id)}
-  else if(act==="rank"){const on=!openRank.has(id);on?openRank.add(id):openRank.delete(id);reveal=on?id+":rank":null;renderCard(id)}
+  else if(act==="rank"){const on=togglePanel(id,"rank");reveal=on?id+":rank":null;renderCard(id)}   // puts Login away if it was open
   else if(act==="rankapply"){
     // Bump the check generation so an in-flight Refresh cannot overwrite a manual
     // entry that landed while it was still waiting on the network.
@@ -7041,16 +7268,24 @@ $("grid").addEventListener("click",async e=>{
       level:old.level!=null?old.level:null,peak:old.peak||null,
       seasons:old.seasons||null,flex:old.flex||null,champs:old.champs||null,icon:old.icon||null,mmr:old.mmr||null,avgRecent:null,
       uncertain:false,source:null,asOf:"manual entry",note:null,updatedAt:Date.now()};
-    const ptier=g("ptier")?g("ptier").value:"UNRANKED";
-    if(ptier==="UNRANKED")delete acc.peakManual;
-    else acc.peakManual={tier:ptier,division:TIER_ORDER.indexOf(ptier)>=TIER_ORDER.indexOf("MASTER")?null:g("pdiv").value,lp:+g("plp").value||0};
+    /* Both of these now sit behind their own fold, so their fields are simply
+       absent when it is closed. Absent has to mean "leave it alone": reading a
+       missing select as "UNRANKED" would have deleted a peak or a goal every time
+       somebody saved a rank without opening the section it lives in. */
+    if(g("ptier")){
+      const ptier=g("ptier").value;
+      if(ptier==="UNRANKED")delete acc.peakManual;
+      else acc.peakManual={tier:ptier,division:TIER_ORDER.indexOf(ptier)>=TIER_ORDER.indexOf("MASTER")?null:g("pdiv").value,lp:+g("plp").value||0};
+    }
     // A goal is a rank, not a rank and an LP figure: nobody sets out to reach
     // Diamond II with exactly 47 LP. The division is as fine as it gets.
-    const gtier=g("gtier")?g("gtier").value:"UNRANKED";
-    if(gtier==="UNRANKED")delete acc.goal;
-    // lp stays null, not 0: ladderLP reads it as zero either way, but shortRank
-    // prints it, and "Master · 0 LP" is not a goal anybody set.
-    else acc.goal={tier:gtier,division:TIER_ORDER.indexOf(gtier)>=TIER_ORDER.indexOf("MASTER")?null:g("gdiv").value,lp:null};
+    if(g("gtier")){
+      const gtier=g("gtier").value;
+      if(gtier==="UNRANKED")delete acc.goal;
+      // lp stays null, not 0: ladderLP reads it as zero either way, but shortRank
+      // prints it, and "Master · 0 LP" is not a goal anybody set.
+      else acc.goal={tier:gtier,division:TIER_ORDER.indexOf(gtier)>=TIER_ORDER.indexOf("MASTER")?null:g("gdiv").value,lp:null};
+    }
     commitStats(id,acc,s);toast("Rank saved");
   }
   else if(act==="check")check(id);
@@ -7059,6 +7294,7 @@ $("grid").addEventListener("click",async e=>{
       const idx=accounts.findIndex(a=>a.id===id);const removed=accounts[idx];
       accounts=accounts.filter(a=>a.id!==id);armedDelete=null;
       selected.delete(id);if(lastSelectedId===id)lastSelectedId=null;
+      closeCardMenu();   // it was armed from in there, and its card is gone now
       render();
       // Undo must not fire after an auto-lock — that would put passwords back into
       // memory (and the hidden DOM) while the lock screen is up.
@@ -7071,8 +7307,21 @@ $("grid").addEventListener("click",async e=>{
         saveThen("Account restored");
       });
     }
-    else{armedDelete=id;renderGrid();setTimeout(()=>{if(armedDelete===id){armedDelete=null;renderGrid()}},3000)}
+    // renderCardMenu too: the "Sure? Click again" label lives in the menu now, and
+    // the menu is not part of the grid it would otherwise be redrawn with.
+    else{armedDelete=id;renderGrid();renderCardMenu();
+      setTimeout(()=>{if(armedDelete===id){armedDelete=null;renderGrid();renderCardMenu()}},3000)}
   }
+}
+$("grid").addEventListener("click",onCardClick);
+/* A click anywhere that is not the menu and not a ⋯ dismisses it. The grid's own
+   listener has already run by the time this does, so an action picked inside the
+   menu has been handled — and closed the menu itself — before we get here. */
+document.addEventListener("click",e=>{
+  if(!openMore.size)return;
+  const t=e.target;
+  if(t&&t.closest&&(t.closest("#cardMenu")||t.closest('[data-act="more"]')))return;
+  closeCardMenu();
 });
 
 // ---------- boot ----------
@@ -7194,6 +7443,7 @@ function showLockScreen(envelope){
   setTimeout(()=>$("lockPass").focus(),50);
 }
 function relock(){
+  closeCardMenu();   // floats on the body, so hiding #appRoot would leave it on screen
   let envelope=null;
   try{
     const raw=hasStorage?localStorage.getItem(DB_KEY):null;

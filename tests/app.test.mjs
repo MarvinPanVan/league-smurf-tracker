@@ -80,6 +80,22 @@ async function until(pred, label, ms = 5000) {
 const encrypted = w => { const r = w.localStorage.getItem("smurf-tracker"); return !!(r && JSON.parse(r).__enc) };
 const storedPlain = w => { const r = w.localStorage.getItem("smurf-tracker"); return !!r && Array.isArray(JSON.parse(r)) };
 
+/* A card's ⋯ opens one floating menu on the body instead of unfolding a second
+   row of buttons into the card, so a test opens it through the card and then
+   reads the items out of the menu. Pass an id, a card element, or nothing at all
+   for "the only card on screen". */
+function cardMenu(win, target) {
+  const doc = win.document;
+  const toggle = !target ? doc.querySelector('[data-act="more"]')
+    : typeof target === "string" ? doc.querySelector(`[data-id="${target}"] [data-act="more"]`)
+    : target.querySelector('[data-act="more"]');
+  assert.ok(toggle, "the card has a ⋯ button");
+  toggle.click();
+  const menu = doc.getElementById("cardMenu");
+  assert.ok(menu && !menu.classList.contains("hidden"), "the ⋯ menu is open");
+  return menu;
+}
+
 test("boots clean with an empty vault, no accounts", () => {
   const win = bootApp();
   assert.equal(win.document.querySelectorAll(".card").length, 0);
@@ -382,10 +398,8 @@ test("region/status/tag filters list only values present in the view being shown
   addRealAccount(win, "To Archive", "2222");           // will become archived
 
   // Give the second account a distinguishing tag, then archive it
-  let card = [...win.document.querySelectorAll(".card")].find(c => c.textContent.includes("To Archive"));
-  card.querySelector('[data-act="more"]').click();
-  card = [...win.document.querySelectorAll(".card")].find(c => c.textContent.includes("To Archive"));
-  card.querySelector('[data-act="archive"]').click();
+  const card = [...win.document.querySelectorAll(".card")].find(c => c.textContent.includes("To Archive"));
+  cardMenu(win, card).querySelector('[data-act="archive"]').click();
 
   // Active view must not offer a status that only the archived account has, and vice versa
   const activeStatuses = [...win.document.querySelectorAll("#tStatus option")].map(o => o.value).filter(Boolean);
@@ -439,14 +453,13 @@ test("archiving hides an account from the default view without deleting it, unar
   addRealAccount(win, "Archive Me", "1111");
   assert.equal(win.document.querySelectorAll(".card").length, 1);
 
-  win.document.querySelector('[data-act="more"]').click();
-  win.document.querySelector('[data-act="archive"]').click();
+  cardMenu(win).querySelector('[data-act="archive"]').click();
   assert.equal(win.document.querySelectorAll(".card").length, 0, "archived account must vanish from the default view");
 
   win.document.getElementById("tArchived").click();
   assert.equal(win.document.querySelectorAll(".card").length, 1, "must reappear under the archived toggle");
-  // the "more" panel toggled open back at step 1 is still open (openMore state persists across archive/view changes)
-  win.document.querySelector('[data-act="unarchive"]').click();
+  // Picking from the menu closes it, so reopen it on the archived card.
+  cardMenu(win).querySelector('[data-act="unarchive"]').click();
   win.document.getElementById("tArchived").click(); // back to the active view
   assert.equal(win.document.querySelectorAll(".card").length, 1, "unarchived account must be back in the default view");
 });
@@ -1793,11 +1806,15 @@ test("a card is patched in place, not rebuilt, so nothing blinks", () => {
   const portrait = doc.querySelector(".c-portrait");
   const chart = doc.querySelector(".lpc");
 
-  doc.querySelector('[data-act="more"]').click();
+  const menu = cardMenu(win, card);
   assert.equal(doc.querySelector(".card"), card, "the card element survives a panel toggle");
   assert.equal(doc.querySelector(".c-portrait"), portrait, "so the avatar is never re-fetched");
   if (chart) assert.equal(doc.querySelector(".lpc"), chart, "and the chart is not redrawn from scratch");
-  assert.equal(doc.querySelectorAll(".acts").length, 2, "the overflow row did appear");
+  // The ⋯ menu floats on the body, so opening it does not change the card's
+  // shape at all — it used to unfold a second row of buttons and push everything
+  // below it down the page.
+  assert.equal(doc.querySelectorAll(".card .acts").length, 1, "no second row folded into the card");
+  assert.equal(menu.parentElement, doc.body, "the menu is a sibling of the grid, not a child of the card");
 
   doc.querySelector(".c-drawer").click();
   assert.equal(doc.querySelector(".card"), card, "same through the details drawer");
@@ -2011,8 +2028,7 @@ test("a selection does not outlive the view it was made in", () => {
   assert.equal(count(win2), "2 selected");
 
   const first = win2.document.querySelector('.card[data-id]');
-  first.querySelector('[data-act="more"]').click();
-  first.querySelector('[data-act="archive"]').click();
+  cardMenu(win2, first).querySelector('[data-act="archive"]').click();
   assert.equal(count(win2), "1 selected", "the archived one left the selection with the view");
 
   win2.document.getElementById("bulkDelete").click(); // confirm() is stubbed to true
@@ -2503,8 +2519,7 @@ test("an edit cannot rename one account on top of another", () => {
   // edit the second one to collide with the first
   const cards = [...win.document.querySelectorAll(".card")];
   const second = cards.find(c => c.textContent.includes("Second"));
-  second.querySelector('[data-act="more"]').click();
-  win.document.querySelector(`.card[data-id="${second.dataset.id}"] [data-act="edit"]`).click();
+  cardMenu(win, second).querySelector('[data-act="edit"]').click();
   win.document.getElementById("fName").value = "First";
   win.document.getElementById("fTag").value = "AAA";
   win.document.getElementById("fSave").click();
@@ -3311,8 +3326,7 @@ test("the created and date-of-birth fields save, reopen and round-trip", () => {
   addRealAccount(win, "Recovered", "1234");
   const id = win.filtered()[0].id;
 
-  win.document.querySelector(`.card[data-id="${id}"] [data-act="more"]`).click();
-  win.document.querySelector(`.card[data-id="${id}"] [data-act="edit"]`).click();
+  cardMenu(win, id).querySelector('[data-act="edit"]').click();
   win.document.getElementById("fCreated").value = "2022-02-04";
   win.document.getElementById("fBirth").value = "1987-01-08";
   win.document.getElementById("fSave").click();
@@ -3321,8 +3335,8 @@ test("the created and date-of-birth fields save, reopen and round-trip", () => {
   assert.equal(stored.createdOn, "2022-02-04");
   assert.equal(stored.birthdate, "1987-01-08");
 
-  // the overflow menu is still open from before — clicking ⋯ again would shut it
-  win.document.querySelector(`.card[data-id="${id}"] [data-act="edit"]`).click();
+  // Picking Edit closed the menu, so open it again for the second trip.
+  cardMenu(win, id).querySelector('[data-act="edit"]').click();
   assert.equal(win.document.getElementById("fCreated").value, "2022-02-04", "and come back into the form");
   assert.equal(win.document.getElementById("fBirth").value, "1987-01-08");
 });
@@ -3358,8 +3372,7 @@ test("the recovery facts show where you look for them, on the login panel", () =
 test("flagging an account marks it in every layout, filters, and is counted", () => {
   const win = bootApp(ladderSeed());
   const id = "t4";
-  win.document.querySelector(`.card[data-id="${id}"] [data-act="more"]`).click();
-  win.document.querySelector(`.card[data-id="${id}"] [data-act="flag"]`).click();
+  cardMenu(win, id).querySelector('[data-act="flag"]').click();
 
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.id === id).flagged, true);
   assert.ok(win.document.querySelector(`.card[data-id="${id}"] .flagmark`), "marked on the card");
@@ -3833,8 +3846,7 @@ test("no screen prints a division on a Master, Grandmaster or Challenger rank", 
 test("the rank panel does not offer divisions it will throw away", () => {
   const win = bootApp(ladderSeed());
   const open = id => {
-    win.document.querySelector(`.card[data-id="${id}"] [data-act="more"]`).click();
-    win.document.querySelector(`.card[data-id="${id}"] [data-act="rank"]`).click();
+    cardMenu(win, id).querySelector('[data-act="rank"]').click();
     return win.document.querySelector(`.card[data-id="${id}"] [data-f="div"]`);
   };
   assert.equal(open("t9").disabled, true, "Challenger");   // t9 is CHALLENGER
@@ -4168,8 +4180,7 @@ test("rank panel draft survives a remorph while open", () => {
   }]);
   const card = win.document.querySelector('.card[data-id="r1"]');
   assert.ok(card);
-  card.querySelector('[data-act="more"]').click();
-  card.querySelector('[data-act="rank"]').click();
+  cardMenu(win, card).querySelector('[data-act="rank"]').click();
   const lp = win.document.querySelector('[data-f="lp"]');
   assert.ok(lp, "rank panel opened");
   lp.value = "99";
@@ -4713,15 +4724,14 @@ test("Escape on compare clears Unselect compare labels via re-render", async () 
   win.openCompare("c1");
   win.openCompare("c2");
   assert.equal(appGet(win, 'compareIds.join(",")'), "c1,c2");
-  win.document.querySelector('.card[data-id="c1"] [data-act="more"]').click();
-  assert.match(win.document.querySelector('.card[data-id="c1"]').textContent, /Unselect compare/);
+  assert.match(cardMenu(win, "c1").textContent, /Unselect compare/);
   win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   await until(() => win.document.getElementById("compareModal").classList.contains("hidden"), "compare closed");
   assert.equal(appGet(win, "compareIds.length"), 0);
-  // closeCompare re-rendered; keep ⋯ open to read the label (second more-click would toggle it shut).
-  appDo(win, 'openMore.add("c1"); renderCard("c1")');
-  assert.doesNotMatch(win.document.querySelector('.card[data-id="c1"]').textContent, /Unselect compare/);
-  assert.match(win.document.querySelector('.card[data-id="c1"]').textContent, /Compare/);
+  // The label lives in the ⋯ menu now, so read it from there.
+  const menu = cardMenu(win, "c1");
+  assert.doesNotMatch(menu.textContent, /Unselect compare/);
+  assert.match(menu.textContent, /Compare/);
 });
 
 test("soft-empty batch chunk continues to the next chunk instead of aborting", async () => {
@@ -5137,6 +5147,134 @@ test("the footer prints the running version, with its changelog on hover", () =>
   assert.ok(entry, "the running version has a changelog entry of its own");
   assert.match(el.getAttribute("title"), new RegExp("New in v" + win.__v.replace(/\./g, "\\.")));
   for (const item of entry.items) assert.ok(el.title.includes(item), `hover lists: ${item}`);
+});
+
+/* ---- the card's ⋯ menu ----
+   The complaint this answers: click ⋯, missclick Rank, and you now have two
+   things open that each close only via the button that opened them — one of
+   which lives inside the other. */
+test("picking from the ⋯ menu closes it, so one missclick costs one click", () => {
+  const win = bootApp(seededAccount());
+  const id = win.document.querySelector(".card").dataset.id;
+
+  cardMenu(win, id).querySelector('[data-act="rank"]').click();
+  const menu = win.document.getElementById("cardMenu");
+  assert.equal(menu.classList.contains("hidden"), true,
+    "the menu put itself away when you picked from it");
+  assert.ok(win.document.querySelector('.card [data-f="tier"]'), "and Rank opened");
+
+  // so undoing the missclick is one click, on the panel that is actually open
+  win.document.querySelector(".card .rk-x").click();
+  assert.equal(win.document.querySelector('.card [data-f="tier"]'), null, "Rank closed again");
+  assert.equal(win.document.getElementById("cardMenu").classList.contains("hidden"), true,
+    "and nothing else was left behind");
+});
+
+test("only one card menu is open at a time", () => {
+  const win = bootApp([
+    { id: "m1", gameName: "One", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], stats: null },
+    { id: "m2", gameName: "Two", tagLine: "2", region: "EUW", status: "active", tags: [], history: [], stats: null },
+  ]);
+  assert.equal(cardMenu(win, "m1").dataset.id, "m1");
+  assert.equal(cardMenu(win, "m2").dataset.id, "m2", "opening the second takes the first's place");
+  const pressed = [...win.document.querySelectorAll('[data-act="more"]')]
+    .filter(b => b.getAttribute("aria-expanded") === "true").map(b => b.closest("[data-id]").dataset.id);
+  assert.deepEqual(pressed, ["m2"], "and only one ⋯ reads as pressed");
+});
+
+test("a click anywhere else dismisses the card menu", () => {
+  const win = bootApp(seededAccount());
+  cardMenu(win);
+  win.document.body.click();
+  assert.equal(win.document.getElementById("cardMenu").classList.contains("hidden"), true);
+});
+
+/* Opening the menu used to unfold a second row of buttons into the card, which
+   pushed everything below it — including the card's own footer and every card
+   after it in the grid — down the page. */
+test("opening the card menu does not move the card", () => {
+  const win = bootApp(seededAccount());
+  const card = win.document.querySelector(".card");
+  const before = card.innerHTML;
+  cardMenu(win, card);
+  const after = win.document.querySelector(".card").innerHTML;
+  // the ⋯ itself changes (pressed state); nothing else may
+  const strip = h => h.replace(/aria-expanded="(true|false)"/g, "").replace(/c-more on/g, "c-more");
+  assert.equal(strip(after), strip(before), "the card's own markup is otherwise untouched");
+});
+
+test("Login and Rank are alternatives, not a stack", () => {
+  const win = bootApp(seededAccount());
+  const id = win.document.querySelector(".card").dataset.id;
+  const open = sel => !!win.document.querySelector(`.card ${sel}`);
+
+  win.document.querySelector('.card [data-act="login"]').click();
+  assert.equal(open(".lrow"), true, "login panel open");
+
+  cardMenu(win, id).querySelector('[data-act="rank"]').click();
+  assert.equal(open('[data-f="tier"]'), true, "rank panel open");
+  assert.equal(open(".lrow"), false, "and the login panel put itself away");
+
+  win.document.querySelector('.card [data-act="login"]').click();
+  assert.equal(open(".lrow"), true);
+  assert.equal(open('[data-f="tier"]'), false, "and back the other way");
+});
+
+test("Escape clears what a card has unfolded before it touches the page's panels", () => {
+  const win = bootApp(seededAccount());
+  const id = win.document.querySelector(".card").dataset.id;
+  win.document.querySelector('.card [data-act="login"]').click();
+  win.document.querySelector(".c-drawer").click();
+  cardMenu(win, id);
+
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(win.document.querySelector(".card .lrow"), null, "login closed");
+  assert.equal(win.document.querySelector(".card .login.info"), null, "details closed");
+  assert.equal(win.document.getElementById("cardMenu").classList.contains("hidden"), true, "menu closed");
+});
+
+/* Three sections of form with a paragraph of prose each, opened from inside a
+   menu — which is exactly how it kept getting opened by accident. */
+test("the Rank panel opens on Current only, with peak and goal folded away", () => {
+  const win = bootApp(seededAccount());
+  const id = win.document.querySelector(".card").dataset.id;
+  cardMenu(win, id).querySelector('[data-act="rank"]').click();
+  const q = f => win.document.querySelector(`.card [data-f="${f}"]`);
+
+  assert.ok(q("tier"), "Current is there");
+  assert.equal(q("ptier"), null, "the season peak is folded");
+  assert.equal(q("gtier"), null, "so is the goal");
+
+  win.document.querySelector('.card [data-act="sec"][data-s="rkpeak"]').click();
+  assert.ok(q("ptier"), "and unfolds when asked for");
+});
+
+/* A folded section renders no fields at all, and reading a missing select as
+   "UNRANKED" would delete the value it stands for. */
+test("saving a rank leaves a folded-away peak and goal alone", () => {
+  const win = bootApp(seededAccount());
+  const id = win.document.querySelector(".card").dataset.id;
+  appDo(win, `
+    const a = accounts.find(x => x.id === ${JSON.stringify(id)});
+    a.peakManual = { tier: "MASTER", division: null, lp: 120 };
+    a.goal = { tier: "DIAMOND", division: "II", lp: null };
+  `);
+  cardMenu(win, id).querySelector('[data-act="rank"]').click();
+  win.document.querySelector('.card [data-f="lp"]').value = "77";
+  win.document.querySelector('.card [data-act="rankapply"]').click();
+
+  assert.equal(appGet(win, `accounts.find(a=>a.id===${JSON.stringify(id)}).peakManual.tier`), "MASTER");
+  assert.equal(appGet(win, `accounts.find(a=>a.id===${JSON.stringify(id)}).goal.tier`), "DIAMOND");
+  assert.equal(appGet(win, `accounts.find(a=>a.id===${JSON.stringify(id)}).stats.lp`), 77, "and the rank did save");
+});
+
+test("the card footer is three buttons and a ⋯, not five", () => {
+  const win = bootApp(seededAccount());
+  const acts = win.document.querySelector(".card .acts");
+  const labels = [...acts.children].map(el => el.textContent.trim());
+  assert.deepEqual(labels, ["Login", "OP.GG ↗", "Refresh", "⋯"]);
+  // dpm.lol did not vanish — it moved in with the rest of the outbound links
+  assert.match(cardMenu(win).textContent, /dpm\.lol/);
 });
 
 test("every panel that locks page scrolling is fixed over the page", () => {
