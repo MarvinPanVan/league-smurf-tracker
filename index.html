@@ -1136,7 +1136,15 @@
      chart exactly. The first version centred a fixed-width column on every point,
      which meant the outermost ones hung ~56 px past the edge of the chart — far
      enough to cover part of the neighbouring card and steal its hover. */
-  .lpc-pt{position:absolute;top:0;bottom:0}
+  /* The column positions things and draws the guide; it is no longer the thing
+     you hover. That is .lpc-hit, a band around the dot — pointer-events on a
+     child still give the column its :hover, so the guide, the dot's pop and the
+     tip all keep working off the same selector. */
+  .lpc-pt{position:absolute;top:0;bottom:0;pointer-events:none}
+  /* As wide as the column allows (which narrows by itself when checks are dense)
+     and 26px tall, centred on the dot — instead of the full height of the plot. */
+  .lpc-hit{position:absolute;left:var(--hl,0);right:var(--hr,0);top:var(--y);
+    height:26px;margin-top:-13px;pointer-events:auto;cursor:pointer}
   /* the guide makes it obvious which check you're reading, not just which dot */
   .lpc-pt::before{content:"";position:absolute;left:var(--x);top:0;bottom:0;width:1px;margin-left:-.5px;
     background:#ffffff2b;opacity:0;transition:opacity .13s ease}
@@ -2193,6 +2201,7 @@ const APP_CHANGELOG=[
     "Tags fold into a tab on the console's bottom edge — a handle, not a band",
     "Folded it costs ~17px; the handle lights up while a tag is filtering",
     "No tags in the view, no tag band at all",
+    "Chart points are hovered from a band around the dot, not the whole column",
   ]},
   {v:"1.8.7",items:[
     "op.gg joins dpm.lol under Look up — one kind of thing, one place",
@@ -2964,7 +2973,17 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     const when=p.h.t?timeAgo(p.h.t):null;
     const w=cr-cl;
     const anchor=last===0?50:(i===0?0:i===last?100:50); // where the dot sits in its column
-    return `<div class="lpc-pt" style="left:${xp.toFixed(2)}%;width:min(${w.toFixed(2)}%,40px);transform:translateX(-${anchor}%);--x:${anchor}%">`
+    /* --y is the dot's own height, which is what the hit area is built around.
+       The column used to *be* the target: full plot height and up to 40px wide,
+       so a point lit up from right across the chart and from anywhere above or
+       below it. The band is a little larger than the dot and nothing more. */
+    /* The outermost columns are anchored flush to their own dot so nothing hangs
+       off the ends of the plot — which leaves that dot sitting on the very edge
+       of its own target, with its outer half unreachable. Those two get a small
+       outward reach back; the card clips, so it still cannot touch a neighbour. */
+    const hl=anchor===0?-10:0, hr=anchor===100?-10:0;
+    return `<div class="lpc-pt" style="left:${xp.toFixed(2)}%;width:min(${w.toFixed(2)}%,28px);transform:translateX(-${anchor}%);--x:${anchor}%;--y:${py(p.v).toFixed(1)}px;--hl:${hl}px;--hr:${hr}px">`
+      +`<span class="lpc-hit"></span>`
       +`<b style="top:${py(p.v).toFixed(1)}px"><i style="background:${tierColor(p.h.tier)}"></i>`
       +`<span class="lpc-tip${side}${hi}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(dateLabel(p.h.t))} · ${esc(when)}</em>`:""}</span></b></div>`;
   }).join("");

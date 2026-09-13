@@ -1205,7 +1205,8 @@ function chartDom(win, h, mode) {
 
 test("a point's hit area is a window around it, never a slab of the whole chart", () => {
   const win = bootApp();
-  // Two failure modes, opposite ends of the same dial. Columns that overhang the
+  // Horizontal extent only — the vertical band is the test below. Two failure
+  // modes, opposite ends of the same dial. Columns that overhang the
   // chart lie on top of the neighbouring card and steal its hover. Columns that
   // tile the chart edge to edge mean pointing anywhere at all — the empty middle
   // of the plot — lights up whichever dot happens to be nearest.
@@ -1217,7 +1218,7 @@ test("a point's hit area is a window around it, never a slab of the whole chart"
       const left = parseFloat(p.style.left);
       // never wider than the slice between neighbours, and never wider than a
       // target either way
-      assert.match(p.style.width, /^min\(\d+(\.\d+)?%,\s*40px\)$/, `${n}[${i}]: capped width`);
+      assert.match(p.style.width, /^min\(\d+(\.\d+)?%,\s*28px\)$/, `${n}[${i}]: capped width`);
       const slice = parseFloat(p.style.width.match(/([\d.]+)%/)[1]);
       assert.ok(slice > 0 && slice <= 100 / (n - 1) + 0.02, `${n}[${i}]: no wider than its share`);
       // anchored so nothing hangs off either end of the plot
@@ -5334,6 +5335,37 @@ test("a point too high for a tip above it flips the tip below", () => {
   assert.ok(tips[tips.length - 1].classList.contains("hi"),
     "the top point's tip opens downward, away from the range switcher");
   assert.equal(tips[0].classList.contains("hi"), false, "a low point still opens upward");
+});
+
+/* The hover target used to be the whole column: top:0;bottom:0 on a box up to
+   40px wide, so a point lit up from well off to the side and from anywhere
+   above or below it. It is a band around the dot now. */
+test("a chart point is hovered from around the dot, not from the whole column", () => {
+  const now = Date.now(), D = 86400000;
+  const win = bootApp([{ id: "h1", gameName: "Hist", tagLine: "1", region: "EUW",
+    status: "active", tags: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 40, updatedAt: now },
+    history: [{ t: now - 4 * D, tier: "GOLD", division: "IV", lp: 10 },
+              { t: now - 2 * D, tier: "GOLD", division: "III", lp: 60 },
+              { t: now, tier: "GOLD", division: "II", lp: 40 }] }]);
+  const pts = [...win.document.querySelectorAll(".lpc-pt")];
+  assert.equal(pts.length, 3);
+  for (const p of pts) {
+    const hit = p.querySelector(".lpc-hit");
+    assert.ok(hit, "the target is its own element, not the column");
+    // it is anchored to the dot's height, so it can be a band rather than a column
+    const y = p.style.getPropertyValue("--y").trim();
+    assert.match(y, /^[\d.]+px$/, "--y is set");
+    assert.equal(y, p.querySelector("b").style.top, "and it is exactly the dot's height");
+    assert.match(p.style.width, /28px\)/, "the column is capped narrower than it was");
+  }
+  /* The end columns are anchored flush to their own dot so nothing hangs off the
+     plot, which leaves that dot on the very edge of its target with its outer
+     half unreachable. Those two reach back outward; the middle one needs nothing. */
+  const reach = p => [p.style.getPropertyValue("--hl").trim(), p.style.getPropertyValue("--hr").trim()];
+  assert.deepEqual(reach(pts[0]), ["-10px", "0px"], "first reaches left");
+  assert.deepEqual(reach(pts[1]), ["0px", "0px"], "a middle point is already centred");
+  assert.deepEqual(reach(pts[2]), ["0px", "-10px"], "last reaches right");
 });
 
 /* ---- the tag bar ----
