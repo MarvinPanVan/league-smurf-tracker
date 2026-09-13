@@ -5268,6 +5268,46 @@ test("saving a rank leaves a folded-away peak and goal alone", () => {
   assert.equal(appGet(win, `accounts.find(a=>a.id===${JSON.stringify(id)}).stats.lp`), 77, "and the rank did save");
 });
 
+/* Below the ladder, "Unranked", "Not found" and "never checked" all used to
+   return -1 from rankValue, so they tied and fell back to array order — an
+   account that had been read and simply has no rank sat mixed in among ones
+   nobody had ever looked at. */
+test("sorting by rank ranks what we know above what we don't", () => {
+  const acc = (id, stats) => ({ id, gameName: id, tagLine: "1", region: "EUW",
+    status: "active", tags: [], history: [], stats });
+  const win = bootApp([
+    acc("never", null),
+    acc("missing", { found: false, updatedAt: Date.now() }),
+    acc("unranked", { found: true, tier: "UNRANKED", division: null, lp: null, level: 120, updatedAt: Date.now() }),
+    acc("gold", { found: true, tier: "GOLD", division: "II", lp: 40, updatedAt: Date.now() }),
+  ]);
+  assert.deepEqual([...win.document.querySelectorAll(".card")].map(c => c.dataset.id),
+    ["gold", "unranked", "missing", "never"],
+    "ranked · an answer with no rank · a bad answer · no answer at all");
+
+  assert.ok(win.rankValue({ found: true, tier: "UNRANKED" }) > win.rankValue(null),
+    "an Unranked reading outranks no reading at all");
+  assert.ok(win.rankValue({ found: false }) > win.rankValue(null),
+    "and even a miss is more than never having looked");
+  assert.ok(win.rankValue({ found: true, tier: "IRON", division: "IV", lp: 0 }) > win.rankValue({ found: true, tier: "UNRANKED" }),
+    "any rank at all still beats Unranked");
+});
+
+test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
+  const win = bootApp(seededAccount());
+  const m = cardMenu(win);
+  assert.deepEqual([...m.querySelectorAll(".cm-g")].map(g => g.textContent.trim()),
+    ["Edit", "Look up", "Mark", "Vault", "Remove"],
+    "named groups — a hairline never says what either side of it is");
+  const items = [...m.querySelectorAll("button,.cm-link")];
+  assert.equal(items.length, 10, "every action still reachable");
+  for (const b of items) assert.ok(b.querySelector("svg.ico"), `"${b.textContent.trim()}" carries a mark`);
+  // The account name used to sit at the top as the one row that was not an item,
+  // which is exactly the row that got clipped once the list had to scroll.
+  assert.equal(m.querySelector(".cm-h"), null, "no name row to clip");
+  assert.equal(m.querySelectorAll(".cm-sep").length, 0, "and no leftover bare separators");
+});
+
 test("the card footer is three buttons and a ⋯, not five", () => {
   const win = bootApp(seededAccount());
   const acts = win.document.querySelector(".card .acts");

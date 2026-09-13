@@ -1185,19 +1185,30 @@
 
   /* ---- the card's ⋯ menu: one fixed element, shared by every card ---- */
   .card-menu{position:fixed;z-index:70;width:232px;max-width:calc(100vw - 16px)}
-  .cm-in{padding:6px;display:flex;flex-direction:column;gap:1px;
-    max-height:min(70vh,420px);overflow:auto}
-  .card-menu .cm-h{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
-    color:var(--faint);padding:7px 11px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .card-menu button,.card-menu .cm-link{width:100%;justify-content:flex-start;gap:9px;
-    font-size:12.5px;font-weight:450;padding:9px 11px;min-height:36px;border-radius:var(--r-sm);
+  /* Tall enough that the whole menu fits without scrolling on any normal screen —
+     a scrollbar here clipped the first row and made the list look truncated. */
+  .cm-in{padding:5px;display:flex;flex-direction:column;gap:0;
+    max-height:min(82vh,540px);overflow:auto;overscroll-behavior:contain}
+  /* Named groups, not bare hairlines. A rule says "these are apart"; it never says
+     what either side of it is. Same lockup as the list view's tier bands. */
+  .cm-g{display:flex;align-items:center;gap:8px;padding:7px 11px 3px;
+    font-size:9px;font-weight:700;line-height:1;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--faint);user-select:none}
+  .cm-g::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
+  .cm-g:first-child{padding-top:3px}
+  .card-menu button,.card-menu .cm-link{width:100%;justify-content:flex-start;gap:10px;
+    font-size:12.5px;font-weight:450;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
     background:none;border:1px solid transparent;box-shadow:none;color:var(--muted);
-    text-decoration:none;display:inline-flex;align-items:center;cursor:pointer}
+    text-decoration:none;display:inline-flex;align-items:center;cursor:pointer;text-align:left}
+  .card-menu .ico{width:15px;height:15px;flex-shrink:0;color:var(--faint);
+    transition:color .14s ease}
   .card-menu button:hover,.card-menu .cm-link:hover{background:#ffffff0f;border-color:transparent;color:var(--text)}
+  .card-menu button:hover .ico,.card-menu .cm-link:hover .ico{color:var(--teal-txt)}
   .card-menu button:focus-visible,.card-menu .cm-link:focus-visible{outline-offset:-2px}
   .card-menu button.b-danger{color:var(--danger)}
+  .card-menu button.b-danger .ico{color:color-mix(in srgb,var(--danger) 70%,transparent)}
   .card-menu button.b-danger:hover{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
-  .cm-sep{height:1px;margin:5px 9px;background:var(--line)}
+  .card-menu button.b-danger:hover .ico{color:var(--danger)}
   .card-menu:not(.hidden){animation:menuIn .14s cubic-bezier(.22,1,.36,1) both}
   @keyframes menuIn{from{opacity:0;transform:translateY(4px) scale(.985)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion:reduce){.card-menu:not(.hidden){animation:none}}
@@ -2135,8 +2146,13 @@ const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / 
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.8.5";
+const APP_VERSION="1.8.6";
 const APP_CHANGELOG=[
+  {v:"1.8.6",items:[
+    "Sort by rank: Unranked-but-checked now ranks above never-checked",
+    "⋯ menu: named groups and an icon per item instead of ten lines of text",
+    "⋯ menu fits without scrolling; the clipped account-name row is gone",
+  ]},
   {v:"1.8.5",items:[
     "The card's ⋯ is a real menu now — it floats, and the card no longer reflows",
     "Picking from it closes it, so one missclick costs one click to undo",
@@ -2479,7 +2495,16 @@ const ICON={
   // a person, not a door: the button reveals the stored credentials, it doesn't sign you in anywhere
   user:'<path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-7A4.5 4.5 0 0 0 4 19.5V21"/><circle cx="12" cy="8" r="4"/>',
   note:'<path d="M6.5 3H18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 18.5v-13A2.5 2.5 0 0 1 6.5 3z"/><line x1="8" y1="8.5" x2="16" y2="8.5"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="15.5" x2="13" y2="15.5"/>',
-  chart:'<line x1="3" y1="21" x2="21" y2="21"/><rect x="5" y="11" width="4" height="7" rx="1"/><rect x="11" y="6" width="4" height="12" rx="1"/><rect x="17" y="14" width="4" height="4" rx="1"/>'
+  chart:'<line x1="3" y1="21" x2="21" y2="21"/><rect x="5" y="11" width="4" height="7" rx="1"/><rect x="11" y="6" width="4" height="12" rx="1"/><rect x="17" y="14" width="4" height="4" rx="1"/>',
+  /* The ⋯ menu's own set. Ten identical lines of grey text is a wall you read
+     word by word; a mark in front of each one is what lets the eye group them
+     and land on the right row without reading all of them. */
+  external:'<path d="M14 3h7v7"/><line x1="21" y1="3" x2="11.5" y2="12.5"/><path d="M19 14.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4.5"/>',
+  check:'<polyline points="20 6 9 17 4 12"/>',
+  compare:'<rect x="3" y="5" width="7" height="14" rx="1.5"/><rect x="14" y="5" width="7" height="14" rx="1.5"/>',
+  archive:'<rect x="3" y="4" width="18" height="4.5" rx="1"/><path d="M5 8.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><line x1="10" y1="13" x2="14" y2="13"/>',
+  reset:'<path d="M3.5 12a8.5 8.5 0 1 0 2.9-6.4"/><polyline points="3 4 3 9.5 8.5 9.5"/>',
+  trash:'<line x1="3.5" y1="6" x2="20.5" y2="6"/><path d="M18.5 6l-.9 13.1A2 2 0 0 1 15.6 21H8.4a2 2 0 0 1-2-1.9L5.5 6"/><line x1="10" y1="10.5" x2="10" y2="17"/><line x1="14" y1="10.5" x2="14" y2="17"/><path d="M9 6V4.2A1.2 1.2 0 0 1 10.2 3h3.6A1.2 1.2 0 0 1 15 4.2V6"/>'
 };
 function icon(name,cls){return `<svg class="ico${cls?" "+cls:""}" viewBox="0 0 24 24">${ICON[name]}</svg>`}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -2571,13 +2596,27 @@ function crest(tier,cls){
   if(c.f)for(const f of c.f)s+=`<path d="${f}" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="1"/>`;
   return s+"</svg>";
 }
+/* Below the ladder there are three more states, and they all used to tie at -1 —
+   so an account that came back Unranked sat mixed in with ones nobody had ever
+   checked, in whatever order the array happened to hold them.
+   They are not the same thing. "Unranked" is an answer: the profile was read, it
+   simply has no rank this season. "Not found" is also an answer, just a bad one.
+   "Never checked" is the absence of one. Sorting by rank should put what we know
+   above what we don't, in that order. */
+const RANK_UNRANKED=-1, RANK_MISSING=-2, RANK_NEVER=-3;
 function rankValue(s){ // sortable number, higher = better
-  if(!s||!s.tier||s.found===false)return -1;
+  if(!s)return RANK_NEVER;
+  if(s.found===false)return RANK_MISSING;
   const t=TIER_ORDER.indexOf((s.tier||"").toUpperCase());
-  if(t<0)return -1;
-  if(t>=TIER_ORDER.indexOf("MASTER"))return t*10000+(Number(s.lp)||0);
-  const d=DIV_ORDER[(s.division||"").toUpperCase()]??0;
-  return t*10000+d*1000+(Number(s.lp)||0);
+  if(t>=0){
+    if(t>=TIER_ORDER.indexOf("MASTER"))return t*10000+(Number(s.lp)||0);
+    const d=DIV_ORDER[(s.division||"").toUpperCase()]??0;
+    return t*10000+d*1000+(Number(s.lp)||0);
+  }
+  // No tier on the ladder. An explicit UNRANKED is a reading; so is a CSV row that
+  // carried a level and nothing else. Anything with no reading at all is last.
+  if((s.tier||"").toUpperCase()==="UNRANKED")return RANK_UNRANKED;
+  return hasReading(s)?RANK_UNRANKED:RANK_NEVER;
 }
 function shortRank(s){
   if(!s||!s.tier)return null;
@@ -5470,27 +5509,32 @@ function cardHTML(a,i){
 let cardMenuAnchor=null;
 function cardMenuHTML(a){
   const dpm="https://dpm.lol/"+encodeURIComponent(a.gameName)+"-"+encodeURIComponent(a.tagLine);
-  const sep=`<div class="cm-sep" role="separator"></div>`;
-  // Grouped by what they are, and ordered by how often you reach for them:
-  // edit the account · look it up elsewhere · mark its state · manage it in the
-  // vault · destroy it. Delete is last, alone, and red — it used to sit between
-  // "Exclude from stats" and the edge, at the same size as everything else.
+  /* Grouped by what the items are, ordered by how often you reach for them, and
+     each group named rather than merely separated — a hairline says "these two
+     things are apart" without ever saying what either of them is.
+     No account name at the top any more: the menu is anchored to the card you
+     clicked, so it was repeating something already on screen — and being the
+     one row that was not an item, it was also the row that got clipped when the
+     list needed to scroll. */
+  const grp=t=>`<div class="cm-g">${esc(t)}</div>`;
+  const it=(act,ico,label,extra)=>
+    `<button data-act="${act}" role="menuitem"${extra||""}>${icon(ico)}<span>${esc(label)}</span></button>`;
   return `<div class="hx-in cm-in">`
-    +`<div class="cm-h">${esc(a.label||a.gameName)}</div>`
-    +`<button data-act="rank" role="menuitem">${icon("pencil")} Rank…</button>`
-    +`<button data-act="edit" role="menuitem">Edit account…</button>`
-    +sep
-    +`<a class="cm-link" href="${dpm}" target="_blank" rel="noreferrer" role="menuitem">dpm.lol ↗</a>`
-    +sep
-    +`<button data-act="played" role="menuitem" title="Mark that you played on this account today">Played today</button>`
-    +`<button data-act="flag" role="menuitem">${a.flagged?"Clear the flag":"Flag for attention"}</button>`
-    +`<button data-act="compare" role="menuitem">${compareIds.includes(a.id)?"Unselect compare":"Compare…"}</button>`
-    +sep
-    +`<button data-act="${a.archived?"unarchive":"archive"}" role="menuitem">${a.archived?"Unarchive":"Archive"}</button>`
-    +`<button data-act="exstats" role="menuitem">${a.excludeStats?"Count in stats":"Exclude from stats"}</button>`
-    +`<button data-act="seasonreset" role="menuitem">Season reset…</button>`
-    +sep
-    +`<button data-act="del" class="b-danger" role="menuitem">${armedDelete===a.id?"Sure? Click again":"Delete account"}</button>`
+    +grp("Edit")
+    +it("rank","pencil","Rank…")
+    +it("edit","user","Account…")
+    +grp("Look up")
+    +`<a class="cm-link" href="${dpm}" target="_blank" rel="noreferrer" role="menuitem">${icon("external")}<span>dpm.lol</span></a>`
+    +grp("Mark")
+    +it("played","check","Played today",' title="Mark that you played on this account today"')
+    +it("flag","flag",a.flagged?"Clear the flag":"Flag for attention")
+    +it("compare","compare",compareIds.includes(a.id)?"Unselect compare":"Compare…")
+    +grp("Vault")
+    +it(a.archived?"unarchive":"archive","archive",a.archived?"Unarchive":"Archive")
+    +it("exstats","chart",a.excludeStats?"Count in stats":"Exclude from stats")
+    +it("seasonreset","reset","Season reset…")
+    +grp("Remove")
+    +`<button data-act="del" class="b-danger" role="menuitem">${icon("trash")}<span>${armedDelete===a.id?"Sure? Click again":"Delete account"}</span></button>`
   +`</div>`;
 }
 function ensureCardMenu(){
