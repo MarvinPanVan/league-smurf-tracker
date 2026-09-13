@@ -5300,7 +5300,7 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
     ["Edit", "Look up", "Mark", "Vault", "Remove"],
     "named groups — a hairline never says what either side of it is");
   const items = [...m.querySelectorAll("button,.cm-link")];
-  assert.equal(items.length, 10, "every action still reachable");
+  assert.equal(items.length, 11, "every action still reachable");
   for (const b of items) assert.ok(b.querySelector("svg.ico"), `"${b.textContent.trim()}" carries a mark`);
   // The account name used to sit at the top as the one row that was not an item,
   // which is exactly the row that got clipped once the list had to scroll.
@@ -5308,13 +5308,32 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
   assert.equal(m.querySelectorAll(".cm-sep").length, 0, "and no leftover bare separators");
 });
 
-test("the card footer is three buttons and a ⋯, not five", () => {
+test("the card footer is two buttons and a ⋯, not five", () => {
   const win = bootApp(seededAccount());
   const acts = win.document.querySelector(".card .acts");
-  const labels = [...acts.children].map(el => el.textContent.trim());
-  assert.deepEqual(labels, ["Login", "OP.GG ↗", "Refresh", "⋯"]);
-  // dpm.lol did not vanish — it moved in with the rest of the outbound links
-  assert.match(cardMenu(win).textContent, /dpm\.lol/);
+  assert.deepEqual([...acts.children].map(el => el.textContent.trim()), ["Login", "Refresh", "⋯"]);
+  // Neither profile link vanished — they are one kind of thing and now sit
+  // together under Look up, rather than op.gg in the footer and dpm.lol in here.
+  const links = [...cardMenu(win).querySelectorAll(".cm-link")];
+  assert.deepEqual(links.map(a => a.textContent.trim()), ["op.gg", "dpm.lol"]);
+  for (const a of links) assert.match(a.getAttribute("href"), /^https:\/\//);
+});
+
+/* The newest check on a climbing account is the highest point on the chart, and
+   its tip opened upward into the corner the D/W/M switcher lives in. */
+test("a point too high for a tip above it flips the tip below", () => {
+  const near = (t, tier, division, lp) => ({ t, tier, division, lp });
+  const now = Date.now(), D = 86400000;
+  const win = bootApp([{ id: "c1", gameName: "Climber", tagLine: "1", region: "EUW",
+    status: "active", tags: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 80, updatedAt: now },
+    history: [near(now - 4 * D, "GOLD", "IV", 10), near(now - 2 * D, "GOLD", "III", 40), near(now, "GOLD", "I", 80)] }]);
+  const tips = [...win.document.querySelectorAll(".lpc-pt")].map(p => p.querySelector(".lpc-tip"));
+  assert.equal(tips.length, 3);
+  // the highest LP is the last point, and it is the one that has to flip
+  assert.ok(tips[tips.length - 1].classList.contains("hi"),
+    "the top point's tip opens downward, away from the range switcher");
+  assert.equal(tips[0].classList.contains("hi"), false, "a low point still opens upward");
 });
 
 test("every panel that locks page scrolling is fixed over the page", () => {

@@ -1085,7 +1085,11 @@
   .to-top .ico{width:17px;height:17px;stroke-width:2.4}
   .to-top:hover{color:var(--text);border-color:var(--line2);transform:translateY(-2px)}
   .to-top.hidden{display:block;opacity:0;pointer-events:none;transform:translateY(8px) scale(.9)}
-  .lpc-range{position:absolute;top:4px;right:5px;display:flex;gap:2px;z-index:3}
+  .lpc-range{position:absolute;top:4px;right:5px;display:flex;gap:2px;z-index:3;
+    transition:opacity .13s ease}
+  /* Steps aside while a point is being read. Two small things wanting the same
+     corner is one too many, and the one you asked for is the tip. */
+  .lpc-plot:has(.lpc-pt:hover) .lpc-range{opacity:0;pointer-events:none}
   .lpc-range button{font-size:8.5px;font-weight:700;letter-spacing:.06em;line-height:1;
     padding:3px 5px;border-radius:5px;border:1px solid transparent;background:#ffffff0d;
     color:var(--faint);box-shadow:none}
@@ -1115,14 +1119,22 @@
   .lpc-pt i{position:absolute;left:0;top:0;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;
     box-shadow:0 0 0 2px #0d1017;transition:transform .15s cubic-bezier(.34,1.56,.64,1)}
   .lpc-pt:hover i{transform:scale(1.55)}
-  .lpc-tip{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:4;
+  /* Opaque, not glass. This is the one surface that is always read against a busy
+     background — the line, the band captions and the LP numerals all pass under
+     it — and at 96% the line showed straight through the text. */
+  .lpc-tip{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;
     opacity:0;pointer-events:none;transition:opacity .13s ease;
     white-space:nowrap;font-size:11px;font-weight:500;line-height:1.35;color:var(--text);
-    padding:6px 9px;border-radius:8px;background:#181c26f5;border:1px solid var(--line2);
-    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:var(--sh-2)}
+    padding:6px 9px;border-radius:8px;background:#171b24;border:1px solid var(--line2);
+    box-shadow:var(--sh-3)}
   .lpc-tip em{display:block;font-style:normal;font-size:9.5px;color:var(--faint);margin-top:1px}
   .lpc-tip.l{left:-6px;transform:none}
   .lpc-tip.r{left:auto;right:-6px;transform:none}
+  /* Below the dot when the dot sits too near the top for a tip to fit above it.
+     That corner is also where the range switcher lives, so a high point — which
+     the newest check on a climbing account usually is — used to hang its tip
+     straight over D/W/M. */
+  .lpc-tip.hi{bottom:auto;top:12px}
   .lpc-pt:hover .lpc-tip{opacity:1}
   .stale{color:var(--danger)}
   #toast button{margin-left:12px;font-size:12px;padding:3px 10px;color:var(--teal-txt)}
@@ -2146,8 +2158,13 @@ const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / 
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.8.6";
+const APP_VERSION="1.8.7";
 const APP_CHANGELOG=[
+  {v:"1.8.7",items:[
+    "op.gg joins dpm.lol under Look up — one kind of thing, one place",
+    "A chart point too near the top opens its tip downward, clear of D/W/M",
+    "Chart tip is opaque, so the line no longer shows through the text",
+  ]},
   {v:"1.8.6",items:[
     "Sort by rank: Unranked-but-checked now ranks above never-checked",
     "⋯ menu: named groups and an icon per item instead of ten lines of text",
@@ -2906,12 +2923,16 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     const cl=i===0?0:(fx(i-1)+fx(i))/2*100, cr=i===last?100:(fx(i)+fx(i+1))/2*100;
     // tooltips at the edges would hang off the card, so they anchor inwards there
     const side=xp<26?" l":xp>74?" r":"";
+    // A two-line tip is about 42px plus its 10px gap. A dot higher than that has
+    // no room above it, so the tip goes underneath instead of over the chart's
+    // top edge — and out of the range switcher's corner.
+    const hi=py(p.v)<52?" hi":"";
     const when=p.h.t?timeAgo(p.h.t):null;
     const w=cr-cl;
     const anchor=last===0?50:(i===0?0:i===last?100:50); // where the dot sits in its column
     return `<div class="lpc-pt" style="left:${xp.toFixed(2)}%;width:min(${w.toFixed(2)}%,40px);transform:translateX(-${anchor}%);--x:${anchor}%">`
       +`<b style="top:${py(p.v).toFixed(1)}px"><i style="background:${tierColor(p.h.tier)}"></i>`
-      +`<span class="lpc-tip${side}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(dateLabel(p.h.t))} · ${esc(when)}</em>`:""}</span></b></div>`;
+      +`<span class="lpc-tip${side}${hi}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(dateLabel(p.h.t))} · ${esc(when)}</em>`:""}</span></b></div>`;
   }).join("");
 
   // Date axis. Ticks sit at the ends and at even time fractions between them, and
@@ -5337,8 +5358,7 @@ function cardHTML(a,i){
   // whichever of the two is known — printing both from coerced numbers is what put
   // an invented "0L" beside a real win count
   const wlTxt=[wins!=null?`<b>${wins}W</b>`:"",losses!=null?`<b>${losses}L</b>`:""].filter(Boolean).join(" ");
-  const dpm="https://dpm.lol/"+encodeURIComponent(a.gameName)+"-"+encodeURIComponent(a.tagLine);
-  const opgg="https://op.gg/lol/summoners/"+(REGIONS[a.region]||REGIONS.EUW).opgg+"/"+encodeURIComponent(a.gameName)+"-"+encodeURIComponent(a.tagLine);
+  // Both profile links live in the ⋯ menu's "Look up" group now.
   // Tier and LP are separate on purpose: the tier carries the card's type scale,
   // the LP sits under it as the companion figure — shortRank() glues them for
   // places that need one string (list, palette, Peak).
@@ -5475,7 +5495,6 @@ function cardHTML(a,i){
            occasionally, not one of the three things you do on a card. -->
       <div class="acts">
         <button data-act="login" class="a-login" title="Show saved login">${icon("user")} ${loginOpen?"Hide login":"Login"}</button>
-        <a class="btn" href="${opgg}" target="_blank" rel="noreferrer">OP.GG ↗</a>
         <button data-act="check" ${isChecking?"disabled":""} style="color:var(--teal-txt)">${isChecking?"…":icon("refresh")+" Refresh"}</button>
         <button data-act="more" class="c-more${openMore.has(a.id)?" on":""}" aria-haspopup="menu" aria-expanded="${openMore.has(a.id)}" title="More actions" aria-label="More actions">⋯</button>
       </div>
@@ -5509,6 +5528,7 @@ function cardHTML(a,i){
 let cardMenuAnchor=null;
 function cardMenuHTML(a){
   const dpm="https://dpm.lol/"+encodeURIComponent(a.gameName)+"-"+encodeURIComponent(a.tagLine);
+  const opgg="https://op.gg/lol/summoners/"+(REGIONS[a.region]||REGIONS.EUW).opgg+"/"+encodeURIComponent(a.gameName)+"-"+encodeURIComponent(a.tagLine);
   /* Grouped by what the items are, ordered by how often you reach for them, and
      each group named rather than merely separated — a hairline says "these two
      things are apart" without ever saying what either of them is.
@@ -5523,7 +5543,10 @@ function cardMenuHTML(a){
     +grp("Edit")
     +it("rank","pencil","Rank…")
     +it("edit","user","Account…")
+    // Both profile links together. op.gg used to sit in the footer while dpm.lol
+    // sat in here, which split one kind of thing across two places.
     +grp("Look up")
+    +`<a class="cm-link" href="${opgg}" target="_blank" rel="noreferrer" role="menuitem">${icon("external")}<span>op.gg</span></a>`
     +`<a class="cm-link" href="${dpm}" target="_blank" rel="noreferrer" role="menuitem">${icon("external")}<span>dpm.lol</span></a>`
     +grp("Mark")
     +it("played","check","Played today",' title="Mark that you played on this account today"')
