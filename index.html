@@ -1226,8 +1226,19 @@
      text happened to measure. */
   .acts{display:flex;gap:7px;flex-wrap:wrap}
   .acts button,.acts a{font-size:12px;padding:7px 12px;min-height:32px;text-decoration:none}
-  .c-more{min-width:34px;padding:7px 10px;font-size:15px;line-height:1;color:var(--muted)}
+  .c-more{min-width:36px;padding:7px 10px;font-size:15px;line-height:1;color:var(--muted);
+    letter-spacing:.08em}
+  .c-more:hover{color:var(--text)}
   .c-more.on{background:var(--panel3);border-color:var(--line2);color:var(--text)}
+  /* Once op.gg and dpm moved into the menu this row was two buttons and a small
+     square, all shoved against the left edge with a third of the card empty
+     beside them. The pair share the width and the ⋯ closes the row, so the
+     footer reads as one bar rather than as three things put down next to each
+     other. Card only: a list row's action bar has seven of these and wants its
+     natural widths. */
+  .c-foot .acts{gap:8px}
+  .c-foot .acts>button:not(.c-more){flex:1 1 0;min-width:0}
+  .c-foot .acts>.c-more{flex:0 0 auto}
 
   /* ---- the card's ⋯ menu: one fixed element, shared by every card ---- */
   .card-menu{position:fixed;z-index:70;width:232px;max-width:calc(100vw - 16px)}
@@ -2195,8 +2206,11 @@ const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / 
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.8.8";
+const APP_VERSION="1.8.9";
 const APP_CHANGELOG=[
+  {v:"1.8.9",items:[
+    "Card footer is a full-width bar — Login and Refresh share it, ⋯ closes it",
+  ]},
   {v:"1.8.8",items:[
     "Tags fold into a tab on the console's bottom edge — a handle, not a band",
     "Folded it costs ~17px; the handle lights up while a tag is filtering",
