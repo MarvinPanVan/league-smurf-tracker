@@ -5324,7 +5324,7 @@ function setDivisionOptions(ds,tier){
   ds.title=off?"No divisions above Master — up there the ladder is only LP":"";
   const want=off?[DIV_NONE]:["I","II","III","IV"];
   const have=[...ds.options].map(o=>o.textContent);
-  if(have.join(" ")===want.join(" "))return;   // already right; keep the value
+  if(have.join("|")===want.join("|"))return;   // already right; keep the value
   const keep=ds.value;
   ds.innerHTML=want.map(d=>`<option>${d}</option>`).join("");
   if(!off&&want.includes(keep))ds.value=keep;
