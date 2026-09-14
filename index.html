@@ -2258,6 +2258,7 @@ const APP_CHANGELOG=[
     "Rank opens a window, like Account — the two sit together in the ⋯ menu",
     "Tag handle carries a mark and the gold filters already speak in",
     "Rank fields are named and roomy — no clipped digits, no stepper arrows",
+    "Above Master the division field says —, instead of a greyed-out I",
   ]},
   {v:"1.8.9",items:[
     "Card footer is a full-width bar — Login and Refresh share it, ⋯ closes it",
@@ -5304,6 +5305,35 @@ function divOff(tier){
   return hasDivisions(tier)?""
     :' disabled style="opacity:.35" title="No divisions above Master — up there the ladder is only LP"';
 }
+/* A tier with no divisions gets a dash, not a greyed-out "I". Disabling the
+   select said the numeral did not apply; it still left a numeral sitting there
+   as if the account were Master I, which is not a rank. */
+const DIV_NONE="—";
+function divisionOptions(entry){
+  if(!hasDivisions(entry&&entry.tier))return `<option>${DIV_NONE}</option>`;
+  return ["I","II","III","IV"]
+    .map(d=>`<option ${entry&&entry.division===d?"selected":""}>${d}</option>`).join("");
+}
+/* Rebuilt in the DOM rather than re-rendered: morph deliberately leaves an open
+   rank window's fields alone — that is what keeps a half-typed LP alive — so the
+   tier listener has to swap these options itself. */
+function setDivisionOptions(ds,tier){
+  const off=!hasDivisions(tier);
+  ds.disabled=off;
+  ds.style.opacity=off?".35":"";
+  ds.title=off?"No divisions above Master — up there the ladder is only LP":"";
+  const want=off?[DIV_NONE]:["I","II","III","IV"];
+  const have=[...ds.options].map(o=>o.textContent);
+  if(have.join(" ")===want.join(" "))return;   // already right; keep the value
+  const keep=ds.value;
+  ds.innerHTML=want.map(d=>`<option>${d}</option>`).join("");
+  if(!off&&want.includes(keep))ds.value=keep;
+}
+// "—" is the absence of a division, never a value to store.
+function readDivision(tier,el){
+  const v=el?el.value:null;
+  return normDivision(tier,v&&v!==DIV_NONE?v:null);
+}
 /* Three stacked sections with a paragraph of prose each made this the tallest
    thing on a card — and it opened from inside the ⋯ menu, so it was routinely
    opened by accident. Current is what you came for and stays open; the peak and
@@ -5315,7 +5345,7 @@ function rankPanelHTML(a,s,rev){
   const numVal=v=>{const n=Number(v);return Number.isFinite(n)?esc(String(n)):""};
   const tierOpts=(sel,noneLabel)=>["UNRANKED"].concat(TIER_ORDER)
     .map(t=>`<option value="${t}" ${(sel&&(sel.tier||"").toUpperCase())===t?"selected":""}>${t==="UNRANKED"?noneLabel:t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("");
-  const divOpts=sel=>["I","II","III","IV"].map(d=>`<option ${sel&&sel.division===d?"selected":""}>${d}</option>`).join("");
+  const divOpts=divisionOptions;
   /* Every field named. These were five bare boxes in a row whose placeholders
      vanish the moment they hold a value, so a saved account showed "239" and
      "260" side by side with nothing saying which was which — and at 64px a
@@ -7343,8 +7373,7 @@ function syncDivisionSelects(e){
   for(const[t,d]of[["tier","div"],["ptier","pdiv"],["gtier","gdiv"]]){
     const ts=panel.querySelector('[data-f="'+t+'"]'), ds=panel.querySelector('[data-f="'+d+'"]');
     if(!ts||!ds)continue;
-    const off=!hasDivisions(ts.value);
-    ds.disabled=off;ds.style.opacity=off?".35":"";
+    setDivisionOptions(ds,ts.value);
   }
 }
 $("grid").addEventListener("change",syncDivisionSelects);
@@ -7520,9 +7549,10 @@ async function onCardClick(e){
     checkGen.set(id,(checkGen.get(id)||0)+1);
     checking.delete(id);
     const g=f=>card.querySelector('[data-f="'+f+'"]');
-    const tier=g("tier").value, isU=tier==="UNRANKED", mPlus=TIER_ORDER.indexOf(tier)>=TIER_ORDER.indexOf("MASTER");
+    // readDivision carries the above-Master rule now, so mPlus has nothing left to do here.
+    const tier=g("tier").value, isU=tier==="UNRANKED";
     const old=acc.stats||{};
-    const s={found:true,tier,division:(isU||mPlus)?null:g("div").value,lp:isU?null:(+g("lp").value||0),
+    const s={found:true,tier,division:readDivision(tier,g("div")),lp:isU?null:(+g("lp").value||0),
       wins:g("w").value===""?null:+g("w").value,losses:g("l").value===""?null:+g("l").value,
       level:old.level!=null?old.level:null,peak:old.peak||null,
       seasons:old.seasons||null,flex:old.flex||null,champs:old.champs||null,icon:old.icon||null,mmr:old.mmr||null,avgRecent:null,
@@ -7534,7 +7564,7 @@ async function onCardClick(e){
     if(g("ptier")){
       const ptier=g("ptier").value;
       if(ptier==="UNRANKED")delete acc.peakManual;
-      else acc.peakManual={tier:ptier,division:TIER_ORDER.indexOf(ptier)>=TIER_ORDER.indexOf("MASTER")?null:g("pdiv").value,lp:+g("plp").value||0};
+      else acc.peakManual={tier:ptier,division:readDivision(ptier,g("pdiv")),lp:+g("plp").value||0};
     }
     // A goal is a rank, not a rank and an LP figure: nobody sets out to reach
     // Diamond II with exactly 47 LP. The division is as fine as it gets.
@@ -7543,7 +7573,7 @@ async function onCardClick(e){
       if(gtier==="UNRANKED")delete acc.goal;
       // lp stays null, not 0: ladderLP reads it as zero either way, but shortRank
       // prints it, and "Master · 0 LP" is not a goal anybody set.
-      else acc.goal={tier:gtier,division:TIER_ORDER.indexOf(gtier)>=TIER_ORDER.indexOf("MASTER")?null:g("gdiv").value,lp:null};
+      else acc.goal={tier:gtier,division:readDivision(gtier,g("gdiv")),lp:null};
     }
     closeRankModal();
     commitStats(id,acc,s);toast("Rank saved");

@@ -3858,6 +3858,41 @@ test("the rank panel does not offer divisions it will throw away", () => {
   assert.equal(open("t4").disabled, false, "Platinum");    // t4 is PLATINUM
 });
 
+/* Greying the select said the numeral did not apply, but left a numeral sitting
+   there — a Master account read as "Master I", which is not a rank. */
+test("a tier with no divisions shows a dash, not a greyed-out numeral", () => {
+  const win = bootApp(ladderSeed());
+  const rank = rankWindow(win, "t9");                 // t9 is CHALLENGER
+  const d = rank.querySelector('[data-f="div"]');
+  const opts = () => [...d.options].map(o => o.textContent);
+  assert.equal(d.disabled, true);
+  assert.deepEqual(opts(), ["—"], "nothing to pick, and it says so");
+
+  /* Swapped live by the tier listener. The window is not re-rendered while it is
+     open — morph leaves its fields alone on purpose — so this has to happen in
+     the DOM or the options would stay whatever they were opened with. */
+  const tier = rank.querySelector('[data-f="tier"]');
+  const pick = v => { tier.value = v; tier.dispatchEvent(new win.Event("change", { bubbles: true })) };
+
+  pick("GOLD");
+  assert.equal(d.disabled, false);
+  assert.deepEqual(opts(), ["I", "II", "III", "IV"], "the numerals come back");
+
+  d.value = "III";
+  pick("MASTER");
+  assert.deepEqual(opts(), ["—"], "and go away again");
+
+  pick("DIAMOND");
+  assert.deepEqual(opts(), ["I", "II", "III", "IV"]);
+
+  // saving from the dash must never store it as a division
+  pick("MASTER");
+  rank.querySelector('[data-f="lp"]').value = "310";
+  win.document.getElementById("rankSave").click();
+  assert.equal(appGet(win, 'accounts.find(a=>a.id==="t9").stats.division'), null);
+  assert.equal(appGet(win, 'accounts.find(a=>a.id==="t9").stats.tier'), "MASTER");
+});
+
 test("CSV cannot import a division above Master either", () => {
   const win = bootApp();
   assert.equal(win.normDivision("CHALLENGER", "II"), null);
