@@ -594,23 +594,37 @@
   .tagbar{display:flex;flex-direction:column;align-items:flex-start;gap:10px;
     position:relative;z-index:9;margin:-19px 0 14px 20px}
   .tagbar:empty{display:none;margin:0}
-  .tag-handle{gap:6px;padding:4px 11px 5px;min-height:0;
+  /* Tags are part of the gold family in this app — .fchip and an active .chip
+     both light up gold — so the handle carries a little of it even at rest
+     rather than sitting there as a grey rectangle: a gold mark, a gold count,
+     and the faintest wash in the tab itself. The label stays muted so the thing
+     is still quiet; hover and the lit state are where the gold comes up. */
+  .tag-handle{gap:7px;padding:4px 11px 5px;min-height:0;
     border-radius:0 0 10px 10px;border:1px solid var(--line);border-top:0;
-    background:var(--panel2);color:var(--faint);box-shadow:0 3px 8px -4px #0009;
-    font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
-  .tag-handle:hover{color:var(--text);border-color:var(--line2);background:var(--panel3)}
+    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 8%,var(--panel2)),var(--panel2));
+    color:var(--muted);box-shadow:0 3px 8px -4px #0009;
+    font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+    transition:color .16s ease,border-color .16s ease,background .16s ease}
+  .tag-handle:hover{color:var(--text);border-color:color-mix(in srgb,var(--gold) 38%,var(--line2));
+    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 17%,var(--panel2)),var(--panel2))}
   .tag-handle b{font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums;
-    color:var(--muted);font-size:10px}
-  .tag-handle:hover b{color:var(--text)}
+    font-size:10px;line-height:1.5;padding:0 6px;border-radius:999px;
+    color:var(--gold-txt);background:color-mix(in srgb,var(--gold) 15%,transparent)}
+  .tag-handle:hover b{background:color-mix(in srgb,var(--gold) 26%,transparent)}
+  .tag-ico{color:color-mix(in srgb,var(--gold) 60%,var(--muted));transition:color .16s ease}
+  .tag-handle:hover .tag-ico,.tag-handle.lit .tag-ico{color:var(--gold-txt)}
   /* lit while a tag is filtering — the chip that says which one lives in the
      console's filter row, this only says "one is on" */
-  .tag-handle.lit{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 45%,transparent);
-    background:color-mix(in srgb,var(--gold) 12%,var(--panel2))}
-  .tag-handle.lit b{color:var(--gold-txt)}
-  .tag-handle .ico{width:11px;height:11px;transition:transform .22s cubic-bezier(.22,1,.36,1)}
-  .tag-handle.open .ico{transform:rotate(180deg)}
+  .tag-handle.lit{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 50%,transparent);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 22%,var(--panel2)),color-mix(in srgb,var(--gold) 9%,var(--panel2)));
+    box-shadow:0 3px 8px -4px #0009,0 0 14px -6px color-mix(in srgb,var(--gold) 85%,transparent)}
+  .tag-handle.lit b{background:color-mix(in srgb,var(--gold) 30%,transparent)}
+  .tag-handle .ico{width:11px;height:11px}
+  .tag-chev{transition:transform .22s cubic-bezier(.22,1,.36,1);opacity:.75}
+  .tag-handle:hover .tag-chev{opacity:1}
+  .tag-handle.open .tag-chev{transform:rotate(180deg)}
   .tag-list{display:flex;gap:7px;flex-wrap:wrap;padding-bottom:2px}
-  @media (prefers-reduced-motion:reduce){.tag-handle .ico{transition:none}}
+  @media (prefers-reduced-motion:reduce){.tag-handle,.tag-handle .ico{transition:none}}
   .chip{font-size:12px;font-weight:500;padding:5px 12px;border:1px solid var(--line);border-radius:999px;
     background:var(--panel2);color:var(--muted);cursor:pointer;
     transition:background .15s ease,border-color .15s ease,color .15s ease}
@@ -1271,22 +1285,20 @@
   @media (prefers-reduced-motion:reduce){.card-menu:not(.hidden){animation:none}}
 
   /* ---- ✎ Rank panel ---- */
-  .rk-head{display:flex;align-items:center;gap:9px}
-  .rk-head .k{flex:1;min-width:0;margin-bottom:0}
-  .rk-x{width:26px;height:26px;min-height:0;padding:0;font-size:12px;flex-shrink:0;
-    background:none;border-color:transparent;color:var(--faint)}
-  .rk-x:hover{background:#ffffff12;border-color:transparent;color:var(--text)}
+  /* The panel is the rank window's body now, and .mdl-b carries no padding of its
+     own — the account form gets its 22px from .formgrid. This is that measure. */
+  .rankpanel{display:flex;flex-direction:column;gap:14px;padding:20px 22px}
+  .rankpanel .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--faint);display:block;margin-bottom:8px}
   .rk-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-  .rk-cur{margin-top:-2px}
-  .rk-note{font-size:11px;color:var(--faint);margin-top:8px;line-height:1.5}
+  .rk-note{font-size:11px;color:var(--faint);margin-top:9px;line-height:1.5}
   .rk-none{color:var(--faint);font-weight:450}
-  /* the two folds run the full width of the panel — .login pads by 12, so they
-     pull back out by exactly that and re-pad their own contents to match */
-  .rankpanel .sec{border-top:1px solid var(--line);margin:0 -12px}
-  .rankpanel .sec:first-of-type{margin-top:2px}
-  .rankpanel .sec-h{padding:11px 12px}
-  .rankpanel .sec-b{padding:2px 12px 12px}
-  .rk-save{display:flex}
+  /* The two folds run the full width of the window and re-pad their own contents
+     back to the same measure, so a closed fold reads as a divider across it. */
+  .rankpanel .sec{border-top:1px solid var(--line);margin:0 -22px}
+  .rankpanel .sec-h{padding:12px 22px}
+  .rankpanel .sec-b{padding:2px 22px 14px}
+  .rankpanel .sec:last-child{border-bottom:1px solid var(--line)}
   /* DPM and OP.GG are the same kind of thing — an outbound profile link — so they
      look the same. The gold tint implied a hierarchy that isn't there. */
   .a-dpm{border:1px solid var(--line);color:var(--text);font-weight:500;background:var(--panel2)}
@@ -2012,6 +2024,24 @@
     </div>
   </div></div></div>
 
+  <!-- Manual rank entry. Opened from the same menu Account is opened from, so
+       the two answer that gesture the same way — this used to unfold inside the
+       card while its neighbour opened a window. -->
+  <div id="rankModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="rankTitle">
+  <div class="mdl narrow hx teal"><div class="hx-in mdl-in" style="position:relative">
+    <div class="mdl-h">
+      <span class="t" id="rankTitle">Rank</span>
+      <span class="s" id="rankSub"></span>
+      <button class="panel-close" data-close-panel title="Close" aria-label="Close">&#10005;</button>
+    </div>
+    <div class="mdl-b" id="rankBody"></div>
+    <div class="mdl-f">
+      <button id="rankSave" class="b-gold" data-act="rankapply">Save rank</button>
+      <button id="rankCancel">Cancel</button>
+      <span class="sp hint">A refresh overwrites this the next time it reads a rank.</span>
+    </div>
+  </div></div></div>
+
   <!-- dashboard -->
   <div id="dash"></div>
 
@@ -2206,8 +2236,12 @@ const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / 
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.8.9";
+const APP_VERSION="1.9.0";
 const APP_CHANGELOG=[
+  {v:"1.9.0",items:[
+    "Rank opens a window, like Account — the two sit together in the ⋯ menu",
+    "Tag handle carries a mark and the gold filters already speak in",
+  ]},
   {v:"1.8.9",items:[
     "Card footer is a full-width bar — Login and Refresh share it, ⋯ closes it",
   ]},
@@ -2574,6 +2608,7 @@ const ICON={
      word by word; a mark in front of each one is what lets the eye group them
      and land on the right row without reading all of them. */
   external:'<path d="M14 3h7v7"/><line x1="21" y1="3" x2="11.5" y2="12.5"/><path d="M19 14.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4.5"/>',
+  tag:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2.5 12.5V2.5h10l8.1 8.1a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.3"/>',
   check:'<polyline points="20 6 9 17 4 12"/>',
   compare:'<rect x="3" y="5" width="7" height="14" rx="1.5"/><rect x="14" y="5" width="7" height="14" rx="1.5"/>',
   archive:'<rect x="3" y="4" width="18" height="4.5" rx="1"/><path d="M5 8.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><line x1="10" y1="13" x2="14" y2="13"/>',
@@ -5115,9 +5150,12 @@ function renderTagbar(){
      whenever one is filtering, so the rule that a filter must always be visible
      and removable is kept there rather than paid for twice. The handle only
      lights up to say one is on. */
+  // Mark first, then what it is, then how many, then the way to open it. Every
+  // other control in this row carries a colour or a glyph; this was the one
+  // reading as a grey rectangle.
   setHTML(el,`<button class="tag-handle${open?" open":""}${ui.tag?" lit":""}" data-k="tagtoggle" data-tagtoggle
       aria-expanded="${open}" title="${open?"Hide the tag list":"Show every tag in the vault"}">`
-    +icon("chevron")+`<span>Tags</span><b>${all.length}</b></button>`
+    +icon("tag","tag-ico")+`<span>Tags</span><b>${all.length}</b>`+icon("chevron","tag-chev")+`</button>`
     +(open?`<div class="tag-list" data-k="taglist">${all.map(chip).join("")}</div>`:""));
 }
 // A number in a dashboard always raises "which ones?", so the stats panel sets
@@ -5271,10 +5309,9 @@ function rankPanelHTML(a,s,rev){
     +`<select data-f="gdiv"${divOff(gm&&gm.tier)}>${divOpts(gm)}</select>`
     +`</div><div class="rk-note">The card gets a rail showing how far there is left to go, and — once there is a fortnight of checks to work from — roughly how long at the rate this account has actually been climbing.</div>`;
   const tint=e=>e&&e.tier?`<span style="color:${tierColor(e.tier)}">${esc(shortRank(e)||"")}</span>`:`<span class="rk-none">not set</span>`;
-  return `<div class="login rankpanel${rev||""}">
-    <div class="rk-head"><span class="k">Enter rank by hand</span>
-      <button class="rk-x" data-act="rank" title="Close" aria-label="Close the rank panel">✕</button></div>
-    <div class="rk-cur"><div class="rk-row">
+  // Body only: the window around it carries the title, the ✕ and Save.
+  return `<div class="rankpanel">
+    <div class="rk-cur"><span class="k">Current</span><div class="rk-row">
       <select data-f="tier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${s&&(s.tier||"").toUpperCase()===t?"selected":""}>${t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
       <select data-f="div"${divOff(s&&s.tier)}>${divOpts(s)}</select>
       <input data-f="lp" type="number" min="0" max="2000" placeholder="LP" value="${s&&s.lp!=null?numVal(s.lp):""}" style="width:72px">
@@ -5283,8 +5320,39 @@ function rankPanelHTML(a,s,rev){
     </div></div>
     ${secHTML(a,"rkpeak","Season peak","",tint(pm),peakBody)}
     ${secHTML(a,"rkgoal","Goal","",tint(gm),goalBody)}
-    <div class="rk-save"><button data-act="rankapply" class="b-teal">Save</button></div>
   </div>`;
+}
+/* Opened from the ⋯ menu, beside Account — which has always opened a window.
+   Unfolding one of the two inside the card and floating the other was two
+   answers to the same gesture, and the inline one was the taller of them. */
+function openRankModal(id){
+  const a=accounts.find(x=>x.id===id);if(!a)return;
+  closeAllPanels();
+  openRank.clear();openRank.add(id);
+  const m=$("rankModal");
+  m.dataset.id=id;
+  $("rankTitle").textContent="Rank by hand";
+  $("rankSub").textContent=(a.label&&a.label!==a.gameName?a.label+" · ":"")+a.gameName+"#"+a.tagLine;
+  renderRankBody(id,true);
+  m.classList.remove("hidden");
+}
+// Folding Season peak or Goal open has to redraw the window's own body —
+// renderCard redraws the card behind it, which is not where the panel lives.
+/* `fresh` empties the body first so the patch has nothing to match against.
+   It has to: morph deliberately refuses to touch a rank field while the window
+   is open, which is what keeps half-typed numbers alive across a refold — and
+   that same guard would otherwise hand the next account the previous one's
+   values, because the fields it declines to update are exactly these. */
+function renderRankBody(id,fresh){
+  const a=accounts.find(x=>x.id===id);if(!a)return;
+  const body=$("rankBody");
+  if(fresh)body.textContent="";
+  setHTML(body,rankPanelHTML(a,a.stats));
+}
+function closeRankModal(){
+  openRank.clear();
+  const m=$("rankModal");
+  if(m){m.classList.add("hidden");m.removeAttribute("data-id")}
 }
 
 // A sixty-account vault is a list, not a wall. Each card is ~450 px tall, so the
@@ -5383,7 +5451,6 @@ function rowHTML(a,i){
         <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
         <div class="lrow"><span class="val mono ${a.password?"":"none"}">${a.password?(shownPw.has(a.id)?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${shownPw.has(a.id)?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
       </div>`:""}
-      ${openRank.has(a.id)?rankPanelHTML(a,s):""}
     </div>`:""}
   </div></div>`;
 }
@@ -5569,7 +5636,6 @@ function cardHTML(a,i){
       ${a.birthdate?`<div class="lrow"><span class="val"><span class="lk">Date of birth</span>${esc(fmtDate(a.birthdate))}</span><span class="lbtns"><button data-act="copybirth">Copy</button></span></div>`:""}
       ${a.createdOn?`<div class="lrow"><span class="val"><span class="lk">Created</span>${esc(fmtDate(a.createdOn))}<em class="lage">${esc(ageFrom(a.createdOn))}</em></span></div>`:""}
     </div>`:""}
-    ${openRank.has(a.id)?rankPanelHTML(a,s,rv("rank")):""}
     ${noteBlockHTML(a,rv("note"))}
     <div class="c-foot">
       <!-- Where the numbers came from used to sit here as its own pill. It is
@@ -5733,15 +5799,13 @@ function closeCardMenu(){
   for(const id of ids)if(accounts.some(a=>a.id===id))renderCard(id);
   return true;
 }
-/* One panel per card. Login and ✎ Rank are alternatives — both are "a panel on
-   this card's body" — and they had entirely independent toggles, so opening one
-   never put the other away. Details is deliberately not in here: in the list
-   layout it is the container the other two are rendered *inside*. */
+/* Login is the only panel that still unfolds inside a card — ✎ Rank opens a
+   window now, so there is nothing left for it to stack against. Kept as its own
+   function because opening it also has to put the revealed password away. */
 function togglePanel(id,which){
-  const sets={login:openLogin,rank:openRank};
-  const on=!sets[which].has(id);
-  for(const k in sets)sets[k].delete(id);
-  if(on)sets[which].add(id);
+  const on=!openLogin.has(id);
+  openLogin.delete(id);
+  if(on)openLogin.add(id);
   shownPw.delete(id);
   return on;
 }
@@ -5749,9 +5813,10 @@ function togglePanel(id,which){
 // outside any card falls through to.
 function closeCardPanels(){
   let touched=closeCardMenu();
-  const ids=new Set([...openLogin,...openRank,...openInfo]);
+  if(openRank.size){closeRankModal();touched=true}
+  const ids=new Set([...openLogin,...openInfo]);
   if(ids.size){
-    openLogin.clear();openRank.clear();openInfo.clear();shownPw.clear();
+    openLogin.clear();openInfo.clear();shownPw.clear();
     touched=true;
     for(const id of ids)if(accounts.some(a=>a.id===id))renderCard(id);
   }
@@ -5926,6 +5991,7 @@ function closeAllPanels(){
   // otherwise an empty vault re-opens the modal on every reload.
   if(!$("help").classList.contains("hidden")&&!cfg.seenHelp){cfg.seenHelp=true;saveCfg()}
   editingId=null; // form ✕ / backdrop used to leave this set while the form was hidden
+  closeRankModal();
   $("form").classList.add("hidden");
   $("settings").classList.add("hidden");
   $("help").classList.add("hidden");
@@ -6515,7 +6581,7 @@ document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListene
 // Driven by an observer rather than by each of the eight places that add or
 // remove .hidden on these two. Wiring it into every call site works right up
 // until the ninth one is added and quietly doesn't lock the page.
-const MODALS=["settings","help","form","palette","compareModal","bulkAdd"];
+const MODALS=["settings","help","form","rankModal","palette","compareModal","bulkAdd"];
 let modalReturn=null;
 function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains("hidden"))}
 function syncModals(){
@@ -7244,18 +7310,26 @@ $("bulkClear").addEventListener("click",()=>{selected.clear();lastSelectedId=nul
 // The note saves itself as you type — there was never anything for a Save button
 // to decide. A short debounce so a sentence is one write to storage, not thirty.
 let noteSaveT=0;
-// Keeps the division dropdowns in step while the tier above them is being edited.
-$("grid").addEventListener("change",e=>{
+/* Keeps the division dropdowns in step while the tier above them is being edited.
+   Bound to the rank window as well as the grid — the panel lives in the window
+   now, and the list still renders its own selects inside an expanded row. */
+function syncDivisionSelects(e){
   const f=e.target&&e.target.dataset&&e.target.dataset.f;
   if(f!=="tier"&&f!=="ptier"&&f!=="gtier")return;
-  const panel=e.target.closest(".login");if(!panel)return;
+  const panel=e.target.closest(".rankpanel,.login");if(!panel)return;
   for(const[t,d]of[["tier","div"],["ptier","pdiv"],["gtier","gdiv"]]){
     const ts=panel.querySelector('[data-f="'+t+'"]'), ds=panel.querySelector('[data-f="'+d+'"]');
     if(!ts||!ds)continue;
     const off=!hasDivisions(ts.value);
     ds.disabled=off;ds.style.opacity=off?".35":"";
   }
-});
+}
+$("grid").addEventListener("change",syncDivisionSelects);
+$("rankModal").addEventListener("change",syncDivisionSelects);
+// The window carries the account's data-id, so every branch of the card handler
+// resolves from in there exactly as it does from inside a card.
+$("rankModal").addEventListener("click",onCardClick);
+$("rankCancel").addEventListener("click",closeRankModal);
 $("grid").addEventListener("input",e=>{
   if(!e.target||!e.target.dataset||e.target.dataset.f!=="notetext")return;
   noteDraft=e.target.value;
@@ -7414,8 +7488,9 @@ async function onCardClick(e){
 
   else if(act==="range"){chartRange.set(id,btn.dataset.r);renderCard(id)}
   else if(act==="info"){const on=!openInfo.has(id);on?openInfo.add(id):openInfo.delete(id);reveal=on?id+":info":null;renderCard(id)}
-  else if(act==="sec"){const k=id+"|"+btn.dataset.s;openSec.has(k)?openSec.delete(k):openSec.add(k);renderCard(id)}
-  else if(act==="rank"){const on=togglePanel(id,"rank");reveal=on?id+":rank":null;renderCard(id)}   // puts Login away if it was open
+  else if(act==="sec"){const k=id+"|"+btn.dataset.s;openSec.has(k)?openSec.delete(k):openSec.add(k);
+    e.target.closest("#rankModal")?renderRankBody(id):renderCard(id)}
+  else if(act==="rank")openRankModal(id);
   else if(act==="rankapply"){
     // Bump the check generation so an in-flight Refresh cannot overwrite a manual
     // entry that landed while it was still waiting on the network.
@@ -7447,6 +7522,7 @@ async function onCardClick(e){
       // prints it, and "Master · 0 LP" is not a goal anybody set.
       else acc.goal={tier:gtier,division:TIER_ORDER.indexOf(gtier)>=TIER_ORDER.indexOf("MASTER")?null:g("gdiv").value,lp:null};
     }
+    closeRankModal();
     commitStats(id,acc,s);toast("Rank saved");
   }
   else if(act==="check")check(id);

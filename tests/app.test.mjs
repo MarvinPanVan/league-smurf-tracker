@@ -84,6 +84,13 @@ const storedPlain = w => { const r = w.localStorage.getItem("smurf-tracker"); re
    row of buttons into the card, so a test opens it through the card and then
    reads the items out of the menu. Pass an id, a card element, or nothing at all
    for "the only card on screen". */
+function rankWindow(win, target) {
+  cardMenu(win, target).querySelector('[data-act="rank"]').click();
+  const m = win.document.getElementById("rankModal");
+  assert.ok(m && !m.classList.contains("hidden"), "the rank window is open");
+  return m;
+}
+
 function cardMenu(win, target) {
   const doc = win.document;
   const toggle = !target ? doc.querySelector('[data-act="more"]')
@@ -3846,10 +3853,7 @@ test("no screen prints a division on a Master, Grandmaster or Challenger rank", 
 
 test("the rank panel does not offer divisions it will throw away", () => {
   const win = bootApp(ladderSeed());
-  const open = id => {
-    cardMenu(win, id).querySelector('[data-act="rank"]').click();
-    return win.document.querySelector(`.card[data-id="${id}"] [data-f="div"]`);
-  };
+  const open = id => rankWindow(win, id).querySelector('[data-f="div"]');
   assert.equal(open("t9").disabled, true, "Challenger");   // t9 is CHALLENGER
   assert.equal(open("t4").disabled, false, "Platinum");    // t4 is PLATINUM
 });
@@ -5158,15 +5162,15 @@ test("picking from the ⋯ menu closes it, so one missclick costs one click", ()
   const win = bootApp(seededAccount());
   const id = win.document.querySelector(".card").dataset.id;
 
-  cardMenu(win, id).querySelector('[data-act="rank"]').click();
+  const rank = rankWindow(win, id);
   const menu = win.document.getElementById("cardMenu");
   assert.equal(menu.classList.contains("hidden"), true,
     "the menu put itself away when you picked from it");
-  assert.ok(win.document.querySelector('.card [data-f="tier"]'), "and Rank opened");
+  assert.ok(rank.querySelector('[data-f="tier"]'), "and Rank opened");
 
-  // so undoing the missclick is one click, on the panel that is actually open
-  win.document.querySelector(".card .rk-x").click();
-  assert.equal(win.document.querySelector('.card [data-f="tier"]'), null, "Rank closed again");
+  // so undoing the missclick is one click, on the window that is actually open
+  win.document.getElementById("rankCancel").click();
+  assert.equal(rank.classList.contains("hidden"), true, "Rank closed again");
   assert.equal(win.document.getElementById("cardMenu").classList.contains("hidden"), true,
     "and nothing else was left behind");
 });
@@ -5204,21 +5208,27 @@ test("opening the card menu does not move the card", () => {
   assert.equal(strip(after), strip(before), "the card's own markup is otherwise untouched");
 });
 
-test("Login and Rank are alternatives, not a stack", () => {
+/* Rank and Account sit next to each other in the ⋯ menu. Account has always
+   opened a window; Rank used to unfold inside the card, which is two answers
+   to the same gesture — and Rank was the taller of the two. */
+test("Rank opens as a window, the way Account does", () => {
   const win = bootApp(seededAccount());
   const id = win.document.querySelector(".card").dataset.id;
-  const open = sel => !!win.document.querySelector(`.card ${sel}`);
 
-  win.document.querySelector('.card [data-act="login"]').click();
-  assert.equal(open(".lrow"), true, "login panel open");
+  const rank = rankWindow(win, id);
+  assert.match(rank.className, /\bmodal\b/, "it is a real modal");
+  assert.equal(rank.getAttribute("role"), "dialog");
+  assert.equal(rank.getAttribute("aria-modal"), "true");
+  assert.ok(win.document.getElementById(rank.getAttribute("aria-labelledby")),
+    "labelled by a real element");
+  assert.equal(rank.dataset.id, id, "and it knows which account it is editing");
+  assert.ok(win.openModals().some(m => m.id === "rankModal"), "so it locks the page too");
 
-  cardMenu(win, id).querySelector('[data-act="rank"]').click();
-  assert.equal(open('[data-f="tier"]'), true, "rank panel open");
-  assert.equal(open(".lrow"), false, "and the login panel put itself away");
-
-  win.document.querySelector('.card [data-act="login"]').click();
-  assert.equal(open(".lrow"), true);
-  assert.equal(open('[data-f="tier"]'), false, "and back the other way");
+  // nothing unfolds inside the card any more
+  assert.equal(win.document.querySelector('.card [data-f="tier"]'), null);
+  // Save and Cancel are pinned in the footer, outside the part that scrolls
+  assert.ok(win.document.querySelector("#rankModal .mdl-f #rankSave"));
+  assert.ok(win.document.querySelector("#rankModal .mdl-b [data-f=\"tier\"]"));
 });
 
 test("Escape clears what a card has unfolded before it touches the page's panels", () => {
@@ -5239,15 +5249,39 @@ test("Escape clears what a card has unfolded before it touches the page's panels
 test("the Rank panel opens on Current only, with peak and goal folded away", () => {
   const win = bootApp(seededAccount());
   const id = win.document.querySelector(".card").dataset.id;
-  cardMenu(win, id).querySelector('[data-act="rank"]').click();
-  const q = f => win.document.querySelector(`.card [data-f="${f}"]`);
+  const rank = rankWindow(win, id);
+  const q = f => rank.querySelector(`[data-f="${f}"]`);
 
   assert.ok(q("tier"), "Current is there");
   assert.equal(q("ptier"), null, "the season peak is folded");
   assert.equal(q("gtier"), null, "so is the goal");
 
-  win.document.querySelector('.card [data-act="sec"][data-s="rkpeak"]').click();
+  rank.querySelector('[data-act="sec"][data-s="rkpeak"]').click();
   assert.ok(q("ptier"), "and unfolds when asked for");
+});
+
+/* One window serves every account, and morph deliberately refuses to touch a
+   rank field while it is open — that is what keeps a half-typed number alive
+   across a refold. Patching the next account's values in therefore did nothing,
+   and the window opened on the account before it. */
+test("the rank window shows the account it was opened for, every time", () => {
+  const win = bootApp([
+    { id: "r1", gameName: "Plat", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+      stats: { found: true, tier: "PLATINUM", division: "III", lp: 25, updatedAt: Date.now() } },
+    { id: "r2", gameName: "Chall", tagLine: "2", region: "EUW", status: "active", tags: [], history: [],
+      stats: { found: true, tier: "CHALLENGER", division: null, lp: 900, updatedAt: Date.now() } },
+  ]);
+  const read = id => {
+    const m = rankWindow(win, id);
+    return { id: m.dataset.id, tier: m.querySelector('[data-f="tier"]').value,
+      lp: m.querySelector('[data-f="lp"]').value,
+      divOff: m.querySelector('[data-f="div"]').disabled };
+  };
+  assert.deepEqual(read("r2"), { id: "r2", tier: "CHALLENGER", lp: "900", divOff: true });
+  assert.deepEqual(read("r1"), { id: "r1", tier: "PLATINUM", lp: "25", divOff: false },
+    "the second open is not still showing the first account");
+  assert.deepEqual(read("r2"), { id: "r2", tier: "CHALLENGER", lp: "900", divOff: true },
+    "and back again");
 });
 
 /* A folded section renders no fields at all, and reading a missing select as
@@ -5260,9 +5294,10 @@ test("saving a rank leaves a folded-away peak and goal alone", () => {
     a.peakManual = { tier: "MASTER", division: null, lp: 120 };
     a.goal = { tier: "DIAMOND", division: "II", lp: null };
   `);
-  cardMenu(win, id).querySelector('[data-act="rank"]').click();
-  win.document.querySelector('.card [data-f="lp"]').value = "77";
-  win.document.querySelector('.card [data-act="rankapply"]').click();
+  const rank = rankWindow(win, id);
+  rank.querySelector('[data-f="lp"]').value = "77";
+  win.document.getElementById("rankSave").click();
+  assert.equal(rank.classList.contains("hidden"), true, "saving closes the window");
 
   assert.equal(appGet(win, `accounts.find(a=>a.id===${JSON.stringify(id)}).peakManual.tier`), "MASTER");
   assert.equal(appGet(win, `accounts.find(a=>a.id===${JSON.stringify(id)}).goal.tier`), "DIAMOND");
@@ -5513,11 +5548,9 @@ test("a banned Challenger is not the vault's best account", () => {
    division for a tier that has none. */
 test("an open Rank panel keeps its disabled division select through a re-render", () => {
   const win = bootApp(seededAccount());
-  const card = win.document.querySelector(".card");
-  const id = card.dataset.id;
-  card.querySelector('[data-act="more"]').click();
-  win.document.querySelector('[data-act="rank"]').click();
-  const q = f => win.document.querySelector(`.card [data-f="${f}"]`);
+  const id = win.document.querySelector(".card").dataset.id;
+  const rank = rankWindow(win, id);
+  const q = f => rank.querySelector(`[data-f="${f}"]`);
   assert.equal(q("div").disabled, false, "Diamond has divisions");
 
   const tier = q("tier");
