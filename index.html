@@ -1290,7 +1290,23 @@
   .rankpanel{display:flex;flex-direction:column;gap:14px;padding:20px 22px}
   .rankpanel .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
     color:var(--faint);display:block;margin-bottom:8px}
-  .rk-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  /* Named fields that wrap, rather than a row of bare boxes sized to the shortest
+     thing they might hold. Wide enough that four digits and a spinner are not
+     fighting for the same pixels. */
+  /* Three to a row rather than however many happen to fit, so Current breaks
+     where it means something — the rank on the first line, the record on the
+     second — instead of landing on an arbitrary four-and-one. */
+  .rk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 14px}
+  @media (max-width:560px){.rk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .rk-f{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .rk-f>span{font-size:11px;font-weight:500;letter-spacing:.005em;color:var(--muted)}
+  .rk-f>select,.rk-f>input{width:100%}
+  /* The native steppers sit over the digits at this size and are no use for a
+     season's win count anyway — these are numbers you type, not nudge. */
+  .rk-f input[type=number]{appearance:textfield;-moz-appearance:textfield;
+    font-variant-numeric:tabular-nums}
+  .rk-f input[type=number]::-webkit-outer-spin-button,
+  .rk-f input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;appearance:none;margin:0}
   .rk-note{font-size:11px;color:var(--faint);margin-top:9px;line-height:1.5}
   .rk-none{color:var(--faint);font-weight:450}
   /* The two folds run the full width of the window and re-pad their own contents
@@ -2241,6 +2257,7 @@ const APP_CHANGELOG=[
   {v:"1.9.0",items:[
     "Rank opens a window, like Account — the two sit together in the ⋯ menu",
     "Tag handle carries a mark and the gold filters already speak in",
+    "Rank fields are named and roomy — no clipped digits, no stepper arrows",
   ]},
   {v:"1.8.9",items:[
     "Card footer is a full-width bar — Login and Refresh share it, ⋯ closes it",
@@ -5299,24 +5316,30 @@ function rankPanelHTML(a,s,rev){
   const tierOpts=(sel,noneLabel)=>["UNRANKED"].concat(TIER_ORDER)
     .map(t=>`<option value="${t}" ${(sel&&(sel.tier||"").toUpperCase())===t?"selected":""}>${t==="UNRANKED"?noneLabel:t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("");
   const divOpts=sel=>["I","II","III","IV"].map(d=>`<option ${sel&&sel.division===d?"selected":""}>${d}</option>`).join("");
-  const peakBody=`<div class="rk-row">`
-    +`<select data-f="ptier">${tierOpts(pm,"— none —")}</select>`
-    +`<select data-f="pdiv"${divOff(pm&&pm.tier)}>${divOpts(pm)}</select>`
-    +`<input data-f="plp" type="number" min="0" max="2000" placeholder="LP" value="${pm&&pm.lp!=null?numVal(pm.lp):""}" style="width:72px">`
+  /* Every field named. These were five bare boxes in a row whose placeholders
+     vanish the moment they hold a value, so a saved account showed "239" and
+     "260" side by side with nothing saying which was which — and at 64px a
+     three-digit count had the native spinner sitting on top of its own digits. */
+  const fld=(label,control)=>`<label class="rk-f"><span>${esc(label)}</span>${control}</label>`;
+  const num=(f,val,extra)=>`<input data-f="${f}" type="number" min="0"${extra||""} value="${val}">`;
+  const peakBody=`<div class="rk-grid">`
+    +fld("Tier",`<select data-f="ptier">${tierOpts(pm,"— none —")}</select>`)
+    +fld("Division",`<select data-f="pdiv"${divOff(pm&&pm.tier)}>${divOpts(pm)}</select>`)
+    +fld("LP",num("plp",pm&&pm.lp!=null?numVal(pm.lp):"",' max="2000"'))
     +`</div><div class="rk-note">Refresh reads op.gg's own "Top tier" peak when the profile has one, and the app also tracks the highest rank it has seen itself. Set a peak here as well if you know better — whichever is genuinely highest is the one shown.</div>`;
-  const goalBody=`<div class="rk-row">`
-    +`<select data-f="gtier">${tierOpts(gm,"— none —")}</select>`
-    +`<select data-f="gdiv"${divOff(gm&&gm.tier)}>${divOpts(gm)}</select>`
+  const goalBody=`<div class="rk-grid">`
+    +fld("Tier",`<select data-f="gtier">${tierOpts(gm,"— none —")}</select>`)
+    +fld("Division",`<select data-f="gdiv"${divOff(gm&&gm.tier)}>${divOpts(gm)}</select>`)
     +`</div><div class="rk-note">The card gets a rail showing how far there is left to go, and — once there is a fortnight of checks to work from — roughly how long at the rate this account has actually been climbing.</div>`;
   const tint=e=>e&&e.tier?`<span style="color:${tierColor(e.tier)}">${esc(shortRank(e)||"")}</span>`:`<span class="rk-none">not set</span>`;
   // Body only: the window around it carries the title, the ✕ and Save.
   return `<div class="rankpanel">
-    <div class="rk-cur"><span class="k">Current</span><div class="rk-row">
-      <select data-f="tier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${s&&(s.tier||"").toUpperCase()===t?"selected":""}>${t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>
-      <select data-f="div"${divOff(s&&s.tier)}>${divOpts(s)}</select>
-      <input data-f="lp" type="number" min="0" max="2000" placeholder="LP" value="${s&&s.lp!=null?numVal(s.lp):""}" style="width:72px">
-      <input data-f="w" type="number" min="0" placeholder="W" value="${s&&s.wins!=null?numVal(s.wins):""}" style="width:64px">
-      <input data-f="l" type="number" min="0" placeholder="L" value="${s&&s.losses!=null?numVal(s.losses):""}" style="width:64px">
+    <div class="rk-cur"><span class="k">Current</span><div class="rk-grid">
+      ${fld("Tier",`<select data-f="tier">${["UNRANKED"].concat(TIER_ORDER).map(t=>`<option value="${t}" ${s&&(s.tier||"").toUpperCase()===t?"selected":""}>${t.charAt(0)+t.slice(1).toLowerCase()}</option>`).join("")}</select>`)}
+      ${fld("Division",`<select data-f="div"${divOff(s&&s.tier)}>${divOpts(s)}</select>`)}
+      ${fld("LP",num("lp",s&&s.lp!=null?numVal(s.lp):"",' max="2000"'))}
+      ${fld("Wins",num("w",s&&s.wins!=null?numVal(s.wins):""))}
+      ${fld("Losses",num("l",s&&s.losses!=null?numVal(s.losses):""))}
     </div></div>
     ${secHTML(a,"rkpeak","Season peak","",tint(pm),peakBody)}
     ${secHTML(a,"rkgoal","Goal","",tint(gm),goalBody)}

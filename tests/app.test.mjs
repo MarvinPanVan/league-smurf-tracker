@@ -5284,6 +5284,30 @@ test("the rank window shows the account it was opened for, every time", () => {
     "and back again");
 });
 
+/* Five bare boxes in a row, sized to the shortest thing they might hold. The
+   placeholders that named them vanish the moment a field has a value, so a saved
+   account showed "239" and "260" beside each other with nothing saying which was
+   which — and at 64px a three-digit count shared its pixels with the native
+   stepper. */
+test("every field in the rank window is named", () => {
+  const win = bootApp(seededAccount());
+  const id = win.document.querySelector(".card").dataset.id;
+  const rank = rankWindow(win, id);
+  rank.querySelector('[data-act="sec"][data-s="rkpeak"]').click();
+
+  const labelled = [...rank.querySelectorAll("[data-f]")].map(c => {
+    const f = c.closest(".rk-f");
+    return { f: c.dataset.f, label: f && f.querySelector("span") ? f.querySelector("span").textContent : null };
+  });
+  assert.ok(labelled.length >= 8, "current plus the unfolded peak");
+  for (const { f, label } of labelled) assert.ok(label, `[data-f=${f}] sits in a named field`);
+  assert.deepEqual(labelled.filter(x => ["tier", "div", "lp", "w", "l"].includes(x.f)).map(x => x.label),
+    ["Tier", "Division", "LP", "Wins", "Losses"]);
+  // and nothing is sized by a hard-coded inline width any more
+  for (const c of rank.querySelectorAll(".rk-f input,.rk-f select"))
+    assert.doesNotMatch(c.getAttribute("style") || "", /width/, `${c.dataset.f} is sized by the grid`);
+});
+
 /* A folded section renders no fields at all, and reading a missing select as
    "UNRANKED" would delete the value it stands for. */
 test("saving a rank leaves a folded-away peak and goal alone", () => {
