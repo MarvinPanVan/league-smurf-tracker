@@ -5758,3 +5758,23 @@ test("on a phone the rank window still says whose rank it is", () => {
   assert.ok(hide > -1, "modal captions are still hidden on narrow screens");
   assert.ok(show > hide, "and the rank window's own rule comes after it, so it wins");
 });
+
+/* A vault with one tag and no filter was drawing a gold count on a gold wash inside
+   a gold-washed tab — which is exactly what "a tag is filtering" looks like, only
+   fainter. Two states, one picture, told apart by 8%% against 22%%. Gold on this
+   handle means one thing now, and the resting state keeps only the tinted mark. */
+test("the tag handle is only gold when a tag is actually filtering", () => {
+  const rest = html.match(/\.tag-handle b\{[^}]*\}/);
+  const lit = html.match(/\.tag-handle\.lit b[^{]*\{[^}]*\}/);
+  assert.ok(rest, "the resting count rule is still there");
+  assert.ok(lit, "and the lit one");
+  assert.doesNotMatch(rest[0], /--gold/, "how many tags exist is a fact, not a filter");
+  assert.match(lit[0], /--gold/, "it turns gold when one is on");
+
+  // and the class that switches between them still only appears with a filter set
+  const win = bootApp([{ id: "t1", gameName: "Tagged", tagLine: "1", region: "EUW",
+    status: "active", tags: ["mid"], history: [], stats: null }]);
+  const handle = () => win.document.querySelector(".tag-handle");
+  assert.match(handle().textContent.replace(/\s+/g, ""), /Tags1/, "the vault has one tag");
+  assert.equal(handle().classList.contains("lit"), false, "and nothing is filtering by it");
+});

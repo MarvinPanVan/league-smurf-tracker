@@ -605,31 +605,33 @@
   .tagbar{display:flex;flex-direction:column;align-items:flex-start;gap:10px;
     position:relative;z-index:9;margin:-19px 0 14px 20px}
   .tagbar:empty{display:none;margin:0}
-  /* Tags are part of the gold family in this app — .fchip and an active .chip
-     both light up gold — so the handle carries a little of it even at rest
-     rather than sitting there as a grey rectangle: a gold mark, a gold count,
-     and the faintest wash in the tab itself. The label stays muted so the thing
-     is still quiet; hover and the lit state are where the gold comes up. */
+  /* Gold on this handle means one thing: a tag is filtering. It used to mean two —
+     the resting state also had a gold count on a gold wash inside a gold-washed
+     tab, so "off" and "on" were the same picture at two strengths and a vault with
+     one tag and no filter looked like a filter was on. Only the mark keeps a tint
+     at rest, because a glyph is identity and a lit pill full of a number is status.
+     Everything else waits for .lit. */
   .tag-handle{gap:7px;padding:4px 11px 5px;min-height:0;
     border-radius:0 0 10px 10px;border:1px solid var(--line);border-top:0;
-    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 8%,var(--panel2)),var(--panel2));
+    background:var(--panel2);
     color:var(--muted);box-shadow:0 3px 8px -4px #0009;
     font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
     transition:color .16s ease,border-color .16s ease,background .16s ease}
   .tag-handle:hover{color:var(--text);border-color:color-mix(in srgb,var(--gold) 38%,var(--line2));
     background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 17%,var(--panel2)),var(--panel2))}
+  /* how many tags the vault has — a fact, not a filter, so it is not gold until one is */
   .tag-handle b{font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums;
     font-size:10px;line-height:1.5;padding:0 6px;border-radius:999px;
-    color:var(--gold-txt);background:color-mix(in srgb,var(--gold) 15%,transparent)}
-  .tag-handle:hover b{background:color-mix(in srgb,var(--gold) 26%,transparent)}
-  .tag-ico{color:color-mix(in srgb,var(--gold) 60%,var(--muted));transition:color .16s ease}
+    color:var(--muted);background:#ffffff12;transition:color .16s ease,background .16s ease}
+  .tag-handle:hover b{color:var(--text);background:#ffffff1f}
+  .tag-ico{color:color-mix(in srgb,var(--gold) 42%,var(--muted));transition:color .16s ease}
   .tag-handle:hover .tag-ico,.tag-handle.lit .tag-ico{color:var(--gold-txt)}
   /* lit while a tag is filtering — the chip that says which one lives in the
      console's filter row, this only says "one is on" */
   .tag-handle.lit{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 50%,transparent);
     background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 22%,var(--panel2)),color-mix(in srgb,var(--gold) 9%,var(--panel2)));
     box-shadow:0 3px 8px -4px #0009,0 0 14px -6px color-mix(in srgb,var(--gold) 85%,transparent)}
-  .tag-handle.lit b{background:color-mix(in srgb,var(--gold) 30%,transparent)}
+  .tag-handle.lit b,.tag-handle.lit:hover b{color:var(--gold-txt);background:color-mix(in srgb,var(--gold) 34%,transparent)}
   .tag-handle .ico{width:11px;height:11px}
   .tag-chev{transition:transform .22s cubic-bezier(.22,1,.36,1);opacity:.75}
   .tag-handle:hover .tag-chev{opacity:1}
@@ -2285,8 +2287,11 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.9.2";
+const APP_VERSION="1.9.3";
 const APP_CHANGELOG=[
+  {v:"1.9.3",items:[
+    "Tag handle: gold means a tag is filtering, and nothing else — the count is grey until one is",
+  ]},
   {v:"1.9.2",items:[
     "Dashboard: all seven tiles share one baseline again, and no W/L figure orphans its WR",
     "A status chip no longer takes the room the account name needs",
