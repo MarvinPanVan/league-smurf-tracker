@@ -5586,6 +5586,37 @@ test("the ribbon and the dash Rank spread agree about banned accounts", () => {
   assert.match(shown[0].textContent, /Perma/);
 });
 
+/* Segments scaled by their count, and "Not found" is usually the biggest count
+   there is. On a vault of 55 where 41 Riot IDs no longer resolve, that one
+   segment took 72% of a bar labelled "by tier" and squeezed the entire actual
+   spread into 12% — measured in the browser before this changed. */
+test("chore segments cannot take the tier bar over", () => {
+  const now = Date.now();
+  const seed = [];
+  for (let i = 0; i < 3; i++) seed.push({ id: "g" + i, gameName: "G" + i, tagLine: "1", region: "EUW",
+    status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 40, updatedAt: now } });
+  for (let i = 0; i < 40; i++) seed.push({ id: "n" + i, gameName: "N" + i, tagLine: "1", region: "EUW",
+    status: "active", tags: [], history: [], stats: { found: false, updatedAt: now } });
+  const win = bootApp(seed);
+
+  const segs = [...win.document.querySelectorAll("#ribbon .rib-seg")];
+  const tail = segs.filter(s => s.classList.contains("tail"));
+  const tiers = segs.filter(s => !s.classList.contains("tail"));
+  assert.deepEqual(tiers.map(s => s.dataset.tier), ["GOLD"]);
+  assert.deepEqual(tail.map(s => s.dataset.flag), ["missing"]);
+
+  // a rung on the ladder carries its count as flex; a state that is not a rung
+  // carries none, so it is sized by the CSS instead of by how many there are
+  assert.match(tiers[0].getAttribute("style"), /flex:\s*3\b/, "the tier scales");
+  assert.doesNotMatch(tail[0].getAttribute("style"), /flex/, "the chore does not");
+
+  // still a filter, and still says how many
+  assert.equal(tail[0].textContent.trim(), "40");
+  tail[0].click();
+  assert.equal(win.document.querySelectorAll(".card").length, 40);
+});
+
 test("a banned Challenger is not the vault's best account", () => {
   const st = (tier, division) => ({ found: true, tier, division, lp: 50, updatedAt: Date.now() });
   const win = bootApp([

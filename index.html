@@ -208,6 +208,11 @@
     background:color-mix(in srgb,var(--c) 62%,#0b0e14);box-shadow:none;
     display:flex;align-items:center;justify-content:center;overflow:hidden;
     transform:none;transition:background .16s ease,box-shadow .16s ease,filter .16s ease}
+  /* The states that are not rungs on the ladder: sized to their own number so
+     they cannot take the bar over, and set slightly back so the ladder reads
+     first. */
+  .rib-seg.tail{flex:0 0 auto;padding:0 10px;min-width:28px;opacity:.82}
+  .rib-seg.tail:hover,.rib-seg.tail.on{opacity:1}
   .rib-seg:first-child{border-radius:999px 4px 4px 999px}
   .rib-seg:last-child{border-radius:4px 999px 999px 4px}
   .rib-seg:only-child{border-radius:999px}
@@ -963,10 +968,13 @@
   .c-notes .none{color:var(--faint)}
   .c-notes textarea{width:100%;font-size:12.5px;line-height:1.6;min-height:62px;display:block}
   .c-notes.editing{border-color:color-mix(in srgb,var(--teal) 34%,transparent);background:#ffffff0d}
-  /* an empty note is an invitation, not a panel — one quiet line, no filled box */
-  .c-notes.blank{display:flex;align-items:center;gap:7px;padding:6px 12px;
-    background:none;border:1px dashed #ffffff14;color:var(--faint);font-size:11.5px}
-  .c-notes.blank:hover{background:#ffffff08;border-color:#ffffff26;color:var(--muted)}
+  /* An empty note is an invitation, not a panel. It still had a dashed box around
+     it, which on a vault where almost nothing is annotated makes it the most
+     repeated element on the page — fifty-one outlined rectangles, all empty.
+     One quiet line now; the box arrives with the note, or as soon as you click. */
+  .c-notes.blank{display:flex;align-items:center;gap:6px;padding:3px 5px;
+    background:none;border:0;color:var(--faint);font-size:11px;opacity:.72}
+  .c-notes.blank:hover{background:#ffffff0d;border:0;color:var(--muted);opacity:1}
   .c-notes.blank .ico{width:11px;height:11px;opacity:.8}
   /* ---- the details drawer ----
      Details was one button among six in the action row — a poor home for the one
@@ -1125,10 +1133,16 @@
   .to-top .ico{width:17px;height:17px;stroke-width:2.4}
   .to-top:hover{color:var(--text);border-color:var(--line2);transform:translateY(-2px)}
   .to-top.hidden{display:block;opacity:0;pointer-events:none;transform:translateY(8px) scale(.9)}
+  /* Top-right of the plot — which is also where a high division numeral or LP
+     mark lands, and where a point's tip opens. Three things wanting one corner.
+     The marks and the tip are information; this is a control used once in a
+     while, so it is the one that waits to be asked for. Visible on hovering the
+     chart, or when it has keyboard focus. */
   .lpc-range{position:absolute;top:4px;right:5px;display:flex;gap:2px;z-index:3;
-    transition:opacity .13s ease}
-  /* Steps aside while a point is being read. Two small things wanting the same
-     corner is one too many, and the one you asked for is the tip. */
+    opacity:0;pointer-events:none;transition:opacity .13s ease}
+  .lpc-plot:hover .lpc-range,.lpc-range:focus-within{opacity:1;pointer-events:auto}
+  /* except while a point is being read — the tip wants that corner and you asked
+     for the tip. Outranks the hover rule above on specificity. */
   .lpc-plot:has(.lpc-pt:hover) .lpc-range{opacity:0;pointer-events:none}
   .lpc-range button{font-size:8.5px;font-weight:700;letter-spacing:.06em;line-height:1;
     padding:3px 5px;border-radius:5px;border:1px solid transparent;background:#ffffff0d;
@@ -2252,8 +2266,13 @@ const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / 
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.9.0";
+const APP_VERSION="1.9.1";
 const APP_CHANGELOG=[
+  {v:"1.9.1",items:[
+    "Ribbon: the ladder keeps the bar — Not found and Banned stop scaling with their count",
+    "Chart: the D/W/M switcher waits to be asked for, so it stops covering the marks",
+    "An empty note is a quiet line, not an outlined box on every card",
+  ]},
   {v:"1.9.0",items:[
     "Rank opens a window, like Account — the two sit together in the ⋯ menu",
     "Tag handle carries a mark and the gold filters already speak in",
@@ -2913,7 +2932,13 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
   // the chart at five marks or fewer. 100 is the floor, and MIN_SPAN guarantees
   // nothing finer is ever picked, which is what keeps the numerals honest.
   const M_BASE=mIdx*TIER_SPAN;
-  const room=v=>{const y=py(v);return y>=22&&y<=LPC_H-3}; // enough space to label it
+  /* Enough space to label it. The floor stays at 22 on purpose: raising it to
+     clear the range switcher in the top-right corner does stop the collision,
+     but it costs the topmost mark on a lot of charts — Platinum loses its "I",
+     a Master range loses "2000 LP". The marks are information and are on screen
+     always; the switcher is a control touched once in a while, so the switcher
+     is what gives way (see .lpc-range in the CSS). */
+  const room=v=>{const y=py(v);return y>=22&&y<=LPC_H-3};
   const rule=v=>{const y=py(v).toFixed(1);
     lines+=`<line x1="0" x2="${LPC_W}" y1="${y}" y2="${y}" stroke="#ffffff" stroke-opacity=".07" stroke-width="1" vector-effect="non-scaling-stroke"/>`};
   const mark=(v,txt)=>{labels+=`<span class="lpc-sub" style="top:${(py(v)-9.5).toFixed(1)}px">${esc(txt)}</span>`};
@@ -5035,9 +5060,17 @@ function renderRibbon(){
   const best=pool.filter(a=>isLive(a)&&isRanked(a)).sort((x,y)=>rankValue(y.stats)-rankValue(x.stats))[0];
   const segAttr=s=>s.flag?`data-flag="${s.flag}"`:s.status?`data-status="${s.status}"`:`data-tier="${s.k}"`;
   const segOn=s=>s.flag?ui.flag===s.flag:s.status?ui.status===s.status:ui.tier===s.k;
+  /* A tier segment is a share of the ladder, so it scales with its count. "Not
+     found", "Never checked" and "Banned" are not positions on the ladder — and
+     scaled the same way they take the bar over: a vault with forty dead Riot IDs
+     gave 72% of a bar labelled "by tier" to something that is not a tier, and
+     squeezed the whole actual spread into 12%. They sit at the end at a fixed
+     size instead, big enough to read and click. The exact numbers are in the
+     caption either way. */
+  const isTail=s=>!!(s.flag||s.status);
   setHTML(el,`<div class="rib-bar" role="group" aria-label="Accounts by tier">${segs.map(s=>{
       const on=segOn(s);
-      return `<button class="rib-seg${on?" on":""}" ${segAttr(s)} style="--c:${s.c};flex:${s.n}"
+      return `<button class="rib-seg${on?" on":""}${isTail(s)?" tail":""}" ${segAttr(s)} style="--c:${s.c}${isTail(s)?"":";flex:"+s.n}"
         aria-pressed="${on}" title="${esc(s.label)} — ${s.n} account${s.n===1?"":"s"} (click to show only these)"
         aria-label="${esc(s.label)}, ${s.n}"><i>${s.n}</i></button>`}).join("")}</div>
     <div class="rib-cap"><span><b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}${unN?` · <b>${unN}</b> unranked`:""}${missN?` · <b>${missN}</b> not found`:""}${neverN?` · <b>${neverN}</b> never checked`:""}${bannedN?` · <b>${bannedN}</b> banned`:""}</span>`
