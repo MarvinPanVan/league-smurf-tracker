@@ -5669,3 +5669,92 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
     stats: { found: true, tier: "GOLD", division: "II", lp: 10 } }), false);
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
+
+/* .stchip was flex-shrink:0 beside a name that ellipsises, so the chip always won:
+   "Resting / unused" held 114 px of a 234 px row and left "Fresh leveling acc" 58 —
+   four letters and a dot dot dot. The card carries the short wording now, with the
+   full phrase in the title, and the chip can give way. */
+test("a status chip says its piece without crowding out the account name", () => {
+  const win = bootApp([{ id: "s1", label: "Fresh leveling account", gameName: "NewSmurf",
+    tagLine: "2026", region: "EUW", status: "restricted", tags: [], history: [], stats: null }]);
+  const chip = win.document.querySelector(".card .stchip");
+  assert.ok(chip, "a status other than active is still marked on the card");
+  assert.equal(chip.textContent, "Restricted", "short enough to sit beside a name");
+  assert.equal(chip.getAttribute("title"), "Chat/ranked restricted", "the full wording is a hover away");
+  // and the long form is still what every list of statuses says
+  assert.ok([...win.document.querySelectorAll("#tStatus option")]
+    .some(o => o.textContent === "Chat/ranked restricted"), "the status filter names it in full");
+  // nothing lays out in jsdom, so the half of the fix that is geometry is read here
+  const rule = html.match(/\.stchip\{[^}]*\}/);
+  assert.ok(rule, "the .stchip rule is still there");
+  assert.doesNotMatch(rule[0], /flex-shrink:0/, "a chip that cannot shrink takes the name's room");
+  assert.match(rule[0], /max-width:/, "and a cap, so no future status can do it again");
+});
+
+/* The preview is the first thing a visitor sees, and its sub-30 account printed
+   "Not level 30 yet" twice — once from the rank block, once from a stats.note the
+   fixture had set to the very same sentence. */
+test("the example data never says the same thing twice on one card", () => {
+  const win = bootApp();
+  win.document.getElementById("bDemo").click();
+  const card = [...win.document.querySelectorAll(".card")]
+    .find(c => /Not level 30 yet/.test(c.textContent));
+  assert.ok(card, "the preview still has an account below level 30");
+  assert.equal(card.textContent.match(/Not level 30 yet/g).length, 1);
+});
+
+/* A grid emptied by the filters was one sentence and nothing else. The filters sit
+   in a dropdown row, a ribbon segment, a tag drawer and a search box, so working out
+   which one is hiding everything was a hunt — and the chips' own "Clear all" does not
+   touch region or status, either of which can empty the grid on its own. */
+test("a grid emptied by the filters offers the way back", async () => {
+  const acc = (id, gameName, region) => ({ id, gameName, tagLine: "1", region,
+    status: "active", tags: [], history: [], stats: null });
+  const win = bootApp([acc("a", "Alpha", "EUW"), acc("b", "Beta", "EUNE")]);
+  assert.equal(win.document.querySelectorAll(".card").length, 2);
+
+  const region = win.document.getElementById("tRegion");
+  region.value = "EUNE";
+  region.dispatchEvent(new win.Event("change", { bubbles: true }));
+  await until(() => win.document.querySelectorAll(".card").length === 1, "the region filter to narrow the grid");
+
+  const search = win.document.getElementById("tSearch");
+  search.value = "Alpha";                      // in the vault, but not in EUNE
+  search.dispatchEvent(new win.Event("input", { bubbles: true }));
+  await until(() => win.document.querySelectorAll(".card").length === 0, "the two together to empty it");
+
+  const out = win.document.getElementById("bClearFilters");
+  assert.ok(out, "the empty grid hands you a way out");
+  out.click();
+  await until(() => win.document.querySelectorAll(".card").length === 2, "both accounts to come back");
+  // the region dropdown carries no chip, so the chips own "Clear all" would have left it set
+  assert.equal(win.document.getElementById("tRegion").value, "", "the dropdown was reset too");
+  assert.equal(win.document.getElementById("tSearch").value, "");
+});
+
+/* Both of these are geometry, and nothing lays out in jsdom — they guard the two
+   declarations that carry the fix. A <button> centres its content box vertically, so
+   the two clickable dashboard tiles sat 24 and 31 px lower than the five plain ones
+   beside them: three baselines in one row of seven. */
+test("the clickable dashboard tiles share a baseline with the plain ones", () => {
+  const rule = html.match(/\.stat-b\{[^}]*\}/);
+  assert.ok(rule, "the .stat-b rule is still there");
+  assert.match(rule[0], /display:flex/, "a block-level button centres its content");
+  assert.match(rule[0], /flex-direction:column/);
+
+  // same reason, same row: a long enough W/L figure used to break between the number
+  // and its unit and leave "WR" stranded on a line of its own.
+  const small = html.match(/.stat .v small{[^}]*}/);
+  assert.ok(small, "the .stat .v small rule is still there");
+  assert.match(small[0], /white-space:nowrap/);
+});
+
+/* The desktop rank window was fixed to always name the account it opened for. The
+   phone hid that line with every other modal caption — which put it straight back
+   into the state the bug had it in: a rank form with no name on it. */
+test("on a phone the rank window still says whose rank it is", () => {
+  const hide = html.indexOf(".mdl-h .s{display:none}");
+  const show = html.indexOf("#rankModal .mdl-h .s{display:block");
+  assert.ok(hide > -1, "modal captions are still hidden on narrow screens");
+  assert.ok(show > hide, "and the rank window's own rule comes after it, so it wins");
+});

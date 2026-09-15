@@ -342,7 +342,9 @@
   .stat+.stat::before{content:"";position:absolute;left:0;top:15px;bottom:15px;width:1px;background:var(--line)}
   .stat .k{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:7px}
   .stat .v{font-size:20px;font-weight:600;color:var(--text);line-height:1.25;letter-spacing:-.015em;font-variant-numeric:tabular-nums}
-  .stat .v small{font-size:11.5px;color:var(--muted);font-weight:400;letter-spacing:0}
+  /* nowrap, or a long enough figure breaks between the number and its unit and
+     leaves "WR" alone on the next line. It wraps as one piece instead. */
+  .stat .v small{font-size:11.5px;color:var(--muted);font-weight:400;letter-spacing:0;white-space:nowrap}
   .stat .v.spark-wrap{font-size:12px;line-height:1.2;overflow:visible;max-width:100%;width:100%;position:relative}
   .pool-spark{display:block;width:100%;max-width:100%;height:28px;margin-top:4px;opacity:.85;overflow:visible;cursor:crosshair}
   .pool-spark circle.pool-dot{fill:var(--teal);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
@@ -379,7 +381,11 @@
   .gem-b.on{background:color-mix(in srgb,var(--gold) 16%,transparent);
     border-color:color-mix(in srgb,var(--gold) 52%,transparent);color:var(--gold-txt)}
   .gem-b.on b{color:var(--gold-txt)}
-  .stat-b{display:block;width:100%;text-align:left;border:0;border-radius:0;background:none;
+  /* flex, not block. A <button> centres its content box vertically, so the two
+     tiles that are buttons sat 24 and 31 px lower than the five that are not —
+     three baselines in one row of seven, which reads as a broken grid. */
+  .stat-b{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;
+    width:100%;text-align:left;border:0;border-radius:0;background:none;
     padding:16px 20px;font:inherit;white-space:normal}
   .stat-b:hover{background:#ffffff08;border:0}
   .stat-b.on{background:color-mix(in srgb,var(--gold) 11%,transparent);border:0;
@@ -860,7 +866,12 @@
   .c-id{min-width:0;flex:1}
   .c-name{font-weight:600;font-size:17px;letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
   .c-name>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .stchip{font-size:9.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:6px;flex-shrink:0}
+  /* The chip may not take the room the account name needs: "Resting / unused"
+     was holding 114 px of a 234 px row and leaving the name 58 — four letters
+     and an ellipsis. Short wording here, the full phrase in the title and
+     everywhere else, and a cap so no future status can do it again. */
+  .stchip{font-size:9.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:6px;
+    flex:0 1 auto;min-width:0;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .c-chrome{display:flex;align-items:center;gap:9px;flex-shrink:0;align-self:flex-start}
   /* selection is chrome, not content — it stays out of the way until wanted */
   .bulkchk{width:15px;height:15px;flex-shrink:0;accent-color:var(--teal);cursor:pointer;margin:0;
@@ -1504,6 +1515,12 @@
     .mdl.hx{border-radius:0;padding:0;box-shadow:none}
     .mdl-in{max-height:none;min-height:100vh;min-height:100dvh;border-radius:0}
     .mdl-h .s{display:none}
+    /* …except in the rank window, where that line is not a caption: it is which
+       account you are editing. Hiding it put the phone back in the state the
+       desktop had before it was fixed — a rank form with no name on it. It goes
+       under the title instead of beside it. */
+    #rankModal .mdl-h{flex-wrap:wrap}
+    #rankModal .mdl-h .s{display:block;width:100%;margin:3px 34px 0 0}
     .grp,.mdl-h,.mdl-f{padding-left:16px;padding-right:16px}
   }
 
@@ -2262,12 +2279,20 @@ function fillAutoLock(sel,current){
   sel.innerHTML=opts.map(o=>`<option value="${o.v}">${esc(o.label)}</option>`).join("");
   sel.value=String(mins);
 }
-const STATUS={active:{label:"Active",color:"#3ddc84"},resting:{label:"Resting / unused",color:"#7a94ab"},restricted:{label:"Chat/ranked restricted",color:"#f4d688"},banned:{label:"Banned",color:"#d06060"}};
+// label is the full wording — dropdowns, search text, toasts. short is what fits
+// on a card next to the account name.
+const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{label:"Resting / unused",short:"Resting",color:"#7a94ab"},restricted:{label:"Chat/ranked restricted",short:"Restricted",color:"#f4d688"},banned:{label:"Banned",short:"Banned",color:"#d06060"}};
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.9.1";
+const APP_VERSION="1.9.2";
 const APP_CHANGELOG=[
+  {v:"1.9.2",items:[
+    "Dashboard: all seven tiles share one baseline again, and no W/L figure orphans its WR",
+    "A status chip no longer takes the room the account name needs",
+    "A grid emptied by the filters offers a way back out of them",
+    "On a phone the rank window says whose rank it is",
+  ]},
   {v:"1.9.1",items:[
     "Ribbon: the ladder keeps the bar — Not found and Banned stop scaling with their count",
     "Chart: the D/W/M switcher waits to be asked for, so it stops covering the marks",
@@ -5674,7 +5699,7 @@ function cardHTML(a,i){
       <div class="c-id">
         <!-- the name is ellipsised at the card's width, so the full one has to be
              available somewhere; hovering is the only place left for it -->
-        <div class="c-name"><span title="${esc(a.label||a.gameName)}">${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.label)}</span>`:""}</div>
+        <div class="c-name"><span title="${esc(a.label||a.gameName)}">${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f" title="${esc(st.label)}">${esc(st.short||st.label)}</span>`:""}</div>
         <button class="rid" data-act="copyid" title="Copy Riot ID"><span>${esc(a.gameName)}<b>#${esc(a.tagLine)}</b></span></button>
       </div>
       <div class="c-chrome">
@@ -5966,7 +5991,11 @@ function renderGrid(){
   if(accounts.length===0){
     setHTML(grid,`<div class="hx" data-k="empty" style="grid-column:1/-1"><div class="hx-in empty"><div class="d"><span class="empty-gem"></span></div>No accounts yet. Hit <span style="color:var(--teal-txt)">+ Add account</span> to store your first smurf.<div style="margin-top:12px"><button id="bDemo">👁 Preview with example data</button></div></div></div>`);
   }else if(list.length===0){
-    setHTML(grid,`<div class="hx" data-k="nomatch" style="grid-column:1/-1"><div class="hx-in empty">No accounts match the current filters.</div></div>`);
+    /* The zero-accounts state offers Add account and the demo; this one used to
+       be a sentence and nothing else — on a page where the filters are spread
+       over a dropdown row, a ribbon segment, a tag drawer and a search box, so
+       "which one is hiding everything?" was a hunt. */
+    setHTML(grid,`<div class="hx" data-k="nomatch" style="grid-column:1/-1"><div class="hx-in empty">No accounts match the current filters.<div style="margin-top:12px"><button id="bClearFilters">Clear filters</button></div></div></div>`);
   }else{
     const layout=ui.density==="list"?"list":ui.density==="wall"?"wall":"cards";
     const asList=layout==="list";
@@ -6513,7 +6542,7 @@ function loadDemo(){
       stats:{found:true,tier:"SILVER",division:"I",lp:89,wins:15,losses:11,level:98,mmr:"~1420",avgRecent:"Silver I",asOf:"updated yesterday",updatedAt:now-1*D},
       history:[{t:now-8*D,tier:"SILVER",division:"II",lp:60},{t:now-5*D,tier:"SILVER",division:"II",lp:95},{t:now-1*D,tier:"SILVER",division:"I",lp:89}]}),
     mk({label:"Fresh leveling acc",gameName:"NewSmurf",tagLine:"2026",region:"EUW",status:"resting",tags:["leveling"],login:"demo_user4",password:"demo-pass-4",
-      stats:{found:true,tier:"UNRANKED",division:null,lp:null,wins:null,losses:null,level:23,mmr:null,avgRecent:null,asOf:"updated 6 days ago",note:"Not level 30 yet",updatedAt:now-6*D}}),
+      stats:{found:true,tier:"UNRANKED",division:null,lp:null,wins:null,losses:null,level:23,mmr:null,avgRecent:null,asOf:"updated 6 days ago",note:null,updatedAt:now-6*D}}),
     mk({label:"RIP acc",gameName:"Chat Restricted",tagLine:"4444",region:"EUNE",status:"banned",tags:["dead"],notes:"perma for chat, had Prestige K/DA Akali",
       stats:{found:true,tier:"BRONZE",division:"I",lp:12,wins:40,losses:52,level:301,asOf:"before the ban",updatedAt:now-40*D},
       history:[{t:now-50*D,tier:"BRONZE",division:"II",lp:30},{t:now-40*D,tier:"BRONZE",division:"I",lp:12}]})
@@ -7477,8 +7506,22 @@ $("grid").addEventListener("keydown",e=>{
 /* Named and shared, because the ⋯ menu is no longer inside the grid: it is one
    floating element on the body carrying the account's data-id, and it binds this
    exact listener. Every branch below resolves the same either way. */
+// Every filter that can empty the grid, in one gesture. Not the same as the
+// chips' "Clear all", which only drops the ones that have a chip — region and
+// status live in dropdowns and have none, and either of them alone can hide
+// every account.
+function clearFilters(){
+  Object.assign(ui,{search:"",region:"",tag:null,favOnly:false,status:"",flag:"",tier:""});
+  $("tSearch").value="";
+  syncToggles();
+  // the full render, not renderFilters(): the region and status dropdowns are
+  // resynced by renderFilterOptions(), which the light path does not call, and
+  // they would otherwise go on showing a filter that is no longer set.
+  render();
+}
 async function onCardClick(e){
   if(e.target.id==="bDemo"){loadDemo();return}
+  if(e.target.closest("#bClearFilters")){clearFilters();return}
   const btn=e.target.closest("[data-act]");if(!btn)return;
   const card=e.target.closest("[data-id]");if(!card)return;
   const id=card.dataset.id, acc=accounts.find(a=>a.id===id);if(!acc)return;
