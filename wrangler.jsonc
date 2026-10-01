@@ -9,5 +9,7 @@
   "compatibility_date": "2026-09-01",
   "kv_namespaces": [
     { "binding": "VAULT" }
-  ]
+  ],
+  // once a day: the Discord decay alerts, if you turn them on in the app
+  "triggers": { "crons": ["17 9 * * *"] }
 }

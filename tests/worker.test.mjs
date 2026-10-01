@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import {
   parseRankText, parseLevelText, parsePeakText, parseSeasons, parseFlex,
   parseChampions, parseChampionTable, parseChampionsMeta, parseProfileIcon,
-  parseLpHistory, stripRows, riotOne, lookupOne, handleBatch, riotForm, resetChampNames,
+  parseLpHistory, stripRows, riotOne, lookupOne, handleBatch, riotForm, resetChampNames, runWatch, carryBank,
 } from "../cloudflare-worker.js";
 
 // The shape op.gg actually serves, reduced but structurally faithful — this is
@@ -423,6 +423,7 @@ function mockKv() {
   return {
     async get(k) { return map.has(k) ? map.get(k) : null; },
     async put(k, v) { map.set(k, v); },
+    async delete(k) { map.delete(k); },
     _map: map,
   };
 }
@@ -636,6 +637,70 @@ test("mastery: top champions by name, only when asked, and counted in the batch 
   const out = (await res.json()).results;
   assert.equal(out.filter(r => r.ok).length, 15, "(48 - 2 for the champion list) / 3 a row");
   assert.ok(out[0].mastery && out[0].mastery[0].name === "Ahri");
+});
+
+const HOOK = "https://discord.com/api/webhooks/123456/abc-DEF_9";
+const watchReq = (method, token, body) => new Request("https://w.example/watch", { method,
+  headers: Object.assign({ "Content-Type": "application/json" }, token ? { Authorization: "Bearer " + token } : {}),
+  body: body ? JSON.stringify(body) : undefined });
+test("/watch: one list per worker, owned by the token that set it up, checked on the way in", async () => {
+  const env = { VAULT: mockKv() }, mine = "m".repeat(32), theirs = "t".repeat(32);
+  const acc = { name: "Main", tag: "EUW", region: "euw", puuid: PUUID, label: "Diamond main", tier: "DIAMOND", division: "II", lp: 40, games: 200, bank: 5, at: Date.now() };
+  assert.equal((await worker.fetch(watchReq("GET"), env)).status, 401, "no token, no answer");
+  assert.equal((await worker.fetch(watchReq("PUT", mine, { webhook: "https://evil.example/hook", accounts: [acc] }), env)).status, 400, "only a Discord webhook");
+  const put = await worker.fetch(watchReq("PUT", mine, { webhook: HOOK, accounts: [acc, { name: "Plat", tag: "1", region: "euw", tier: "PLATINUM", games: 1, bank: 1, at: 1 }, "junk"] }), env);
+  assert.deepEqual(await put.json(), { ok: true, accounts: 1 }, "below Diamond nothing decays, and junk is dropped");
+  const stored = JSON.parse(env.VAULT._map.get("watch:slot"));
+  assert.equal(stored.owner.length, 64, "the token is kept only as a hash");
+  assert.ok(!JSON.stringify(stored).includes(mine));
+  const status = await (await worker.fetch(watchReq("GET", mine), env)).json();
+  assert.equal(status.accounts, 1);
+  const taken = await worker.fetch(watchReq("PUT", theirs, { webhook: HOOK, accounts: [] }), env);
+  assert.equal(taken.status, 409, "someone else who finds the URL cannot take it over");
+  assert.equal((await taken.json()).code, "taken");
+  assert.equal((await worker.fetch(watchReq("DELETE", theirs), env)).status, 409, "nor stop it");
+  assert.equal((await worker.fetch(watchReq("DELETE", mine), env)).status, 200);
+  assert.equal((await worker.fetch(watchReq("GET", mine), env)).status, 404, "stopped");
+});
+
+test("the daily run carries each estimate forward and posts once when an account is about to decay, or decaying", async () => {
+  assert.equal(carryBank(5, { cap: 28, per: 7 }, 2, 1), 10, "half the gap, a game's seven days, the other half");
+  const D = 86400000, now = Date.UTC(2026, 9, 2, 9, 17);
+  const kv = mockKv(), env = { VAULT: kv, RIOT_API_KEY: KEY };
+  const row = (name, puuid, bank, games) => ({ name, tag: "EUW", region: "euw", puuid, label: name + " acc", tier: "DIAMOND", division: "II", lp: 40, games, bank, at: now - D, alerted: null });
+  const P1 = "a".repeat(78), P2 = "b".repeat(78), P3 = "c".repeat(78);
+  kv._map.set("watch:slot", JSON.stringify({ owner: "x", webhook: HOOK, accounts: [row("Soon", P1, 3.4, 100), row("Gone", P2, 0.4, 50), row("Busy", P3, 1.2, 80)] }));
+  let games = { [P1]: 100, [P2]: 50, [P3]: 82 }; const posted = [];
+  globalThis.fetch = async (u, init) => {
+    const url = String(u);
+    if (url === HOOK) { posted.push(JSON.parse(init.body)); return new Response(null, { status: 204 }); }
+    const p = url.match(/by-puuid\/(\w+)/)[1];
+    return new Response(JSON.stringify([{ queueType: "RANKED_SOLO_5x5", tier: "DIAMOND", rank: "II", leaguePoints: 40, wins: games[p], losses: 0 }]), { status: 200 });
+  };
+  const first = await runWatch(env, now);
+  assert.equal(first.sent, 2);
+  assert.match(posted[0].content, /⏳ \*\*Soon acc\*\* \(Diamond II · 40 LP\) decays in ~2 days/);
+  assert.match(posted[1].content, /📉 \*\*Gone acc\*\* .* is decaying: −50 LP a day/);
+  assert.deepEqual(posted[0].allowed_mentions, { parse: [] }, "a label can never ping anyone");
+  const slot = JSON.parse(kv._map.get("watch:slot"));
+  assert.equal(slot.accounts.find(a => a.name === "Busy").bank > 14, true, "two games banked fourteen days");
+  assert.equal(slot.lastRun, now);
+  posted.length = 0;
+  await runWatch(env, now + D);
+  assert.equal(posted.length, 0, "the same state is not posted again the next day");
+  games[P1] = 101;
+  await runWatch(env, now + 2 * D);
+  assert.equal(posted.length, 0, "a game banks days again");
+  await runWatch(env, now + 9 * D);
+  assert.equal(posted.length, 1, "and when it runs low again, that is news again");
+});
+
+test("the one-click deploy also schedules the daily run", async () => {
+  const fs = await import("node:fs"), path = await import("node:path"), { fileURLToPath } = await import("node:url");
+  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const cfg = JSON.parse(fs.readFileSync(path.join(root, "wrangler.jsonc"), "utf8").replace(/^\s*\/\/.*$/gm, ""));
+  assert.equal(cfg.triggers.crons.length, 1);
+  assert.equal(typeof worker.scheduled, "function", "the worker answers the cron");
 });
 
 test("recent form: the last five ranked games, reduced to this player's line", async () => {
