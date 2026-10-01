@@ -1131,6 +1131,11 @@ test("Streamer mode: Riot IDs, logins, emails and notes are hidden on screen and
   runScript(win, `commitStats("2", accounts.find(a => a.id === "2"), {found:true,tier:"GOLD",division:"I",lp:1,updatedAt:Date.now(),
     puuid:"${"q".repeat(78)}",riotId:{name:"NewSecret",tag:"NEW"}})`);
   assert.doesNotMatch(doc.getElementById("toast").textContent, /Secret|NEW/);
+  // a system notification shows on screen too
+  runScript(win, "window.__notes = []; notify = (t, b) => window.__notes.push(t + ' ' + b);");
+  runScript(win, `{ const a = accounts.find(x => x.id === "2"); a.history = [{ t: 1, tier: "SILVER" }, { t: 2, tier: "GOLD" }]; celebrate("2", a); }`);
+  assert.equal(win.__notes.length, 1);
+  assert.doesNotMatch(win.__notes[0], /Secret/, "a tier-up notification names no Riot ID");
   // other views
   doc.querySelector('#density [data-density="list"]').click();
   assert.ok(doc.querySelector('#grid [data-id="1"] .rw-tag.sens'), "the list's Riot ID column");

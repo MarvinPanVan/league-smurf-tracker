@@ -4064,7 +4064,8 @@ async function pullVaultSync(force){
 function celebrate(id,acc){
   const prev=acc.history[acc.history.length-2]||{};
   toast("Tier up: "+(prev.tier||"?")+" → "+acc.stats.tier);
-  notify("Tier up — "+(acc.label||acc.gameName),(prev.tier||"?")+" → "+acc.stats.tier);
+  // a system notification shows on screen like the page does, so streamer mode applies
+  notify("Tier up — "+plainName(acc),(prev.tier||"?")+" → "+acc.stats.tier);
   postDiscord("🎉 **"+(acc.label||acc.gameName)+"** tiered up: "+(prev.tier||"?")+" → "+acc.stats.tier);
   if(prefersReducedMotion())return;
   // The crest is now a different emblem than it was a second ago, which is the
