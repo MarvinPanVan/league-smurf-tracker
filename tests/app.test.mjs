@@ -667,7 +667,7 @@ test("the page speaks in line icons, not emoji", () => {
     stats: { found: true, tier: "GOLD", division: "II", lp: 70, updatedAt: Date.now() }, history: [h(3), h(2), h(1), h(0)], tags: [] }]);
   const chip = [...win.document.querySelectorAll(".delta.d-up")].find(d => /Climbing/.test(d.textContent));
   assert.ok(chip, "the climbing chip is drawn");
-  assert.ok(chip.querySelector("svg.ico"), "with the trend line icon");
+  assert.ok(chip.querySelector("svg.ico.flame"), "with the flame, drawn rather than an emoji");
   assert.doesNotMatch(chip.textContent, /\u{1F525}/u);
   assert.ok(win.document.querySelector("#previewBanner svg.ico"), "the preview banner's eye is drawn too");
   // UI markup only: the Discord post is a chat message, where an emoji belongs
