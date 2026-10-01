@@ -345,6 +345,11 @@
   /* nowrap, or a long enough figure breaks between the number and its unit and
      leaves "WR" alone on the next line. It wraps as one piece instead. */
   .stat .v small{font-size:11.5px;color:var(--muted);font-weight:400;letter-spacing:0;white-space:nowrap}
+  /* Except where the caption is a list — Accounts' "· 7 ★ · 5 banned · 5 archived"
+     is wider than its tile, which is overflow:hidden, so nowrap cut it off at
+     "archiv". It breaks between the pieces and never inside one. */
+  .stat .v small.parts{white-space:normal}
+  .stat .v small.parts>span{white-space:nowrap}
   .stat .v.spark-wrap{font-size:12px;line-height:1.2;overflow:visible;max-width:100%;width:100%;position:relative}
   .pool-spark{display:block;width:100%;max-width:100%;height:28px;margin-top:4px;opacity:.85;overflow:visible;cursor:crosshair}
   .pool-spark circle.pool-dot{fill:var(--teal);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
@@ -5188,7 +5193,7 @@ function renderDash(){
     </div>
   </div>
   <div class="dash">
-    <div class="stat"><div class="k">Accounts</div><div class="v">${allActive.length} <small>· ${allActive.filter(a=>a.fav).length} ★${bannedN?" · "+bannedN+" banned":""}${archivedN?" · "+archivedN+" archived":""}</small></div></div>
+    <div class="stat"><div class="k">Accounts</div><div class="v">${allActive.length} <small class="parts"><span>· ${allActive.filter(a=>a.fav).length} ★</span>${bannedN?` <span>· ${bannedN} banned</span>`:""}${archivedN?` <span>· ${archivedN} archived</span>`:""}</small></div></div>
     <div class="stat"><div class="k">Best account</div><div class="v" style="font-size:14px">${bestTxt}</div></div>
     <div class="stat"><div class="k">Season W/L</div><div class="v">${W}W ${L}L <small>· ${wr} WR</small></div>
       <div class="s-note">from ${pool.length} counted account${pool.length===1?"":"s"}</div></div>

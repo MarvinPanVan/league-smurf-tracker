@@ -6017,3 +6017,24 @@ test("closing Add account or Bulk add hands focus back to what opened it", async
   esc(); await tick();
   assert.equal(doc.activeElement, more, "the ⋯ that the menu hangs off, since the item itself is hidden now");
 });
+
+/* The nowrap that stops "WR" being stranded on a line of its own applies to every
+   tile's caption, and the Accounts tile's is a list — "· 7 ★ · 5 banned · 5
+   archived" — far longer than a tile is wide, in a tile that is overflow:hidden.
+   So it was cut at "· 5 archiv" at every width from 1440 down to a phone. Its
+   pieces still never break inside; the list breaks between them. */
+test("the Accounts tile's caption wraps between its pieces instead of being cut off", () => {
+  const acc = (id, extra) => Object.assign({ id, gameName: id, tagLine: "1", region: "EUW", status: "active",
+    tags: [], history: [], stats: null }, extra);
+  const win = bootApp([acc("a", { fav: true }), acc("b", { status: "banned" }), acc("c", { archived: true })]);
+  const small = [...win.document.querySelectorAll("#dash .stat")]
+    .find(s => /Accounts/i.test(s.querySelector(".k").textContent)).querySelector(".v small");
+  assert.ok(small.classList.contains("parts"), "the caption is marked as a list of pieces");
+  assert.deepEqual([...small.children].map(c => c.textContent.trim()), ["· 1 ★", "· 1 banned", "· 1 archived"],
+    "one element per piece, so a line can only break between them");
+  const rule = html.match(/\.stat \.v small\.parts\{[^}]*\}/);
+  const piece = html.match(/\.stat \.v small\.parts>span\{[^}]*\}/);
+  assert.ok(rule && piece, "both rules are there");
+  assert.match(rule[0], /white-space:normal/);
+  assert.match(piece[0], /white-space:nowrap/);
+});
