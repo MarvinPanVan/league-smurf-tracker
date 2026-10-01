@@ -842,6 +842,36 @@ test("a shared link unfurls into a card: title, description and an image that ex
   assert.ok(fs.existsSync(local), "and the image is in the repo at that path: " + local);
 });
 
+test("the vault is stretched at 600 000 rounds, and an older vault upgrades itself on unlock", async () => {
+  // An envelope as the app wrote it before: 150 000 rounds, bare base64 salt.
+  const enc = new TextEncoder(), B = u => Buffer.from(u).toString("base64");
+  const salt = webcrypto.getRandomValues(new Uint8Array(16)), iv = webcrypto.getRandomValues(new Uint8Array(12));
+  const km = await webcrypto.subtle.importKey("raw", enc.encode("legacy-pass"), "PBKDF2", false, ["deriveKey"]);
+  const key = await webcrypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, km,
+    { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  const vault = [{ id: "v1", region: "EUW", gameName: "Old", tagLine: "1", status: "active", stats: null, history: [], tags: [] }];
+  const ct = await webcrypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(JSON.stringify(vault)));
+  const legacy = { __enc: true, salt: B(salt), iv: B(iv), data: B(new Uint8Array(ct)) };
+
+  const win = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker", JSON.stringify(legacy)));
+  assert.equal(win.document.getElementById("lock").classList.contains("hidden"), false);
+  const rev = appGet(win, "cfg.vaultRev");
+  win.document.getElementById("lockPass").value = "legacy-pass";
+  win.document.getElementById("lockBtn").click();
+  await until(() => win.document.getElementById("lock").classList.contains("hidden"), "the old vault to open");
+  assert.equal(win.document.querySelectorAll(".card").length, 1, "the same account inside");
+  await until(() => /^600000\$/.test(JSON.parse(win.localStorage.getItem("smurf-tracker")).salt),
+    "the vault to be rewritten at 600 000 rounds");
+  assert.equal(appGet(win, "cfg.vaultRev"), rev, "an upgrade is not an edit: sync must not see a new revision");
+
+  // and what it wrote opens again, through the same path
+  runScript(win, "relock()");
+  win.document.getElementById("lockPass").value = "legacy-pass";
+  win.document.getElementById("lockBtn").click();
+  await until(() => win.document.getElementById("lock").classList.contains("hidden"), "the upgraded vault to open");
+  assert.equal(win.document.querySelectorAll(".card").length, 1);
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");

@@ -2932,12 +2932,27 @@ function b64(bytes){
   return btoa(s);
 }
 function unb64(str){return Uint8Array.from(atob(str),c=>c.charCodeAt(0))}
-async function deriveKey(password,salt){
+/* Key stretching: what a stolen vault costs per password guess. 150 000 rounds of
+   PBKDF2-SHA256 was the figure when the vault was written; OWASP's current advice is
+   600 000. New saves use 600 000 and say so in the envelope, and a vault saved
+   before that (no count recorded) is read at 150 000 and rewritten at 600 000 on
+   its next save — so it upgrades itself the first time it is opened.
+   The count rides in the salt field ("600000$<salt>") rather than a field of its
+   own: a sync worker deployed from an older copy rebuilds the envelope from exactly
+   {__enc, salt, iv, data}, and would have dropped a new field on the floor —
+   leaving a vault that the next pull could not open. */
+const KDF_ITER=600000, KDF_ITER_LEGACY=150000;
+function saltField(salt,iter){return iter+"$"+b64(salt)}
+function readSaltField(f){
+  const i=String(f).indexOf("$");
+  return i<0?{salt:unb64(f),iter:KDF_ITER_LEGACY}:{salt:unb64(f.slice(i+1)),iter:parseInt(f.slice(0,i),10)||KDF_ITER_LEGACY};
+}
+async function deriveKey(password,salt,iter){
   const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),"PBKDF2",false,["deriveKey"]);
-  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:150000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:iter||KDF_ITER,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
 }
 /* The derived key, held for as long as the vault stays open.
-   Deriving it is 150 000 PBKDF2 rounds, and encryptData used to do that on every
+   Deriving it is 600 000 PBKDF2 rounds, and encryptData used to do that on every
    single save — with a save committed after each account, one "Check all ranks"
    over sixty accounts paid for sixty full derivations on top of the network work.
    The salt is what stops a precomputed table from attacking the password, so it
@@ -2946,25 +2961,28 @@ async function deriveKey(password,salt){
    the IV, and that is still drawn fresh for every single encryption below.
    The key itself is created non-extractable, so unlike the password beside it,
    it cannot be read back out of memory by script. */
-let vaultKey=null;   // {password, salt:Uint8Array, key:CryptoKey}
-async function keyFor(password,salt){
-  if(vaultKey&&vaultKey.password===password&&(!salt||b64(salt)===b64(vaultKey.salt)))return vaultKey;
+let vaultKey=null;   // {password, salt:Uint8Array, iter, key:CryptoKey}
+// With no salt this is the key new saves are written with, so a key cached from
+// reading an older, weaker envelope is not reused for writing.
+async function keyFor(password,salt,iter){
+  const it=iter||KDF_ITER;
+  if(vaultKey&&vaultKey.password===password&&vaultKey.iter===it&&(!salt||b64(salt)===b64(vaultKey.salt)))return vaultKey;
   const s=salt||crypto.getRandomValues(new Uint8Array(16));
-  vaultKey={password,salt:s,key:await deriveKey(password,s)};
+  vaultKey={password,salt:s,iter:it,key:await deriveKey(password,s,it)};
   return vaultKey;
 }
 function forgetVaultKey(){vaultKey=null}
 async function encryptData(password,obj){
-  const {salt,key}=await keyFor(password);
+  const {salt,key,iter}=await keyFor(password);
   const iv=crypto.getRandomValues(new Uint8Array(12));
   const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(JSON.stringify(obj)));
-  return {__enc:true,salt:b64(salt),iv:b64(iv),data:b64(new Uint8Array(ct))};
+  return {__enc:true,salt:saltField(salt,iter),iv:b64(iv),data:b64(new Uint8Array(ct))};
 }
 async function decryptData(password,envelope){
-  const salt=unb64(envelope.salt),iv=unb64(envelope.iv),data=unb64(envelope.data);
+  const {salt,iter}=readSaltField(envelope.salt),iv=unb64(envelope.iv),data=unb64(envelope.data);
   // Derived against the envelope's own salt and cached under it, so unlocking is
   // the last derivation that happens until the vault is locked again.
-  const {key}=await keyFor(password,salt);
+  const {key}=await keyFor(password,salt,iter);
   let pt;
   try{pt=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,data)}
   catch(e){forgetVaultKey();throw e}   // a key derived from a wrong guess must not linger
@@ -8246,6 +8264,10 @@ async function tryUnlock(){
     $("lock").classList.add("hidden");
     lastActivity=Date.now();
     startApp();
+    // A vault written with the older, weaker key stretching is rewritten with the
+    // current one now that the password is in hand. Same data, same revision —
+    // sync must not see the upgrade as an edit.
+    if(readSaltField(currentEnvelope.salt).iter<KDF_ITER)saveDB({keepRev:true});
   }catch(e){
     $("lockErr").style.display="block";
     $("lockPass").value="";$("lockPass").focus();
