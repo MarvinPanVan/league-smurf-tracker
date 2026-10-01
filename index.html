@@ -204,8 +204,11 @@
      The account actions have since moved down to the console above the grid,
      where the rest of the controls over those accounts live. What's left here is
      what it should have been: two app-level utilities — settings/backup and help
-     — in a quiet tray, not a second, competing command centre. */
-  .top .bar{gap:3px;padding:5px;border:1px solid color-mix(in srgb,var(--gold-dim) 55%,transparent);border-radius:var(--r-md);
+     — in a quiet tray, not a second, competing command centre.
+     It keeps to the right edge when the header wraps. Left-aligned on a row of its
+     own it read as a stray, and the ⋯ menu, which hangs leftward from its button,
+     opened off the left of a phone screen with "Export backup" cut to "ackup". */
+  .top .bar{margin-left:auto;gap:3px;padding:5px;border:1px solid color-mix(in srgb,var(--gold-dim) 55%,transparent);border-radius:var(--r-md);
     background:linear-gradient(180deg,#ffffff0b,#ffffff05);
     backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
     box-shadow:var(--sh-1),inset 0 1px 0 #ffffff0d;

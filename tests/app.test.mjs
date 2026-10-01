@@ -650,6 +650,17 @@ test("quick find names a rank in the display face, and a state that is not one i
   assert.match(html, /\.pal-r:not\(\.q\)[^{]*\{\s*font-family:'Cinzel'/);
 });
 
+/* Measured in Chromium before the fix: at 390px the ⋯ menu ran from -75px to 163px,
+   at 768px from -68px — the tray sat left on its own row and the menu, right-anchored
+   to its button, hung off the screen's left edge. */
+test("the header tray keeps to the right edge, so the ⋯ menu opens on screen", () => {
+  assert.match(html, /\.top \.bar\{margin-left:auto/);
+  const win = bootApp();
+  const menu = win.document.getElementById("moreMenu");
+  assert.match(menu.getAttribute("style"), /right:0/, "the menu hangs leftward from its button");
+  assert.ok(menu.closest(".top .bar"), "from inside the tray");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
