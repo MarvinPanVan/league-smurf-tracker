@@ -3420,6 +3420,41 @@ test("the modal panels keep every control the app talks to", () => {
   assert.ok(win.document.getElementById("help").contains(win.document.getElementById("bHelpClose")));
 });
 
+test("leaving Settings by Escape, its ✕ or the backdrop puts every Appearance preview back, not just the colours", () => {
+  const now = Date.now();
+  const acc = { id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 30, wins: 3, losses: 0, updatedAt: now, champs: [{ name: "Ahri", games: 5, wr: 60 }] } };
+  const win = bootApp([acc]);
+  const doc = win.document, body = doc.body, html = doc.documentElement;
+  const preview = () => {
+    doc.getElementById("bSettings").click();
+    doc.querySelector('#sThemes [data-theme="void"]').click();
+    doc.querySelector('#sEffects [data-v="off"]').click();
+    doc.querySelector('#sTextSize [data-v="large"]').click();
+    const chart = doc.querySelector('#sCardParts [data-part="chart"]');
+    chart.checked = false; chart.dispatchEvent(new win.Event("change", { bubbles: true }));
+    const art = doc.getElementById("sChampArt");
+    art.checked = false; art.dispatchEvent(new win.Event("change", { bubbles: true }));
+    assert.equal(body.dataset.fx, "off");
+    assert.equal(html.dataset.ts, "large");
+    assert.ok(body.classList.contains("hide-chart"));
+    assert.equal(doc.querySelector(".c-art"), null);
+  };
+  const reverted = how => {
+    assert.equal(body.dataset.fx, "full", how + ": effects");
+    assert.equal(html.dataset.ts, undefined, how + ": text size");
+    assert.equal(body.classList.contains("hide-chart"), false, how + ": card parts");
+    assert.ok(doc.querySelector(".c-art"), how + ": champion art");
+    assert.equal(html.style.getPropertyValue("--gold"), "#c8aa6e", how + ": colours");
+  };
+  preview();
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  reverted("Escape");
+  preview();
+  doc.querySelector("#settings [data-close-panel]").click();
+  reverted("the ✕");
+});
+
 test("Effects: Full, Subtle or Off — previewed live, kept on Save, honoured on the next visit", () => {
   const win = bootApp();
   const doc = win.document;
