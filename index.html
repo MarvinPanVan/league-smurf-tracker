@@ -2112,7 +2112,7 @@
       <dt>Cards</dt>
       <dd>The bar across a card's bottom edge opens <b>Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot.</dd>
       <dt>Search</dt>
-      <dd>Matches names, tags, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code>, <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
+      <dd>Matches names, tags, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code> <code>champ:yasuo</code> (played this season, or in its top mastery), <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
       <dt>Quick find</dt>
       <dd><kbd>Ctrl</kbd><kbd>K</kbd> (or <kbd>⌘</kbd><kbd>K</kbd>) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.</dd>
       <dt>Keys</dt>
@@ -3330,6 +3330,8 @@ function sanitizeAccount(a){
   if(!Array.isArray(a.tags))a.tags=[];
   if(!Array.isArray(a.history))a.history=[];
   if(a.puuid!=null&&!validPuuid(a.puuid))delete a.puuid;
+  if(a.mastery!=null){a.mastery=normMastery(a.mastery);if(!a.mastery)delete a.mastery}
+  if(a.masteryAt!=null&&!(Number(a.masteryAt)>0))delete a.masteryAt;
   if(a.stats&&a.stats.seasons&&typeof a.stats.seasons==="object"){
     if(!Array.isArray(a.stats.seasons.solo))a.stats.seasons.solo=[];
     if(!Array.isArray(a.stats.seasons.flex))a.stats.seasons.flex=[];
@@ -4609,7 +4611,7 @@ function mapBackendPayload(d){
   return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),seasons:d.seasons||null,flex:normPeak(d.flex),champs:Array.isArray(d.champs)?d.champs.slice(0,10):null,lpAt:normLpAt(d.lpAt),icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,uncertain,source:d.source||null,updatedAt:Date.now(),
     puuid:validPuuid(d.puuid)?d.puuid:null,
     riotId:d.riotId&&typeof d.riotId==="object"&&d.riotId.name&&d.riotId.tag?{name:String(d.riotId.name).slice(0,32),tag:String(d.riotId.tag).slice(0,8)}:null,
-    riotError:d.riotError||null};
+    riotError:d.riotError||null,mastery:normMastery(d.mastery)};
 }
 async function fetchViaBackend(acc){
   const r=REGIONS[acc.region]||REGIONS.EUW;
@@ -4619,6 +4621,7 @@ async function fetchViaBackend(acc){
   url.searchParams.set("tag",acc.tagLine);
   url.searchParams.set("region",r.opgg);
   if(validPuuid(acc.puuid))url.searchParams.set("puuid",acc.puuid);
+  if(wantsMastery(acc))url.searchParams.set("mastery","1");
   const text=await fetchWithTimeout(url.href,12000);
   return mapBackendPayload(JSON.parse(text));
 }
@@ -4629,12 +4632,12 @@ async function fetchViaBackendBatch(list){
   try{url=new URL(cfg.backendUrl)}catch(e){return null}
   const accounts=list.map(a=>{
     const r=REGIONS[a.region]||REGIONS.EUW;
-    return{name:a.gameName,tag:a.tagLine,region:r.opgg,id:a.id,puuid:validPuuid(a.puuid)?a.puuid:undefined};
+    return{name:a.gameName,tag:a.tagLine,region:r.opgg,id:a.id,puuid:validPuuid(a.puuid)?a.puuid:undefined,mastery:wantsMastery(a)||undefined};
   });
   const c=new AbortController();const t=setTimeout(()=>c.abort(),45000);
   try{
     const res=await fetch(url.href,{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({accounts:accounts.map(({name,tag,region,puuid})=>({name,tag,region,puuid}))}),signal:c.signal});
+      body:JSON.stringify({accounts:accounts.map(({name,tag,region,puuid,mastery})=>({name,tag,region,puuid,mastery}))}),signal:c.signal});
     if(!res.ok)throw new Error("HTTP "+res.status);
     const data=await res.json();
     if(!data||!Array.isArray(data.results))throw new Error("bad batch response");
@@ -4686,6 +4689,19 @@ function normLpAt(p){
   return{t,tier,division:normDivision(tier,DIV_ORDER[div]!==undefined?div:null),
     lp:p.lp==null||p.lp===""?null:(Number(p.lp)||0)};
 }
+/* Champion mastery, from a worker with a Riot key: the account's top five, kept on
+   the account (not on a reading) because it changes over weeks, not games. It is
+   asked for at most every three days per account — one more Riot call a lookup. */
+const MASTERY_EVERY=3*86400000;
+function normMastery(list){
+  if(!Array.isArray(list))return null;
+  const out=list.slice(0,5).map(m=>m&&typeof m==="object"&&typeof m.name==="string"&&/^[A-Za-z0-9 '.&-]{1,24}$/.test(m.name)?{
+    name:m.name,level:Number.isFinite(m.level)?Math.max(0,Math.min(1000,Math.round(m.level))):null,
+    points:Number.isFinite(m.points)?Math.max(0,Math.round(m.points)):null}:null).filter(Boolean);
+  return out.length?out:null;
+}
+function wantsMastery(a){return !!cfg.backendUrl&&!(Number(a.masteryAt)>Date.now()-MASTERY_EVERY)}
+function fmtPoints(n){return n==null?"":n>=1e6?(n/1e6).toFixed(n>=1e7?0:1).replace(/\.0$/,"")+"M":n>=1e3?Math.round(n/1e3)+"k":String(n)}
 function normChamps(list){
   if(!Array.isArray(list))return null;
   const num=(v,d)=>v==null||v===""||isNaN(Number(v))?d:Number(v);
@@ -4913,7 +4929,8 @@ function takeIdentity(acc,s){
     riotKeyWarned=true;
     toast("Your worker's Riot API key was refused, so this check used op.gg. Development keys expire after 24 hours.");
   }
-  delete s.puuid;delete s.riotId;delete s.riotError;
+  if(s.mastery){acc.mastery=s.mastery;acc.masteryAt=Date.now()}
+  delete s.puuid;delete s.riotId;delete s.riotError;delete s.mastery;
 }
 function commitStats(id,acc,s){
   takeIdentity(acc,s);
@@ -5372,12 +5389,12 @@ function renderCompare(){
 /* Sixty accounts is the point where "type some letters and see what sticks" stops
    being enough. The operators are the filters that already exist in the toolbar,
    reachable without leaving the keyboard:
-     tier:diamond   region:euw   is:stale|never|flagged|banned|fav|goal|decay|ready|leveling
+     tier:diamond   region:euw   champ:yasuo   is:stale|never|flagged|banned|fav|goal|decay|ready|leveling
      >plat  >=plat  <gold  <=gold      (rank at least / below)
    Anything not recognised as an operator stays a plain search term, so a stray
    colon in a note never silently swallows the rest of the query. */
 function parseQuery(q){
-  const out={terms:[],tier:"",region:"",is:[],min:null,max:null};
+  const out={terms:[],tier:"",region:"",is:[],min:null,max:null,champ:[]};
   for(const raw of String(q||"").trim().split(/\s+/)){
     if(!raw)continue;
     const tok=raw.toLowerCase();
@@ -5390,6 +5407,8 @@ function parseQuery(q){
       const r=Object.keys(REGIONS).find(x=>x.toLowerCase()===m[1]||x.toLowerCase().startsWith(m[1]));
       if(r){out.region=r;continue}
     }
+    // champ:yasuo — played this season (op.gg's list) or in its top mastery
+    if((m=/^(?:champ|c):(.+)$/.exec(tok))){out.champ.push(m[1].replace(/[^a-z0-9]/g,""));continue}
     if((m=/^is:(.+)$/.exec(tok))){
       if(["stale","never","flagged","banned","fav","goal","decay","ready","leveling"].includes(m[1])){out.is.push(m[1]);continue}
     }
@@ -5431,6 +5450,10 @@ function passesBaseFilters(a,Q,{forceActive=false}={}){
     if(i<0)return false;
     if(Q.min!=null&&i<Q.min)return false;
     if(Q.max!=null&&i>=Q.max)return false;
+  }
+  for(const c of Q.champ||[]){
+    const names=[...(normChamps(a.stats&&a.stats.champs)||[]),...(normMastery(a.mastery)||[])].map(x=>x.name.toLowerCase().replace(/[^a-z0-9]/g,""));
+    if(!names.some(n=>n.startsWith(c)))return false;
   }
   for(const f of Q.is){
     if(f==="stale"&&(!isLive(a)||!isStale(a)))return false;
@@ -6168,7 +6191,7 @@ function drawerTitle(){
   const h=new Set(cardHidden());
   return CARD_PARTS.filter(([k])=>h.has(k)).map(p=>p[1]).concat(["past seasons, flex rank, champions"]).join(", ").replace(/^./,c=>c.toUpperCase());
 }
-function hasInfo(a){const p=infoParts(a);return !!(p.solo.length||p.flexHist.length||p.champs.length||p.flex)}
+function hasInfo(a){const p=infoParts(a);return !!(p.solo.length||p.flexHist.length||p.champs.length||p.flex||(a.mastery&&a.mastery.length))}
 // The one-line summary on the drawer pull, so the card says what is folded away
 // before you open it.
 function infoPeek(a){
@@ -6197,7 +6220,8 @@ function secHTML(a,key,label,n,peek,body){
 }
 function infoBlockHTML(a,rev){
   const {solo,flexHist,champs,flex}=infoParts(a);
-  if(!solo.length&&!flexHist.length&&!champs.length&&!flex&&!canForm(a))return"";
+  const mastery=normMastery(a.mastery)||[];
+  if(!solo.length&&!flexHist.length&&!champs.length&&!flex&&!mastery.length&&!canForm(a))return"";
   // through tierLabel like everywhere else — the drawer was the fifth place
   // building this string by hand, and the fifth place printing "Challenger II"
   const rank=e=>tierLabel(e)+(e.lp!=null?" · "+e.lp+" LP":"");
@@ -6225,6 +6249,13 @@ function infoBlockHTML(a,rev){
         +`<span class="c-gm">${c.wins!=null&&c.losses!=null?esc(c.wins)+"-"+esc(c.losses):esc(c.games)+"G"}</span>`
         +`<span class="c-wr${c.wr>=50?" wr-good":""}">${esc(c.wr)}%</span>`
         +(kdaCol?`<span class="c-kd">${c.kda!=null?esc(c.kda):"—"}</span>`:""))).join(""));
+  }
+  if(mastery.length){
+    const top=mastery[0];
+    out+=secHTML(a,"mastery","Mastery",mastery.length,
+      `<span class="c-nm">${esc(top.name)}</span>${top.level!=null?" · M"+esc(top.level):""}`,
+      mastery.map(m=>`<div class="chp" style="grid-template-columns:1fr auto auto"><span class="c-nm">${esc(m.name)}</span>`
+        +`<span class="c-gm">${m.level!=null?"M"+esc(m.level):""}</span><span class="c-kd">${esc(fmtPoints(m.points))}${m.points!=null?" pts":""}</span></div>`).join(""));
   }
   return `<div class="login info${rev||""}">${out}</div>`;
 }

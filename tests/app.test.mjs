@@ -1247,6 +1247,41 @@ test("Riot mode in the app: a refused key is said once, and a junk puuid never s
   assert.equal(win.__toasts.filter(m => /Riot API key was refused/.test(m)).length, 1, "once a session, not once per account");
 });
 
+test("Mastery: asked for every three days, kept on the account, shown under Details, found with champ:", async () => {
+  const P = "q".repeat(78), now = Date.now(), D = 86400000;
+  const acc = (id, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: now }, puuid: P }, extra);
+  const win = bootApp([acc("fresh", { masteryAt: now - D, mastery: [{ name: "Lux", level: 7, points: 250000 }] }),
+    acc("due", { masteryAt: now - 4 * D }), acc("never", {}),
+    acc("junk", { mastery: [{ name: "<img src=x>", level: 7, points: 1 }, "nope"], masteryAt: "soon" })]);
+  assert.equal(appGet(win, 'accounts.find(a => a.id === "junk").mastery'), undefined, "junk is dropped on load");
+  assert.equal(appGet(win, 'accounts.find(a => a.id === "junk").masteryAt'), undefined);
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev'");
+  // the batch asks only for the accounts that are due
+  let body = null;
+  win.fetch = async (u, init) => { body = JSON.parse(init.body); return { ok: true, status: 200, json: async () => ({ results: body.accounts.map(() => ({ ok: true, found: true, tier: "GOLD" })) }) }; };
+  runScript(win, `window.__b = fetchViaBackendBatch(accounts.filter(a => a.id !== "junk"))`);
+  await win.__b;
+  assert.deepEqual(body.accounts.map(a => a.mastery ?? false), [false, true, true]);
+  // a reading that carries mastery puts it on the account, stamped
+  runScript(win, `commitStats("due", accounts.find(a => a.id === "due"), mapBackendPayload({ found: true, tier: "GOLD", division: "I", lp: 5,
+    mastery: [{ name: "Yasuo", level: 7, points: 1234567 }, { name: "Ahri", level: 5, points: 40211 }] }))`);
+  assert.equal(appGet(win, 'accounts.find(a => a.id === "due").mastery[0].name'), "Yasuo");
+  assert.ok(appGet(win, 'accounts.find(a => a.id === "due").masteryAt') > now - 1000);
+  assert.equal(appGet(win, 'accounts.find(a => a.id === "due").stats.mastery'), undefined, "kept on the account, not the reading");
+  // Details shows it
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  card("due").querySelector('[data-act="info"]').click();
+  assert.match(card("due").querySelector('[data-k="sec-mastery"]').textContent, /Mastery\s*2\s*Yasuo · M7/);
+  card("due").querySelector('[data-act="sec"][data-s="mastery"]').click();
+  assert.match(card("due").querySelector('[data-k="sec-mastery"]').textContent, /Yasuo\s*M7\s*1\.2M pts/);
+  // and champ: finds it, by mastery or by this season's champions
+  const shown = q => { runScript(win, `ui.search = ${JSON.stringify(q)}; renderGrid()`); return [...win.document.querySelectorAll("#grid .card")].map(c => c.dataset.id).sort(); };
+  assert.deepEqual(shown("champ:yas"), ["due"]);
+  assert.deepEqual(shown("champ:lux"), ["fresh"]);
+  assert.deepEqual(shown("c:ah"), ["due"]);
+});
+
 test("Recent form: a Riot-read account's Details fetch its last five ranked games once, and say why when they cannot", async () => {
   const P = "q".repeat(78);
   const win = bootApp([
