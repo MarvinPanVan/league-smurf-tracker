@@ -2159,6 +2159,7 @@
           <div class="fld fw">
             <label>Backend URL (optional — your own rank server, e.g. Cloudflare Worker)</label>
             <input id="sBackend" placeholder="https://... — leave empty to use the free auto-fetch" autocomplete="off">
+            <div id="sBackendStatus" class="hint" style="margin-top:2px" aria-live="polite"></div>
           </div>
           <div class="fld fw">
             <label>Advanced: Anthropic API key (optional, stored only in this browser)</label>
@@ -2172,7 +2173,7 @@
             </select>
           </div>
           <div class="fw hint">
-            Check order: <b>backend URL → API key → free op.gg auto-fetch</b>. With all three empty, checks use the free auto-fetch and cost nothing. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable, but only worth it for power users.
+            Check order: <b>backend URL → API key → free op.gg auto-fetch</b>. A worker with a Riot API key reads ranks from Riot directly, the most reliable source there is. With all three empty, checks use the free auto-fetch and cost nothing. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable, but only worth it for power users.
           </div>
           <div class="fw hint" id="sDeployHelp" style="margin-top:8px">
             <b>Deploy the worker:</b> Cloudflare → Workers → Create → paste
@@ -2942,6 +2943,26 @@ async function storageState(){
 async function protectStorage(){
   try{return !!(navigator.storage&&navigator.storage.persist&&await navigator.storage.persist())}catch(e){return false}
 }
+/* What the worker at the Backend URL has set up, so that a deploy can be checked
+   from here rather than by guesswork: a Riot API key, and storage for sync. An
+   older worker without /status answers with an error, which is reported as such. */
+async function updateBackendStatus(){
+  const el=$("sBackendStatus");if(!el)return;
+  const raw=($("sBackend").value||"").trim();
+  if(!raw){el.textContent="";return}
+  let u;try{u=new URL(raw)}catch(e){el.textContent="That is not a URL.";el.style.color="var(--danger)";return}
+  u.pathname=u.pathname.replace(/\/?$/,"/status");u.search="";
+  el.style.color="";el.textContent="Checking the worker…";
+  try{
+    const c=new AbortController();const t=setTimeout(()=>c.abort(),8000);
+    const res=await fetch(u.href,{signal:c.signal}).finally(()=>clearTimeout(t));
+    const d=await res.json().catch(()=>null);
+    if(d&&d.ok===true){
+      el.textContent=(d.riot?"Riot API key: set — ranks come from Riot":"Riot API key: not set — ranks come from op.gg")
+        +" · "+(d.vault?"Sync storage: ready":"Sync storage: not bound");
+    }else el.textContent="Worker reached, but it is an older version — redeploy it for Riot API support and this status line.";
+  }catch(e){el.textContent="Could not reach the worker at that URL.";el.style.color="var(--danger)"}
+}
 async function updateStorageStatus(){
   const el=$("sStorageStatus"),btn=$("sStorageProtect");
   if(!el)return;
@@ -3132,6 +3153,7 @@ function sanitizeAccount(a){
   if(typeof a.tagLine==="string")a.tagLine=a.tagLine.trim();
   if(!Array.isArray(a.tags))a.tags=[];
   if(!Array.isArray(a.history))a.history=[];
+  if(a.puuid!=null&&!validPuuid(a.puuid))delete a.puuid;
   if(a.stats&&a.stats.seasons&&typeof a.stats.seasons==="object"){
     if(!Array.isArray(a.stats.seasons.solo))a.stats.seasons.solo=[];
     if(!Array.isArray(a.stats.seasons.flex))a.stats.seasons.flex=[];
@@ -4403,12 +4425,15 @@ function refreshCutoffs(){
 function mapBackendPayload(d){
   if(!d||typeof d!=="object")throw new Error("empty backend payload");
   if(d.ok===false&&d.found!==false)throw new Error(d.error||"backend row failed");
-  if(d.found===false)return {found:false,updatedAt:Date.now()};
+  if(d.found===false)return {found:false,updatedAt:Date.now(),riotError:d.riotError||null};
   // Require an explicit found:true (or a tier) so a half-empty error object is not
   // promoted to UNRANKED success.
   if(d.found!==true&&!d.tier)throw new Error("backend row missing rank");
   const uncertain=!!d.uncertain;
-  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),seasons:d.seasons||null,flex:normPeak(d.flex),champs:Array.isArray(d.champs)?d.champs.slice(0,10):null,lpAt:normLpAt(d.lpAt),icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,uncertain,source:d.source||null,updatedAt:Date.now()};
+  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),seasons:d.seasons||null,flex:normPeak(d.flex),champs:Array.isArray(d.champs)?d.champs.slice(0,10):null,lpAt:normLpAt(d.lpAt),icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,uncertain,source:d.source||null,updatedAt:Date.now(),
+    puuid:validPuuid(d.puuid)?d.puuid:null,
+    riotId:d.riotId&&typeof d.riotId==="object"&&d.riotId.name&&d.riotId.tag?{name:String(d.riotId.name).slice(0,32),tag:String(d.riotId.tag).slice(0,8)}:null,
+    riotError:d.riotError||null};
 }
 async function fetchViaBackend(acc){
   const r=REGIONS[acc.region]||REGIONS.EUW;
@@ -4417,6 +4442,7 @@ async function fetchViaBackend(acc){
   url.searchParams.set("name",acc.gameName);
   url.searchParams.set("tag",acc.tagLine);
   url.searchParams.set("region",r.opgg);
+  if(validPuuid(acc.puuid))url.searchParams.set("puuid",acc.puuid);
   const text=await fetchWithTimeout(url.href,12000);
   return mapBackendPayload(JSON.parse(text));
 }
@@ -4427,12 +4453,12 @@ async function fetchViaBackendBatch(list){
   try{url=new URL(cfg.backendUrl)}catch(e){return null}
   const accounts=list.map(a=>{
     const r=REGIONS[a.region]||REGIONS.EUW;
-    return{name:a.gameName,tag:a.tagLine,region:r.opgg,id:a.id};
+    return{name:a.gameName,tag:a.tagLine,region:r.opgg,id:a.id,puuid:validPuuid(a.puuid)?a.puuid:undefined};
   });
   const c=new AbortController();const t=setTimeout(()=>c.abort(),45000);
   try{
     const res=await fetch(url.href,{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({accounts:accounts.map(({name,tag,region})=>({name,tag,region}))}),signal:c.signal});
+      body:JSON.stringify({accounts:accounts.map(({name,tag,region,puuid})=>({name,tag,region,puuid}))}),signal:c.signal});
     if(!res.ok)throw new Error("HTTP "+res.status);
     const data=await res.json();
     if(!data||!Array.isArray(data.results))throw new Error("bad batch response");
@@ -4690,7 +4716,31 @@ function rollNumber(el,from,to,suffix){
   };
   requestAnimationFrame(step);
 }
+/* Riot's account id, from a worker that has a Riot API key. It does not change
+   when the Riot ID does, so a renamed account keeps its card and history instead
+   of turning into "not found". A rename the worker reports is followed: the name
+   and tag on the card become the new ones (a change of letter case alone, quietly). */
+const PUUID_RE=/^[A-Za-z0-9_-]{30,100}$/;
+function validPuuid(p){return typeof p==="string"&&PUUID_RE.test(p)}
+let riotKeyWarned=false;
+function takeIdentity(acc,s){
+  if(!s)return;
+  if(validPuuid(s.puuid))acc.puuid=s.puuid;
+  const r=s.riotId;
+  if(r&&r.name&&r.tag&&(r.name!==acc.gameName||r.tag!==acc.tagLine)){
+    const was=acc.gameName+"#"+acc.tagLine, same=was.toLowerCase()===(r.name+"#"+r.tag).toLowerCase();
+    acc.gameName=r.name;acc.tagLine=r.tag;
+    if(!same)toast("Renamed on Riot: "+was+" is now "+r.name+"#"+r.tag);
+  }
+  // Once a session, not once per account: sixty toasts about one expired key help nobody.
+  if(s.riotError==="key"&&!riotKeyWarned){
+    riotKeyWarned=true;
+    toast("Your worker's Riot API key was refused, so this check used op.gg. Development keys expire after 24 hours.");
+  }
+  delete s.puuid;delete s.riotId;delete s.riotError;
+}
 function commitStats(id,acc,s){
+  takeIdentity(acc,s);
   // A profile that does not exist is not a failed request to be retried later —
   // it means the Riot ID has moved, and every future check on this account will
   // fail the same way until somebody corrects it. Raise the flag once.
@@ -6760,7 +6810,7 @@ function openSettings(){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";$("sCompact").checked=!!cfg.compactCards;updateVaultStatus();updateSyncStatus();updateStorageStatus();$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";$("sCompact").checked=!!cfg.compactCards;updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("settings").classList.remove("hidden")
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -7626,6 +7676,7 @@ $("sVaultRemove").addEventListener("click",async()=>{
 $("bHelp").addEventListener("click",()=>{const willShow=$("help").classList.contains("hidden");closeAllPanels();if(willShow)$("help").classList.remove("hidden")});
 $("bHelpClose").addEventListener("click",()=>{$("help").classList.add("hidden");cfg.seenHelp=true;saveCfg()});
 $("bExport").addEventListener("click",doExport);
+$("sBackend").addEventListener("change",updateBackendStatus);
 $("sStorageProtect").addEventListener("click",async()=>{
   const ok=await protectStorage();
   await updateStorageStatus();

@@ -1028,6 +1028,51 @@ test("compact cards leave the chart and stats under Details, and bring them back
   assert.ok(card().classList.contains("info-open"), "an opened card gets them back");
 });
 
+test("Riot mode in the app: the puuid goes out with a check, comes back stored, and a rename is followed", async () => {
+  const P = "q".repeat(78);
+  const win = bootApp([{ id: "r", region: "EUW", gameName: "Old Name", tagLine: "OLD", status: "active", tags: [], history: [], stats: null, puuid: P }]);
+  let asked = null;
+  const reply = (obj, status = 200) => ({ ok: status < 400, status, text: async () => JSON.stringify(obj), json: async () => obj });
+  win.fetch = async u => { asked = String(u); return reply({ found: true, tier: "GOLD", division: "I", lp: 10, wins: 5, losses: 5, level: 99,
+    puuid: P, riotId: { name: "New Name", tag: "NEW" }, source: "riot" }); };
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev'");
+  runScript(win, "window.__r = fetchViaBackend(accounts[0])");
+  const s = await win.__r;
+  assert.match(asked, /[?&]puuid=q{78}/, "the stored puuid is sent, so the worker can skip a lookup and survive renames");
+  win.__s = s; runScript(win, "commitStats('r', accounts[0], window.__s)");
+  assert.equal(appGet(win, "accounts[0].gameName"), "New Name");
+  assert.equal(appGet(win, "accounts[0].tagLine"), "NEW");
+  assert.match(win.document.getElementById("toast").textContent, /Renamed on Riot: Old Name#OLD is now New Name#NEW/);
+  assert.equal(appGet(win, "accounts[0].stats.puuid"), undefined, "identity lives on the account, not in the reading");
+  assert.equal(appGet(win, "accounts[0].puuid"), P);
+});
+
+test("Riot mode in the app: a refused key is said once, and a junk puuid never sticks", () => {
+  const win = bootApp([
+    { id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null, puuid: "<script>" },
+    { id: "b", region: "EUW", gameName: "B", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  assert.equal(appGet(win, "accounts[0].puuid"), undefined, "an invalid puuid is dropped on load");
+  runScript(win, "window.__toasts = []; const _t = toast; toast = (m, ...r) => { window.__toasts.push(m); return _t(m, ...r); };");
+  for (const id of ["a", "b"])
+    runScript(win, `commitStats("${id}", accounts.find(x => x.id === "${id}"), {found:true,tier:"GOLD",division:"I",lp:1,updatedAt:Date.now(),riotError:"key"})`);
+  assert.equal(win.__toasts.filter(m => /Riot API key was refused/.test(m)).length, 1, "once a session, not once per account");
+});
+
+test("Settings says what the worker has set up", async () => {
+  const win = bootApp();
+  const reply = (obj, status = 200) => ({ ok: status < 400, status, json: async () => obj });
+  win.fetch = async u => { assert.match(String(u), /\/status$/); return reply({ ok: true, riot: true, vault: false }); };
+  win.document.getElementById("bSettings").click();
+  const el = win.document.getElementById("sStatus") || win.document.getElementById("sBackendStatus");
+  win.document.getElementById("sBackend").value = "https://smurf.example.workers.dev";
+  win.document.getElementById("sBackend").dispatchEvent(new win.Event("change", { bubbles: true }));
+  await until(() => /Riot API key: set/.test(el.textContent), "the status line to fill in");
+  assert.match(el.textContent, /Sync storage: not bound/);
+  win.fetch = async () => reply({ error: "missing name/tag" }, 400);
+  win.document.getElementById("sBackend").dispatchEvent(new win.Event("change", { bubbles: true }));
+  await until(() => /older version/.test(el.textContent), "an old worker to be named as one");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
