@@ -12,11 +12,12 @@ Every League account you own in one place: rank, LP history, logins, notes. It r
 ## What it does
 
 - **Ranks without the busywork.** One click checks every account. Each card shows the tier, LP, win rate and level, plus an LP chart that draws the ladder as bands, so a promotion looks like one. Past seasons, flex rank and your champions sit under **Details**.
-- **Tells you what to play.** **Play next** picks the account that needs a game: one about to decay first, otherwise the one you have left longest. **Decay risk** estimates how many days a Diamond+ account has banked from the games seen between checks. **Needs refresh** counts the accounts whose rank is old.
+- **Tells you what to play.** **Play next** picks the account that needs a game: one about to decay first, otherwise the one you have left longest. **Decay risk** estimates how many days a Diamond+ account has banked from the games seen between checks. **This week** sums up the last seven days, and **Needs refresh** counts the accounts whose rank is old. With your worker, **decay alerts reach your Discord** even while the app is closed.
 - **Logins kept safe.** Username, password and email per account, hidden until you ask. Set a master password and everything is encrypted (AES-256, 600 000 PBKDF2 rounds), with auto-lock. **Copy username, then password** fills a login screen in two pastes, and copied passwords clear after 30 seconds.
-- **Three layouts.** Cards to browse, a list to work through a big vault, or a wall of rank crests to see the whole collection at once.
-- **Finds things fast.** Search names, tags and ranks, or combine filters like `>diamond is:stale`, `region:euw` or `is:decay`. Accounts still levelling show how far they are from 30, and `is:ready` lists the ones that can play ranked.
-- **Backups and sync.** Export a plain or encrypted backup, import a list of `Name#TAG`s at once, or sync phone and PC through your own worker. Only the encrypted vault is uploaded.
+- **Three layouts, your look.** Cards to browse, a list to work through a big vault, or a wall of rank crests to see the whole collection at once. Pick a theme (Hextech, Shadow Isles, Noxus, Piltover, Freljord, Ionia, Void, or one that follows your best rank), choose what each card shows, and set the effects and text size. Each card can carry its account's most-played champion as art.
+- **Streamer mode.** Press <kbd>H</kbd> and Riot IDs, logins, emails and notes are blurred, so you can stream or share your screen.
+- **Finds things fast.** Search names, tags and ranks, or combine filters like `>diamond is:stale`, `region:euw`, `is:decay`, `champ:yasuo` or `role:mid`. Accounts still levelling show how far they are from 30, and `is:ready` lists the ones that can play ranked.
+- **Backups and sync.** Export a plain or encrypted backup, add many accounts at once (a list of `Name#TAG`s, an op.gg multi-search link or the lobby chat), or sync phone and PC through your own worker. Only the encrypted vault is uploaded. A new split? **New season** moves every rank into Past seasons in one go.
 
 | List | Wall | Phone |
 |---|---|---|
@@ -37,7 +38,8 @@ Out of the box, rank checks read op.gg through free public proxies. That works m
 
 - faster, more reliable checks, plus the champion table and the dates your LP was actually reached;
 - **device sync** (the encrypted vault, nothing else);
-- with a Riot API key: ranks straight from Riot, accounts that keep their history when renamed, and your **last 5 ranked games** under Details.
+- with a Riot API key: ranks straight from Riot, accounts that keep their history when renamed, your **last 5 ranked games**, win streaks and roles, and **champion mastery** under Details;
+- **decay alerts on Discord** (Settings → Alerts), checked once a day even when the app is closed.
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/MarvinPanVan/league-smurf-tracker)
 
@@ -52,7 +54,7 @@ Out of the box, rank checks read op.gg through free public proxies. That works m
 
 1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Create Worker** → name it → **Deploy**.
 2. **Edit code** → paste the whole of [`cloudflare-worker.js`](cloudflare-worker.js) → **Deploy**.
-3. For sync: **Storage & Databases → KV** → create a namespace, then in the worker **Settings → Bindings → Add → KV namespace**, variable name `VAULT`.
+3. For sync and alerts: **Storage & Databases → KV** → create a namespace, then in the worker **Settings → Bindings → Add → KV namespace**, variable name `VAULT`. For alerts, also add a Cron Trigger `17 9 * * *` under **Settings → Triggers**.
 4. Copy the `workers.dev` address into **Settings → Backend URL** in the app.
 
 </details>
@@ -76,6 +78,15 @@ A personal key allows 100 requests every 2 minutes, roughly 40 accounts. A bigge
 3. On each device, use the **same token and the same master password**, then **Push to cloud** and **Pull from cloud**. The newest write wins, and you are warned if the other side is newer.
 
 Keep every synced device on the latest version: since 2.1 the vault uses stronger encryption, which older versions cannot open. Reloading the page updates it.
+
+### Decay alerts on Discord
+
+1. In Discord: **Server Settings → Integrations → Webhooks → New Webhook**, pick the channel, **Copy Webhook URL**.
+2. In the app: **Settings → Alerts**, paste it, tick **Decay alerts on Discord**, **Save**.
+
+Once a day your worker re-reads your Diamond+ accounts and posts when one is about to decay, or has started to: once per change, not every day. For this it keeps a short list on your worker: those accounts' Riot IDs, labels and decay estimates, never logins.
+
+**Deployed your worker before 2.2?** It needs the new code and its daily trigger. Click **Deploy to Cloudflare** again, or paste the new [`cloudflare-worker.js`](cloudflare-worker.js) into your worker and add a Cron Trigger `17 9 * * *` under its **Settings → Triggers**. The app says so if your worker is too old.
 
 ## Development
 
