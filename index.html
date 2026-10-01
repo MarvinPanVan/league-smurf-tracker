@@ -7917,9 +7917,9 @@ function boot(){
   if(cfg.accent)applyAccent(cfg.accent);
   if(cfg.accent2)applyAccent2(cfg.accent2);
   applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);
-  let envelope=null;
+  let envelope=null, raw=null, understood=true;
   try{
-    const raw=hasStorage?localStorage.getItem(DB_KEY):null;
+    raw=hasStorage?localStorage.getItem(DB_KEY):null;
     const parsed=raw?JSON.parse(raw):null;
     if(parsed&&parsed.__enc)envelope=parsed;
     else if(Array.isArray(parsed))accounts=parsed.map(sanitizeAccount).filter(Boolean);
@@ -7929,7 +7929,24 @@ function boot(){
        the object is false, and nothing else looked. The next saveDB writes the
        array shape back, so this is only a one-time rescue. */
     else if(parsed&&Array.isArray(parsed.accounts))accounts=parsed.accounts.map(sanitizeAccount).filter(Boolean);
-  }catch(e){}
+    // The encrypted export is the same rescue for the other kind of backup file.
+    else if(parsed&&parsed.envelope&&parsed.envelope.__enc)envelope=parsed.envelope;
+    else if(parsed!=null)understood=false;
+  }catch(e){understood=!raw}
+  /* Anything else used to boot as an empty vault, and the first save wrote the new
+     one straight over the only copy of the old. It is set aside under a key of its
+     own first. If even that cannot be written, nothing is written at all this
+     session — an app that cannot save is better than one that saves over this. */
+  if(!understood){
+    const side=DB_KEY+"-unreadable-"+Date.now();
+    let kept=false;
+    try{localStorage.setItem(side,raw);kept=true}catch(e){}
+    if(!kept)hasStorage=false;
+    $("banner").textContent=kept
+      ?"The saved vault could not be read, so this opened empty. What was there is kept untouched in this browser's storage as \""+side+"\"."
+      :"The saved vault could not be read, and there was no room to keep a copy — nothing will be saved this session, so the original stays as it was.";
+    $("banner").classList.add("show");
+  }
   if(envelope)showLockScreen(envelope);
   else startApp();
 }

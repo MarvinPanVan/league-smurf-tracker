@@ -5778,3 +5778,51 @@ test("the tag handle is only gold when a tag is actually filtering", () => {
   assert.match(handle().textContent.replace(/\s+/g, ""), /Tags1/, "the vault has one tag");
   assert.equal(handle().classList.contains("lit"), false, "and nothing is filtering by it");
 });
+
+/* boot() understood three shapes: an envelope, an array, and a plaintext export
+   file. Anything else — an *encrypted* export written into the key the same way
+   the plaintext rescue above expects, or a value that no longer parses — booted
+   an empty, unlocked vault, and the first save then wrote the new array straight
+   over the only copy of the old one. */
+test("an encrypted backup dropped into localStorage asks for its password", async () => {
+  const maker = bootApp();
+  const envelope = await maker.encryptData("pw-1234", [{ id: "e1", gameName: "Sealed", tagLine: "EUW",
+    region: "EUW", status: "active", stats: null, history: [], tags: [] }]);
+  const raw = JSON.stringify({ app: "smurf-tracker", version: 2, encrypted: true, envelope });
+  const win = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker", raw));
+  assert.equal(win.document.getElementById("lock").classList.contains("hidden"), false,
+    "it is a vault with a password on it, so the lock screen comes up");
+  assert.equal(win.localStorage.getItem("smurf-tracker"), raw, "and nothing has been written over it");
+  win.document.getElementById("lockPass").value = "pw-1234";
+  win.document.getElementById("lockBtn").click();
+  await until(() => win.document.querySelectorAll(".card").length === 1, "the backup to unlock");
+  assert.match(win.document.querySelector(".card").textContent, /Sealed/);
+});
+
+test("saved data the app cannot read is kept, not overwritten by the next save", () => {
+  const raw = '[{"id":"t1","gameName":"Truncat';
+  const win = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker", raw));
+  addRealAccount(win, "Fresh", "NEW");
+  const kept = Object.keys(win.localStorage).filter(k => k.startsWith("smurf-tracker-unreadable"));
+  assert.equal(kept.length, 1, "a copy of what was there is set aside before anything is saved");
+  assert.equal(win.localStorage.getItem(kept[0]), raw, "byte for byte");
+  const banner = win.document.getElementById("banner");
+  assert.ok(banner.classList.contains("show"), "and the page says so, rather than looking like a new vault");
+  assert.match(banner.textContent, /could not be read/i);
+  assert.match(banner.textContent, new RegExp(kept[0]), "naming where the copy is");
+});
+
+test("with no room to set it aside, unreadable saved data is left alone entirely", () => {
+  const raw = "{not json at all";
+  const win = bootApp(undefined, w => {
+    w.localStorage.setItem("smurf-tracker", raw);
+    const set = w.Storage.prototype.setItem;
+    w.Storage.prototype.setItem = function (k, v) {
+      if (String(k).startsWith("smurf-tracker-unreadable")) throw new Error("QuotaExceededError");
+      return set.call(this, k, v);
+    };
+  });
+  addRealAccount(win, "Fresh", "NEW");
+  assert.equal(win.localStorage.getItem("smurf-tracker"), raw, "the original is still the only thing in the key");
+  assert.match(win.document.getElementById("banner").textContent, /nothing will be saved/i);
+});
