@@ -5847,3 +5847,17 @@ test("a setting saved in another tab survives this tab's next save", async () =>
   assert.equal(disk.syncToken, "tok-from-the-other-tab-1234", "the other tab's token is still there");
   assert.equal(disk.backendUrl, "https://w.example.workers.dev");
 });
+
+/* touchVaultRev took max(previous, now). After a pull from a device whose clock
+   runs ahead, "previous" is in this device's future, so an edit made inside that
+   gap stamped the very revision it had just pulled. The other device then asked,
+   saw equal numbers, answered "Already in sync" — and never took the edit. */
+test("every save advances the sync revision, even ahead of this device's clock", async () => {
+  const win = bootApp(seededAccount());
+  const ahead = Date.now() + 60000;   // pulled from a device a minute fast
+  runScript(win, `cfg.vaultRev = ${ahead};`);
+  win.document.querySelector('.card [data-act="fav"]').click();
+  await until(() => JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].fav === true, "the star to save");
+  runScript(win, "window.__rev = cfg.vaultRev;");
+  assert.ok(win.__rev > ahead, "a real change is a newer revision than the one it was made on top of");
+});

@@ -2599,7 +2599,10 @@ function saveThen(msg,action,fn){
 }
 function touchVaultRev(){
   // Monotonic local revision for LWW device sync — bumped on every successful save.
-  cfg.vaultRev=Math.max(Number(cfg.vaultRev)||0,Date.now());
+  // Strictly bumped: a revision pulled from a device whose clock runs ahead is in
+  // this one's future, and max(rev, now) then stamped an edit with the very number
+  // it was pulled at — which the other device reads as "already in sync".
+  cfg.vaultRev=Math.max((Number(cfg.vaultRev)||0)+1,Date.now());
   saveCfg();
 }
 function saveCfg(){if(!hasStorage)return;try{localStorage.setItem(CFG_KEY,JSON.stringify(cfg))}catch(e){}}
