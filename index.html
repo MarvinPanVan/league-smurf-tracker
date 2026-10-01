@@ -1099,7 +1099,10 @@
 
   /* labelled micro-stats instead of one muted run-on sentence */
   .c-stats{display:flex;flex-wrap:wrap;gap:7px 20px}
-  body.compact-cards .card:not(.info-open) .lpc,body.compact-cards .card:not(.info-open) .c-stats{display:none}
+  /* Settings → On each card: a part left under Details is hidden on a closed card */
+  body.hide-chart .card:not(.info-open) .lpc,body.hide-stats .card:not(.info-open) .c-stats,
+  body.hide-wl .card:not(.info-open) .wrbar,body.hide-goal .card:not(.info-open) .goal,
+  body.hide-tags .card:not(.info-open) .ctags,body.hide-notes .card:not(.info-open) .c-notes:not(.editing){display:none}
   .c-stats>div{display:flex;flex-direction:column;gap:2px;min-width:0}
   .c-stats .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
   .c-stats .v{font-size:calc(13px*var(--ts));font-weight:500;color:var(--text);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
@@ -1629,6 +1632,13 @@
   #settings .grp[data-tab="checks"]+.grp[data-tab="checks"]{border-top:1px solid var(--line)}
   .grp-h.tab-same{display:none}
   .bk-acts{display:flex;flex-wrap:wrap;gap:8px}
+  .part-chks{display:flex;flex-wrap:wrap;gap:6px}
+  .part-chks label{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--line);
+    border-radius:var(--r-sm);background:var(--panel2);font-size:calc(13px*var(--ts));color:var(--muted);cursor:pointer}
+  .part-chks label:has(input:checked){color:var(--text);border-color:var(--line2)}
+  .part-chks input{width:auto;margin:0}
+  #settings .link-btn{display:inline;padding:0;border:0;background:none;box-shadow:none;min-height:0;
+    color:var(--teal-txt);font:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
   html[data-ts="small"]{--ts:.9}
   html[data-ts="large"]{--ts:1.15}
   /* a three-way choice in Settings: one row, the chosen one lit */
@@ -2192,9 +2202,11 @@
           </div>
           <div class="hint" style="margin-top:7px">Only the type changes size; the layout stays put. Small fits more on a screen, Large reads easier from further away.</div>
         </div>
-        <div class="chk" style="margin-top:16px">
-          <input type="checkbox" id="sCompact" style="width:auto">
-          <label for="sCompact">Compact cards — leave each card's chart and stats under its Details, so more cards fit on screen</label>
+        <div class="atm-block">
+          <div class="atm-h">On each card</div>
+          <div id="sCardParts" class="part-chks"></div>
+          <div class="hint" style="margin-top:7px">What you untick waits under each card's <b>Details</b>, so cards get shorter and more fit on a screen.
+            <button type="button" id="sCompact" class="link-btn">Compact: chart and stats under Details</button></div>
         </div>
       </div>
 
@@ -6034,6 +6046,10 @@ function formHTML(a){
       +`<span class="c-gm">${g.min!=null?esc(g.min)+" min":""}</span>`
       +`<span class="c-gm">${g.at?esc(timeAgo(g.at)):""}</span></div>`).join(""));
 }
+function drawerTitle(){
+  const h=new Set(cardHidden());
+  return CARD_PARTS.filter(([k])=>h.has(k)).map(p=>p[1]).concat(["past seasons, flex rank, champions"]).join(", ").replace(/^./,c=>c.toUpperCase());
+}
 function hasInfo(a){const p=infoParts(a);return !!(p.solo.length||p.flexHist.length||p.champs.length||p.flex)}
 // The one-line summary on the drawer pull, so the card says what is folded away
 // before you open it.
@@ -6550,7 +6566,7 @@ function cardHTML(a,i){
       </div>
     </div>
     ${openInfo.has(a.id)&&(hasInfo(a)||canForm(a))?infoBlockHTML(a,rv("info")):""}
-    ${hasInfo(a)||cfg.compactCards||canForm(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${cfg.compactCards?"Chart, stats, past seasons, flex rank, champions":"Past seasons, flex rank, champions"}">
+    ${hasInfo(a)||cardHidden().length||canForm(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${esc(drawerTitle())}">
       <span class="c-dl" aria-hidden="true"></span>
       <span class="c-dt">${open?"Close":"Details"}</span>
       <svg class="ico" viewBox="0 0 26 12" aria-hidden="true"><polyline points="2 3 13 10 24 3"/></svg>
@@ -7037,7 +7053,7 @@ function openSettings(tab){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";$("sCompact").checked=!!cfg.compactCards;updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden")
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -7104,7 +7120,18 @@ function applyTextSize(v){
   syncOptSeg("sTextSize",t);return t;
 }
 function applyEffects(v){const f=EFFECTS.includes(v)?v:"full";document.body.dataset.fx=f;syncOptSeg("sEffects",f);return f}
-function applyCompact(){document.body.classList.toggle("compact-cards",!!cfg.compactCards)}
+const CARD_PARTS=[["chart","LP chart"],["stats","Peak & stats"],["wl","Win/loss bar"],["goal","Goal & level bar"],["tags","Tags"],["notes","Notes"]];
+let pendingCardHide=null; // Settings' choice before Save
+function cardHidden(){
+  const list=pendingCardHide||cfg.cardHide;
+  return Array.isArray(list)?list.filter(k=>CARD_PARTS.some(p=>p[0]===k)):[];
+}
+function applyCompact(){const h=new Set(cardHidden());for(const[k]of CARD_PARTS)document.body.classList.toggle("hide-"+k,h.has(k))}
+function renderCardParts(){
+  const el=$("sCardParts");if(!el)return;const h=new Set(cardHidden());
+  setHTML(el,CARD_PARTS.map(([k,n])=>`<label><input type="checkbox" data-part="${k}"${h.has(k)?"":" checked"}> ${esc(n)}</label>`).join(""));
+}
+function previewCardParts(list){pendingCardHide=list;applyCompact();renderCardParts();renderGrid()}
 function revertAtmosphere(){applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE)}
 /* ---- themes ----
    Two accents and an atmosphere picked to go together, so a new look is one
@@ -7716,7 +7743,7 @@ document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.targ
 // Closing has to go through the same door as the ✕ and Escape do. Toggling the panel
 // shut from the ⋯ menu only hid it, which left a colour you had dragged but not saved
 // applied to the whole page — the one close out of four that kept it.
-function closeSettings(){revertAccents();revertAtmosphere();applyEffects(cfg.effects);applyTextSize(cfg.textSize);settingsSaveGen++;$("settings").classList.add("hidden")}
+function closeSettings(){revertAccents();revertAtmosphere();applyEffects(cfg.effects);applyTextSize(cfg.textSize);if(pendingCardHide){pendingCardHide=null;applyCompact();renderGrid()}settingsSaveGen++;$("settings").classList.add("hidden")}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
 $("settings").querySelector(".stabs").addEventListener("click",e=>{const b=e.target.closest("[data-stab]");if(b)settingsTab(b.dataset.stab)});
 $("settings").querySelector(".stabs").addEventListener("keydown",e=>{
@@ -7774,7 +7801,7 @@ $("sSave").addEventListener("click",async()=>{
     cfg.accent2=$("sAccent2").value===DEFAULT_ACCENT2?null:$("sAccent2").value;applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
   }
   // the Details handle depends on it, so the cards are redrawn when it changes
-  if(!!cfg.compactCards!==$("sCompact").checked){cfg.compactCards=$("sCompact").checked;applyCompact();renderGrid()}
+  if(pendingCardHide){cfg.cardHide=pendingCardHide.length?pendingCardHide:null;delete cfg.compactCards;pendingCardHide=null;applyCompact();renderGrid()}
   cfg.effects=applyEffects(document.body.dataset.fx);if(cfg.effects==="full")cfg.effects=null;
   cfg.textSize=applyTextSize(document.documentElement.dataset.ts);if(cfg.textSize==="default")cfg.textSize=null;
   cfg.atmosphere=applyAtmosphere(document.body.dataset.atmosphere||DEFAULT_ATMOSPHERE);
@@ -7796,6 +7823,11 @@ $("sAtmosphere").addEventListener("click",e=>{
   const b=e.target.closest("[data-atmosphere]");if(!b)return;
   applyAtmosphere(b.dataset.atmosphere); // preview only — Save keeps it, Close reverts
 });
+$("sCardParts").addEventListener("change",e=>{
+  const h=new Set(cardHidden()),k=e.target.dataset.part;if(!k)return;
+  e.target.checked?h.delete(k):h.add(k);previewCardParts([...h]);
+});
+$("sCompact").addEventListener("click",()=>previewCardParts([...new Set([...cardHidden(),"chart","stats"])]));
 $("sTextSize").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b)applyTextSize(b.dataset.v)});
 $("sEffects").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b)applyEffects(b.dataset.v)}); // preview; Save keeps it
 $("sThemes").addEventListener("click",e=>{const b=e.target.closest("[data-theme]");if(b)pickTheme(b.dataset.theme)});
@@ -8990,6 +9022,10 @@ function boot(){
   if(MODEL_ALIASES[cfg.model]){cfg.model=MODEL_ALIASES[cfg.model];saveCfg()}
   {
     let cfgDirty=false;
+    // 2.1's Compact cards was one switch for the chart and the stats; it is now
+    // those two parts in the per-part list, so a vault that had it keeps the look
+    if(cfg.compactCards===true&&!Array.isArray(cfg.cardHide)){cfg.cardHide=["chart","stats"];cfgDirty=true}
+    if("compactCards"in cfg){delete cfg.compactCards;cfgDirty=true}
     const every=coerceAutoEvery(cfg.autoEveryHours);
     if(cfg.autoEveryHours!==every){cfg.autoEveryHours=every;cfgDirty=true}
     if(cfg.discordWebhook){

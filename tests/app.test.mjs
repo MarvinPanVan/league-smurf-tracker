@@ -1011,24 +1011,46 @@ test("a new vault gets four set-up steps, each a button, until they are done or 
   assert.equal(appGet(win, "cfg.setupHidden"), true, "and it stays hidden");
 });
 
-test("compact cards leave the chart and stats under Details, and bring them back when opened", () => {
+test("On each card: any part can wait under Details, Compact is chart and stats, and 2.1's switch carries over", () => {
   const now = Date.now(), D = 86400000;
-  const win = bootApp([{ id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: [],
+  const acc = { id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: ["mid"], notes: "honor 3",
     history: [1, 2, 3].map(k => ({ t: now - (4 - k) * D, tier: "GOLD", division: "II", lp: 10 * k, w: k, l: 0 })),
-    stats: { found: true, tier: "GOLD", division: "II", lp: 30, wins: 3, losses: 0, level: 50, updatedAt: now } }]);
-  const card = () => win.document.querySelector('.card[data-id="c"]');
-  assert.equal(win.document.body.classList.contains("compact-cards"), false, "off by default");
-  win.document.getElementById("bSettings").click();
-  win.document.getElementById("sCompact").checked = true;
-  win.document.getElementById("sSave").click();
-  assert.ok(win.document.body.classList.contains("compact-cards"));
-  assert.equal(appGet(win, "cfg.compactCards"), true, "and it is remembered");
-  const rule = html.match(/body\.compact-cards \.card:not\(\.info-open\) \.lpc,[^{]*\{display:none\}/);
-  assert.ok(rule, "the chart and stats are hidden on a closed card");
+    stats: { found: true, tier: "GOLD", division: "II", lp: 30, wins: 3, losses: 0, level: 50, updatedAt: now } };
+  const win = bootApp([acc]);
+  const doc = win.document, body = doc.body;
+  const card = () => doc.querySelector('.card[data-id="c"]');
+  const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  assert.equal(card().querySelector('[data-act="info"]'), null, "nothing hidden and nothing to show: no Details handle");
+  doc.getElementById("bSettings").click();
+  const box = k => doc.querySelector(`#sCardParts [data-part="${k}"]`);
+  assert.deepEqual([...doc.querySelectorAll("#sCardParts [data-part]")].map(b => b.dataset.part), ["chart", "stats", "wl", "goal", "tags", "notes"]);
+  assert.ok([...doc.querySelectorAll("#sCardParts [data-part]")].every(b => b.checked), "everything shows by default");
+  box("tags").checked = false; box("tags").dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert.ok(body.classList.contains("hide-tags"), "previews at once");
+  assert.ok(card().querySelector('[data-act="info"]'), "and the card grows a Details handle to find them under");
+  doc.getElementById("sClose").click();
+  assert.equal(body.classList.contains("hide-tags"), false, "Close puts it back");
+  assert.equal(card().querySelector('[data-act="info"]'), null);
+  doc.getElementById("bSettings").click();
+  doc.getElementById("sCompact").click();
+  assert.equal(box("chart").checked, false);
+  assert.equal(box("stats").checked, false);
+  assert.equal(box("notes").checked, true, "Compact is the chart and the stats, nothing else");
+  doc.getElementById("sSave").click();
+  assert.deepEqual(cfg().cardHide, ["chart", "stats"]);
+  const css = [...doc.querySelectorAll("style")].map(s => s.textContent).join("\n");
+  for (const [cls, part] of [["chart", ".lpc"], ["stats", ".c-stats"], ["wl", ".wrbar"], ["goal", ".goal"], ["tags", ".ctags"], ["notes", ".c-notes"]])
+    assert.ok(css.includes(`body.hide-${cls} .card:not(.info-open) ${part}`), `${cls} hides ${part} on a closed card`);
   const drawer = card().querySelector('[data-act="info"]');
-  assert.ok(drawer, "every card offers Details in compact mode, even one with no seasons to show");
+  assert.match(drawer.title, /^LP chart, Peak & stats, past seasons/, "the handle says what is under it");
   drawer.click();
   assert.ok(card().classList.contains("info-open"), "an opened card gets them back");
+  // a vault that turned Compact on in 2.1 opens looking the same
+  const old = bootApp([acc], w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, compactCards: true })));
+  assert.ok(old.document.body.classList.contains("hide-chart") && old.document.body.classList.contains("hide-stats"));
+  const saved = JSON.parse(old.localStorage.getItem("smurf-tracker-cfg"));
+  assert.deepEqual(saved.cardHide, ["chart", "stats"]);
+  assert.equal("compactCards" in saved, false);
 });
 
 test("Riot mode in the app: the puuid goes out with a check, comes back stored, and a rename is followed", async () => {
