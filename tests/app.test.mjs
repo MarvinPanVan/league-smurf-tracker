@@ -5942,3 +5942,27 @@ test("the card's ⋯ menu works from the keyboard", () => {
   key("ArrowDown");
   assert.equal(doc.activeElement, items()[0], "but ArrowDown from the ⋯ goes in");
 });
+
+/* The Tab trap took the last match of a broad selector as "the last field", and in
+   Settings that was a button inside the colour preview — inert, tabindex -1, and
+   never focused. So Tab from the real last control, Close, was never caught, and
+   focus walked out of the window into the dashboard behind it (Chromium: after
+   thirty presses). Only what Tab can actually land on counts now. */
+test("Tab stays inside Settings", () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document;
+  win.openSettings();
+  const tab = (shift) => {
+    const ev = new win.KeyboardEvent("keydown", { key: "Tab", shiftKey: !!shift, bubbles: true, cancelable: true });
+    doc.activeElement.dispatchEvent(ev);
+    return ev.defaultPrevented;
+  };
+  const close = doc.getElementById("sClose");
+  close.focus();
+  assert.equal(tab(), true, "Tab from the last real control is caught");
+  assert.ok(doc.getElementById("settings").contains(doc.activeElement), "and lands back inside the window");
+  assert.equal(doc.activeElement.closest("[inert]"), null, "never on something inert");
+  const first = doc.activeElement;
+  assert.equal(tab(true), true, "Shift+Tab from there goes round the other way");
+  assert.equal(doc.activeElement, close);
+});

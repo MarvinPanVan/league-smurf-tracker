@@ -6783,7 +6783,11 @@ document.addEventListener("keydown",e=>{
   if(e.key!=="Tab")return;
   const el=openModals()[0];
   if(!el)return;
-  const f=[...el.querySelectorAll('a[href],button:not([disabled]),input:not([type=hidden]),select,textarea,[tabindex]:not([tabindex="-1"])')];
+  /* Only what Tab can actually land on. Settings ends in the colour preview, which
+     is inert with tabindex -1 throughout — and its last button, taken as "last",
+     meant Tab from Close was never caught and walked out into the page behind. */
+  const f=[...el.querySelectorAll('a[href],button,input:not([type=hidden]),select,textarea,[tabindex]')]
+    .filter(x=>!x.disabled&&x.getAttribute("tabindex")!=="-1"&&!x.closest("[inert],.hidden"));
   if(!f.length)return;
   const first=f[0], last=f[f.length-1];
   if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}
