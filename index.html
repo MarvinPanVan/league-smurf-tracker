@@ -372,6 +372,8 @@
   /* nowrap, or a long enough figure breaks between the number and its unit and
      leaves "WR" alone on the next line. It wraps as one piece instead. */
   .stat .v small{font-size:12px;color:var(--muted);font-weight:400;letter-spacing:0;white-space:nowrap}
+  .stat .v.nw{white-space:nowrap}
+  .stat .v.nw small{margin-left:1px}
   /* Except where the caption is a list — Accounts' "· 7 ★ · 5 banned · 5 archived"
      is wider than its tile, which is overflow:hidden, so nowrap cut it off at
      "archiv". It breaks between the pieces and never inside one. */
@@ -416,7 +418,9 @@
   /* flex, not block. A <button> centres its content box vertically, so the two
      tiles that are buttons sat 24 and 31 px lower than the five that are not —
      three baselines in one row of seven, which reads as a broken grid. */
-  .stat-b{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;
+  /* gap:0 — the generic button rule gives every button a 7px flex gap, which on
+     top of the label's own margin dropped these tiles' figures 7px below the rest */
+  .stat-b{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;
     width:100%;text-align:left;border:0;border-radius:0;background:none;
     padding:16px 20px;font:inherit;white-space:normal}
   .stat-b:hover{background:#ffffff08;border:0}
@@ -4630,7 +4634,9 @@ function poolLpTrend(pool){
   const sign=delta>0?"↑ +":delta<0?"↓ ":"→ ";
   const headline=sign+Math.abs(delta);
   const note=from+" → "+to+" · avg of counted accounts (Iron→Challenger scale)";
-  return {svg, note, tip:note, headline, delta};
+  // what fits under a tile: the window; the rest of the sentence is the tile's title
+  const window_=from+" → "+to;
+  return {svg, note, tip:note, headline, delta, span:window_};
 }
 // Back-compat for tests that still call the old name.
 function poolLpSpark(pool){const t=poolLpTrend(pool);return t?t.svg:""}
@@ -5235,6 +5241,7 @@ function renderDash(){
   const bestTxt=best&&rankValue(best.stats)>=0?esc(best.label||best.gameName)+" <small>"+esc(shortRank(best.stats)||"")+"</small>":"—";
   const regCount={};allActive.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
   const regTxt=Object.entries(regCount).map(([r,n])=>r+" "+n).join(" · ");
+  const regN=Object.keys(regCount).length;
   const dist={};ranked.forEach(a=>{const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1});
   const neverN=countPool.filter(neverChecked).length;
   const un=countPool.filter(isUnrankedAnswer).length;
@@ -5272,9 +5279,10 @@ function renderDash(){
   <div class="dash">
     <div class="stat"><div class="k">Accounts</div><div class="v">${allActive.length} <small class="parts"><span>· ${allActive.filter(a=>a.fav).length} ★</span>${bannedN?` <span>· ${bannedN} banned</span>`:""}${archivedN?` <span>· ${archivedN} archived</span>`:""}</small></div></div>
     <div class="stat"><div class="k">Best account</div><div class="v" style="font-size:14px">${bestTxt}</div></div>
-    <div class="stat"><div class="k">Season W/L</div><div class="v">${W}W ${L}L <small>· ${wr} WR</small></div>
-      <div class="s-note">from ${pool.length} counted account${pool.length===1?"":"s"}</div></div>
-    <div class="stat"><div class="k">Regions</div><div class="v" style="font-size:14px">${esc(regTxt)||"—"}</div></div>
+    <div class="stat"><div class="k">Season W/L</div><div class="v nw">${W}<small>W</small> ${L}<small>L</small></div>
+      <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>
+    <div class="stat"><div class="k">Regions</div><div class="v">${regN||"—"}${regN?` <small>${regN===1?"region":"regions"}</small>`:""}</div>
+      ${regTxt?`<div class="s-note">${esc(regTxt)}</div>`:""}</div>
     ${neverN?`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
       <div class="v" style="color:var(--gold-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`:""}
     ${attentionN?`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
@@ -5285,12 +5293,12 @@ function renderDash(){
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`:""}
     ${rotN?`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
       <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`:""}
-    <div class="stat" id="ladderTrendStat">
+    <div class="stat" id="ladderTrendStat"${poolTrend?` title="${esc(poolTrend.note)}"`:""}>
       <div class="k">Group climb</div>
       ${poolTrend
-        ?`<div class="v">${esc(poolTrend.headline)} <small>ladder</small></div>
+        ?`<div class="v">${esc(poolTrend.headline)} <small>LP</small></div>
           <div class="v spark-wrap">${poolTrend.svg}</div>
-          <div class="s-note">${esc(poolTrend.note)}</div>`
+          <div class="s-note">${esc(poolTrend.span)}</div>`
         :`<div class="v">—</div><div class="s-note">needs ≥2 days of history on counted accounts</div>`}
     </div>
     <button class="stat stat-b${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"><div class="k">Needs refresh</div>

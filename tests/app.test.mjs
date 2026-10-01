@@ -6178,3 +6178,30 @@ test("a toast can use the width of a phone, not half of it", () => {
   assert.match(rule[0], /max-width:min\(720px,calc\(100vw - 32px\)\)/,
     "never wider than the screen, nor than the measure a desktop always had");
 });
+
+/* Three tiles were laid out as prose: Season W/L broke "2311W / 2450L" over two
+   lines, Regions was a three-line paragraph in heading weight, and Group climb
+   ended in three lines of 9px explanation. And the four clickable tiles sat 7px
+   lower than the rest: every button gets a 7px flex gap, on top of the label's
+   own margin. Geometry is read from the declarations; the result was measured
+   in Chromium at 1440/1280/1024/768/390 — one baseline, no label wrapping. */
+test("the dashboard reads as one row of figures", () => {
+  const acc = (id, region, extra) => Object.assign({ id, gameName: id, tagLine: "1", region, status: "active",
+    tags: [], history: [], stats: { found: true, tier: "GOLD", division: "II", lp: 50, wins: 1200, losses: 1100,
+    updatedAt: Date.now() } }, extra);
+  const win = bootApp([acc("a", "EUW"), acc("b", "EUW"), acc("c", "KR")]);
+  const tile = name => [...win.document.querySelectorAll("#dash .stat")]
+    .find(s => s.querySelector(".k").textContent.trim() === name);
+
+  const wl = tile("Season W/L").querySelector(".v");
+  assert.ok(wl.classList.contains("nw"), "the record holds together on one line");
+  assert.match(wl.textContent.replace(/\s+/g, " "), /^3600W 3300L$/);
+  assert.match(tile("Season W/L").querySelector(".s-note").textContent, /52% WR/, "the rate moves under it");
+
+  const reg = tile("Regions");
+  assert.match(reg.querySelector(".v").textContent.replace(/\s+/g, " "), /^2 regions$/, "a figure, like every other tile");
+  assert.match(reg.querySelector(".s-note").textContent, /EUW 2 · KR 1/, "the breakdown is the note");
+
+  const rule = html.match(/\.stat-b\{[^}]*\}/);
+  assert.match(rule[0], /gap:0/, "a clickable tile does not inherit the button's flex gap");
+});
