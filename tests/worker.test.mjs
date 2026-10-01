@@ -695,6 +695,25 @@ test("the daily run carries each estimate forward and posts once when an account
   assert.equal(posted.length, 1, "and when it runs low again, that is news again");
 });
 
+test("the daily run without a Riot key reads one op.gg page an account, so twenty fit in a run", async () => {
+  const D = 86400000, now = Date.UTC(2026, 9, 3, 9, 17);
+  const kv = mockKv(), env = { VAULT: kv };
+  const rows = Array.from({ length: 20 }, (_, i) => ({ name: "Acc" + i, tag: "EUW", region: "euw", puuid: null, label: null,
+    tier: "DIAMOND", division: "I", lp: 10, games: 100, bank: 20, at: now - D, alerted: null }));
+  kv._map.set("watch:slot", JSON.stringify({ owner: "x", webhook: HOOK, accounts: rows }));
+  const urls = [];
+  globalThis.fetch = async u => {
+    const url = String(u); urls.push(url);
+    if (url === HOOK) return new Response(null, { status: 204 });
+    return new Response(`<meta name="description" content="Acc#EUW / Diamond 1 10LP / 60Win 40Lose Win rate 60%"/>`, { status: 200 });
+  };
+  const r = await runWatch(env, now);
+  assert.equal(r.ran, true);
+  assert.equal(urls.filter(u => u.includes("op.gg")).length, 20, "one request an account");
+  assert.equal(urls.filter(u => u.endsWith("/champions")).length, 0, "the champions page is not needed to count games");
+  assert.ok(urls.length <= 50, "inside a free-plan run's 50 subrequests");
+});
+
 test("the one-click deploy also schedules the daily run", async () => {
   const fs = await import("node:fs"), path = await import("node:path"), { fileURLToPath } = await import("node:url");
   const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");

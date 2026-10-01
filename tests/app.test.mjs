@@ -1131,6 +1131,11 @@ test("Streamer mode: Riot IDs, logins, emails and notes are hidden on screen and
   runScript(win, `commitStats("2", accounts.find(a => a.id === "2"), {found:true,tier:"GOLD",division:"I",lp:1,updatedAt:Date.now(),
     puuid:"${"q".repeat(78)}",riotId:{name:"NewSecret",tag:"NEW"}})`);
   assert.doesNotMatch(doc.getElementById("toast").textContent, /Secret|NEW/);
+  // a system notification shows on screen too
+  runScript(win, "window.__notes = []; notify = (t, b) => window.__notes.push(t + ' ' + b);");
+  runScript(win, `{ const a = accounts.find(x => x.id === "2"); a.history = [{ t: 1, tier: "SILVER" }, { t: 2, tier: "GOLD" }]; celebrate("2", a); }`);
+  assert.equal(win.__notes.length, 1);
+  assert.doesNotMatch(win.__notes[0], /Secret/, "a tier-up notification names no Riot ID");
   // other views
   doc.querySelector('#density [data-density="list"]').click();
   assert.ok(doc.querySelector('#grid [data-id="1"] .rw-tag.sens'), "the list's Riot ID column");
@@ -1154,7 +1159,8 @@ test("champion art: the most-played champion's splash, by Data Dragon id, lazy, 
   const key = n => { win.__n = n; runScript(win, "window.__k = champKey(window.__n)"); return win.__k; };
   for (const [name, id] of [["Kai'Sa", "Kaisa"], ["Wukong", "MonkeyKing"], ["Nunu & Willump", "Nunu"], ["Dr. Mundo", "DrMundo"],
     ["Jarvan IV", "JarvanIV"], ["Rek'Sai", "RekSai"], ["K'Sante", "KSante"], ["LeBlanc", "Leblanc"], ["Miss Fortune", "MissFortune"],
-    ["FiddleSticks", "Fiddlesticks"], ["MonkeyKing", "MonkeyKing"], ["Renata Glasc", "Renata"]])
+    ["FiddleSticks", "Fiddlesticks"], ["MonkeyKing", "MonkeyKing"], ["Renata Glasc", "Renata"],
+    ["Kai\u2019Sa", "Kaisa"], ["Cho\u2019Gath", "Chogath"], ["Rek\u2019Sai", "RekSai"]])
     assert.equal(key(name), id, name);
   assert.equal(key('"><img src=x>'), null, "anything that is not a plain id makes no URL at all");
   const art = id => doc.querySelector(`.card[data-id="${id}"] .c-art`);
@@ -1353,6 +1359,34 @@ test("Recent form: a Riot-read account's Details fetch its last five ranked game
   await until(() => /No ranked games yet this season/.test(card("r").textContent), "Retry to fetch again");
 });
 
+test("the Best account tile's rank can break between its pieces in a narrow column", () => {
+  const win = bootApp([{ id: "g", label: "Smurf10", region: "EUW", gameName: "g", tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GRANDMASTER", division: null, lp: 874, wins: 1, losses: 1, updatedAt: Date.now() } }]);
+  const tile = [...win.document.querySelectorAll("#dash .stat")].find(s => s.querySelector(".k").textContent === "Best account");
+  const small = tile.querySelector(".v small");
+  assert.ok(small.classList.contains("parts"), "the wrapping kind of small");
+  assert.deepEqual([...small.querySelectorAll("span")].map(s => s.textContent), ["Grandmaster", "· 874 LP"]);
+});
+
+test("on a phone the set-up steps wrap their labels instead of cutting them off", () => {
+  const css = html.slice(0, html.indexOf("</style>"));
+  const rule = css.match(/\.setup-steps button\{width:100%;[^}]*\}/);
+  assert.ok(rule, "the phone rule for the step buttons");
+  assert.match(rule[0], /white-space:normal/, "two columns leave no room for \"Set a master password\" on one line");
+});
+
+test("Escape closes Quick find first, even with a card's login open behind it", () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null, login: "x", password: "y" }]);
+  const doc = win.document;
+  doc.querySelector('.card[data-id="a"] [data-act="login"]').click();
+  assert.ok(doc.querySelector('.card[data-id="a"] .login'), "the login panel is open");
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }));
+  assert.equal(doc.getElementById("palette").classList.contains("hidden"), false);
+  doc.getElementById("palInput").dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(doc.getElementById("palette").classList.contains("hidden"), true, "the palette, which is in front, closes");
+  assert.ok(doc.querySelector('.card[data-id="a"] .login'), "the card behind it is left as it was");
+});
+
 test("Settings is six tabs, one section at a time, and a step that needs a field opens its tab", () => {
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
   const doc = win.document, m = doc.getElementById("settings");
@@ -1362,9 +1396,13 @@ test("Settings is six tabs, one section at a time, and a step that needs a field
     .map(g => g.querySelector(".grp-h").textContent.trim());
   doc.getElementById("bSettings").click();
   assert.deepEqual(shown(), ["Appearance"], "opens on Appearance, alone");
+  const panel = doc.getElementById("settingsPanel");
+  assert.equal(panel.getAttribute("role"), "tabpanel");
+  assert.ok(tabs.every(t => t.getAttribute("aria-controls") === "settingsPanel"), "each tab names the panel it controls");
   tabs[1].click();
   assert.deepEqual(shown(), ["Rank checks", "Automatic refresh"], "the backend first, then when it runs");
   assert.equal(tabs[1].getAttribute("aria-selected"), "true");
+  assert.equal(panel.getAttribute("aria-labelledby"), tabs[1].id, "and the panel is read as that tab's");
   assert.equal(tabs[0].getAttribute("aria-selected"), "false");
   // arrow keys walk the row, and wrap
   tabs[1].dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
@@ -1382,6 +1420,10 @@ test("Settings is six tabs, one section at a time, and a step that needs a field
   doc.getElementById("bExportCsv").addEventListener("click", () => exported++);
   backup.querySelector('[data-proxy="bExportCsv"]').click();
   assert.equal(exported, 1, "a backup button does what its ⋯ menu twin does");
+  // the encrypted backup needs a master password, whose field is a tab away
+  backup.querySelector('[data-proxy="bExportEnc"]').click();
+  assert.equal(m.dataset.tab, "security", "it takes you to the password field");
+  assert.equal(doc.activeElement, doc.getElementById("sVaultPass"));
   // reopening starts on Appearance again
   win.closeAllPanels();
   doc.getElementById("bSettings").click();
@@ -3399,6 +3441,41 @@ test("the modal panels keep every control the app talks to", () => {
   assert.ok(win.document.getElementById("help").contains(win.document.getElementById("bHelpClose")));
 });
 
+test("leaving Settings by Escape, its ✕ or the backdrop puts every Appearance preview back, not just the colours", () => {
+  const now = Date.now();
+  const acc = { id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 30, wins: 3, losses: 0, updatedAt: now, champs: [{ name: "Ahri", games: 5, wr: 60 }] } };
+  const win = bootApp([acc]);
+  const doc = win.document, body = doc.body, html = doc.documentElement;
+  const preview = () => {
+    doc.getElementById("bSettings").click();
+    doc.querySelector('#sThemes [data-theme="void"]').click();
+    doc.querySelector('#sEffects [data-v="off"]').click();
+    doc.querySelector('#sTextSize [data-v="large"]').click();
+    const chart = doc.querySelector('#sCardParts [data-part="chart"]');
+    chart.checked = false; chart.dispatchEvent(new win.Event("change", { bubbles: true }));
+    const art = doc.getElementById("sChampArt");
+    art.checked = false; art.dispatchEvent(new win.Event("change", { bubbles: true }));
+    assert.equal(body.dataset.fx, "off");
+    assert.equal(html.dataset.ts, "large");
+    assert.ok(body.classList.contains("hide-chart"));
+    assert.equal(doc.querySelector(".c-art"), null);
+  };
+  const reverted = how => {
+    assert.equal(body.dataset.fx, "full", how + ": effects");
+    assert.equal(html.dataset.ts, undefined, how + ": text size");
+    assert.equal(body.classList.contains("hide-chart"), false, how + ": card parts");
+    assert.ok(doc.querySelector(".c-art"), how + ": champion art");
+    assert.equal(html.style.getPropertyValue("--gold"), "#c8aa6e", how + ": colours");
+  };
+  preview();
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  reverted("Escape");
+  preview();
+  doc.querySelector("#settings [data-close-panel]").click();
+  reverted("the ✕");
+});
+
 test("Effects: Full, Subtle or Off — previewed live, kept on Save, honoured on the next visit", () => {
   const win = bootApp();
   const doc = win.document;
@@ -3422,6 +3499,15 @@ test("Effects: Full, Subtle or Off — previewed live, kept on Save, honoured on
   assert.match(css, /body\[data-fx="off"\] \*[^{]*\{animation:none!important;transition:none!important\}/);
   const again = bootApp(null, w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, effects: "off" })));
   assert.equal(again.document.body.dataset.fx, "off", "applied on boot");
+});
+
+test("on touch screens no field is ever under 16px, whatever the text size (iOS zooms into smaller ones)", () => {
+  const win = bootApp();
+  const css = [...win.document.querySelectorAll("style")].map(s => s.textContent).join("\n");
+  const coarse = css.slice(css.indexOf("@media (pointer:coarse){"));
+  const block = coarse.slice(0, coarse.indexOf("\n  }") + 4);
+  assert.match(block, /:is\(input:not\(\[type=checkbox\]\):not\(\[type=radio\]\):not\(\[type=color\]\),select,textarea\)\{font-size:max\(16px,calc\(16px\*var\(--ts\)\)\)!important\}/,
+    "a floor of 16px that Small cannot scale under, and that beats the fields' own smaller rules");
 });
 
 test("Text size: every font size scales with one setting, and nothing else moves", () => {
@@ -3477,6 +3563,25 @@ test("themes: one click sets both colours and the atmosphere, kept only on Save"
   const pick = doc.getElementById("sAccent");
   pick.value = "#123456"; pick.dispatchEvent(new win.Event("input", { bubbles: true }));
   assert.deepEqual(on(), []);
+});
+
+test("swatches draw cleanly: no border for a gradient to repeat under, a smoothed split, and an opaque tray frame", () => {
+  const win = bootApp();
+  const css = [...win.document.querySelectorAll("style")].map(s => s.textContent).join("\n");
+  // A background repeats under its own border, so a gradient swatch with a border
+  // showed a sliver of its other end along each edge. The edge is an inset shadow.
+  for (const sel of [".thm-sw", ".atm-mini"]) {
+    const rule = css.match(new RegExp("\\" + sel + "\\{([^}]*)\\}"))[1];
+    assert.match(rule, /border:0/, sel + " has no border");
+    assert.match(rule, /box-shadow:inset 0 0 0 1px/, sel + " draws its edge as an inset shadow");
+  }
+  win.document.getElementById("bSettings").click();
+  const sw = win.document.querySelector('#sThemes [data-theme="noxus"] .thm-sw').getAttribute("style");
+  assert.match(sw, /calc\(50% - \.6px\).*calc\(50% \+ \.6px\)/, "the diagonal blends over a pixel instead of stepping");
+  // the tray's frame is solid: a see-through one took on the colour of whatever wash was behind it
+  const tray = css.match(/\.top \.bar\{[^}]*\}/)[0];
+  assert.match(tray, /border:1px solid color-mix\(in srgb,var\(--gold-dim\) \d+%,var\(--line2\)\)/);
+  assert.doesNotMatch(css.match(/\.top \.bar:hover\{[^}]*\}/)[0], /transparent\)/);
 });
 
 test("themes: My best rank follows the highest tier, and moves when you climb", () => {

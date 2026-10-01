@@ -227,7 +227,11 @@
      It keeps to the right edge when the header wraps. Left-aligned on a row of its
      own it read as a stray, and the ⋯ menu, which hangs leftward from its button,
      opened off the left of a phone screen with "Export backup" cut to "ackup". */
-  .top .bar{margin-left:auto;gap:3px;padding:5px;border:1px solid color-mix(in srgb,var(--gold-dim) 55%,transparent);border-radius:var(--r-md);
+  /* An opaque line, tinted by the accent. It was the accent at 55% over
+     whatever was behind, and the tray blurs and saturates what is behind it,
+     so on a theme's coloured wash the frame came out two-toned: the wash's
+     colour along one edge, the accent along the other. */
+  .top .bar{margin-left:auto;gap:3px;padding:5px;border:1px solid color-mix(in srgb,var(--gold-dim) 45%,var(--line2));border-radius:var(--r-md);
     background:linear-gradient(180deg,#ffffff0b,#ffffff05);
     backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
     box-shadow:var(--sh-1),inset 0 1px 0 #ffffff0d;
@@ -236,7 +240,7 @@
        menu's z-index inside it — without lifting the tray itself the menu paints
        under everything that follows in the document. */
     position:relative;z-index:30}
-  .top .bar:hover{border-color:color-mix(in srgb,var(--gold) 50%,transparent);box-shadow:var(--sh-2),inset 0 1px 0 #ffffff14}
+  .top .bar:hover{border-color:color-mix(in srgb,var(--gold) 45%,var(--line2));box-shadow:var(--sh-2),inset 0 1px 0 #ffffff14}
   .tray-sep{width:1px;align-self:stretch;margin:2px 3px;flex-shrink:0;
     background:linear-gradient(180deg,transparent,var(--line2),transparent)}
   /* The old header stacked a pill, then the title, then a rule — three full-width
@@ -406,7 +410,10 @@
     .setup-in{position:relative;gap:10px}
     .setup-x{position:absolute;top:6px;right:6px}
     .setup-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex-basis:100%;gap:6px}
-    .setup-steps button{width:100%;justify-content:flex-start;padding:7px 9px;font-size:calc(12px*var(--ts))}
+    /* two columns leave "Set a master password" no room on a phone: it wraps
+       onto a second line rather than running into the button's edge */
+    .setup-steps button{width:100%;justify-content:flex-start;padding:7px 9px;font-size:calc(12px*var(--ts));
+      white-space:normal;text-align:left;line-height:1.25;min-height:36px}
     .setup-steps li.done{font-size:calc(12px*var(--ts))}
   }
   .bk-note button:hover{background:color-mix(in srgb,var(--gold) 10%,transparent);border-color:color-mix(in srgb,var(--gold) 55%,transparent)}
@@ -590,7 +597,9 @@
   .thm.on{border-color:color-mix(in srgb,var(--gold) 55%,var(--line2));color:var(--gold-txt);
     background:color-mix(in srgb,var(--gold) 10%,var(--panel2));box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 28%,transparent)}
   .thm:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-  .thm-sw{display:block;height:24px;border-radius:var(--r-xs);border:1px solid #ffffff14;pointer-events:none}
+  /* No border: a background repeats under its own border, so each end showed a
+     sliver of the other colour. The edge is an inset shadow drawn over it instead. */
+  .thm-sw{display:block;height:24px;border-radius:var(--r-xs);border:0;box-shadow:inset 0 0 0 1px #ffffff1f;pointer-events:none}
   .thm-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
   .thm-n small{display:block;font-size:calc(10.5px*var(--ts));font-weight:500;color:var(--faint);white-space:normal;line-height:1.3}
   .atm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
@@ -605,7 +614,9 @@
     background:color-mix(in srgb,var(--gold) 10%,var(--panel2));color:var(--gold-txt);
     box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 28%,transparent)}
   .atm-tile:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-  .atm-mini{display:block;height:46px;border-radius:var(--r-xs);border:1px solid #ffffff12;
+  /* the edge is an inset shadow, not a border, for the same reason as .thm-sw:
+     the glow at the top repeated under a border and showed along the bottom */
+  .atm-mini{display:block;height:46px;border-radius:var(--r-xs);border:0;box-shadow:inset 0 0 0 1px #ffffff12;
     background:var(--bg);overflow:hidden;position:relative;pointer-events:none;flex-shrink:0}
   .atm-mini::after{content:"";position:absolute;inset:0;opacity:.04;pointer-events:none;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
@@ -1983,7 +1994,11 @@
     .star{font-size:calc(20px*var(--ts));padding:2px 6px 2px 0}
     button,.btn{padding:10px 15px}
     .seg button{width:40px;height:36px;padding:0} /* keep fixed; don't inherit the fat button padding */
-    input,select,textarea{font-size:calc(16px*var(--ts))}
+    /* iOS zooms the page into any field typed in at under 16px. Text size may
+       scale the rest of the type down, never a field below that, and the
+       smaller fields with rules of their own (the note editor, the compact
+       selects) are held to it too. */
+    :is(input:not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea){font-size:max(16px,calc(16px*var(--ts)))!important}
   }
   @media (max-width:760px){
     .top{align-items:flex-start;gap:16px}
@@ -2141,14 +2156,14 @@
     <!-- One section at a time. Seven groups in one scroll put the vault password
          four screens below the colour pickers; a tab row is one click to any of them. -->
     <div class="stabs" role="tablist" aria-label="Settings sections">
-      <button type="button" role="tab" data-stab="look" aria-selected="true">Appearance</button>
-      <button type="button" role="tab" data-stab="checks" aria-selected="false" tabindex="-1">Rank checks</button>
-      <button type="button" role="tab" data-stab="alerts" aria-selected="false" tabindex="-1">Alerts</button>
-      <button type="button" role="tab" data-stab="security" aria-selected="false" tabindex="-1">Security</button>
-      <button type="button" role="tab" data-stab="sync" aria-selected="false" tabindex="-1">Sync</button>
-      <button type="button" role="tab" data-stab="backup" aria-selected="false" tabindex="-1">Backup</button>
+      <button type="button" role="tab" id="stab-look" aria-controls="settingsPanel" data-stab="look" aria-selected="true">Appearance</button>
+      <button type="button" role="tab" id="stab-checks" aria-controls="settingsPanel" data-stab="checks" aria-selected="false" tabindex="-1">Rank checks</button>
+      <button type="button" role="tab" id="stab-alerts" aria-controls="settingsPanel" data-stab="alerts" aria-selected="false" tabindex="-1">Alerts</button>
+      <button type="button" role="tab" id="stab-security" aria-controls="settingsPanel" data-stab="security" aria-selected="false" tabindex="-1">Security</button>
+      <button type="button" role="tab" id="stab-sync" aria-controls="settingsPanel" data-stab="sync" aria-selected="false" tabindex="-1">Sync</button>
+      <button type="button" role="tab" id="stab-backup" aria-controls="settingsPanel" data-stab="backup" aria-selected="false" tabindex="-1">Backup</button>
     </div>
-    <div class="mdl-b">
+    <div class="mdl-b" id="settingsPanel" role="tabpanel" aria-labelledby="stab-look">
 
       <div class="grp" data-tab="look">
         <div class="grp-h tab-same">Appearance</div>
@@ -2755,8 +2770,17 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.2.0";
+const APP_VERSION="2.2.1";
 const APP_CHANGELOG=[
+  {v:"2.2.1",items:[
+    "Theme swatches and the header tray draw cleanly on every theme",
+    "Leaving Settings by Escape or ✕ now undoes every unsaved preview",
+    "iPhones no longer zoom into fields when Text size is Small",
+    "Escape closes Quick find first; Settings shows its open tab on a phone",
+    "Streamer mode covers tier-up notifications too",
+    "Phones: set-up steps and Best account wrap instead of spilling",
+    "Worker: a lighter daily alert check (redeploy to get it)",
+  ]},
   {v:"2.2.0",items:[
     "Themes: a whole look in one click, or colours that follow your best rank",
     "Streamer mode (H) hides Riot IDs, logins, emails and notes",
@@ -4048,7 +4072,8 @@ async function pullVaultSync(force){
 function celebrate(id,acc){
   const prev=acc.history[acc.history.length-2]||{};
   toast("Tier up: "+(prev.tier||"?")+" → "+acc.stats.tier);
-  notify("Tier up — "+(acc.label||acc.gameName),(prev.tier||"?")+" → "+acc.stats.tier);
+  // a system notification shows on screen like the page does, so streamer mode applies
+  notify("Tier up — "+plainName(acc),(prev.tier||"?")+" → "+acc.stats.tier);
   postDiscord("🎉 **"+(acc.label||acc.gameName)+"** tiered up: "+(prev.tier||"?")+" → "+acc.stats.tier);
   if(prefersReducedMotion())return;
   // The crest is now a different emblem than it was a second ago, which is the
@@ -6018,7 +6043,10 @@ function renderDash(){
   let best=null;
   pool.forEach(a=>{if(rankValue(a.stats)>rankValue(best&&best.stats))best=a});
   const topChamps=mergeChampions(pool);
-  const bestTxt=best&&rankValue(best.stats)>=0?nameOf(best)+" <small>"+esc(shortRank(best.stats)||"")+"</small>":"—";
+  // the rank breaks between its pieces ("Grandmaster" / "· 874 LP") rather than
+  // running out of a narrow column as one unbreakable line
+  const bestTxt=best&&rankValue(best.stats)>=0?nameOf(best)+' <small class="parts">'
+    +String(shortRank(best.stats)||"").split(" · ").map((x,i)=>`<span>${i?"· ":""}${esc(x)}</span>`).join(" ")+"</small>":"—";
   const regCount={};allActive.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
   const regTxt=Object.entries(regCount).map(([r,n])=>r+" "+n).join(" · ");
   const regN=Object.keys(regCount).length;
@@ -6258,7 +6286,7 @@ function formHTML(a){
 const CHAMP_ID_FIX={"wukong":"MonkeyKing","nunu & willump":"Nunu","renata glasc":"Renata","kai'sa":"Kaisa","cho'gath":"Chogath",
   "vel'koz":"Velkoz","kha'zix":"Khazix","bel'veth":"Belveth","leblanc":"Leblanc","fiddlesticks":"Fiddlesticks"};
 function champKey(name){
-  const n=String(name||"").trim();
+  const n=String(name||"").trim().replace(/[\u2018\u2019\u02bc]/g,"'"); // Kai’Sa is Kai'Sa
   if(!n||!/^[A-Za-z0-9 '.&-]+$/.test(n))return null; // what champion names are made of, and nothing else
   const fixed=CHAMP_ID_FIX[n.toLowerCase()];if(fixed)return fixed;
   const k=n.split(/[^A-Za-z0-9]+/).filter(Boolean).map(w=>w[0].toUpperCase()+w.slice(1)).join("");
@@ -7185,8 +7213,7 @@ function closeAllPanels(){
   // menu left hanging over a modal that has just opened on top of it is the one
   // thing on this page that could still be above everything and belong to nothing.
   closeCardMenu();
-  revertAccents(); // Settings previews colours live; leaving it must not keep them
-  revertAtmosphere(); // same for the atmosphere tiles — Escape/✕ used to keep the preview
+  revertLookPreviews(); // Settings previews Appearance live; leaving it must not keep any of it
   settingsSaveGen++; // cancel a Save that is waiting on the notification prompt
   // Dismissing first-run Help via ✕ or Escape must count as "seen", the same as Got it —
   // otherwise an empty vault re-opens the modal on every reload.
@@ -7291,12 +7318,21 @@ const SETTINGS_TABS=["look","checks","alerts","security","sync","backup"];
 function settingsTab(tab,focus){
   if(!SETTINGS_TABS.includes(tab))tab="look";
   const m=$("settings");m.dataset.tab=tab;
+  $("settingsPanel").setAttribute("aria-labelledby","stab-"+tab); // read as the tab's panel
   for(const b of m.querySelectorAll("[data-stab]")){
     const on=b.dataset.stab===tab;
     b.setAttribute("aria-selected",String(on));b.tabIndex=on?0:-1;
     if(on&&focus)b.focus();
   }
   const body=m.querySelector(".mdl-b");if(body)body.scrollTop=0;
+  centreSettingsTab();
+}
+// A phone shows four of the six tabs; one chosen from elsewhere (Back up, Set a
+// master password) was selected out of sight. Centre it in the row. Only
+// measurable once Settings is on screen, so openSettings calls it again then.
+function centreSettingsTab(){
+  const row=$("settings").querySelector(".stabs"), on=row&&row.querySelector('[aria-selected="true"]');
+  if(row&&on&&row.clientWidth)row.scrollLeft=Math.max(0,on.offsetLeft-row.offsetLeft-(row.clientWidth-on.offsetWidth)/2);
 }
 function updateBackupLast(){
   const el=$("sBackupLast");if(!el)return;
@@ -7310,7 +7346,7 @@ function openSettings(tab){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden");centreSettingsTab()
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -7439,7 +7475,7 @@ function renderThemes(){
   const tile=(k,name,sw,on,sub)=>`<button type="button" role="radio" class="thm${on?" on":""}" data-theme="${k}" aria-checked="${on}">`
     +`<span class="thm-sw" style="background:${sw}" aria-hidden="true"></span><span class="thm-n">${esc(name)}${sub?`<small>${esc(sub)}</small>`:""}</span></button>`;
   const ladder=TIER_ORDER.map((t,i)=>`${TIER_COLORS[t]} ${Math.round(i/(TIER_ORDER.length-1)*100)}%`).join(",");
-  setHTML(el,THEMES.map(t=>tile(t.k,t.n,`linear-gradient(110deg,${t.a} 0 50%,${t.b} 50% 100%)`,!rank&&pa===t.a&&pb===t.b)).join("")
+  setHTML(el,THEMES.map(t=>tile(t.k,t.n,`linear-gradient(110deg,${t.a} 0 calc(50% - .6px),${t.b} calc(50% + .6px) 100%)`,!rank&&pa===t.a&&pb===t.b)).join("")
     +tile("rank","My best rank",`linear-gradient(90deg,${ladder})`,rank,"follows your highest tier"));
 }
 function pickTheme(k){
@@ -7865,6 +7901,10 @@ document.addEventListener("keydown",e=>{
   if((e.key==="h"||e.key==="H")&&!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();if(!streamerOn())setStreamer(true);else toast("Streamer mode is on — click its pill in the header to turn it off")}
   if(e.key==="Escape"){
     if($("accPrev").classList.contains("show")){hideAccPrev();return}
+    // Quick find sits over everything, so it goes first. With a card's login
+    // still open underneath, Escape used to fold the card away behind the
+    // palette and leave the palette up.
+    if(!$("palette").classList.contains("hidden")){closePalette();return}
     // Whatever a card has unfolded goes first — that is what is in front of you,
     // and hunting down the button that opened each panel was the complaint.
     // Only once the cards are tidy does Escape mean "close the page's panels".
@@ -8005,7 +8045,14 @@ document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.targ
 // Closing has to go through the same door as the ✕ and Escape do. Toggling the panel
 // shut from the ⋯ menu only hid it, which left a colour you had dragged but not saved
 // applied to the whole page — the one close out of four that kept it.
-function closeSettings(){revertAccents();revertAtmosphere();applyEffects(cfg.effects);applyTextSize(cfg.textSize);if(pendingCardHide||pendingChampArt!==null){pendingCardHide=null;pendingChampArt=null;applyCompact();renderGrid()}settingsSaveGen++;$("settings").classList.add("hidden")}
+// Everything in Appearance previews live; leaving Settings without saving, by
+// any way out, puts it all back. Close did this for every setting, but Escape,
+// the ✕ and the backdrop (closeAllPanels) only for the colours and atmosphere.
+function revertLookPreviews(){
+  revertAccents();revertAtmosphere();applyEffects(cfg.effects);applyTextSize(cfg.textSize);
+  if(pendingCardHide||pendingChampArt!==null){pendingCardHide=null;pendingChampArt=null;applyCompact();renderGrid()}
+}
+function closeSettings(){revertLookPreviews();settingsSaveGen++;$("settings").classList.add("hidden")}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
 $("bNewSeason").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");newSeasonAll()});
 $("bStreamer").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");setStreamer(!streamerOn())});
@@ -8017,7 +8064,15 @@ $("settings").querySelector(".stabs").addEventListener("keydown",e=>{
   if(to===null)return;
   e.preventDefault();settingsTab(SETTINGS_TABS[(to+SETTINGS_TABS.length)%SETTINGS_TABS.length],true);
 });
-for(const b of document.querySelectorAll("#settings [data-proxy]"))b.addEventListener("click",()=>{const t=$(b.dataset.proxy);if(t)t.click();setTimeout(updateBackupLast,0)});
+for(const b of document.querySelectorAll("#settings [data-proxy]"))b.addEventListener("click",()=>{
+  // An encrypted backup needs the master password, and its field is one tab
+  // away: go there rather than saying "in Settings" to someone already in it.
+  if(b.dataset.proxy==="bExportEnc"&&!vaultPassword&&!previewMode){
+    settingsTab("security");$("sVaultPass").focus();
+    toast("Set a master password here first — the encrypted backup is locked with it");return;
+  }
+  const t=$(b.dataset.proxy);if(t)t.click();setTimeout(updateBackupLast,0);
+});
 $("sSave").addEventListener("click",async()=>{
   // Validate the two free-text URLs before touching cfg — a bail after partial
   // assignment left the session with the new API key / auto-check values even
