@@ -872,6 +872,14 @@ test("the vault is stretched at 600 000 rounds, and an older vault upgrades itse
   assert.equal(win.document.querySelectorAll(".card").length, 1);
 });
 
+test("SECURITY.md states the key stretching the code actually uses", () => {
+  const doc = fs.readFileSync(path.join(__dirname, "..", "SECURITY.md"), "utf8");
+  const iter = Number(html.match(/const KDF_ITER=(\d+)/)[1]);
+  const spaced = iter.toLocaleString("en-US").replace(/,/g, " ");
+  assert.ok(doc.includes(spaced + " rounds"), `the doc says ${spaced} rounds`);
+  assert.match(doc, /plain text/i, "and says what is unprotected without a master password");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
