@@ -590,3 +590,18 @@ test("/status says what the worker has set up, without revealing it", async () =
   assert.deepEqual(full, { ok: true, riot: true, vault: true });
   assert.doesNotMatch(JSON.stringify(full), /RGAPI/);
 });
+
+/* The deploy button builds the worker from wrangler.jsonc and asks for the secrets in
+   .dev.vars.example. Both have to name what the worker actually reads. */
+test("the one-click deploy config matches what the worker reads", async () => {
+  const fs = await import("node:fs"), path = await import("node:path"), { fileURLToPath } = await import("node:url");
+  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const cfg = JSON.parse(fs.readFileSync(path.join(root, "wrangler.jsonc"), "utf8").replace(/^\s*\/\/.*$/gm, ""));
+  assert.ok(fs.existsSync(path.join(root, cfg.main)), "main points at the worker");
+  const src = fs.readFileSync(path.join(root, cfg.main), "utf8");
+  for (const kv of cfg.kv_namespaces) assert.match(src, new RegExp("env\\." + kv.binding + "\\b"), `the worker reads env.${kv.binding}`);
+  assert.ok(!cfg.kv_namespaces.some(k => k.id), "no namespace id: the deploy creates one in the deployer's account");
+  const vars = fs.readFileSync(path.join(root, ".dev.vars.example"), "utf8").match(/^[A-Z_]+(?==)/gm);
+  for (const v of vars) assert.match(src, new RegExp("env\\." + v + "\\b"), `the worker reads env.${v}`);
+  assert.deepEqual(vars, ["RIOT_API_KEY"]);
+});

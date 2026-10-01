@@ -4,3 +4,4 @@ smurf-backup-*.json
 smurf-export-*.csv
 node_modules/
 .claude/
+.dev.vars
