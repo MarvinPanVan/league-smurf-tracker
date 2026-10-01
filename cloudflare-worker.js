@@ -18,6 +18,8 @@
 //   a renamed account keeps its history.
 //
 // GET /status -> {"ok":true,"riot":true|false,"vault":true|false}  (what this worker has set up)
+// GET /form?puuid=<puuid>&region=<euw|...> -> {"games":[{"win","champ","k","d","a","min","at"}]}
+//   The last five ranked solo games, from Riot's match-v5. Needs RIOT_API_KEY.
 //
 // Device sync (encrypted vault blob only — not a scrape cache):
 //   Bind a KV namespace as VAULT (or SMURF_VAULT) on the worker.
@@ -50,6 +52,12 @@ export default {
       const url = new URL(request.url);
       if (isVaultPath(url.pathname)) return await handleVault(request, env);
       if (/\/status\/?$/.test(url.pathname)) return json({ ok: true, riot: !!riotKey(env), vault: !!vaultStore(env) }, 200);
+      if (/\/form\/?$/.test(url.pathname)) {
+        const key = riotKey(env);
+        if (!key) return json({ error: "no Riot API key on this worker" }, 404);
+        const r = await riotForm(url.searchParams.get("puuid"), (url.searchParams.get("region") || "euw").toLowerCase(), key);
+        return r.body ? json(r.body, 200) : json({ error: r.error }, r.status || 502);
+      }
 
       if (request.method === "POST") return await handleBatch(request, env);
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
@@ -277,6 +285,36 @@ export async function riotOne(name, tag, region, key, puuid, withAccount = true)
       source: "riot",
     },
   };
+}
+
+// match-v5 routes by these four clusters, which are not account-v1's three
+const MATCH_CLUSTER = {
+  euw: "europe", eune: "europe", tr: "europe", ru: "europe", me: "europe",
+  na: "americas", br: "americas", lan: "americas", las: "americas",
+  kr: "asia", jp: "asia",
+  oce: "sea", sg: "sea", tw: "sea", vn: "sea", ph: "sea", th: "sea",
+};
+/* The last five ranked solo games (queue 420): the list of match ids, then each
+   match, reduced to this player's line. Six subrequests, asked for one account at
+   a time when its details are opened — never in a batch. */
+export async function riotForm(puuid, region, key) {
+  const cluster = MATCH_CLUSTER[region];
+  if (!cluster || !PUUID_RE.test(String(puuid || ""))) return { error: "bad puuid or region", status: 400 };
+  const base = `https://${cluster}.api.riotgames.com/lol/match/v5/matches`;
+  const ir = await riotGet(`${base}/by-puuid/${puuid}/ids?queue=420&count=5`, key);
+  if (!ir.ok) return riotFailure(ir, "match list");
+  const ids = (await ir.json()).slice(0, 5);
+  const matches = await Promise.all(ids.map(id => riotGet(`${base}/${encodeURIComponent(id)}`, key).catch(() => null)));
+  const games = [];
+  for (const m of matches) {
+    if (!m || !m.ok) continue;
+    const d = await m.json();
+    const info = d && d.info, p = info && (info.participants || []).find(x => x.puuid === puuid);
+    if (!p) continue;
+    games.push({ win: !!p.win, champ: String(p.championName || "?"), k: p.kills, d: p.deaths, a: p.assists,
+      min: Math.round((info.gameDuration || 0) / 60), at: info.gameEndTimestamp || info.gameCreation || null });
+  }
+  return { body: { games } };
 }
 
 /* One lookup, the way a single GET wants it. With a Riot key: Riot for the numbers,

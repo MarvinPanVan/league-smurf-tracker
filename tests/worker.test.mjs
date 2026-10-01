@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import {
   parseRankText, parseLevelText, parsePeakText, parseSeasons, parseFlex,
   parseChampions, parseChampionTable, parseChampionsMeta, parseProfileIcon,
-  parseLpHistory, stripRows, riotOne, lookupOne, handleBatch,
+  parseLpHistory, stripRows, riotOne, lookupOne, handleBatch, riotForm,
 } from "../cloudflare-worker.js";
 
 // The shape op.gg actually serves, reduced but structurally faithful — this is
@@ -604,4 +604,24 @@ test("the one-click deploy config matches what the worker reads", async () => {
   const vars = fs.readFileSync(path.join(root, ".dev.vars.example"), "utf8").match(/^[A-Z_]+(?==)/gm);
   for (const v of vars) assert.match(src, new RegExp("env\\." + v + "\\b"), `the worker reads env.${v}`);
   assert.deepEqual(vars, ["RIOT_API_KEY"]);
+});
+
+test("recent form: the last five ranked games, reduced to this player's line", async () => {
+  const calls = [];
+  globalThis.fetch = async u => {
+    const url = String(u); calls.push(url);
+    const res = b => new Response(JSON.stringify(b), { status: 200 });
+    if (url.includes("/ids?")) return res(["EUW1_1", "EUW1_2"]);
+    const n = url.endsWith("EUW1_1") ? 1 : 2;
+    return res({ info: { gameDuration: 1800, gameEndTimestamp: 1700000000000 + n, participants: [
+      { puuid: "x".repeat(78), win: n === 2, championName: "Zed", kills: 1, deaths: 1, assists: 1 },
+      { puuid: PUUID, win: n === 1, championName: n === 1 ? "Ahri" : "Lux", kills: 7, deaths: 2, assists: 9 }] } });
+  };
+  const r = await riotForm(PUUID, "euw", KEY);
+  assert.ok(calls[0].startsWith("https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/" + PUUID + "/ids?queue=420&count=5"));
+  assert.deepEqual(r.body.games.map(g => [g.win, g.champ, g.k, g.d, g.a, g.min]), [[true, "Ahri", 7, 2, 9, 30], [false, "Lux", 7, 2, 9, 30]]);
+  assert.equal((await riotForm("not-a-puuid", "euw", KEY)).status, 400);
+  const sea = []; globalThis.fetch = async u => { sea.push(String(u)); return new Response("[]", { status: 200 }); };
+  await riotForm(PUUID, "oce", KEY);
+  assert.match(sea[0], /^https:\/\/sea\.api\.riotgames\.com\//, "match-v5 routes Oceania through sea, not asia");
 });
