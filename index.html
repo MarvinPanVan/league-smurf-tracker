@@ -1377,6 +1377,9 @@
   .t-nm .flagmark .ico,.rw-nm .flagmark .ico{width:11px;height:11px}
   .lbtns{display:flex;gap:5px;flex-shrink:0}
   .lbtns button{font-size:11px;padding:4px 9px}
+  .login .lseq{width:100%;font-size:12px;font-weight:600;padding:8px 10px;color:var(--teal-txt);
+    border-color:color-mix(in srgb,var(--teal) 45%,transparent);background:color-mix(in srgb,var(--teal) 10%,transparent)}
+  .login .lseq:hover{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 18%,transparent);color:var(--teal-txt)}
   .c-foot{display:flex;flex-direction:column;align-items:stretch;gap:11px;
     border-top:1px solid var(--line);padding-top:12px;margin-top:auto}
   .c-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
@@ -3789,6 +3792,7 @@ async function copyText(v,label,sensitive){
   }
 }
 let lastCopiedSecret=null;
+const loginSeq=new Set();   // cards whose username is copied and whose password is next
 function uid(){return Date.now()+"-"+Math.random().toString(36).slice(2,7)}
 function cryptoInt(max){
   // Rejection sampling — a raw `% max` is slightly biased whenever max does not
@@ -6022,7 +6026,8 @@ function rowHTML(a,i){
         <button data-act="del" class="b-danger">${armedDelete===a.id?"Sure?":"Delete"}</button>
       </div>
       ${openLogin.has(a.id)?`<div class="login">
-        <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
+        ${a.login&&a.password?`<button class="lseq" data-act="copyseq">${loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`:""}
+      <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
         <div class="lrow"><span class="val mono ${a.password?"":"none"}">${a.password?(shownPw.has(a.id)?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${shownPw.has(a.id)?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
       </div>`:""}
     </div>`:""}
@@ -6214,6 +6219,7 @@ function cardHTML(a,i){
     ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(a.tags||[]).length?`<div class="ctags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""}
     ${loginOpen?`<div class="login${rv("login")}">
+      ${a.login&&a.password?`<button class="lseq" data-act="copyseq">${loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`:""}
       <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
       <div class="lrow"><span class="val mono ${a.password?"":"none"}" style="font-family:${a.password?"":"inherit"}">${a.password?(pw?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${pw?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
       ${a.email?`<div class="lrow"><span class="val">${esc(a.email)}</span><span class="lbtns"><button data-act="copymail">Copy</button></span></div>`:""}
@@ -8116,6 +8122,15 @@ async function onCardClick(e){
     else{renderGrid();renderDash()}
   }
   else if(act==="copyid")copyText(acc.gameName+"#"+acc.tagLine,"Riot ID");
+  /* Logging in is username, then password, into two boxes in the client. One
+     button walks through both: the first press copies the username and the
+     button becomes "Copy password"; the second copies that (cleared from the
+     clipboard after 30s, like any copied password) and starts over. */
+  else if(act==="copyseq"){
+    if(!loginSeq.has(id)){copyText(acc.login,"Username");loginSeq.add(id)}
+    else{copyText(acc.password,"Password",true);loginSeq.delete(id)}
+    renderCard(id);
+  }
   else if(act==="copylogin")copyText(acc.login,"Username");
   else if(act==="copypw")copyText(acc.password,"Password",true);
   else if(act==="copymail")copyText(acc.email,"Email");
@@ -8138,6 +8153,7 @@ async function onCardClick(e){
     // actually using the account. "Status: resting" was a label you had to keep up
     // by hand; this is the same fact, kept by itself.
     if(on){acc.lastLoginAt=Date.now();saveDB()}
+    loginSeq.delete(id);   // a fresh look at the login starts at the username
     renderCard(id);
   }
   else if(act==="edit")openForm(acc);

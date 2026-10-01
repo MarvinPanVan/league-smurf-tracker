@@ -943,6 +943,26 @@ test("a levelling account shows its way to ranked, and says when it is ready", (
   });
 });
 
+test("one button copies the username, then the password", async () => {
+  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [],
+    login: "riotuser", password: "hunter22!", stats: null }]);
+  const copied = [];
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async v => { copied.push(v); } } });
+  const card = () => win.document.querySelector('.card[data-id="L"]');
+  card().querySelector('[data-act="login"]').click();
+  const seq = () => card().querySelector('[data-act="copyseq"]');
+  assert.match(seq().textContent, /Copy username, then password/);
+  seq().click();
+  await until(() => copied.length === 1, "the username to be copied");
+  assert.equal(copied[0], "riotuser");
+  assert.match(seq().textContent, /^\s*Copy password$/, "the button moves on to the password");
+  seq().click();
+  await until(() => copied.length === 2, "the password to be copied");
+  assert.equal(copied[1], "hunter22!");
+  assert.match(seq().textContent, /Copy username, then password/, "and starts over");
+  await until(() => appGet(win, "lastCopiedSecret") === "hunter22!", "the password to be the secret that gets cleared later");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
