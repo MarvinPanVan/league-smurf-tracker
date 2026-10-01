@@ -6160,3 +6160,11 @@ test("a pull from a device whose clock runs ahead does not make this one look ed
   assert.match(toast(), /changed after last sync/i, "a local change still asks first");
   assert.match(win.document.querySelector(".card").textContent, /CloudTwo/, "and nothing was replaced");
 });
+
+/* No saved settings is not on its own a first visit: a vault from a build that
+   never wrote them, or whose settings write failed, has accounts and no cfg — and
+   its owner is exactly who the changelog is for. */
+test("a vault with no saved settings still hears what changed", () => {
+  const win = bootApp(seededAccount());   // accounts on disk, no cfg key at all
+  assert.match(win.document.getElementById("toast").textContent, /^v\d/);
+});

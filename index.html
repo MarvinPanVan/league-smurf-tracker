@@ -8047,7 +8047,9 @@ function boot(){
   renderVersion();
   hasStorage=storageOK();
   if(!hasStorage){$("banner").classList.add("show")}
-  try{const c=hasStorage?localStorage.getItem(CFG_KEY):null;firstVisit=hasStorage&&!c;if(c)cfg=Object.assign(cfg,JSON.parse(c))}catch(e){}
+  // A first visit has neither settings nor a vault — a vault without settings is
+  // an older build's, and its owner is exactly who the changelog is for.
+  try{const c=hasStorage?localStorage.getItem(CFG_KEY):null;firstVisit=hasStorage&&!c&&!localStorage.getItem(DB_KEY);if(c)cfg=Object.assign(cfg,JSON.parse(c))}catch(e){}
   if(MODEL_ALIASES[cfg.model]){cfg.model=MODEL_ALIASES[cfg.model];saveCfg()}
   {
     let cfgDirty=false;
