@@ -1437,6 +1437,13 @@
   .fld{display:flex;flex-direction:column;gap:6px}
   /* sentence case, not micro-caps — several of these labels are full sentences */
   .fld label{font-size:12px;font-weight:500;letter-spacing:.005em;color:var(--muted);line-height:1.45}
+  /* The strength meter held a 30px band open under the password even with no
+     password in it, across both columns — the widest gap in the form, around
+     nothing. The bar now sits in the grid's own gap and the word rides the label. */
+  .pw-fld{position:relative}
+  .pw-fld label{display:flex;justify-content:space-between;gap:10px}
+  #pwMeterLabel{font-size:11px;color:var(--faint)}
+  #pwMeter{position:absolute;left:0;right:0;bottom:-9px;height:3px;display:flex;gap:4px}
   .hidden{display:none!important}
   .empty{padding:64px 24px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7}
   .empty .d{height:84px;margin-bottom:20px;display:flex;align-items:center;justify-content:center}
@@ -2168,7 +2175,7 @@
       <div class="fld"><label>Riot name *</label><input id="fName" placeholder="Game name (before the #)" data-autofocus></div>
       <div class="fld"><label>Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234 (no #)"></div>
       <div class="fld"><label>Login username</label><input id="fLogin" placeholder="Riot client login" autocomplete="off"></div>
-      <div class="fld"><label>Password</label><div style="display:flex;gap:6px">
+      <div class="fld pw-fld"><label>Password <span id="pwMeterLabel"></span></label><div style="display:flex;gap:6px">
         <div style="position:relative;flex:1;display:flex">
           <!-- Deliberately not type="password": see the .mask rule in the CSS. -->
           <input type="text" id="fPass" class="mask" placeholder="Stored unencrypted, locally" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" style="width:100%;padding-right:34px">
@@ -2176,8 +2183,7 @@
         </div>
         <button id="fGen" type="button" title="Generate a new safe password (asks first if there's already one)"><svg class="ico" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg> Gen</button>
       </div>
-      <div id="pwMeter" style="height:5px;display:flex;gap:4px;margin-top:8px"></div>
-      <div id="pwMeterLabel" style="font-size:11px;color:var(--muted);margin-top:5px"></div>
+      <div id="pwMeter"></div>
       </div>
       <div class="fld"><label>Email on the account</label><input id="fEmail" placeholder="mail the account is registered to" autocomplete="off"></div>
       <!-- These two were being kept in the Notes box by hand — "birthdate 8/1/1987,
@@ -6416,7 +6422,7 @@ function renderPwMeter(){
   const p=$("fPass").value;
   const {score,label}=passwordStrength(p);
   const colors=["#ff6b6b","#ff6b6b","#e8c464","#e8c464","#4ade80"];
-  $("pwMeter").innerHTML=p?Array.from({length:5},(_,i)=>`<span style="flex:1;height:100%;border-radius:999px;transition:background .2s;background:${i<score?colors[score-1]:"var(--line)"}"></span>`).join(""):"";
+  $("pwMeter").innerHTML=p?Array.from({length:5},(_,i)=>`<span style="flex:1;height:100%;border-radius:1px;transition:background .2s;background:${i<score?colors[score-1]:"var(--line)"}"></span>`).join(""):"";
   $("pwMeterLabel").textContent=p?label:"";
 }
 function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted."}

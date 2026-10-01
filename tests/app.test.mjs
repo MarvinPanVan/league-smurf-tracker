@@ -537,6 +537,26 @@ test("relock re-shows the lock screen and clears in-memory accounts; the same pa
   assert.equal(win.document.querySelectorAll(".card").length, 1, "the same account must come back after unlocking");
 });
 
+test("an empty password meter holds no band open in the Add form", () => {
+  const win = bootApp();
+  const meter = win.document.getElementById("pwMeter");
+  const word = win.document.getElementById("pwMeterLabel");
+  assert.ok(meter.closest(".pw-fld") && word.closest("label"), "the word rides the Password label");
+  const rule = html.match(/#pwMeter\{[^}]*\}/);
+  assert.ok(rule, "the meter has a rule of its own");
+  assert.match(rule[0], /position:absolute/, "out of the flow, so no height is reserved for it");
+  win.document.getElementById("bAdd").click();
+  const pass = win.document.getElementById("fPass");
+  pass.value = "Tr0ub4dor&3xyz!";
+  pass.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(meter.children.length, 5);
+  assert.notEqual(word.textContent, "");
+  pass.value = "";
+  pass.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(meter.children.length, 0);
+  assert.equal(word.textContent, "");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
