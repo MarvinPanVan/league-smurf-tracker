@@ -573,6 +573,15 @@ test("Help is a labelled list a newcomer can scan, and the terms survive word fo
   assert.ok(help.querySelectorAll("kbd").length >= 5, "and so do keys");
 });
 
+test("the colour miniature looks like the page it stands in for", () => {
+  const rule = sel => { const m = html.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\{[^}]*\\}")); return m && m[0]; };
+  assert.match(rule(".acc-prev-mark"), /rotate\(45deg\)/, "the turned gem, like the header's");
+  assert.match(rule(".brand-mark"), /rotate\(45deg\)/);
+  assert.match(rule(".acc-prev-rk"), /Cinzel/, "the rank in the display face, as a card sets it");
+  assert.match(html, /\.acc-prev-cmd button,\.acc-prev-card \.bar button\{[^}]*Cinzel/, "and the actions");
+  assert.doesNotMatch(rule(".acc-prev-rib i"), /999px/, "the ribbon is plates, not a pill");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");

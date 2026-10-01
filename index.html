@@ -1557,24 +1557,25 @@
     border-right:1px solid var(--line)}
   .acc-prev-top{display:flex;align-items:center;gap:10px;padding:12px 14px;
     border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--panel) 72%,transparent)}
-  .acc-prev-mark{width:28px;height:28px;border-radius:9px;flex-shrink:0;
+  /* The miniature is only worth anything if it looks like the page it stands in
+     for: the turned gem, display-face actions, the rank as the card sets it. */
+  .acc-prev-mark{width:20px;height:20px;margin:4px;border-radius:2px;flex-shrink:0;transform:rotate(45deg);
     display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 26%,transparent),#10131ae6);
-    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 32%,transparent)}
-  .acc-prev-mark i{display:block;width:9px;height:9px;border-radius:2px;transform:rotate(45deg);
+    background:linear-gradient(135deg,#1e2328,#0a1119);
+    box-shadow:inset 0 0 0 1px var(--gold),0 0 0 2px var(--bg),0 0 0 3px color-mix(in srgb,var(--gold-dim) 90%,transparent)}
+  .acc-prev-mark i{display:block;width:8px;height:8px;border-radius:1px;
     background:linear-gradient(145deg,var(--star),var(--gold) 55%,var(--gold-mid))}
   .acc-prev-brand{min-width:0}
   .acc-prev-t{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em;text-transform:uppercase;
     font-size:12px;color:var(--gold-txt);line-height:1.2}
   .acc-prev-sub{font-size:10px;color:var(--faint);margin-top:2px}
-  .acc-prev-sub b{color:var(--muted);font-weight:600}
+  .acc-prev-sub b{color:var(--gold-txt);font-weight:600}
   .acc-prev-rib{display:flex;gap:2px;height:14px;padding:8px 14px 0}
-  .acc-prev-rib i{flex:1;border-radius:3px;background:color-mix(in srgb,var(--c) 62%,#0b0e14)}
-  .acc-prev-rib i:first-child{border-radius:999px 3px 3px 999px}
-  .acc-prev-rib i:last-child{border-radius:3px 999px 999px 3px}
+  .acc-prev-rib i{flex:1;border-radius:1px;background:color-mix(in srgb,var(--c) 62%,#0b0e14)}
   .acc-prev-cmd{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;
     border-bottom:1px solid var(--line)}
-  .acc-prev-cmd button{padding:5px 9px;font-size:11px}
+  .acc-prev-cmd button,.acc-prev-card .bar button{padding:5px 9px;font:700 10px/1.2 'Cinzel',Georgia,serif;
+    letter-spacing:.06em;text-transform:uppercase}
   .acc-prev-tools{display:flex;gap:6px;align-items:center;padding:10px 14px 12px}
   .acc-prev-tools input{flex:1;min-width:0;font-size:11px;padding:6px 9px;
     border-color:color-mix(in srgb,var(--teal) 60%,transparent);
@@ -1587,13 +1588,13 @@
     background:color-mix(in srgb,var(--panel) 40%,transparent)}
   .acc-prev-card{padding:11px 12px;border:1px solid var(--line);border-radius:var(--r-sm);
     background:var(--panel);box-shadow:inset 0 1px 0 #ffffff08;flex:1}
-  .acc-prev-card-h{display:flex;align-items:center;gap:7px;margin-bottom:4px}
-  .acc-prev-nm{font-size:13px;font-weight:600;color:var(--text)}
-  .acc-prev-star{color:var(--star);font-size:13px;line-height:1}
-  .acc-prev-rk{font-size:12px;color:var(--gold-txt);margin-left:auto}
+  .acc-prev-card-h{display:flex;flex-wrap:wrap;align-items:center;gap:4px 7px;margin-bottom:6px}
+  .acc-prev-nm{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap}
+  .acc-prev-star{color:var(--star);font-size:13px;line-height:1;margin-left:auto}
+  .acc-prev-rk{flex-basis:100%;font:700 14px/1.1 'Cinzel',Georgia,serif;text-transform:uppercase;color:#7ea6f0}
+  .acc-prev-rk small{font:600 11px Inter,system-ui,sans-serif;text-transform:none;color:var(--muted);margin-left:4px}
   .acc-prev-wl{font-size:11px;color:var(--muted);margin-bottom:8px}
   .acc-prev-card .bar{gap:6px}
-  .acc-prev-card .bar button{padding:4px 8px;font-size:11px}
   .acc-reset{width:27px;height:27px;padding:0;font-size:13px;color:var(--muted)}
   .acc-reset:hover{color:var(--text)}
   @media (max-width:620px){
@@ -2136,7 +2137,6 @@
       <div class="acc-prev-cmd bar">
         <button class="b-gold" type="button" tabindex="-1">Check all ranks</button>
         <button class="b-teal" type="button" tabindex="-1">+ Add account</button>
-        <button type="button" tabindex="-1">Refresh</button>
       </div>
       <div class="acc-prev-tools">
         <input type="search" value="search or filter…" tabindex="-1" readonly>
@@ -2149,7 +2149,7 @@
         <div class="acc-prev-card-h">
           <span class="acc-prev-nm">Hide on Bush</span>
           <span class="acc-prev-star">★</span>
-          <span class="acc-prev-rk">Diamond I · 52 LP</span>
+          <span class="acc-prev-rk">Diamond I<small>52 LP</small></span>
         </div>
         <div class="acc-prev-wl">190W 215L · 47% WR</div>
         <div class="bar">
