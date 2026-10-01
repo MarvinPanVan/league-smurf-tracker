@@ -1,0 +1,36 @@
+# Runs the jsdom suite in tests/ on every push and pull request. It boots the
+# real index.html, so a red run here means the file GitHub Pages is about to
+# serve is wrong.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+      - run: npm ci
+      - run: npm test
+      # index.html has been committed as binary/CRLF before, which turns every
+      # diff into a full-file rewrite. Fail loudly if it happens again.
+      - name: index.html is UTF-8 text with LF endings and no NUL bytes
+        working-directory: .
+        run: |
+          if [ "$(tr -cd '\000' < index.html | wc -c)" -ne 0 ]; then echo "index.html contains NUL bytes"; exit 1; fi
+          if grep -q $'\r' index.html; then echo "index.html contains CR line endings"; exit 1; fi
+          file index.html | grep -q 'UTF-8 text\|ASCII text' || { file index.html; exit 1; }

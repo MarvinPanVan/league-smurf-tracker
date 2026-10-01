@@ -345,6 +345,11 @@
   /* nowrap, or a long enough figure breaks between the number and its unit and
      leaves "WR" alone on the next line. It wraps as one piece instead. */
   .stat .v small{font-size:11.5px;color:var(--muted);font-weight:400;letter-spacing:0;white-space:nowrap}
+  /* Except where the caption is a list — Accounts' "· 7 ★ · 5 banned · 5 archived"
+     is wider than its tile, which is overflow:hidden, so nowrap cut it off at
+     "archiv". It breaks between the pieces and never inside one. */
+  .stat .v small.parts{white-space:normal}
+  .stat .v small.parts>span{white-space:nowrap}
   .stat .v.spark-wrap{font-size:12px;line-height:1.2;overflow:visible;max-width:100%;width:100%;position:relative}
   .pool-spark{display:block;width:100%;max-width:100%;height:28px;margin-top:4px;opacity:.85;overflow:visible;cursor:crosshair}
   .pool-spark circle.pool-dot{fill:var(--teal);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
@@ -755,7 +760,7 @@
   .rw-id{min-width:0;display:flex;flex-direction:column;gap:1px}
   .rw-nm{font-size:14.5px;font-weight:600;letter-spacing:-.012em;color:var(--text);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
-  .rw-star{color:var(--star);display:inline-flex}
+  .rw-star{color:var(--star);display:inline-flex;flex-shrink:0}
   .rw-star .ico{width:11px;height:11px;fill:var(--star)}
   .rw-tag{font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rw-tags{display:flex;gap:4px;margin-top:3px;overflow:hidden}
@@ -818,8 +823,14 @@
     .rw-main{grid-template-columns:auto 40px minmax(120px,1.4fr) 92px minmax(92px,1fr) 56px 16px;gap:10px}
     .rw-wr,.rw-up{display:none}
   }
+  /* Fixed minimums here — 110px of name, 90px of rank, 54px of change — came to 36px
+     more than a 390px row holds, so every row overflowed: "Diamond IV" was cut to
+     "Diamond…", the LP pill was sliced and the chevron fell off the edge. The rank
+     and the change get the width their longest label needs ("Grandmaster", a four-
+     figure drop), fixed so they still line up from row to row; the name takes what
+     is left and ellipsises. */
   @media (max-width:720px){
-    .rw-main{grid-template-columns:auto 36px minmax(110px,1.5fr) minmax(90px,1fr) 54px 16px;gap:10px;
+    .rw-main{grid-template-columns:auto 36px minmax(0,1fr) 106px 58px 16px;gap:10px;
       min-height:52px;padding:12px 12px;align-items:center}
     .rw-spark,.rw-tags{display:none}
     .rw-check{opacity:1} /* thumb-friendly: always show Refresh on phones */
@@ -832,6 +843,13 @@
     .dash{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
     .stat{padding:14px 14px}
     .bulkchk{opacity:1} /* selection without needing hover */
+  }
+  /* On the smallest phones the rank and a name you can read do not both fit beside
+     the LP change, and the rule above says which goes: the nice-to-know column. The
+     change is still on the card, and in the chart when the row is opened. */
+  @media (max-width:440px){
+    .rw-main{grid-template-columns:auto 36px minmax(0,1fr) 106px 16px;gap:8px}
+    .rw-d{display:none}
   }
   @supports (padding:max(0px)){
     body{padding-bottom:max(12px,env(safe-area-inset-bottom))}
@@ -867,7 +885,11 @@
     background:#0d1017;box-shadow:0 0 0 1px var(--line2),0 2px 8px #00000080}
   .c-id{min-width:0;flex:1}
   .c-name{font-weight:600;font-size:17px;letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
-  .c-name>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* text-overflow only works on a box that holds the text itself. The wall tile and
+     the list row had the name as a bare text node in a flex row, so it was sheared
+     off mid-letter, no ellipsis, with the flag after it pushed out of sight — the
+     card never did, because its name was already a span of its own. */
+  .c-name>span,.t-nm>.nm-t,.rw-nm>.nm-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* The chip may not take the room the account name needs: "Resting / unused"
      was holding 114 px of a 234 px row and leaving the name 58 — four letters
      and an ellipsis. Short wording here, the full phrase in the title and
@@ -1529,7 +1551,12 @@
   /* ---- toast ---- */
   /* above the modals (z 60): "Vault password set" is confirmed from inside
      Settings, and behind the backdrop it would never be seen */
+  /* left:50% with no width shrinks to the half of the viewport right of that point —
+     195px on a phone, which made every longer toast a tall pill of short lines. As
+     wide as its text, up to the screen less its gutters, and no wider than the
+     measure a desktop always got by accident. */
   #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:80;display:none;
+    width:max-content;max-width:min(720px,calc(100vw - 32px));
     background:#161a23f2;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
     border:1px solid var(--line2);border-radius:999px;color:var(--text);
     padding:11px 20px;font-size:13px;font-weight:500;box-shadow:var(--sh-3)}
@@ -1768,7 +1795,7 @@
     <b style="color:var(--text)">Using this app:</b> free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.<br>
     <b style="color:var(--text)">More:</b> <b style="color:var(--text)">⋯</b> menu has bulk add (paste a list of Name#TAG) and CSV import · archive an account to hide it without deleting (toggle <b style="color:var(--text)">Archived</b> in the toolbar) · shift-click a card's checkbox to select a range · <b style="color:var(--text)">n</b> for a new account · click a card's note to rewrite it on the spot · pick your own primary and secondary colors in Settings.
     </div>
-    <div class="mdl-f"><button id="bHelpClose" class="b-gold">Got it</button></div>
+    <div class="mdl-f"><button id="bHelpClose" class="b-gold" data-autofocus>Got it</button></div>
   </div></div></div>
 
   <!-- settings -->
@@ -2009,7 +2036,7 @@
     <div class="formgrid">
       <div class="fw hint">One account per line, format <code>Name#TAG</code>. All get the region below — edit individually afterward for logins/notes.</div>
       <div class="fld"><label>Region for all</label><select id="baRegion"></select></div>
-      <div class="fld fw"><label>Accounts</label><textarea id="baList" rows="6" placeholder="Hide on Bush#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
+      <div class="fld fw"><label>Accounts</label><textarea id="baList" data-autofocus rows="6" placeholder="Hide on Bush#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
     </div>
     </div>
     <div class="mdl-f">
@@ -2033,7 +2060,7 @@
       <div class="fld"><label>Region</label>
         <select id="fRegion"></select>
       </div>
-      <div class="fld"><label>Riot name *</label><input id="fName" placeholder="Game name (before the #)"></div>
+      <div class="fld"><label>Riot name *</label><input id="fName" placeholder="Game name (before the #)" data-autofocus></div>
       <div class="fld"><label>Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234 (no #)"></div>
       <div class="fld"><label>Login username</label><input id="fLogin" placeholder="Riot client login" autocomplete="off"></div>
       <div class="fld"><label>Password</label><div style="display:flex;gap:6px">
@@ -2164,6 +2191,13 @@
 
   <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
   <input type="file" id="fileInCsv" accept=".csv,text/csv" class="hidden">
+  <!-- Sixty cards is thirteen screens, and the only way back was to scroll all of
+       them again. Kept out of the way until there is actually something to go back
+       up to. Inside #appRoot: on the lock screen the header is display:none, which
+       the observer below reads as "scrolled past", and the button floated there. -->
+  <button id="toTop" class="to-top hidden" title="Back to top" aria-label="Back to top">
+    <svg class="ico" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+  </button>
   </div>
   <!-- Sixty accounts is more than anyone scrolls to find one. Typing is the
        shortest path to every account and to most of what you would then do with
@@ -2193,12 +2227,6 @@
     </div></div>
   </div>
 
-  <!-- Sixty cards is thirteen screens, and the only way back was to scroll all of
-       them again. Kept out of the way until there is actually something to go back
-       up to. -->
-  <button id="toTop" class="to-top hidden" title="Back to top" aria-label="Back to top">
-    <svg class="ico" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
-  </button>
   <div id="toast" role="status" aria-live="polite"></div>
 </div>
 
@@ -2287,8 +2315,16 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.9.3";
+const APP_VERSION="1.9.4";
 const APP_CHANGELOG=[
+  {v:"1.9.4",items:[
+    "Saved data that can't be read is set aside, never saved over",
+    "A setting saved in one tab survives a save in another",
+    "Sync: every edit is a newer revision; a fast clock elsewhere no longer fakes a conflict",
+    "Locking empties the windows too — no login left behind in a hidden form",
+    "The card's ⋯ menu works from the keyboard, and Tab stays inside Settings",
+    "Phones: list rows and toasts fit the screen; long names ellipsise, flag in view",
+  ]},
   {v:"1.9.3",items:[
     "Tag handle: gold means a tag is filtering, and nothing else — the count is grey until one is",
   ]},
@@ -2599,7 +2635,10 @@ function saveThen(msg,action,fn){
 }
 function touchVaultRev(){
   // Monotonic local revision for LWW device sync — bumped on every successful save.
-  cfg.vaultRev=Math.max(Number(cfg.vaultRev)||0,Date.now());
+  // Strictly bumped: a revision pulled from a device whose clock runs ahead is in
+  // this one's future, and max(rev, now) then stamped an edit with the very number
+  // it was pulled at — which the other device reads as "already in sync".
+  cfg.vaultRev=Math.max((Number(cfg.vaultRev)||0)+1,Date.now());
   saveCfg();
 }
 function saveCfg(){if(!hasStorage)return;try{localStorage.setItem(CFG_KEY,JSON.stringify(cfg))}catch(e){}}
@@ -3190,6 +3229,11 @@ function vaultSyncUrl(){
     return u.href;
   }catch(e){return""}
 }
+/* Both ends of a sync agree on `rev` now. Every path that completes one — push,
+   pull, and the pull that finds nothing to do — records the same two facts, and a
+   path that recorded only the time is what made a later pull compare the other
+   device's clock against this one's. */
+function markSynced(rev){cfg.lastSyncAt=Date.now();cfg.syncedRev=rev;saveCfg()}
 function genSyncToken(){
   const b=crypto.getRandomValues(new Uint8Array(24));
   return b64(b).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
@@ -3259,7 +3303,7 @@ async function pushVaultSync(){
     }
     if(!res.ok){toast("Push failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
     currentEnvelope=envelope;
-    cfg.lastSyncAt=Date.now(); saveCfg();
+    markSynced(updatedAt);
     updateSyncStatus();
     toast("Vault pushed to cloud");
   }catch(e){toast("Push failed: "+(e.message||"network"))}
@@ -3288,10 +3332,15 @@ async function pullVaultSync(force){
     if(!data||!data.envelope||!data.envelope.__enc){toast("Cloud record is not an encrypted vault");return}
     const remoteAt=Number(data.updatedAt)||0;
     const localAt=Number(cfg.vaultRev)||0;
-    const lastSync=Number(cfg.lastSyncAt)||0;
+    /* The revision both sides last agreed on. This used to be lastSyncAt, which is
+       this device's clock, while a pulled revision is the clock of whichever device
+       pushed it — so a pull from one running ahead left this device looking edited
+       for good, and the next pull asked to throw away changes nobody made. Settings
+       from before syncedRev existed fall back to the old comparison. */
+    const lastSync=Number(cfg.syncedRev)||Number(cfg.lastSyncAt)||0;
     // Same revision already on disk — nothing to apply (avoids a rewrite + rev bump).
     if(!force&&remoteAt>0&&remoteAt===localAt&&accounts.length){
-      cfg.lastSyncAt=Date.now(); saveCfg();
+      markSynced(remoteAt);
       updateSyncStatus();
       toast("Already in sync with cloud");
       return;
@@ -3321,8 +3370,7 @@ async function pullVaultSync(force){
     accounts=next.map(sanitizeAccount).filter(Boolean);
     currentEnvelope=data.envelope;
     cfg.vaultRev=remoteAt||Date.now();
-    cfg.lastSyncAt=Date.now();
-    saveCfg();
+    markSynced(cfg.vaultRev);
     // keepRev: this vault *is* the cloud's revision now. Stamping a fresh one
     // would make the next pull think this device had changed since the sync it
     // just performed.
@@ -5005,7 +5053,7 @@ function renderFilterOptions(){
   const order=["active","resting","restricted","banned"];
   const statuses=[...new Set(inView.map(a=>a.status||"active"))].sort((a,b)=>order.indexOf(a)-order.indexOf(b));
   if(ui.status&&!statuses.includes(ui.status))ui.status="";
-  setHTML($("tStatus"),`<option value="">All statuses</option>`+statuses.map(s=>`<option value="${s}">${esc((STATUS[s]||STATUS.active).label)}</option>`).join(""));
+  setHTML($("tStatus"),`<option value="">All statuses</option>`+statuses.map(s=>`<option value="${esc(s)}">${esc((STATUS[s]||STATUS.active).label)}</option>`).join(""));
   $("tStatus").value=ui.status||"";
 }
 
@@ -5172,7 +5220,7 @@ function renderDash(){
     </div>
   </div>
   <div class="dash">
-    <div class="stat"><div class="k">Accounts</div><div class="v">${allActive.length} <small>· ${allActive.filter(a=>a.fav).length} ★${bannedN?" · "+bannedN+" banned":""}${archivedN?" · "+archivedN+" archived":""}</small></div></div>
+    <div class="stat"><div class="k">Accounts</div><div class="v">${allActive.length} <small class="parts"><span>· ${allActive.filter(a=>a.fav).length} ★</span>${bannedN?` <span>· ${bannedN} banned</span>`:""}${archivedN?` <span>· ${archivedN} archived</span>`:""}</small></div></div>
     <div class="stat"><div class="k">Best account</div><div class="v" style="font-size:14px">${bestTxt}</div></div>
     <div class="stat"><div class="k">Season W/L</div><div class="v">${W}W ${L}L <small>· ${wr} WR</small></div>
       <div class="s-note">from ${pool.length} counted account${pool.length===1?"":"s"}</div></div>
@@ -5534,7 +5582,7 @@ function rowHTML(a,i){
       <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}">
       <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
       <span class="rw-id">
-        <span class="rw-nm" title="${esc(a.label||a.gameName)}">${esc(a.label||a.gameName)}${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
+        <span class="rw-nm" title="${esc(a.label||a.gameName)}"><span class="nm-t">${esc(a.label||a.gameName)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
         <span class="rw-tag">${esc(a.gameName)}#${esc(a.tagLine)}</span>
         ${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}
       </span>
@@ -5593,7 +5641,7 @@ function tileHTML(a){
     <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
-    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}${esc(a.label||a.gameName)}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
+    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
     <span class="t-rk" style="color:${col}">${esc(rank)}</span>
     ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
   </div></div>`;
@@ -5840,7 +5888,28 @@ function ensureCardMenu(){
   // The same delegated handler the grid uses — the menu carries the account's
   // data-id, so every branch resolves exactly as it does from inside a card.
   el.addEventListener("click",onCardClick);
+  el.addEventListener("keydown",onCardMenuKey);
   return el;
+}
+/* A menu is somewhere the keyboard goes, not only something it can open. This one
+   is appended to <body>, so in tab order it came after every card in the vault,
+   and nothing ever moved focus into it — which left Rank, Account, Archive and
+   Delete, all of which live only in here in the card layout, out of reach without
+   a mouse. Arrows walk it, Escape and Tab leave it from the ⋯ that opened it. */
+function cardMenuItems(){const m=$("cardMenu");return m?[...m.querySelectorAll('[role="menuitem"]')]:[]}
+function focusCardMenuItem(i){
+  const items=cardMenuItems();
+  if(items.length)items[((i%items.length)+items.length)%items.length].focus();
+}
+function onCardMenuKey(e){
+  const at=cardMenuItems().indexOf(document.activeElement);
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();focusCardMenuItem(at<0?0:at+(e.key==="ArrowDown"?1:-1))}
+  else if(e.key==="Home"){e.preventDefault();focusCardMenuItem(0)}
+  else if(e.key==="End"){e.preventDefault();focusCardMenuItem(-1)}
+  // the page's own Escape would go on to fold the card's panels as well
+  else if(e.key==="Escape"){e.preventDefault();e.stopPropagation();closeCardMenu()}
+  // focus is back on the ⋯ by the time Tab's default runs, so it carries on from the card
+  else if(e.key==="Tab")closeCardMenu();
 }
 function renderCardMenu(){
   const id=[...openMore][0];
@@ -5895,7 +5964,8 @@ function bindCardMenuTracking(on){
     window.removeEventListener("resize",cardMenuTrack);
   }
 }
-function openCardMenu(id,anchor){
+// `focusFirst` when the keyboard opened it: the menu is where the keyboard goes next.
+function openCardMenu(id,anchor,focusFirst){
   const others=[...openMore].filter(x=>x!==id);
   openMore.clear();openMore.add(id);
   cardMenuAnchor=anchor||null;
@@ -5904,15 +5974,20 @@ function openCardMenu(id,anchor){
   renderCardMenu();
   if(window.requestAnimationFrame)requestAnimationFrame(placeCardMenu); // measure once laid out
   bindCardMenuTracking(true);
+  if(focusFirst)focusCardMenuItem(0);
 }
 function closeCardMenu(){
   if(!openMore.size&&!cardMenuAnchor)return false;
-  const ids=[...openMore];
+  const ids=[...openMore], anchor=cardMenuAnchor;
   openMore.clear();cardMenuAnchor=null;
   const el=$("cardMenu");
+  // A focused item about to be hidden drops focus to <body>, and the keyboard
+  // starts over from the top of the page. It goes back to the ⋯ instead.
+  const hadFocus=!!(el&&el.contains(document.activeElement));
   if(el){el.classList.add("hidden");el.removeAttribute("data-id")}
   bindCardMenuTracking(false);
   for(const id of ids)if(accounts.some(a=>a.id===id))renderCard(id);
+  if(hadFocus&&anchor&&anchor.isConnected)anchor.focus();
   return true;
 }
 /* Login is the only panel that still unfolds inside a card — ✎ Rank opens a
@@ -6157,11 +6232,9 @@ function openForm(acc){
   // Which one, in the header: over the page the card being edited is behind the
   // backdrop, so the panel is the only thing left saying what it is editing.
   $("formSub").textContent=acc?acc.gameName+"#"+acc.tagLine:"";
+  // The modal observer focuses the name, which carries data-autofocus — the first
+  // field is the optional label, and the one you came here to type is the name.
   $("form").classList.remove("hidden");
-  // Focused before the observer that manages modal focus gets a look in, so it
-  // leaves this alone: the first field is the optional label, and the one you
-  // came here to type is the name.
-  $("fName").focus();
 }
 function closeForm(){$("form").classList.add("hidden");editingId=null}
 function submitForm(){
@@ -6716,14 +6789,16 @@ function syncModals(){
     }
     const el=open[0];
     if(!el.contains(document.activeElement)){
-      // Help's primary action is Got it — landing on ✕ reads as "leave", not "read".
-      if(el.id==="help"){const got=$("bHelpClose");if(got)got.focus()}
-      else{
-        // the first real field, not the ✕ — landing on Close reads as "are you sure
-        // you meant to open this".
-        const first=el.querySelector("input:not([type=hidden]),select,textarea")||el.querySelector("button");
-        if(first)first.focus();
-      }
+      /* Where a window wants to start is marked in its markup — Help on Got it,
+         since landing on ✕ reads as "leave", not "read"; Add account on the name
+         and Bulk add on the list, past the optional field above each. Two of those
+         used to focus themselves before this ran, which this then recorded as the
+         way back, and closing them dropped focus on <body>. Otherwise the first
+         real field, not the ✕ — landing on Close reads as "are you sure you meant
+         to open this". */
+      const first=el.querySelector("[data-autofocus]")
+        ||el.querySelector("input:not([type=hidden]),select,textarea")||el.querySelector("button");
+      if(first)first.focus();
     }
   }else if(modalReturn){
     // Back to whatever opened it, so the keyboard doesn't restart at the top of
@@ -6755,7 +6830,11 @@ document.addEventListener("keydown",e=>{
   if(e.key!=="Tab")return;
   const el=openModals()[0];
   if(!el)return;
-  const f=[...el.querySelectorAll('a[href],button:not([disabled]),input:not([type=hidden]),select,textarea,[tabindex]:not([tabindex="-1"])')];
+  /* Only what Tab can actually land on. Settings ends in the colour preview, which
+     is inert with tabindex -1 throughout — and its last button, taken as "last",
+     meant Tab from Close was never caught and walked out into the page behind. */
+  const f=[...el.querySelectorAll('a[href],button,input:not([type=hidden]),select,textarea,[tabindex]')]
+    .filter(x=>!x.disabled&&x.getAttribute("tabindex")!=="-1"&&!x.closest("[inert],.hidden"));
   if(!f.length)return;
   const first=f[0], last=f[f.length-1];
   if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}
@@ -7044,11 +7123,9 @@ $("bBulkAdd").addEventListener("click",()=>{
   if(previewMode){previewMode=false;accounts=[];render()}
   closeAllPanels();
   $("baList").value="";
+  // The list carries data-autofocus: the first field is the region select, and
+  // the one you came here to fill is the list.
   $("bulkAdd").classList.remove("hidden");
-  // Before the modal observer gets a look in, the same way openForm does: the
-  // first focusable field is the region select, and the one you came here to
-  // fill is the list.
-  $("baList").focus();
 });
 $("baCancel").addEventListener("click",()=>$("bulkAdd").classList.add("hidden"));
 $("baSave").addEventListener("click",()=>{
@@ -7501,6 +7578,14 @@ $("grid").addEventListener("keydown",e=>{
   const row=e.target&&e.target.classList&&e.target.classList.contains("rw-main")?e.target:null;
   const tile=e.target&&e.target.classList&&e.target.classList.contains("tile")?e.target:null;
   if((row||tile)&&(e.key==="Enter"||e.key===" ")){e.preventDefault();(row||tile).click();return}
+  // ArrowDown on a ⋯ goes into its menu — opening it first, if a click has not.
+  if(e.key==="ArrowDown"&&e.target&&e.target.dataset&&e.target.dataset.act==="more"){
+    const card=e.target.closest("[data-id]");if(!card)return;
+    e.preventDefault();
+    if(openMore.has(card.dataset.id))focusCardMenuItem(0);
+    else openCardMenu(card.dataset.id,e.target,true);
+    return;
+  }
   const ta=e.target;
   if(!ta||!ta.dataset||ta.dataset.f!=="notetext")return;
   if(e.key==="Escape"){
@@ -7576,7 +7661,11 @@ async function onCardClick(e){
     if(card&&card.scrollIntoView)card.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
     setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
   }
-  else if(act==="more"){openMore.has(id)?closeCardMenu():openCardMenu(id,btn)}
+  else if(act==="more"){
+    // Enter or Space on a button is a click with no pointer behind it: detail 0
+    if(openMore.has(id))closeCardMenu();
+    else openCardMenu(id,btn,e.detail===0);
+  }
   else if(act==="fav"){
     acc.fav=!acc.fav;reveal=acc.fav?id+":fav":null;saveDB();
     // Favs pin to the top of every sort — rebuild the grid order, not just this card.
@@ -7813,14 +7902,20 @@ function showLockScreen(envelope){
   $("lock").classList.remove("hidden");
   setTimeout(()=>$("lockPass").focus(),50);
 }
+/* The grid is emptied on a lock, but render() never rewrites the windows over it.
+   An auto-lock that landed while an account was open for editing left its login,
+   password and email sitting in the form's fields, and the rank, compare and quick-
+   find windows and the ⋯ menu went on naming accounts — hidden, and one devtools
+   away from whoever sits down at the keyboard next. Each one is rebuilt from the
+   vault when it next opens, so emptying them costs nothing. */
+function forgetVaultDom(){
+  for(const el of document.querySelectorAll("#form input,#form textarea,#baList,#palInput,#bulkTag,#sVaultPass"))el.value="";
+  for(const id of["formSub","rankSub","rankBody","cmpBody","cardMenu","palList","awayBand","toast"]){const el=$(id);if(el)el.textContent=""}
+}
 function relock(){
   closeCardMenu();   // floats on the body, so hiding #appRoot would leave it on screen
   let envelope=null;
-  try{
-    const raw=hasStorage?localStorage.getItem(DB_KEY):null;
-    const parsed=raw?JSON.parse(raw):null;
-    if(parsed&&parsed.__enc)envelope=parsed;
-  }catch(e){}
+  try{const stored=readStoredVault(hasStorage?localStorage.getItem(DB_KEY):null);envelope=stored&&stored.envelope||null}catch(e){}
   // Disk may briefly lack an envelope (quota mid-write, failed set-password). Prefer
   // the envelope we unlocked with over fail-opening with secrets still in memory.
   if(!envelope)envelope=currentEnvelope;
@@ -7850,6 +7945,8 @@ function relock(){
   armedDelete=null;editingId=null;lastSelectedId=null;flashId=null;
   // an unsaved note draft is vault content too, and it was surviving the lock
   editingNote=null;noteDraft="";
+  lastFails=null; // the failbar names accounts, and render() below redraws it
+  forgetVaultDom();
   // Empty the grid rather than only hiding it. Locking used to leave every card
   // standing in the hidden #appRoot with everything still on it — including a
   // password that had been revealed just before — until the next unlock happened
@@ -7871,16 +7968,70 @@ window.addEventListener("storage",e=>{
     return;
   }
   if(!vaultPassword&&!vaultLocked()){
-    try{
-      const parsed=e.newValue?JSON.parse(e.newValue):null;
-      if(parsed&&parsed.__enc){showLockScreen(parsed);return}
-      accounts=Array.isArray(parsed)?parsed.map(sanitizeAccount).filter(Boolean)
-        :(parsed&&Array.isArray(parsed.accounts)?parsed.accounts.map(sanitizeAccount).filter(Boolean):[]);
-      render();
-      toast("Vault updated from another tab");
-    }catch(err){/* ignore corrupt cross-tab payloads */}
+    const stored=readStoredVault(e.newValue);
+    // Not a shape this build can read: keep this tab's vault rather than empty it.
+    if(!stored)return;
+    if(stored.envelope){showLockScreen(stored.envelope);return}
+    accounts=stored.accounts;
+    render();
+    toast("Vault updated from another tab");
   }
 });
+/* cfg is one object written whole, and every vault save writes it as well — the
+   sync revision lives in it. Each tab held its own copy, so a setting saved in one
+   (a sync token just generated, the backend URL) was written straight back out by
+   the other the next time it saved anything at all. Adopted as it lands instead. */
+window.addEventListener("storage",e=>{
+  if(!e||e.key!==CFG_KEY||e.storageArea!==localStorage||!e.newValue)return;
+  try{Object.assign(cfg,JSON.parse(e.newValue))}catch(err){return}
+  syncLockTimer(); // the auto-lock minutes may be what changed
+});
+/* Every shape the vault key has been seen holding, read one way. Boot and another
+   tab's write each kept their own list, and the cross-tab one mapped anything it
+   did not know onto an empty vault. null means "there is something here, and it is
+   none of these" — never the same thing as an empty vault. */
+function readStoredVault(raw){
+  if(!raw)return{accounts:[]};
+  let parsed;
+  try{parsed=JSON.parse(raw)}catch(e){return null}
+  if(parsed==null)return{accounts:[]};
+  if(parsed.__enc)return{envelope:parsed};
+  /* An export file is {app, version, accounts}, not a bare array. Dropping that
+     into localStorage — or restoring a backup with a tool that writes the file
+     body straight into the key — used to boot an empty vault: Array.isArray on
+     the object is false, and nothing else looked. The next saveDB writes the
+     array shape back, so this is only a one-time rescue. */
+  const list=Array.isArray(parsed)?parsed:Array.isArray(parsed.accounts)?parsed.accounts:null;
+  if(list)return{accounts:list.map(sanitizeAccount).filter(Boolean)};
+  // The encrypted export is the same rescue for the other kind of backup file.
+  if(parsed.envelope&&parsed.envelope.__enc)return{envelope:parsed.envelope};
+  return null;
+}
+/* Anything boot cannot read used to open as an empty vault, and the first save
+   wrote the new one straight over the only copy of the old. It is set aside under
+   a key of its own first — once: until something is saved the vault key still holds
+   it, and a copy per reload would fill the quota with the same thing. If even one
+   copy cannot be written, nothing is written at all this session — an app that
+   cannot save is better than one that saves over this. */
+function keepUnreadableVault(raw){
+  const prefix=DB_KEY+"-unreadable-";
+  let side=null;
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k&&k.startsWith(prefix)&&localStorage.getItem(k)===raw){side=k;break}
+    }
+  }catch(e){}
+  if(!side){
+    const k=prefix+Date.now();
+    try{localStorage.setItem(k,raw);side=k}catch(e){}
+  }
+  if(!side)hasStorage=false;
+  $("banner").textContent=side
+    ?"The saved vault could not be read, so this opened empty. What was there is kept untouched in this browser's storage as \""+side+"\"."
+    :"The saved vault could not be read, and there was no room to keep a copy — nothing will be saved this session, so the original stays as it was.";
+  $("banner").classList.add("show");
+}
 function boot(){
   $("fRegion").innerHTML=Object.keys(REGIONS).map(r=>`<option value="${r}">${esc(r)} — ${esc(REGIONS[r].full)}</option>`).join("");
   $("sAutoEvery").innerHTML=AUTO_EVERY.map(o=>`<option value="${o.v}">${esc(o.label)}</option>`).join("");
@@ -7890,7 +8041,16 @@ function boot(){
   renderVersion();
   hasStorage=storageOK();
   if(!hasStorage){$("banner").classList.add("show")}
-  try{const c=hasStorage?localStorage.getItem(CFG_KEY):null;if(c)cfg=Object.assign(cfg,JSON.parse(c))}catch(e){}
+  try{
+    const c=hasStorage?localStorage.getItem(CFG_KEY):null;
+    if(c)cfg=Object.assign(cfg,JSON.parse(c));
+    /* "What's new" is only news to somebody who had the version before. A first
+       visit — no settings and no vault; a vault without settings is an older
+       build's, and its owner is exactly who the changelog is for — used to get a
+       toast about the tag handle's count over the welcome window. It records the
+       version quietly instead, so the next update is the one it hears about. */
+    else if(hasStorage&&!localStorage.getItem(DB_KEY)){cfg.lastChangelog=APP_VERSION;saveCfg()}
+  }catch(e){}
   if(MODEL_ALIASES[cfg.model]){cfg.model=MODEL_ALIASES[cfg.model];saveCfg()}
   {
     let cfgDirty=false;
@@ -7917,20 +8077,12 @@ function boot(){
   if(cfg.accent)applyAccent(cfg.accent);
   if(cfg.accent2)applyAccent2(cfg.accent2);
   applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);
-  let envelope=null;
-  try{
-    const raw=hasStorage?localStorage.getItem(DB_KEY):null;
-    const parsed=raw?JSON.parse(raw):null;
-    if(parsed&&parsed.__enc)envelope=parsed;
-    else if(Array.isArray(parsed))accounts=parsed.map(sanitizeAccount).filter(Boolean);
-    /* An export file is {app, version, accounts}, not a bare array. Dropping that
-       into localStorage — or restoring a backup with a tool that writes the file
-       body straight into the key — used to boot an empty vault: Array.isArray on
-       the object is false, and nothing else looked. The next saveDB writes the
-       array shape back, so this is only a one-time rescue. */
-    else if(parsed&&Array.isArray(parsed.accounts))accounts=parsed.accounts.map(sanitizeAccount).filter(Boolean);
-  }catch(e){}
-  if(envelope)showLockScreen(envelope);
+  let raw=null;
+  try{raw=hasStorage?localStorage.getItem(DB_KEY):null}catch(e){}
+  const stored=readStoredVault(raw);
+  if(!stored)keepUnreadableVault(raw);
+  else if(stored.accounts)accounts=stored.accounts;
+  if(stored&&stored.envelope)showLockScreen(stored.envelope);
   else startApp();
 }
 boot();

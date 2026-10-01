@@ -1,8 +1,8 @@
 // Smurf Tracker offline cache. Only useful when the app is hosted over http(s)
 // (e.g. GitHub Pages) — service workers cannot register on file:// pages, so
 // opening the HTML file directly just skips all of this, which is fine.
-// Bump SW cache so the 1.9.3 tag-handle fix reaches hosted installs.
-const CACHE = "smurf-tracker-cache-v77";
+// Bump SW cache so the 1.9.4 inspection pass reaches hosted installs.
+const CACHE = "smurf-tracker-cache-v78";
 // index.html is the shell; "./" was a redundant second cache of the same document.
 const ASSETS = [
   "./index.html",

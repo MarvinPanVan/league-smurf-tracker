@@ -5532,14 +5532,16 @@ test("every panel that locks page scrolling is fixed over the page", () => {
   }
 });
 
-test("bulk add opens over the page, focused on the list", () => {
+test("bulk add opens over the page, focused on the list", async () => {
   const win = bootApp(seededAccount());
   const panel = win.document.getElementById("bulkAdd");
   assert.equal(panel.classList.contains("hidden"), true);
   win.document.getElementById("bBulkAdd").click();
   assert.equal(panel.classList.contains("hidden"), false);
   assert.ok(win.openModals().some(m => m.id === "bulkAdd"), "and it counts as a modal");
-  // the region select is the first focusable field; the textarea is the one you came for
+  // the region select is the first focusable field; the textarea is the one you came
+  // for — focused by the modal observer, which runs as a microtask
+  await tick();
   assert.equal(win.document.activeElement.id, "baList");
   // Save/Cancel are pinned in the footer, outside the part that scrolls
   assert.ok(win.document.querySelector("#bulkAdd .mdl-f #baSave"));
@@ -5777,4 +5779,402 @@ test("the tag handle is only gold when a tag is actually filtering", () => {
   const handle = () => win.document.querySelector(".tag-handle");
   assert.match(handle().textContent.replace(/\s+/g, ""), /Tags1/, "the vault has one tag");
   assert.equal(handle().classList.contains("lit"), false, "and nothing is filtering by it");
+});
+
+/* boot() understood three shapes: an envelope, an array, and a plaintext export
+   file. Anything else — an *encrypted* export written into the key the same way
+   the plaintext rescue above expects, or a value that no longer parses — booted
+   an empty, unlocked vault, and the first save then wrote the new array straight
+   over the only copy of the old one. */
+test("an encrypted backup dropped into localStorage asks for its password", async () => {
+  const maker = bootApp();
+  const envelope = await maker.encryptData("pw-1234", [{ id: "e1", gameName: "Sealed", tagLine: "EUW",
+    region: "EUW", status: "active", stats: null, history: [], tags: [] }]);
+  const raw = JSON.stringify({ app: "smurf-tracker", version: 2, encrypted: true, envelope });
+  const win = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker", raw));
+  assert.equal(win.document.getElementById("lock").classList.contains("hidden"), false,
+    "it is a vault with a password on it, so the lock screen comes up");
+  assert.equal(win.localStorage.getItem("smurf-tracker"), raw, "and nothing has been written over it");
+  win.document.getElementById("lockPass").value = "pw-1234";
+  win.document.getElementById("lockBtn").click();
+  await until(() => win.document.querySelectorAll(".card").length === 1, "the backup to unlock");
+  assert.match(win.document.querySelector(".card").textContent, /Sealed/);
+});
+
+test("saved data the app cannot read is kept, not overwritten by the next save", () => {
+  const raw = '[{"id":"t1","gameName":"Truncat';
+  const win = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker", raw));
+  addRealAccount(win, "Fresh", "NEW");
+  const kept = Object.keys(win.localStorage).filter(k => k.startsWith("smurf-tracker-unreadable"));
+  assert.equal(kept.length, 1, "a copy of what was there is set aside before anything is saved");
+  assert.equal(win.localStorage.getItem(kept[0]), raw, "byte for byte");
+  const banner = win.document.getElementById("banner");
+  assert.ok(banner.classList.contains("show"), "and the page says so, rather than looking like a new vault");
+  assert.match(banner.textContent, /could not be read/i);
+  assert.match(banner.textContent, new RegExp(kept[0]), "naming where the copy is");
+});
+
+test("with no room to set it aside, unreadable saved data is left alone entirely", () => {
+  const raw = "{not json at all";
+  const win = bootApp(undefined, w => {
+    w.localStorage.setItem("smurf-tracker", raw);
+    const set = w.Storage.prototype.setItem;
+    w.Storage.prototype.setItem = function (k, v) {
+      if (String(k).startsWith("smurf-tracker-unreadable")) throw new Error("QuotaExceededError");
+      return set.call(this, k, v);
+    };
+  });
+  addRealAccount(win, "Fresh", "NEW");
+  assert.equal(win.localStorage.getItem("smurf-tracker"), raw, "the original is still the only thing in the key");
+  assert.match(win.document.getElementById("banner").textContent, /nothing will be saved/i);
+});
+
+/* cfg is one object written whole, and every vault save writes it too (the sync
+   revision lives there). Two open tabs each held their own copy, so a setting
+   saved in one — the sync token you just generated, the backend URL — was
+   written straight back out by the other the next time it saved anything. */
+test("a setting saved in another tab survives this tab's next save", async () => {
+  const win = bootApp(seededAccount());
+  // the other tab: generates a sync token and sets a backend, which lands on disk
+  const other = JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  Object.assign(other, { syncToken: "tok-from-the-other-tab-1234", backendUrl: "https://w.example.workers.dev" });
+  const value = JSON.stringify(other);
+  win.localStorage.setItem("smurf-tracker-cfg", value);
+  win.dispatchEvent(new win.StorageEvent("storage", { key: "smurf-tracker-cfg", newValue: value,
+    storageArea: win.localStorage }));
+  // this tab: star an account, which saves the vault and with it cfg
+  win.document.querySelector('.card [data-act="fav"]').click();
+  await until(() => JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].fav === true, "the star to save");
+  const disk = JSON.parse(win.localStorage.getItem("smurf-tracker-cfg"));
+  assert.equal(disk.syncToken, "tok-from-the-other-tab-1234", "the other tab's token is still there");
+  assert.equal(disk.backendUrl, "https://w.example.workers.dev");
+});
+
+/* touchVaultRev took max(previous, now). After a pull from a device whose clock
+   runs ahead, "previous" is in this device's future, so an edit made inside that
+   gap stamped the very revision it had just pulled. The other device then asked,
+   saw equal numbers, answered "Already in sync" — and never took the edit. */
+test("every save advances the sync revision, even ahead of this device's clock", async () => {
+  const win = bootApp(seededAccount());
+  const ahead = Date.now() + 60000;   // pulled from a device a minute fast
+  runScript(win, `cfg.vaultRev = ${ahead};`);
+  win.document.querySelector('.card [data-act="fav"]').click();
+  await until(() => JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].fav === true, "the star to save");
+  assert.ok(appGet(win, "cfg.vaultRev") > ahead, "a real change is a newer revision than the one it was made on top of");
+});
+
+/* Every other value in the toolbar's dropdowns goes through esc(); the status
+   options were the one exception, and a status is free text by the time it is on
+   disk — import pins it to a known one, but boot, unlock, a cloud pull and another
+   tab's write do not. A stored status of `"><img onerror=…>` ran as markup. */
+test("a stored status cannot break out of the status filter", () => {
+  const evil = '"><img src=x onerror="window.__pwned=1">';
+  const win = bootApp([{ id: "x1", gameName: "Odd", tagLine: "1", region: "EUW", status: evil,
+    tags: [], history: [], stats: null }]);
+  const sel = win.document.getElementById("tStatus");
+  assert.equal(sel.querySelector("img"), null, "no element was created out of it");
+  assert.equal(win.__pwned, undefined);
+  assert.ok([...sel.options].some(o => o.value === evil), "it is still a value you can pick, verbatim");
+});
+
+/* Locking empties the grid so a revealed password cannot outlive it — but the
+   windows over the grid were left as they were. An auto-lock that landed while
+   an account was open for editing kept its login, password and email in the
+   form's fields, and the rank, compare and quick-find windows and the ⋯ menu
+   kept account names, all a devtools away from anyone at the keyboard. */
+test("locking empties the windows as well as the grid", async () => {
+  const seed = seededAccount();
+  Object.assign(seed[0], { login: "secret-login", password: "secret-pass", email: "me@mail.gg", notes: "private note" });
+  const win = bootApp(seed);
+  runScript(win, 'vaultPassword = "a-master-password";');
+  await win.saveDB();
+  await until(() => encrypted(win), "the vault to be written encrypted");
+
+  win.openRankModal("seed1"); win.closeRankModal();
+  cardMenu(win, "seed1").querySelector('[data-act="edit"]').click();   // Account… — the form, filled in
+  assert.equal(win.document.getElementById("fPass").value, "secret-pass", "the form is holding the login");
+  win.document.getElementById("baList").value = "Pasted Name#EUW";
+  win.relock();
+
+  const doc = win.document;
+  const leftovers = [...doc.querySelectorAll("input,textarea")].filter(el => el.value && el.type !== "checkbox"
+    && /secret|me@mail|private|Seeded|Main|Pasted/.test(el.value)).map(el => el.id + "=" + el.value);
+  assert.deepEqual(leftovers, [], "no field still holds vault content");
+  for (const id of ["formSub", "rankSub", "rankBody", "cardMenu"]) {
+    const el = doc.getElementById(id);
+    assert.doesNotMatch(el ? el.textContent : "", /Seeded|Main/, `#${id} no longer names the account`);
+  }
+});
+
+/* The ⋯ menu is appended to <body>, so in tab order it came after every card in
+   the vault, and nothing ever moved focus into it — Rank, Account, Archive and
+   Delete live only in there in the card layout, and none of them could be reached
+   without a mouse. Escape and picking an item then dropped focus on <body>. */
+test("the card's ⋯ menu works from the keyboard", () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document;
+  const more = doc.querySelector('.card [data-act="more"]');
+  const items = () => [...doc.querySelectorAll('#cardMenu [role="menuitem"]')];
+  const key = k => doc.activeElement.dispatchEvent(new win.KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true }));
+
+  // Enter or Space on a button arrives as a click with no pointer behind it: detail 0
+  more.focus();
+  more.dispatchEvent(new win.MouseEvent("click", { bubbles: true, detail: 0 }));
+  assert.equal(doc.getElementById("cardMenu").classList.contains("hidden"), false, "the menu opened");
+  assert.equal(doc.activeElement, items()[0], "and focus went into it, onto the first item");
+  key("ArrowDown");
+  assert.equal(doc.activeElement, items()[1], "arrows walk the items");
+  key("End");
+  assert.equal(doc.activeElement, items().at(-1));
+  key("ArrowDown");
+  assert.equal(doc.activeElement, items()[0], "and wrap");
+  key("Escape");
+  assert.equal(doc.getElementById("cardMenu").classList.contains("hidden"), true, "Escape closes it");
+  assert.equal(doc.activeElement, more, "and hands focus back to the ⋯, not to <body>");
+
+  // picking an item from the keyboard also lands back on the ⋯
+  more.dispatchEvent(new win.MouseEvent("click", { bubbles: true, detail: 0 }));
+  items().find(b => b.dataset.act === "played").click();
+  assert.equal(doc.activeElement, more);
+
+  // a real mouse click leaves focus alone, the way it always has
+  more.dispatchEvent(new win.MouseEvent("click", { bubbles: true, detail: 1 }));
+  assert.equal(doc.activeElement, more, "a pointer click does not pull focus into the menu");
+  key("ArrowDown");
+  assert.equal(doc.activeElement, items()[0], "but ArrowDown from the ⋯ goes in");
+});
+
+/* The Tab trap took the last match of a broad selector as "the last field", and in
+   Settings that was a button inside the colour preview — inert, tabindex -1, and
+   never focused. So Tab from the real last control, Close, was never caught, and
+   focus walked out of the window into the dashboard behind it (Chromium: after
+   thirty presses). Only what Tab can actually land on counts now. */
+test("Tab stays inside Settings", () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document;
+  win.openSettings();
+  const tab = (shift) => {
+    const ev = new win.KeyboardEvent("keydown", { key: "Tab", shiftKey: !!shift, bubbles: true, cancelable: true });
+    doc.activeElement.dispatchEvent(ev);
+    return ev.defaultPrevented;
+  };
+  const close = doc.getElementById("sClose");
+  close.focus();
+  assert.equal(tab(), true, "Tab from the last real control is caught");
+  assert.ok(doc.getElementById("settings").contains(doc.activeElement), "and lands back inside the window");
+  assert.equal(doc.activeElement.closest("[inert]"), null, "never on something inert");
+  assert.equal(tab(true), true, "Shift+Tab from there goes round the other way");
+  assert.equal(doc.activeElement, close);
+});
+
+/* On a phone the list row was laid out as fixed minimums — 110px of name, 90px of
+   rank, 54px of LP change — that add up to 36px more than a 390px row holds. So
+   every row overflowed its own box: the rank was cut to "Diamond…", which is the
+   one part of it that says where the account is, the LP pill was sliced through
+   and the chevron was off the edge altogether (Chromium: 40 of 40 rows). Nothing
+   lays out in jsdom, so this guards the declarations; the fix was measured there. */
+test("on a phone a list row fits its rank instead of cutting it short", () => {
+  const at = html.indexOf("@media (max-width:720px){\n    .rw-main{");
+  assert.ok(at > -1, "the phone list rule is still there");
+  const phone = html.slice(at, html.indexOf("}", at));
+  assert.match(phone, /grid-template-columns:auto 36px minmax\(0,1fr\) 106px 58px 16px/,
+    "the name takes what is left; rank and change are wide enough for their longest labels, and fixed so they line up");
+  const n = html.indexOf("@media (max-width:440px){");
+  assert.ok(n > at, "and a narrower step for the smallest phones, after it so it wins");
+  const small = html.slice(n, html.indexOf("\n  }", n));
+  assert.match(small, /\.rw-main\{grid-template-columns:auto 36px minmax\(0,1fr\) 106px 16px;/,
+    "where the change gives its column up rather than the rank");
+  assert.match(small, /\.rw-d\{display:none\}/);
+  // Measured in Chromium at 390: 15 + 36 + 106 + 16 + 4 gaps of 8 leaves the name
+  // 117px of a 334px row; at 360 it is 87px.
+});
+
+/* Add account and Bulk add focus their real first field themselves, before the
+   observer that manages modal focus gets a look in — on purpose, so they land on
+   the name and the list rather than the label and the region. But that observer
+   then recorded *that field* as where to send focus back to, and on close it went
+   back into a hidden form and fell through to <body>. */
+test("closing Add account or Bulk add hands focus back to what opened it", async () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document;
+  const esc = () => doc.activeElement.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+  const add = doc.getElementById("bAdd");
+  add.focus(); add.click();
+  await tick();
+  assert.equal(doc.activeElement.id, "fName", "it still opens on the name");
+  esc(); await tick();
+  assert.equal(doc.activeElement, add, "and closing goes back to + Add account");
+
+  const more = doc.getElementById("bMore");
+  more.click();
+  const bulk = doc.getElementById("bBulkAdd");
+  bulk.focus(); bulk.click();
+  await tick();
+  assert.equal(doc.activeElement.id, "baList");
+  esc(); await tick();
+  assert.equal(doc.activeElement, more, "the ⋯ that the menu hangs off, since the item itself is hidden now");
+});
+
+/* The nowrap that stops "WR" being stranded on a line of its own applies to every
+   tile's caption, and the Accounts tile's is a list — "· 7 ★ · 5 banned · 5
+   archived" — far longer than a tile is wide, in a tile that is overflow:hidden.
+   So it was cut at "· 5 archiv" at every width from 1440 down to a phone. Its
+   pieces still never break inside; the list breaks between them. */
+test("the Accounts tile's caption wraps between its pieces instead of being cut off", () => {
+  const acc = (id, extra) => Object.assign({ id, gameName: id, tagLine: "1", region: "EUW", status: "active",
+    tags: [], history: [], stats: null }, extra);
+  const win = bootApp([acc("a", { fav: true }), acc("b", { status: "banned" }), acc("c", { archived: true })]);
+  const small = [...win.document.querySelectorAll("#dash .stat")]
+    .find(s => /Accounts/i.test(s.querySelector(".k").textContent)).querySelector(".v small");
+  assert.ok(small.classList.contains("parts"), "the caption is marked as a list of pieces");
+  assert.deepEqual([...small.children].map(c => c.textContent.trim()), ["· 1 ★", "· 1 banned", "· 1 archived"],
+    "one element per piece, so a line can only break between them");
+  const rule = html.match(/\.stat \.v small\.parts\{[^}]*\}/);
+  const piece = html.match(/\.stat \.v small\.parts>span\{[^}]*\}/);
+  assert.ok(rule && piece, "both rules are there");
+  assert.match(rule[0], /white-space:normal/);
+  assert.match(piece[0], /white-space:nowrap/);
+});
+
+/* text-overflow only works on a block that holds the text itself. The wall tile's
+   and the list row's name boxes are flex containers with the name as a bare text
+   node beside the star and the flag, so a long name was sheared off mid-letter
+   with no ellipsis, and the flag after it was pushed out of sight — on exactly the
+   accounts the flag exists to point at. */
+test("a long name ellipsises in the wall and the list, and keeps its flag in view", () => {
+  const long = "This is an extremely long account label that will not fit anywhere";
+  const win = bootApp([{ id: "l1", label: long, gameName: "Long", tagLine: "1", region: "EUW", status: "active",
+    flagged: true, fav: true, tags: [], history: [], stats: null }]);
+  const doc = win.document;
+  for (const layout of ["wall", "list"]) {
+    doc.querySelector(`#density [data-density="${layout}"]`).click();
+    const box = doc.querySelector(layout === "wall" ? ".t-nm" : ".rw-nm");
+    const text = box.querySelector(".nm-t");
+    assert.ok(text, `${layout}: the name sits in an element of its own`);
+    assert.equal(text.textContent, long);
+    assert.ok(box.querySelector(".flagmark"), `${layout}: the flag is still there beside it`);
+  }
+  const rule = html.match(/\.c-name>span,\.t-nm>\.nm-t,\.rw-nm>\.nm-t\{[^}]*\}/);
+  assert.ok(rule, "one rule ellipsises the name in all three layouts");
+  assert.match(rule[0], /text-overflow:ellipsis/);
+  assert.match(rule[0], /overflow:hidden/, "which also lets the flex item get narrower than its text");
+  assert.match(html.match(/\.rw-star\{[^}]*\}/)[0], /flex-shrink:0/, "the star does not give way to the name either");
+});
+
+/* "Back to top" is shown whenever the header is out of view — and on the lock
+   screen the header is not merely scrolled away, it is display:none along with
+   the rest of the app. So the button floated in the corner of the lock screen
+   (Chromium, every width), offering to scroll to a search box that was not there.
+   It belongs to the app, so it lives in the app's root and goes when that does. */
+test("the lock screen has no back-to-top button", async () => {
+  const maker = bootApp();
+  const envelope = await maker.encryptData("pw-1234", []);
+  const win = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker", JSON.stringify(envelope)));
+  const doc = win.document;
+  assert.equal(doc.getElementById("lock").classList.contains("hidden"), false, "locked");
+  assert.ok(doc.getElementById("appRoot").contains(doc.getElementById("toTop")),
+    "it is inside #appRoot, so hiding the app hides it, whatever the observer thinks of the header");
+});
+
+/* The changelog toast keys off cfg.lastChangelog, which a first visit does not
+   have — so somebody opening the app for the first time was told, over the top
+   of the welcome window, that "the tag handle's count is grey until one is
+   filtering", about a release they had never seen the one before of. A first
+   visit records the version quietly; an update still announces itself. */
+test("a first visit is not shown a changelog; an update still is", () => {
+  const first = bootApp();
+  assert.doesNotMatch(first.document.getElementById("toast").textContent, /^v\d/, "nothing to compare against yet");
+  assert.equal(appGet(first, "cfg.lastChangelog"), appGet(first, "APP_VERSION"), "but the version is recorded, so the next one is news");
+
+  const returning = bootApp(seededAccount(), w => w.localStorage.setItem("smurf-tracker-cfg",
+    JSON.stringify({ seenHelp: true, lastChangelog: "1.0.0" })));
+  assert.match(returning.document.getElementById("toast").textContent, /^v\d/, "someone on an older version hears what changed");
+});
+
+/* Until something is saved, the vault key still holds what could not be read — so
+   every reload set it aside again, under a fresh name, as another full-size copy,
+   until the quota ran out and the app stopped saving altogether. */
+test("unreadable saved data is set aside once, not once per reload", () => {
+  const raw = '{"broken":';
+  const win = bootApp(undefined, w => {
+    w.localStorage.setItem("smurf-tracker", raw);
+    w.localStorage.setItem("smurf-tracker-unreadable-1700000000000", raw);   // an earlier load's copy
+  });
+  const kept = Object.keys(win.localStorage).filter(k => k.startsWith("smurf-tracker-unreadable"));
+  assert.deepEqual(kept, ["smurf-tracker-unreadable-1700000000000"], "the copy that is already there is the copy");
+  assert.match(win.document.getElementById("banner").textContent, /smurf-tracker-unreadable-1700000000000/);
+});
+
+/* The other half of the same reader: another tab's write was mapped onto an empty
+   vault whenever its shape was not one of the three the listener knew — this tab
+   then showed nothing, and its next save wrote nothing over everything. */
+test("a write from another tab that cannot be read leaves this tab's vault alone", () => {
+  const win = bootApp(seededAccount());
+  const odd = JSON.stringify({ something: "else" });
+  win.localStorage.setItem("smurf-tracker", odd);
+  win.dispatchEvent(new win.StorageEvent("storage", { key: "smurf-tracker", newValue: odd, storageArea: win.localStorage }));
+  assert.equal(win.document.querySelectorAll(".card").length, 1, "the account is still on screen");
+  assert.equal(appGet(win, "accounts.length"), 1, "and still in memory");
+});
+
+/* "Has this device changed since the last sync" compared the vault's revision —
+   which after a pull is the *other* device's clock — against lastSyncAt, which is
+   this device's. Pull once from a device whose clock runs ahead and this one looks
+   edited forever after: the next pull of a newer cloud copy asked whether to throw
+   away local changes that were never made. */
+test("a pull from a device whose clock runs ahead does not make this one look edited", async () => {
+  const AHEAD = Date.now() + 10 * 60000;
+  const win = bootApp([{ id: "a1", region: "EUW", gameName: "Local", tagLine: "1", status: "active",
+    tags: [], history: [], stats: null }]);
+  runScript(win, `
+    vaultPassword = "test-pass-1234";
+    cfg.backendUrl = "https://example.workers.dev";
+    cfg.syncToken = "sync-token-abcdef12";
+    cfg.vaultRev = 100; cfg.lastSyncAt = 100;
+  `);
+  const vault = name => win.encryptData("test-pass-1234", [{ id: "c1", region: "EUW", gameName: name,
+    tagLine: "2", status: "active", tags: [], history: [], stats: null }]);
+  let record = { updatedAt: AHEAD, envelope: await vault("CloudOne") };
+  win.fetch = async () => new Response(JSON.stringify(record), { status: 200 });
+  const toast = () => win.document.getElementById("toast").textContent;
+
+  await win.pullVaultSync(false);
+  await until(() => /pulled/i.test(toast()), "the first pull to land");
+  record = { updatedAt: AHEAD + 5000, envelope: await vault("CloudTwo") };   // the other device pushes again
+  await win.pullVaultSync(false);
+  await until(() => /CloudTwo/.test(win.document.querySelector(".card").textContent)
+    || /changed after last sync/i.test(toast()), "the second pull to answer");
+  assert.doesNotMatch(toast(), /changed after last sync/i, "nothing was edited here, so there is nothing to lose");
+  assert.match(win.document.querySelector(".card").textContent, /CloudTwo/);
+
+  // and a real edit made here after that is still caught before a pull drops it
+  win.document.querySelector('.card [data-act="fav"]').click();
+  await until(() => appGet(win, "cfg.vaultRev") > AHEAD + 5000, "the star to save");
+  record = { updatedAt: AHEAD + 9000, envelope: await vault("CloudThree") };
+  await win.pullVaultSync(false);
+  assert.match(toast(), /changed after last sync/i, "a local change still asks first");
+  assert.match(win.document.querySelector(".card").textContent, /CloudTwo/, "and nothing was replaced");
+});
+
+/* No saved settings is not on its own a first visit: a vault from a build that
+   never wrote them, or whose settings write failed, has accounts and no cfg — and
+   its owner is exactly who the changelog is for. */
+test("a vault with no saved settings still hears what changed", () => {
+  const win = bootApp(seededAccount());   // accounts on disk, no cfg key at all
+  assert.match(win.document.getElementById("toast").textContent, /^v\d/);
+});
+
+/* A box positioned at left:50% with no width of its own shrinks to fit the space
+   to the right of that point — half the viewport. On a 390px phone every toast was
+   195px wide: the preview notice, an update's "what's new", "Already in the vault:
+   …" all came out as a tall pill of five to nine short lines. It is as wide as its
+   text, up to the screen minus the page gutters. */
+test("a toast can use the width of a phone, not half of it", () => {
+  const rule = html.match(/#toast\{position:fixed;[^}]*\}/);
+  assert.ok(rule, "the toast rule is still there");
+  assert.match(rule[0], /left:50%/, "still centred the same way");
+  assert.match(rule[0], /width:max-content/, "sized by its text rather than by the half-viewport left over");
+  assert.match(rule[0], /max-width:min\(720px,calc\(100vw - 32px\)\)/,
+    "never wider than the screen, nor than the measure a desktop always had");
 });
