@@ -1011,6 +1011,20 @@ test("a new vault gets four set-up steps, each a button, until they are done or 
   assert.equal(appGet(win, "cfg.setupHidden"), true, "and it stays hidden");
 });
 
+test("app icon shortcuts: the manifest offers Check all and Add account, and the page does each once", async () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "manifest.json"), "utf8"));
+  assert.deepEqual(manifest.shortcuts.map(s => s.url), ["./index.html?action=checkall", "./index.html?action=add"]);
+  for (const s of manifest.shortcuts) assert.ok(fs.existsSync(path.join(__dirname, "..", s.icons[0].src)), s.icons[0].src);
+  const add = bootApp(null, w => w.history.replaceState(null, "", "/index.html?action=add"));
+  await until(() => !add.document.getElementById("form").classList.contains("hidden"), "the Add form to open");
+  assert.equal(add.location.search, "", "and the address is cleaned, so a reload does not repeat it");
+  let checked = 0;
+  const seed = [{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }];
+  const chk = bootApp(seed, w => { w.history.replaceState(null, "", "/index.html?action=checkall"); });
+  runScript(chk, "checkAll = () => { window.__checked = (window.__checked || 0) + 1; }");
+  await until(() => chk.__checked === 1, "Check all to start");
+});
+
 test("This week: LP and games over the last seven days, the best climber one click away", () => {
   const D = 86400000, now = Date.now();
   const pt = (ago, tier, division, lp, w, l) => ({ t: now - ago * D, tier, division, lp, w, l });

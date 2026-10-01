@@ -8973,6 +8973,17 @@ function showChangelogIfNeeded(){
   if(!entry||!entry.items||!entry.items.length)return;
   toast("v"+entry.v+": "+entry.items.slice(0,2).join(" · ")+(entry.items.length>2?"…":""));
 }
+// The installed app's icon shortcuts (manifest.json) open the page with
+// ?action=…. It is read once and wiped from the address bar, so a reload or a
+// bookmark of that address does not do it again; a locked vault runs it after
+// the unlock, when startApp first gets to it.
+let startAction=null;
+try{startAction=new URLSearchParams(location.search).get("action");if(startAction)history.replaceState(null,"",location.pathname+location.hash)}catch(e){}
+function runStartAction(){
+  const a=startAction;startAction=null;
+  if(a==="add")openForm(null);
+  else if(a==="checkall"){if(accounts.length)checkAll();else toast("No accounts to check yet — add one first")}
+}
 function startApp(){
   $("appRoot").classList.remove("hidden");
   syncLockTimer();
@@ -8985,6 +8996,7 @@ function startApp(){
   setTimeout(()=>$("grid").classList.remove("boot"),1200);
   if(!cfg.seenHelp&&accounts.length===0)$("help").classList.remove("hidden");
   showChangelogIfNeeded();
+  if(startAction)setTimeout(runStartAction,0); // after boot's own first paint
   if(cfg.autoCheck){
     const staleAccs=accounts.filter(autoCheckDue);
     if(staleAccs.length){
