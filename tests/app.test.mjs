@@ -705,6 +705,23 @@ test("a dense chart is a line and its latest reading, a sparse one keeps a dot p
   assert.match(html, /\.lpc\.dense \.lpc-pt:not\(\.now\):not\(:hover\) i\{transform:scale\(0\)\}/, "and the rest show on hover");
 });
 
+test("the backup reminder carries the way to act on it", () => {
+  const win = bootApp();
+  addRealAccount(win, "Keep", "1");
+  const btn = win.document.getElementById("bkNow");
+  assert.ok(btn, "the reminder has its own button, not a pointer at the ⋯ menu");
+  assert.doesNotMatch(win.document.querySelector(".bk-note").textContent, /hit Export/);
+  let downloads = 0;
+  win.URL.createObjectURL = () => "blob:x"; win.URL.revokeObjectURL = () => {};
+  const orig = win.HTMLAnchorElement.prototype.click;
+  win.HTMLAnchorElement.prototype.click = function () { downloads++; };
+  try { btn.click(); } finally { win.HTMLAnchorElement.prototype.click = orig; }
+  assert.equal(downloads, 1, "one click backs the vault up");
+  assert.ok(appGet(win, "cfg.lastExport") > 0, "and it counts as the backup it is");
+  runScript(win, "renderDash()");
+  assert.equal(win.document.getElementById("bkNow"), null, "so the reminder goes");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");

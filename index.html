@@ -365,6 +365,11 @@
   .banner{display:none;border:1px solid color-mix(in srgb,var(--danger) 45%,transparent);color:var(--danger);
     background:color-mix(in srgb,var(--danger) 9%,var(--panel));padding:12px 16px;font-size:13px;margin-bottom:18px;border-radius:var(--r-md)}
   .banner.show{display:block}
+  .bk-note{display:flex;align-items:center;gap:8px;margin:-4px 0 16px;font-size:12px;color:var(--muted)}
+  .bk-note .ico{color:var(--faint)}
+  .bk-note button{padding:3px 9px;font-size:12px;font-weight:600;color:var(--gold-txt);background:none;
+    border-color:color-mix(in srgb,var(--gold) 30%,transparent)}
+  .bk-note button:hover{background:color-mix(in srgb,var(--gold) 10%,transparent);border-color:color-mix(in srgb,var(--gold) 55%,transparent)}
 
   /* ---- dashboard ---- */
   .dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr))}
@@ -5434,8 +5439,8 @@ function renderDash(){
   let bk="";
   if(hasStorage){
     const remindDays=clampExportDays(cfg.exportRemindDays);
-    if(!cfg.lastExport)bk="No backup yet — hit Export once your accounts are in.";
-    else if(Date.now()-cfg.lastExport>remindDays*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago — consider exporting.";
+    if(!cfg.lastExport)bk="No backup yet.";
+    else if(Date.now()-cfg.lastExport>remindDays*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago.";
   }
   const dupN=countPool.filter(isDuplicate).length;
   const rotN=countPool.filter(needsRotation).length;
@@ -5492,9 +5497,15 @@ function renderDash(){
       +`<b class="${c.wr>=50?"wr-good":""}">${esc(c.wr)}%</b>`
       +`<i class="g">${esc(c.wins)}<em>-</em>${esc(c.losses)}</i></span>`).join("")}</div>`:""}
   </div></div>
-  ${bk?`<div style="font-size:12px;color:var(--muted);margin:-4px 0 16px">${bk}</div>`:""}`);
+  ${bk&&accounts.length&&!previewMode?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:""}`);
   dashJustOpened=false; // consumed by the render above
   bindSparkTip(el);
+  /* The reminder said "hit Export" — and Export lives two clicks away, inside the
+     ⋯ menu at the other end of the header. The way to act on it is now on it:
+     encrypted when there is a master password to encrypt with, plaintext (which
+     asks first whenever logins are in it) when there is not. */
+  const bkNow=el.querySelector("#bkNow");
+  if(bkNow)bkNow.onclick=()=>{vaultPassword?doExportEnc():doExport()};
   balanceDash();
 }
 /* The figures are a grid that fits as many as it can per row, and how many there
