@@ -7881,6 +7881,15 @@ window.addEventListener("storage",e=>{
     }catch(err){/* ignore corrupt cross-tab payloads */}
   }
 });
+/* cfg is one object written whole, and every vault save writes it as well — the
+   sync revision lives in it. Each tab held its own copy, so a setting saved in one
+   (a sync token just generated, the backend URL) was written straight back out by
+   the other the next time it saved anything at all. Adopted as it lands instead. */
+window.addEventListener("storage",e=>{
+  if(!e||e.key!==CFG_KEY||e.storageArea!==localStorage||!e.newValue)return;
+  try{Object.assign(cfg,JSON.parse(e.newValue))}catch(err){return}
+  syncLockTimer(); // the auto-lock minutes may be what changed
+});
 function boot(){
   $("fRegion").innerHTML=Object.keys(REGIONS).map(r=>`<option value="${r}">${esc(r)} — ${esc(REGIONS[r].full)}</option>`).join("");
   $("sAutoEvery").innerHTML=AUTO_EVERY.map(o=>`<option value="${o.v}">${esc(o.label)}</option>`).join("");

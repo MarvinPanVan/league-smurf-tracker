@@ -5826,3 +5826,24 @@ test("with no room to set it aside, unreadable saved data is left alone entirely
   assert.equal(win.localStorage.getItem("smurf-tracker"), raw, "the original is still the only thing in the key");
   assert.match(win.document.getElementById("banner").textContent, /nothing will be saved/i);
 });
+
+/* cfg is one object written whole, and every vault save writes it too (the sync
+   revision lives there). Two open tabs each held their own copy, so a setting
+   saved in one — the sync token you just generated, the backend URL — was
+   written straight back out by the other the next time it saved anything. */
+test("a setting saved in another tab survives this tab's next save", async () => {
+  const win = bootApp(seededAccount());
+  // the other tab: generates a sync token and sets a backend, which lands on disk
+  const other = JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  Object.assign(other, { syncToken: "tok-from-the-other-tab-1234", backendUrl: "https://w.example.workers.dev" });
+  const value = JSON.stringify(other);
+  win.localStorage.setItem("smurf-tracker-cfg", value);
+  win.dispatchEvent(new win.StorageEvent("storage", { key: "smurf-tracker-cfg", newValue: value,
+    storageArea: win.localStorage }));
+  // this tab: star an account, which saves the vault and with it cfg
+  win.document.querySelector('.card [data-act="fav"]').click();
+  await until(() => JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].fav === true, "the star to save");
+  const disk = JSON.parse(win.localStorage.getItem("smurf-tracker-cfg"));
+  assert.equal(disk.syncToken, "tok-from-the-other-tab-1234", "the other tab's token is still there");
+  assert.equal(disk.backendUrl, "https://w.example.workers.dev");
+});
