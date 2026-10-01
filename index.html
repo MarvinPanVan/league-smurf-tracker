@@ -8046,7 +8046,15 @@ $("settings").querySelector(".stabs").addEventListener("keydown",e=>{
   if(to===null)return;
   e.preventDefault();settingsTab(SETTINGS_TABS[(to+SETTINGS_TABS.length)%SETTINGS_TABS.length],true);
 });
-for(const b of document.querySelectorAll("#settings [data-proxy]"))b.addEventListener("click",()=>{const t=$(b.dataset.proxy);if(t)t.click();setTimeout(updateBackupLast,0)});
+for(const b of document.querySelectorAll("#settings [data-proxy]"))b.addEventListener("click",()=>{
+  // An encrypted backup needs the master password, and its field is one tab
+  // away: go there rather than saying "in Settings" to someone already in it.
+  if(b.dataset.proxy==="bExportEnc"&&!vaultPassword&&!previewMode){
+    settingsTab("security");$("sVaultPass").focus();
+    toast("Set a master password here first — the encrypted backup is locked with it");return;
+  }
+  const t=$(b.dataset.proxy);if(t)t.click();setTimeout(updateBackupLast,0);
+});
 $("sSave").addEventListener("click",async()=>{
   // Validate the two free-text URLs before touching cfg — a bail after partial
   // assignment left the session with the new API key / auto-check values even

@@ -1399,6 +1399,10 @@ test("Settings is six tabs, one section at a time, and a step that needs a field
   doc.getElementById("bExportCsv").addEventListener("click", () => exported++);
   backup.querySelector('[data-proxy="bExportCsv"]').click();
   assert.equal(exported, 1, "a backup button does what its ⋯ menu twin does");
+  // the encrypted backup needs a master password, whose field is a tab away
+  backup.querySelector('[data-proxy="bExportEnc"]').click();
+  assert.equal(m.dataset.tab, "security", "it takes you to the password field");
+  assert.equal(doc.activeElement, doc.getElementById("sVaultPass"));
   // reopening starts on Appearance again
   win.closeAllPanels();
   doc.getElementById("bSettings").click();
