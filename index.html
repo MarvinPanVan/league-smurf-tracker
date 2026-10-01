@@ -2186,6 +2186,13 @@
 
   <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
   <input type="file" id="fileInCsv" accept=".csv,text/csv" class="hidden">
+  <!-- Sixty cards is thirteen screens, and the only way back was to scroll all of
+       them again. Kept out of the way until there is actually something to go back
+       up to. Inside #appRoot: on the lock screen the header is display:none, which
+       the observer below reads as "scrolled past", and the button floated there. -->
+  <button id="toTop" class="to-top hidden" title="Back to top" aria-label="Back to top">
+    <svg class="ico" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+  </button>
   </div>
   <!-- Sixty accounts is more than anyone scrolls to find one. Typing is the
        shortest path to every account and to most of what you would then do with
@@ -2215,12 +2222,6 @@
     </div></div>
   </div>
 
-  <!-- Sixty cards is thirteen screens, and the only way back was to scroll all of
-       them again. Kept out of the way until there is actually something to go back
-       up to. -->
-  <button id="toTop" class="to-top hidden" title="Back to top" aria-label="Back to top">
-    <svg class="ico" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
-  </button>
   <div id="toast" role="status" aria-live="polite"></div>
 </div>
 

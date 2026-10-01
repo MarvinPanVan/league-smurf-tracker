@@ -6063,3 +6063,18 @@ test("a long name ellipsises in the wall and the list, and keeps its flag in vie
   assert.match(rule[0], /min-width:0/, "or the flex item never gets narrower than its text");
   assert.match(html.match(/\.rw-star\{[^}]*\}/)[0], /flex-shrink:0/, "the star does not give way to the name either");
 });
+
+/* "Back to top" is shown whenever the header is out of view — and on the lock
+   screen the header is not merely scrolled away, it is display:none along with
+   the rest of the app. So the button floated in the corner of the lock screen
+   (Chromium, every width), offering to scroll to a search box that was not there.
+   It belongs to the app, so it lives in the app's root and goes when that does. */
+test("the lock screen has no back-to-top button", async () => {
+  const maker = bootApp();
+  const envelope = await maker.encryptData("pw-1234", []);
+  const win = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker", JSON.stringify(envelope)));
+  const doc = win.document;
+  assert.equal(doc.getElementById("lock").classList.contains("hidden"), false, "locked");
+  assert.ok(doc.getElementById("appRoot").contains(doc.getElementById("toTop")),
+    "it is inside #appRoot, so hiding the app hides it, whatever the observer thinks of the header");
+});
