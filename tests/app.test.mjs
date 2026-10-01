@@ -3424,6 +3424,15 @@ test("Effects: Full, Subtle or Off — previewed live, kept on Save, honoured on
   assert.equal(again.document.body.dataset.fx, "off", "applied on boot");
 });
 
+test("on touch screens no field is ever under 16px, whatever the text size (iOS zooms into smaller ones)", () => {
+  const win = bootApp();
+  const css = [...win.document.querySelectorAll("style")].map(s => s.textContent).join("\n");
+  const coarse = css.slice(css.indexOf("@media (pointer:coarse){"));
+  const block = coarse.slice(0, coarse.indexOf("\n  }") + 4);
+  assert.match(block, /:is\(input:not\(\[type=checkbox\]\):not\(\[type=radio\]\):not\(\[type=color\]\),select,textarea\)\{font-size:max\(16px,calc\(16px\*var\(--ts\)\)\)!important\}/,
+    "a floor of 16px that Small cannot scale under, and that beats the fields' own smaller rules");
+});
+
 test("Text size: every font size scales with one setting, and nothing else moves", () => {
   const win = bootApp();
   const doc = win.document, html = doc.documentElement;
