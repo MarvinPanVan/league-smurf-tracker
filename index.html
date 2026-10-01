@@ -3285,7 +3285,7 @@ async function pushVaultSync(){
     }
     if(!res.ok){toast("Push failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
     currentEnvelope=envelope;
-    cfg.lastSyncAt=Date.now(); saveCfg();
+    cfg.lastSyncAt=Date.now(); cfg.syncedRev=updatedAt; saveCfg();
     updateSyncStatus();
     toast("Vault pushed to cloud");
   }catch(e){toast("Push failed: "+(e.message||"network"))}
@@ -3314,10 +3314,15 @@ async function pullVaultSync(force){
     if(!data||!data.envelope||!data.envelope.__enc){toast("Cloud record is not an encrypted vault");return}
     const remoteAt=Number(data.updatedAt)||0;
     const localAt=Number(cfg.vaultRev)||0;
-    const lastSync=Number(cfg.lastSyncAt)||0;
+    /* The revision both sides last agreed on. This used to be lastSyncAt, which is
+       this device's clock, while a pulled revision is the clock of whichever device
+       pushed it — so a pull from one running ahead left this device looking edited
+       for good, and the next pull asked to throw away changes nobody made. Settings
+       from before syncedRev existed fall back to the old comparison. */
+    const lastSync=Number(cfg.syncedRev)||Number(cfg.lastSyncAt)||0;
     // Same revision already on disk — nothing to apply (avoids a rewrite + rev bump).
     if(!force&&remoteAt>0&&remoteAt===localAt&&accounts.length){
-      cfg.lastSyncAt=Date.now(); saveCfg();
+      cfg.lastSyncAt=Date.now(); cfg.syncedRev=remoteAt; saveCfg();
       updateSyncStatus();
       toast("Already in sync with cloud");
       return;
@@ -3348,6 +3353,7 @@ async function pullVaultSync(force){
     currentEnvelope=data.envelope;
     cfg.vaultRev=remoteAt||Date.now();
     cfg.lastSyncAt=Date.now();
+    cfg.syncedRev=cfg.vaultRev;
     saveCfg();
     // keepRev: this vault *is* the cloud's revision now. Stamping a fresh one
     // would make the next pull think this device had changed since the sync it

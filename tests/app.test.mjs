@@ -6121,3 +6121,42 @@ test("a write from another tab that cannot be read leaves this tab's vault alone
   runScript(win, "window.__n = accounts.length;");
   assert.equal(win.__n, 1, "and still in memory");
 });
+
+/* "Has this device changed since the last sync" compared the vault's revision —
+   which after a pull is the *other* device's clock — against lastSyncAt, which is
+   this device's. Pull once from a device whose clock runs ahead and this one looks
+   edited forever after: the next pull of a newer cloud copy asked whether to throw
+   away local changes that were never made. */
+test("a pull from a device whose clock runs ahead does not make this one look edited", async () => {
+  const AHEAD = Date.now() + 10 * 60000;
+  const win = bootApp([{ id: "a1", region: "EUW", gameName: "Local", tagLine: "1", status: "active",
+    tags: [], history: [], stats: null }]);
+  runScript(win, `
+    vaultPassword = "test-pass-1234";
+    cfg.backendUrl = "https://example.workers.dev";
+    cfg.syncToken = "sync-token-abcdef12";
+    cfg.vaultRev = 100; cfg.lastSyncAt = 100;
+  `);
+  const vault = name => win.encryptData("test-pass-1234", [{ id: "c1", region: "EUW", gameName: name,
+    tagLine: "2", status: "active", tags: [], history: [], stats: null }]);
+  let record = { updatedAt: AHEAD, envelope: await vault("CloudOne") };
+  win.fetch = async () => new Response(JSON.stringify(record), { status: 200 });
+  const toast = () => win.document.getElementById("toast").textContent;
+
+  await win.pullVaultSync(false);
+  await until(() => /pulled/i.test(toast()), "the first pull to land");
+  record = { updatedAt: AHEAD + 5000, envelope: await vault("CloudTwo") };   // the other device pushes again
+  await win.pullVaultSync(false);
+  await until(() => /CloudTwo/.test(win.document.querySelector(".card").textContent)
+    || /changed after last sync/i.test(toast()), "the second pull to answer");
+  assert.doesNotMatch(toast(), /changed after last sync/i, "nothing was edited here, so there is nothing to lose");
+  assert.match(win.document.querySelector(".card").textContent, /CloudTwo/);
+
+  // and a real edit made here after that is still caught before a pull drops it
+  win.document.querySelector('.card [data-act="fav"]').click();
+  await until(() => { runScript(win, "window.__rev = cfg.vaultRev;"); return win.__rev > AHEAD + 5000 }, "the star to save");
+  record = { updatedAt: AHEAD + 9000, envelope: await vault("CloudThree") };
+  await win.pullVaultSync(false);
+  assert.match(toast(), /changed after last sync/i, "a local change still asks first");
+  assert.match(win.document.querySelector(".card").textContent, /CloudTwo/, "and nothing was replaced");
+});
