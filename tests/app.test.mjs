@@ -782,6 +782,32 @@ test("Refresh stale refreshes found accounts that have gone old, not ones with n
     "never-checked and not-found accounts are not re-tried, banned ones are left alone");
 });
 
+test("the vault asks the browser to keep it, once, and Settings says whether it does", async () => {
+  let asks = 0, granted = false;
+  const win = bootApp(undefined, w => {
+    Object.defineProperty(w.navigator, "storage", { configurable: true, value: {
+      persisted: async () => granted,
+      persist: async () => { asks++; return granted; },
+    } });
+  });
+  assert.equal(asks, 0, "an empty vault has nothing to keep yet");
+  addRealAccount(win, "Keep", "1");
+  await until(() => asks === 1, "the first saved account to ask for persistence");
+  addRealAccount(win, "Keep2", "2");
+  await tick(win);
+  assert.equal(asks, 1, "asked once, not on every save");
+
+  win.document.getElementById("bSettings").click();
+  const status = win.document.getElementById("sStorageStatus"), btn = win.document.getElementById("sStorageProtect");
+  await until(() => /Not protected/.test(status.textContent), "the status to say the vault can be cleared");
+  assert.equal(btn.classList.contains("hidden"), false, "with a way to ask again");
+  granted = true;
+  btn.click();
+  await until(() => /^Protected/.test(status.textContent), "the status to follow the answer");
+  assert.equal(asks, 2);
+  assert.ok(btn.classList.contains("hidden"), "nothing left to ask for");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");

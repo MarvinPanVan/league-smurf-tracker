@@ -2078,6 +2078,13 @@
 
       <div class="grp">
         <div class="grp-h">Security</div>
+        <div class="fld fw" style="margin-bottom:14px">
+          <label>Storage</label>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <span id="sStorageStatus" class="hint" style="margin:0;flex:1;min-width:200px"></span>
+            <button type="button" id="sStorageProtect" class="hidden">Protect</button>
+          </div>
+        </div>
         <div class="fld fw">
           <label>Master password — encrypts the whole vault at rest with AES-256. There is no recovery: lose the password and the vault is gone.</label>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -2817,7 +2824,33 @@ function storageOK(){try{localStorage.setItem("__t","1");localStorage.removeItem
    losing local changes on its next pull. Every other write is a real change and
    stamps a real revision. */
 let saveSeq=0, saveChain=Promise.resolve();
+/* The whole vault is localStorage, and by default a browser treats that as
+   disposable: Chrome and Firefox may clear it when the disk runs low, and Safari
+   clears it after seven days without a visit. Asking for persistent storage turns
+   it into data only the user can delete. Asked once, when the first account is
+   saved; Settings shows the answer and can ask again. Firefox asks the user; Chrome
+   and Safari decide by themselves (an installed or often-used site usually gets it). */
+async function storageState(){
+  try{
+    if(!navigator.storage||!navigator.storage.persisted)return"unknown";
+    return(await navigator.storage.persisted())?"protected":"open";
+  }catch(e){return"unknown"}
+}
+async function protectStorage(){
+  try{return !!(navigator.storage&&navigator.storage.persist&&await navigator.storage.persist())}catch(e){return false}
+}
+async function updateStorageStatus(){
+  const el=$("sStorageStatus"),btn=$("sStorageProtect");
+  if(!el)return;
+  const st=await storageState();
+  el.textContent=st==="protected"?"Protected — this browser will not clear the vault on its own."
+    :st==="open"?"Not protected — the browser may clear it when space runs low, and Safari does after 7 days without a visit. Protect it, install the app, and keep a backup."
+    :"This browser does not say whether it keeps the vault — keep a backup.";
+  el.style.color=st==="open"?"var(--danger)":"";
+  btn.classList.toggle("hidden",st!=="open");
+}
 function saveDB(opts){invalidateDupCache();
+  if(accounts.length&&!previewMode&&hasStorage&&!cfg.persistAsked){cfg.persistAsked=true;saveCfg();protectStorage()}
   const keepRev=!!(opts&&opts.keepRev);
   const stampRev=()=>{if(!keepRev)touchVaultRev()};
   // Locked is a hard no — not a silent success. Import (and anything else that
@@ -6566,7 +6599,7 @@ function openSettings(){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";updateVaultStatus();updateSyncStatus();$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";updateVaultStatus();updateSyncStatus();updateStorageStatus();$("settings").classList.remove("hidden")
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -7399,6 +7432,12 @@ $("sVaultRemove").addEventListener("click",async()=>{
 $("bHelp").addEventListener("click",()=>{const willShow=$("help").classList.contains("hidden");closeAllPanels();if(willShow)$("help").classList.remove("hidden")});
 $("bHelpClose").addEventListener("click",()=>{$("help").classList.add("hidden");cfg.seenHelp=true;saveCfg()});
 $("bExport").addEventListener("click",doExport);
+$("sStorageProtect").addEventListener("click",async()=>{
+  const ok=await protectStorage();
+  await updateStorageStatus();
+  toast(ok?"Storage protected — the browser will not clear the vault on its own"
+    :"The browser said no — installing the app or using it more often usually changes that. Keep a backup meanwhile.");
+});
 if($("bExportEnc"))$("bExportEnc").addEventListener("click",()=>{doExportEnc()});
 $("bExportCsv").addEventListener("click",doExportCSV);
 $("bImport").addEventListener("click",()=>$("fileIn").click());
