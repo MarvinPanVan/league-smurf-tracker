@@ -3122,6 +3122,30 @@ test("Effects: Full, Subtle or Off — previewed live, kept on Save, honoured on
   assert.equal(again.document.body.dataset.fx, "off", "applied on boot");
 });
 
+test("Text size: every font size scales with one setting, and nothing else moves", () => {
+  const win = bootApp();
+  const doc = win.document, html = doc.documentElement;
+  const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  // every size in the app goes through --ts — a hard-coded one would stay put at Large
+  const all = [...doc.querySelectorAll("style")].map(s => s.textContent).join("\n") + html.outerHTML;
+  assert.doesNotMatch(all, /font-size:\s*[\d.]+px/, "no font-size bypasses the scale");
+  assert.doesNotMatch(all, /font:\s*\d{3} [\d.]+px/, "nor a font shorthand");
+  assert.match(all, /--ts:1;/);
+  assert.match(all, /html\[data-ts="large"\]\{--ts:1\.15\}/);
+  assert.equal(html.dataset.ts, undefined, "default: no attribute at all");
+  doc.getElementById("bSettings").click();
+  doc.querySelector('#sTextSize [data-v="large"]').click();
+  assert.equal(html.dataset.ts, "large", "previews at once");
+  doc.getElementById("sClose").click();
+  assert.equal(html.dataset.ts, undefined, "Close puts it back");
+  doc.getElementById("bSettings").click();
+  doc.querySelector('#sTextSize [data-v="small"]').click();
+  doc.getElementById("sSave").click();
+  assert.equal(cfg().textSize, "small");
+  const again = bootApp(null, w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, textSize: "large" })));
+  assert.equal(again.document.documentElement.dataset.ts, "large", "applied on boot");
+});
+
 test("themes: one click sets both colours and the atmosphere, kept only on Save", () => {
   const win = bootApp();
   const doc = win.document, root = doc.documentElement.style;
