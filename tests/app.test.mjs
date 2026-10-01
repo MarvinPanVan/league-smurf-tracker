@@ -5861,3 +5861,17 @@ test("every save advances the sync revision, even ahead of this device's clock",
   runScript(win, "window.__rev = cfg.vaultRev;");
   assert.ok(win.__rev > ahead, "a real change is a newer revision than the one it was made on top of");
 });
+
+/* Every other value in the toolbar's dropdowns goes through esc(); the status
+   options were the one exception, and a status is free text by the time it is on
+   disk — import pins it to a known one, but boot, unlock, a cloud pull and another
+   tab's write do not. A stored status of `"><img onerror=…>` ran as markup. */
+test("a stored status cannot break out of the status filter", () => {
+  const evil = '"><img src=x onerror="window.__pwned=1">';
+  const win = bootApp([{ id: "x1", gameName: "Odd", tagLine: "1", region: "EUW", status: evil,
+    tags: [], history: [], stats: null }]);
+  const sel = win.document.getElementById("tStatus");
+  assert.equal(sel.querySelector("img"), null, "no element was created out of it");
+  assert.equal(win.__pwned, undefined);
+  assert.ok([...sel.options].some(o => o.value === evil), "it is still a value you can pick, verbatim");
+});

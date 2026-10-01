@@ -5008,7 +5008,7 @@ function renderFilterOptions(){
   const order=["active","resting","restricted","banned"];
   const statuses=[...new Set(inView.map(a=>a.status||"active"))].sort((a,b)=>order.indexOf(a)-order.indexOf(b));
   if(ui.status&&!statuses.includes(ui.status))ui.status="";
-  setHTML($("tStatus"),`<option value="">All statuses</option>`+statuses.map(s=>`<option value="${s}">${esc((STATUS[s]||STATUS.active).label)}</option>`).join(""));
+  setHTML($("tStatus"),`<option value="">All statuses</option>`+statuses.map(s=>`<option value="${esc(s)}">${esc((STATUS[s]||STATUS.active).label)}</option>`).join(""));
   $("tStatus").value=ui.status||"";
 }
 
