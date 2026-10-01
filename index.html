@@ -43,7 +43,10 @@
     --sh-1:0 1px 2px #00000059;
     --sh-2:0 2px 4px #0000003d,0 8px 24px -10px #000000a8;
     --sh-3:0 4px 10px #0000004a,0 24px 56px -18px #000000cc;
-    --r-sm:9px; --r-md:13px; --r-lg:18px;
+    /* Cut metal, not moulded plastic: the client's frames are near-square, and
+       eighteen-pixel corners plus twenty-seven pills were most of what made this
+       read as any other web app. --r-xs is the plate a label or a count sits on. */
+    --r-xs:3px; --r-sm:4px; --r-md:6px; --r-lg:8px;
   }
   *{box-sizing:border-box}
   /* The <meta name="color-scheme"> up top does not reach the computed style, so
@@ -225,7 +228,7 @@
   .ribbon{flex:1 1 260px;min-width:0;max-width:640px;display:flex;flex-direction:column;gap:6px}
   .ribbon:empty{display:none}
   .rib-bar{display:flex;gap:2px;height:19px}
-  .rib-seg{flex-grow:1;flex-basis:0;min-width:20px;padding:0;border:0;border-radius:4px;
+  .rib-seg{flex-grow:1;flex-basis:0;min-width:20px;padding:0;border:0;border-radius:2px;
     background:color-mix(in srgb,var(--c) 62%,#0b0e14);box-shadow:none;
     display:flex;align-items:center;justify-content:center;overflow:hidden;
     transform:none;transition:background .16s ease,box-shadow .16s ease,filter .16s ease}
@@ -234,9 +237,9 @@
      first. */
   .rib-seg.tail{flex:0 0 auto;padding:0 10px;min-width:28px;opacity:.82}
   .rib-seg.tail:hover,.rib-seg.tail.on{opacity:1}
-  .rib-seg:first-child{border-radius:999px 4px 4px 999px}
-  .rib-seg:last-child{border-radius:4px 999px 999px 4px}
-  .rib-seg:only-child{border-radius:999px}
+  .rib-seg:first-child{border-radius:var(--r-xs) 2px 2px var(--r-xs)}
+  .rib-seg:last-child{border-radius:2px var(--r-xs) var(--r-xs) 2px}
+  .rib-seg:only-child{border-radius:var(--r-xs)}
   .rib-seg i{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.02em;
     color:#0b0e14;opacity:.72;font-variant-numeric:tabular-nums}
   .rib-seg:hover{background:var(--c);transform:none;border:0;filter:brightness(1.06)}
@@ -251,19 +254,19 @@
     font-size:10.5px;letter-spacing:.02em;color:var(--faint)}
   .rib-cap b{font-weight:600;color:var(--muted)}
   .brand{display:flex;align-items:center;gap:16px;min-width:0}
-  .brand-mark{position:relative;width:54px;height:54px;flex-shrink:0;border-radius:17px;
-    display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 26%,transparent),#10131ae6);
-    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 32%,transparent),
-      inset 0 1px 0 #ffffff21,
-      0 10px 30px -14px color-mix(in srgb,var(--gold) 80%,transparent)}
-  .brand-mark::before{content:"";width:18px;height:18px;border-radius:5px;transform:rotate(45deg);
+  /* A gem set in a turned gold frame, rather than a rounded app-icon tile. */
+  .brand-mark{position:relative;width:44px;height:44px;margin:5px;flex-shrink:0;border-radius:var(--r-xs);
+    display:flex;align-items:center;justify-content:center;transform:rotate(45deg);
+    background:linear-gradient(135deg,#1e2328,#0a1119);
+    box-shadow:inset 0 0 0 1px var(--gold),0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold-dim) 90%,transparent),
+      0 10px 30px -10px color-mix(in srgb,var(--gold) 70%,transparent)}
+  .brand-mark::before{content:"";width:18px;height:18px;border-radius:1px;
     background:linear-gradient(145deg,var(--star),var(--gold) 55%,var(--gold-mid));
     box-shadow:0 0 20px color-mix(in srgb,var(--gold) 78%,transparent),inset 0 0 0 1px #ffffff45;
     animation:gemGlow 3.6s ease-in-out infinite}
   .brand-sub{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;
     font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
-  .brand-sub b{font-weight:600;letter-spacing:.14em;color:var(--gold-txt);padding:3px 9px;border-radius:999px;
+  .brand-sub b{font-weight:600;letter-spacing:.14em;color:var(--gold-txt);padding:3px 9px;border-radius:var(--r-xs);
     background:color-mix(in srgb,var(--gold) 11%,transparent);
     border:1px solid color-mix(in srgb,var(--gold) 24%,transparent)}
   /* Metal needs a value swing, but --gold-dim is derived as lightness-25, which on
@@ -309,23 +312,26 @@
      background is redeclared on :hover on purpose: the generic button:hover rule
      is more specific than .b-gold, so omitting it here lets the plain dark hover
      background win and the button turns black. */
-  .b-gold{font-weight:600;color:var(--gold-txt);
-    border-color:var(--gold);border-color:color-mix(in srgb,var(--gold) 58%,transparent);
-    background:var(--panel3);
-    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 26%,transparent),color-mix(in srgb,var(--gold) 12%,transparent)),var(--panel2);
-    box-shadow:inset 0 1px 0 color-mix(in srgb,var(--gold) 34%,transparent),
-      0 4px 16px -8px color-mix(in srgb,var(--gold) 50%,transparent)}
-  .b-gold:hover{color:var(--gold-txt);
-    border-color:color-mix(in srgb,var(--gold) 88%,transparent);
-    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 38%,transparent),color-mix(in srgb,var(--gold) 20%,transparent)),var(--panel2);
-    box-shadow:inset 0 1px 0 color-mix(in srgb,var(--gold) 48%,transparent),
-      0 0 0 3px color-mix(in srgb,var(--gold) 12%,transparent),
-      0 6px 22px -8px color-mix(in srgb,var(--gold) 65%,transparent)}
-  .b-teal{color:var(--teal-txt);border-color:var(--teal);border-color:color-mix(in srgb,var(--teal) 40%,transparent);
-    background:var(--panel2);background:color-mix(in srgb,var(--teal) 9%,var(--panel2))}
-  .b-teal:hover{border-color:color-mix(in srgb,var(--teal) 68%,transparent);color:var(--teal-txt);
-    background:color-mix(in srgb,var(--teal) 17%,var(--panel2));
-    box-shadow:0 0 0 3px color-mix(in srgb,var(--teal) 11%,transparent)}
+  /* Metal, the way the client draws its buttons: a dark plate inside a rim that is
+     lit at the top and falls to the dim gold below — drawn as a second background
+     clipped to the border box, so the corners stay round where a border-image
+     would square them off. Built from the accent tokens, so a picked colour is
+     still the colour of the rim. */
+  .b-gold{color:var(--text);border:1px solid transparent;
+    background:linear-gradient(180deg,#1e2328,#12171d) padding-box,
+      linear-gradient(180deg,var(--star),var(--gold) 34%,var(--gold-dim)) border-box;
+    box-shadow:0 0 0 1px #010a13,0 6px 18px -10px color-mix(in srgb,var(--gold) 70%,transparent)}
+  .b-gold:hover{color:#fff;border-color:transparent;
+    background:linear-gradient(180deg,#2a2b27,#171b1f) padding-box,
+      linear-gradient(180deg,#fff,var(--star) 30%,var(--gold)) border-box;
+    box-shadow:0 0 0 1px #010a13,0 0 18px -3px color-mix(in srgb,var(--gold) 70%,transparent),inset 0 0 14px color-mix(in srgb,var(--gold) 18%,transparent)}
+  .b-teal{color:var(--teal-txt);border:1px solid transparent;
+    background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 16%,#0a1119),#0a1820) padding-box,
+      linear-gradient(180deg,var(--teal),color-mix(in srgb,var(--teal) 40%,#0a1119)) border-box}
+  .b-teal:hover{color:#fff;border-color:transparent;
+    background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 26%,#0a1119),#0b1e27) padding-box,
+      linear-gradient(180deg,#fff,var(--teal) 40%) border-box;
+    box-shadow:0 0 16px -4px color-mix(in srgb,var(--teal) 80%,transparent)}
   .b-danger{color:var(--danger)}
   .b-danger:hover{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);
     background:color-mix(in srgb,var(--danger) 13%,var(--panel2))}
@@ -377,14 +383,14 @@
   .pool-spark .pool-hit{fill:transparent;stroke:none;cursor:pointer}
   .spark-tip{
     position:fixed;z-index:80;pointer-events:none;
-    padding:6px 9px;border-radius:8px;font-size:11.5px;line-height:1.35;
+    padding:6px 9px;border-radius:var(--r-sm);font-size:11.5px;line-height:1.35;
     color:var(--text);background:var(--panel3);border:1px solid var(--line2);
     box-shadow:0 8px 24px #00000088;max-width:220px;white-space:pre-line;
     opacity:0;transform:translateY(4px);transition:opacity .12s ease,transform .12s ease;
   }
   .spark-tip.on{opacity:1;transform:none}
   .dash-toggle{display:flex;justify-content:flex-end;margin-bottom:14px}
-  .ghost-toggle{font-size:11.5px;padding:6px 13px;border-radius:999px;color:var(--muted);
+  .ghost-toggle{font-size:11.5px;padding:6px 13px;border-radius:var(--r-xs);color:var(--muted);
     background:#ffffff09;border:1px solid var(--line);box-shadow:none}
   .ghost-toggle:hover{background:#ffffff14;border-color:var(--line2);color:var(--text)}
   .ghost-toggle .ico{transition:transform .22s cubic-bezier(.22,1,.36,1)}
@@ -397,11 +403,11 @@
      nothing holding them together — at eight across a row it read as debris. One
      pill per champion, with the games as a W-L pair rather than a count needing a
      unit letter glued to it. */
-  .gem.cmb{gap:7px;padding:3px 4px 3px 10px;border-radius:999px;
+  .gem.cmb{gap:7px;padding:3px 4px 3px 10px;border-radius:var(--r-xs);
     background:#ffffff08;border:1px solid #ffffff0f}
   .gem.cmb .n{font-weight:500}
   /* every count in here answers "how many"; clicking it answers "which ones" */
-  .gem-b{border:1px solid transparent;border-radius:999px;padding:4px 11px;background:none;font-size:12px}
+  .gem-b{border:1px solid transparent;border-radius:var(--r-xs);padding:4px 11px;background:none;font-size:12px}
   .gem-b b{font-weight:600;color:var(--faint)}
   .gem-b:hover{background:#ffffff0f;border-color:var(--line2)}
   .gem-b.on{background:color-mix(in srgb,var(--gold) 16%,transparent);
@@ -420,9 +426,16 @@
   .gem.cmb b{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .gem.cmb b.wr-good{color:var(--good)}
   .gem.cmb i.g{font-style:normal;font-size:10.5px;font-weight:600;color:var(--faint);
-    font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:999px;background:#ffffff0d}
+    font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:var(--r-xs);background:#ffffff0d}
   .gem.cmb i.g em{font-style:normal;opacity:.5;padding:0 1px}
-  .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px}
+  .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px;position:relative}
+  /* The client divides with a gold hairline that is brightest in the middle and a
+     small diamond set on it, not with a flat grey rule. */
+  .hx-in>.dist{border-top:0!important}
+  .hx-in>.dist::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;pointer-events:none;
+    background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent)}
+  .hx-in>.dist::after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;pointer-events:none;
+    transform:translateX(-50%) rotate(45deg);background:var(--bg);border:1px solid var(--gold)}
   .dist .k{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-right:2px}
   .gem{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text)}
   /* the tier lozenge — scoped to a class rather than the bare tag, because every
@@ -448,7 +461,7 @@
     display:inline-flex;align-items:center;gap:9px;letter-spacing:.015em}
   .cmd-count b{font-weight:600;color:var(--muted)}
   .cmd-count .warn{color:var(--danger);font-weight:600;font-size:11.5px;letter-spacing:.015em;
-    padding:3px 9px;border-radius:999px;background:none;border:1px solid transparent;box-shadow:none}
+    padding:3px 9px;border-radius:var(--r-xs);background:none;border:1px solid transparent;box-shadow:none}
   .cmd-count .warn:hover{background:color-mix(in srgb,var(--danger) 13%,transparent);
     border-color:color-mix(in srgb,var(--danger) 34%,transparent)}
   .cmd-count .warn.on{background:color-mix(in srgb,var(--danger) 18%,transparent);
@@ -464,7 +477,7 @@
   /* layout switch: segmented control. Kept fully isolated from the global
      button chrome — that rule transitions border-color + translateY on hover,
      which made the dividers flash and the icons look like they squeezed. */
-  .seg{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:9px;
+  .seg{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:var(--r-sm);
     overflow:hidden;background:var(--panel2);flex-shrink:0}
   .seg button{
     box-sizing:border-box;width:36px;height:32px;padding:0;margin:0;gap:0;
@@ -584,7 +597,7 @@
      look like a bug */
   .chips{display:flex;gap:7px;flex-wrap:wrap;padding:0 12px}
   .chips:not(:empty){padding:11px 12px;border-top:1px solid var(--line)}
-  .fchip{font-size:11.5px;font-weight:600;padding:4px 8px 4px 11px;gap:7px;border-radius:999px;
+  .fchip{font-size:11.5px;font-weight:600;padding:4px 8px 4px 11px;gap:7px;border-radius:var(--r-xs);
     color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 45%,transparent);
     background:color-mix(in srgb,var(--gold) 12%,transparent)}
   .fchip span{opacity:.65;font-size:10px}
@@ -647,7 +660,7 @@
     background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 17%,var(--panel2)),var(--panel2))}
   /* how many tags the vault has — a fact, not a filter, so it is not gold until one is */
   .tag-handle b{font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums;
-    font-size:10px;line-height:1.5;padding:0 6px;border-radius:999px;
+    font-size:10px;line-height:1.5;padding:0 6px;border-radius:var(--r-xs);
     color:var(--muted);background:#ffffff12;transition:color .16s ease,background .16s ease}
   .tag-handle:hover b{color:var(--text);background:#ffffff1f}
   .tag-ico{color:color-mix(in srgb,var(--gold) 42%,var(--muted));transition:color .16s ease}
@@ -664,7 +677,7 @@
   .tag-handle.open .tag-chev{transform:rotate(180deg)}
   .tag-list{display:flex;gap:7px;flex-wrap:wrap;padding-bottom:2px}
   @media (prefers-reduced-motion:reduce){.tag-handle,.tag-handle .ico{transition:none}}
-  .chip{font-size:12px;font-weight:500;padding:5px 12px;border:1px solid var(--line);border-radius:999px;
+  .chip{font-size:12px;font-weight:500;padding:5px 12px;border:1px solid var(--line);border-radius:var(--r-xs);
     background:var(--panel2);color:var(--muted);cursor:pointer;
     transition:background .15s ease,border-color .15s ease,color .15s ease}
   .chip:hover{color:var(--text);border-color:var(--line2);background:var(--panel3)}
@@ -704,17 +717,17 @@
   .tile:focus-visible{outline-offset:-3px}
   .tile::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;
     border-radius:0 3px 3px 0;background:var(--st,transparent);opacity:.85}
-  .t-pic{width:52px;height:52px;border-radius:15px;position:relative;flex-shrink:0;
+  .t-pic{width:52px;height:52px;border-radius:50%;position:relative;flex-shrink:0;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center;margin-bottom:3px}
-  .t-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:15px}
+  .t-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
   .t-pic b{font-size:19px;font-weight:600;color:var(--faint)}
   .t-crest{position:absolute;right:-7px;top:-7px;width:21px;height:21px;
     filter:drop-shadow(0 1px 2px #000000cc)}
   .t-crest .crest{width:100%;height:100%}
   .t-lv{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);
     font-style:normal;font-size:9px;font-weight:700;line-height:14px;padding:0 5px;
-    min-width:20px;text-align:center;border-radius:999px;font-variant-numeric:tabular-nums;
+    min-width:20px;text-align:center;border-radius:var(--r-xs);font-variant-numeric:tabular-nums;
     color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
   .t-nm{font-size:12px;font-weight:600;letter-spacing:-.01em;color:var(--text);max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:4px}
@@ -744,11 +757,11 @@
   .lgrp-ln{flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
   .lgrp-k{font-size:10.5px;font-weight:600;color:var(--faint);letter-spacing:.05em;
     font-variant-numeric:tabular-nums}
-  .hx.row{padding:1px;background:#ffffff0d;border-radius:11px}
+  .hx.row{padding:1px;background:#ffffff0d;border-radius:var(--r-md)}
   .hx.row:hover{background:#ffffff1c}
   .hx.row.gold{background:color-mix(in srgb,var(--gold) 40%,transparent)}
   .hx.row.open{background:color-mix(in srgb,var(--teal) 34%,transparent)}
-  .rw{border-radius:10px;background:var(--panel);overflow:hidden}
+  .rw{border-radius:calc(var(--r-md) - 1px);background:var(--panel);overflow:hidden}
   /* Roughly 46px of row, of which about a third was padding: a 30px picture,
      13.5px type, and six hundred pixels of nothing between the name and the rank.
      Taller, and with that gap given to the two things the list had been throwing
@@ -763,10 +776,10 @@
     border-radius:0 3px 3px 0;background:var(--st,transparent);opacity:.85}
   /* a row is a line in a list, not a tile — it must not lift off the page */
   .grid.list>.hx:hover{transform:none;box-shadow:var(--sh-1)}
-  .rw-pic{width:40px;height:40px;border-radius:11px;position:relative;overflow:visible;
+  .rw-pic{width:40px;height:40px;border-radius:50%;position:relative;overflow:visible;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center}
-  .rw-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:11px}
+  .rw-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
   .rw-pic b{font-size:15px;font-weight:600;color:var(--faint)}
   /* the tier, on the picture, the way the card puts it beside the rank */
   .rw-crest{position:absolute;right:-6px;top:-6px;width:17px;height:17px;
@@ -776,7 +789,7 @@
      performance numbers */
   .rw-lvb{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
     font-style:normal;font-size:9px;font-weight:700;line-height:13px;padding:0 4px;
-    min-width:18px;text-align:center;border-radius:999px;font-variant-numeric:tabular-nums;
+    min-width:18px;text-align:center;border-radius:var(--r-xs);font-variant-numeric:tabular-nums;
     color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
   .rw-id{min-width:0;display:flex;flex-direction:column;gap:1px}
   .rw-nm{font-size:14.5px;font-weight:600;letter-spacing:-.012em;color:var(--text);
@@ -786,7 +799,7 @@
   .rw-tag{font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rw-tags{display:flex;gap:4px;margin-top:3px;overflow:hidden}
   .rw-tags i{font-style:normal;font-size:9.5px;letter-spacing:.02em;color:var(--muted);
-    padding:1px 6px;border-radius:999px;background:#ffffff0f;white-space:nowrap}
+    padding:1px 6px;border-radius:var(--r-xs);background:#ffffff0f;white-space:nowrap}
   /* the shape of the climb, which the list used to leave out entirely */
   .rw-spark{display:flex;align-items:center;height:30px}
   .spk{width:100%;height:100%;display:block}
@@ -805,8 +818,8 @@
   .rw-wr em,.rw-lv em{font-style:normal;font-size:9.5px;color:var(--faint);letter-spacing:.02em}
   /* Sixty rows of "47%" are sixty identical grey blocks. Sixty bars of differing
      length are a shape you can run your eye down. */
-  .rw-bar{display:block;height:3px;border-radius:999px;background:#ffffff14;overflow:hidden}
-  .rw-bar i{display:block;height:100%;border-radius:999px}
+  .rw-bar{display:block;height:3px;border-radius:1px;background:#ffffff14;overflow:hidden}
+  .rw-bar i{display:block;height:100%;border-radius:1px}
   .rw-d .delta{font-size:10.5px;padding:2px 6px}
   .rw-rg{font-size:10px;font-weight:600;letter-spacing:.09em;color:var(--faint);text-align:center}
   /* An unranked row has nothing to say in four of its columns, and at full
@@ -886,11 +899,15 @@
   /* ---- card header: portrait anchors it, name and ID stack beside it ---- */
   .c-head{display:flex;align-items:center;gap:13px;min-width:0}
   .c-portrait{position:relative;width:50px;height:50px;flex-shrink:0}
-  .c-initial{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:15px;
-    background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
+  /* Round, in a gold ring with the level on a plate beneath: the way the client
+     frames a summoner icon, and the one shape here nobody mistakes for a generic
+     avatar. */
+  .c-initial{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:50%;
+    background:linear-gradient(150deg,var(--panel3),var(--panel2));
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold-dim) 80%,transparent),0 0 0 2px #010a13,0 0 0 3px color-mix(in srgb,var(--gold-dim) 55%,transparent);
     font-size:21px;font-weight:600;color:var(--faint);letter-spacing:-.02em}
-  .c-avatar{position:absolute;inset:0;width:100%;height:100%;border-radius:15px;object-fit:cover;
-    box-shadow:inset 0 0 0 1px #ffffff1f,0 0 0 1px var(--line),0 4px 12px #00000073}
+  .c-avatar{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;
+    box-shadow:0 0 0 1px var(--gold-dim),0 0 0 2px #010a13,0 0 0 3px color-mix(in srgb,var(--gold) 55%,transparent),0 4px 12px #00000073}
   /* The rank crest rides the portrait; it moved to the top corner to make room
      for the level, which now sits centred on the bottom edge the way op.gg puts
      it. Level was in the stats row next to Peak and MMR, which read as another
@@ -900,7 +917,7 @@
      without saying which. The crest says which. */
   .crest{display:block;flex-shrink:0;overflow:visible}
   .c-lvbadge{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);
-    min-width:24px;padding:1px 6px;border-radius:999px;text-align:center;
+    min-width:24px;padding:1px 6px;border-radius:var(--r-xs);text-align:center;
     font-size:10.5px;font-weight:700;line-height:16px;letter-spacing:.01em;
     font-variant-numeric:tabular-nums;color:var(--text);
     background:#0d1017;box-shadow:0 0 0 1px var(--line2),0 2px 8px #00000080}
@@ -952,7 +969,7 @@
     color:var(--muted);z-index:2;font-size:13px}
   .panel-close:hover{color:var(--danger);background:color-mix(in srgb,var(--danger) 13%,transparent);border-color:transparent}
 
-  .regiontag{font-size:10.5px;font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:999px;flex-shrink:0;
+  .regiontag{font-size:10.5px;font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:var(--r-xs);flex-shrink:0;
     background:color-mix(in srgb,var(--teal) 12%,transparent);color:var(--teal-txt);
     border:1px solid color-mix(in srgb,var(--teal) 24%,transparent)}
   /* the rank is why the card exists, so it gets the card's largest type */
@@ -1011,7 +1028,7 @@
   /* This is the one thing on the card the user wrote themselves, so it reads as
      content on its own small surface rather than another grey caption line. */
   .c-notes{font-size:12.5px;line-height:1.6;color:var(--text);opacity:.9;
-    padding:9px 12px;border-radius:10px;background:#ffffff08;border:1px solid #ffffff0d;
+    padding:9px 12px;border-radius:var(--r-sm);background:#ffffff08;border:1px solid #ffffff0d;
     transition:background .16s ease,border-color .16s ease}
   /* the note is the one field you actually keep rewriting, so it edits where it
      lives — no round trip through the Edit form */
@@ -1077,7 +1094,7 @@
   .sec-n{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
     display:inline-flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0}
   .sec-n i{font-style:normal;font-size:9.5px;letter-spacing:.03em;color:var(--faint);
-    padding:1px 6px;border-radius:999px;background:#ffffff0f}
+    padding:1px 6px;border-radius:var(--r-xs);background:#ffffff0f}
   .sec-p{margin-left:auto;font-size:12px;font-weight:600;letter-spacing:-.01em;color:var(--muted);
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
   .sec-p .c-nm{display:inline}
@@ -1108,9 +1125,9 @@
   .c-gm,.c-kd{color:var(--faint);font-size:11px;text-align:right}
   .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:7.5px;font-weight:700;letter-spacing:.12em;
     pointer-events:none;line-height:1;opacity:.9}
-  .wrbar{height:5px;background:var(--panel2);border-radius:999px;overflow:hidden}
-  .wrbar i{display:block;height:100%;border-radius:999px}
-  .delta{font-size:10.5px;padding:2px 8px;border-radius:999px;font-weight:600;display:inline-block;white-space:nowrap}
+  .wrbar{height:5px;background:var(--panel2);border-radius:1px;overflow:hidden}
+  .wrbar i{display:block;height:100%;border-radius:1px}
+  .delta{font-size:10.5px;padding:2px 8px;border-radius:var(--r-xs);font-weight:600;display:inline-block;white-space:nowrap}
   .d-up{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
   .d-down{color:var(--danger);background:color-mix(in srgb,var(--danger) 15%,transparent)}
   /* ---- LP chart ----
@@ -1120,12 +1137,12 @@
      visible as leaving the green — and every check is a hoverable point.
      Height is fixed and matches the SVG viewBox height, so viewBox units and
      pixels are the same thing and the HTML overlay can be positioned in px. */
-  .lpc{position:relative;margin-top:2px;border-radius:9px;overflow:visible;
+  .lpc{position:relative;margin-top:2px;border-radius:var(--r-sm);overflow:visible;
     border:1px solid var(--line);background:#00000038}
   /* the plot's height matches the SVG viewBox height, so viewBox units and pixels
      are the same thing and the HTML overlay can be positioned in px */
   .lpc-plot{position:relative;height:88px}
-  .lpc-svg{display:block;width:100%;height:100%;border-radius:8px 8px 0 0}
+  .lpc-svg{display:block;width:100%;height:100%;border-radius:var(--r-sm) var(--r-sm) 0 0}
   /* X is real time now, so the dates below are worth printing */
   .lpc-axis{position:relative;height:16px;border-top:1px solid var(--line)}
   .lpc-tick{position:absolute;top:3px;transform:translateX(-50%);white-space:nowrap;
@@ -1162,12 +1179,12 @@
      pointer anywhere near it — a hover tint is not enough on its own. */
   .pal-i.sel{background:color-mix(in srgb,var(--teal) 13%,transparent);
     box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--teal) 32%,transparent)}
-  .pal-pic{width:28px;height:28px;border-radius:9px;flex-shrink:0;position:relative;overflow:visible;
+  .pal-pic{width:28px;height:28px;border-radius:50%;flex-shrink:0;position:relative;overflow:visible;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--faint)}
-  .pal-pic img{width:100%;height:100%;object-fit:cover;border-radius:9px;display:block}
+  .pal-pic img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
   .pal-pic .crest{position:absolute;right:-5px;top:-5px;width:14px;height:14px}
-  .pal-ico{width:28px;height:28px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;
+  .pal-ico{width:28px;height:28px;border-radius:var(--r-sm);flex-shrink:0;display:flex;align-items:center;
     justify-content:center;background:#ffffff0d;color:var(--muted)}
   .pal-ico .ico{width:15px;height:15px}
   .pal-t{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px}
@@ -1243,7 +1260,7 @@
   .lpc-tip{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;
     opacity:0;pointer-events:none;transition:opacity .13s ease;
     white-space:nowrap;font-size:11px;font-weight:500;line-height:1.35;color:var(--text);
-    padding:6px 9px;border-radius:8px;background:#171b24;border:1px solid var(--line2);
+    padding:6px 9px;border-radius:var(--r-sm);background:#0c151f;border:1px solid color-mix(in srgb,var(--gold-dim) 70%,transparent);
     box-shadow:var(--sh-3)}
   .lpc-tip em{display:block;font-style:normal;font-size:9.5px;color:var(--faint);margin-top:1px}
   .lpc-tip.l{left:-6px;transform:none}
@@ -1260,7 +1277,7 @@
   .meta b{color:var(--text);font-weight:500}
   .meta .g{color:var(--gold-txt)}
   .ctags{display:flex;gap:6px;flex-wrap:wrap}
-  .ctags span{font-size:11px;padding:3px 9px;border-radius:999px;background:#ffffff0a;border:1px solid #ffffff0f;color:var(--muted)}
+  .ctags span{font-size:11px;padding:3px 9px;border-radius:var(--r-xs);background:#ffffff0a;border:1px solid #ffffff0f;color:var(--muted)}
   .login{background:#00000038;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:13px;display:flex;flex-direction:column;gap:9px}
   .login .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:7px}
   .lrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -1282,8 +1299,8 @@
   .goal-t{font-weight:700;letter-spacing:-.01em;font-size:11.5px}
   .goal-r{margin-left:auto;color:var(--faint);font-variant-numeric:tabular-nums;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .goal-bar{height:4px;border-radius:999px;background:#ffffff12;overflow:hidden}
-  .goal-bar i{display:block;height:100%;border-radius:999px;transition:width .5s cubic-bezier(.22,1,.36,1)}
+  .goal-bar{height:4px;border-radius:1px;background:#ffffff12;overflow:hidden}
+  .goal-bar i{display:block;height:100%;border-radius:1px;transition:width .5s cubic-bezier(.22,1,.36,1)}
   .goal.hit .goal-r{color:var(--good);font-weight:600}
   @media (prefers-reduced-motion:reduce){.goal-bar i{transition:none}}
   .flagmark{display:inline-flex;flex-shrink:0;color:var(--danger)}
@@ -1304,7 +1321,7 @@
      phrase op.gg printed ("updated today") — so no uppercasing, which would
      shout at a sentence fragment */
   .src{font-size:10px;font-weight:500;letter-spacing:.01em;color:var(--faint);
-    padding:2px 8px;border-radius:999px;background:#ffffff0a;border:1px solid #ffffff0f;white-space:nowrap}
+    padding:2px 8px;border-radius:var(--r-xs);background:#ffffff0a;border:1px solid #ffffff0f;white-space:nowrap}
   /* 11.5px type in 6px of padding is a 26px target, and there were five of them
      in a row. Mobile already got 40px; the desktop was left with whatever the
      text happened to measure. */
@@ -1389,9 +1406,10 @@
      look the same. The gold tint implied a hierarchy that isn't there. */
   .a-dpm{border:1px solid var(--line);color:var(--text);font-weight:500;background:var(--panel2)}
   .a-dpm:hover{color:var(--text);border-color:var(--line2);background:var(--panel3)}
-  .a-login{background:var(--teal);border-color:var(--teal);color:var(--teal-ink);font-weight:700;
+  .a-login{background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 82%,#fff),var(--teal) 45%,color-mix(in srgb,var(--teal) 78%,#000));
+    border-color:var(--teal);color:var(--teal-ink);font-weight:700;
     box-shadow:0 4px 14px -6px color-mix(in srgb,var(--teal) 85%,transparent)}
-  .a-login:hover{background:var(--teal);border-color:var(--teal);color:var(--teal-ink);filter:brightness(1.1);
+  .a-login:hover{background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 70%,#fff),var(--teal) 50%);border-color:var(--teal);color:var(--teal-ink);filter:brightness(1.06);
     box-shadow:0 7px 22px -6px color-mix(in srgb,var(--teal) 95%,transparent)}
 
   /* ---- form + settings ---- */
@@ -1403,7 +1421,7 @@
   .hidden{display:none!important}
   .empty{padding:64px 24px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7}
   .empty .d{height:84px;margin-bottom:20px;display:flex;align-items:center;justify-content:center}
-  .empty-gem{width:56px;height:56px;display:inline-block;border-radius:17px;transform:rotate(45deg);
+  .empty-gem{width:52px;height:52px;display:inline-block;border-radius:var(--r-xs);transform:rotate(45deg);
     border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);
     background:linear-gradient(145deg,color-mix(in srgb,var(--gold) 22%,transparent),#0f1218);
     box-shadow:0 0 40px color-mix(in srgb,var(--gold) 22%,transparent),inset 0 0 0 1px #ffffff0f}
@@ -1579,7 +1597,7 @@
   #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:80;display:none;
     width:max-content;max-width:min(720px,calc(100vw - 32px));
     background:#161a23f2;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
-    border:1px solid var(--line2);border-radius:999px;color:var(--text);
+    border:1px solid color-mix(in srgb,var(--gold-dim) 70%,transparent);border-radius:var(--r-md);color:var(--text);
     padding:11px 20px;font-size:13px;font-weight:500;box-shadow:var(--sh-3)}
 
   .spin{display:inline-block;animation:sp 1s linear infinite}
