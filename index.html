@@ -2118,13 +2118,13 @@
       <dt>Quick find</dt>
       <dd><kbd>Ctrl</kbd><kbd>K</kbd> (or <kbd>⌘</kbd><kbd>K</kbd>) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.</dd>
       <dt>Keys</dt>
-      <dd><kbd>/</kbd> search · <kbd>n</kbd> new account · <kbd>Esc</kbd> closes panels · shift-click a card's checkbox to select a range.</dd>
+      <dd><kbd>/</kbd> search · <kbd>n</kbd> new account · <kbd>f</kbd> favorites · <kbd>h</kbd> streamer mode (hides Riot IDs, logins, emails and notes; its red marker in the header turns it off) · <kbd>Esc</kbd> closes panels · shift-click a card's checkbox to select a range.</dd>
       <dt>Goals</dt>
       <dd>Set a target rank in a card's <b>Rank</b> panel and the card grows a rail showing how far there is left, plus a rough estimate once there's a fortnight of checks to work from.</dd>
       <dt>Extra privacy</dt>
       <dd>Set a master password in <b>Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.</dd>
       <dt>More</dt>
-      <dd>The <b>⋯</b> menu has bulk add (paste a list of Name#TAG) and CSV import · archive an account to hide it without deleting (toggle <b>Archived</b> in the toolbar) · pick your own primary and secondary colors in Settings.</dd>
+      <dd>The <b>⋯</b> menu has bulk add (paste Name#TAGs, an op.gg multi-search link or the lobby chat), CSV import, <b>New season</b> (every rank into Past seasons at once, with Undo) and streamer mode · archive an account to hide it without deleting (toggle <b>Archived</b> in the toolbar) · <b>Settings → Appearance</b> has themes, effects, text size and what each card shows.</dd>
       <dt>Using this app</dt>
       <dd class="terms">free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.</dd>
     </dl></div>
@@ -2755,8 +2755,19 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.1.0";
+const APP_VERSION="2.2.0";
 const APP_CHANGELOG=[
+  {v:"2.2.0",items:[
+    "Themes: a whole look in one click, or colours that follow your best rank",
+    "Streamer mode (H) hides Riot IDs, logins, emails and notes",
+    "Settings in tabs; Effects and Text size; choose what each card shows",
+    "Champion art: each account's most-played champion, faded into its card",
+    "This week on the dashboard; New season resets every rank at once, with Undo",
+    "Bulk add reads op.gg multi-search links and the lobby chat",
+    "With a Riot key: mastery, win streaks and roles; search champ: and role:",
+    "Decay alerts on Discord, even with the app closed (redeploy your worker)",
+    "App icon shortcuts: Check all ranks, Add account",
+  ]},
   {v:"2.1.0",items:[
     "Play next picks the account that needs a game; Diamond+ warns before decay",
     "Stronger vault encryption — update every device you sync before pushing",
