@@ -5989,3 +5989,31 @@ test("on a phone a list row fits its rank instead of cutting it short", () => {
   const fixed = 15 + 36 + 106 + 16 + 4 * 8;
   assert.ok(390 - 32 - 24 - fixed >= 100, "which leaves a phone a name column of 100px or more");
 });
+
+/* Add account and Bulk add focus their real first field themselves, before the
+   observer that manages modal focus gets a look in — on purpose, so they land on
+   the name and the list rather than the label and the region. But that observer
+   then recorded *that field* as where to send focus back to, and on close it went
+   back into a hidden form and fell through to <body>. */
+test("closing Add account or Bulk add hands focus back to what opened it", async () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document;
+  const tick = () => new Promise(r => setTimeout(r, 0));
+  const esc = () => doc.activeElement.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+  const add = doc.getElementById("bAdd");
+  add.focus(); add.click();
+  await tick();
+  assert.equal(doc.activeElement.id, "fName", "it still opens on the name");
+  esc(); await tick();
+  assert.equal(doc.activeElement, add, "and closing goes back to + Add account");
+
+  const more = doc.getElementById("bMore");
+  more.click();
+  const bulk = doc.getElementById("bBulkAdd");
+  bulk.focus(); bulk.click();
+  await tick();
+  assert.equal(doc.activeElement.id, "baList");
+  esc(); await tick();
+  assert.equal(doc.activeElement, more, "the ⋯ that the menu hangs off, since the item itself is hidden now");
+});

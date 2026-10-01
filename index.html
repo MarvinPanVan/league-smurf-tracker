@@ -6202,6 +6202,7 @@ function openForm(acc){
   // Focused before the observer that manages modal focus gets a look in, so it
   // leaves this alone: the first field is the optional label, and the one you
   // came here to type is the name.
+  noteModalReturn();
   $("fName").focus();
 }
 function closeForm(){$("form").classList.add("hidden");editingId=null}
@@ -6745,6 +6746,13 @@ document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListene
 const MODALS=["settings","help","form","rankModal","palette","compareModal","bulkAdd"];
 let modalReturn=null;
 function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains("hidden"))}
+/* For the windows that move focus to their own first field before the observer
+   below gets a look in: they note where they were opened from first, or there is
+   nothing to go back to on close but <body>. */
+function noteModalReturn(){
+  const a=document.activeElement;
+  if(!modalReturn&&a&&a!==document.body&&!openModals().some(m=>m.contains(a)))modalReturn=a;
+}
 function syncModals(){
   const open=openModals();
   document.body.classList.toggle("modal-open",open.length>0);
@@ -6752,8 +6760,9 @@ function syncModals(){
     if(!modalReturn){
       const a=document.activeElement;
       // body means nothing had focus; restoring to it later would be a no-op that
-      // still counts as "handled", so don't record it
-      modalReturn=a&&a!==document.body?a:null;
+      // still counts as "handled", so don't record it. Nor a field inside the window:
+      // that is one the opener focused itself before this ran, and it is no way back.
+      modalReturn=a&&a!==document.body&&!open.some(m=>m.contains(a))?a:null;
     }
     const el=open[0];
     if(!el.contains(document.activeElement)){
@@ -7093,6 +7102,7 @@ $("bBulkAdd").addEventListener("click",()=>{
   // Before the modal observer gets a look in, the same way openForm does: the
   // first focusable field is the region select, and the one you came here to
   // fill is the list.
+  noteModalReturn();
   $("baList").focus();
 });
 $("baCancel").addEventListener("click",()=>$("bulkAdd").classList.add("hidden"));
