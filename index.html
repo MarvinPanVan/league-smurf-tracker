@@ -1909,66 +1909,60 @@
   <div class="mdl hx teal"><div class="hx-in mdl-in" style="position:relative">
     <div class="mdl-h">
       <span class="t" id="settingsTitle">Settings</span>
-      <span class="s">Everything here is optional and stays in this browser</span>
       <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     </div>
     <div class="mdl-b">
 
       <div class="grp">
-        <div class="grp-h">Rank checks</div>
-        <div class="formgrid">
-          <div class="fld fw">
-            <label>Backend URL (optional — your own rank server, e.g. Cloudflare Worker)</label>
-            <input id="sBackend" placeholder="https://... — leave empty to use the free auto-fetch" autocomplete="off">
+        <div class="grp-h">Appearance</div>
+        <div class="hint" style="margin-bottom:12px">Pick a colour and a preview of the homepage opens beside it. Colours and atmosphere change live; close without saving to put them back.</div>
+        <div class="acc-swatches">
+          <div class="acc-swatch">
+            <input type="color" id="sAccent" aria-label="Primary accent color">
+            <span style="font-size:12px;color:var(--muted);line-height:1.4">Primary<br><span style="color:var(--faint)">title, favorites, scrollbar</span></span>
+            <button id="sAccentReset1" class="acc-reset" type="button" title="Back to the default primary" aria-label="Reset the primary color">↺</button>
           </div>
-          <div class="fld fw">
-            <label>Advanced: Anthropic API key (optional, stored only in this browser)</label>
-            <input type="text" id="sKey" class="mask" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
-          </div>
-          <div class="fld">
-            <label>Model for rank checks</label>
-            <select id="sModel">
-              <option value="claude-sonnet-5">Sonnet — more reliable (~1–2 ct/check)</option>
-              <option value="claude-haiku-4-5">Haiku — cheaper, may miss data</option>
-            </select>
-          </div>
-          <div class="fw hint">
-            Check order: <b>backend URL → API key → free op.gg auto-fetch</b>. With all three empty, checks use the free auto-fetch and cost nothing. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable, but only worth it for power users.
-          </div>
-          <div class="fw hint" id="sDeployHelp" style="margin-top:8px">
-            <b>Deploy the worker:</b> Cloudflare → Workers → Create → paste
-            <code style="user-select:all">cloudflare-worker.js</code> from the repo → Deploy → paste the
-            <code>*.workers.dev</code> URL above. Check-all then uses one batch POST instead of N GETs.
-            For device sync, also bind a KV namespace named <code>VAULT</code> (Settings → Variables → KV bindings).
-            Raw file:
-            <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>
-          </div>
-          <div class="fld">
-            <label>Remind me to export after (days)</label>
-            <input id="sExportDays" type="number" min="1" max="365" value="30" style="max-width:120px">
+          <div class="acc-swatch">
+            <input type="color" id="sAccent2" aria-label="Secondary accent color">
+            <span style="font-size:12px;color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login, Refresh, Add, focus rings</span></span>
+            <button id="sAccentReset2" class="acc-reset" type="button" title="Back to the default secondary" aria-label="Reset the secondary color">↺</button>
           </div>
         </div>
-      </div>
-
-      <div class="grp">
-        <div class="grp-h">Device sync</div>
-        <div class="fw hint" style="margin-bottom:10px">
-          Pushes the <b>encrypted</b> vault blob to your worker (KV). Same sync token on phone and PC.
-          Last write wins. Needs a master password (Security below) and Backend URL + KV binding above.
-          No scrape cache — you are responsible for not hammering op.gg.
-        </div>
-        <div class="fld fw">
-          <label>Sync token (same on every device — treat like a password)</label>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <input type="text" id="sSyncToken" class="mask" placeholder="Generate or paste a long token" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="flex:1;min-width:170px">
-            <button type="button" id="sSyncGen">Generate</button>
+        <div class="atm-block">
+          <div class="atm-h">Atmosphere</div>
+          <div id="sAtmosphere" class="atm-grid" role="radiogroup" aria-label="Page atmosphere">
+            <button type="button" role="radio" data-atmosphere="spotlight" class="atm-tile on" aria-checked="true">
+              <span class="atm-mini" data-atm="spotlight" aria-hidden="true"></span>
+              <span class="atm-name">Spotlight</span>
+              <span class="atm-tip">Quiet glow behind the title from your accents.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="aurora" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="aurora" aria-hidden="true"></span>
+              <span class="atm-name">Aurora</span>
+              <span class="atm-tip">Stronger mirrored colour washes — stays with the window like Spotlight.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="noir" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="noir" aria-hidden="true"></span>
+              <span class="atm-name">Noir</span>
+              <span class="atm-tip">Darker edges and heavier grain. No accent colour — quiet on purpose.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="lattice" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="lattice" aria-hidden="true"></span>
+              <span class="atm-name">Lattice</span>
+              <span class="atm-tip">A soft grid that fades out toward the end of the page.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="stardust" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="stardust" aria-hidden="true"></span>
+              <span class="atm-name">Stardust</span>
+              <span class="atm-tip">Sparse dots that fade out toward the end of the page.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="void" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="void" aria-hidden="true"></span>
+              <span class="atm-name">Void</span>
+              <span class="atm-tip">Flat background. The UI is the atmosphere.</span>
+            </button>
           </div>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-          <button type="button" id="sSyncPush">Push to cloud</button>
-          <button type="button" id="sSyncPull">Pull from cloud</button>
-        </div>
-        <div id="sSyncStatus" class="hint" style="margin-top:8px"></div>
       </div>
 
       <div class="grp">
@@ -2022,55 +2016,60 @@
       </div>
 
       <div class="grp">
-        <div class="grp-h">Appearance</div>
-        <div class="hint" style="margin-bottom:12px">Click a colour — a miniature of the homepage opens beside the colour popup (clear of it, not on top of it). It leaves when the popup does. Click the square again to close both. Colours and atmosphere preview live; closing without saving puts them back.</div>
-        <div class="acc-swatches">
-          <div class="acc-swatch">
-            <input type="color" id="sAccent" aria-label="Primary accent color">
-            <span style="font-size:12px;color:var(--muted);line-height:1.4">Primary<br><span style="color:var(--faint)">title, favorites, scrollbar</span></span>
-            <button id="sAccentReset1" class="acc-reset" type="button" title="Back to the default primary" aria-label="Reset the primary color">↺</button>
+        <div class="grp-h">Rank checks</div>
+        <div class="formgrid">
+          <div class="fld fw">
+            <label>Backend URL (optional — your own rank server, e.g. Cloudflare Worker)</label>
+            <input id="sBackend" placeholder="https://... — leave empty to use the free auto-fetch" autocomplete="off">
           </div>
-          <div class="acc-swatch">
-            <input type="color" id="sAccent2" aria-label="Secondary accent color">
-            <span style="font-size:12px;color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login, Refresh, Add, focus rings</span></span>
-            <button id="sAccentReset2" class="acc-reset" type="button" title="Back to the default secondary" aria-label="Reset the secondary color">↺</button>
+          <div class="fld fw">
+            <label>Advanced: Anthropic API key (optional, stored only in this browser)</label>
+            <input type="text" id="sKey" class="mask" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
           </div>
-        </div>
-        <div class="atm-block">
-          <div class="atm-h">Atmosphere</div>
-          <div id="sAtmosphere" class="atm-grid" role="radiogroup" aria-label="Page atmosphere">
-            <button type="button" role="radio" data-atmosphere="spotlight" class="atm-tile on" aria-checked="true">
-              <span class="atm-mini" data-atm="spotlight" aria-hidden="true"></span>
-              <span class="atm-name">Spotlight</span>
-              <span class="atm-tip">Quiet glow behind the title from your accents.</span>
-            </button>
-            <button type="button" role="radio" data-atmosphere="aurora" class="atm-tile" aria-checked="false">
-              <span class="atm-mini" data-atm="aurora" aria-hidden="true"></span>
-              <span class="atm-name">Aurora</span>
-              <span class="atm-tip">Stronger mirrored colour washes — stays with the window like Spotlight.</span>
-            </button>
-            <button type="button" role="radio" data-atmosphere="noir" class="atm-tile" aria-checked="false">
-              <span class="atm-mini" data-atm="noir" aria-hidden="true"></span>
-              <span class="atm-name">Noir</span>
-              <span class="atm-tip">Darker edges and heavier grain. No accent colour — quiet on purpose.</span>
-            </button>
-            <button type="button" role="radio" data-atmosphere="lattice" class="atm-tile" aria-checked="false">
-              <span class="atm-mini" data-atm="lattice" aria-hidden="true"></span>
-              <span class="atm-name">Lattice</span>
-              <span class="atm-tip">A soft grid that fades out toward the end of the page.</span>
-            </button>
-            <button type="button" role="radio" data-atmosphere="stardust" class="atm-tile" aria-checked="false">
-              <span class="atm-mini" data-atm="stardust" aria-hidden="true"></span>
-              <span class="atm-name">Stardust</span>
-              <span class="atm-tip">Sparse dots that fade out toward the end of the page.</span>
-            </button>
-            <button type="button" role="radio" data-atmosphere="void" class="atm-tile" aria-checked="false">
-              <span class="atm-mini" data-atm="void" aria-hidden="true"></span>
-              <span class="atm-name">Void</span>
-              <span class="atm-tip">Flat background. The UI is the atmosphere.</span>
-            </button>
+          <div class="fld">
+            <label>Model for rank checks</label>
+            <select id="sModel">
+              <option value="claude-sonnet-5">Sonnet — more reliable (~1–2 ct/check)</option>
+              <option value="claude-haiku-4-5">Haiku — cheaper, may miss data</option>
+            </select>
+          </div>
+          <div class="fw hint">
+            Check order: <b>backend URL → API key → free op.gg auto-fetch</b>. With all three empty, checks use the free auto-fetch and cost nothing. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable, but only worth it for power users.
+          </div>
+          <div class="fw hint" id="sDeployHelp" style="margin-top:8px">
+            <b>Deploy the worker:</b> Cloudflare → Workers → Create → paste
+            <code style="user-select:all">cloudflare-worker.js</code> from the repo → Deploy → paste the
+            <code>*.workers.dev</code> URL above. Check-all then uses one batch POST instead of N GETs.
+            For device sync, also bind a KV namespace named <code>VAULT</code> (Settings → Variables → KV bindings).
+            Raw file:
+            <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>
+          </div>
+          <div class="fld">
+            <label>Remind me to export after (days)</label>
+            <input id="sExportDays" type="number" min="1" max="365" value="30" style="max-width:120px">
           </div>
         </div>
+      </div>
+
+      <div class="grp">
+        <div class="grp-h">Device sync</div>
+        <div class="fw hint" style="margin-bottom:10px">
+          Pushes the <b>encrypted</b> vault blob to your worker (KV). Same sync token on phone and PC.
+          Last write wins. Needs a master password (Security) and a Backend URL with a KV binding (Rank checks), both above.
+          No scrape cache — you are responsible for not hammering op.gg.
+        </div>
+        <div class="fld fw">
+          <label>Sync token (same on every device — treat like a password)</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <input type="text" id="sSyncToken" class="mask" placeholder="Generate or paste a long token" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="flex:1;min-width:170px">
+            <button type="button" id="sSyncGen">Generate</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+          <button type="button" id="sSyncPush">Push to cloud</button>
+          <button type="button" id="sSyncPull">Pull from cloud</button>
+        </div>
+        <div id="sSyncStatus" class="hint" style="margin-top:8px"></div>
       </div>
 
     </div>

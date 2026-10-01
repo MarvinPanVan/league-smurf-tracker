@@ -2460,7 +2460,8 @@ test("atmosphere previews live and only sticks after Save", () => {
   assert.deepEqual(tiles, ["spotlight", "aurora", "noir", "lattice", "stardust", "void"]);
 
   // colours sit above the atmosphere picker in Appearance
-  const appearance = win.document.querySelector("#settings .grp:last-of-type");
+  const appearance = [...win.document.querySelectorAll("#settings .grp")]
+    .find(g => g.querySelector(".grp-h").textContent.trim() === "Appearance");
   const accent = appearance.querySelector("#sAccent");
   const atm = appearance.querySelector("#sAtmosphere");
   assert.ok(accent && atm, "both live in Appearance");
@@ -2502,12 +2503,15 @@ test("atmosphere previews live and only sticks after Save", () => {
 test("the settings body is grouped rather than one flat run of fields", () => {
   const win = bootApp();
   const groups = [...win.document.querySelectorAll("#settings .grp-h")].map(g => g.textContent.trim());
-  assert.deepEqual(groups, ["Rank checks", "Device sync", "Automatic refresh", "Alerts", "Security", "Appearance"]);
+  // what most people change first; the plumbing (rank server, API key, sync) last,
+  // with sync after both of the things it needs
+  assert.deepEqual(groups, ["Appearance", "Automatic refresh", "Alerts", "Security", "Rank checks", "Device sync"]);
   // header and footer sit outside the scrolling middle, so Save is always reachable
   const body = win.document.querySelector("#settings .mdl-b");
   assert.ok(body, "there is a scroll region");
   assert.equal(body.contains(win.document.getElementById("sSave")), false, "Save is pinned, not scrolled");
   assert.ok(body.contains(win.document.getElementById("sBackend")), "the fields are the part that scrolls");
+  assert.doesNotMatch(body.textContent, /clear of it|not on top of it/, "the hint talks about colours, not about layout");
 });
 
 // ---- second review pass ----
