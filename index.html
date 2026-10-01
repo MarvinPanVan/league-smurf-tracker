@@ -1716,11 +1716,12 @@
   @keyframes starPop{0%{transform:scale(1)}45%{transform:scale(1.45) rotate(9deg)}100%{transform:scale(1)}}
   .star.reveal{animation:starPop .42s cubic-bezier(.34,1.56,.64,1)}
 
-  /* ---- micro-interactions ---- */
-  .a-login .ico,.acts .ico{transition:transform .22s cubic-bezier(.22,1,.36,1)}
-  .a-login:hover .ico{transform:scale(1.16)}
-  .acts button:hover .ico{transform:rotate(-12deg)}
-  .acts button[data-act="check"]:hover .ico{transform:rotate(180deg)}
+  /* ---- micro-interactions ----
+     One response per hover. Pointing at a card used to lift it, grow its portrait
+     and light its region tag, and pointing at a button then tilted, spun or swelled
+     its icon on top of the button's own change — five things moving for one
+     movement of the mouse, on every card the pointer crossed on its way across the
+     grid. The card's lift and each button's own colour change are what remain. */
   .cmp{padding:22px 22px 6px}
   .cmp-head{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:start;margin-bottom:18px}
   .cmp-side{display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;min-width:0}
@@ -1748,14 +1749,9 @@
   .cmp-row .win{color:var(--gold-txt);font-weight:600}
   .toast-log{max-width:420px;font-size:12px;line-height:1.45}
 
-  .panel-close{transition:color .16s,background .16s,transform .2s cubic-bezier(.22,1,.36,1)}
-  .panel-close:hover{transform:rotate(90deg)}
+  .panel-close{transition:color .16s,background .16s}
   .chip{transition:background .15s ease,border-color .15s ease,color .15s ease,transform .14s cubic-bezier(.22,1,.36,1)}
   .chip:active{transform:scale(.95)}
-  .c-portrait{transition:transform .24s cubic-bezier(.22,1,.36,1)}
-  .card:hover .c-portrait{transform:scale(1.05)}
-  .regiontag{transition:background .2s,border-color .2s}
-  .card:hover .regiontag{background:color-mix(in srgb,var(--teal) 19%,transparent);border-color:color-mix(in srgb,var(--teal) 40%,transparent)}
 
   /* ---- motion ---- */
   /* The lit border used to be a `background` transition between two gradients,
@@ -1825,8 +1821,7 @@
     .modal::before,.modal:not(.hidden) .mdl,.acc-prev.show{animation:none!important}
     .hx-in.scanning::after{animation:none!important;content:none}
     .grid>.hx{transition:none}
-    .panel-close:hover,.chip:active,.card:hover .c-portrait,.a-login:hover .ico,.acts button:hover .ico,
-    .c-drawer:hover .ico{transform:none}
+    .chip:active,.c-drawer:hover .ico{transform:none}
     /* the flipped chevrons stay — they say open vs closed, they aren't decoration */
     .c-drawer .ico,.sec-h .ico{transition:none}
     html{scroll-behavior:auto}
