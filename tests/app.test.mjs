@@ -1159,7 +1159,8 @@ test("champion art: the most-played champion's splash, by Data Dragon id, lazy, 
   const key = n => { win.__n = n; runScript(win, "window.__k = champKey(window.__n)"); return win.__k; };
   for (const [name, id] of [["Kai'Sa", "Kaisa"], ["Wukong", "MonkeyKing"], ["Nunu & Willump", "Nunu"], ["Dr. Mundo", "DrMundo"],
     ["Jarvan IV", "JarvanIV"], ["Rek'Sai", "RekSai"], ["K'Sante", "KSante"], ["LeBlanc", "Leblanc"], ["Miss Fortune", "MissFortune"],
-    ["FiddleSticks", "Fiddlesticks"], ["MonkeyKing", "MonkeyKing"], ["Renata Glasc", "Renata"]])
+    ["FiddleSticks", "Fiddlesticks"], ["MonkeyKing", "MonkeyKing"], ["Renata Glasc", "Renata"],
+    ["Kai\u2019Sa", "Kaisa"], ["Cho\u2019Gath", "Chogath"], ["Rek\u2019Sai", "RekSai"]])
     assert.equal(key(name), id, name);
   assert.equal(key('"><img src=x>'), null, "anything that is not a plain id makes no URL at all");
   const art = id => doc.querySelector(`.card[data-id="${id}"] .c-art`);

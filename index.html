@@ -6281,7 +6281,7 @@ function formHTML(a){
 const CHAMP_ID_FIX={"wukong":"MonkeyKing","nunu & willump":"Nunu","renata glasc":"Renata","kai'sa":"Kaisa","cho'gath":"Chogath",
   "vel'koz":"Velkoz","kha'zix":"Khazix","bel'veth":"Belveth","leblanc":"Leblanc","fiddlesticks":"Fiddlesticks"};
 function champKey(name){
-  const n=String(name||"").trim();
+  const n=String(name||"").trim().replace(/[\u2018\u2019\u02bc]/g,"'"); // Kai’Sa is Kai'Sa
   if(!n||!/^[A-Za-z0-9 '.&-]+$/.test(n))return null; // what champion names are made of, and nothing else
   const fixed=CHAMP_ID_FIX[n.toLowerCase()];if(fixed)return fixed;
   const k=n.split(/[^A-Za-z0-9]+/).filter(Boolean).map(w=>w[0].toUpperCase()+w.slice(1)).join("");
