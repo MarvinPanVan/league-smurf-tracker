@@ -5843,7 +5843,28 @@ function ensureCardMenu(){
   // The same delegated handler the grid uses — the menu carries the account's
   // data-id, so every branch resolves exactly as it does from inside a card.
   el.addEventListener("click",onCardClick);
+  el.addEventListener("keydown",onCardMenuKey);
   return el;
+}
+/* A menu is somewhere the keyboard goes, not only something it can open. This one
+   is appended to <body>, so in tab order it came after every card in the vault,
+   and nothing ever moved focus into it — which left Rank, Account, Archive and
+   Delete, all of which live only in here in the card layout, out of reach without
+   a mouse. Arrows walk it, Escape and Tab leave it from the ⋯ that opened it. */
+function cardMenuItems(){const m=$("cardMenu");return m?[...m.querySelectorAll('[role="menuitem"]')]:[]}
+function focusCardMenuItem(i){
+  const items=cardMenuItems();
+  if(items.length)items[((i%items.length)+items.length)%items.length].focus();
+}
+function onCardMenuKey(e){
+  const at=cardMenuItems().indexOf(document.activeElement);
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();focusCardMenuItem(at<0?0:at+(e.key==="ArrowDown"?1:-1))}
+  else if(e.key==="Home"){e.preventDefault();focusCardMenuItem(0)}
+  else if(e.key==="End"){e.preventDefault();focusCardMenuItem(-1)}
+  // the page's own Escape would go on to fold the card's panels as well
+  else if(e.key==="Escape"){e.preventDefault();e.stopPropagation();closeCardMenu()}
+  // focus is back on the ⋯ by the time Tab's default runs, so it carries on from the card
+  else if(e.key==="Tab")closeCardMenu();
 }
 function renderCardMenu(){
   const id=[...openMore][0];
@@ -5910,12 +5931,16 @@ function openCardMenu(id,anchor){
 }
 function closeCardMenu(){
   if(!openMore.size&&!cardMenuAnchor)return false;
-  const ids=[...openMore];
+  const ids=[...openMore], anchor=cardMenuAnchor;
   openMore.clear();cardMenuAnchor=null;
   const el=$("cardMenu");
+  // A focused item about to be hidden drops focus to <body>, and the keyboard
+  // starts over from the top of the page. It goes back to the ⋯ instead.
+  const hadFocus=!!(el&&el.contains(document.activeElement));
   if(el){el.classList.add("hidden");el.removeAttribute("data-id")}
   bindCardMenuTracking(false);
   for(const id of ids)if(accounts.some(a=>a.id===id))renderCard(id);
+  if(hadFocus&&anchor&&anchor.isConnected)anchor.focus();
   return true;
 }
 /* Login is the only panel that still unfolds inside a card — ✎ Rank opens a
@@ -7504,6 +7529,14 @@ $("grid").addEventListener("keydown",e=>{
   const row=e.target&&e.target.classList&&e.target.classList.contains("rw-main")?e.target:null;
   const tile=e.target&&e.target.classList&&e.target.classList.contains("tile")?e.target:null;
   if((row||tile)&&(e.key==="Enter"||e.key===" ")){e.preventDefault();(row||tile).click();return}
+  // ArrowDown on a ⋯ goes into its menu — opening it first, if a click has not.
+  if(e.key==="ArrowDown"&&e.target&&e.target.dataset&&e.target.dataset.act==="more"){
+    const card=e.target.closest("[data-id]");if(!card)return;
+    e.preventDefault();
+    if(!openMore.has(card.dataset.id))openCardMenu(card.dataset.id,e.target);
+    focusCardMenuItem(0);
+    return;
+  }
   const ta=e.target;
   if(!ta||!ta.dataset||ta.dataset.f!=="notetext")return;
   if(e.key==="Escape"){
@@ -7579,7 +7612,14 @@ async function onCardClick(e){
     if(card&&card.scrollIntoView)card.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
     setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
   }
-  else if(act==="more"){openMore.has(id)?closeCardMenu():openCardMenu(id,btn)}
+  else if(act==="more"){
+    if(openMore.has(id))closeCardMenu();
+    else{
+      openCardMenu(id,btn);
+      // Enter or Space on a button is a click with no pointer behind it
+      if(e.detail===0)focusCardMenuItem(0);
+    }
+  }
   else if(act==="fav"){
     acc.fav=!acc.fav;reveal=acc.fav?id+":fav":null;saveDB();
     // Favs pin to the top of every sort — rebuild the grid order, not just this card.

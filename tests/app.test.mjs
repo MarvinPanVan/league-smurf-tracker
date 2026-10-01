@@ -5904,3 +5904,41 @@ test("locking empties the windows as well as the grid", async () => {
     assert.doesNotMatch(el ? el.textContent : "", /Seeded|Main/, `#${id} no longer names the account`);
   }
 });
+
+/* The ⋯ menu is appended to <body>, so in tab order it came after every card in
+   the vault, and nothing ever moved focus into it — Rank, Account, Archive and
+   Delete live only in there in the card layout, and none of them could be reached
+   without a mouse. Escape and picking an item then dropped focus on <body>. */
+test("the card's ⋯ menu works from the keyboard", () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document;
+  const more = doc.querySelector('.card [data-act="more"]');
+  const items = () => [...doc.querySelectorAll('#cardMenu [role="menuitem"]')];
+  const key = k => doc.activeElement.dispatchEvent(new win.KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true }));
+
+  // Enter or Space on a button arrives as a click with no pointer behind it: detail 0
+  more.focus();
+  more.dispatchEvent(new win.MouseEvent("click", { bubbles: true, detail: 0 }));
+  assert.equal(doc.getElementById("cardMenu").classList.contains("hidden"), false, "the menu opened");
+  assert.equal(doc.activeElement, items()[0], "and focus went into it, onto the first item");
+  key("ArrowDown");
+  assert.equal(doc.activeElement, items()[1], "arrows walk the items");
+  key("End");
+  assert.equal(doc.activeElement, items().at(-1));
+  key("ArrowDown");
+  assert.equal(doc.activeElement, items()[0], "and wrap");
+  key("Escape");
+  assert.equal(doc.getElementById("cardMenu").classList.contains("hidden"), true, "Escape closes it");
+  assert.equal(doc.activeElement, more, "and hands focus back to the ⋯, not to <body>");
+
+  // picking an item from the keyboard also lands back on the ⋯
+  more.dispatchEvent(new win.MouseEvent("click", { bubbles: true, detail: 0 }));
+  items().find(b => b.dataset.act === "played").click();
+  assert.equal(doc.activeElement, more);
+
+  // a real mouse click leaves focus alone, the way it always has
+  more.dispatchEvent(new win.MouseEvent("click", { bubbles: true, detail: 1 }));
+  assert.equal(doc.activeElement, more, "a pointer click does not pull focus into the menu");
+  key("ArrowDown");
+  assert.equal(doc.activeElement, items()[0], "but ArrowDown from the ⋯ goes in");
+});
