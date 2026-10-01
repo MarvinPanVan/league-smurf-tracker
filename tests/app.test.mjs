@@ -902,6 +902,7 @@ test("decay: Diamond and up are warned before their bank runs out, from the game
   const win = bootApp([
     acc("idle", "DIAMOND", [[20, 100]], 100),          // reached 20 days ago, no game since: 28 - 20 = 8, today ~7
     acc("gone", "DIAMOND", [[40, 100]], 100),          // 40 days without a game: decaying
+    acc("today", "DIAMOND", [[27.5, 100]], 100),       // half a day left
     acc("active", "DIAMOND", [[20, 100], [1, 103]], 103), // three games since: banked again
     acc("master", "MASTER", [[10, 300]], 300),         // Master: a 14-day bank, 10 days idle
     acc("plat", "PLATINUM", [[60, 10]], 10),           // no decay below Diamond
@@ -915,12 +916,14 @@ test("decay: Diamond and up are warned before their bank runs out, from the game
   const chip = id => [...win.document.querySelectorAll(`.card[data-id="${id}"] .delta`)].map(d => d.textContent.trim()).join("|");
   assert.match(chip("idle"), /Decay in ~7d/);
   assert.match(chip("gone"), /Decaying/);
+  assert.equal(days("today"), 0);
+  assert.match(chip("today"), /Decay in <1d/, "less than a day left is not \"~0d\"");
   assert.doesNotMatch(chip("active"), /Decay/);
   const tile = win.document.querySelector('#dash [data-flag="decay"]');
   assert.ok(tile, "the dashboard counts them");
-  assert.equal(tile.querySelector(".v").textContent, "3");
+  assert.equal(tile.querySelector(".v").textContent, "4");
   tile.click();
-  assert.deepEqual([...win.document.querySelectorAll(".card")].map(c => c.dataset.id).sort(), ["gone", "idle", "master"]);
+  assert.deepEqual([...win.document.querySelectorAll(".card")].map(c => c.dataset.id).sort(), ["gone", "idle", "master", "today"]);
 });
 
 test("a levelling account shows its way to ranked, and says when it is ready", () => {

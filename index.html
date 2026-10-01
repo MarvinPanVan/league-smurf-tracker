@@ -2802,6 +2802,8 @@ function decayDays(a){
    unranked it is ready to place. */
 function isLeveling(a){const s=a.stats;return isLive(a)&&!!s&&s.found!==false&&!isRanked(a)&&s.level!=null&&Number(s.level)<30}
 function isReadyForRanked(a){const s=a.stats;return isLive(a)&&!!s&&s.found!==false&&!isRanked(a)&&Number(s.level)>=30}
+// days are floored, so 0 is "less than one left" — "~0d" read as already gone
+function decayIn(d){return d<1?"<1d":"~"+d+"d"}
 function decayRisk(a){const d=decayDays(a);return isLive(a)&&d!==null&&d<=7}
 /* Which account to play next. One about to decay comes first — the soonest of
    them — because that is LP to lose; after that, the active account left longest
@@ -2811,7 +2813,7 @@ function decayRisk(a){const d=decayDays(a);return isLive(a)&&d!==null&&d<=7}
 function playNext(pool){
   const live=(pool||accounts).filter(a=>isLive(a)&&(a.status||"active")==="active"&&isChecked(a)&&a.stats.found!==false);
   const urgent=live.filter(decayRisk).sort((x,y)=>decayDays(x)-decayDays(y));
-  if(urgent.length){const a=urgent[0],d=decayDays(a);return{a,why:d<0?"decaying — play a ranked game":"decay in ~"+d+"d"}}
+  if(urgent.length){const a=urgent[0],d=decayDays(a);return{a,why:d<0?"decaying — play a ranked game":"decay in "+decayIn(d)}}
   let best=null,days=-1;
   for(const a of live){const d=rotationDays(a);if(d!=null&&d>days){best=a;days=d}}
   return best&&days>=3?{a:best,why:days+" days since played"}:null;
@@ -6251,7 +6253,7 @@ function cardHTML(a,i){
       const r=DECAY_RULES[(a.stats.tier||"").toUpperCase()];
       const why=`Estimated from the games seen between checks. A ranked game banks ${r.per===1?"1 day":r.per+" days"}, up to ${r.cap}; past that the account loses ${r.lp} LP a day.`;
       deltaChip+=dd<0?`<span class="delta d-down" title="${esc(why)}">${icon("alert")} Decaying</span>`
-        :`<span class="delta d-warn" title="${esc(why)}">${icon("alert")} Decay in ~${dd}d</span>`;
+        :`<span class="delta d-warn" title="${esc(why)}">${icon("alert")} Decay in ${decayIn(dd)}</span>`;
     }
   }
   if(isDuplicate(a))deltaChip+='<span class="delta" title="Another card shares this Riot ID + region">Duplicate ID</span>';
