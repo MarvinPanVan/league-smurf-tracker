@@ -1011,6 +1011,30 @@ test("a new vault gets four set-up steps, each a button, until they are done or 
   assert.equal(appGet(win, "cfg.setupHidden"), true, "and it stays hidden");
 });
 
+test("This week: LP and games over the last seven days, the best climber one click away", () => {
+  const D = 86400000, now = Date.now();
+  const pt = (ago, tier, division, lp, w, l) => ({ t: now - ago * D, tier, division, lp, w, l });
+  const acc = (id, history, label) => ({ id, label, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history,
+    stats: { found: true, tier: history.at(-1).tier, division: history.at(-1).division, lp: history.at(-1).lp, wins: history.at(-1).w, losses: history.at(-1).l, updatedAt: now - history.at(-1).t } });
+  const win = bootApp([
+    acc("climber", [pt(9, "GOLD", "II", 10, 50, 50), pt(8, "GOLD", "II", 20, 52, 50), pt(2, "GOLD", "II", 80, 57, 50)], "Climber"),
+    acc("newbie", [pt(4, "SILVER", "I", 10, 5, 5), pt(1, "SILVER", "I", 30, 7, 6)]),       // first checked mid-week
+    acc("idle", [pt(20, "PLATINUM", "IV", 10, 9, 9), pt(10, "PLATINUM", "IV", 50, 11, 9)]),  // not checked this week
+    acc("reset", [pt(6, "DIAMOND", "I", 90, 200, 180), pt(3, "IRON", "IV", 0, 1, 1), pt(1, "IRON", "IV", 40, 3, 1)]), // new season mid-week
+  ]);
+  win.__pool = win.eval("accounts");
+  runScript(win, "window.__w = weekRecap(window.__pool)");
+  const w = win.__w;
+  assert.equal(w.lp, 60 + 20 + 40, "climber +60 since the week began, newbie +20 since its first check, reset +40 since the new season");
+  assert.equal(w.games, 5 + 3 + 2, "games the same way");
+  assert.equal(w.moved, 3, "an account not checked this week is not counted as flat");
+  assert.equal(w.best.a.id, "climber");
+  const tile = win.document.getElementById("weekStat");
+  assert.match(tile.textContent, /This week\s*\+120\s*LP\s*10 games · best Climber \+60/);
+  tile.click();
+  assert.equal(appGet(win, "flashId"), "climber", "the tile takes you to the best climber");
+});
+
 test("New season resets every ranked account at once, leaves the rest, and one Undo puts them all back", async () => {
   const acc = (id, tier, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [],
     history: [{ t: Date.now() - 86400000, tier, division: tier === "UNRANKED" ? null : "II", lp: 40 }],

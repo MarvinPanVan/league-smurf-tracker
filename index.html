@@ -5156,6 +5156,33 @@ function newSeasonAll(){
     render();saveThen("New season undone");
   });
 }
+/* This week: the last seven days at a glance — LP gained across the counted
+   accounts, games played and who climbed most. Not "since your last visit",
+   which the band over the grid already says: the same week however often the
+   app is opened. Like Group climb, an account first checked during the week
+   counts from that check, and a new season inside the week starts it afresh
+   rather than reading as a fall to Iron. */
+function weekRecap(pool,now=Date.now()){
+  const from=now-7*86400000;
+  let lp=0,games=0,moved=0,best=null;
+  for(const a of pool||[]){
+    const pts=(a.history||[]).filter(h=>+h.t&&+h.t<=now&&ladderLP(h)!=null).sort((x,y)=>x.t-y.t);
+    if(!pts.length)continue;
+    const last=pts[pts.length-1];
+    if(last.t<from)continue; // not checked this week: no telling what it did
+    let start=pts[0];
+    for(let i=0;i<pts.length;i++){
+      if(pts[i].t<=from)start=pts[i];
+      else if(i&&seasonBreak(pts[i-1],pts[i]))start=pts[i];
+    }
+    if(start===last)continue;
+    const d=ladderLP(last)-ladderLP(start);
+    lp+=d;moved++;
+    if(last.w!=null&&last.l!=null&&start.w!=null&&start.l!=null)games+=Math.max(0,(last.w+last.l)-(start.w+start.l));
+    if(d>0&&(!best||d>best.d))best={a,d:Math.round(d)};
+  }
+  return moved?{lp:Math.round(lp),games,moved,best}:null;
+}
 function poolLpTrend(pool){
   // Average absolute ladder position across the counted pool (same scale as the
   // LP chart: Iron→Challenger). One point per day. Carry each account's last
@@ -5887,7 +5914,7 @@ function renderDash(){
   const rotN=countPool.filter(needsRotation).length;
   const decayN=countPool.filter(decayRisk).length;
   const next=playNext(countPool);
-  const poolTrend=poolLpTrend(pool);
+  const poolTrend=poolLpTrend(pool), week=weekRecap(pool);
   // These are filter toggles, not links — they say so to a screen reader as well
   // as by lighting up.
   const gem=(tier,label,n,colour)=>`<button class="gem gem-b${ui.tier===tier?" on":""}" data-tier="${tier}" aria-pressed="${ui.tier===tier}" title="Show only these">`
@@ -5925,6 +5952,13 @@ function renderDash(){
       <div class="v" style="color:#f0b45a">${decayN}</div><div class="s-note">a week or less banked — play a ranked game</div></button>`:""}
     ${rotN?`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
       <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`:""}
+    ${week?(()=>{
+      const note=(week.games?week.games+" game"+(week.games===1?"":"s")+" · ":"")
+        +(week.best?"best "+nameOf(week.best.a)+" +"+week.best.d:week.moved+" account"+(week.moved===1?"":"s")+" checked");
+      const inner=`<div class="k">This week</div><div class="v">${week.lp>0?"+":week.lp<0?"−":""}${Math.abs(week.lp)} <small>LP</small></div><div class="s-note">${note}</div>`;
+      return week.best?`<button class="stat stat-b" id="weekStat" data-next="${idAttr(week.best.a.id)}" title="The last seven days across the counted accounts — click to see the best climber">${inner}</button>`
+        :`<div class="stat" id="weekStat" title="The last seven days across the counted accounts">${inner}</div>`;
+    })():""}
     <div class="stat" id="ladderTrendStat"${poolTrend?` title="${esc(poolTrend.note)}"`:""}>
       <div class="k">Group climb</div>
       ${poolTrend
