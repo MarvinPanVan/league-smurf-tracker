@@ -6094,3 +6094,30 @@ test("a first visit is not shown a changelog; an update still is", () => {
     JSON.stringify({ seenHelp: true, lastChangelog: "1.0.0" })));
   assert.match(returning.document.getElementById("toast").textContent, /^v\d/, "someone on an older version hears what changed");
 });
+
+/* Until something is saved, the vault key still holds what could not be read — so
+   every reload set it aside again, under a fresh name, as another full-size copy,
+   until the quota ran out and the app stopped saving altogether. */
+test("unreadable saved data is set aside once, not once per reload", () => {
+  const raw = '{"broken":';
+  const win = bootApp(undefined, w => {
+    w.localStorage.setItem("smurf-tracker", raw);
+    w.localStorage.setItem("smurf-tracker-unreadable-1700000000000", raw);   // an earlier load's copy
+  });
+  const kept = Object.keys(win.localStorage).filter(k => k.startsWith("smurf-tracker-unreadable"));
+  assert.deepEqual(kept, ["smurf-tracker-unreadable-1700000000000"], "the copy that is already there is the copy");
+  assert.match(win.document.getElementById("banner").textContent, /smurf-tracker-unreadable-1700000000000/);
+});
+
+/* The other half of the same reader: another tab's write was mapped onto an empty
+   vault whenever its shape was not one of the three the listener knew — this tab
+   then showed nothing, and its next save wrote nothing over everything. */
+test("a write from another tab that cannot be read leaves this tab's vault alone", () => {
+  const win = bootApp(seededAccount());
+  const odd = JSON.stringify({ something: "else" });
+  win.localStorage.setItem("smurf-tracker", odd);
+  win.dispatchEvent(new win.StorageEvent("storage", { key: "smurf-tracker", newValue: odd, storageArea: win.localStorage }));
+  assert.equal(win.document.querySelectorAll(".card").length, 1, "the account is still on screen");
+  runScript(win, "window.__n = accounts.length;");
+  assert.equal(win.__n, 1, "and still in memory");
+});

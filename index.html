@@ -7968,14 +7968,13 @@ window.addEventListener("storage",e=>{
     return;
   }
   if(!vaultPassword&&!vaultLocked()){
-    try{
-      const parsed=e.newValue?JSON.parse(e.newValue):null;
-      if(parsed&&parsed.__enc){showLockScreen(parsed);return}
-      accounts=Array.isArray(parsed)?parsed.map(sanitizeAccount).filter(Boolean)
-        :(parsed&&Array.isArray(parsed.accounts)?parsed.accounts.map(sanitizeAccount).filter(Boolean):[]);
-      render();
-      toast("Vault updated from another tab");
-    }catch(err){/* ignore corrupt cross-tab payloads */}
+    const stored=readStoredVault(e.newValue);
+    // Not a shape this build can read: keep this tab's vault rather than empty it.
+    if(!stored)return;
+    if(stored.envelope){showLockScreen(stored.envelope);return}
+    accounts=stored.accounts;
+    render();
+    toast("Vault updated from another tab");
   }
 });
 /* cfg is one object written whole, and every vault save writes it as well — the
@@ -7987,6 +7986,52 @@ window.addEventListener("storage",e=>{
   try{Object.assign(cfg,JSON.parse(e.newValue))}catch(err){return}
   syncLockTimer(); // the auto-lock minutes may be what changed
 });
+/* Every shape the vault key has been seen holding, read one way. Boot and another
+   tab's write each kept their own list, and the cross-tab one mapped anything it
+   did not know onto an empty vault. null means "there is something here, and it is
+   none of these" — never the same thing as an empty vault. */
+function readStoredVault(raw){
+  if(!raw)return{accounts:[]};
+  let parsed;
+  try{parsed=JSON.parse(raw)}catch(e){return null}
+  if(parsed==null)return{accounts:[]};
+  if(parsed.__enc)return{envelope:parsed};
+  if(Array.isArray(parsed))return{accounts:parsed.map(sanitizeAccount).filter(Boolean)};
+  /* An export file is {app, version, accounts}, not a bare array. Dropping that
+     into localStorage — or restoring a backup with a tool that writes the file
+     body straight into the key — used to boot an empty vault: Array.isArray on
+     the object is false, and nothing else looked. The next saveDB writes the
+     array shape back, so this is only a one-time rescue. */
+  if(Array.isArray(parsed.accounts))return{accounts:parsed.accounts.map(sanitizeAccount).filter(Boolean)};
+  // The encrypted export is the same rescue for the other kind of backup file.
+  if(parsed.envelope&&parsed.envelope.__enc)return{envelope:parsed.envelope};
+  return null;
+}
+/* Anything boot cannot read used to open as an empty vault, and the first save
+   wrote the new one straight over the only copy of the old. It is set aside under
+   a key of its own first — once: until something is saved the vault key still holds
+   it, and a copy per reload would fill the quota with the same thing. If even one
+   copy cannot be written, nothing is written at all this session — an app that
+   cannot save is better than one that saves over this. */
+function keepUnreadableVault(raw){
+  const prefix=DB_KEY+"-unreadable-";
+  let side=null;
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k&&k.startsWith(prefix)&&localStorage.getItem(k)===raw){side=k;break}
+    }
+  }catch(e){}
+  if(!side){
+    const k=prefix+Date.now();
+    try{localStorage.setItem(k,raw);side=k}catch(e){}
+  }
+  if(!side)hasStorage=false;
+  $("banner").textContent=side
+    ?"The saved vault could not be read, so this opened empty. What was there is kept untouched in this browser's storage as \""+side+"\"."
+    :"The saved vault could not be read, and there was no room to keep a copy — nothing will be saved this session, so the original stays as it was.";
+  $("banner").classList.add("show");
+}
 function boot(){
   $("fRegion").innerHTML=Object.keys(REGIONS).map(r=>`<option value="${r}">${esc(r)} — ${esc(REGIONS[r].full)}</option>`).join("");
   $("sAutoEvery").innerHTML=AUTO_EVERY.map(o=>`<option value="${o.v}">${esc(o.label)}</option>`).join("");
@@ -8023,36 +8068,12 @@ function boot(){
   if(cfg.accent)applyAccent(cfg.accent);
   if(cfg.accent2)applyAccent2(cfg.accent2);
   applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);
-  let envelope=null, raw=null, understood=true;
-  try{
-    raw=hasStorage?localStorage.getItem(DB_KEY):null;
-    const parsed=raw?JSON.parse(raw):null;
-    if(parsed&&parsed.__enc)envelope=parsed;
-    else if(Array.isArray(parsed))accounts=parsed.map(sanitizeAccount).filter(Boolean);
-    /* An export file is {app, version, accounts}, not a bare array. Dropping that
-       into localStorage — or restoring a backup with a tool that writes the file
-       body straight into the key — used to boot an empty vault: Array.isArray on
-       the object is false, and nothing else looked. The next saveDB writes the
-       array shape back, so this is only a one-time rescue. */
-    else if(parsed&&Array.isArray(parsed.accounts))accounts=parsed.accounts.map(sanitizeAccount).filter(Boolean);
-    // The encrypted export is the same rescue for the other kind of backup file.
-    else if(parsed&&parsed.envelope&&parsed.envelope.__enc)envelope=parsed.envelope;
-    else if(parsed!=null)understood=false;
-  }catch(e){understood=!raw}
-  /* Anything else used to boot as an empty vault, and the first save wrote the new
-     one straight over the only copy of the old. It is set aside under a key of its
-     own first. If even that cannot be written, nothing is written at all this
-     session — an app that cannot save is better than one that saves over this. */
-  if(!understood){
-    const side=DB_KEY+"-unreadable-"+Date.now();
-    let kept=false;
-    try{localStorage.setItem(side,raw);kept=true}catch(e){}
-    if(!kept)hasStorage=false;
-    $("banner").textContent=kept
-      ?"The saved vault could not be read, so this opened empty. What was there is kept untouched in this browser's storage as \""+side+"\"."
-      :"The saved vault could not be read, and there was no room to keep a copy — nothing will be saved this session, so the original stays as it was.";
-    $("banner").classList.add("show");
-  }
+  let raw=null;
+  try{raw=hasStorage?localStorage.getItem(DB_KEY):null}catch(e){}
+  const stored=readStoredVault(raw);
+  let envelope=null;
+  if(stored){envelope=stored.envelope||null;if(stored.accounts)accounts=stored.accounts}
+  else keepUnreadableVault(raw);
   if(envelope)showLockScreen(envelope);
   else startApp();
 }
