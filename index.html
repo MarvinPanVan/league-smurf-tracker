@@ -3813,6 +3813,7 @@ async function syncWatch(force){
     const d=await res.json().catch(()=>null);
     if(res.ok){cfg.watchSyncedAt=Date.now();saveCfg();return true}
     if(res.status===409&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker already sends decay alerts for another browser — turn them off there first")}
+    else if((res.status===405||res.status===404&&!d)&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker is an older version without decay alerts — redeploy it (Settings → Rank checks → the guide)")}
     else if(d&&d.code==="no_kv")toast("Decay alerts need sync storage on your worker (a KV namespace bound as VAULT)");
   }catch(e){}
   return false;
@@ -3831,7 +3832,9 @@ async function updateWatchStatus(){
     const d=await res.json().catch(()=>null);
     el.textContent=res.ok&&d?"On — watching "+d.accounts+" account"+(d.accounts===1?"":"s")
       +(d.lastRun?" · last checked "+timeAgo(d.lastRun):" · first check at the next daily run")+(d.lastSent?" · last alert "+timeAgo(d.lastSent):"")
-      :res.status===409?"Another browser owns the alerts on this worker.":"On, but the worker does not have the list yet — it is sent after your next check.";
+      :res.status===409?"Another browser owns the alerts on this worker."
+      :res.status===405?"Your worker is an older version without decay alerts — redeploy it, then save here again."
+      :"On, but the worker does not have the list yet — it is sent after your next check.";
   }catch(e){el.textContent="On — could not reach the worker to check."}
 }
 function postDiscord(content){

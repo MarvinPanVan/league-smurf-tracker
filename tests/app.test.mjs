@@ -1435,6 +1435,11 @@ test("Discord decay alerts: switched on in Alerts, the worker gets a list of Dia
   assert.equal(win.__soon, 1, "a Gold reading cannot change a decay estimate");
   doc.getElementById("bSettings").click();
   await until(() => /On — watching 1 account · last checked 1 h ago/.test(doc.getElementById("sWatchStatus").textContent), "the status line");
+  // a worker deployed before alerts existed answers 405: say so instead of failing quietly
+  win.fetch = async () => ({ ok: false, status: 405, json: async () => ({ error: "method not allowed" }) });
+  runScript(win, "updateWatchStatus()");
+  await until(() => /older version without decay alerts — redeploy/.test(doc.getElementById("sWatchStatus").textContent), "the old worker named");
+  win.fetch = async (u, init = {}) => { calls.push({ method: init.method || "GET" }); return { ok: true, status: 200, json: async () => ({ ok: true }) }; };
   doc.getElementById("sWatch").checked = false;
   doc.getElementById("sSave").click();
   await until(() => calls.some(c => c.method === "DELETE"), "switching off to stop it on the worker");
