@@ -2153,14 +2153,14 @@
     <!-- One section at a time. Seven groups in one scroll put the vault password
          four screens below the colour pickers; a tab row is one click to any of them. -->
     <div class="stabs" role="tablist" aria-label="Settings sections">
-      <button type="button" role="tab" data-stab="look" aria-selected="true">Appearance</button>
-      <button type="button" role="tab" data-stab="checks" aria-selected="false" tabindex="-1">Rank checks</button>
-      <button type="button" role="tab" data-stab="alerts" aria-selected="false" tabindex="-1">Alerts</button>
-      <button type="button" role="tab" data-stab="security" aria-selected="false" tabindex="-1">Security</button>
-      <button type="button" role="tab" data-stab="sync" aria-selected="false" tabindex="-1">Sync</button>
-      <button type="button" role="tab" data-stab="backup" aria-selected="false" tabindex="-1">Backup</button>
+      <button type="button" role="tab" id="stab-look" aria-controls="settingsPanel" data-stab="look" aria-selected="true">Appearance</button>
+      <button type="button" role="tab" id="stab-checks" aria-controls="settingsPanel" data-stab="checks" aria-selected="false" tabindex="-1">Rank checks</button>
+      <button type="button" role="tab" id="stab-alerts" aria-controls="settingsPanel" data-stab="alerts" aria-selected="false" tabindex="-1">Alerts</button>
+      <button type="button" role="tab" id="stab-security" aria-controls="settingsPanel" data-stab="security" aria-selected="false" tabindex="-1">Security</button>
+      <button type="button" role="tab" id="stab-sync" aria-controls="settingsPanel" data-stab="sync" aria-selected="false" tabindex="-1">Sync</button>
+      <button type="button" role="tab" id="stab-backup" aria-controls="settingsPanel" data-stab="backup" aria-selected="false" tabindex="-1">Backup</button>
     </div>
-    <div class="mdl-b">
+    <div class="mdl-b" id="settingsPanel" role="tabpanel" aria-labelledby="stab-look">
 
       <div class="grp" data-tab="look">
         <div class="grp-h tab-same">Appearance</div>
@@ -7307,6 +7307,7 @@ const SETTINGS_TABS=["look","checks","alerts","security","sync","backup"];
 function settingsTab(tab,focus){
   if(!SETTINGS_TABS.includes(tab))tab="look";
   const m=$("settings");m.dataset.tab=tab;
+  $("settingsPanel").setAttribute("aria-labelledby","stab-"+tab); // read as the tab's panel
   for(const b of m.querySelectorAll("[data-stab]")){
     const on=b.dataset.stab===tab;
     b.setAttribute("aria-selected",String(on));b.tabIndex=on?0:-1;

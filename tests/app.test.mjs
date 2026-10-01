@@ -1379,9 +1379,13 @@ test("Settings is six tabs, one section at a time, and a step that needs a field
     .map(g => g.querySelector(".grp-h").textContent.trim());
   doc.getElementById("bSettings").click();
   assert.deepEqual(shown(), ["Appearance"], "opens on Appearance, alone");
+  const panel = doc.getElementById("settingsPanel");
+  assert.equal(panel.getAttribute("role"), "tabpanel");
+  assert.ok(tabs.every(t => t.getAttribute("aria-controls") === "settingsPanel"), "each tab names the panel it controls");
   tabs[1].click();
   assert.deepEqual(shown(), ["Rank checks", "Automatic refresh"], "the backend first, then when it runs");
   assert.equal(tabs[1].getAttribute("aria-selected"), "true");
+  assert.equal(panel.getAttribute("aria-labelledby"), tabs[1].id, "and the panel is read as that tab's");
   assert.equal(tabs[0].getAttribute("aria-selected"), "false");
   // arrow keys walk the row, and wrap
   tabs[1].dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
