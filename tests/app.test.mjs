@@ -593,6 +593,19 @@ test("on a phone the console's readout rides with the layout switch and the filt
   assert.match(html, /\.tools input\[type=search\]\{grid-column:1\/-1/, "with search across both");
 });
 
+test("every corner comes off the radius scale", () => {
+  // The tokens (3/4/6/8px), round (50%), square, and hairline 1–3px for bars and
+  // rails. Anything else is a radius somebody picked by eye — which is how the page
+  // ended up with twenty of them and nothing that read as one family.
+  const ok = v => /^(var\(--r-(xs|sm|md|lg)\)|calc\(var\(--r-(md|lg)\) - [12]px\)|50%|0|[123]px|inherit)$/.test(v);
+  const bad = [];
+  for (const m of html.matchAll(/border-radius:([^;}]+)/g)) {
+    const parts = m[1].trim().match(/calc\((?:[^()]|\([^()]*\))*\)|\S+/g);
+    if (!parts.every(ok) && m[1].trim() !== "99px") bad.push(m[1].trim());
+  }
+  assert.deepEqual(bad, [], "off-scale radii (99px is the scrollbar thumb, which the OS shapes anyway)");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
