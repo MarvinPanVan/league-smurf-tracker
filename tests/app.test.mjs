@@ -1358,6 +1358,13 @@ test("Recent form: a Riot-read account's Details fetch its last five ranked game
   await until(() => /No ranked games yet this season/.test(card("r").textContent), "Retry to fetch again");
 });
 
+test("on a phone the set-up steps wrap their labels instead of cutting them off", () => {
+  const css = html.slice(0, html.indexOf("</style>"));
+  const rule = css.match(/\.setup-steps button\{width:100%;[^}]*\}/);
+  assert.ok(rule, "the phone rule for the step buttons");
+  assert.match(rule[0], /white-space:normal/, "two columns leave no room for \"Set a master password\" on one line");
+});
+
 test("Escape closes Quick find first, even with a card's login open behind it", () => {
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null, login: "x", password: "y" }]);
   const doc = win.document;

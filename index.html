@@ -410,7 +410,10 @@
     .setup-in{position:relative;gap:10px}
     .setup-x{position:absolute;top:6px;right:6px}
     .setup-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex-basis:100%;gap:6px}
-    .setup-steps button{width:100%;justify-content:flex-start;padding:7px 9px;font-size:calc(12px*var(--ts))}
+    /* two columns leave "Set a master password" no room on a phone: it wraps
+       onto a second line rather than running into the button's edge */
+    .setup-steps button{width:100%;justify-content:flex-start;padding:7px 9px;font-size:calc(12px*var(--ts));
+      white-space:normal;text-align:left;line-height:1.25;min-height:36px}
     .setup-steps li.done{font-size:calc(12px*var(--ts))}
   }
   .bk-note button:hover{background:color-mix(in srgb,var(--gold) 10%,transparent);border-color:color-mix(in srgb,var(--gold) 55%,transparent)}
