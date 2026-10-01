@@ -1353,6 +1353,18 @@ test("Recent form: a Riot-read account's Details fetch its last five ranked game
   await until(() => /No ranked games yet this season/.test(card("r").textContent), "Retry to fetch again");
 });
 
+test("Escape closes Quick find first, even with a card's login open behind it", () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null, login: "x", password: "y" }]);
+  const doc = win.document;
+  doc.querySelector('.card[data-id="a"] [data-act="login"]').click();
+  assert.ok(doc.querySelector('.card[data-id="a"] .login'), "the login panel is open");
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }));
+  assert.equal(doc.getElementById("palette").classList.contains("hidden"), false);
+  doc.getElementById("palInput").dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(doc.getElementById("palette").classList.contains("hidden"), true, "the palette, which is in front, closes");
+  assert.ok(doc.querySelector('.card[data-id="a"] .login'), "the card behind it is left as it was");
+});
+
 test("Settings is six tabs, one section at a time, and a step that needs a field opens its tab", () => {
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
   const doc = win.document, m = doc.getElementById("settings");

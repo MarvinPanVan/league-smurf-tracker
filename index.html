@@ -7881,6 +7881,10 @@ document.addEventListener("keydown",e=>{
   if((e.key==="h"||e.key==="H")&&!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();if(!streamerOn())setStreamer(true);else toast("Streamer mode is on — click its pill in the header to turn it off")}
   if(e.key==="Escape"){
     if($("accPrev").classList.contains("show")){hideAccPrev();return}
+    // Quick find sits over everything, so it goes first. With a card's login
+    // still open underneath, Escape used to fold the card away behind the
+    // palette and leave the palette up.
+    if(!$("palette").classList.contains("hidden")){closePalette();return}
     // Whatever a card has unfolded goes first — that is what is in front of you,
     // and hunting down the button that opened each panel was the complaint.
     // Only once the cards are tidy does Escape mean "close the page's panels".
