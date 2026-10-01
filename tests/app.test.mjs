@@ -577,7 +577,7 @@ test("the colour miniature looks like the page it stands in for", () => {
   const rule = sel => { const m = html.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\{[^}]*\\}")); return m && m[0]; };
   assert.match(rule(".acc-prev-mark"), /rotate\(45deg\)/, "the turned gem, like the header's");
   assert.match(rule(".brand-mark"), /rotate\(45deg\)/);
-  assert.match(rule(".acc-prev-rk"), /Cinzel/, "the rank in the display face, as a card sets it");
+  assert.doesNotMatch(rule(".acc-prev-rk"), /Cinzel/, "the rank set the way a card sets it");
   assert.match(html, /\.acc-prev-cmd button,\.acc-prev-card \.bar button\{[^}]*Cinzel/, "and the actions");
   assert.doesNotMatch(rule(".acc-prev-rib i"), /999px/, "the ribbon is plates, not a pill");
 });
@@ -635,7 +635,7 @@ test("the dashboard shares its figures evenly across rows instead of leaving a s
   [...d.children].forEach((t, i) => assert.equal(t.classList.contains("rs"), i % cols === 0, "row starts lose the left hairline"));
 });
 
-test("quick find names a rank in the display face, and a state that is not one in the text face", async () => {
+test("ranks are set to be read: the text face, bold, and a state that is not a tier stays lighter", async () => {
   const win = bootApp([
     { id: "p1", region: "EUW", gameName: "Ranked", tagLine: "1", status: "active",
       stats: { found: true, tier: "GOLD", division: "I", lp: 5, updatedAt: 1 }, history: [], tags: [] },
@@ -645,9 +645,15 @@ test("quick find names a rank in the display face, and a state that is not one i
   const rows = [...win.document.querySelectorAll("#palList .pal-r")];
   assert.equal(rows.length, 2);
   const by = txt => rows.find(r => r.textContent.startsWith(txt));
-  assert.ok(!by("Gold").classList.contains("q"), "a tier gets the display face");
+  assert.ok(!by("Gold").classList.contains("q"), "a tier is set bold");
   assert.ok(by("Never checked").classList.contains("q"), "Never checked is not dressed as a tier");
-  assert.match(html, /\.pal-r:not\(\.q\)[^{]*\{\s*font-family:'Cinzel'/);
+  const rule = html.match(/\.pal-r:not\(\.q\)[^{]*\{[^}]*\}/)[0];
+  assert.match(rule, /font-weight:700/);
+  assert.doesNotMatch(rule, /Cinzel|uppercase/, "not the inscription capitals — they read as costume, slowly");
+  for (const sel of [".rk-t{", ".rw-rank b{", ".t-rk{", ".acc-prev-rk{"]) {
+    const r = html.slice(html.indexOf(sel), html.indexOf("}", html.indexOf(sel)));
+    assert.doesNotMatch(r, /Cinzel|uppercase/, sel);
+  }
 });
 
 /* Measured in Chromium before the fix: at 390px the ⋯ menu ran from -75px to 163px,

@@ -155,15 +155,14 @@
   .wrap{position:relative;z-index:1;max-width:1640px;margin:0 auto;padding:clamp(26px,5vw,58px) clamp(16px,3vw,30px) 90px}
   .measure{max-width:1220px}
   .hex-display{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em}
-  /* The client speaks in one display face — rank names, headings and every button
-     are set in it — and this page had it on the wordmark and the window titles and
-     nowhere else. Cinzel is the stand-in (League's own Beaufort is not free to
-     ship), and it goes where the client's does: the ranks, the list's tier
-     headings, and the buttons that do something. Controls that set a filter or
-     open a menu stay in the text face; so do states that are not ranks — "Never
-     checked" is not a tier and should not be dressed as one. */
-  .rk-t,.rw:not(.rw-quiet) .rw-rank b,.tile:not(.rw-quiet) .t-rk,.cmp-rk:not(.q),.pal-r:not(.q),.lgrp-n{
-    font-family:'Cinzel',Georgia,serif;font-weight:700;text-transform:uppercase}
+  /* Ranks are set in the text face, bold, in their tier's colour beside the gem
+     crest. For a while they were in Cinzel capitals, the way the client sets them,
+     and it read as costume: an inscription face is slow to read at a glance, and
+     sixty of them across a grid outweighed everything else on the page. The crest
+     and the tier colour carry the League in a rank now; the words just have to be
+     read. "Never checked" and "Unranked" stay lighter, since they are not tiers. */
+  .rk-t,.rw:not(.rw-quiet) .rw-rank b,.tile:not(.rw-quiet) .t-rk,.cmp-rk:not(.q),.pal-r:not(.q){
+    font-weight:700;letter-spacing:-.01em}
   .cmd>button,.acts>button:not(.c-more),.acts>.btn,.mdl-f>button,#lockBtn,#bExitPreview,#bDemo,#bClearFilters,
   #sSyncGen,#sSyncPush,#sSyncPull,#sVaultSet,#sVaultRemove,#sLockNow,#fGen,#cmpClear{
     font-family:'Cinzel',Georgia,serif;font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
@@ -751,7 +750,7 @@
   .t-nm{font-size:12px;font-weight:600;letter-spacing:-.01em;color:var(--text);max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:4px}
   .t-nm .rw-star .ico{width:10px;height:10px}
-  .t-rk{font-size:12px;font-weight:700;letter-spacing:.02em;max-width:100%;
+  .t-rk{font-size:12px;font-weight:700;max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .t-lp{font-size:10px;font-weight:600;color:var(--faint);font-variant-numeric:tabular-nums}
   .grid.wall>.hx:hover{transform:translateY(-2px)}
@@ -772,7 +771,7 @@
   .lgrp-crest{width:16px;height:16px;flex-shrink:0}
   .lgrp-dot{width:8px;height:8px;border-radius:2px;transform:rotate(45deg);flex-shrink:0;opacity:.8}
   .lgrp-star{width:13px;height:13px;fill:var(--star);stroke:var(--star);flex-shrink:0}
-  .lgrp-n{font-size:12px;letter-spacing:.1em}
+  .lgrp-n{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
   .lgrp-ln{flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
   .lgrp-k{font-size:11px;font-weight:600;color:var(--faint);letter-spacing:.05em;
     font-variant-numeric:tabular-nums}
@@ -827,7 +826,7 @@
   .rw-check .ico{width:11px;height:11px}
   .rw-main:hover .rw-check,.rw-check:focus-visible{opacity:1}
   .rw-rank{display:flex;flex-direction:column;gap:0;overflow:hidden;white-space:nowrap}
-  .rw-rank b{font-size:14px;font-weight:700;letter-spacing:.02em;
+  .rw-rank b{font-size:14px;font-weight:700;
     overflow:hidden;text-overflow:ellipsis}
   .rw-rank em{font-style:normal;font-size:11px;font-weight:600;color:var(--muted);
     font-variant-numeric:tabular-nums}
@@ -904,8 +903,8 @@
      the LP change, and the rule above says which goes: the nice-to-know column. The
      change is still on the card, and in the chart when the row is opened. */
   @media (max-width:440px){
-    /* GRANDMASTER in the display caps is ~196px at 24, and a 360 phone's card
-       has less than that beside the crest and the LP chip */
+    /* a 360 phone's card has ~190px beside the crest and the LP chip, and
+       "Grandmaster" at full size wants most of it */
     .card .rk-t{font-size:20px} /* .card: the base rule comes later in the sheet */
     .rw-main{grid-template-columns:auto 36px minmax(0,1fr) 106px 16px;gap:8px}
     .rw-d{display:none}
@@ -1022,7 +1021,7 @@
   .rk{display:flex;align-items:center;gap:11px;min-width:0;white-space:nowrap;
     overflow:hidden}
   .rk-main{display:flex;flex-direction:column;gap:3px;min-width:0;line-height:1}
-  .rk-t{font-size:24px;letter-spacing:.02em;line-height:1.05;
+  .rk-t{font-size:22px;letter-spacing:-.02em;line-height:1.1;
     overflow:hidden;text-overflow:ellipsis}
   /* No coloured glow. A 9px halo in the tier's own full-saturation colour around
      a 27px shape stops reading as a lit emblem and starts reading as a lit square
@@ -1616,7 +1615,7 @@
   .acc-prev-card-h{display:flex;flex-wrap:wrap;align-items:center;gap:4px 7px;margin-bottom:6px}
   .acc-prev-nm{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap}
   .acc-prev-star{color:var(--star);font-size:13px;line-height:1;margin-left:auto}
-  .acc-prev-rk{flex-basis:100%;font:700 14px/1.1 'Cinzel',Georgia,serif;text-transform:uppercase;color:#7ea6f0}
+  .acc-prev-rk{flex-basis:100%;font:700 14px/1.1 'Inter',system-ui,sans-serif;letter-spacing:-.01em;color:#7ea6f0}
   .acc-prev-rk small{font:600 11px Inter,system-ui,sans-serif;text-transform:none;color:var(--muted);margin-left:4px}
   .acc-prev-wl{font-size:11px;color:var(--muted);margin-bottom:8px}
   .acc-prev-card .bar{gap:6px}
