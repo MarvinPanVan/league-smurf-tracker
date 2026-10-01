@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import {
   parseRankText, parseLevelText, parsePeakText, parseSeasons, parseFlex,
   parseChampions, parseChampionTable, parseChampionsMeta, parseProfileIcon,
-  parseLpHistory, stripRows, riotOne, lookupOne, handleBatch, riotForm,
+  parseLpHistory, stripRows, riotOne, lookupOne, handleBatch, riotForm, resetChampNames,
 } from "../cloudflare-worker.js";
 
 // The shape op.gg actually serves, reduced but structurally faithful — this is
@@ -504,6 +504,11 @@ function fakeRiot({ keyRejected = false, staleOld = true, tier = "DIAMOND", entr
   globalThis.fetch = async (u, init) => {
     const url = String(u); calls.push(url);
     if (url.includes("op.gg")) return res(404, "not found");
+    // Data Dragon is public and must never be sent the key
+    if (url.includes("ddragon")) assert.equal(init && init.headers && init.headers["X-Riot-Token"], undefined, "no key to Data Dragon");
+    if (url === "https://ddragon.leagueoflegends.com/api/versions.json") return res(200, ["15.19.1", "15.18.1"]);
+    if (url.startsWith("https://ddragon.leagueoflegends.com/cdn/15.19.1/data/en_US/champion.json"))
+      return res(200, { data: { Ahri: { key: "103", name: "Ahri" }, Yasuo: { key: "157", name: "Yasuo" } } });
     if (keyRejected) return res(403, { status: { message: "Forbidden" } });
     assert.equal(init.headers["X-Riot-Token"], KEY, "the key goes in the header, never the URL");
     if (url.includes("/accounts/by-puuid/" + OLD_PUUID) && staleOld) return res(400, { status: { message: "Exception decrypting" } });
@@ -511,6 +516,9 @@ function fakeRiot({ keyRejected = false, staleOld = true, tier = "DIAMOND", entr
     if (url.includes("/accounts/by-riot-id/Nobody/")) return res(404, {});
     if (url.includes("/accounts/by-riot-id/")) return res(200, { puuid: PUUID, gameName: "Hide on Bush", tagLine: "KR1" });
     if (url.includes("/summoner/v4/summoners/by-puuid/")) return res(200, { profileIconId: 6, summonerLevel: 812 });
+    if (url.includes("/champion-mastery/v4/champion-masteries/by-puuid/")) return res(200, [
+      { championId: 103, championLevel: 7, championPoints: 312045 }, { championId: 157, championLevel: 5, championPoints: 40211 },
+      { championId: 99999, championLevel: 1, championPoints: 10 }]);
     if (url.includes("/league/v4/entries/by-puuid/")) return res(200, entries || [
       { queueType: "RANKED_SOLO_5x5", tier, rank: "II", leaguePoints: 45, wins: 120, losses: 100 },
       { queueType: "RANKED_FLEX_SR", tier: "GOLD", rank: "I", leaguePoints: 3, wins: 4, losses: 2 }]);
@@ -606,6 +614,30 @@ test("the one-click deploy config matches what the worker reads", async () => {
   assert.deepEqual(vars, ["RIOT_API_KEY"]);
 });
 
+test("mastery: top champions by name, only when asked, and counted in the batch budget", async () => {
+  resetChampNames();
+  let calls = fakeRiot();
+  const r = await riotOne("a", "b", "euw", KEY, PUUID, false, true);
+  assert.deepEqual(r.body.mastery, [{ name: "Ahri", level: 7, points: 312045 }, { name: "Yasuo", level: 5, points: 40211 }],
+    "names from Data Dragon; a champion it does not know yet is left out");
+  assert.ok(calls.some(u => u.startsWith("https://euw1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/" + PUUID + "/top?count=5")));
+  calls = fakeRiot();
+  await riotOne("a", "b", "euw", KEY, PUUID, false, true);
+  assert.equal(calls.filter(u => u.includes("ddragon")).length, 0, "the champion list is kept, not fetched every time");
+  calls = fakeRiot();
+  const plain = await riotOne("a", "b", "euw", KEY, PUUID, false);
+  assert.equal(plain.body.mastery, undefined);
+  assert.equal(calls.filter(u => u.includes("mastery")).length, 0, "not asked, not fetched");
+  // the batch budget counts the extra call: 16 rows with a puuid at 2 each fit in 48, at 3 each only 16 of them do
+  resetChampNames();
+  fakeRiot();
+  const rows = n => Array.from({ length: n }, (_, i) => ({ name: "n" + i, tag: "t", region: "euw", puuid: PUUID, mastery: true }));
+  const res = await handleBatch(new Request("https://w.example/", { method: "POST", body: JSON.stringify({ accounts: rows(20) }) }), { RIOT_API_KEY: KEY });
+  const out = (await res.json()).results;
+  assert.equal(out.filter(r => r.ok).length, 15, "(48 - 2 for the champion list) / 3 a row");
+  assert.ok(out[0].mastery && out[0].mastery[0].name === "Ahri");
+});
+
 test("recent form: the last five ranked games, reduced to this player's line", async () => {
   const calls = [];
   globalThis.fetch = async u => {
@@ -615,11 +647,11 @@ test("recent form: the last five ranked games, reduced to this player's line", a
     const n = url.endsWith("EUW1_1") ? 1 : 2;
     return res({ info: { gameDuration: 1800, gameEndTimestamp: 1700000000000 + n, participants: [
       { puuid: "x".repeat(78), win: n === 2, championName: "Zed", kills: 1, deaths: 1, assists: 1 },
-      { puuid: PUUID, win: n === 1, championName: n === 1 ? "Ahri" : "Lux", kills: 7, deaths: 2, assists: 9 }] } });
+      { puuid: PUUID, win: n === 1, championName: n === 1 ? "Ahri" : "Lux", teamPosition: n === 1 ? "MIDDLE" : "UTILITY", kills: 7, deaths: 2, assists: 9 }] } });
   };
   const r = await riotForm(PUUID, "euw", KEY);
   assert.ok(calls[0].startsWith("https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/" + PUUID + "/ids?queue=420&count=5"));
-  assert.deepEqual(r.body.games.map(g => [g.win, g.champ, g.k, g.d, g.a, g.min]), [[true, "Ahri", 7, 2, 9, 30], [false, "Lux", 7, 2, 9, 30]]);
+  assert.deepEqual(r.body.games.map(g => [g.win, g.champ, g.role, g.k, g.d, g.a, g.min]), [[true, "Ahri", "Mid", 7, 2, 9, 30], [false, "Lux", "Support", 7, 2, 9, 30]]);
   assert.equal((await riotForm("not-a-puuid", "euw", KEY)).status, 400);
   const sea = []; globalThis.fetch = async u => { sea.push(String(u)); return new Response("[]", { status: 200 }); };
   await riotForm(PUUID, "oce", KEY);

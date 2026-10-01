@@ -18,7 +18,10 @@
 //   a renamed account keeps its history.
 //
 // GET /status -> {"ok":true,"riot":true|false,"vault":true|false}  (what this worker has set up)
-// GET /form?puuid=<puuid>&region=<euw|...> -> {"games":[{"win","champ","k","d","a","min","at"}]}
+// A lookup (GET with &mastery=1, or a batch row with "mastery":true) also returns the
+//   account's top five champions by mastery, when there is a Riot key:
+//   "mastery":[{"name":"Ahri","level":7,"points":312045}, ...]
+// GET /form?puuid=<puuid>&region=<euw|...> -> {"games":[{"win","champ","role","k","d","a","min","at"}]}
 //   The last five ranked solo games, from Riot's match-v5. Needs RIOT_API_KEY.
 //
 // Device sync (encrypted vault blob only — not a scrape cache):
@@ -67,7 +70,7 @@ export default {
       const region = (url.searchParams.get("region") || "euw").toLowerCase();
       if (!name || !tag) return json({ error: "missing name/tag" }, 400);
 
-      const result = await lookupOne(name, tag, region, env, url.searchParams.get("puuid"));
+      const result = await lookupOne(name, tag, region, env, url.searchParams.get("puuid"), url.searchParams.get("mastery") === "1");
       if (result.error && result.status) return json({ error: result.error }, result.status);
       return json(result.body, 200);
     } catch (e) {
@@ -171,7 +174,7 @@ export async function handleBatch(request, env) {
       // is handed back as failed, and the app retries it on its own GET — a fresh
       // request with a fresh subrequest budget.
       const result = key
-        ? await riotOne(String(name), String(tag), region, key, a.puuid, false)
+        ? await riotOne(String(name), String(tag), region, key, a.puuid, false, !!a.mastery)
         : await scrapeOne(String(name), String(tag), region);
       if (result.error) return { name, tag, region, ok: false, error: result.error };
       return { name, tag, region, ok: true, ...result.body };
@@ -186,9 +189,11 @@ export async function handleBatch(request, env) {
   // a batch of twenty can overrun it. Rows past the budget are handed back to be
   // retried one at a time. Five at a time also keeps clear of Riot's 20-a-second
   // limit for personal keys.
-  let budget = SUBREQUEST_BUDGET;
+  // Mastery is one more call a row, and naming the champions costs two the first
+  // time an isolate needs Data Dragon's list; that pair is set aside up front.
+  let budget = SUBREQUEST_BUDGET - (list.some(a => a && a.mastery) && !champNamesFresh() ? 2 : 0);
   const plan = list.map(a => {
-    const cost = a && a.puuid ? 2 : 3;
+    const cost = (a && a.puuid ? 2 : 3) + (a && a.mastery ? 1 : 0);
     if (budget < cost) return false;
     budget -= cost; return true;
   });
@@ -238,7 +243,7 @@ const PUUID_RE = /^[A-Za-z0-9_-]{30,100}$/;
    which is the difference between 2 and 3 subrequests. A puuid is encrypted per
    API key, so one stored under an earlier key (a 24-hour development key, say)
    answers 400/404 — the account is then found again by Riot ID. */
-export async function riotOne(name, tag, region, key, puuid, withAccount = true) {
+export async function riotOne(name, tag, region, key, puuid, withAccount = true, withMastery = false) {
   const plat = RIOT_PLATFORM[region], cluster = RIOT_CLUSTER[region];
   if (!plat || !cluster) return { error: "no Riot routing for region " + region, riotError: "http", status: 400 };
   const known = typeof puuid === "string" && PUUID_RE.test(puuid) ? puuid : null;
@@ -253,9 +258,10 @@ export async function riotOne(name, tag, region, key, puuid, withAccount = true)
     acct = await res.json();
   }
   const id = acct ? acct.puuid : known;
-  const [sr, lr] = await Promise.all([
+  const [sr, lr, mastery] = await Promise.all([
     riotGet(`https://${plat}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${id}`, key),
     riotGet(`https://${plat}.api.riotgames.com/lol/league/v4/entries/by-puuid/${id}`, key),
+    withMastery ? riotMastery(plat, id, key) : null,
   ]);
   // A Riot account with no League profile on this server: the region is wrong.
   if (sr.status === 404) return { body: { found: false, source: "riot" } };
@@ -281,10 +287,41 @@ export async function riotOne(name, tag, region, key, puuid, withAccount = true)
         ? `https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon${summ.profileIconId}.jpg` : null,
       puuid: id,
       riotId: acct ? { name: acct.gameName, tag: acct.tagLine } : null,
+      ...(mastery ? { mastery } : {}),
       uncertain: false,
       source: "riot",
     },
   };
+}
+
+/* Champion mastery, top five. Riot answers with champion numbers, so the names come
+   from Data Dragon's champion list, kept for a day in the isolate. Best effort:
+   a failure here leaves the rank reading untouched and simply has no mastery. */
+let champNameCache = null;
+function champNamesFresh() { return !!(champNameCache && Date.now() - champNameCache.at < 86400000); }
+export function resetChampNames() { champNameCache = null; }
+async function champNames() {
+  if (champNamesFresh()) return champNameCache.map;
+  const vr = await fetch("https://ddragon.leagueoflegends.com/api/versions.json");
+  if (!vr.ok) return null;
+  const v = (await vr.json())[0];
+  const cr = await fetch(`https://ddragon.leagueoflegends.com/cdn/${encodeURIComponent(v)}/data/en_US/champion.json`);
+  if (!cr.ok) return null;
+  const map = {};
+  for (const c of Object.values((await cr.json()).data || {})) map[String(c.key)] = c.name;
+  champNameCache = { map, at: Date.now() };
+  return map;
+}
+async function riotMastery(plat, puuid, key) {
+  try {
+    const [res, names] = await Promise.all([
+      riotGet(`https://${plat}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${puuid}/top?count=5`, key),
+      champNames(),
+    ]);
+    if (!res.ok || !names) return null;
+    return (await res.json()).slice(0, 5).filter(m => names[String(m.championId)])
+      .map(m => ({ name: names[String(m.championId)], level: m.championLevel ?? null, points: m.championPoints ?? null }));
+  } catch (e) { return null; }
 }
 
 // match-v5 routes by these four clusters, which are not account-v1's three
@@ -297,6 +334,7 @@ const MATCH_CLUSTER = {
 /* The last five ranked solo games (queue 420): the list of match ids, then each
    match, reduced to this player's line. Six subrequests, asked for one account at
    a time when its details are opened — never in a batch. */
+const ROLE_NAME = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "Bot", UTILITY: "Support" };
 export async function riotForm(puuid, region, key) {
   const cluster = MATCH_CLUSTER[region];
   if (!cluster || !PUUID_RE.test(String(puuid || ""))) return { error: "bad puuid or region", status: 400 };
@@ -311,7 +349,7 @@ export async function riotForm(puuid, region, key) {
     const d = await m.json();
     const info = d && d.info, p = info && (info.participants || []).find(x => x.puuid === puuid);
     if (!p) continue;
-    games.push({ win: !!p.win, champ: String(p.championName || "?"), k: p.kills, d: p.deaths, a: p.assists,
+    games.push({ win: !!p.win, champ: String(p.championName || "?"), role: ROLE_NAME[p.teamPosition] || null, k: p.kills, d: p.deaths, a: p.assists,
       min: Math.round((info.gameDuration || 0) / 60), at: info.gameEndTimestamp || info.gameCreation || null });
   }
   return { body: { games } };
@@ -321,10 +359,10 @@ export async function riotForm(puuid, region, key) {
    then op.gg (best effort) for what Riot does not know — peak, past seasons,
    champions, the dates LP was reached. Without one, or when Riot refuses, op.gg
    alone, with Riot's complaint passed along so the app can say the key expired. */
-export async function lookupOne(name, tag, region, env, puuid) {
+export async function lookupOne(name, tag, region, env, puuid, withMastery = false) {
   const key = riotKey(env);
   if (!key) return scrapeOne(name, tag, region);
-  const r = await riotOne(name, tag, region, key, puuid, true);
+  const r = await riotOne(name, tag, region, key, puuid, true, withMastery);
   if (r.body && r.body.found === false) return r;
   if (r.body) {
     try {
