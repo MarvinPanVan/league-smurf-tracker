@@ -34,7 +34,8 @@ in Safari after 7 days without a visit. The app asks the browser to keep the vau
 
 | When                                   | What is sent                                | Where to |
 |----------------------------------------|---------------------------------------------|----------|
-| A rank check (Refresh / Check all)     | The Riot ID and region, never logins        | Your own worker if you set a Backend URL; otherwise a public CORS proxy (corsproxy.io, allorigins) fetching the op.gg profile |
+| A rank check (Refresh / Check all)     | The Riot ID and region, never logins        | Your own worker if you set a Backend URL, which asks Riot's API (with your key) or op.gg; otherwise a public CORS proxy (corsproxy.io, allorigins) fetching the op.gg profile |
+| Opening Details, with a Riot key on your worker | The account's Riot id (puuid) and region | Your worker, which asks Riot for the last five ranked games |
 | A rank check with an Anthropic API key set | The Riot ID and region                  | api.anthropic.com |
 | Tier-up alerts, if you set a Discord webhook | The account label and the tiers        | Your Discord webhook |
 | **Device sync**, if you set it up      | The **encrypted** vault only (ciphertext)   | Your own Cloudflare worker's KV |
