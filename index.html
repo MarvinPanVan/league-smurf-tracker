@@ -1065,6 +1065,13 @@
      asking to be looked at. Anchored top-left, away from every chip and number.
      isolation:isolate is what lets z-index:-1 paint above the card's own
      background while still staying under every child. */
+  /* The champion the account plays most, faded into the top of the card under the
+     tier tint. Low and masked off well before the rank and the buttons, so it is
+     felt rather than read; nothing on the card depends on it. */
+  .c-art{position:absolute;left:0;right:0;top:0;width:100%;height:230px;z-index:-2;pointer-events:none;
+    object-fit:cover;object-position:center 18%;opacity:.28;
+    -webkit-mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%);mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%)}
+  .card.dead .c-art{filter:grayscale(1);opacity:.1}
   .c-tint{position:absolute;inset:0;z-index:-1;pointer-events:none;
     background:radial-gradient(125% 78% at 0% 0%,
       color-mix(in srgb,var(--tier) 15%,transparent),transparent 60%)}
@@ -2207,6 +2214,10 @@
           <div id="sCardParts" class="part-chks"></div>
           <div class="hint" style="margin-top:7px">What you untick waits under each card's <b>Details</b>, so cards get shorter and more fit on a screen.
             <button type="button" id="sCompact" class="link-btn">Compact: chart and stats under Details</button></div>
+          <div class="chk" style="margin-top:12px">
+            <input type="checkbox" id="sChampArt" style="width:auto">
+            <label for="sChampArt">Champion art: the champion each account plays most, faded into the top of its card (images from Riot's Data Dragon)</label>
+          </div>
         </div>
       </div>
 
@@ -6046,6 +6057,29 @@ function formHTML(a){
       +`<span class="c-gm">${g.min!=null?esc(g.min)+" min":""}</span>`
       +`<span class="c-gm">${g.at?esc(timeAgo(g.at)):""}</span></div>`).join(""));
 }
+/* ---- champion art ----
+   From Riot's Data Dragon, which serves splash art by champion id ("MonkeyKing",
+   "Kaisa"), not by the name people see. Most names map by squeezing out spaces
+   and punctuation; the ones that do not are listed. An <img loading="lazy"> and
+   not a CSS background, so a card far down the page fetches nothing until it is
+   near the screen, and one that fails to load is simply removed. */
+const CHAMP_ID_FIX={"wukong":"MonkeyKing","nunu & willump":"Nunu","renata glasc":"Renata","kai'sa":"Kaisa","cho'gath":"Chogath",
+  "vel'koz":"Velkoz","kha'zix":"Khazix","bel'veth":"Belveth","leblanc":"Leblanc","fiddlesticks":"Fiddlesticks"};
+function champKey(name){
+  const n=String(name||"").trim();
+  if(!n||!/^[A-Za-z0-9 '.&-]+$/.test(n))return null; // what champion names are made of, and nothing else
+  const fixed=CHAMP_ID_FIX[n.toLowerCase()];if(fixed)return fixed;
+  const k=n.split(/[^A-Za-z0-9]+/).filter(Boolean).map(w=>w[0].toUpperCase()+w.slice(1)).join("");
+  return /^[A-Za-z][A-Za-z0-9]{1,29}$/.test(k)?k:null;
+}
+let pendingChampArt=null;
+function champArtOn(){return pendingChampArt===null?cfg.champArt!==false:pendingChampArt}
+function mainChamp(a){const c=normChamps(a.stats&&a.stats.champs);return c&&c.length?c[0].name:null}
+function champArtHTML(a){
+  if(!champArtOn())return"";
+  const k=champKey(mainChamp(a));if(!k)return"";
+  return`<img class="c-art" src="https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${k}_0.jpg" alt="" aria-hidden="true" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
+}
 function drawerTitle(){
   const h=new Set(cardHidden());
   return CARD_PARTS.filter(([k])=>h.has(k)).map(p=>p[1]).concat(["past seasons, flex rank, champions"]).join(", ").replace(/^./,c=>c.toUpperCase());
@@ -6484,7 +6518,7 @@ function cardHTML(a,i){
   const railed=a.status&&a.status!=="active";
   const icon0=iconUrl(s);
   return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}${openInfo.has(a.id)?" info-open":""}" data-id="${idAttr(a.id)}"${railed?` style="--st:${st.color}"`:""}>
-    ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
+    ${champArtHTML(a)}${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <div class="c-head">
       <div class="c-portrait">
         <span class="c-initial">${esc(initial)}</span>
@@ -7053,7 +7087,7 @@ function openSettings(tab){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden")
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -7505,16 +7539,19 @@ function loadDemo(){
   const mk=o=>Object.assign({id:uid(),fav:false,status:"active",tags:[],history:[],login:"",password:"",email:"",notes:"",label:"",demo:true},o);
   accounts=[
     mk({label:"Main smurf",gameName:"Hide on Bush",tagLine:"0001",region:"EUW",fav:true,tags:["mid","ranked-ready"],login:"demo_user1",password:"demo-pass-1",email:"smurf1@mail.gg",notes:"Elementalist Lux, honor 3",
-      stats:{found:true,tier:"PLATINUM",division:"II",lp:61,wins:38,losses:29,level:214,icon:"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",mmr:"~2140",avgRecent:"Platinum II",asOf:"updated today",updatedAt:now-2*3600000},
+      stats:{found:true,tier:"PLATINUM",division:"II",lp:61,wins:38,losses:29,level:214,icon:"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",mmr:"~2140",avgRecent:"Platinum II",asOf:"updated today",updatedAt:now-2*3600000,
+        champs:[{name:"Lux",games:24,wins:15,losses:9,wr:63,kda:"3.4"},{name:"Ahri",games:18,wins:10,losses:8,wr:56,kda:"2.9"},{name:"Syndra",games:9,wins:4,losses:5,wr:44,kda:"2.1"}]},
       history:[
         {t:now-24*D,tier:"GOLD",division:"II",lp:40},{t:now-20*D,tier:"GOLD",division:"I",lp:15},{t:now-16*D,tier:"GOLD",division:"I",lp:78},
         {t:now-12*D,tier:"PLATINUM",division:"IV",lp:12},{t:now-9*D,tier:"PLATINUM",division:"IV",lp:55},{t:now-6*D,tier:"PLATINUM",division:"III",lp:31},
         {t:now-3*D,tier:"PLATINUM",division:"III",lp:74},{t:now-2*3600000,tier:"PLATINUM",division:"II",lp:61}]}),
     mk({label:"ADC acc",gameName:"Bot Diff",tagLine:"EUW",region:"EUW",tags:["adc"],login:"demo_user2",password:"demo-pass-2",email:"smurf2@mail.gg",notes:"Spirit Blossom Yasuo",
-      stats:{found:true,tier:"GOLD",division:"III",lp:22,wins:21,losses:24,level:167,mmr:"~1650",avgRecent:"Gold III",asOf:"updated 4 days ago",updatedAt:now-4*D},
+      stats:{found:true,tier:"GOLD",division:"III",lp:22,wins:21,losses:24,level:167,mmr:"~1650",avgRecent:"Gold III",asOf:"updated 4 days ago",updatedAt:now-4*D,
+        champs:[{name:"Jinx",games:20,wins:10,losses:10,wr:50,kda:"2.6"},{name:"Kai'Sa",games:15,wins:7,losses:8,wr:47,kda:"2.4"}]},
       history:[{t:now-14*D,tier:"GOLD",division:"II",lp:35},{t:now-10*D,tier:"GOLD",division:"II",lp:8},{t:now-7*D,tier:"GOLD",division:"III",lp:71},{t:now-4*D,tier:"GOLD",division:"III",lp:22}]}),
     mk({label:"EUNE fill acc",gameName:"Coinflip Queue",tagLine:"EUNE",region:"EUNE",tags:["fill"],login:"demo_user3",password:"demo-pass-3",
-      stats:{found:true,tier:"SILVER",division:"I",lp:89,wins:15,losses:11,level:98,mmr:"~1420",avgRecent:"Silver I",asOf:"updated yesterday",updatedAt:now-1*D},
+      stats:{found:true,tier:"SILVER",division:"I",lp:89,wins:15,losses:11,level:98,mmr:"~1420",avgRecent:"Silver I",asOf:"updated yesterday",updatedAt:now-1*D,
+        champs:[{name:"Thresh",games:14,wins:9,losses:5,wr:64,kda:"3.1"},{name:"Lee Sin",games:8,wins:4,losses:4,wr:50,kda:"2.2"}]},
       history:[{t:now-8*D,tier:"SILVER",division:"II",lp:60},{t:now-5*D,tier:"SILVER",division:"II",lp:95},{t:now-1*D,tier:"SILVER",division:"I",lp:89}]}),
     mk({label:"Fresh leveling acc",gameName:"NewSmurf",tagLine:"2026",region:"EUW",status:"resting",tags:["leveling"],login:"demo_user4",password:"demo-pass-4",
       stats:{found:true,tier:"UNRANKED",division:null,lp:null,wins:null,losses:null,level:23,mmr:null,avgRecent:null,asOf:"updated 6 days ago",note:null,updatedAt:now-6*D}}),
@@ -7743,7 +7780,7 @@ document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.targ
 // Closing has to go through the same door as the ✕ and Escape do. Toggling the panel
 // shut from the ⋯ menu only hid it, which left a colour you had dragged but not saved
 // applied to the whole page — the one close out of four that kept it.
-function closeSettings(){revertAccents();revertAtmosphere();applyEffects(cfg.effects);applyTextSize(cfg.textSize);if(pendingCardHide){pendingCardHide=null;applyCompact();renderGrid()}settingsSaveGen++;$("settings").classList.add("hidden")}
+function closeSettings(){revertAccents();revertAtmosphere();applyEffects(cfg.effects);applyTextSize(cfg.textSize);if(pendingCardHide||pendingChampArt!==null){pendingCardHide=null;pendingChampArt=null;applyCompact();renderGrid()}settingsSaveGen++;$("settings").classList.add("hidden")}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
 $("settings").querySelector(".stabs").addEventListener("click",e=>{const b=e.target.closest("[data-stab]");if(b)settingsTab(b.dataset.stab)});
 $("settings").querySelector(".stabs").addEventListener("keydown",e=>{
@@ -7801,6 +7838,7 @@ $("sSave").addEventListener("click",async()=>{
     cfg.accent2=$("sAccent2").value===DEFAULT_ACCENT2?null:$("sAccent2").value;applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
   }
   // the Details handle depends on it, so the cards are redrawn when it changes
+  if(pendingChampArt!==null){cfg.champArt=pendingChampArt?null:false;pendingChampArt=null;renderGrid()}
   if(pendingCardHide){cfg.cardHide=pendingCardHide.length?pendingCardHide:null;delete cfg.compactCards;pendingCardHide=null;applyCompact();renderGrid()}
   cfg.effects=applyEffects(document.body.dataset.fx);if(cfg.effects==="full")cfg.effects=null;
   cfg.textSize=applyTextSize(document.documentElement.dataset.ts);if(cfg.textSize==="default")cfg.textSize=null;
@@ -7827,6 +7865,8 @@ $("sCardParts").addEventListener("change",e=>{
   const h=new Set(cardHidden()),k=e.target.dataset.part;if(!k)return;
   e.target.checked?h.delete(k):h.add(k);previewCardParts([...h]);
 });
+document.addEventListener("error",e=>{const t=e.target;if(t&&t.classList&&t.classList.contains("c-art"))t.remove()},true);
+$("sChampArt").addEventListener("change",e=>{pendingChampArt=e.target.checked;renderGrid()});
 $("sCompact").addEventListener("click",()=>previewCardParts([...new Set([...cardHidden(),"chart","stats"])]));
 $("sTextSize").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b)applyTextSize(b.dataset.v)});
 $("sEffects").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b)applyEffects(b.dataset.v)}); // preview; Save keeps it

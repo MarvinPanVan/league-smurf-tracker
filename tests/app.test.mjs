@@ -1011,6 +1011,36 @@ test("a new vault gets four set-up steps, each a button, until they are done or 
   assert.equal(appGet(win, "cfg.setupHidden"), true, "and it stays hidden");
 });
 
+test("champion art: the most-played champion's splash, by Data Dragon id, lazy, gone if it fails, and switchable off", () => {
+  const acc = (id, champs) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: Date.now(), champs } });
+  const win = bootApp([acc("a", [{ name: "Kai'Sa", games: 30, wins: 15, losses: 15, wr: 50 }, { name: "Jinx", games: 3, wr: 50 }]),
+    acc("b", [{ name: "Dr. Mundo", games: 5, wr: 60 }]), acc("c", null)]);
+  const doc = win.document;
+  const key = n => { win.__n = n; runScript(win, "window.__k = champKey(window.__n)"); return win.__k; };
+  for (const [name, id] of [["Kai'Sa", "Kaisa"], ["Wukong", "MonkeyKing"], ["Nunu & Willump", "Nunu"], ["Dr. Mundo", "DrMundo"],
+    ["Jarvan IV", "JarvanIV"], ["Rek'Sai", "RekSai"], ["K'Sante", "KSante"], ["LeBlanc", "Leblanc"], ["Miss Fortune", "MissFortune"],
+    ["FiddleSticks", "Fiddlesticks"], ["MonkeyKing", "MonkeyKing"], ["Renata Glasc", "Renata"]])
+    assert.equal(key(name), id, name);
+  assert.equal(key('"><img src=x>'), null, "anything that is not a plain id makes no URL at all");
+  const art = id => doc.querySelector(`.card[data-id="${id}"] .c-art`);
+  assert.equal(art("a").getAttribute("src"), "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Kaisa_0.jpg", "the top champion, by id");
+  assert.equal(art("a").getAttribute("loading"), "lazy");
+  assert.equal(art("a").getAttribute("alt"), "", "decoration, not content");
+  assert.match(art("b").getAttribute("src"), /\/DrMundo_0\.jpg$/);
+  assert.equal(art("c"), null, "no champion data, no picture");
+  art("b").dispatchEvent(new win.Event("error"));
+  assert.equal(art("b"), null, "a picture that fails to load goes away");
+  doc.getElementById("bSettings").click();
+  const box = doc.getElementById("sChampArt");
+  assert.equal(box.checked, true, "on by default");
+  box.checked = false; box.dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert.equal(art("a"), null, "previews off at once");
+  doc.getElementById("sSave").click();
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).champArt, false);
+  assert.equal(doc.querySelectorAll(".c-art").length, 0, "and stays off: nothing is requested");
+});
+
 test("On each card: any part can wait under Details, Compact is chart and stats, and 2.1's switch carries over", () => {
   const now = Date.now(), D = 86400000;
   const acc = { id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: ["mid"], notes: "honor 3",
