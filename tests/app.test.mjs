@@ -578,7 +578,7 @@ test("the colour miniature looks like the page it stands in for", () => {
   assert.match(rule(".acc-prev-mark"), /rotate\(45deg\)/, "the turned gem, like the header's");
   assert.match(rule(".brand-mark"), /rotate\(45deg\)/);
   assert.doesNotMatch(rule(".acc-prev-rk"), /Cinzel/, "the rank set the way a card sets it");
-  assert.match(html, /\.acc-prev-cmd button,\.acc-prev-card \.bar button\{[^}]*Cinzel/, "and the actions");
+  assert.doesNotMatch(html.match(/\.acc-prev-cmd button,\.acc-prev-card \.bar button\{[^}]*\}/)[0], /Cinzel/, "and the actions too");
   assert.doesNotMatch(rule(".acc-prev-rib i"), /999px/, "the ribbon is plates, not a pill");
 });
 
@@ -747,6 +747,16 @@ test("a stale card warns with a drawn mark, which a fresh card does not carry", 
   assert.ok(upd("s1").querySelector("svg.ico"), "the warning is an icon, drawn the same everywhere");
   assert.equal(upd("s1").textContent, "Updated 6 days ago", "not a \u26A0 character in the text");
   assert.equal(upd("f1").querySelector("svg"), null, "a fresh card has nothing to warn about");
+});
+
+test("actions are set in the text face, a weight up, not in spaced capitals", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const rule = css.match(/\.cmd>button,\.acts>button:not\(\.c-more\)[^{]*\{[^}]*\}/)[0];
+  assert.match(rule, /font-weight:600/);
+  assert.doesNotMatch(rule, /Cinzel|uppercase|letter-spacing/);
+  // Cinzel is the wordmark's now, and the wordmark's only
+  const users = [...css.matchAll(/([^{}]+)\{[^}]*Cinzel[^}]*\}/g)].map(m => m[1].trim());
+  assert.ok(users.every(sel => /hex-display|lock-wm|acc-prev-t|\.mdl-h \.t|cmp-vs/.test(sel)), users.join(" | "));
 });
 
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {

@@ -163,9 +163,13 @@
      read. "Never checked" and "Unranked" stay lighter, since they are not tiers. */
   .rk-t,.rw:not(.rw-quiet) .rw-rank b,.tile:not(.rw-quiet) .t-rk,.cmp-rk:not(.q),.pal-r:not(.q){
     font-weight:700;letter-spacing:-.01em}
+  /* The buttons that do something are a weight heavier than the ones that filter
+     or open a menu, and that is all the type does for them. Spaced Cinzel capitals
+     on every action ("REFRESH 20 STALE", "SAVE SETTINGS") were slow to read and
+     loud in a row; the metal rims of the gold and teal buttons are where the client
+     shows through now. */
   .cmd>button,.acts>button:not(.c-more),.acts>.btn,.mdl-f>button,#lockBtn,#bExitPreview,#bDemo,#bClearFilters,
-  #sSyncGen,#sSyncPush,#sSyncPull,#sVaultSet,#sVaultRemove,#sLockNow,#fGen,#cmpClear{
-    font-family:'Cinzel',Georgia,serif;font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+  #sSyncGen,#sSyncPush,#sSyncPull,#sVaultSet,#sVaultRemove,#sLockNow,#fGen,#cmpClear{font-weight:600}
 
   /* ---- surfaces: rounded, gradient hairline, soft glass ---- */
   /* The client frames everything in metal: a gold edge lit from above that dims as
@@ -1598,8 +1602,7 @@
   .acc-prev-rib i{flex:1;border-radius:1px;background:color-mix(in srgb,var(--c) 62%,#0b0e14)}
   .acc-prev-cmd{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;
     border-bottom:1px solid var(--line)}
-  .acc-prev-cmd button,.acc-prev-card .bar button{padding:5px 9px;font:700 10px/1.2 'Cinzel',Georgia,serif;
-    letter-spacing:.06em;text-transform:uppercase}
+  .acc-prev-cmd button,.acc-prev-card .bar button{padding:5px 9px;font:600 11px/1.2 'Inter',system-ui,sans-serif}
   .acc-prev-tools{display:flex;gap:6px;align-items:center;padding:10px 14px 12px}
   .acc-prev-tools input{flex:1;min-width:0;font-size:11px;padding:6px 9px;
     border-color:color-mix(in srgb,var(--teal) 60%,transparent);
@@ -1866,7 +1869,7 @@
     .tools input[type=search]{grid-column:1/-1;min-width:0}
     .tools>label{justify-content:center}
   }
-  @media (max-width:440px){.cmd{gap:8px}.cmd>button{padding-inline:10px;letter-spacing:.04em}}
+  @media (max-width:440px){.cmd{gap:8px}.cmd>button{padding-inline:10px}}
   @media (max-width:560px){.formgrid{grid-template-columns:1fr;padding:18px}.card{padding:15px}
     .c-drawer{margin:1px -15px -15px}
     /* a phone has ~150px a side: the tier word drops to its own size, the crest
