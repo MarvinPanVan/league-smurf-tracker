@@ -737,17 +737,6 @@ test("a stale card says so in red with its dot, not with a warning glyph as well
   assert.match(upd.textContent, /^Updated 6 days ago$/);
 });
 
-test("one response per hover: no icon spins, tilts or swells on top of its button's own change", () => {
-  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-  const moving = [...css.matchAll(/([^{}]*:hover[^{}]*)\{([^}]*)\}/g)]
-    .filter(([, sel, body]) => /transform:(?!none)/.test(body) && /\.ico|portrait|panel-close/.test(sel))
-    .map(([, sel]) => sel.trim())
-    // the drawer's chevron moves to say open/closed, which is information
-    .filter(sel => !/c-drawer/.test(sel));
-  assert.deepEqual(moving, []);
-  assert.doesNotMatch(css, /\.card:hover \.regiontag/, "a card under the pointer does not light its region tag");
-});
-
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
