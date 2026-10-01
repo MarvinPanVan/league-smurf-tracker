@@ -5619,6 +5619,26 @@ test("dash shows Group climb with a working spark tip target", () => {
   assert.equal(tip.id, "sparkTip");
 });
 
+test("Group climb: an account added later joins the line instead of dragging it", () => {
+  const win = bootApp();
+  const day = 86400000;
+  const diamond = { id: "d", history: [
+    { t: 10 * day, tier: "DIAMOND", division: "IV", lp: 0 },
+    { t: 12 * day, tier: "DIAMOND", division: "IV", lp: 30 },
+    { t: 14 * day, tier: "DIAMOND", division: "IV", lp: 50 }] };
+  const silver = { id: "s", history: [
+    { t: 12 * day, tier: "SILVER", division: "II", lp: 10 },
+    { t: 14 * day, tier: "SILVER", division: "II", lp: 30 }] };
+  const t = win.poolLpTrend([diamond, silver]);
+  // Diamond +50 over the window; Silver +20 over the half it was counted for. The
+  // day Silver arrives moves nothing (Diamond's +30 alone), the last day averages
+  // the two (+20, +20). A plain average of whoever was counted read as a 660-LP fall.
+  assert.equal(t.delta, 50);
+  assert.equal(t.headline, "↑ +50");
+  assert.match(t.svg, /\+50 LP since/);
+  assert.equal(win.poolLpTrend([diamond]).delta, 50, "one account: the line is its own climb");
+});
+
 test("genSyncToken is long enough for the worker", () => {
   const win = bootApp();
   const t = win.genSyncToken();

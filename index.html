@@ -4995,16 +4995,28 @@ function poolLpTrend(pool){
   for(const days of series.values())for(const p of days)allT.add(p.t);
   const timeline=[...allT].sort((a,b)=>a-b);
   if(timeline.length<2)return null;
+  // Chained, not a plain average of whoever has a point that day: an account first
+  // checked mid-window used to drag the line by its distance from the rest, so
+  // adding a Silver account to a Diamond vault read as the group falling 300 LP.
+  // Each day moves the line by the average change of the accounts already
+  // counted; one that is new that day joins from there, moving nothing.
   const last=new Map();
   const days=[];
+  let level=0;
   for(const t of timeline){
+    let moved=0; const before=last.size;
     for(const key of keys){
       const hist=series.get(key);
-      while(hist.length&&hist[0].t<=t){last.set(key,hist[0].v);hist.shift()}
+      while(hist.length&&hist[0].t<=t){
+        const v=hist[0].v;hist.shift();
+        if(last.has(key))moved+=v-last.get(key);
+        last.set(key,v);
+      }
     }
     if(last.size<1)continue;
-    let sum=0; for(const v of last.values())sum+=v;
-    days.push({t,avg:sum/last.size,n:last.size});
+    if(!days.length){let sum=0;for(const v of last.values())sum+=v;level=sum/last.size}
+    else if(before)level+=moved/before;
+    days.push({t,avg:level,n:last.size});
   }
   if(days.length<2)return null;
   const pts=days.map(d=>d.avg);
@@ -5020,14 +5032,15 @@ function poolLpTrend(pool){
   const fmtDay=t=>new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
   const from=fmtDay(days[0].t), to=fmtDay(days[days.length-1].t);
   const dots=coords.map(c=>{
-    const label=fmtDay(c.d.t)+"\n~"+Math.round(c.v)+" ladder LP\n"+c.d.n+" counted account"+(c.d.n===1?"":"s");
+    const ch=Math.round(c.v-pts[0]);
+    const label=fmtDay(c.d.t)+"\n"+(ch>0?"+":ch<0?"−":"±")+Math.abs(ch)+" LP since "+fmtDay(days[0].t)+"\n"+c.d.n+" counted account"+(c.d.n===1?"":"s");
     return `<circle class="pool-hit" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="8" data-spark-tip="${esc(label)}"></circle>`
       +`<circle class="pool-dot" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.2"></circle>`;
   }).join("");
-  const svg=`<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="100%" height="28" preserveAspectRatio="none" role="img" aria-label="Average ladder position of counted accounts from ${esc(from)} to ${esc(to)}"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/>${dots}</svg>`;
+  const svg=`<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="100%" height="28" preserveAspectRatio="none" role="img" aria-label="Average climb of counted accounts from ${esc(from)} to ${esc(to)}"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/>${dots}</svg>`;
   const sign=delta>0?"↑ +":delta<0?"↓ ":"→ ";
   const headline=sign+Math.abs(delta);
-  const note=from+" → "+to+" · avg of counted accounts (Iron→Challenger scale)";
+  const note=from+" → "+to+" · the average climb of counted accounts; one added later counts from its first check";
   // what fits under a tile: the window; the rest of the sentence is the tile's title
   const window_=from+" → "+to;
   return {svg, note, tip:note, headline, delta, span:window_};
