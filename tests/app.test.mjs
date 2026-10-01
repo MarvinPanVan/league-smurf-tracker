@@ -1011,6 +1011,33 @@ test("a new vault gets four set-up steps, each a button, until they are done or 
   assert.equal(appGet(win, "cfg.setupHidden"), true, "and it stays hidden");
 });
 
+test("New season resets every ranked account at once, leaves the rest, and one Undo puts them all back", async () => {
+  const acc = (id, tier, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [],
+    history: [{ t: Date.now() - 86400000, tier, division: tier === "UNRANKED" ? null : "II", lp: 40 }],
+    stats: { found: true, tier, division: tier === "UNRANKED" ? null : "II", lp: tier === "UNRANKED" ? null : 40, wins: 5, losses: 5, updatedAt: Date.now() } }, extra);
+  const win = bootApp([acc("g", "GOLD"), acc("d", "DIAMOND", { goal: { tier: "MASTER", division: null, lp: 0 } }),
+    acc("u", "UNRANKED"), acc("old", "SILVER", { archived: true })]);
+  const doc = win.document;
+  let asked = "";
+  win.confirm = m => { asked = m; return true; };
+  doc.getElementById("bNewSeason").click();
+  assert.match(asked, /new season for 2 ranked accounts/, "says how many, before doing anything");
+  const get = id => win.eval("accounts").find(a => a.id === id);
+  assert.equal(get("g").stats.tier, "UNRANKED");
+  assert.equal(get("d").stats.tier, "UNRANKED");
+  assert.equal(get("d").stats.seasons.solo[0].tier, "DIAMOND", "the old rank is kept in Past seasons");
+  assert.equal(get("d").goal, null);
+  assert.equal(get("old").stats.tier, "SILVER", "archived accounts are left alone");
+  await until(() => /2 accounts moved to the new season/.test(doc.getElementById("toast").textContent), "the toast");
+  doc.getElementById("toastBtn").click();
+  assert.equal(get("g").stats.tier, "GOLD", "Undo puts them back");
+  assert.equal(get("d").stats.tier, "DIAMOND");
+  assert.equal(JSON.stringify(get("d").goal), JSON.stringify({ tier: "MASTER", division: null, lp: 0 }), "goal included");
+  win.confirm = () => false;
+  doc.getElementById("bNewSeason").click();
+  assert.equal(get("g").stats.tier, "GOLD", "a No changes nothing");
+});
+
 test("Bulk add reads Riot IDs, op.gg multi-search links and the lobby chat, each with the right region", async () => {
   const win = bootApp([{ id: "x", region: "EUW", gameName: "Already", tagLine: "HERE", status: "active", tags: [], history: [], stats: null }]);
   const doc = win.document;

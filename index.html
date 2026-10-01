@@ -2064,6 +2064,7 @@
           <button id="bImportCsv" style="justify-content:flex-start;width:100%">Import CSV</button>
           <div style="border-top:1px solid var(--line);margin:2px 0"></div>
           <button id="bBulkAdd" style="justify-content:flex-start;width:100%">Bulk add accounts…</button>
+          <button id="bNewSeason" style="justify-content:flex-start;width:100%" title="Move every ranked account's current rank into its Past seasons">New season…</button>
           <button id="bStreamer" style="justify-content:flex-start;width:100%" title="Hide Riot IDs, logins, emails and notes while you stream or share your screen (H)">Streamer mode</button>
           <div style="border-top:1px solid var(--line);margin:2px 0"></div>
           <button id="bDeleteAll" class="b-danger" style="justify-content:flex-start;width:100%" title="Wipe every account — useful for clearing out demo/test data">Delete all accounts</button>
@@ -5115,6 +5116,12 @@ function markPlayed(id){
 function seasonReset(id){
   const a=accounts.find(x=>x.id===id); if(!a||!a.stats){toast("Nothing to reset");return}
   openMore.delete(id);
+  seasonResetCore(a);
+  renderCard(id); renderDash(); renderRibbon();
+  saveThen("Season reset — previous rank kept in Past seasons");
+}
+// The data side of a season reset, shared by one account's ⋯ menu and New season.
+function seasonResetCore(a){
   const s=a.stats;
   const seasons=normSeasons(s.seasons)||{solo:[],flex:[]};
   if(s.tier&&s.tier!=="UNRANKED"){
@@ -5133,8 +5140,21 @@ function seasonReset(id){
     note:null,updatedAt:Date.now(),seasonResetAt:Date.now()
   };
   a.goal=null;
-  renderCard(id); renderDash(); renderRibbon();
-  saveThen("Season reset — previous rank kept in Past seasons");
+}
+/* New season: the same reset for every ranked account at once, for the day a
+   split ends, instead of thirty trips through thirty ⋯ menus. Archived and
+   never-ranked accounts are left alone. One Undo puts them all back. */
+function newSeasonAll(){
+  const list=accounts.filter(a=>!a.archived&&isRanked(a));
+  if(!list.length){toast("No ranked accounts to start a new season for");return}
+  if(!confirm("Start a new season for "+list.length+" ranked account"+(list.length===1?"":"s")+"?\n\nEach one's current rank moves into its Past seasons, and it shows as unranked until it is checked again."))return;
+  const before=new Map(list.map(a=>[a.id,JSON.parse(JSON.stringify(a))]));
+  for(const a of list)seasonResetCore(a);
+  render();
+  saveThen(list.length+" account"+(list.length===1?"":"s")+" moved to the new season","Undo",()=>{
+    accounts=accounts.map(a=>before.has(a.id)?before.get(a.id):a);
+    render();saveThen("New season undone");
+  });
 }
 function poolLpTrend(pool){
   // Average absolute ladder position across the counted pool (same scale as the
@@ -7814,6 +7834,7 @@ document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.targ
 // applied to the whole page — the one close out of four that kept it.
 function closeSettings(){revertAccents();revertAtmosphere();applyEffects(cfg.effects);applyTextSize(cfg.textSize);if(pendingCardHide||pendingChampArt!==null){pendingCardHide=null;pendingChampArt=null;applyCompact();renderGrid()}settingsSaveGen++;$("settings").classList.add("hidden")}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
+$("bNewSeason").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");newSeasonAll()});
 $("bStreamer").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");setStreamer(!streamerOn())});
 $("streamerPill").addEventListener("click",()=>setStreamer(false));
 $("settings").querySelector(".stabs").addEventListener("click",e=>{const b=e.target.closest("[data-stab]");if(b)settingsTab(b.dataset.stab)});
@@ -8370,6 +8391,7 @@ function palCommands(){
       cfg.density=ui.density;saveCfg();openInfo.clear();render();
     }},
     {k:"settings",n:"Settings",s:"Rank checks, alerts, security, appearance",i:"user",run:()=>openSettings()},
+    {k:"newseason",n:"New season",s:"Move every ranked account's rank into Past seasons",i:"refresh",run:()=>newSeasonAll()},
     {k:"streamer",n:"Streamer mode",s:"Hide Riot IDs, logins, emails and notes on screen (H)",i:"eye",run:()=>setStreamer(!streamerOn())},
     {k:"export backup",n:"Export backup",s:"Download the vault as JSON",i:"clipboard",run:()=>doExport()},
     {k:"help",n:"Help",s:"How this works",i:"note",run:()=>$("bHelp").click()},
