@@ -162,7 +162,7 @@
      headings, and the buttons that do something. Controls that set a filter or
      open a menu stay in the text face; so do states that are not ranks — "Never
      checked" is not a tier and should not be dressed as one. */
-  .rk-t,.rw:not(.rw-quiet) .rw-rank b,.tile:not(.rw-quiet) .t-rk,.cmp-rk,.lgrp-n{
+  .rk-t,.rw:not(.rw-quiet) .rw-rank b,.tile:not(.rw-quiet) .t-rk,.cmp-rk:not(.q),.lgrp-n{
     font-family:'Cinzel',Georgia,serif;font-weight:700;text-transform:uppercase}
   .cmd>button,.acts>button:not(.c-more),.acts>.btn,.mdl-f>button,#lockBtn,#bExitPreview,#bDemo,#bClearFilters,
   #sSyncGen,#sSyncPush,#sSyncPull,#sVaultSet,#sVaultRemove,#sLockNow,#fGen,#cmpClear{
@@ -1656,11 +1656,31 @@
   .a-login:hover .ico{transform:scale(1.16)}
   .acts button:hover .ico{transform:rotate(-12deg)}
   .acts button[data-act="check"]:hover .ico{transform:rotate(180deg)}
-  .cmp-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:start}
-  .cmp-vs{align-self:center;color:var(--faint);font-weight:700}
-  .cmp-nm{font-weight:700;margin-bottom:6px}
-  .cmp-rk{font-size:18px;margin-bottom:8px}
-  .cmp-line{font-size:12px;color:var(--muted);margin:3px 0}
+  .cmp{padding:22px 22px 6px}
+  .cmp-head{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:start;margin-bottom:18px}
+  .cmp-side{display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;min-width:0}
+  .cmp-pic{width:56px;height:56px;border-radius:50%;margin-bottom:8px;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(150deg,var(--panel3),var(--panel2));
+    box-shadow:0 0 0 1px var(--gold-dim),0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold) 55%,transparent)}
+  .cmp-pic img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+  .cmp-pic b{font-size:20px;font-weight:600;color:var(--faint)}
+  .cmp-nm{font-size:16px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmp-id{font-size:11px;color:var(--faint);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmp-rk{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:18px;line-height:1.1}
+  .cmp-rk.q{font-family:inherit;text-transform:none;font-weight:600;font-size:14px;color:var(--faint)!important}
+  .cmp-crest{width:22px;height:22px}
+  .cmp-lp{font-size:12px;font-weight:600;color:var(--muted)}
+  .cmp-vs{width:38px;height:38px;margin-top:30px;display:grid;place-items:center;transform:rotate(45deg);
+    background:linear-gradient(135deg,#1e2328,#0a1119);border:1px solid var(--gold-dim);
+    box-shadow:0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold-dim) 60%,transparent)}
+  .cmp-vs span{transform:rotate(-45deg);font-family:'Cinzel',Georgia,serif;font-weight:700;font-size:12px;letter-spacing:.06em;color:var(--gold-txt)}
+  .cmp-rows{border-top:1px solid var(--line)}
+  .cmp-row{display:grid;grid-template-columns:minmax(0,1fr) 92px minmax(0,1fr);gap:10px;align-items:center;
+    padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;font-variant-numeric:tabular-nums;color:var(--text)}
+  .cmp-row:last-child{border-bottom:0}
+  .cmp-row>:first-child{text-align:right}
+  .cmp-row .k{text-align:center;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  .cmp-row .win{color:var(--gold-txt);font-weight:600}
   .toast-log{max-width:420px;font-size:12px;line-height:1.45}
 
   .panel-close{transition:color .16s,background .16s,transform .2s cubic-bezier(.22,1,.36,1)}
@@ -1764,8 +1784,15 @@
   }
   @media (max-width:560px){.formgrid{grid-template-columns:1fr;padding:18px}.card{padding:15px}
     .c-drawer{margin:1px -15px -15px}
-    .cmp-grid{grid-template-columns:1fr;gap:8px}
-    .cmp-vs{text-align:center;padding:4px 0}}
+    /* a phone has ~150px a side: the tier word drops to its own size, the crest
+       above it, so DIAMOND II reads on one line instead of breaking at the space */
+    .cmp{padding:18px 14px 4px}
+    .cmp-head{gap:8px}
+    .cmp-rk{flex-direction:column;gap:4px;font-size:15px}
+    .cmp-rk>span{white-space:nowrap}
+    .cmp-vs{width:30px;height:30px;margin-top:24px}
+    .cmp-row{grid-template-columns:minmax(0,1fr) 86px minmax(0,1fr);gap:8px;font-size:12px}
+    .cmp-row .k{white-space:nowrap}}
 </style>
 </head>
 <body data-atmosphere="spotlight">
@@ -2273,11 +2300,13 @@
        sees it — creating it lazily left Compare outside body.modal-open and the
        focus trap. -->
   <div id="compareModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Compare">
-    <div class="mdl hx teal"><div class="hx-in mdl-in">
+    <div class="mdl narrow hx teal"><div class="hx-in mdl-in">
       <div class="mdl-h"><span class="t">Compare</span>
         <button class="panel-close" id="cmpClose" data-close-panel title="Close" aria-label="Close">✕</button>
       </div>
       <div class="mdl-b" id="cmpBody"></div>
+      <div class="mdl-f"><button id="cmpClear" type="button">Clear selection</button>
+        <span class="sp hint">Pick accounts with Compare… in a card's ⋯ menu.</span></div>
     </div></div>
   </div>
 
@@ -4695,27 +4724,53 @@ function openCompare(id){
   if(compareIds.length<2){toast("Pick one more account to compare ("+compareIds.length+"/2)");return}
   renderCompare();
 }
+/* A versus screen rather than two loose columns of grey lines: who, at what rank,
+   then the same facts side by side on one row each, with the better of a pair
+   lit — so the answer to "which one" is where the eye lands, not something read
+   off two lists and worked out. */
 function renderCompare(){
   const a=accounts.find(x=>x.id===compareIds[0]), b=accounts.find(x=>x.id===compareIds[1]);
   if(!a||!b){compareIds=[];return}
-  const cell=(acc)=>{
-    const s=acc.stats||{};
-    const tr=wrTrend(acc);
-    const peak=peakInfo(acc).peak;
-    return `<div class="cmp-col">
-      <div class="cmp-nm">${esc(acc.label||acc.gameName)}</div>
-      <div class="cmp-rk" style="color:${tierColor(s.tier)}">${esc(shortRank(s)||"—")}</div>
-      <div class="cmp-line">${esc(s.wins!=null?s.wins+"W":"—")} / ${esc(s.losses!=null?s.losses+"L":"—")}</div>
-      <div class="cmp-line">Peak ${esc(peak||"—")}</div>
-      <div class="cmp-line">WR trend ${tr?(tr.d>0?"+":"")+tr.d+" pp":"—"}</div>
-      <div class="cmp-line">Last played ${acc.lastPlayedAt?timeAgo(acc.lastPlayedAt):(acc.lastLoginAt?timeAgo(acc.lastLoginAt):(s.updatedAt?timeAgo(s.updatedAt):"never"))}</div>
+  const side=acc=>{
+    const s=acc.stats||{}, url=iconUrl(s), ranked=isRanked(acc);
+    const initial=(acc.label||acc.gameName||"?").trim().charAt(0).toUpperCase()||"?";
+    const rank=ranked?tierLabel(s):!hasReading(s)?"Never checked":s.found===false?"Not found":"Unranked";
+    return `<div class="cmp-side">
+      <span class="cmp-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}</span>
+      <div class="cmp-nm" title="${esc(acc.label||acc.gameName)}">${esc(acc.label||acc.gameName)}</div>
+      <div class="cmp-id">${esc(acc.gameName)}#${esc(acc.tagLine)} · ${esc(acc.region)}</div>
+      <div class="cmp-rk${ranked?"":" q"}" style="color:${tierColor(s.tier)}">${ranked?crest(s.tier,"cmp-crest"):""}<span>${esc(rank)}</span></div>
+      <div class="cmp-lp">${ranked&&s.lp!=null?esc(s.lp+" LP"):"&nbsp;"}</div>
     </div>`;
   };
+  const facts=acc=>{
+    const s=acc.stats||{}, wl=winLoss(s), tr=wrTrend(acc);
+    const seen=acc.lastPlayedAt||acc.lastLoginAt||s.updatedAt||0;
+    return {
+      record:wl.w!=null||wl.l!=null?(wl.w!=null?wl.w+"W":"—")+" "+(wl.l!=null?wl.l+"L":"—"):"—",
+      wr:wl.wr, peak:peakInfo(acc).peak||"—", trend:tr?(tr.d>0?"+":"")+tr.d+" pp":"—",
+      seen, level:s.level!=null?String(s.level):"—",
+    };
+  };
+  const fa=facts(a), fb=facts(b);
+  // -1 left is better, 1 right is, 0 neither (or nothing to compare)
+  const cmp=(x,y)=>x==null||y==null||x===y?0:(x>y?-1:1);
+  const row=(label,l,r,better)=>`<div class="cmp-row"><span class="${better<0?"win":""}">${esc(l)}</span>`
+    +`<span class="k">${esc(label)}</span><span class="${better>0?"win":""}">${esc(r)}</span></div>`;
+  const pct=v=>v==null?"—":v+"%";
+  setHTML($("cmpBody"),`<div class="cmp">
+    <div class="cmp-head">${side(a)}<div class="cmp-vs" aria-hidden="true"><span>VS</span></div>${side(b)}</div>
+    <div class="cmp-rows">`
+      +row("Record",fa.record,fb.record,0)
+      +row("Win rate",pct(fa.wr),pct(fb.wr),cmp(fa.wr,fb.wr))
+      +row("Peak",fa.peak,fb.peak,0)
+      +row("WR trend",fa.trend,fb.trend,0)
+      +row("Level",fa.level,fb.level,0)
+      +row("Last played",fa.seen?timeAgo(fa.seen):"never",fb.seen?timeAgo(fb.seen):"never",0)
+    +`</div></div>`);
   const modal=$("compareModal");
   if(!modal){compareIds=[];return}
   modal.classList.remove("hidden");
-  setHTML($("cmpBody"),`<div class="cmp-grid">${cell(a)}<div class="cmp-vs">vs</div>${cell(b)}</div>
-    <button class="btn" id="cmpClear" style="margin-top:12px">Clear selection</button>`);
   $("cmpClear").onclick=()=>{closeCompare()};
 }
 

@@ -4496,18 +4496,56 @@ test("compare modal is in the document at boot and closes via Escape / closeAllP
   assert.equal(appGet(win, "compareIds.length"), 0);
 });
 
-test("compare W/L values are escaped in the modal HTML", () => {
+test("compare escapes every account-supplied string in the modal HTML", () => {
   const win = bootApp([
-    { id: "x1", region: "EUW", gameName: "X", tagLine: "A", status: "active",
+    { id: "x1", region: "EUW", gameName: "\"onerror", tagLine: "<b>", status: "active", label: "<img src=x>",
       stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: "<img>", losses: "\"onerror", updatedAt: 1 }, history: [], tags: [] },
     { id: "x2", region: "EUW", gameName: "Y", tagLine: "B", status: "active",
       stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: 1 }, history: [], tags: [] },
   ]);
   win.openCompare("x1");
   win.openCompare("x2");
-  const html = win.document.getElementById("cmpBody").innerHTML;
-  assert.doesNotMatch(html, /<img>/);
-  assert.match(html, /&lt;img&gt;/);
+  const body = win.document.getElementById("cmpBody");
+  // Serialised HTML leaves "<" bare inside attribute values, so ask the DOM what
+  // the strings became instead of pattern-matching markup.
+  assert.equal(body.querySelector(".cmp-nm").textContent, "<img src=x>");
+  assert.equal(body.querySelector(".cmp-nm").title, "<img src=x>", "and the tooltip holds the same text");
+  assert.equal(body.querySelector(".cmp-id").textContent, "\"onerror#<b> · EUW", "name and tag arrive as text");
+  assert.equal(body.querySelectorAll("img").length, 0, "no element came out of the data");
+});
+
+test("compare is a versus screen: one row per fact, the better win rate lit", () => {
+  const win = bootApp([
+    { id: "c1", region: "EUW", gameName: "Alpha", tagLine: "A", status: "active",
+      stats: { found: true, tier: "GOLD", division: "II", lp: 20, wins: 10, losses: 8, level: 40, updatedAt: 1 }, history: [], tags: [] },
+    { id: "c2", region: "KR", gameName: "Beta", tagLine: "B", status: "active",
+      stats: { found: true, tier: "PLATINUM", division: "IV", lp: 5, wins: 20, losses: 10, level: 90, updatedAt: 1 }, history: [], tags: [] },
+    { id: "c3", region: "NA", gameName: "Gamma", tagLine: "C", status: "active", stats: null, history: [], tags: [] },
+  ]);
+  win.openCompare("c1");
+  win.openCompare("c2");
+  const body = win.document.getElementById("cmpBody");
+  const sides = body.querySelectorAll(".cmp-side");
+  assert.equal(sides.length, 2);
+  assert.equal(sides[0].querySelector(".cmp-rk").textContent, "Gold II");
+  assert.equal(sides[1].querySelector(".cmp-lp").textContent, "5 LP");
+  const rows = [...body.querySelectorAll(".cmp-row")];
+  assert.deepEqual(rows.map(r => r.querySelector(".k").textContent),
+    ["Record", "Win rate", "Peak", "WR trend", "Level", "Last played"]);
+  const wr = rows[1].children;
+  assert.equal(wr[0].textContent, "56%");
+  assert.equal(wr[2].textContent, "67%");
+  assert.ok(wr[2].classList.contains("win") && !wr[0].classList.contains("win"), "the higher win rate is the lit one");
+  assert.equal(body.querySelectorAll(".cmp-row .win").length, 1, "only facts with a better side are lit");
+  const clear = win.document.getElementById("cmpClear");
+  assert.ok(clear.closest(".mdl-f") && !body.contains(clear), "Clear sits in the window's footer, not in the scroll");
+  win.closeCompare();
+  win.openCompare("c1");
+  win.openCompare("c3");
+  const q = win.document.querySelectorAll("#cmpBody .cmp-rk")[1];
+  assert.ok(q.classList.contains("q"), "a side with no rank is not dressed as one");
+  assert.equal(q.textContent, "Never checked");
+  assert.equal(win.document.querySelectorAll("#cmpBody .cmp-row .win").length, 0, "nothing to beat without a win rate");
 });
 
 test("closeAllPanels / closeCompare clears selection and hides Compare", () => {
