@@ -1639,6 +1639,13 @@
   #settings .grp[data-tab="checks"]+.grp[data-tab="checks"]{border-top:1px solid var(--line)}
   .grp-h.tab-same{display:none}
   .bk-acts{display:flex;flex-wrap:wrap;gap:8px}
+  /* streamer mode: blurred where it stands, so the layout does not jump */
+  body.streamer :is(.sens,.login .val,.c-notes textarea),
+  body.streamer :is(#fName,#fTag,#fLogin,#fPass,#fEmail,#fNotes,#fCreated,#fBirth,#baList){filter:blur(7px);user-select:none}
+  .streamer-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:var(--r-sm);font-size:calc(12px*var(--ts));font-weight:600;
+    color:#ffb4b4;border:1px solid #ff6b6b66;background:#ff6b6b17;box-shadow:none}
+  .streamer-pill:hover{color:#fff;border-color:#ff6b6baa;background:#ff6b6b26}
+  .streamer-pill i{width:7px;height:7px;border-radius:50%;background:#ff5b5b;box-shadow:0 0 8px #ff5b5b}
   .part-chks{display:flex;flex-wrap:wrap;gap:6px}
   .part-chks label{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--line);
     border-radius:var(--r-sm);background:var(--panel2);font-size:calc(13px*var(--ts));color:var(--muted);cursor:pointer}
@@ -2045,6 +2052,7 @@
          underneath. This is what the middle is for. -->
     <div id="ribbon" class="ribbon"></div>
     <div class="bar">
+      <button id="streamerPill" class="streamer-pill hidden" title="Streamer mode is on: Riot IDs, logins, emails and notes are hidden. Click to show them again."><i aria-hidden="true"></i>Streamer mode</button>
       <button id="bDashToggle" class="ghost-toggle" title="Season totals, champion pool, account counts"></button>
       <div style="position:relative">
         <button id="bMore" title="Export, import, settings">⋯</button>
@@ -2056,6 +2064,7 @@
           <button id="bImportCsv" style="justify-content:flex-start;width:100%">Import CSV</button>
           <div style="border-top:1px solid var(--line);margin:2px 0"></div>
           <button id="bBulkAdd" style="justify-content:flex-start;width:100%">Bulk add accounts…</button>
+          <button id="bStreamer" style="justify-content:flex-start;width:100%" title="Hide Riot IDs, logins, emails and notes while you stream or share your screen (H)">Streamer mode</button>
           <div style="border-top:1px solid var(--line);margin:2px 0"></div>
           <button id="bDeleteAll" class="b-danger" style="justify-content:flex-start;width:100%" title="Wipe every account — useful for clearing out demo/test data">Delete all accounts</button>
           <div style="border-top:1px solid var(--line);margin:2px 0"></div>
@@ -4896,7 +4905,7 @@ function takeIdentity(acc,s){
   if(r&&r.name&&r.tag&&(r.name!==acc.gameName||r.tag!==acc.tagLine)){
     const was=acc.gameName+"#"+acc.tagLine, same=was.toLowerCase()===(r.name+"#"+r.tag).toLowerCase();
     acc.gameName=r.name;acc.tagLine=r.tag;
-    if(!same)toast("Renamed on Riot: "+was+" is now "+r.name+"#"+r.tag);
+    if(!same)toast(streamerOn()?"Renamed on Riot: "+plainName(acc)+" follows its new Riot ID":"Renamed on Riot: "+was+" is now "+r.name+"#"+r.tag);
   }
   // Once a session, not once per account: sixty toasts about one expired key help nobody.
   if(s.riotError==="key"&&!riotKeyWarned){
@@ -5058,10 +5067,10 @@ async function checkAll(ids){
   for(const acc of list){
     if(run.stop)break;
     if(done.has(acc.id))continue;
-    run.current=acc.label||acc.gameName;renderRun();
+    run.current=plainName(acc);renderRun();
     // null = superseded/deleted; "missing" = found:false; false = transport fail; true = refreshed.
     const result=await check(acc.id);
-    if(result===false)run.failed.push({id:acc.id,name:acc.label||acc.gameName});
+    if(result===false)run.failed.push({id:acc.id,name:plainName(acc)});
     else if(result===true)run.ok++;
     else if(result==="missing")run.missing++;
     run.done++;renderRun();
@@ -5274,8 +5283,8 @@ function renderCompare(){
     const rank=ranked?tierLabel(s):!hasReading(s)?"Never checked":s.found===false?"Not found":"Unranked";
     return `<div class="cmp-side">
       <span class="cmp-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}</span>
-      <div class="cmp-nm" title="${esc(acc.label||acc.gameName)}">${esc(acc.label||acc.gameName)}</div>
-      <div class="cmp-id">${esc(acc.gameName)}#${esc(acc.tagLine)} · ${esc(acc.region)}</div>
+      <div class="cmp-nm" title="${esc(plainName(acc))}">${nameOf(acc)}</div>
+      <div class="cmp-id">${sens(esc(acc.gameName)+"#"+esc(acc.tagLine))} · ${esc(acc.region)}</div>
       <div class="cmp-rk${ranked?"":" q"}" style="color:${tierColor(s.tier)}">${ranked?crest(s.tier,"cmp-crest"):""}<span>${esc(rank)}</span></div>
       <div class="cmp-lp">${ranked&&s.lp!=null?esc(s.lp+" LP"):"&nbsp;"}</div>
     </div>`;
@@ -5835,7 +5844,7 @@ function renderDash(){
   let best=null;
   pool.forEach(a=>{if(rankValue(a.stats)>rankValue(best&&best.stats))best=a});
   const topChamps=mergeChampions(pool);
-  const bestTxt=best&&rankValue(best.stats)>=0?esc(best.label||best.gameName)+" <small>"+esc(shortRank(best.stats)||"")+"</small>":"—";
+  const bestTxt=best&&rankValue(best.stats)>=0?nameOf(best)+" <small>"+esc(shortRank(best.stats)||"")+"</small>":"—";
   const regCount={};allActive.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
   const regTxt=Object.entries(regCount).map(([r,n])=>r+" "+n).join(" · ");
   const regN=Object.keys(regCount).length;
@@ -5891,7 +5900,7 @@ function renderDash(){
     ${dupN?`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`:""}
     ${next?`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
-      <div class="v" style="font-size:calc(14px*var(--ts))">${esc(next.a.label||next.a.gameName)}</div><div class="s-note">${esc(next.why)}</div></button>`:""}
+      <div class="v" style="font-size:calc(14px*var(--ts))">${nameOf(next.a)}</div><div class="s-note">${esc(next.why)}</div></button>`:""}
     ${decayN?`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left — estimated from the games seen between checks"><div class="k">Decay risk</div>
       <div class="v" style="color:#f0b45a">${decayN}</div><div class="s-note">a week or less banked — play a ranked game</div></button>`:""}
     ${rotN?`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
@@ -6080,6 +6089,27 @@ function champArtHTML(a){
   const k=champKey(mainChamp(a));if(!k)return"";
   return`<img class="c-art" src="https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${k}_0.jpg" alt="" aria-hidden="true" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
 }
+/* ---- streamer mode ----
+   For streaming or sharing the screen: whatever would let a viewer find an
+   account — its Riot ID, login, email, notes, or a name that is only its Riot
+   name — is blurred on screen and left out of tooltips and messages. The
+   labels you gave your accounts stay: you chose those. One key (H) or the ⋯
+   menu turns it on; turning it off takes a click on the header's pill, so a
+   stray key can never reveal anything mid-stream. */
+function streamerOn(){return !!cfg.streamer}
+function sens(html){return`<span class="sens">${html}</span>`}
+function nameOf(a){return a.label?esc(a.label):sens(esc(a.gameName||""))}
+function plainName(a){return a.label||(streamerOn()?"an unlabelled account":a.gameName||"")}
+function applyStreamer(){
+  const on=streamerOn();
+  document.body.classList.toggle("streamer",on);
+  const pill=$("streamerPill");if(pill)pill.classList.toggle("hidden",!on);
+  const b=$("bStreamer");if(b)b.textContent=on?"Streamer mode: on":"Streamer mode";
+}
+function setStreamer(on){
+  cfg.streamer=on?true:null;saveCfg();applyStreamer();render();
+  toast(on?"Streamer mode on — Riot IDs, logins, emails and notes are hidden":"Streamer mode off");
+}
 function drawerTitle(){
   const h=new Set(cardHidden());
   return CARD_PARTS.filter(([k])=>h.has(k)).map(p=>p[1]).concat(["past seasons, flex rank, champions"]).join(", ").replace(/^./,c=>c.toUpperCase());
@@ -6151,7 +6181,7 @@ function noteBlockHTML(a,rev){
     +`<textarea data-f="notetext" rows="3" placeholder="Anything worth remembering about this account…">${esc(noteDraft)}</textarea></div>`;
   // Always clickable, so there is no separate "add a note" action to find — an
   // empty one is just a quiet line rather than a filled box.
-  if(a.notes)return`<div class="c-notes" data-act="noteedit" title="Click to edit"><span class="k">Notes ${icon("pencil")}</span>${esc(a.notes)}</div>`;
+  if(a.notes)return`<div class="c-notes" data-act="noteedit" title="Click to edit"><span class="k">Notes ${icon("pencil")}</span>${sens(esc(a.notes))}</div>`;
   return`<div class="c-notes blank" data-act="noteedit" title="Click to write a note">${icon("pencil")} Add a note</div>`;
 }
 // Replace only the note block, leaving the rest of the card's DOM alone. Going
@@ -6265,7 +6295,7 @@ function openRankModal(id){
   const m=$("rankModal");
   m.dataset.id=id;
   $("rankTitle").textContent="Rank by hand";
-  $("rankSub").textContent=(a.label&&a.label!==a.gameName?a.label+" · ":"")+a.gameName+"#"+a.tagLine;
+  $("rankSub").textContent=streamerOn()?(a.label||"Riot ID hidden"):(a.label&&a.label!==a.gameName?a.label+" · ":"")+a.gameName+"#"+a.tagLine;
   renderRankBody(id,true);
   m.classList.remove("hidden");
 }
@@ -6351,8 +6381,8 @@ function rowHTML(a,i){
       <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}">
       <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
       <span class="rw-id">
-        <span class="rw-nm" title="${esc(a.label||a.gameName)}"><span class="nm-t">${esc(a.label||a.gameName)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
-        <span class="rw-tag">${esc(a.gameName)}#${esc(a.tagLine)}</span>
+        <span class="rw-nm" title="${esc(plainName(a))}"><span class="nm-t">${nameOf(a)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
+        <span class="rw-tag sens">${esc(a.gameName)}#${esc(a.tagLine)}</span>
         ${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}
       </span>
       <span class="rw-spark">${sparkline(a.history,col)
@@ -6406,12 +6436,12 @@ function tileHTML(a){
     if(s.lp!=null)lp=s.lp+" LP";
   }else rank="Unranked";
   const st=STATUS[a.status]||STATUS.active;
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc((a.label||a.gameName)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
-    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
+    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
     <span class="t-rk" style="color:${col}">${esc(rank)}</span>
     ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
   </div></div>`;
@@ -6531,8 +6561,8 @@ function cardHTML(a,i){
       <div class="c-id">
         <!-- the name is ellipsised at the card's width, so the full one has to be
              available somewhere; hovering is the only place left for it -->
-        <div class="c-name"><span title="${esc(a.label||a.gameName)}">${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f" title="${esc(st.label)}">${esc(st.short||st.label)}</span>`:""}</div>
-        <button class="rid" data-act="copyid" title="Copy Riot ID"><span>${esc(a.gameName)}<b>#${esc(a.tagLine)}</b></span></button>
+        <div class="c-name"><span title="${esc(plainName(a))}"${a.label?"":' class="sens"'}>${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f" title="${esc(st.label)}">${esc(st.short||st.label)}</span>`:""}</div>
+        <button class="rid" data-act="copyid" title="Copy Riot ID"><span class="sens">${esc(a.gameName)}<b>#${esc(a.tagLine)}</b></span></button>
       </div>
       <div class="c-chrome">
         <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select for bulk actions">
@@ -7046,7 +7076,7 @@ function submitForm(){
       &&a.gameName.toLowerCase()===gameName.toLowerCase()
       &&a.tagLine.toLowerCase()===tagLine.toLowerCase()
       &&a.region===$("fRegion").value);
-    if(dup){toast("Already in the vault: "+(dup.label||dup.gameName));return}
+    if(dup){toast("Already in the vault: "+plainName(dup));return}
   }
   const data={label:$("fLabel").value.trim(),region:$("fRegion").value,gameName,tagLine,status:$("fStatus").value,
     login:$("fLogin").value,password:$("fPass").value,email:$("fEmail").value.trim(),
@@ -7638,6 +7668,8 @@ document.addEventListener("keydown",e=>{
   if(e.key==="/"&&!typing){e.preventDefault();$("tSearch").focus()}
   if(e.key==="n"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();openForm(null)}
   if(e.key==="f"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$("tFav").click()}
+  // H only ever hides: turning streamer mode off is the pill's job, never a stray key
+  if((e.key==="h"||e.key==="H")&&!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();if(!streamerOn())setStreamer(true);else toast("Streamer mode is on — click its pill in the header to turn it off")}
   if(e.key==="Escape"){
     if($("accPrev").classList.contains("show")){hideAccPrev();return}
     // Whatever a card has unfolded goes first — that is what is in front of you,
@@ -7782,6 +7814,8 @@ document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.targ
 // applied to the whole page — the one close out of four that kept it.
 function closeSettings(){revertAccents();revertAtmosphere();applyEffects(cfg.effects);applyTextSize(cfg.textSize);if(pendingCardHide||pendingChampArt!==null){pendingCardHide=null;pendingChampArt=null;applyCompact();renderGrid()}settingsSaveGen++;$("settings").classList.add("hidden")}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
+$("bStreamer").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");setStreamer(!streamerOn())});
+$("streamerPill").addEventListener("click",()=>setStreamer(false));
 $("settings").querySelector(".stabs").addEventListener("click",e=>{const b=e.target.closest("[data-stab]");if(b)settingsTab(b.dataset.stab)});
 $("settings").querySelector(".stabs").addEventListener("keydown",e=>{
   const i=SETTINGS_TABS.indexOf($("settings").dataset.tab);
@@ -8233,7 +8267,7 @@ function renderAwayBand(){
   if(sum.down.length)bits.push(`<span class="down">${sum.down.length} fell</span>`);
   const star=best&&(!worst||best.d>=-worst.d)?best:worst;
   setHTML(el,`<span class="away-k">While you were away</span>`
-    +`<span>${bits.join(" · ")}${star?` — biggest mover <b>${esc(star.a.label||star.a.gameName)}</b> `
+    +`<span>${bits.join(" · ")}${star?` — biggest mover <b>${nameOf(star.a)}</b> `
       +`<span class="${star.d>0?"up":"down"}">${star.d>0?"+":""}${star.d} LP</span>`:""}</span>`
     +`<span class="sp"><button id="awayShow">Sort by movement</button><button id="awayHide">Dismiss</button></span>`);
   el.classList.remove("hidden");
@@ -8295,6 +8329,7 @@ function palCommands(){
       cfg.density=ui.density;saveCfg();openInfo.clear();render();
     }},
     {k:"settings",n:"Settings",s:"Rank checks, alerts, security, appearance",i:"user",run:()=>openSettings()},
+    {k:"streamer",n:"Streamer mode",s:"Hide Riot IDs, logins, emails and notes on screen (H)",i:"eye",run:()=>setStreamer(!streamerOn())},
     {k:"export backup",n:"Export backup",s:"Download the vault as JSON",i:"clipboard",run:()=>doExport()},
     {k:"help",n:"Help",s:"How this works",i:"note",run:()=>$("bHelp").click()},
   ];
@@ -8333,8 +8368,8 @@ function renderPalette(){
       html+=`<button class="pal-i${sel}" data-i="${i}" role="option" aria-selected="${i===palSel}">`
         +`<span class="pal-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" onerror="markIconDead(this)">`:esc(initial)}`
         +`${isRanked(a)?crest(s.tier):""}</span>`
-        +`<span class="pal-t"><span class="pal-n">${esc(a.label||a.gameName)}</span>`
-        +`<span class="pal-s">${esc(a.gameName)}#${esc(a.tagLine)} · ${esc(a.region)}</span></span>`
+        +`<span class="pal-t"><span class="pal-n">${nameOf(a)}</span>`
+        +`<span class="pal-s">${sens(esc(a.gameName)+"#"+esc(a.tagLine))} · ${esc(a.region)}</span></span>`
         +`<span class="pal-r${isRanked(a)?"":" q"}" style="color:${col}">${esc(isRanked(a)?shortRank(s)||"":isChecked(a)?"Unranked":"Never checked")}</span>`
         +`</button>`;
     }else{
@@ -9088,7 +9123,7 @@ function boot(){
   fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);
   if(cfg.accent)applyAccent(cfg.accent);
   if(cfg.accent2)applyAccent2(cfg.accent2);
-  applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);applyCompact();
+  applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);applyCompact();applyStreamer();
   let raw=null;
   try{raw=hasStorage?localStorage.getItem(DB_KEY):null}catch(e){}
   const stored=readStoredVault(raw);

@@ -1011,6 +1011,48 @@ test("a new vault gets four set-up steps, each a button, until they are done or 
   assert.equal(appGet(win, "cfg.setupHidden"), true, "and it stays hidden");
 });
 
+test("Streamer mode: Riot IDs, logins, emails and notes are hidden on screen and in messages; H only turns it on", () => {
+  const acc = (id, extra) => Object.assign({ id, region: "EUW", gameName: "Secret" + id, tagLine: "TAG" + id, status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: Date.now() } }, extra);
+  const win = bootApp([acc("1", { label: "Main", notes: "honor 3, Elementalist Lux", login: "mylogin", password: "pw", email: "me@mail.gg" }), acc("2", {})]);
+  const doc = win.document, body = doc.body;
+  const card = id => doc.querySelector(`.card[data-id="${id}"]`);
+  const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  const key = k => doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: k, bubbles: true }));
+  assert.equal(body.classList.contains("streamer"), false);
+  assert.ok(doc.getElementById("streamerPill").classList.contains("hidden"));
+  doc.getElementById("bStreamer").click();
+  assert.ok(body.classList.contains("streamer"), "on from the ⋯ menu");
+  assert.equal(cfg().streamer, true, "and it survives a reload mid-stream");
+  assert.equal(doc.getElementById("streamerPill").classList.contains("hidden"), false, "the header says so");
+  const css = [...doc.querySelectorAll("style")].map(s => s.textContent).join("\n");
+  assert.match(css, /body\.streamer :is\(\.sens,\.login \.val,\.c-notes textarea\)[^{]*\{filter:blur/);
+  assert.match(css, /body\.streamer :is\(#fName,#fTag,#fLogin,#fPass,#fEmail,#fNotes/, "the edit form too");
+  // every Riot ID sits inside something blurred
+  for (const id of ["1", "2"]) assert.ok(card(id).querySelector(".rid .sens").textContent.includes("Secret" + id));
+  assert.equal(card("1").querySelector(".c-name").textContent.trim(), "Main", "a label you chose stays readable");
+  assert.ok(card("2").querySelector(".c-name .sens"), "a name that is only the Riot name is blurred");
+  assert.equal(card("1").querySelector(".c-name .sens"), null);
+  assert.doesNotMatch(card("2").querySelector(".c-name span").getAttribute("title"), /Secret2/, "and kept out of its tooltip");
+  assert.ok(card("1").querySelector(".c-notes .sens").textContent.includes("Elementalist"), "notes are blurred");
+  // messages carry no Riot ID either
+  runScript(win, `commitStats("2", accounts.find(a => a.id === "2"), {found:true,tier:"GOLD",division:"I",lp:1,updatedAt:Date.now(),
+    puuid:"${"q".repeat(78)}",riotId:{name:"NewSecret",tag:"NEW"}})`);
+  assert.doesNotMatch(doc.getElementById("toast").textContent, /Secret|NEW/);
+  // other views
+  doc.querySelector('#density [data-density="list"]').click();
+  assert.ok(doc.querySelector('#grid [data-id="1"] .rw-tag.sens'), "the list's Riot ID column");
+  doc.querySelector('#density [data-density="wall"]').click();
+  assert.doesNotMatch(doc.querySelector('#grid .tile[data-id="2"]').getAttribute("title") || "", /Secret/, "the wall's tooltips");
+  // H turns it on, never off; the pill turns it off
+  doc.getElementById("streamerPill").click();
+  assert.equal(body.classList.contains("streamer"), false);
+  key("h");
+  assert.ok(body.classList.contains("streamer"), "H hides");
+  key("h");
+  assert.ok(body.classList.contains("streamer"), "a second H does not reveal");
+});
+
 test("champion art: the most-played champion's splash, by Data Dragon id, lazy, gone if it fails, and switchable off", () => {
   const acc = (id, champs) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
     stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: Date.now(), champs } });
