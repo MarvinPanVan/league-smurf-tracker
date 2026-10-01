@@ -722,11 +722,11 @@ test("the backup reminder carries the way to act on it", () => {
   assert.equal(win.document.getElementById("bkNow"), null, "so the reminder goes");
 });
 
-test("Login is a flat fill: primary on its card, without a glow repeated sixty times", () => {
-  const rule = html.match(/\n  \.a-login\{[^}]*\}/)[0], hover = html.match(/\n  \.a-login:hover\{[^}]*\}/)[0];
-  assert.match(rule, /background:var\(--teal\)/, "still filled — it is the thing you came to the card for");
-  assert.doesNotMatch(rule + hover, /gradient|filter:/, "no gloss");
-  assert.doesNotMatch(rule + hover, /box-shadow:(?!none)/, "no glow");
+test("Login stays the most lit control on a card: filled, glossed and glowing", () => {
+  // It is what the app is used for. A calm-down pass once flattened it; this keeps it lit.
+  const rule = html.match(/\n  \.a-login\{[^}]*\}/)[0];
+  assert.match(rule, /background:linear-gradient/, "a gloss on the fill");
+  assert.match(rule, /box-shadow:0 /, "and a glow under it");
 });
 
 test("a stale card says so in red with its dot, not with a warning glyph as well", () => {

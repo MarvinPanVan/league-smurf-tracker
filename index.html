@@ -1452,12 +1452,11 @@
      look the same. The gold tint implied a hierarchy that isn't there. */
   .a-dpm{border:1px solid var(--line);color:var(--text);font-weight:500;background:var(--panel2)}
   .a-dpm:hover{color:var(--text);border-color:var(--line2);background:var(--panel3)}
-  /* Filled, because it is the one thing you came to a card to do — but flat. A
-     gloss gradient and a glow under it, on every card, made sixty of them the
-     loudest thing on the page, louder than Check all ranks. The fill says
-     "primary" on its own. */
-  .a-login{background:var(--teal);border-color:var(--teal);color:var(--teal-ink);font-weight:700;box-shadow:none}
-  .a-login:hover{background:color-mix(in srgb,var(--teal) 84%,#fff);border-color:color-mix(in srgb,var(--teal) 84%,#fff);color:var(--teal-ink)}
+  .a-login{background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 82%,#fff),var(--teal) 45%,color-mix(in srgb,var(--teal) 78%,#000));
+    border-color:var(--teal);color:var(--teal-ink);font-weight:700;
+    box-shadow:0 4px 14px -6px color-mix(in srgb,var(--teal) 85%,transparent)}
+  .a-login:hover{background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 70%,#fff),var(--teal) 50%);border-color:var(--teal);color:var(--teal-ink);filter:brightness(1.06);
+    box-shadow:0 7px 22px -6px color-mix(in srgb,var(--teal) 95%,transparent)}
 
   /* One eyebrow. The small uppercase label over a figure is the most repeated
      element on the page — ACCOUNTS, PEAK, GOAL, CURRENT, RANK SPREAD — and it was
