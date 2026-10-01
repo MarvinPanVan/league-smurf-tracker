@@ -1011,6 +1011,33 @@ test("a new vault gets four set-up steps, each a button, until they are done or 
   assert.equal(appGet(win, "cfg.setupHidden"), true, "and it stays hidden");
 });
 
+test("Bulk add reads Riot IDs, op.gg multi-search links and the lobby chat, each with the right region", async () => {
+  const win = bootApp([{ id: "x", region: "EUW", gameName: "Already", tagLine: "HERE", status: "active", tags: [], history: [], stats: null }]);
+  const doc = win.document;
+  doc.getElementById("bBulkAdd").click();
+  doc.getElementById("baRegion").value = "EUW";
+  doc.getElementById("baList").value = [
+    "Plain One#EUW",
+    "Comma A#1A, Comma B#2B",
+    "https://op.gg/lol/multisearch/kr?summoners=Hide%20on%20bush%23KR1%2CFaker%23T1",
+    "https://www.op.gg/summoners/na/Doublelift-NA1",
+    "Lobby Guy #EUNE joined the lobby",
+    "Lobby Guy #EUNE left the lobby",
+    "Champ Pick#4444 joined the room.",
+    "Already#HERE",
+    "just some words",
+  ].join("\n");
+  doc.getElementById("baSave").click();
+  const got = Object.fromEntries(win.eval("accounts").map(a => [a.gameName + "#" + a.tagLine, a.region]));
+  assert.deepEqual(got, {
+    "Already#HERE": "EUW",
+    "Plain One#EUW": "EUW", "Comma A#1A": "EUW", "Comma B#2B": "EUW",
+    "Hide on bush#KR1": "KR", "Faker#T1": "KR", "Doublelift#NA1": "NA",
+    "Lobby Guy#EUNE": "EUW", "Champ Pick#4444": "EUW",
+  });
+  await until(() => /8 added, 1 duplicate skipped, 1 line couldn't be parsed/.test(doc.getElementById("toast").textContent), "the count");
+});
+
 test("Streamer mode: Riot IDs, logins, emails and notes are hidden on screen and in messages; H only turns it on", () => {
   const acc = (id, extra) => Object.assign({ id, region: "EUW", gameName: "Secret" + id, tagLine: "TAG" + id, status: "active", tags: [], history: [],
     stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: Date.now() } }, extra);
