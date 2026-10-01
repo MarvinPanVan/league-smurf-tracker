@@ -830,6 +830,18 @@ test("a pasted Riot ID fills both the name and the tag", () => {
   assert.equal(saved.tagLine, "EUW");
 });
 
+test("a shared link unfurls into a card: title, description and an image that exists", () => {
+  const win = bootApp();
+  const meta = (attr, key) => { const m = win.document.querySelector(`meta[${attr}="${key}"]`); return m && m.getAttribute("content"); };
+  assert.ok(meta("name", "description"));
+  assert.ok(meta("property", "og:title") && meta("property", "og:description"));
+  assert.equal(meta("name", "twitter:card"), "summary_large_image");
+  const img = meta("property", "og:image");
+  assert.match(img, /^https:\/\//, "absolute — link scrapers do not resolve relative URLs");
+  const local = path.join(__dirname, "..", img.replace(/^https:\/\/[^/]+\/[^/]+\//, ""));
+  assert.ok(fs.existsSync(local), "and the image is in the repo at that path: " + local);
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
