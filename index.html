@@ -2767,6 +2767,19 @@ function decayDays(a){
 function isLeveling(a){const s=a.stats;return isLive(a)&&!!s&&s.found!==false&&!isRanked(a)&&s.level!=null&&Number(s.level)<30}
 function isReadyForRanked(a){const s=a.stats;return isLive(a)&&!!s&&s.found!==false&&!isRanked(a)&&Number(s.level)>=30}
 function decayRisk(a){const d=decayDays(a);return isLive(a)&&d!==null&&d<=7}
+/* Which account to play next. One about to decay comes first — the soonest of
+   them — because that is LP to lose; after that, the active account left longest
+   without being played or opened. Resting, banned and archived accounts are out
+   by definition, and so is anything never read. Nothing is suggested until some
+   account has sat for 3 days: "play the one you played yesterday" is not advice. */
+function playNext(pool){
+  const live=(pool||accounts).filter(a=>isLive(a)&&(a.status||"active")==="active"&&isChecked(a)&&a.stats.found!==false);
+  const urgent=live.filter(decayRisk).sort((x,y)=>decayDays(x)-decayDays(y));
+  if(urgent.length){const a=urgent[0],d=decayDays(a);return{a,why:d<0?"decaying — play a ranked game":"decay in ~"+d+"d"}}
+  let best=null,days=-1;
+  for(const a of live){const d=rotationDays(a);if(d!=null&&d>days){best=a;days=d}}
+  return best&&days>=3?{a:best,why:days+" days since played"}:null;
+}
 function needsRotation(a){
   if(a.status==="banned"||a.archived)return false;
   const d=rotationDays(a);
@@ -5584,6 +5597,7 @@ function renderDash(){
   const dupN=countPool.filter(isDuplicate).length;
   const rotN=countPool.filter(needsRotation).length;
   const decayN=countPool.filter(decayRisk).length;
+  const next=playNext(countPool);
   const poolTrend=poolLpTrend(pool);
   // These are filter toggles, not links — they say so to a screen reader as well
   // as by lighting up.
@@ -5616,6 +5630,8 @@ function renderDash(){
       <div class="v" style="color:var(--danger)">${failedN}</div><div class="s-note">auto-fetch failed — enter rank by hand or retry</div></button>`:""}
     ${dupN?`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`:""}
+    ${next?`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
+      <div class="v" style="font-size:14px">${esc(next.a.label||next.a.gameName)}</div><div class="s-note">${esc(next.why)}</div></button>`:""}
     ${decayN?`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left — estimated from the games seen between checks"><div class="k">Decay risk</div>
       <div class="v" style="color:#f0b45a">${decayN}</div><div class="s-note">a week or less banked — play a ranked game</div></button>`:""}
     ${rotN?`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
@@ -7883,6 +7899,8 @@ $("ribbon").addEventListener("click",e=>{
 $("dash").addEventListener("click",e=>{
   const flag=e.target.closest("[data-flag]");
   if(flag){setChoreFlag(flag.dataset.flag);return}
+  const next=e.target.closest("[data-next]");
+  if(next){zoomToAccount(next.dataset.next);return}
   const tier=e.target.closest("[data-tier]");
   if(tier)setTierFilter(tier.dataset.tier);
 });
@@ -8049,6 +8067,24 @@ $("grid").addEventListener("keydown",e=>{
 // chips' "Clear all", which only drops the ones that have a chip — region and
 // status live in dropdowns and have none, and either of them alone can hide
 // every account.
+/* Bring one account into view and flash it, in whatever layout is showing. A
+   filter that hides it is cleared first — there would be nothing to scroll to. */
+function zoomToAccount(id){
+  const acc=accounts.find(a=>a.id===id);if(!acc)return;
+  if(!!acc.archived!==ui.showArchived){ui.showArchived=!!acc.archived;syncToggles()}
+  if(!filtered().some(a=>a.id===id)){
+    Object.assign(ui,{search:"",region:"",tag:null,favOnly:false,status:"",flag:"",tier:""});
+    $("tSearch").value="";syncToggles();
+  }
+  flashId=id;render();
+  const el=$("grid").querySelector(`[data-id="${idSel(id)}"]`);
+  // Guarded like the other two places that scroll something into view. Not
+  // being guarded here meant an environment without it threw in the middle of
+  // this handler, which took the timer below down with it — so the card stayed
+  // lit for the rest of the session instead of flashing once.
+  if(el&&el.scrollIntoView)el.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
+  setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
+}
 function clearFilters(){
   Object.assign(ui,{search:"",region:"",tag:null,favOnly:false,status:"",flag:"",tier:""});
   $("tSearch").value="";
@@ -8101,14 +8137,7 @@ async function onCardClick(e){
   // which of the sixty you landed on.
   else if(act==="zoom"){
     ui.density="cards";cfg.density="cards";saveCfg();
-    flashId=id;render();
-    const card=$("grid").querySelector(`.card[data-id="${idSel(id)}"]`);
-    // Guarded like the other two places that scroll something into view. Not
-    // being guarded here meant an environment without it threw in the middle of
-    // this handler, which took the timer below down with it — so the card stayed
-    // lit for the rest of the session instead of flashing once.
-    if(card&&card.scrollIntoView)card.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
-    setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
+    zoomToAccount(id);
   }
   else if(act==="more"){
     // Enter or Space on a button is a click with no pointer behind it: detail 0

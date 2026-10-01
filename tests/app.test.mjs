@@ -963,6 +963,29 @@ test("one button copies the username, then the password", async () => {
   await until(() => appGet(win, "lastCopiedSecret") === "hunter22!", "the password to be the secret that gets cleared later");
 });
 
+test("Play next names the account to play: about to decay first, then the longest left", () => {
+  const D = 86400000, now = Date.now();
+  const acc = (id, tier, playedAgo, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [],
+    history: [], lastPlayedAt: now - playedAgo * D,
+    stats: { found: true, tier, division: "II", lp: 20, wins: 10, losses: 10, level: 80, updatedAt: now - 3600000 } }, extra || {});
+  const sitting = bootApp([acc("recent", "GOLD", 1), acc("old", "GOLD", 20), acc("resting", "GOLD", 60, { status: "resting" })]);
+  const tile = w => w.document.querySelector("#dash [data-next]");
+  assert.equal(tile(sitting).dataset.next, "old", "the active account left longest; resting ones are not suggested");
+  assert.match(tile(sitting).textContent, /20 days since played/);
+  const urgent = acc("dia", "DIAMOND", 2, { history: [{ t: now - 25 * D, tier: "DIAMOND", division: "II", lp: 20, w: 10, l: 10 }] });
+  const both = bootApp([acc("old", "GOLD", 20), urgent]);
+  assert.equal(tile(both).dataset.next, "dia", "an account about to decay comes before one that has merely sat");
+  assert.match(tile(both).textContent, /decay in ~\dd/);
+  tile(both).click();
+  assert.equal(appGet(both, "flashId"), "dia", "clicking it brings that account into view");
+  // and the jump gets there even through a filter that hides the account
+  runScript(both, 'ui.search = "old"; render(); zoomToAccount("dia");');
+  assert.ok(both.document.querySelector('[data-id="dia"]'), "the filter hiding it is cleared");
+  assert.equal(appGet(both, "ui.search"), "");
+  const fresh = bootApp([acc("a", "GOLD", 0), acc("b", "GOLD", 1)]);
+  assert.equal(tile(fresh), null, "nothing has sat long enough to suggest");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
