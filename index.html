@@ -387,6 +387,27 @@
   .bk-note .ico{color:var(--faint)}
   .bk-note button{padding:3px 9px;font-size:12px;font-weight:600;color:var(--gold-txt);background:none;
     border-color:color-mix(in srgb,var(--gold) 30%,transparent)}
+  .setup{margin:-2px 0 16px}
+  .setup-in{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 14px}
+  .setup-k{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt)}
+  .setup-k em{font-style:normal;color:var(--faint);letter-spacing:.04em;margin-left:6px}
+  .setup-steps{display:flex;gap:8px;flex-wrap:wrap;margin:0;padding:0;list-style:none;flex:1}
+  .setup-steps li{display:flex;align-items:center;gap:6px;font-size:13px}
+  .setup-steps li.done{color:var(--faint);padding:6px 4px}
+  .setup-steps li.done .ico{color:var(--good)}
+  .setup-steps li.done span{text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--faint) 60%,transparent)}
+  .setup-steps button{padding:6px 11px;font-size:13px;font-weight:600}
+  .setup-steps button b{display:inline-grid;place-items:center;width:18px;height:18px;flex-shrink:0;margin-right:2px;border-radius:50%;
+    font-size:11px;color:var(--bg);background:var(--gold-mid)}
+  .setup-x{padding:4px 8px;font-size:12px;color:var(--faint);background:none;border-color:transparent;box-shadow:none}
+  .setup-x:hover{color:var(--text);background:none;border-color:transparent}
+  @media (max-width:560px){
+    .setup-in{position:relative;gap:10px}
+    .setup-x{position:absolute;top:6px;right:6px}
+    .setup-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex-basis:100%;gap:6px}
+    .setup-steps button{width:100%;justify-content:flex-start;padding:7px 9px;font-size:12px}
+    .setup-steps li.done{font-size:12px}
+  }
   .bk-note button:hover{background:color-mix(in srgb,var(--gold) 10%,transparent);border-color:color-mix(in srgb,var(--gold) 55%,transparent)}
 
   /* ---- dashboard ---- */
@@ -2334,6 +2355,8 @@
 
   <!-- dashboard -->
   <div id="dash"></div>
+  <!-- first steps, until they are done or hidden -->
+  <div id="setup"></div>
 
   <!-- toolbar -->
   <div class="console">
@@ -5411,7 +5434,7 @@ function render(){
   // No renderBulkBar() after renderGrid(): it ends with one, against the list it
   // has just built. Calling it again here filtered and sorted the whole vault a
   // second time to reach the same answer, on the hottest path in the app.
-  renderRibbon();renderDash();renderTagbar();renderChips();renderFilterOptions();renderGrid();
+  renderRibbon();renderDash();renderSetup();renderTagbar();renderChips();renderFilterOptions();renderGrid();
   renderRun();renderFailbar();
   for(const b of $("density").children){
     const on=b.dataset.density===ui.density;
@@ -5655,7 +5678,7 @@ function renderDash(){
       +`<b class="${c.wr>=50?"wr-good":""}">${esc(c.wr)}%</b>`
       +`<i class="g">${esc(c.wins)}<em>-</em>${esc(c.losses)}</i></span>`).join("")}</div>`:""}
   </div></div>
-  ${bk&&accounts.length&&!previewMode?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:""}`);
+  ${bk&&accounts.length&&!previewMode&&!(setupVisible()&&!cfg.lastExport)?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:""}`);
   dashJustOpened=false; // consumed by the render above
   bindSparkTip(el);
   /* The reminder said "hit Export" — and Export lives two clicks away, inside the
@@ -6741,7 +6764,32 @@ function renderPwMeter(){
   $("pwMeter").innerHTML=p?Array.from({length:5},(_,i)=>`<span style="flex:1;height:100%;border-radius:1px;transition:background .2s;background:${i<score?colors[score-1]:"var(--line)"}"></span>`).join(""):"";
   $("pwMeterLabel").textContent=p?label:"";
 }
-function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted."}
+function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted.";renderSetup()}
+/* Four things make a vault safe to rely on, and a first visit does the first and
+   usually stops: accounts in, ranks read, a master password, a backup. Until all
+   four are done (or the strip is hidden) they sit above the toolbar as one row of
+   steps, each a button that does it. The backup line in the dashboard stands
+   down while this is showing the same step. */
+function setupSteps(){
+  return [
+    {act:"add",done:accounts.length>0,label:"Add your accounts"},
+    {act:"check",done:accounts.some(isChecked),label:"Check their ranks"},
+    {act:"lock",done:!!vaultPassword,label:"Set a master password"},
+    {act:"backup",done:!!cfg.lastExport,label:"Back up"},
+  ];
+}
+function setupVisible(){return accounts.length>0&&!previewMode&&!cfg.setupHidden&&setupSteps().some(s=>!s.done)}
+function renderSetup(){
+  const el=$("setup");if(!el)return;
+  if(!setupVisible()){setHTML(el,"");return}
+  const steps=setupSteps(), left=steps.filter(s=>!s.done).length;
+  setHTML(el,`<div class="setup hx"><div class="hx-in setup-in">
+    <span class="setup-k">Get set up <em>${steps.length-left} of ${steps.length}</em></span>
+    <ol class="setup-steps">${steps.map((s,i)=>`<li class="${s.done?"done":""}">`
+      +(s.done?`${icon("check")}<span>${esc(s.label)}</span>`:`<button type="button" data-setup="${s.act}"><b>${i+1}</b>${esc(s.label)}</button>`)+`</li>`).join("")}</ol>
+    <button type="button" class="setup-x" data-setup="hide" title="Hide these steps">Hide</button>
+  </div></div>`);
+}
 const DEFAULT_ACCENT="#c8aa6e", DEFAULT_ACCENT2="#0ac8b9";
 const DEFAULT_ATMOSPHERE="spotlight";
 const ATMOSPHERES=new Set(["spotlight","aurora","noir","lattice","stardust","void"]);
@@ -6880,7 +6928,7 @@ function doExport(){
   const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),plaintext:true,accounts};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   downloadBlob(blob,"smurf-backup-plaintext-"+new Date().toISOString().slice(0,10)+".json");
-  cfg.lastExport=Date.now();saveCfg();
+  cfg.lastExport=Date.now();saveCfg();renderDash();renderSetup();
   toast("Plaintext backup exported — keep it private");
 }
 async function doExportEnc(){
@@ -6893,7 +6941,7 @@ async function doExportEnc(){
     const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),encrypted:true,envelope};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
     downloadBlob(blob,"smurf-backup-encrypted-"+new Date().toISOString().slice(0,10)+".json");
-    cfg.lastExport=Date.now();saveCfg();
+    cfg.lastExport=Date.now();saveCfg();renderDash();renderSetup();
     toast("Encrypted backup exported — same master password opens it");
   }catch(e){toast("Encrypted export failed: "+(e.message||"error"))}
 }
@@ -7903,6 +7951,15 @@ $("dash").addEventListener("click",e=>{
   if(next){zoomToAccount(next.dataset.next);return}
   const tier=e.target.closest("[data-tier]");
   if(tier)setTierFilter(tier.dataset.tier);
+});
+$("setup").addEventListener("click",e=>{
+  const b=e.target.closest("[data-setup]");if(!b)return;
+  const a=b.dataset.setup;
+  if(a==="add")openForm();
+  else if(a==="check")$("bCheckAll").click();
+  else if(a==="lock"){openSettings();setTimeout(()=>{const f=$("sVaultPass");if(f){f.scrollIntoView&&f.scrollIntoView({block:"center"});f.focus()}},60)}
+  else if(a==="backup")vaultPassword?doExportEnc():doExport();
+  else if(a==="hide"){cfg.setupHidden=true;saveCfg();renderSetup()}
 });
 $("chips").addEventListener("click",e=>{
   const b=e.target.closest("[data-clear]");if(!b)return;

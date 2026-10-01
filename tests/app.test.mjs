@@ -713,7 +713,8 @@ test("a dense chart is a line and its latest reading, a sparse one keeps a dot p
 });
 
 test("the backup reminder carries the way to act on it", () => {
-  const win = bootApp();
+  // (in a brand-new vault the setup steps carry the backup instead; hidden here)
+  const win = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, setupHidden: true })));
   addRealAccount(win, "Keep", "1");
   const btn = win.document.getElementById("bkNow");
   assert.ok(btn, "the reminder has its own button, not a pointer at the ⋯ menu");
@@ -725,8 +726,7 @@ test("the backup reminder carries the way to act on it", () => {
   try { btn.click(); } finally { win.HTMLAnchorElement.prototype.click = orig; }
   assert.equal(downloads, 1, "one click backs the vault up");
   assert.ok(appGet(win, "cfg.lastExport") > 0, "and it counts as the backup it is");
-  runScript(win, "renderDash()");
-  assert.equal(win.document.getElementById("bkNow"), null, "so the reminder goes");
+  assert.equal(win.document.getElementById("bkNow"), null, "so the reminder goes, straight away");
 });
 
 test("Login stays the most lit control on a card: filled, glossed and glowing", () => {
@@ -984,6 +984,28 @@ test("Play next names the account to play: about to decay first, then the longes
   assert.equal(appGet(both, "ui.search"), "");
   const fresh = bootApp([acc("a", "GOLD", 0), acc("b", "GOLD", 1)]);
   assert.equal(tile(fresh), null, "nothing has sat long enough to suggest");
+});
+
+test("a new vault gets four set-up steps, each a button, until they are done or hidden", async () => {
+  const win = bootApp();
+  const setup = () => win.document.querySelector("#setup .setup");
+  assert.equal(setup(), null, "an empty vault has the empty state, not a checklist");
+  addRealAccount(win, "First", "1");
+  assert.ok(setup(), "the steps appear once there is something to look after");
+  const steps = () => [...setup().querySelectorAll(".setup-steps li")].map(li => (li.classList.contains("done") ? "✓ " : "") + li.textContent.replace(/^\d/, "").trim());
+  assert.deepEqual(steps(), ["✓ Add your accounts", "Check their ranks", "Set a master password", "Back up"]);
+  assert.equal(win.document.getElementById("bkNow"), null, "the dashboard's backup line stands down while the steps carry it");
+  // a step's button does the thing
+  win.URL.createObjectURL = () => "blob:x"; win.URL.revokeObjectURL = () => {};
+  const orig = win.HTMLAnchorElement.prototype.click; win.HTMLAnchorElement.prototype.click = function () {};
+  try { setup().querySelector('[data-setup="backup"]').click(); } finally { win.HTMLAnchorElement.prototype.click = orig; }
+  assert.match(steps()[3], /^✓ Back up/, "and is ticked off at once");
+  setup().querySelector('[data-setup="lock"]').click();
+  assert.equal(win.document.getElementById("settings").classList.contains("hidden"), false, "the password step opens Settings");
+  win.closeAllPanels();
+  setup().querySelector('[data-setup="hide"]').click();
+  assert.equal(setup(), null, "hidden");
+  assert.equal(appGet(win, "cfg.setupHidden"), true, "and it stays hidden");
 });
 
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
