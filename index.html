@@ -1551,7 +1551,12 @@
   /* ---- toast ---- */
   /* above the modals (z 60): "Vault password set" is confirmed from inside
      Settings, and behind the backdrop it would never be seen */
+  /* left:50% with no width shrinks to the half of the viewport right of that point —
+     195px on a phone, which made every longer toast a tall pill of short lines. As
+     wide as its text, up to the screen less its gutters, and no wider than the
+     measure a desktop always got by accident. */
   #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:80;display:none;
+    width:max-content;max-width:min(720px,calc(100vw - 32px));
     background:#161a23f2;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
     border:1px solid var(--line2);border-radius:999px;color:var(--text);
     padding:11px 20px;font-size:13px;font-weight:500;box-shadow:var(--sh-3)}

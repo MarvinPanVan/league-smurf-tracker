@@ -6164,3 +6164,17 @@ test("a vault with no saved settings still hears what changed", () => {
   const win = bootApp(seededAccount());   // accounts on disk, no cfg key at all
   assert.match(win.document.getElementById("toast").textContent, /^v\d/);
 });
+
+/* A box positioned at left:50% with no width of its own shrinks to fit the space
+   to the right of that point — half the viewport. On a 390px phone every toast was
+   195px wide: the preview notice, an update's "what's new", "Already in the vault:
+   …" all came out as a tall pill of five to nine short lines. It is as wide as its
+   text, up to the screen minus the page gutters. */
+test("a toast can use the width of a phone, not half of it", () => {
+  const rule = html.match(/#toast\{position:fixed;[^}]*\}/);
+  assert.ok(rule, "the toast rule is still there");
+  assert.match(rule[0], /left:50%/, "still centred the same way");
+  assert.match(rule[0], /width:max-content/, "sized by its text rather than by the half-viewport left over");
+  assert.match(rule[0], /max-width:min\(720px,calc\(100vw - 32px\)\)/,
+    "never wider than the screen, nor than the measure a desktop always had");
+});
