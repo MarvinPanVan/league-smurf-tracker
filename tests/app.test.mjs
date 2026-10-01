@@ -923,6 +923,26 @@ test("decay: Diamond and up are warned before their bank runs out, from the game
   assert.deepEqual([...win.document.querySelectorAll(".card")].map(c => c.dataset.id).sort(), ["gone", "idle", "master"]);
 });
 
+test("a levelling account shows its way to ranked, and says when it is ready", () => {
+  const acc = (id, level) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "UNRANKED", level, wins: 0, losses: 0, updatedAt: Date.now() } });
+  const win = bootApp([acc("lv24", 24), acc("lv30", 31)]);
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  const rail = card("lv24").querySelector(".goal.lvl");
+  assert.ok(rail, "a rail toward level 30");
+  assert.match(rail.textContent, /at level 30\s*6 levels to go/);
+  assert.equal(rail.querySelector(".goal-bar i").style.width, "80%");
+  assert.ok(card("lv30").querySelector(".ready"), "level 30 and unranked: ready");
+  assert.equal(card("lv30").querySelector(".goal.lvl"), null, "no rail once it is there");
+  const search = q => { const el = win.document.getElementById("tSearch"); el.value = q; el.dispatchEvent(new win.Event("input", { bubbles: true })); };
+  search("is:ready");
+  return until(() => win.document.querySelectorAll(".card").length === 1, "is:ready to narrow").then(() => {
+    assert.equal(win.document.querySelector(".card").dataset.id, "lv30");
+    search("is:leveling");
+    return until(() => win.document.querySelector(".card") && win.document.querySelector(".card").dataset.id === "lv24", "is:leveling to narrow");
+  });
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
@@ -6140,10 +6160,10 @@ test("a status chip says its piece without crowding out the account name", () =>
 test("the example data never says the same thing twice on one card", () => {
   const win = bootApp();
   win.document.getElementById("bDemo").click();
-  const card = [...win.document.querySelectorAll(".card")]
-    .find(c => /Not level 30 yet/.test(c.textContent));
+  const card = [...win.document.querySelectorAll(".card")].find(c => c.querySelector(".goal.lvl"));
   assert.ok(card, "the preview still has an account below level 30");
-  assert.equal(card.textContent.match(/Not level 30 yet/g).length, 1);
+  assert.equal(card.textContent.match(/to go/g).length, 1, "the distance to 30 is said once");
+  assert.equal(card.textContent.match(/Level \d/g).length, 1, "and so is the level");
 });
 
 /* A grid emptied by the filters was one sentence and nothing else. The filters sit

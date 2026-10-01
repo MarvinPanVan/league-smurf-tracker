@@ -1181,6 +1181,8 @@
   .delta .ico.flame{width:1.15em;height:1.15em;color:#ff8f2e;fill:#ff8f2e;stroke-width:1.4;vertical-align:-.2em}
   .d-down{color:var(--danger);background:color-mix(in srgb,var(--danger) 15%,transparent)}
   .d-warn{color:#f0b45a;background:color-mix(in srgb,#f0b45a 15%,transparent)}
+  .wl .ready{color:var(--teal-txt);font-weight:600}
+  .goal.lvl .goal-t{color:var(--teal-txt)}
   .delta .ico{width:1em;height:1em;vertical-align:-.15em}
   /* ---- LP chart ----
      The old sparkline was a bare line with no scale: it told you the number went
@@ -1987,7 +1989,7 @@
       <dt>Cards</dt>
       <dd>The bar across a card's bottom edge opens <b>Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot.</dd>
       <dt>Search</dt>
-      <dd>Matches names, tags, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code>, <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
+      <dd>Matches names, tags, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code>, <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
       <dt>Quick find</dt>
       <dd><kbd>Ctrl</kbd><kbd>K</kbd> (or <kbd>⌘</kbd><kbd>K</kbd>) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.</dd>
       <dt>Keys</dt>
@@ -2756,6 +2758,11 @@ function decayDays(a){
   }
   return Math.floor(bank-(Date.now()-pts[pts.length-1].t)/D);
 }
+/* Building an account: ranked opens at level 30 (and 20 champions owned, which no
+   source shows). Until then the level is the account's progress; at 30 and still
+   unranked it is ready to place. */
+function isLeveling(a){const s=a.stats;return isLive(a)&&!!s&&s.found!==false&&!isRanked(a)&&s.level!=null&&Number(s.level)<30}
+function isReadyForRanked(a){const s=a.stats;return isLive(a)&&!!s&&s.found!==false&&!isRanked(a)&&Number(s.level)>=30}
 function decayRisk(a){const d=decayDays(a);return isLive(a)&&d!==null&&d<=7}
 function needsRotation(a){
   if(a.status==="banned"||a.archived)return false;
@@ -5033,7 +5040,7 @@ function renderCompare(){
 /* Sixty accounts is the point where "type some letters and see what sticks" stops
    being enough. The operators are the filters that already exist in the toolbar,
    reachable without leaving the keyboard:
-     tier:diamond   region:euw   is:stale|never|flagged|banned|fav|goal|decay
+     tier:diamond   region:euw   is:stale|never|flagged|banned|fav|goal|decay|ready|leveling
      >plat  >=plat  <gold  <=gold      (rank at least / below)
    Anything not recognised as an operator stays a plain search term, so a stray
    colon in a note never silently swallows the rest of the query. */
@@ -5052,7 +5059,7 @@ function parseQuery(q){
       if(r){out.region=r;continue}
     }
     if((m=/^is:(.+)$/.exec(tok))){
-      if(["stale","never","flagged","banned","fav","goal","decay"].includes(m[1])){out.is.push(m[1]);continue}
+      if(["stale","never","flagged","banned","fav","goal","decay","ready","leveling"].includes(m[1])){out.is.push(m[1]);continue}
     }
     if((m=/^(>=|>|<=|<)(.+)$/.exec(tok))){
       const t=TIER_ORDER.find(x=>x.toLowerCase().startsWith(m[2]));
@@ -5101,6 +5108,8 @@ function passesBaseFilters(a,Q,{forceActive=false}={}){
     if(f==="fav"&&!a.fav)return false;
     if(f==="goal"&&!(a.goal&&a.goal.tier))return false;
     if(f==="decay"&&!decayRisk(a))return false;
+    if(f==="ready"&&!isReadyForRanked(a))return false;
+    if(f==="leveling"&&!isLeveling(a))return false;
   }
   if(Q.terms.length){
     const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,a.createdOn,a.birthdate,
@@ -6104,7 +6113,7 @@ function cardHTML(a,i){
   else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">Never checked</div>`;
   else if(s.found===false)rankBlock=`<div class="wl" style="color:var(--danger)">Not found — check name/tag/region</div>`;
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
-    <div class="wl">${s.level>=30?"Unranked this season":"Not level 30 yet"}</div>`;
+    ${s.level>=30?`<div class="wl"><span class="ready" title="Level 30 reached. Ranked also needs 20 champions owned, which the app cannot see.">Ready for ranked</span></div>`:""}`;
   else if(!isRanked(a))rankBlock=`<div class="rk" style="color:${col}"><span class="rk-main"><span class="rk-t">Unranked</span></span></div>
     <div class="wl">${total>0?wlTxt+(wr!==null?` · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:""):"No ranked games found"}</div>`;
   else rankBlock=`<div class="rk" style="color:${col}">${crest(s.tier,"rk-crest")}<span class="rk-main"><span class="rk-t">${esc(tierTxt)}</span>${lpTxt?`<span class="rk-lp">${esc(lpTxt)}</span>`:""}</span></div>
@@ -6176,6 +6185,9 @@ function cardHTML(a,i){
       ${deltaChip?`<div class="c-deltas">${deltaChip}</div>`:""}
     </div>
     ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
+    ${levelLed&&s.level<30?`<div class="goal lvl" title="Ranked opens at level 30 (and 20 champions owned)">
+      <div class="goal-h"><span class="k">Ranked</span><span class="goal-t">at level 30</span><span class="goal-r">${30-s.level} level${30-s.level===1?"":"s"} to go</span></div>
+      <div class="goal-bar"><i style="width:${Math.max(3,Math.round(s.level/30*100))}%;background:var(--teal)"></i></div></div>`:""}
     ${(()=>{
       // The goal rail. Only drawn once there is a goal — an account with nothing to
       // climb towards should not be shown an empty progress bar.
