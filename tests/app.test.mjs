@@ -808,6 +808,28 @@ test("the vault asks the browser to keep it, once, and Settings says whether it 
   assert.ok(btn.classList.contains("hidden"), "nothing left to ask for");
 });
 
+test("a pasted Riot ID fills both the name and the tag", () => {
+  const win = bootApp();
+  win.document.getElementById("bAdd").click();
+  const name = win.document.getElementById("fName"), tag = win.document.getElementById("fTag");
+  name.value = "Hide on Bush#KR1";
+  name.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(name.value, "Hide on Bush");
+  assert.equal(tag.value, "KR1");
+  // typed: the "#" moves on to the tag box
+  name.value = "Faker#";
+  name.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(name.value, "Faker");
+  assert.equal(win.document.activeElement, tag);
+  // and a value set without an input event is split on save all the same
+  tag.value = "";
+  name.value = "Bot Diff#EUW";
+  win.document.getElementById("fSave").click();
+  const saved = JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.gameName === "Bot Diff");
+  assert.ok(saved, "saved with the name alone");
+  assert.equal(saved.tagLine, "EUW");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");

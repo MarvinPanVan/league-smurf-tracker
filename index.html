@@ -2253,7 +2253,7 @@
       <div class="fld"><label>Region</label>
         <select id="fRegion"></select>
       </div>
-      <div class="fld"><label>Riot name *</label><input id="fName" placeholder="Game name (before the #)" data-autofocus></div>
+      <div class="fld"><label>Riot name *</label><input id="fName" placeholder="Game name, or paste Name#TAG" data-autofocus></div>
       <div class="fld"><label>Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234 (no #)"></div>
       <div class="fld"><label>Login username</label><input id="fLogin" placeholder="Riot client login" autocomplete="off"></div>
       <div class="fld pw-fld"><label>Password <span id="pwMeterLabel"></span></label><div style="display:flex;gap:6px">
@@ -6563,7 +6563,22 @@ function openForm(acc){
   $("form").classList.remove("hidden");
 }
 function closeForm(){$("form").classList.add("hidden");editingId=null}
+/* A Riot ID is copied as one string — "Hide on Bush#EUW" from op.gg, the client,
+   a friend's message — and the form wanted it in two boxes, so a paste into the
+   name failed with "name and tag are required". A game name cannot contain "#",
+   so everything after the last one is the tag: pasted, it fills both fields;
+   typed, the "#" carries you on to the tag. */
+function splitRiotId(){
+  const f=$("fName"),v=f.value,i=v.lastIndexOf("#");
+  if(i<0)return;
+  const tag=v.slice(i+1).trim();
+  f.value=v.slice(0,i).trim();
+  if(tag)$("fTag").value=tag;
+  else $("fTag").focus();
+}
+$("fName").addEventListener("input",splitRiotId);
 function submitForm(){
+  splitRiotId();
   const gameName=$("fName").value.trim(), tagLine=$("fTag").value.trim().replace(/^#/,"");
   if(!gameName||!tagLine){toast("Riot name and tag are required");return}
   // Checked on edit too, not only on add: renaming one account onto another was
