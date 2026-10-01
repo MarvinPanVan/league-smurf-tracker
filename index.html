@@ -2310,7 +2310,7 @@
   <div class="console">
   <div class="cmd">
     <button id="bCheckAll" class="b-gold"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg> Check all ranks</button>
-    <button id="bCheckStale" class="hidden" title="Only the ones that are actually out of date">Refresh stale</button>
+    <button id="bCheckStale" class="hidden" title="Accounts that were found and last read over 3 days ago — not the never-checked or not-found ones">Refresh stale</button>
     <button id="bCancelCheck" class="b-danger hidden">Stop</button>
     <button id="bAdd" class="b-teal">+ Add account</button>
     <div class="cmd-r"><span id="count" class="cmd-count"></span>
@@ -2648,7 +2648,16 @@ let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArc
 // The three questions a vault of sixty accounts raises, as functions, because the
 // filters, the stats panel and the check runner all need to agree on the answers.
 function isChecked(a){return !!(a.stats&&a.stats.updatedAt)}
-function isStale(a){return a.status!=="banned"&&(!isChecked(a)||Date.now()-a.stats.updatedAt>STALE_MS)}
+/* Stale is a reading that has gone old: a profile that was found, last read more
+   than three days ago. It used to include every account with no reading at all —
+   never checked, or checked and not found — so "Refresh N stale" re-tried, on every
+   run, accounts whose Riot side is not set up yet and can only answer "not found"
+   again. Those have their own tiles (Never checked, Needs attention) and their own
+   way to be checked: filter to them and Check N shown. */
+function isStale(a){
+  const s=a.stats;
+  return a.status!=="banned"&&isChecked(a)&&s.found!==false&&!!(s.tier||s.level!=null)&&Date.now()-s.updatedAt>STALE_MS;
+}
 function isRanked(a){const t=a.stats&&a.stats.found!==false&&(a.stats.tier||"").toUpperCase();return !!(t&&t!=="UNRANKED")}
 function isFailed(a){
   if(!a.stats||a.stats.found===false)return false;
@@ -5879,7 +5888,7 @@ function rowHTML(a,i){
       <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wins}W ${losses}L</em>`
         :total>0?`<em>${wins!=null?wins+"W":losses+"L"}</em>`:""}</span>
       <span class="rw-rg">${esc(a.region)}</span>
-      <span class="rw-up${isStale(a)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
+      <span class="rw-up${isStale(a)||!hasReading(s)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     ${open?`<div class="rw-open">
@@ -7601,7 +7610,7 @@ function palCommands(){
   return [
     {k:"add",n:"Add account",s:"New entry in the vault",i:"plus",run:()=>openForm(null)},
     {k:"check",n:"Check all ranks",s:"Refresh everything currently shown",i:"refresh",run:()=>checkAll()},
-    {k:"stale",n:"Refresh stale accounts",s:"Only the ones actually out of date",i:"refresh",run:()=>$("bCheckStale").click()},
+    {k:"stale",n:"Refresh stale accounts",s:"Found accounts last read over 3 days ago",i:"refresh",run:()=>$("bCheckStale").click()},
     {k:"cards list wall layout",n:"Switch layout",s:"Cards, list, wall",i:"chart",run:()=>{
       const order=["cards","list","wall"];
       ui.density=order[(order.indexOf(ui.density)+1)%order.length];

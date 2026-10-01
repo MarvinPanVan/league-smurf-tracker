@@ -759,6 +759,29 @@ test("actions and window titles are set in the text face; Cinzel is the wordmark
   assert.ok(users.every(sel => /hex-display|lock-wm|acc-prev-t/.test(sel)), users.join(" | "));
 });
 
+test("Refresh stale refreshes found accounts that have gone old, not ones with no profile yet", () => {
+  const D = 86400000, old = Date.now() - 6 * D, fresh = Date.now() - 3600000;
+  const acc = (id, stats, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active",
+    stats, history: [], tags: [] }, extra || {});
+  const win = bootApp([
+    acc("rankedOld", { found: true, tier: "GOLD", division: "II", lp: 5, level: 80, updatedAt: old }),
+    acc("unrankedOld", { found: true, tier: "UNRANKED", level: 31, updatedAt: old }),
+    acc("rankedFresh", { found: true, tier: "GOLD", division: "I", lp: 9, level: 90, updatedAt: fresh }),
+    acc("neverChecked", null),
+    acc("notFoundOld", { found: false, updatedAt: old }),
+    acc("bannedOld", { found: true, tier: "SILVER", division: "I", lp: 1, level: 50, updatedAt: old }, { status: "banned" }),
+  ]);
+  const btn = win.document.getElementById("bCheckStale");
+  assert.equal(btn.classList.contains("hidden"), false);
+  assert.equal(btn.textContent, "Refresh 2 stale", "the found ones that have gone old, ranked or not");
+  assert.match(win.document.querySelector("#count [data-flag='stale']").textContent, /^2 need a refresh$/,
+    "and the readout beside it counts the same two");
+  runScript(win, "window.__ids = null; checkAll = function (ids) { window.__ids = ids; };");
+  btn.click();
+  assert.deepEqual([...win.__ids].sort(), ["rankedOld", "unrankedOld"],
+    "never-checked and not-found accounts are not re-tried, banned ones are left alone");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
