@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#07080c">
+<meta name="theme-color" content="#010a13">
 <title>Smurf Tracker — Summoner Vault</title>
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -16,28 +16,37 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* surfaces — cool neutral dark, no more navy wash */
-    --bg:#07080c; --panel:#0f1116; --panel2:#161922; --panel3:#1e222d;
-    --line:#232733; --line2:#343b4c;
-    /* accent — live-overridden by the accent picker in Settings */
-    --gold:#d8b874; --gold-dim:#8a6a2e; --gold-mid:#c2a45f; --star:#f2d489;
+    /* Hextech. The League client is blue-black metal, not neutral grey, and its
+       text is warm parchment (#f0e6d2 / #a09b8c) where ours was blue-white — that
+       temperature, more than any one colour, is what made this read as a generic
+       dark app. Faint is lifted to 4.8:1 on a card: the old #5d6577 was 3.2:1,
+       below what small text needs to be read. */
+    --bg:#010a13; --panel:#0a1119; --panel2:#111a24; --panel3:#18222e;
+    --line:#1f2a34; --line2:#33414c;
+    /* accent — live-overridden by the accent picker in Settings. The defaults are
+       the client's own gold and blue; the derived ones are what applyAccent()
+       computes from them, so a reset lands exactly here. */
+    --gold:#c8aa6e; --gold-dim:#7b663b; --gold-mid:#b69b67; --star:#e9d7b3;
     /* The accent as *text*. A raw accent is picked to look good as a fill, and at
        full chroma on a near-black panel it vibrates and reads as glare rather than
        as a label — a deep one goes the other way and disappears. These two are the
        same hue held inside a band that stays legible either way, and every place
        the accent is used for type reads from them instead of the raw colour. */
-    --gold-txt:#e3c98f; --teal-txt:#63ecd3;
-    --text:#e9edf5; --muted:#8b93a6; --faint:#5d6577;
+    --gold-txt:#d2ba89; --teal-txt:#73e8df;
+    --text:#f0e6d2; --muted:#a09b8c; --faint:#85827a;
     /* secondary accent — also live-overridden from Settings. --teal-ink is the
        text colour for anything filled with --teal; applyAccent2 flips it between
        near-black and white by luminance, because a fixed dark ink goes unreadable
        the moment somebody picks a deep secondary. */
-    --teal:#2ee0c2; --teal-ink:#04211f; --danger:#ff6b6b; --good:#4ade80;
+    --teal:#0ac8b9; --teal-ink:#002e2a; --danger:#ff6b6b; --good:#4ade80;
     /* elevation */
     --sh-1:0 1px 2px #00000059;
     --sh-2:0 2px 4px #0000003d,0 8px 24px -10px #000000a8;
     --sh-3:0 4px 10px #0000004a,0 24px 56px -18px #000000cc;
-    --r-sm:9px; --r-md:13px; --r-lg:18px;
+    /* Cut metal, not moulded plastic: the client's frames are near-square, and
+       eighteen-pixel corners plus twenty-seven pills were most of what made this
+       read as any other web app. --r-xs is the plate a label or a count sits on. */
+    --r-xs:3px; --r-sm:4px; --r-md:6px; --r-lg:8px;
   }
   *{box-sizing:border-box}
   /* The <meta name="color-scheme"> up top does not reach the computed style, so
@@ -75,7 +84,7 @@
 
   body{margin:0;position:relative;color:var(--text);
     font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
-    font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
     background:var(--bg);background-attachment:fixed}
   /* Atmosphere: Settings picks one of six looks.
      Spotlight + Aurora = fixed viewport light (stays while you scroll).
@@ -105,7 +114,7 @@
      point is "night", not another wash. */
   body[data-atmosphere="noir"]{
     background:
-      radial-gradient(ellipse 70% 55% at 50% 40%,#0c0e14 0%,var(--bg) 72%),
+      radial-gradient(ellipse 70% 55% at 50% 40%,#0a131d 0%,var(--bg) 72%),
       var(--bg);
     background-attachment:fixed}
   body[data-atmosphere="noir"]::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
@@ -146,9 +155,27 @@
   .wrap{position:relative;z-index:1;max-width:1640px;margin:0 auto;padding:clamp(26px,5vw,58px) clamp(16px,3vw,30px) 90px}
   .measure{max-width:1220px}
   .hex-display{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em}
+  /* Ranks are set in the text face, bold, in their tier's colour beside the gem
+     crest. For a while they were in Cinzel capitals, the way the client sets them,
+     and it read as costume: an inscription face is slow to read at a glance, and
+     sixty of them across a grid outweighed everything else on the page. The crest
+     and the tier colour carry the League in a rank now; the words just have to be
+     read. "Never checked" and "Unranked" stay lighter, since they are not tiers. */
+  .rk-t,.rw:not(.rw-quiet) .rw-rank b,.tile:not(.rw-quiet) .t-rk,.cmp-rk:not(.q),.pal-r:not(.q){
+    font-weight:700;letter-spacing:-.01em}
+  /* The buttons that do something are a weight heavier than the ones that filter
+     or open a menu, and that is all the type does for them. Spaced Cinzel capitals
+     on every action ("REFRESH 20 STALE", "SAVE SETTINGS") were slow to read and
+     loud in a row; the metal rims of the gold and teal buttons are where the client
+     shows through now. */
+  .cmd>button,.acts>button:not(.c-more),.acts>.btn,.mdl-f>button,#lockBtn,#bExitPreview,#bDemo,#bClearFilters,
+  #sSyncGen,#sSyncPush,#sSyncPull,#sVaultSet,#sVaultRemove,#sLockNow,#fGen,#cmpClear{font-weight:600}
 
   /* ---- surfaces: rounded, gradient hairline, soft glass ---- */
-  .hx{border-radius:var(--r-lg);padding:1px;background:linear-gradient(155deg,#ffffff1f,#ffffff0a 38%,#ffffff05);box-shadow:var(--sh-2)}
+  /* The client frames everything in metal: a gold edge lit from above that dims as
+     it goes down. White glass edges were the other half of the generic look. */
+  .hx{border-radius:var(--r-lg);padding:1px;box-shadow:var(--sh-2);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 46%,transparent),color-mix(in srgb,var(--gold) 16%,transparent) 32%,color-mix(in srgb,var(--gold-dim) 30%,#0a1119) 100%)}
   /* No backdrop-filter here, deliberately. This surface is 96–98% opaque, so at
      most 4% of whatever is behind it comes through — and what is behind it is a
      smooth background gradient, which blurring leaves essentially unchanged.
@@ -161,15 +188,15 @@
      and there is one of it: the sticky console, the header tray, the toast and the
      chart tooltip. */
   .hx-in{border-radius:calc(var(--r-lg) - 1px);height:100%;
-    background:linear-gradient(180deg,#151922f5,#0f1218fa)}
+    background:linear-gradient(180deg,#0e1620f7,#091017fb)}
   /* A favourite has to be spottable at a glance across a full grid, so it gets a
      lit border plus a warm halo — the old faint gold edge was invisible in a row
      of cards. */
   .hx.gold{background:var(--gold-dim);
-    background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 95%,transparent),color-mix(in srgb,var(--gold) 34%,transparent) 42%,color-mix(in srgb,var(--gold) 12%,transparent));
+    background:linear-gradient(180deg,var(--star),var(--gold) 26%,var(--gold-dim) 72%,color-mix(in srgb,var(--gold-dim) 50%,#0a1119));
     box-shadow:var(--sh-2),0 0 30px -10px color-mix(in srgb,var(--gold) 60%,transparent)}
-  .hx.gold .hx-in{background:linear-gradient(180deg,#1b1812f5,#12131afa)}
-  .hx.teal{background:var(--teal);background:linear-gradient(155deg,color-mix(in srgb,var(--teal) 52%,transparent),color-mix(in srgb,var(--teal) 10%,transparent) 45%,#ffffff06)}
+  .hx.gold .hx-in{background:linear-gradient(180deg,#15150ff7,#0b1016fb)}
+  .hx.teal{background:var(--teal);background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 55%,transparent),color-mix(in srgb,var(--teal) 16%,transparent) 36%,#0a2a32)}
 
   /* ---- header ---- */
   .top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:22px;margin-bottom:16px}
@@ -180,8 +207,11 @@
      The account actions have since moved down to the console above the grid,
      where the rest of the controls over those accounts live. What's left here is
      what it should have been: two app-level utilities — settings/backup and help
-     — in a quiet tray, not a second, competing command centre. */
-  .top .bar{gap:3px;padding:5px;border:1px solid #ffffff10;border-radius:14px;
+     — in a quiet tray, not a second, competing command centre.
+     It keeps to the right edge when the header wraps. Left-aligned on a row of its
+     own it read as a stray, and the ⋯ menu, which hangs leftward from its button,
+     opened off the left of a phone screen with "Export backup" cut to "ackup". */
+  .top .bar{margin-left:auto;gap:3px;padding:5px;border:1px solid color-mix(in srgb,var(--gold-dim) 55%,transparent);border-radius:var(--r-md);
     background:linear-gradient(180deg,#ffffff0b,#ffffff05);
     backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
     box-shadow:var(--sh-1),inset 0 1px 0 #ffffff0d;
@@ -190,7 +220,7 @@
        menu's z-index inside it — without lifting the tray itself the menu paints
        under everything that follows in the document. */
     position:relative;z-index:30}
-  .top .bar:hover{border-color:#ffffff1c;box-shadow:var(--sh-2),inset 0 1px 0 #ffffff14}
+  .top .bar:hover{border-color:color-mix(in srgb,var(--gold) 50%,transparent);box-shadow:var(--sh-2),inset 0 1px 0 #ffffff14}
   .tray-sep{width:1px;align-self:stretch;margin:2px 3px;flex-shrink:0;
     background:linear-gradient(180deg,transparent,var(--line2),transparent)}
   /* The old header stacked a pill, then the title, then a rule — three full-width
@@ -204,7 +234,7 @@
   .ribbon{flex:1 1 260px;min-width:0;max-width:640px;display:flex;flex-direction:column;gap:6px}
   .ribbon:empty{display:none}
   .rib-bar{display:flex;gap:2px;height:19px}
-  .rib-seg{flex-grow:1;flex-basis:0;min-width:20px;padding:0;border:0;border-radius:4px;
+  .rib-seg{flex-grow:1;flex-basis:0;min-width:20px;padding:0;border:0;border-radius:2px;
     background:color-mix(in srgb,var(--c) 62%,#0b0e14);box-shadow:none;
     display:flex;align-items:center;justify-content:center;overflow:hidden;
     transform:none;transition:background .16s ease,box-shadow .16s ease,filter .16s ease}
@@ -213,10 +243,10 @@
      first. */
   .rib-seg.tail{flex:0 0 auto;padding:0 10px;min-width:28px;opacity:.82}
   .rib-seg.tail:hover,.rib-seg.tail.on{opacity:1}
-  .rib-seg:first-child{border-radius:999px 4px 4px 999px}
-  .rib-seg:last-child{border-radius:4px 999px 999px 4px}
-  .rib-seg:only-child{border-radius:999px}
-  .rib-seg i{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.02em;
+  .rib-seg:first-child{border-radius:var(--r-xs) 2px 2px var(--r-xs)}
+  .rib-seg:last-child{border-radius:2px var(--r-xs) var(--r-xs) 2px}
+  .rib-seg:only-child{border-radius:var(--r-xs)}
+  .rib-seg i{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.02em;
     color:#0b0e14;opacity:.72;font-variant-numeric:tabular-nums}
   .rib-seg:hover{background:var(--c);transform:none;border:0;filter:brightness(1.06)}
   .rib-seg:active{transform:none}
@@ -227,22 +257,22 @@
   .rib-bar:has(.rib-seg.on) .rib-seg:not(.on) i{opacity:.4}
   .rib-seg.on{background:var(--c);box-shadow:0 0 0 1px #0b0e14,0 0 14px -2px var(--c)}
   .rib-cap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
-    font-size:10.5px;letter-spacing:.02em;color:var(--faint)}
+    font-size:11px;letter-spacing:.02em;color:var(--faint)}
   .rib-cap b{font-weight:600;color:var(--muted)}
   .brand{display:flex;align-items:center;gap:16px;min-width:0}
-  .brand-mark{position:relative;width:54px;height:54px;flex-shrink:0;border-radius:17px;
-    display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 26%,transparent),#10131ae6);
-    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 32%,transparent),
-      inset 0 1px 0 #ffffff21,
-      0 10px 30px -14px color-mix(in srgb,var(--gold) 80%,transparent)}
-  .brand-mark::before{content:"";width:18px;height:18px;border-radius:5px;transform:rotate(45deg);
+  /* A gem set in a turned gold frame, rather than a rounded app-icon tile. */
+  .brand-mark{position:relative;width:44px;height:44px;margin:5px;flex-shrink:0;border-radius:var(--r-xs);
+    display:flex;align-items:center;justify-content:center;transform:rotate(45deg);
+    background:linear-gradient(135deg,#1e2328,#0a1119);
+    box-shadow:inset 0 0 0 1px var(--gold),0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold-dim) 90%,transparent),
+      0 10px 30px -10px color-mix(in srgb,var(--gold) 70%,transparent)}
+  .brand-mark::before{content:"";width:18px;height:18px;border-radius:1px;
     background:linear-gradient(145deg,var(--star),var(--gold) 55%,var(--gold-mid));
     box-shadow:0 0 20px color-mix(in srgb,var(--gold) 78%,transparent),inset 0 0 0 1px #ffffff45;
     animation:gemGlow 3.6s ease-in-out infinite}
   .brand-sub{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;
     font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
-  .brand-sub b{font-weight:600;letter-spacing:.14em;color:var(--gold-txt);padding:3px 9px;border-radius:999px;
+  .brand-sub b{font-weight:600;letter-spacing:.14em;color:var(--gold-txt);padding:3px 9px;border-radius:var(--r-xs);
     background:color-mix(in srgb,var(--gold) 11%,transparent);
     border:1px solid color-mix(in srgb,var(--gold) 24%,transparent)}
   /* Metal needs a value swing, but --gold-dim is derived as lightness-25, which on
@@ -250,13 +280,13 @@
      patches mid-word that read as broken letters rather than shine. The ramp now
      spans only mid -> base -> light -> specular, a band that stays legible at
      any hue, with one narrow highlight doing the metallic work. */
-  h1{margin:0;font-weight:700;font-size:clamp(29px,4.2vw,41px);line-height:1.04;
+  h1,.lock-wm{margin:0;font-weight:700;font-size:clamp(29px,4.2vw,41px);line-height:1.04;
     background:linear-gradient(102deg,
       var(--gold-mid) 0%,var(--gold) 20%,var(--star) 36%,
       #fffaf0 44%,var(--star) 53%,var(--gold) 72%,var(--gold-mid) 100%);
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
     filter:drop-shadow(0 1px 1px #00000066)}
-  h1.hex-display{letter-spacing:.02em}
+  h1.hex-display,.lock-wm{letter-spacing:.02em}
   /* Replaces the full-width rule that used to sit here. That line started hard and
      faded into nothing, belonging to neither the header above nor the text below —
      a hairline down the side of the paragraph does the same separating job while
@@ -288,28 +318,31 @@
      background is redeclared on :hover on purpose: the generic button:hover rule
      is more specific than .b-gold, so omitting it here lets the plain dark hover
      background win and the button turns black. */
-  .b-gold{font-weight:600;color:var(--gold-txt);
-    border-color:var(--gold);border-color:color-mix(in srgb,var(--gold) 58%,transparent);
-    background:var(--panel3);
-    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 26%,transparent),color-mix(in srgb,var(--gold) 12%,transparent)),var(--panel2);
-    box-shadow:inset 0 1px 0 color-mix(in srgb,var(--gold) 34%,transparent),
-      0 4px 16px -8px color-mix(in srgb,var(--gold) 50%,transparent)}
-  .b-gold:hover{color:var(--gold-txt);
-    border-color:color-mix(in srgb,var(--gold) 88%,transparent);
-    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 38%,transparent),color-mix(in srgb,var(--gold) 20%,transparent)),var(--panel2);
-    box-shadow:inset 0 1px 0 color-mix(in srgb,var(--gold) 48%,transparent),
-      0 0 0 3px color-mix(in srgb,var(--gold) 12%,transparent),
-      0 6px 22px -8px color-mix(in srgb,var(--gold) 65%,transparent)}
-  .b-teal{color:var(--teal-txt);border-color:var(--teal);border-color:color-mix(in srgb,var(--teal) 40%,transparent);
-    background:var(--panel2);background:color-mix(in srgb,var(--teal) 9%,var(--panel2))}
-  .b-teal:hover{border-color:color-mix(in srgb,var(--teal) 68%,transparent);color:var(--teal-txt);
-    background:color-mix(in srgb,var(--teal) 17%,var(--panel2));
-    box-shadow:0 0 0 3px color-mix(in srgb,var(--teal) 11%,transparent)}
+  /* Metal, the way the client draws its buttons: a dark plate inside a rim that is
+     lit at the top and falls to the dim gold below — drawn as a second background
+     clipped to the border box, so the corners stay round where a border-image
+     would square them off. Built from the accent tokens, so a picked colour is
+     still the colour of the rim. */
+  .b-gold{color:var(--text);border:1px solid transparent;
+    background:linear-gradient(180deg,#1e2328,#12171d) padding-box,
+      linear-gradient(180deg,var(--star),var(--gold) 34%,var(--gold-dim)) border-box;
+    box-shadow:0 0 0 1px #010a13,0 6px 18px -10px color-mix(in srgb,var(--gold) 70%,transparent)}
+  .b-gold:hover{color:#fff;border-color:transparent;
+    background:linear-gradient(180deg,#2a2b27,#171b1f) padding-box,
+      linear-gradient(180deg,#fff,var(--star) 30%,var(--gold)) border-box;
+    box-shadow:0 0 0 1px #010a13,0 0 18px -3px color-mix(in srgb,var(--gold) 70%,transparent),inset 0 0 14px color-mix(in srgb,var(--gold) 18%,transparent)}
+  .b-teal{color:var(--teal-txt);border:1px solid transparent;
+    background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 16%,#0a1119),#0a1820) padding-box,
+      linear-gradient(180deg,var(--teal),color-mix(in srgb,var(--teal) 40%,#0a1119)) border-box}
+  .b-teal:hover{color:#fff;border-color:transparent;
+    background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 26%,#0a1119),#0b1e27) padding-box,
+      linear-gradient(180deg,#fff,var(--teal) 40%) border-box;
+    box-shadow:0 0 16px -4px color-mix(in srgb,var(--teal) 80%,transparent)}
   .b-danger{color:var(--danger)}
   .b-danger:hover{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);
     background:color-mix(in srgb,var(--danger) 13%,var(--panel2))}
   /* utilities, not actions — no rim of their own inside the tray */
-  #bMore,#bHelp{width:34px;padding:8px 0;color:var(--muted);font-size:15px;
+  #bMore,#bHelp{width:34px;padding:8px 0;color:var(--muted);font-size:16px;
     background:none;border-color:transparent;box-shadow:none}
   #bMore:hover,#bHelp:hover{color:var(--text);background:#ffffff12;border-color:transparent}
   .bar{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
@@ -328,23 +361,32 @@
   input[type=search]{-webkit-appearance:none;appearance:none}
   input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;height:14px;width:14px;cursor:pointer;
     background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b93a6' stroke-width='2.4' stroke-linecap='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E") center/contain no-repeat}
-  code{font-family:ui-monospace,'SF Mono',Consolas,monospace;font-size:.92em;padding:2px 6px;border-radius:6px;
+  code{font-family:ui-monospace,'SF Mono',Consolas,monospace;font-size:.92em;padding:2px 6px;border-radius:var(--r-xs);
     background:#ffffff0d;border:1px solid #ffffff12;color:var(--text)}
 
   /* ---- banners ---- */
   .banner{display:none;border:1px solid color-mix(in srgb,var(--danger) 45%,transparent);color:var(--danger);
     background:color-mix(in srgb,var(--danger) 9%,var(--panel));padding:12px 16px;font-size:13px;margin-bottom:18px;border-radius:var(--r-md)}
   .banner.show{display:block}
+  .bk-note{display:flex;align-items:center;gap:8px;margin:-4px 0 16px;font-size:12px;color:var(--muted)}
+  .bk-note .ico{color:var(--faint)}
+  .bk-note button{padding:3px 9px;font-size:12px;font-weight:600;color:var(--gold-txt);background:none;
+    border-color:color-mix(in srgb,var(--gold) 30%,transparent)}
+  .bk-note button:hover{background:color-mix(in srgb,var(--gold) 10%,transparent);border-color:color-mix(in srgb,var(--gold) 55%,transparent)}
 
   /* ---- dashboard ---- */
   .dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr))}
   .stat{padding:16px 20px;position:relative;overflow:hidden;min-width:0}
+  .dash[style*="--cols"]{grid-template-columns:repeat(var(--cols),minmax(0,1fr))}
   .stat+.stat::before{content:"";position:absolute;left:0;top:15px;bottom:15px;width:1px;background:var(--line)}
-  .stat .k{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:7px}
+  .stat.rs::before{display:none}
+  .stat .k{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:7px}
   .stat .v{font-size:20px;font-weight:600;color:var(--text);line-height:1.25;letter-spacing:-.015em;font-variant-numeric:tabular-nums}
   /* nowrap, or a long enough figure breaks between the number and its unit and
      leaves "WR" alone on the next line. It wraps as one piece instead. */
-  .stat .v small{font-size:11.5px;color:var(--muted);font-weight:400;letter-spacing:0;white-space:nowrap}
+  .stat .v small{font-size:12px;color:var(--muted);font-weight:400;letter-spacing:0;white-space:nowrap}
+  .stat .v.nw{white-space:nowrap}
+  .stat .v.nw small{margin-left:1px}
   /* Except where the caption is a list — Accounts' "· 7 ★ · 5 banned · 5 archived"
      is wider than its tile, which is overflow:hidden, so nowrap cut it off at
      "archiv". It breaks between the pieces and never inside one. */
@@ -356,14 +398,14 @@
   .pool-spark .pool-hit{fill:transparent;stroke:none;cursor:pointer}
   .spark-tip{
     position:fixed;z-index:80;pointer-events:none;
-    padding:6px 9px;border-radius:8px;font-size:11.5px;line-height:1.35;
+    padding:6px 9px;border-radius:var(--r-sm);font-size:12px;line-height:1.35;
     color:var(--text);background:var(--panel3);border:1px solid var(--line2);
     box-shadow:0 8px 24px #00000088;max-width:220px;white-space:pre-line;
     opacity:0;transform:translateY(4px);transition:opacity .12s ease,transform .12s ease;
   }
   .spark-tip.on{opacity:1;transform:none}
   .dash-toggle{display:flex;justify-content:flex-end;margin-bottom:14px}
-  .ghost-toggle{font-size:11.5px;padding:6px 13px;border-radius:999px;color:var(--muted);
+  .ghost-toggle{font-size:12px;padding:6px 13px;border-radius:var(--r-xs);color:var(--muted);
     background:#ffffff09;border:1px solid var(--line);box-shadow:none}
   .ghost-toggle:hover{background:#ffffff14;border-color:var(--line2);color:var(--text)}
   .ghost-toggle .ico{transition:transform .22s cubic-bezier(.22,1,.36,1)}
@@ -376,11 +418,11 @@
      nothing holding them together — at eight across a row it read as debris. One
      pill per champion, with the games as a W-L pair rather than a count needing a
      unit letter glued to it. */
-  .gem.cmb{gap:7px;padding:3px 4px 3px 10px;border-radius:999px;
+  .gem.cmb{gap:7px;padding:3px 4px 3px 10px;border-radius:var(--r-xs);
     background:#ffffff08;border:1px solid #ffffff0f}
   .gem.cmb .n{font-weight:500}
   /* every count in here answers "how many"; clicking it answers "which ones" */
-  .gem-b{border:1px solid transparent;border-radius:999px;padding:4px 11px;background:none;font-size:12px}
+  .gem-b{border:1px solid transparent;border-radius:var(--r-xs);padding:4px 11px;background:none;font-size:12px}
   .gem-b b{font-weight:600;color:var(--faint)}
   .gem-b:hover{background:#ffffff0f;border-color:var(--line2)}
   .gem-b.on{background:color-mix(in srgb,var(--gold) 16%,transparent);
@@ -389,20 +431,33 @@
   /* flex, not block. A <button> centres its content box vertically, so the two
      tiles that are buttons sat 24 and 31 px lower than the five that are not —
      three baselines in one row of seven, which reads as a broken grid. */
-  .stat-b{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;
+  /* gap:0 — the generic button rule gives every button a 7px flex gap, which on
+     top of the label's own margin dropped these tiles' figures 7px below the rest */
+  .stat-b{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;
     width:100%;text-align:left;border:0;border-radius:0;background:none;
     padding:16px 20px;font:inherit;white-space:normal}
   .stat-b:hover{background:#ffffff08;border:0}
   .stat-b.on{background:color-mix(in srgb,var(--gold) 11%,transparent);border:0;
     box-shadow:inset 2px 0 0 var(--gold)}
-  .s-note{font-size:10.5px;color:var(--faint);margin-top:4px;line-height:1.4}
+  .s-note{font-size:11px;color:var(--faint);margin-top:4px;line-height:1.4}
   .gem.cmb b{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .gem.cmb b.wr-good{color:var(--good)}
-  .gem.cmb i.g{font-style:normal;font-size:10.5px;font-weight:600;color:var(--faint);
-    font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:999px;background:#ffffff0d}
+  .gem.cmb i.g{font-style:normal;font-size:11px;font-weight:600;color:var(--faint);
+    font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:var(--r-xs);background:#ffffff0d}
   .gem.cmb i.g em{font-style:normal;opacity:.5;padding:0 1px}
-  .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px}
-  .dist .k{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-right:2px}
+  .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px;position:relative}
+  /* The client divides with a gold hairline that is brightest in the middle and a
+     small diamond set on it, not with a flat grey rule. */
+  .hx-in>.dist{border-top:0!important}
+  .hx-in>.dist::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;pointer-events:none;
+    background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent)}
+  .hx-in>.dist::after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;pointer-events:none;
+    transform:translateX(-50%) rotate(45deg);background:var(--bg);border:1px solid var(--gold)}
+  .dist .k{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-right:2px}
+  .hx-rule{position:relative;height:1px;width:100%;flex-shrink:0;
+    background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent)}
+  .hx-rule::after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;
+    transform:translateX(-50%) rotate(45deg);background:var(--bg);border:1px solid var(--gold)}
   .gem{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text)}
   /* the tier lozenge — scoped to a class rather than the bare tag, because every
      <i> inside a .gem was inheriting a 9px box and a 45° rotation, which is what
@@ -416,18 +471,19 @@
      are — the row you work the collection from — and being sticky as one unit
      means the primary action stays reachable instead of scrolling off the top. */
   .console{position:sticky;top:0;z-index:10;margin:0 0 18px;
-    border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;
-    background:#0b0d13d9;backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
+    border:1px solid color-mix(in srgb,var(--gold-dim) 62%,transparent);border-radius:var(--r-md);overflow:hidden;
+    background:#050c14e0;backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
     box-shadow:var(--sh-1)}
   .cmd{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:11px 12px;
-    border-bottom:1px solid var(--line);background:linear-gradient(180deg,#ffffff0a,transparent)}
+    border-bottom:1px solid color-mix(in srgb,var(--gold-dim) 40%,transparent);background:linear-gradient(180deg,#ffffff0a,transparent)}
   /* the count was a lone grey line under the grid, where it answered a question
      nobody was asking by then; beside the buttons it's a status readout */
-  .cmd-count{margin-left:auto;padding-right:3px;font-size:11.5px;color:var(--faint);
+  .cmd-r{margin-left:auto;display:flex;align-items:center;gap:9px;min-width:0}
+  .cmd-count{padding-right:3px;font-size:12px;color:var(--faint);
     display:inline-flex;align-items:center;gap:9px;letter-spacing:.015em}
   .cmd-count b{font-weight:600;color:var(--muted)}
-  .cmd-count .warn{color:var(--danger);font-weight:600;font-size:11.5px;letter-spacing:.015em;
-    padding:3px 9px;border-radius:999px;background:none;border:1px solid transparent;box-shadow:none}
+  .cmd-count .warn{color:var(--danger);font-weight:600;font-size:12px;letter-spacing:.015em;
+    padding:3px 9px;border-radius:var(--r-xs);background:none;border:1px solid transparent;box-shadow:none}
   .cmd-count .warn:hover{background:color-mix(in srgb,var(--danger) 13%,transparent);
     border-color:color-mix(in srgb,var(--danger) 34%,transparent)}
   .cmd-count .warn.on{background:color-mix(in srgb,var(--danger) 18%,transparent);
@@ -443,7 +499,7 @@
   /* layout switch: segmented control. Kept fully isolated from the global
      button chrome — that rule transitions border-color + translateY on hover,
      which made the dividers flash and the icons look like they squeezed. */
-  .seg{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:9px;
+  .seg{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:var(--r-sm);
     overflow:hidden;background:var(--panel2);flex-shrink:0}
   .seg button{
     box-sizing:border-box;width:36px;height:32px;padding:0;margin:0;gap:0;
@@ -492,7 +548,7 @@
   @media(max-width:520px){.atm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .atm-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;
     padding:7px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);
-    color:var(--muted);font-size:11.5px;font-weight:600;text-align:left;box-shadow:none;
+    color:var(--muted);font-size:12px;font-weight:600;text-align:left;box-shadow:none;
     overflow:hidden;min-width:0;
     transition:border-color .16s ease,background .16s ease,color .16s ease,box-shadow .16s ease}
   .atm-tile:hover{background:var(--panel3);border-color:var(--line2);color:var(--text)}
@@ -500,7 +556,7 @@
     background:color-mix(in srgb,var(--gold) 10%,var(--panel2));color:var(--gold-txt);
     box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 28%,transparent)}
   .atm-tile:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-  .atm-mini{display:block;height:46px;border-radius:7px;border:1px solid #ffffff12;
+  .atm-mini{display:block;height:46px;border-radius:var(--r-xs);border:1px solid #ffffff12;
     background:var(--bg);overflow:hidden;position:relative;pointer-events:none;flex-shrink:0}
   .atm-mini::after{content:"";position:absolute;inset:0;opacity:.04;pointer-events:none;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
@@ -532,7 +588,7 @@
      ease, so the old one snapped on and off. Keep the fade, but open quickly:
      a long delay felt like lag. */
   .atm-tip{max-height:0;opacity:0;overflow:hidden;margin-top:-5px;padding:0 2px;
-    color:var(--faint);font-size:10.5px;font-weight:450;line-height:1.4;
+    color:var(--faint);font-size:11px;font-weight:450;line-height:1.4;
     pointer-events:none;
     transition:max-height .22s cubic-bezier(.22,1,.36,1),opacity .18s ease,margin-top .18s ease;
     transition-delay:.06s}
@@ -557,13 +613,13 @@
     background:color-mix(in srgb,var(--danger) 9%,transparent);font-size:12px}
   .fb-n{font-weight:600;color:var(--danger)}
   .fb-l{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-  .failbar button{font-size:11.5px;padding:5px 10px}
+  .failbar button{font-size:12px;padding:5px 10px}
   .fb-x{padding:5px 9px;background:none;border-color:transparent;color:var(--faint)}
   /* what the stats panel just filtered on — invisible filters make a short grid
      look like a bug */
   .chips{display:flex;gap:7px;flex-wrap:wrap;padding:0 12px}
   .chips:not(:empty){padding:11px 12px;border-top:1px solid var(--line)}
-  .fchip{font-size:11.5px;font-weight:600;padding:4px 8px 4px 11px;gap:7px;border-radius:999px;
+  .fchip{font-size:12px;font-weight:600;padding:4px 8px 4px 11px;gap:7px;border-radius:var(--r-xs);
     color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 45%,transparent);
     background:color-mix(in srgb,var(--gold) 12%,transparent)}
   .fchip span{opacity:.65;font-size:10px}
@@ -571,7 +627,7 @@
     border-color:color-mix(in srgb,var(--gold) 70%,transparent)}
   .fchip-all{color:var(--faint);background:none;border-color:var(--line);padding:4px 11px}
   .fchip-all:hover{color:var(--text);background:var(--panel3);border-color:var(--line2)}
-  input,select,textarea{font:inherit;font-size:13.5px;background:var(--panel2);border:1px solid var(--line);
+  input,select,textarea{font:inherit;font-size:14px;background:var(--panel2);border:1px solid var(--line);
     border-radius:var(--r-sm);color:var(--text);padding:9px 12px;
     transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
   input:hover,select:hover,textarea:hover{border-color:var(--line2)}
@@ -617,7 +673,7 @@
      at rest, because a glyph is identity and a lit pill full of a number is status.
      Everything else waits for .lit. */
   .tag-handle{gap:7px;padding:4px 11px 5px;min-height:0;
-    border-radius:0 0 10px 10px;border:1px solid var(--line);border-top:0;
+    border-radius:0 0 var(--r-sm) var(--r-sm);border:1px solid var(--line);border-top:0;
     background:var(--panel2);
     color:var(--muted);box-shadow:0 3px 8px -4px #0009;
     font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
@@ -626,7 +682,7 @@
     background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 17%,var(--panel2)),var(--panel2))}
   /* how many tags the vault has — a fact, not a filter, so it is not gold until one is */
   .tag-handle b{font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums;
-    font-size:10px;line-height:1.5;padding:0 6px;border-radius:999px;
+    font-size:10px;line-height:1.5;padding:0 6px;border-radius:var(--r-xs);
     color:var(--muted);background:#ffffff12;transition:color .16s ease,background .16s ease}
   .tag-handle:hover b{color:var(--text);background:#ffffff1f}
   .tag-ico{color:color-mix(in srgb,var(--gold) 42%,var(--muted));transition:color .16s ease}
@@ -643,7 +699,7 @@
   .tag-handle.open .tag-chev{transform:rotate(180deg)}
   .tag-list{display:flex;gap:7px;flex-wrap:wrap;padding-bottom:2px}
   @media (prefers-reduced-motion:reduce){.tag-handle,.tag-handle .ico{transition:none}}
-  .chip{font-size:12px;font-weight:500;padding:5px 12px;border:1px solid var(--line);border-radius:999px;
+  .chip{font-size:12px;font-weight:500;padding:5px 12px;border:1px solid var(--line);border-radius:var(--r-xs);
     background:var(--panel2);color:var(--muted);cursor:pointer;
     transition:background .15s ease,border-color .15s ease,color .15s ease}
   .chip:hover{color:var(--text);border-color:var(--line2);background:var(--panel3)}
@@ -683,22 +739,22 @@
   .tile:focus-visible{outline-offset:-3px}
   .tile::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;
     border-radius:0 3px 3px 0;background:var(--st,transparent);opacity:.85}
-  .t-pic{width:52px;height:52px;border-radius:15px;position:relative;flex-shrink:0;
+  .t-pic{width:52px;height:52px;border-radius:50%;position:relative;flex-shrink:0;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center;margin-bottom:3px}
-  .t-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:15px}
-  .t-pic b{font-size:19px;font-weight:600;color:var(--faint)}
+  .t-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+  .t-pic b{font-size:20px;font-weight:600;color:var(--faint)}
   .t-crest{position:absolute;right:-7px;top:-7px;width:21px;height:21px;
     filter:drop-shadow(0 1px 2px #000000cc)}
   .t-crest .crest{width:100%;height:100%}
   .t-lv{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);
-    font-style:normal;font-size:9px;font-weight:700;line-height:14px;padding:0 5px;
-    min-width:20px;text-align:center;border-radius:999px;font-variant-numeric:tabular-nums;
+    font-style:normal;font-size:10px;font-weight:700;line-height:14px;padding:0 5px;
+    min-width:20px;text-align:center;border-radius:var(--r-xs);font-variant-numeric:tabular-nums;
     color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
   .t-nm{font-size:12px;font-weight:600;letter-spacing:-.01em;color:var(--text);max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:4px}
   .t-nm .rw-star .ico{width:10px;height:10px}
-  .t-rk{font-size:11.5px;font-weight:700;letter-spacing:-.01em;max-width:100%;
+  .t-rk{font-size:12px;font-weight:700;max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .t-lp{font-size:10px;font-weight:600;color:var(--faint);font-variant-numeric:tabular-nums}
   .grid.wall>.hx:hover{transform:translateY(-2px)}
@@ -719,15 +775,15 @@
   .lgrp-crest{width:16px;height:16px;flex-shrink:0}
   .lgrp-dot{width:8px;height:8px;border-radius:2px;transform:rotate(45deg);flex-shrink:0;opacity:.8}
   .lgrp-star{width:13px;height:13px;fill:var(--star);stroke:var(--star);flex-shrink:0}
-  .lgrp-n{font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase}
+  .lgrp-n{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
   .lgrp-ln{flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
-  .lgrp-k{font-size:10.5px;font-weight:600;color:var(--faint);letter-spacing:.05em;
+  .lgrp-k{font-size:11px;font-weight:600;color:var(--faint);letter-spacing:.05em;
     font-variant-numeric:tabular-nums}
-  .hx.row{padding:1px;background:#ffffff0d;border-radius:11px}
+  .hx.row{padding:1px;background:#ffffff0d;border-radius:var(--r-md)}
   .hx.row:hover{background:#ffffff1c}
   .hx.row.gold{background:color-mix(in srgb,var(--gold) 40%,transparent)}
   .hx.row.open{background:color-mix(in srgb,var(--teal) 34%,transparent)}
-  .rw{border-radius:10px;background:var(--panel);overflow:hidden}
+  .rw{border-radius:calc(var(--r-md) - 1px);background:var(--panel);overflow:hidden}
   /* Roughly 46px of row, of which about a third was padding: a 30px picture,
      13.5px type, and six hundred pixels of nothing between the name and the rank.
      Taller, and with that gap given to the two things the list had been throwing
@@ -742,11 +798,11 @@
     border-radius:0 3px 3px 0;background:var(--st,transparent);opacity:.85}
   /* a row is a line in a list, not a tile — it must not lift off the page */
   .grid.list>.hx:hover{transform:none;box-shadow:var(--sh-1)}
-  .rw-pic{width:40px;height:40px;border-radius:11px;position:relative;overflow:visible;
+  .rw-pic{width:40px;height:40px;border-radius:50%;position:relative;overflow:visible;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center}
-  .rw-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:11px}
-  .rw-pic b{font-size:15px;font-weight:600;color:var(--faint)}
+  .rw-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+  .rw-pic b{font-size:16px;font-weight:600;color:var(--faint)}
   /* the tier, on the picture, the way the card puts it beside the rank */
   .rw-crest{position:absolute;right:-6px;top:-6px;width:17px;height:17px;
     filter:drop-shadow(0 1px 2px #000000cc)}
@@ -754,39 +810,42 @@
   /* same idea as the card: the level belongs to the picture, not to a column of
      performance numbers */
   .rw-lvb{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
-    font-style:normal;font-size:9px;font-weight:700;line-height:13px;padding:0 4px;
-    min-width:18px;text-align:center;border-radius:999px;font-variant-numeric:tabular-nums;
+    font-style:normal;font-size:10px;font-weight:700;line-height:13px;padding:0 4px;
+    min-width:18px;text-align:center;border-radius:var(--r-xs);font-variant-numeric:tabular-nums;
     color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
   .rw-id{min-width:0;display:flex;flex-direction:column;gap:1px}
-  .rw-nm{font-size:14.5px;font-weight:600;letter-spacing:-.012em;color:var(--text);
+  .rw-nm{font-size:14px;font-weight:600;letter-spacing:-.012em;color:var(--text);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
   .rw-star{color:var(--star);display:inline-flex;flex-shrink:0}
   .rw-star .ico{width:11px;height:11px;fill:var(--star)}
   .rw-tag{font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rw-tags{display:flex;gap:4px;margin-top:3px;overflow:hidden}
-  .rw-tags i{font-style:normal;font-size:9.5px;letter-spacing:.02em;color:var(--muted);
-    padding:1px 6px;border-radius:999px;background:#ffffff0f;white-space:nowrap}
+  .rw-tags i{font-style:normal;font-size:10px;letter-spacing:.02em;color:var(--muted);
+    padding:1px 6px;border-radius:var(--r-xs);background:#ffffff0f;white-space:nowrap}
   /* the shape of the climb, which the list used to leave out entirely */
   .rw-spark{display:flex;align-items:center;height:30px}
   .spk{width:100%;height:100%;display:block}
-  .rw-check{font-size:10.5px;padding:4px 9px;gap:5px;opacity:0;color:var(--teal-txt);
+  .rw-check{font-size:11px;padding:4px 9px;gap:5px;opacity:0;color:var(--teal-txt);
     transition:opacity .15s ease,background .15s ease,border-color .15s ease}
   .rw-check .ico{width:11px;height:11px}
   .rw-main:hover .rw-check,.rw-check:focus-visible{opacity:1}
   .rw-rank{display:flex;flex-direction:column;gap:0;overflow:hidden;white-space:nowrap}
-  .rw-rank b{font-size:14.5px;font-weight:700;letter-spacing:-.015em;
+  .rw-rank b{font-size:14px;font-weight:700;
     overflow:hidden;text-overflow:ellipsis}
   .rw-rank em{font-style:normal;font-size:11px;font-weight:600;color:var(--muted);
     font-variant-numeric:tabular-nums}
   .rw-d,.rw-wr,.rw-lv{display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
-  .rw-wr b,.rw-lv b{font-size:12.5px;font-weight:700;color:var(--muted);line-height:1.1}
+  .rw-wr b,.rw-lv b{font-size:13px;font-weight:700;color:var(--muted);line-height:1.1}
   .rw-wr b.wr-good{color:var(--good)}
-  .rw-wr em,.rw-lv em{font-style:normal;font-size:9.5px;color:var(--faint);letter-spacing:.02em}
+  .rw-wr em,.rw-lv em{font-style:normal;font-size:10px;color:var(--faint);letter-spacing:.02em}
   /* Sixty rows of "47%" are sixty identical grey blocks. Sixty bars of differing
      length are a shape you can run your eye down. */
-  .rw-bar{display:block;height:3px;border-radius:999px;background:#ffffff14;overflow:hidden}
-  .rw-bar i{display:block;height:100%;border-radius:999px}
-  .rw-d .delta{font-size:10.5px;padding:2px 6px}
+  /* drawn as a record, like the card's: wins, the losses as the remainder, even marked */
+  .rw-bar{position:relative;display:block;height:3px;border-radius:1px;overflow:hidden;
+    background:color-mix(in srgb,var(--danger) 34%,var(--panel2))}
+  .rw-bar i{display:block;height:100%;border-radius:1px 0 0 1px;box-shadow:1px 0 0 var(--bg)}
+  .rw-bar::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--bg)}
+  .rw-d .delta{font-size:11px;padding:2px 6px}
   .rw-rg{font-size:10px;font-weight:600;letter-spacing:.09em;color:var(--faint);text-align:center}
   /* An unranked row has nothing to say in four of its columns, and at full
      strength a wall of them drowns out the rows that do. */
@@ -803,7 +862,7 @@
     text-decoration-thickness:1.5px;text-decoration-color:currentColor;opacity:.62}
   .card.dead .lpc-wrap,.rw.dead .spk{filter:grayscale(.75);opacity:.55}
   .card.dead .wrbar,.rw.dead .rw-bar{filter:grayscale(.9);opacity:.5}
-  .rw-up{font-size:10.5px;color:var(--faint);text-align:right;white-space:nowrap;
+  .rw-up{font-size:11px;color:var(--faint);text-align:right;white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis}
   .rw-up.stale{color:var(--danger)}
   .rw-chev{width:14px;height:14px;color:var(--faint);transition:transform .24s cubic-bezier(.22,1,.36,1)}
@@ -848,6 +907,9 @@
      the LP change, and the rule above says which goes: the nice-to-know column. The
      change is still on the card, and in the chart when the row is opened. */
   @media (max-width:440px){
+    /* a 360 phone's card has ~190px beside the crest and the LP chip, and
+       "Grandmaster" at full size wants most of it */
+    .card .rk-t{font-size:20px} /* .card: the base rule comes later in the sheet */
     .rw-main{grid-template-columns:auto 36px minmax(0,1fr) 106px 16px;gap:8px}
     .rw-d{display:none}
   }
@@ -865,11 +927,15 @@
   /* ---- card header: portrait anchors it, name and ID stack beside it ---- */
   .c-head{display:flex;align-items:center;gap:13px;min-width:0}
   .c-portrait{position:relative;width:50px;height:50px;flex-shrink:0}
-  .c-initial{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:15px;
-    background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
-    font-size:21px;font-weight:600;color:var(--faint);letter-spacing:-.02em}
-  .c-avatar{position:absolute;inset:0;width:100%;height:100%;border-radius:15px;object-fit:cover;
-    box-shadow:inset 0 0 0 1px #ffffff1f,0 0 0 1px var(--line),0 4px 12px #00000073}
+  /* Round, in a gold ring with the level on a plate beneath: the way the client
+     frames a summoner icon, and the one shape here nobody mistakes for a generic
+     avatar. */
+  .c-initial{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:50%;
+    background:linear-gradient(150deg,var(--panel3),var(--panel2));
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold-dim) 80%,transparent),0 0 0 2px #010a13,0 0 0 3px color-mix(in srgb,var(--gold-dim) 55%,transparent);
+    font-size:20px;font-weight:600;color:var(--faint);letter-spacing:-.02em}
+  .c-avatar{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;
+    box-shadow:0 0 0 1px var(--gold-dim),0 0 0 2px #010a13,0 0 0 3px color-mix(in srgb,var(--gold) 55%,transparent),0 4px 12px #00000073}
   /* The rank crest rides the portrait; it moved to the top corner to make room
      for the level, which now sits centred on the bottom edge the way op.gg puts
      it. Level was in the stats row next to Peak and MMR, which read as another
@@ -879,12 +945,12 @@
      without saying which. The crest says which. */
   .crest{display:block;flex-shrink:0;overflow:visible}
   .c-lvbadge{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);
-    min-width:24px;padding:1px 6px;border-radius:999px;text-align:center;
-    font-size:10.5px;font-weight:700;line-height:16px;letter-spacing:.01em;
+    min-width:24px;padding:1px 6px;border-radius:var(--r-xs);text-align:center;
+    font-size:11px;font-weight:700;line-height:16px;letter-spacing:.01em;
     font-variant-numeric:tabular-nums;color:var(--text);
     background:#0d1017;box-shadow:0 0 0 1px var(--line2),0 2px 8px #00000080}
   .c-id{min-width:0;flex:1}
-  .c-name{font-weight:600;font-size:17px;letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
+  .c-name{font-weight:600;font-size:18px;letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
   /* text-overflow only works on a box that holds the text itself. The wall tile and
      the list row had the name as a bare text node in a flex row, so it was sheared
      off mid-letter, no ellipsis, with the flag after it pushed out of sight — the
@@ -894,7 +960,7 @@
      was holding 114 px of a 234 px row and leaving the name 58 — four letters
      and an ellipsis. Short wording here, the full phrase in the title and
      everywhere else, and a cap so no future status can do it again. */
-  .stchip{font-size:9.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:6px;
+  .stchip{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:var(--r-xs);
     flex:0 1 auto;min-width:0;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .c-chrome{display:flex;align-items:center;gap:9px;flex-shrink:0;align-self:flex-start}
   /* selection is chrome, not content — it stays out of the way until wanted */
@@ -905,7 +971,7 @@
   /* bare icon buttons — must beat the generic button rules */
   .rid,.star,.eye-btn,.panel-close{background:none;border:1px solid transparent;box-shadow:none;padding:0}
   .rid:hover,.star:hover,.eye-btn:hover{background:none;border-color:transparent}
-  .star{font-size:17px;color:var(--line2);line-height:1;display:inline-flex;transition:color .15s ease,transform .15s ease}
+  .star{font-size:18px;color:var(--line2);line-height:1;display:inline-flex;transition:color .15s ease,transform .15s ease}
   .star:hover{color:var(--star);transform:scale(1.12)}
   .star svg{fill:none;stroke:currentColor;stroke-width:1.7}
   .star.on{color:var(--star)}
@@ -931,7 +997,7 @@
     color:var(--muted);z-index:2;font-size:13px}
   .panel-close:hover{color:var(--danger);background:color-mix(in srgb,var(--danger) 13%,transparent);border-color:transparent}
 
-  .regiontag{font-size:10.5px;font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:999px;flex-shrink:0;
+  .regiontag{font-size:11px;font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:var(--r-xs);flex-shrink:0;
     background:color-mix(in srgb,var(--teal) 12%,transparent);color:var(--teal-txt);
     border:1px solid color-mix(in srgb,var(--teal) 24%,transparent)}
   /* the rank is why the card exists, so it gets the card's largest type */
@@ -959,7 +1025,7 @@
   .rk{display:flex;align-items:center;gap:11px;min-width:0;white-space:nowrap;
     overflow:hidden}
   .rk-main{display:flex;flex-direction:column;gap:3px;min-width:0;line-height:1}
-  .rk-t{font-size:24px;font-weight:600;letter-spacing:-.035em;line-height:1.05;
+  .rk-t{font-size:22px;letter-spacing:-.02em;line-height:1.1;
     overflow:hidden;text-overflow:ellipsis}
   /* No coloured glow. A 9px halo in the tier's own full-saturation colour around
      a 27px shape stops reading as a lit emblem and starts reading as a lit square
@@ -970,13 +1036,13 @@
     filter:drop-shadow(0 1px 2px #000000a6)}
   .rk-lp{font-size:13px;font-weight:600;letter-spacing:.04em;margin:0;
     font-variant-numeric:tabular-nums;color:var(--muted);opacity:1}
-  .c-unchecked{font-size:17px;color:var(--faint);letter-spacing:-.02em}
+  .c-unchecked{font-size:18px;color:var(--faint);letter-spacing:-.02em}
   /* on an account with no rank yet, the level is the headline — it was set in
      10 px caps underneath a 23 px "Unranked" that answered nothing */
-  .c-lvl{font-size:15px;color:var(--faint);letter-spacing:.02em;font-weight:500;
+  .c-lvl{font-size:16px;color:var(--faint);letter-spacing:.02em;font-weight:500;
     display:flex;align-items:baseline;gap:8px}
-  .c-lvl .rk-lp{font-size:26px;color:var(--text);letter-spacing:-.03em}
-  .wl{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:4px}
+  .c-lvl .rk-lp{font-size:24px;color:var(--text);letter-spacing:-.03em}
+  .wl{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:4px}
   .wl b{color:var(--text);font-weight:500}
   /* winrate carries the verdict, so it gets the only colour on the line */
   .wrv{font-weight:600;color:var(--text)}
@@ -985,23 +1051,23 @@
   /* labelled micro-stats instead of one muted run-on sentence */
   .c-stats{display:flex;flex-wrap:wrap;gap:7px 20px}
   .c-stats>div{display:flex;flex-direction:column;gap:2px;min-width:0}
-  .c-stats .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+  .c-stats .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
   .c-stats .v{font-size:13px;font-weight:500;color:var(--text);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
   /* This is the one thing on the card the user wrote themselves, so it reads as
      content on its own small surface rather than another grey caption line. */
-  .c-notes{font-size:12.5px;line-height:1.6;color:var(--text);opacity:.9;
-    padding:9px 12px;border-radius:10px;background:#ffffff08;border:1px solid #ffffff0d;
+  .c-notes{font-size:13px;line-height:1.6;color:var(--text);opacity:.9;
+    padding:9px 12px;border-radius:var(--r-sm);background:#ffffff08;border:1px solid #ffffff0d;
     transition:background .16s ease,border-color .16s ease}
   /* the note is the one field you actually keep rewriting, so it edits where it
      lives — no round trip through the Edit form */
   .c-notes[data-act]{cursor:text}
   .c-notes[data-act]:hover{background:#ffffff0f;border-color:#ffffff21}
-  .c-notes .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+  .c-notes .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
     display:flex;align-items:center;gap:5px;margin-bottom:4px}
   .c-notes .k .ico{width:11px;height:11px;opacity:0;transition:opacity .16s ease}
   .c-notes[data-act]:hover .k .ico{opacity:.85}
   .c-notes .none{color:var(--faint)}
-  .c-notes textarea{width:100%;font-size:12.5px;line-height:1.6;min-height:62px;display:block}
+  .c-notes textarea{width:100%;font-size:13px;line-height:1.6;min-height:62px;display:block}
   .c-notes.editing{border-color:color-mix(in srgb,var(--teal) 34%,transparent);background:#ffffff0d}
   /* An empty note is an invitation, not a panel. It still had a dashed box around
      it, which on a vault where almost nothing is annotated makes it the most
@@ -1024,7 +1090,7 @@
   .c-drawer{margin:0 -17px -17px;padding:11px 14px 12px;gap:11px;
     border:0;border-radius:0 0 calc(var(--r-lg) - 2px) calc(var(--r-lg) - 2px);
     background:none;color:var(--faint);
-    font-size:9.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+    font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
     transition:background .18s ease,color .18s ease}
   .c-drawer:hover{color:var(--teal-txt);border:0;
     background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--teal) 11%,transparent))}
@@ -1053,10 +1119,10 @@
   .sec-h{width:100%;display:flex;align-items:center;gap:11px;padding:10px 13px;
     background:none;border:0;border-radius:0;white-space:normal}
   .sec-h:hover{background:#ffffff09;border:0}
-  .sec-n{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+  .sec-n{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
     display:inline-flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0}
-  .sec-n i{font-style:normal;font-size:9.5px;letter-spacing:.03em;color:var(--faint);
-    padding:1px 6px;border-radius:999px;background:#ffffff0f}
+  .sec-n i{font-style:normal;font-size:10px;letter-spacing:.03em;color:var(--faint);
+    padding:1px 6px;border-radius:var(--r-xs);background:#ffffff0f}
   .sec-p{margin-left:auto;font-size:12px;font-weight:600;letter-spacing:-.01em;color:var(--muted);
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
   .sec-p .c-nm{display:inline}
@@ -1069,14 +1135,14 @@
     animation:sectionIn .22s cubic-bezier(.22,1,.36,1) both}
   /* one fact, one line — folding it would cost a click to reveal nothing extra */
   .sec.flat{display:flex;align-items:center;gap:11px;padding:11px 13px}
-  .chp-h{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  .chp-h{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
     color:var(--faint);padding-bottom:5px;border-bottom:1px solid #ffffff12;margin-bottom:2px}
   .chp-h span:not(:first-child){text-align:right}
   .chp-h+.chp{border-top:0}
   .sea{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:3px 0;font-size:12px}
   .sea+.sea{border-top:1px solid #ffffff0a}
-  .s-yr{color:var(--faint);font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
-  .s-rk{font-weight:600;font-size:12.5px;letter-spacing:-.01em}
+  .s-yr{color:var(--faint);font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
+  .s-rk{font-weight:600;font-size:13px;letter-spacing:-.01em}
   /* a fixed grid, so the numbers line up into columns you can scan down */
   .chp{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:baseline;
     padding:3px 0;font-size:12px;font-variant-numeric:tabular-nums}
@@ -1085,12 +1151,19 @@
   .c-wr{font-weight:600;color:var(--muted);text-align:right}
   .c-wr.wr-good{color:var(--good)}
   .c-gm,.c-kd{color:var(--faint);font-size:11px;text-align:right}
-  .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:7.5px;font-weight:700;letter-spacing:.12em;
+  .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;letter-spacing:.12em;
     pointer-events:none;line-height:1;opacity:.9}
-  .wrbar{height:5px;background:var(--panel2);border-radius:999px;overflow:hidden}
-  .wrbar i{display:block;height:100%;border-radius:999px}
-  .delta{font-size:10.5px;padding:2px 8px;border-radius:999px;font-weight:600;display:inline-block;white-space:nowrap}
+  /* Wins against losses, the way op.gg draws a record — not a fill on an empty
+     track. That was exactly the goal rail's picture two lines below, so a 42% win
+     rate and a goal 42% of the way there looked the same. The losses are the red
+     remainder, and a notch marks even. */
+  .wrbar{position:relative;height:4px;border-radius:1px;overflow:hidden;
+    background:color-mix(in srgb,var(--danger) 34%,var(--panel2))}
+  .wrbar i{display:block;height:100%;border-radius:1px 0 0 1px;box-shadow:1px 0 0 var(--bg)}
+  .wrbar::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--bg)}
+  .delta{font-size:11px;padding:2px 8px;border-radius:var(--r-xs);font-weight:600;display:inline-block;white-space:nowrap}
   .d-up{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+  .delta .ico.flame{width:1.15em;height:1.15em;color:#ff8f2e;fill:#ff8f2e;stroke-width:1.4;vertical-align:-.2em}
   .d-down{color:var(--danger);background:color-mix(in srgb,var(--danger) 15%,transparent)}
   /* ---- LP chart ----
      The old sparkline was a bare line with no scale: it told you the number went
@@ -1099,16 +1172,16 @@
      visible as leaving the green — and every check is a hoverable point.
      Height is fixed and matches the SVG viewBox height, so viewBox units and
      pixels are the same thing and the HTML overlay can be positioned in px. */
-  .lpc{position:relative;margin-top:2px;border-radius:9px;overflow:visible;
+  .lpc{position:relative;margin-top:2px;border-radius:var(--r-sm);overflow:visible;
     border:1px solid var(--line);background:#00000038}
   /* the plot's height matches the SVG viewBox height, so viewBox units and pixels
      are the same thing and the HTML overlay can be positioned in px */
   .lpc-plot{position:relative;height:88px}
-  .lpc-svg{display:block;width:100%;height:100%;border-radius:8px 8px 0 0}
+  .lpc-svg{display:block;width:100%;height:100%;border-radius:var(--r-sm) var(--r-sm) 0 0}
   /* X is real time now, so the dates below are worth printing */
   .lpc-axis{position:relative;height:16px;border-top:1px solid var(--line)}
   .lpc-tick{position:absolute;top:3px;transform:translateX(-50%);white-space:nowrap;
-    font-size:8.5px;font-weight:500;letter-spacing:.04em;color:var(--faint);pointer-events:none}
+    font-size:9px;font-weight:500;letter-spacing:.04em;color:var(--faint);pointer-events:none}
   .lpc-tick.l{transform:none;left:5px!important}
   .lpc-tick.r{transform:none;left:auto!important;right:5px}
   .away-band{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;
@@ -1117,12 +1190,12 @@
     background:color-mix(in srgb,var(--teal) 8%,var(--panel));box-shadow:var(--sh-1);
     animation:barIn .3s cubic-bezier(.22,1,.36,1) both}
   .away-band.hidden{display:none}
-  .away-k{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-txt)}
+  .away-k{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-txt)}
   .away-band b{font-weight:600;color:var(--text)}
   .away-band .up{color:var(--good);font-weight:600}
   .away-band .down{color:var(--danger);font-weight:600}
   .away-band .sp{margin-left:auto;display:flex;gap:7px}
-  .away-band button{font-size:11.5px;padding:5px 11px}
+  .away-band button{font-size:12px;padding:5px 11px}
   @media (prefers-reduced-motion:reduce){.away-band{animation:none}}
 
   /* ---- quick find ---- */
@@ -1130,7 +1203,7 @@
   .modal .pal{margin-top:clamp(0px,9vh,110px);margin-bottom:auto}
   .pal-h{display:flex;align-items:center;gap:11px;padding:15px 18px;border-bottom:1px solid var(--line);flex-shrink:0}
   .pal-h .ico{width:17px;height:17px;color:var(--faint);flex-shrink:0}
-  .pal-h input{border:0;background:none;box-shadow:none;padding:0;font-size:15.5px;flex:1;min-width:0}
+  .pal-h input{border:0;background:none;box-shadow:none;padding:0;font-size:16px;flex:1;min-width:0}
   .pal-h input:focus{border:0;box-shadow:none;outline:none}
   .pal-list{flex:1;min-height:0;overflow:auto;padding:7px;display:flex;flex-direction:column;gap:1px;
     max-height:min(52vh,420px)}
@@ -1141,25 +1214,39 @@
      pointer anywhere near it — a hover tint is not enough on its own. */
   .pal-i.sel{background:color-mix(in srgb,var(--teal) 13%,transparent);
     box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--teal) 32%,transparent)}
-  .pal-pic{width:28px;height:28px;border-radius:9px;flex-shrink:0;position:relative;overflow:visible;
+  .pal-pic{width:28px;height:28px;border-radius:50%;flex-shrink:0;position:relative;overflow:visible;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--faint)}
-  .pal-pic img{width:100%;height:100%;object-fit:cover;border-radius:9px;display:block}
+  .pal-pic img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
   .pal-pic .crest{position:absolute;right:-5px;top:-5px;width:14px;height:14px}
-  .pal-ico{width:28px;height:28px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;
+  .pal-ico{width:28px;height:28px;border-radius:var(--r-sm);flex-shrink:0;display:flex;align-items:center;
     justify-content:center;background:#ffffff0d;color:var(--muted)}
   .pal-ico .ico{width:15px;height:15px}
   .pal-t{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px}
-  .pal-n{font-size:13.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pal-n{font-size:14px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pal-s{font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .pal-r{font-size:11.5px;font-weight:700;flex-shrink:0;letter-spacing:-.01em}
-  .pal-g{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+  .pal-r{font-size:12px;font-weight:700;flex-shrink:0;letter-spacing:-.01em}
+  .pal-g{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
     padding:9px 10px 4px}
   .pal-empty{padding:26px 14px;text-align:center;color:var(--faint);font-size:13px}
   .pal-f{display:flex;gap:16px;padding:9px 16px;border-top:1px solid var(--line);flex-shrink:0;
-    font-size:10.5px;color:var(--faint);background:#0b0e14b8}
-  .pal-f kbd{font-family:inherit;font-size:9.5px;padding:1px 5px;border-radius:4px;margin-right:3px;
+    font-size:11px;color:var(--faint);background:#0b0e14b8}
+  .pal-f kbd{font-family:inherit;font-size:10px;padding:1px 5px;border-radius:var(--r-xs);margin-right:3px;
     background:#ffffff12;box-shadow:inset 0 0 0 1px var(--line2)}
+  .help{display:grid;grid-template-columns:118px minmax(0,1fr);gap:0 22px;margin:0;padding:8px 24px 12px;
+    font-size:13px;line-height:1.7;color:var(--muted)}
+  .help dt,.help dd{padding:13px 0;border-top:1px solid var(--line)}
+  .help dt:first-of-type,.help dd:first-of-type{border-top:0}
+  .help dt{font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt);line-height:2.2}
+  .help dd{margin:0}
+  .help dd.terms::first-letter{text-transform:uppercase}
+  .help b{color:var(--text);font-weight:600}
+  .help code{font-size:12px;padding:1px 6px;white-space:nowrap}
+  .help kbd{display:inline-block;min-width:20px;padding:0 6px;margin:0 1px;border-radius:var(--r-xs);text-align:center;
+    font:600 11px/18px Inter,system-ui,sans-serif;color:var(--text);background:var(--panel3);
+    box-shadow:inset 0 0 0 1px var(--line2),inset 0 -2px 0 var(--line2)}
+  @media (max-width:560px){.help{grid-template-columns:1fr;padding:4px 18px 10px}
+    .help dt{padding:14px 0 2px}.help dd{border-top:0;padding-top:0}}
   .to-top{position:fixed;right:clamp(14px,3vw,28px);bottom:clamp(14px,3vw,28px);z-index:55;
     width:40px;height:40px;padding:0;border-radius:50%;
     background:#0b0e14e0;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
@@ -1179,21 +1266,21 @@
   /* except while a point is being read — the tip wants that corner and you asked
      for the tip. Outranks the hover rule above on specificity. */
   .lpc-plot:has(.lpc-pt:hover) .lpc-range{opacity:0;pointer-events:none}
-  .lpc-range button{font-size:8.5px;font-weight:700;letter-spacing:.06em;line-height:1;
-    padding:3px 5px;border-radius:5px;border:1px solid transparent;background:#ffffff0d;
+  .lpc-range button{font-size:9px;font-weight:700;letter-spacing:.06em;line-height:1;
+    padding:3px 5px;border-radius:var(--r-xs);border:1px solid transparent;background:#ffffff0d;
     color:var(--faint);box-shadow:none}
   .lpc-range button:hover{background:#ffffff1c;border-color:transparent;color:var(--text)}
   .lpc-range button.on{background:color-mix(in srgb,var(--teal) 22%,transparent);color:var(--teal-txt)}
-  .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:8px;font-weight:600;letter-spacing:.09em;
+  .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:9px;font-weight:600;letter-spacing:.09em;
     text-transform:uppercase;pointer-events:none;opacity:.62;line-height:1}
   /* the ceiling the line is climbing back towards; left lane, with the band
      captions, and dropped rather than stacked when one is already there */
   .lpc-plot .lpc-peak{position:absolute;left:50%;transform:translateX(-50%);
-    font-size:7.5px;font-weight:700;letter-spacing:.12em;
+    font-size:9px;font-weight:700;letter-spacing:.12em;
     text-transform:uppercase;pointer-events:none;line-height:1;color:var(--gold-txt);opacity:.9}
   /* division numerals below Master, LP marks above it — opposite side to the tier
      names so the two never collide */
-  .lpc-plot .lpc-sub{position:absolute;right:6px;font-size:8px;font-weight:600;letter-spacing:.06em;
+  .lpc-plot .lpc-sub{position:absolute;right:6px;font-size:9px;font-weight:600;letter-spacing:.06em;
     color:#fff;opacity:.32;pointer-events:none;line-height:1;font-variant-numeric:tabular-nums}
   /* Each point owns the slice of the chart nearest to it, and the slices tile the
      chart exactly. The first version centred a fixed-width column on every point,
@@ -1216,15 +1303,16 @@
   .lpc-pt i{position:absolute;left:0;top:0;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;
     box-shadow:0 0 0 2px #0d1017;transition:transform .15s cubic-bezier(.34,1.56,.64,1)}
   .lpc-pt:hover i{transform:scale(1.55)}
+  .lpc.dense .lpc-pt:not(.now):not(:hover) i{transform:scale(0)}
   /* Opaque, not glass. This is the one surface that is always read against a busy
      background — the line, the band captions and the LP numerals all pass under
      it — and at 96% the line showed straight through the text. */
   .lpc-tip{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;
     opacity:0;pointer-events:none;transition:opacity .13s ease;
     white-space:nowrap;font-size:11px;font-weight:500;line-height:1.35;color:var(--text);
-    padding:6px 9px;border-radius:8px;background:#171b24;border:1px solid var(--line2);
+    padding:6px 9px;border-radius:var(--r-sm);background:#0c151f;border:1px solid color-mix(in srgb,var(--gold-dim) 70%,transparent);
     box-shadow:var(--sh-3)}
-  .lpc-tip em{display:block;font-style:normal;font-size:9.5px;color:var(--faint);margin-top:1px}
+  .lpc-tip em{display:block;font-style:normal;font-size:10px;color:var(--faint);margin-top:1px}
   .lpc-tip.l{left:-6px;transform:none}
   .lpc-tip.r{left:auto;right:-6px;transform:none}
   /* Below the dot when the dot sits too near the top for a tip to fit above it.
@@ -1235,34 +1323,34 @@
   .lpc-pt:hover .lpc-tip{opacity:1}
   .stale{color:var(--danger)}
   #toast button{margin-left:12px;font-size:12px;padding:3px 10px;color:var(--teal-txt)}
-  .meta{font-size:12.5px;color:var(--muted);line-height:1.65}
+  .meta{font-size:13px;color:var(--muted);line-height:1.65}
   .meta b{color:var(--text);font-weight:500}
   .meta .g{color:var(--gold-txt)}
   .ctags{display:flex;gap:6px;flex-wrap:wrap}
-  .ctags span{font-size:11px;padding:3px 9px;border-radius:999px;background:#ffffff0a;border:1px solid #ffffff0f;color:var(--muted)}
+  .ctags span{font-size:11px;padding:3px 9px;border-radius:var(--r-xs);background:#ffffff0a;border:1px solid #ffffff0f;color:var(--muted)}
   .login{background:#00000038;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:13px;display:flex;flex-direction:column;gap:9px}
-  .login .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:7px}
+  .login .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:7px}
   .lrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
   .lrow .val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .lrow .mono{font-family:ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:.01em}
   .lrow .none{color:var(--faint)}
   /* The recovery facts are labelled; the credentials above them are not, because
      a username and a password are obvious from their shape and these are not. */
-  .lrow .lk{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  .lrow .lk{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
     color:var(--faint);margin-right:9px}
-  .lrow .lage{font-style:normal;font-size:10.5px;color:var(--faint);margin-left:9px}
+  .lrow .lage{font-style:normal;font-size:11px;color:var(--faint);margin-left:9px}
   /* Beside the name in all three layouts, because the point of the flag is that
      you spot it without having opened anything. */
   /* Drawn only when there is a goal. An account with nothing to climb towards
      should not be shown an empty progress bar to feel bad about. */
   .goal{display:flex;flex-direction:column;gap:5px;margin-top:-3px}
-  .goal-h{display:flex;align-items:baseline;gap:8px;font-size:10.5px}
-  .goal-h .k{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
-  .goal-t{font-weight:700;letter-spacing:-.01em;font-size:11.5px}
+  .goal-h{display:flex;align-items:baseline;gap:8px;font-size:11px}
+  .goal-h .k{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .goal-t{font-weight:700;letter-spacing:-.01em;font-size:12px}
   .goal-r{margin-left:auto;color:var(--faint);font-variant-numeric:tabular-nums;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .goal-bar{height:4px;border-radius:999px;background:#ffffff12;overflow:hidden}
-  .goal-bar i{display:block;height:100%;border-radius:999px;transition:width .5s cubic-bezier(.22,1,.36,1)}
+  .goal-bar{height:4px;border-radius:1px;background:#ffffff12;overflow:hidden}
+  .goal-bar i{display:block;height:100%;border-radius:1px;transition:width .5s cubic-bezier(.22,1,.36,1)}
   .goal.hit .goal-r{color:var(--good);font-weight:600}
   @media (prefers-reduced-motion:reduce){.goal-bar i{transition:none}}
   .flagmark{display:inline-flex;flex-shrink:0;color:var(--danger)}
@@ -1275,21 +1363,24 @@
   .c-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
   /* was a bare run-on caption floating above the buttons; now a dot-led timestamp
      with the source as its own tag, so it reads as a deliberate meta line */
-  .upd{font-size:10.5px;color:var(--faint);letter-spacing:.015em;display:inline-flex;align-items:center;gap:7px;min-width:0}
+  .upd{font-size:11px;color:var(--faint);letter-spacing:.015em;display:inline-flex;align-items:center;gap:7px;min-width:0}
   .upd::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.55;flex-shrink:0}
   .upd.stale{color:var(--danger)}
-  .upd.stale::before{opacity:1}
+  /* Out of date: red, with a warning mark in place of the dot. It was a ⚠
+     character, which some systems draw as a yellow emoji; this one is drawn. */
+  .upd.stale::before{display:none}
+  .upd .ico{width:12px;height:12px;flex-shrink:0}
   /* asOf is sometimes a source ("backend", a proxy name) and sometimes a date
      phrase op.gg printed ("updated today") — so no uppercasing, which would
      shout at a sentence fragment */
   .src{font-size:10px;font-weight:500;letter-spacing:.01em;color:var(--faint);
-    padding:2px 8px;border-radius:999px;background:#ffffff0a;border:1px solid #ffffff0f;white-space:nowrap}
+    padding:2px 8px;border-radius:var(--r-xs);background:#ffffff0a;border:1px solid #ffffff0f;white-space:nowrap}
   /* 11.5px type in 6px of padding is a 26px target, and there were five of them
      in a row. Mobile already got 40px; the desktop was left with whatever the
      text happened to measure. */
   .acts{display:flex;gap:7px;flex-wrap:wrap}
   .acts button,.acts a{font-size:12px;padding:7px 12px;min-height:32px;text-decoration:none}
-  .c-more{min-width:36px;padding:7px 10px;font-size:15px;line-height:1;color:var(--muted);
+  .c-more{min-width:36px;padding:7px 10px;font-size:16px;line-height:1;color:var(--muted);
     letter-spacing:.08em}
   .c-more:hover{color:var(--text)}
   .c-more.on{background:var(--panel3);border-color:var(--line2);color:var(--text)}
@@ -1312,12 +1403,12 @@
   /* Named groups, not bare hairlines. A rule says "these are apart"; it never says
      what either side of it is. Same lockup as the list view's tier bands. */
   .cm-g{display:flex;align-items:center;gap:8px;padding:7px 11px 3px;
-    font-size:9px;font-weight:700;line-height:1;letter-spacing:.14em;text-transform:uppercase;
+    font-size:10px;font-weight:700;line-height:1;letter-spacing:.14em;text-transform:uppercase;
     color:var(--faint);user-select:none}
   .cm-g::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
   .cm-g:first-child{padding-top:3px}
   .card-menu button,.card-menu .cm-link{width:100%;justify-content:flex-start;gap:10px;
-    font-size:12.5px;font-weight:450;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
+    font-size:13px;font-weight:450;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
     background:none;border:1px solid transparent;box-shadow:none;color:var(--muted);
     text-decoration:none;display:inline-flex;align-items:center;cursor:pointer;text-align:left}
   .card-menu .ico{width:15px;height:15px;flex-shrink:0;color:var(--faint);
@@ -1337,7 +1428,7 @@
   /* The panel is the rank window's body now, and .mdl-b carries no padding of its
      own — the account form gets its 22px from .formgrid. This is that measure. */
   .rankpanel{display:flex;flex-direction:column;gap:14px;padding:20px 22px}
-  .rankpanel .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+  .rankpanel .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
     color:var(--faint);display:block;margin-bottom:8px}
   /* Named fields that wrap, rather than a row of bare boxes sized to the shortest
      thing they might hold. Wide enough that four digits and a spinner are not
@@ -1368,21 +1459,37 @@
      look the same. The gold tint implied a hierarchy that isn't there. */
   .a-dpm{border:1px solid var(--line);color:var(--text);font-weight:500;background:var(--panel2)}
   .a-dpm:hover{color:var(--text);border-color:var(--line2);background:var(--panel3)}
-  .a-login{background:var(--teal);border-color:var(--teal);color:var(--teal-ink);font-weight:700;
+  .a-login{background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 82%,#fff),var(--teal) 45%,color-mix(in srgb,var(--teal) 78%,#000));
+    border-color:var(--teal);color:var(--teal-ink);font-weight:700;
     box-shadow:0 4px 14px -6px color-mix(in srgb,var(--teal) 85%,transparent)}
-  .a-login:hover{background:var(--teal);border-color:var(--teal);color:var(--teal-ink);filter:brightness(1.1);
+  .a-login:hover{background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 70%,#fff),var(--teal) 50%);border-color:var(--teal);color:var(--teal-ink);filter:brightness(1.06);
     box-shadow:0 7px 22px -6px color-mix(in srgb,var(--teal) 95%,transparent)}
+
+  /* One eyebrow. The small uppercase label over a figure is the most repeated
+     element on the page — ACCOUNTS, PEAK, GOAL, CURRENT, RANK SPREAD — and it was
+     set four sizes and seven trackings apart, from 9px to 10.5px and .1em to .16em,
+     so neighbouring labels never quite lined up. Colour still says how loud each
+     one is; the shape is now the same everywhere. */
+  .stat .k,.dist .k,.dash-filter .k,.c-stats .k,.c-notes .k,.sec-n,.chp-h,.away-k,.pal-g,.login .k,.lrow .lk,
+  .goal-h .k,.rankpanel .k,.grp-h,.cm-g,.c-drawer{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
 
   /* ---- form + settings ---- */
   .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:22px}
   .fw{grid-column:1/-1}
   .fld{display:flex;flex-direction:column;gap:6px}
   /* sentence case, not micro-caps — several of these labels are full sentences */
-  .fld label{font-size:11.5px;font-weight:500;letter-spacing:.005em;color:var(--muted);line-height:1.45}
+  .fld label{font-size:12px;font-weight:500;letter-spacing:.005em;color:var(--muted);line-height:1.45}
+  /* The strength meter held a 30px band open under the password even with no
+     password in it, across both columns — the widest gap in the form, around
+     nothing. The bar now sits in the grid's own gap and the word rides the label. */
+  .pw-fld{position:relative}
+  .pw-fld label{display:flex;justify-content:space-between;gap:10px}
+  #pwMeterLabel{font-size:11px;color:var(--faint)}
+  #pwMeter{position:absolute;left:0;right:0;bottom:-9px;height:3px;display:flex;gap:4px}
   .hidden{display:none!important}
   .empty{padding:64px 24px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7}
   .empty .d{height:84px;margin-bottom:20px;display:flex;align-items:center;justify-content:center}
-  .empty-gem{width:56px;height:56px;display:inline-block;border-radius:17px;transform:rotate(45deg);
+  .empty-gem{width:52px;height:52px;display:inline-block;border-radius:var(--r-xs);transform:rotate(45deg);
     border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);
     background:linear-gradient(145deg,color-mix(in srgb,var(--gold) 22%,transparent),#0f1218);
     box-shadow:0 0 40px color-mix(in srgb,var(--gold) 22%,transparent),inset 0 0 0 1px #ffffff0f}
@@ -1419,9 +1526,10 @@
   .mdl-in{display:flex;flex-direction:column;max-height:calc(100vh - clamp(28px,10vh,120px))}
   .mdl-h{display:flex;align-items:center;gap:13px;flex-shrink:0;padding:17px 22px;
     border-bottom:1px solid var(--line);background:linear-gradient(180deg,#ffffff0a,transparent)}
-  .mdl-h .t{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em;text-transform:uppercase;
-    font-size:14px;color:var(--gold-txt)}
-  .mdl-h .s{font-size:11.5px;color:var(--faint);margin-left:auto;margin-right:34px;
+  /* a window says what it is in plain words, at title size; the gold frame around it
+     is the ornament */
+  .mdl-h .t{font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--text)}
+  .mdl-h .s{font-size:12px;color:var(--faint);margin-left:auto;margin-right:34px;
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .mdl-b{flex:1;min-height:0;overflow:auto;overflow-x:hidden}
   .mdl-f{display:flex;gap:9px;align-items:center;flex-wrap:wrap;flex-shrink:0;
@@ -1434,7 +1542,7 @@
     color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:9px}
   .grp-h::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
   .grp .formgrid{padding:0;gap:15px}
-  .hint{font-size:11.5px;color:var(--faint);line-height:1.55}
+  .hint{font-size:12px;color:var(--faint);line-height:1.55}
   /* align-items:flex-start so a label that wraps to two lines still starts level
      with its checkbox instead of floating half a line below it */
   /* Checkbox option rows: the label grows so a long line wraps cleanly.
@@ -1444,7 +1552,7 @@
   .sub-fld>label,.sub-fld>span{flex:1;min-width:0}
   .sub-fld.inline{align-items:center;gap:10px}
   .sub-fld.inline>label,.sub-fld.inline>span{flex:none;color:var(--muted);font-size:13px}
-  .sub-fld.inline select,.sub-fld.inline input[type=number]{width:auto;min-width:0;padding:6px 10px;font-size:12.5px}
+  .sub-fld.inline select,.sub-fld.inline input[type=number]{width:auto;min-width:0;padding:6px 10px;font-size:13px}
   .sub-fld input[type=checkbox]{margin-top:3px}
   .chk{display:flex;align-items:center;gap:9px}
   .chk label{font-size:13px;color:var(--text);line-height:1.45}
@@ -1478,24 +1586,24 @@
     border-right:1px solid var(--line)}
   .acc-prev-top{display:flex;align-items:center;gap:10px;padding:12px 14px;
     border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--panel) 72%,transparent)}
-  .acc-prev-mark{width:28px;height:28px;border-radius:9px;flex-shrink:0;
+  /* The miniature is only worth anything if it looks like the page it stands in
+     for: the turned gem, display-face actions, the rank as the card sets it. */
+  .acc-prev-mark{width:20px;height:20px;margin:4px;border-radius:2px;flex-shrink:0;transform:rotate(45deg);
     display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 26%,transparent),#10131ae6);
-    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 32%,transparent)}
-  .acc-prev-mark i{display:block;width:9px;height:9px;border-radius:2px;transform:rotate(45deg);
+    background:linear-gradient(135deg,#1e2328,#0a1119);
+    box-shadow:inset 0 0 0 1px var(--gold),0 0 0 2px var(--bg),0 0 0 3px color-mix(in srgb,var(--gold-dim) 90%,transparent)}
+  .acc-prev-mark i{display:block;width:8px;height:8px;border-radius:1px;
     background:linear-gradient(145deg,var(--star),var(--gold) 55%,var(--gold-mid))}
   .acc-prev-brand{min-width:0}
   .acc-prev-t{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em;text-transform:uppercase;
     font-size:12px;color:var(--gold-txt);line-height:1.2}
   .acc-prev-sub{font-size:10px;color:var(--faint);margin-top:2px}
-  .acc-prev-sub b{color:var(--muted);font-weight:600}
+  .acc-prev-sub b{color:var(--gold-txt);font-weight:600}
   .acc-prev-rib{display:flex;gap:2px;height:14px;padding:8px 14px 0}
-  .acc-prev-rib i{flex:1;border-radius:3px;background:color-mix(in srgb,var(--c) 62%,#0b0e14)}
-  .acc-prev-rib i:first-child{border-radius:999px 3px 3px 999px}
-  .acc-prev-rib i:last-child{border-radius:3px 999px 999px 3px}
+  .acc-prev-rib i{flex:1;border-radius:1px;background:color-mix(in srgb,var(--c) 62%,#0b0e14)}
   .acc-prev-cmd{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;
     border-bottom:1px solid var(--line)}
-  .acc-prev-cmd button{padding:5px 9px;font-size:11px}
+  .acc-prev-cmd button,.acc-prev-card .bar button{padding:5px 9px;font:600 11px/1.2 'Inter',system-ui,sans-serif}
   .acc-prev-tools{display:flex;gap:6px;align-items:center;padding:10px 14px 12px}
   .acc-prev-tools input{flex:1;min-width:0;font-size:11px;padding:6px 9px;
     border-color:color-mix(in srgb,var(--teal) 60%,transparent);
@@ -1508,13 +1616,13 @@
     background:color-mix(in srgb,var(--panel) 40%,transparent)}
   .acc-prev-card{padding:11px 12px;border:1px solid var(--line);border-radius:var(--r-sm);
     background:var(--panel);box-shadow:inset 0 1px 0 #ffffff08;flex:1}
-  .acc-prev-card-h{display:flex;align-items:center;gap:7px;margin-bottom:4px}
-  .acc-prev-nm{font-size:13px;font-weight:600;color:var(--text)}
-  .acc-prev-star{color:var(--star);font-size:13px;line-height:1}
-  .acc-prev-rk{font-size:12px;color:var(--gold-txt);margin-left:auto}
+  .acc-prev-card-h{display:flex;flex-wrap:wrap;align-items:center;gap:4px 7px;margin-bottom:6px}
+  .acc-prev-nm{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap}
+  .acc-prev-star{color:var(--star);font-size:13px;line-height:1;margin-left:auto}
+  .acc-prev-rk{flex-basis:100%;font:700 14px/1.1 'Inter',system-ui,sans-serif;letter-spacing:-.01em;color:#7ea6f0}
+  .acc-prev-rk small{font:600 11px Inter,system-ui,sans-serif;text-transform:none;color:var(--muted);margin-left:4px}
   .acc-prev-wl{font-size:11px;color:var(--muted);margin-bottom:8px}
   .acc-prev-card .bar{gap:6px}
-  .acc-prev-card .bar button{padding:4px 8px;font-size:11px}
   .acc-reset{width:27px;height:27px;padding:0;font-size:13px;color:var(--muted)}
   .acc-reset:hover{color:var(--text)}
   @media (max-width:620px){
@@ -1558,11 +1666,28 @@
   #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:80;display:none;
     width:max-content;max-width:min(720px,calc(100vw - 32px));
     background:#161a23f2;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
-    border:1px solid var(--line2);border-radius:999px;color:var(--text);
+    border:1px solid color-mix(in srgb,var(--gold-dim) 70%,transparent);border-radius:var(--r-md);color:var(--text);
     padding:11px 20px;font-size:13px;font-weight:500;box-shadow:var(--sh-3)}
 
   .spin{display:inline-block;animation:sp 1s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* ---- lock screen ----
+     The one screen that is nothing but the brand, and it was a bare form pinned
+     near the top: no mark, no name, a button sized to its word. It is a gate now —
+     the gem, the wordmark, a gold rule, then one field and one full-width action. */
+  #lock{max-width:400px;margin:min(14vh,124px) auto 0}
+  .lock-in{display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px 34px 32px}
+  .lock-in .brand-mark{margin:6px 0 24px}
+  .lock-wm{font-size:30px}
+  .lock-sub{margin-top:8px;font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+  .lock-in .hx-rule{margin:24px 0 20px}
+  .lock-k{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt)}
+  .lock-txt{font-size:13px;color:var(--muted);margin:8px 0 18px;line-height:1.6}
+  #lockPass{width:100%}
+  .lock-err{align-self:stretch;text-align:left;color:var(--danger);font-size:12px;margin-top:8px}
+  .lock-go{width:100%;margin-top:14px;padding:11px 16px}
+  @media (max-width:440px){#lock{margin-top:8vh}.lock-in{padding:34px 22px 26px}.lock-wm{font-size:26px}}
 
   /* ---- entrances ----
      Panels toggle .hidden (display:none), which can't be transitioned. Taking an
@@ -1602,11 +1727,31 @@
   .a-login:hover .ico{transform:scale(1.16)}
   .acts button:hover .ico{transform:rotate(-12deg)}
   .acts button[data-act="check"]:hover .ico{transform:rotate(180deg)}
-  .cmp-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:start}
-  .cmp-vs{align-self:center;color:var(--faint);font-weight:700}
-  .cmp-nm{font-weight:700;margin-bottom:6px}
-  .cmp-rk{font-size:18px;margin-bottom:8px}
-  .cmp-line{font-size:12px;color:var(--muted);margin:3px 0}
+  .cmp{padding:22px 22px 6px}
+  .cmp-head{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:start;margin-bottom:18px}
+  .cmp-side{display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;min-width:0}
+  .cmp-pic{width:56px;height:56px;border-radius:50%;margin-bottom:8px;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(150deg,var(--panel3),var(--panel2));
+    box-shadow:0 0 0 1px var(--gold-dim),0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold) 55%,transparent)}
+  .cmp-pic img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+  .cmp-pic b{font-size:20px;font-weight:600;color:var(--faint)}
+  .cmp-nm{font-size:16px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmp-id{font-size:11px;color:var(--faint);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmp-rk{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:18px;line-height:1.1}
+  .cmp-rk.q{font-family:inherit;text-transform:none;font-weight:600;font-size:14px;color:var(--faint)!important}
+  .cmp-crest{width:22px;height:22px}
+  .cmp-lp{font-size:12px;font-weight:600;color:var(--muted)}
+  .cmp-vs{width:38px;height:38px;margin-top:30px;display:grid;place-items:center;transform:rotate(45deg);
+    background:linear-gradient(135deg,#1e2328,#0a1119);border:1px solid var(--gold-dim);
+    box-shadow:0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold-dim) 60%,transparent)}
+  .cmp-vs span{transform:rotate(-45deg);font-weight:700;font-size:11px;letter-spacing:.06em;color:var(--gold-txt)}
+  .cmp-rows{border-top:1px solid var(--line)}
+  .cmp-row{display:grid;grid-template-columns:minmax(0,1fr) 92px minmax(0,1fr);gap:10px;align-items:center;
+    padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;font-variant-numeric:tabular-nums;color:var(--text)}
+  .cmp-row:last-child{border-bottom:0}
+  .cmp-row>:first-child{text-align:right}
+  .cmp-row .k{text-align:center;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  .cmp-row .win{color:var(--gold-txt);font-weight:600}
   .toast-log{max-width:420px;font-size:12px;line-height:1.45}
 
   .panel-close{transition:color .16s,background .16s,transform .2s cubic-bezier(.22,1,.36,1)}
@@ -1694,7 +1839,7 @@
   }
   @media (pointer:coarse){
     .acts button,.acts a,.lbtns button{font-size:13px;padding:9px 13px}
-    .star{font-size:21px;padding:2px 6px 2px 0}
+    .star{font-size:20px;padding:2px 6px 2px 0}
     button,.btn{padding:10px 15px}
     .seg button{width:40px;height:36px;padding:0} /* keep fixed; don't inherit the fat button padding */
     input,select,textarea{font-size:16px}
@@ -1703,26 +1848,55 @@
     .top{align-items:flex-start;gap:16px}
     .tools{padding:10px}
     .cmd{padding:10px}
-    .cmd-count{margin-left:0;width:100%}
+    /* The count took a row of its own and the layout switch another below it.
+       Commands stretch to fill the rows they land on; the readout and the switch
+       share the last row, the count wrapping its halves rather than the switch
+       falling to a row of its own. */
+    .cmd>button{flex:1 1 auto}
+    .cmd-r{margin-left:0;flex:1 1 100%}
+    .cmd-count{flex:1 1 0;min-width:0;flex-wrap:wrap;row-gap:2px}
     /* wrapped onto four or five rows this is a third of a phone screen; pinning
        that much of the viewport costs more than scrolling back up to it */
     .console{position:static}
   }
+  /* On a phone the filters wrapped wherever they ran out of room — Sort alone on a
+     row, Archived and the checkbox trailing — so every row was a different ragged
+     length. They sit on a two-column grid. (The command row is set out above.) */
+  @media (max-width:560px){
+    .cmd>#bCheckAll{flex-basis:100%} /* the primary gets the full first row, not half of it */
+    .seg button{width:36px}
+    .tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:stretch}
+    .tools>*{min-width:0;width:100%}
+    .tools input[type=search]{grid-column:1/-1;min-width:0}
+    .tools>label{justify-content:center}
+  }
+  @media (max-width:440px){.cmd{gap:8px}.cmd>button{padding-inline:10px}}
   @media (max-width:560px){.formgrid{grid-template-columns:1fr;padding:18px}.card{padding:15px}
     .c-drawer{margin:1px -15px -15px}
-    .cmp-grid{grid-template-columns:1fr;gap:8px}
-    .cmp-vs{text-align:center;padding:4px 0}}
+    /* a phone has ~150px a side: the tier word drops to its own size, the crest
+       above it, so DIAMOND II reads on one line instead of breaking at the space */
+    .cmp{padding:18px 14px 4px}
+    .cmp-head{gap:8px}
+    .cmp-rk{flex-direction:column;gap:4px;font-size:15px}
+    .cmp-rk>span{white-space:nowrap}
+    .cmp-vs{width:30px;height:30px;margin-top:24px}
+    .cmp-row{grid-template-columns:minmax(0,1fr) 86px minmax(0,1fr);gap:8px;font-size:12px}
+    .cmp-row .k{white-space:nowrap}}
 </style>
 </head>
 <body data-atmosphere="spotlight">
 <div class="wrap">
 
-  <div id="lock" class="hx teal hidden" style="max-width:430px;margin:min(16vh,130px) auto"><div class="hx-in" style="padding:28px">
-    <div class="hex-display" style="color:var(--gold-txt);font-size:14px;text-transform:uppercase;margin-bottom:12px">Vault locked</div>
-    <p style="font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.6">This vault is protected with a master password. Enter it to unlock.</p>
-    <input type="password" id="lockPass" placeholder="Master password" autocomplete="current-password" style="width:100%">
-    <div id="lockErr" style="color:var(--danger);font-size:12px;margin-top:6px;display:none">Wrong password — try again.</div>
-    <div class="bar" style="margin-top:12px"><button id="lockBtn" class="b-gold">Unlock</button></div>
+  <div id="lock" class="hx gold hidden" role="region" aria-labelledby="lockTitle"><div class="hx-in lock-in">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <div class="lock-wm hex-display" id="lockTitle">Smurf Tracker</div>
+    <div class="lock-sub">Summoner Vault</div>
+    <div class="hx-rule" aria-hidden="true"></div>
+    <div class="lock-k">Vault locked</div>
+    <p class="lock-txt">Enter your master password to open it.</p>
+    <input type="password" id="lockPass" placeholder="Master password" aria-label="Master password" autocomplete="current-password">
+    <div id="lockErr" class="lock-err" role="alert" style="display:none">Wrong password — try again.</div>
+    <button id="lockBtn" class="b-gold lock-go">Unlock</button>
   </div></div>
 
   <div id="appRoot" class="hidden">
@@ -1772,7 +1946,7 @@
   <div id="awayBand" class="away-band hidden"></div>
 
   <div id="previewBanner" class="hidden" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border:1px solid color-mix(in srgb,var(--gold) 42%,transparent);background:color-mix(in srgb,var(--gold) 9%,transparent);color:var(--text);padding:13px 16px;border-radius:var(--r-md);font-size:13px;margin-bottom:18px">
-    <span>👁 <b>Preview mode</b> — this is example data to show you the layout. Nothing here is saved.</span>
+    <span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> <b>Preview mode</b> — this is example data to show you the layout. Nothing here is saved.</span>
     <button id="bExitPreview" class="b-gold">Exit preview</button>
   </div>
 
@@ -1783,18 +1957,33 @@
       <span class="t" id="helpTitle">How this works</span>
       <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     </div>
-    <div class="mdl-b" style="padding:22px;font-size:13px;color:var(--muted);line-height:1.8">
-    <b style="color:var(--text)">Your data stays here by default.</b> Accounts are saved in this browser on this device. Optional Device sync (Settings) uploads only an encrypted vault blob to your own Worker; Discord/API/rank proxies leave the browser when you enable them. Clearing browser data wipes the vault, so use <b style="color:var(--text)">Export</b> for backups and <b style="color:var(--text)">Import</b> to restore or merge them.<br>
-    <b style="color:var(--text)">Rank checks are free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b style="color:var(--text)">Rank</b> in a card's ⋯ menu to enter it by hand — history, the chart and the stats all work the same either way.<br>
-    <b style="color:var(--text)">Tips:</b> the bar across a card's bottom edge opens <b style="color:var(--text)">Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · search matches names, tags, even ranks (try "gold"), and every word you add narrows it further · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · press <b style="color:var(--text)">/</b> to search, <b style="color:var(--text)">Esc</b> closes panels.<br>
-    <b style="color:var(--text)">Quick find:</b> <b style="color:var(--text)">Ctrl+K</b> (or ⌘K) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.<br>
-    <b style="color:var(--text)">Search operators:</b> beyond plain words the search box takes <b style="color:var(--text)">tier:diamond</b>, <b style="color:var(--text)">region:euw</b>, <b style="color:var(--text)">&gt;plat</b> and <b style="color:var(--text)">&lt;gold</b> for "at least" and "below" (<b style="color:var(--text)">&lt;=gold</b> takes Gold with it), and <b style="color:var(--text)">is:</b> stale · never · flagged · banned · fav · goal. They combine, so <b style="color:var(--text)">&gt;diamond is:stale</b> is one query.<br>
-    <b style="color:var(--text)">Three layouts:</b> cards for browsing, the list for working through the vault a row at a time, and the wall for seeing all sixty at once — click any tile to land back on that account's card.<br>
-    <b style="color:var(--text)">Goals:</b> set a target rank in a card's <b style="color:var(--text)">Rank</b> panel and the card grows a rail showing how far there is left, plus a rough estimate once there's a fortnight of checks to work from.<br>
-    <b style="color:var(--text)">Extra privacy:</b> set a master password in <b style="color:var(--text)">Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.<br>
-    <b style="color:var(--text)">Using this app:</b> free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.<br>
-    <b style="color:var(--text)">More:</b> <b style="color:var(--text)">⋯</b> menu has bulk add (paste a list of Name#TAG) and CSV import · archive an account to hide it without deleting (toggle <b style="color:var(--text)">Archived</b> in the toolbar) · shift-click a card's checkbox to select a range · <b style="color:var(--text)">n</b> for a new account · click a card's note to rewrite it on the spot · pick your own primary and secondary colors in Settings.
-    </div>
+    <!-- One run-on block of ten bold-led paragraphs, read top to bottom or not at
+         all. A label down the left lets someone find "search" or "keys" without
+         reading the privacy notes first; operators and keys look like what you type. -->
+    <div class="mdl-b"><dl class="help">
+      <dt>Your data</dt>
+      <dd><b>Stays here by default.</b> Accounts are saved in this browser on this device. Optional Device sync (Settings) uploads only an encrypted vault blob to your own Worker; Discord/API/rank proxies leave the browser when you enable them. Clearing browser data wipes the vault, so use <b>Export</b> for backups and <b>Import</b> to restore or merge them.</dd>
+      <dt>Rank checks</dt>
+      <dd><b>Free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b>Rank</b> in a card's ⋯ menu to enter it by hand — history, the chart and the stats all work the same either way.</dd>
+      <dt>Layouts</dt>
+      <dd>Cards for browsing, the list for working through the vault a row at a time, and the wall for seeing all sixty at once — click any tile to land back on that account's card.</dd>
+      <dt>Cards</dt>
+      <dd>The bar across a card's bottom edge opens <b>Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot.</dd>
+      <dt>Search</dt>
+      <dd>Matches names, tags, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code>, <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
+      <dt>Quick find</dt>
+      <dd><kbd>Ctrl</kbd><kbd>K</kbd> (or <kbd>⌘</kbd><kbd>K</kbd>) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.</dd>
+      <dt>Keys</dt>
+      <dd><kbd>/</kbd> search · <kbd>n</kbd> new account · <kbd>Esc</kbd> closes panels · shift-click a card's checkbox to select a range.</dd>
+      <dt>Goals</dt>
+      <dd>Set a target rank in a card's <b>Rank</b> panel and the card grows a rail showing how far there is left, plus a rough estimate once there's a fortnight of checks to work from.</dd>
+      <dt>Extra privacy</dt>
+      <dd>Set a master password in <b>Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.</dd>
+      <dt>More</dt>
+      <dd>The <b>⋯</b> menu has bulk add (paste a list of Name#TAG) and CSV import · archive an account to hide it without deleting (toggle <b>Archived</b> in the toolbar) · pick your own primary and secondary colors in Settings.</dd>
+      <dt>Using this app</dt>
+      <dd class="terms">free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.</dd>
+    </dl></div>
     <div class="mdl-f"><button id="bHelpClose" class="b-gold" data-autofocus>Got it</button></div>
   </div></div></div>
 
@@ -1803,66 +1992,60 @@
   <div class="mdl hx teal"><div class="hx-in mdl-in" style="position:relative">
     <div class="mdl-h">
       <span class="t" id="settingsTitle">Settings</span>
-      <span class="s">Everything here is optional and stays in this browser</span>
       <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     </div>
     <div class="mdl-b">
 
       <div class="grp">
-        <div class="grp-h">Rank checks</div>
-        <div class="formgrid">
-          <div class="fld fw">
-            <label>Backend URL (optional — your own rank server, e.g. Cloudflare Worker)</label>
-            <input id="sBackend" placeholder="https://... — leave empty to use the free auto-fetch" autocomplete="off">
+        <div class="grp-h">Appearance</div>
+        <div class="hint" style="margin-bottom:12px">Pick a colour and a preview of the homepage opens beside it. Colours and atmosphere change live; close without saving to put them back.</div>
+        <div class="acc-swatches">
+          <div class="acc-swatch">
+            <input type="color" id="sAccent" aria-label="Primary accent color">
+            <span style="font-size:12px;color:var(--muted);line-height:1.4">Primary<br><span style="color:var(--faint)">title, favorites, scrollbar</span></span>
+            <button id="sAccentReset1" class="acc-reset" type="button" title="Back to the default primary" aria-label="Reset the primary color">↺</button>
           </div>
-          <div class="fld fw">
-            <label>Advanced: Anthropic API key (optional, stored only in this browser)</label>
-            <input type="text" id="sKey" class="mask" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
-          </div>
-          <div class="fld">
-            <label>Model for rank checks</label>
-            <select id="sModel">
-              <option value="claude-sonnet-5">Sonnet — more reliable (~1–2 ct/check)</option>
-              <option value="claude-haiku-4-5">Haiku — cheaper, may miss data</option>
-            </select>
-          </div>
-          <div class="fw hint">
-            Check order: <b>backend URL → API key → free op.gg auto-fetch</b>. With all three empty, checks use the free auto-fetch and cost nothing. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable, but only worth it for power users.
-          </div>
-          <div class="fw hint" id="sDeployHelp" style="margin-top:8px">
-            <b>Deploy the worker:</b> Cloudflare → Workers → Create → paste
-            <code style="user-select:all">cloudflare-worker.js</code> from the repo → Deploy → paste the
-            <code>*.workers.dev</code> URL above. Check-all then uses one batch POST instead of N GETs.
-            For device sync, also bind a KV namespace named <code>VAULT</code> (Settings → Variables → KV bindings).
-            Raw file:
-            <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>
-          </div>
-          <div class="fld">
-            <label>Remind me to export after (days)</label>
-            <input id="sExportDays" type="number" min="1" max="365" value="30" style="max-width:120px">
+          <div class="acc-swatch">
+            <input type="color" id="sAccent2" aria-label="Secondary accent color">
+            <span style="font-size:12px;color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login, Refresh, Add, focus rings</span></span>
+            <button id="sAccentReset2" class="acc-reset" type="button" title="Back to the default secondary" aria-label="Reset the secondary color">↺</button>
           </div>
         </div>
-      </div>
-
-      <div class="grp">
-        <div class="grp-h">Device sync</div>
-        <div class="fw hint" style="margin-bottom:10px">
-          Pushes the <b>encrypted</b> vault blob to your worker (KV). Same sync token on phone and PC.
-          Last write wins. Needs a master password (Security below) and Backend URL + KV binding above.
-          No scrape cache — you are responsible for not hammering op.gg.
-        </div>
-        <div class="fld fw">
-          <label>Sync token (same on every device — treat like a password)</label>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <input type="text" id="sSyncToken" class="mask" placeholder="Generate or paste a long token" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="flex:1;min-width:170px">
-            <button type="button" id="sSyncGen">Generate</button>
+        <div class="atm-block">
+          <div class="atm-h">Atmosphere</div>
+          <div id="sAtmosphere" class="atm-grid" role="radiogroup" aria-label="Page atmosphere">
+            <button type="button" role="radio" data-atmosphere="spotlight" class="atm-tile on" aria-checked="true">
+              <span class="atm-mini" data-atm="spotlight" aria-hidden="true"></span>
+              <span class="atm-name">Spotlight</span>
+              <span class="atm-tip">Quiet glow behind the title from your accents.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="aurora" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="aurora" aria-hidden="true"></span>
+              <span class="atm-name">Aurora</span>
+              <span class="atm-tip">Stronger mirrored colour washes — stays with the window like Spotlight.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="noir" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="noir" aria-hidden="true"></span>
+              <span class="atm-name">Noir</span>
+              <span class="atm-tip">Darker edges and heavier grain. No accent colour — quiet on purpose.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="lattice" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="lattice" aria-hidden="true"></span>
+              <span class="atm-name">Lattice</span>
+              <span class="atm-tip">A soft grid that fades out toward the end of the page.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="stardust" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="stardust" aria-hidden="true"></span>
+              <span class="atm-name">Stardust</span>
+              <span class="atm-tip">Sparse dots that fade out toward the end of the page.</span>
+            </button>
+            <button type="button" role="radio" data-atmosphere="void" class="atm-tile" aria-checked="false">
+              <span class="atm-mini" data-atm="void" aria-hidden="true"></span>
+              <span class="atm-name">Void</span>
+              <span class="atm-tip">Flat background. The UI is the atmosphere.</span>
+            </button>
           </div>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-          <button type="button" id="sSyncPush">Push to cloud</button>
-          <button type="button" id="sSyncPull">Pull from cloud</button>
-        </div>
-        <div id="sSyncStatus" class="hint" style="margin-top:8px"></div>
       </div>
 
       <div class="grp">
@@ -1916,55 +2099,60 @@
       </div>
 
       <div class="grp">
-        <div class="grp-h">Appearance</div>
-        <div class="hint" style="margin-bottom:12px">Click a colour — a miniature of the homepage opens beside the colour popup (clear of it, not on top of it). It leaves when the popup does. Click the square again to close both. Colours and atmosphere preview live; closing without saving puts them back.</div>
-        <div class="acc-swatches">
-          <div class="acc-swatch">
-            <input type="color" id="sAccent" aria-label="Primary accent color">
-            <span style="font-size:12px;color:var(--muted);line-height:1.4">Primary<br><span style="color:var(--faint)">title, favorites, scrollbar</span></span>
-            <button id="sAccentReset1" class="acc-reset" type="button" title="Back to the default primary" aria-label="Reset the primary color">↺</button>
+        <div class="grp-h">Rank checks</div>
+        <div class="formgrid">
+          <div class="fld fw">
+            <label>Backend URL (optional — your own rank server, e.g. Cloudflare Worker)</label>
+            <input id="sBackend" placeholder="https://... — leave empty to use the free auto-fetch" autocomplete="off">
           </div>
-          <div class="acc-swatch">
-            <input type="color" id="sAccent2" aria-label="Secondary accent color">
-            <span style="font-size:12px;color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login, Refresh, Add, focus rings</span></span>
-            <button id="sAccentReset2" class="acc-reset" type="button" title="Back to the default secondary" aria-label="Reset the secondary color">↺</button>
+          <div class="fld fw">
+            <label>Advanced: Anthropic API key (optional, stored only in this browser)</label>
+            <input type="text" id="sKey" class="mask" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
           </div>
-        </div>
-        <div class="atm-block">
-          <div class="atm-h">Atmosphere</div>
-          <div id="sAtmosphere" class="atm-grid" role="radiogroup" aria-label="Page atmosphere">
-            <button type="button" role="radio" data-atmosphere="spotlight" class="atm-tile on" aria-checked="true">
-              <span class="atm-mini" data-atm="spotlight" aria-hidden="true"></span>
-              <span class="atm-name">Spotlight</span>
-              <span class="atm-tip">Quiet glow behind the title from your accents.</span>
-            </button>
-            <button type="button" role="radio" data-atmosphere="aurora" class="atm-tile" aria-checked="false">
-              <span class="atm-mini" data-atm="aurora" aria-hidden="true"></span>
-              <span class="atm-name">Aurora</span>
-              <span class="atm-tip">Stronger mirrored colour washes — stays with the window like Spotlight.</span>
-            </button>
-            <button type="button" role="radio" data-atmosphere="noir" class="atm-tile" aria-checked="false">
-              <span class="atm-mini" data-atm="noir" aria-hidden="true"></span>
-              <span class="atm-name">Noir</span>
-              <span class="atm-tip">Darker edges and heavier grain. No accent colour — quiet on purpose.</span>
-            </button>
-            <button type="button" role="radio" data-atmosphere="lattice" class="atm-tile" aria-checked="false">
-              <span class="atm-mini" data-atm="lattice" aria-hidden="true"></span>
-              <span class="atm-name">Lattice</span>
-              <span class="atm-tip">A soft grid that fades out toward the end of the page.</span>
-            </button>
-            <button type="button" role="radio" data-atmosphere="stardust" class="atm-tile" aria-checked="false">
-              <span class="atm-mini" data-atm="stardust" aria-hidden="true"></span>
-              <span class="atm-name">Stardust</span>
-              <span class="atm-tip">Sparse dots that fade out toward the end of the page.</span>
-            </button>
-            <button type="button" role="radio" data-atmosphere="void" class="atm-tile" aria-checked="false">
-              <span class="atm-mini" data-atm="void" aria-hidden="true"></span>
-              <span class="atm-name">Void</span>
-              <span class="atm-tip">Flat background. The UI is the atmosphere.</span>
-            </button>
+          <div class="fld">
+            <label>Model for rank checks</label>
+            <select id="sModel">
+              <option value="claude-sonnet-5">Sonnet — more reliable (~1–2 ct/check)</option>
+              <option value="claude-haiku-4-5">Haiku — cheaper, may miss data</option>
+            </select>
+          </div>
+          <div class="fw hint">
+            Check order: <b>backend URL → API key → free op.gg auto-fetch</b>. With all three empty, checks use the free auto-fetch and cost nothing. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable, but only worth it for power users.
+          </div>
+          <div class="fw hint" id="sDeployHelp" style="margin-top:8px">
+            <b>Deploy the worker:</b> Cloudflare → Workers → Create → paste
+            <code style="user-select:all">cloudflare-worker.js</code> from the repo → Deploy → paste the
+            <code>*.workers.dev</code> URL above. Check-all then uses one batch POST instead of N GETs.
+            For device sync, also bind a KV namespace named <code>VAULT</code> (Settings → Variables → KV bindings).
+            Raw file:
+            <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>
+          </div>
+          <div class="fld">
+            <label>Remind me to export after (days)</label>
+            <input id="sExportDays" type="number" min="1" max="365" value="30" style="max-width:120px">
           </div>
         </div>
+      </div>
+
+      <div class="grp">
+        <div class="grp-h">Device sync</div>
+        <div class="fw hint" style="margin-bottom:10px">
+          Pushes the <b>encrypted</b> vault blob to your worker (KV). Same sync token on phone and PC.
+          Last write wins. Needs a master password (Security) and a Backend URL with a KV binding (Rank checks), both above.
+          No scrape cache — you are responsible for not hammering op.gg.
+        </div>
+        <div class="fld fw">
+          <label>Sync token (same on every device — treat like a password)</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <input type="text" id="sSyncToken" class="mask" placeholder="Generate or paste a long token" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="flex:1;min-width:170px">
+            <button type="button" id="sSyncGen">Generate</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+          <button type="button" id="sSyncPush">Push to cloud</button>
+          <button type="button" id="sSyncPull">Pull from cloud</button>
+        </div>
+        <div id="sSyncStatus" class="hint" style="margin-top:8px"></div>
       </div>
 
     </div>
@@ -1995,7 +2183,6 @@
       <div class="acc-prev-cmd bar">
         <button class="b-gold" type="button" tabindex="-1">Check all ranks</button>
         <button class="b-teal" type="button" tabindex="-1">+ Add account</button>
-        <button type="button" tabindex="-1">Refresh</button>
       </div>
       <div class="acc-prev-tools">
         <input type="search" value="search or filter…" tabindex="-1" readonly>
@@ -2008,7 +2195,7 @@
         <div class="acc-prev-card-h">
           <span class="acc-prev-nm">Hide on Bush</span>
           <span class="acc-prev-star">★</span>
-          <span class="acc-prev-rk">Diamond I · 52 LP</span>
+          <span class="acc-prev-rk">Diamond I<small>52 LP</small></span>
         </div>
         <div class="acc-prev-wl">190W 215L · 47% WR</div>
         <div class="bar">
@@ -2029,12 +2216,11 @@
   <div class="mdl narrow hx teal"><div class="hx-in mdl-in" style="position:relative">
     <div class="mdl-h">
       <span class="t" id="bulkAddTitle">Bulk add</span>
-      <span class="s">One per line — logins and notes come afterwards</span>
       <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     </div>
     <div class="mdl-b">
     <div class="formgrid">
-      <div class="fw hint">One account per line, format <code>Name#TAG</code>. All get the region below — edit individually afterward for logins/notes.</div>
+      <div class="fw hint">One account per line, as <code>Name#TAG</code>. They all get the region below; add logins and notes to each one afterwards.</div>
       <div class="fld"><label>Region for all</label><select id="baRegion"></select></div>
       <div class="fld fw"><label>Accounts</label><textarea id="baList" data-autofocus rows="6" placeholder="Hide on Bush#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
     </div>
@@ -2063,7 +2249,7 @@
       <div class="fld"><label>Riot name *</label><input id="fName" placeholder="Game name (before the #)" data-autofocus></div>
       <div class="fld"><label>Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234 (no #)"></div>
       <div class="fld"><label>Login username</label><input id="fLogin" placeholder="Riot client login" autocomplete="off"></div>
-      <div class="fld"><label>Password</label><div style="display:flex;gap:6px">
+      <div class="fld pw-fld"><label>Password <span id="pwMeterLabel"></span></label><div style="display:flex;gap:6px">
         <div style="position:relative;flex:1;display:flex">
           <!-- Deliberately not type="password": see the .mask rule in the CSS. -->
           <input type="text" id="fPass" class="mask" placeholder="Stored unencrypted, locally" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" style="width:100%;padding-right:34px">
@@ -2071,8 +2257,7 @@
         </div>
         <button id="fGen" type="button" title="Generate a new safe password (asks first if there's already one)"><svg class="ico" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg> Gen</button>
       </div>
-      <div id="pwMeter" style="height:5px;display:flex;gap:4px;margin-top:8px"></div>
-      <div id="pwMeterLabel" style="font-size:11px;color:var(--muted);margin-top:5px"></div>
+      <div id="pwMeter"></div>
       </div>
       <div class="fld"><label>Email on the account</label><input id="fEmail" placeholder="mail the account is registered to" autocomplete="off"></div>
       <!-- These two were being kept in the Notes box by hand — "birthdate 8/1/1987,
@@ -2125,15 +2310,15 @@
   <div class="console">
   <div class="cmd">
     <button id="bCheckAll" class="b-gold"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg> Check all ranks</button>
-    <button id="bCheckStale" class="hidden" title="Only the ones that are actually out of date">Refresh stale</button>
+    <button id="bCheckStale" class="hidden" title="Accounts that were found and last read over 3 days ago — not the never-checked or not-found ones">Refresh stale</button>
     <button id="bCancelCheck" class="b-danger hidden">Stop</button>
     <button id="bAdd" class="b-teal">+ Add account</button>
-    <span id="count" class="cmd-count"></span>
+    <div class="cmd-r"><span id="count" class="cmd-count"></span>
     <div id="density" class="seg" role="group" aria-label="Layout">
       <button data-density="cards" title="Cards" aria-label="Card view"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
       <button data-density="list" title="List" aria-label="List view"><svg class="ico" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
       <button data-density="wall" title="Wall — the whole vault on one screen" aria-label="Wall view"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="9.5" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16" y="9.5" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><rect x="9.5" y="16" width="5" height="5" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/></svg></button>
-    </div>
+    </div></div>
   </div>
   <div id="runbar" class="runbar hidden"><div class="run-fill"></div><span class="run-txt"></span></div>
   <div id="failbar" class="failbar hidden"></div>
@@ -2219,11 +2404,13 @@
        sees it — creating it lazily left Compare outside body.modal-open and the
        focus trap. -->
   <div id="compareModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Compare">
-    <div class="mdl hx teal"><div class="hx-in mdl-in">
+    <div class="mdl narrow hx teal"><div class="hx-in mdl-in">
       <div class="mdl-h"><span class="t">Compare</span>
         <button class="panel-close" id="cmpClose" data-close-panel title="Close" aria-label="Close">✕</button>
       </div>
       <div class="mdl-b" id="cmpBody"></div>
+      <div class="mdl-f"><button id="cmpClear" type="button">Clear selection</button>
+        <span class="sp hint">Pick accounts with Compare… in a card's ⋯ menu.</span></div>
     </div></div>
   </div>
 
@@ -2254,20 +2441,43 @@ const TIER_COLORS={IRON:"#8a8a8a",BRONZE:"#b0765a",SILVER:"#a8bdd0",GOLD:"#e6c15
    Silver, cut gems for Gold through Diamond, crowned gems with escalating wings
    above that. `d` is the body, `c` a crown behind it, `w` wings, `s` a star,
    `f` facet lines scored over the top. */
+/* Every crest is cut like a gem: flat facets in three tones of its tier colour,
+   lit from the top left on all ten, so the ladder reads as one family. It used to
+   be one white-to-colour gloss gradient laid over each silhouette — the same
+   shine on everything, which is what made them read as blobs at 16px. The
+   silhouettes are unchanged; only the cut is new. Each facet is [tone, path]:
+   L light, T table (the top face of a cut stone), M the tier colour, D shadow,
+   W white. */
+const crestPoly=pts=>"M"+pts.map(p=>p.join(" ")).join("L")+"Z";
+const crestScale=(pts,f)=>pts.map(([x,y])=>[+(12+(x-12)*f).toFixed(2),+(12+(y-12)*f).toFixed(2)]);
+// a bevelled stone: one facet per edge between the outline and a smaller table
+const crestRing=(outer,f,tones)=>{const inner=crestScale(outer,f);
+  return [...outer.map((o,k)=>{const n=(k+1)%outer.length;return [tones[k],crestPoly([o,outer[n],inner[n],inner[k]])]}),["T",crestPoly(inner)]]};
+// the apex body: a hexagon cut into six facets from its centre
+const crestHex=(cy,r)=>{const h=r*.866,c=[12,cy],pts=[[12,cy-r],[12+h,cy-r/2],[12+h,cy+r/2],[12,cy+r],[12-h,cy+r/2],[12-h,cy-r/2]];
+  return pts.map((p,k)=>[["L","M","D","D","M","L"][k],crestPoly([c,p,pts[(k+1)%6]])])};
+const CREST_HEX=[[12,2.5],[20,7.1],[20,16.9],[12,21.5],[4,16.9],[4,7.1]];
+const CREST_OCT=[[8.4,3],[15.6,3],[20,7.4],[20,16.6],[15.6,21],[8.4,21],[4,16.6],[4,7.4]];
 const CRESTS={
-  IRON:{d:"M6.5 6.5h11l2.5 11H4z"},
-  BRONZE:{d:"M4.5 5h15v6.5c0 4.2-3.4 7-7.5 9.5-4.1-2.5-7.5-5.3-7.5-9.5z"},
-  SILVER:{d:"M4.5 4.5h6L12 6.4l1.5-1.9h6V11c0 4.2-3.4 7-7.5 9.5C7.9 18 4.5 15.2 4.5 11z",f:["M12 9.2l3.4 2 3.4-2"]},
-  GOLD:{d:"M12 2.5l8 4.6v9.8L12 21.5l-8-4.6V7.1z",f:["M12 6.6l4.4 2.5v5.8L12 17.4l-4.4-2.5V9.1z"]},
-  PLATINUM:{d:"M8.4 3h7.2L20 7.4v9.2L15.6 21H8.4L4 16.6V7.4z",f:["M8.4 3l3.6 4.6L15.6 3","M4 16.6L12 12l8 4.6","M12 7.6v4.4"]},
-  EMERALD:{d:"M8 3h8l4 4v10l-4 4H8l-4-4V7z",f:["M8.6 7.4h6.8v9.2H8.6z"]},
-  DIAMOND:{d:"M6.8 3.5h10.4L21.5 9.5 12 21 2.5 9.5z",f:["M2.5 9.5h19","M6.8 3.5L8.8 9.5 12 21 15.2 9.5 17.2 3.5"]},
-  MASTER:{d:"M12 8.6l6.2 3.6v6.2L12 22l-6.2-3.6v-6.2z",c:"M4.6 9.4L3.4 3.2l4 3L12 1l4.6 5.2 4-3-1.2 6.2z"},
-  GRANDMASTER:{d:"M12 9.2l5.8 3.4v5.8L12 21.8l-5.8-3.4v-5.8z",c:"M5.2 10L4 4.2l3.9 2.9L12 2.2l4.1 4.9L20 4.2 18.8 10z",
-    w:["M6 12.6L.5 9.4l.4 6.4z","M18 12.6l5.5-3.2-.4 6.4z"]},
-  CHALLENGER:{d:"M12 9.8l5.4 3.1v5.4L12 21.4l-5.4-3.1v-5.4z",c:"M5.4 10.6L4.2 5.2 7.9 8 12 3.4 16.1 8l3.7-2.8-1.2 5.4z",
-    w:["M5.8 13L0 9.6l.4 6.8z","M18.2 13L24 9.6l-.4 6.8z"],
-    s:"M12 0l.9 2 2.1.3-1.55 1.5.4 2.1L12 4.9l-1.85 1 .4-2.1L9 2.3l2.1-.3z"}
+  IRON:[["L","M7 6.5h10l.6 3.5H6.4z"],["M","M6.4 10h11.2l3.2 8H3.2z"],["D","M3.2 18h17.6l-.8 1.6H4z"]],
+  BRONZE:[["L","M12 4.5H4.5V11c0 4.3 3.4 7.1 7.5 9.7z"],["M","M12 4.5h7.5V11c0 4.3-3.4 7.1-7.5 9.7z"],
+    ["T","M12 8.2l3.6 2.1v3.9L12 16.4l-3.6-2.2v-3.9z"]],
+  SILVER:[["L","M4.5 4.5h6L12 6.4V20.6C7.9 18.1 4.5 15.3 4.5 11z"],["M","M19.5 4.5h-6L12 6.4V20.6c4.1-2.5 7.5-5.3 7.5-9.6z"],
+    ["T","M4.5 9l7.5 4.2L19.5 9v2.6l-7.5 4.2-7.5-4.2z"]],
+  GOLD:crestRing(CREST_HEX,.55,["L","M","D","D","M","L"]),
+  PLATINUM:crestRing(CREST_OCT,.5,["L","L","M","D","D","D","M","L"]),
+  EMERALD:(()=>{const A=[8,3],B=[16,3],C=[20,7],D=[20,17],E=[16,21],F=[8,21],G=[4,17],H=[4,7],
+    p=[8.6,7.4],q=[15.4,7.4],r=[15.4,16.6],s=[8.6,16.6];
+    return [["L",crestPoly([A,B,q,p])],["L",crestPoly([B,C,q])],["M",crestPoly([C,D,r,q])],["D",crestPoly([D,E,r])],
+      ["D",crestPoly([E,F,s,r])],["D",crestPoly([F,G,s])],["M",crestPoly([G,H,p,s])],["L",crestPoly([H,A,p])],["T",crestPoly([p,q,r,s])]]})(),
+  DIAMOND:[["L","M6.8 3.5L2.5 9.5h6.3z"],["T","M6.8 3.5h10.4l-2 6H8.8z"],["M","M17.2 3.5l4.3 6h-6.3z"],
+    ["M","M2.5 9.5h6.3L12 21z"],["L","M8.8 9.5h6.4L12 21z"],["D","M15.2 9.5h6.3L12 21z"]],
+  MASTER:[["L","M4.6 9.4 3.4 3.2l4 3L12 1v8.4z"],["M","M19.4 9.4l1.2-6.2-4 3L12 1v8.4z"],...crestHex(15.3,6.9)],
+  GRANDMASTER:[["M","M6 12.6L.5 9.4l.4 6.4z"],["D","M18 12.6l5.5-3.2-.4 6.4z"],
+    ["L","M5.2 10 4 4.2l3.9 2.9L12 2.2V10z"],["M","M18.8 10 20 4.2l-3.9 2.9L12 2.2V10z"],...crestHex(15.5,6.3)],
+  CHALLENGER:[["M","M5.8 13 0 9.6l.4 6.8z"],["D","M18.2 13 24 9.6l-.4 6.8z"],
+    ["L","M5.4 10.6 4.2 5.2 7.9 8 12 3.4v7.2z"],["M","M18.6 10.6l1.2-5.4L16.1 8 12 3.4v7.2z"],...crestHex(15.6,5.8),
+    ["W","M12 0l.9 2 2.1.3-1.55 1.5.4 2.1L12 4.9l-1.85 1 .4-2.1L9 2.3l2.1-.3z"]]
 };
 const DIV_ORDER={IV:0,III:1,II:2,I:3};
 const STALE_MS=3*24*3600*1000;
@@ -2315,8 +2525,18 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="1.9.4";
+const APP_VERSION="2.0.0";
 const APP_CHANGELOG=[
+  {v:"2.0.0",items:[
+    "A new look from the League client: hextech gold on blue-black, gem-cut rank crests",
+    "Cleaner type: ranks, buttons and titles in one clear face",
+    "Refresh stale skips accounts never checked or not found",
+    "Compare is a versus screen; win rate reads as wins against losses",
+    "Busy charts are a clean line, and an axis over two seasons names the year",
+    "The backup reminder has its own Back up now button",
+    "Settings opens on Appearance; Help is a list you can scan; the lock screen is branded",
+    "Phones: the console squares up, and the ⋯ menu opens on screen",
+  ]},
   {v:"1.9.4",items:[
     "Saved data that can't be read is set aside, never saved over",
     "A setting saved in one tab survives a save in another",
@@ -2428,7 +2648,16 @@ let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArc
 // The three questions a vault of sixty accounts raises, as functions, because the
 // filters, the stats panel and the check runner all need to agree on the answers.
 function isChecked(a){return !!(a.stats&&a.stats.updatedAt)}
-function isStale(a){return a.status!=="banned"&&(!isChecked(a)||Date.now()-a.stats.updatedAt>STALE_MS)}
+/* Stale is a reading that has gone old: a profile that was found, last read more
+   than three days ago. It used to include every account with no reading at all —
+   never checked, or checked and not found — so "Refresh N stale" re-tried, on every
+   run, accounts whose Riot side is not set up yet and can only answer "not found"
+   again. Those have their own tiles (Never checked, Needs attention) and their own
+   way to be checked: filter to them and Check N shown. */
+function isStale(a){
+  const s=a.stats;
+  return a.status!=="banned"&&isChecked(a)&&s.found!==false&&!!(s.tier||s.level!=null)&&Date.now()-s.updatedAt>STALE_MS;
+}
 function isRanked(a){const t=a.stats&&a.stats.found!==false&&(a.stats.tier||"").toUpperCase();return !!(t&&t!=="UNRANKED")}
 function isFailed(a){
   if(!a.stats||a.stats.found===false)return false;
@@ -2709,6 +2938,12 @@ const ICON={
   // a person, not a door: the button reveals the stored credentials, it doesn't sign you in anywhere
   user:'<path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-7A4.5 4.5 0 0 0 4 19.5V21"/><circle cx="12" cy="8" r="4"/>',
   note:'<path d="M6.5 3H18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 18.5v-13A2.5 2.5 0 0 1 6.5 3z"/><line x1="8" y1="8.5" x2="16" y2="8.5"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="15.5" x2="13" y2="15.5"/>',
+  // the stale timestamp's warning, drawn so it looks the same on every system
+  alert:'<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  /* A hot streak. It was a 🔥 emoji, and the flame is the right picture — it is the
+     emoji part that was wrong: a cartoon on one phone, a flat glyph on another. Same
+     flame, drawn, so it looks one way everywhere and still runs warm. */
+  flame:'<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
   chart:'<line x1="3" y1="21" x2="21" y2="21"/><rect x="5" y="11" width="4" height="7" rx="1"/><rect x="11" y="6" width="4" height="12" rx="1"/><rect x="17" y="14" width="4" height="4" rx="1"/>',
   /* The ⋯ menu's own set. Ten identical lines of grey text is a wall you read
      word by word; a mark in front of each one is what lets the eye group them
@@ -2780,36 +3015,24 @@ function ageFrom(iso){
 }
 function timeAgo(ts){if(!ts)return null;const s=Math.floor((Date.now()-ts)/1000);if(s<60)return"just now";const m=Math.floor(s/60);if(m<60)return m+" min ago";const h=Math.floor(m/60);if(h<24)return h+" h ago";const d=Math.floor(h/24);return d+(d===1?" day ago":" days ago")}
 function tierColor(t){return TIER_COLORS[(t||"UNRANKED").toUpperCase()]||TIER_COLORS.UNRANKED}
-/* One <defs> for the whole document instead of one per crest. Sixty cards each
-   carrying their own gradient definition would be sixty duplicate ids — invalid
-   markup, and pointless, since every crest of a tier wants exactly the same ramp.
-   Tier colours are fixed constants, not the accent the picker drives, so this is
-   written once at boot and never touched again. */
-function installCrestDefs(){
-  if($("crestDefs"))return;
-  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
-  svg.id="crestDefs";svg.setAttribute("width","0");svg.setAttribute("height","0");
-  svg.setAttribute("aria-hidden","true");svg.style.cssText="position:absolute;pointer-events:none";
-  svg.innerHTML="<defs>"+TIER_ORDER.map(t=>{const c=TIER_COLORS[t];
-    return `<linearGradient id="cr-${t}" x1="0" y1="0" x2=".35" y2="1">`
-      +`<stop offset="0" stop-color="#fff" stop-opacity=".78"/>`
-      +`<stop offset=".42" stop-color="${c}"/>`
-      +`<stop offset="1" stop-color="${c}" stop-opacity=".5"/></linearGradient>`;
-  }).join("")+"</defs>";
-  document.body.appendChild(svg);
-}
 // Sized by CSS through `cls`, never by attributes — the same markup is the 13px
 // mark on a row, the 20px badge on a portrait and the 80px watermark on a card.
+function crestMix(hex,to,amt){
+  const n=parseInt(hex.slice(1),16),t=to==="w"?255:0;
+  return "#"+[16,8,0].map(sh=>Math.round(((n>>sh)&255)*(1-amt)+t*amt).toString(16).padStart(2,"0")).join("");
+}
+// Built once per tier and reused: the same tier is the same markup on every render,
+// which is what lets the grid's "has this card changed?" check skip it.
+const crestCache={};
 function crest(tier,cls){
   const t=(tier||"").toUpperCase(), c=CRESTS[t];
   if(!c)return "";
-  let s=`<svg class="crest${cls?" "+cls:""}" viewBox="0 0 24 24" aria-hidden="true">`;
-  if(c.w)for(const w of c.w)s+=`<path d="${w}" fill="${TIER_COLORS[t]}" opacity=".6"/>`;
-  if(c.c)s+=`<path d="${c.c}" fill="url(#cr-${t})"/>`;
-  if(c.s)s+=`<path d="${c.s}" fill="#fff" opacity=".92"/>`;
-  s+=`<path d="${c.d}" fill="url(#cr-${t})"/>`;
-  if(c.f)for(const f of c.f)s+=`<path d="${f}" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="1"/>`;
-  return s+"</svg>";
+  if(!crestCache[t]){
+    const col=TIER_COLORS[t];
+    const tone={L:crestMix(col,"w",.38),T:crestMix(col,"w",.2),M:col,D:crestMix(col,"k",.34),W:"#fff"};
+    crestCache[t]=c.map(([k,d])=>`<path d="${d}" fill="${tone[k]}"/>`).join("");
+  }
+  return `<svg class="crest${cls?" "+cls:""}" viewBox="0 0 24 24" aria-hidden="true">${crestCache[t]}</svg>`;
 }
 /* Below the ladder there are three more states, and they all used to tie at -1 —
    so an account that came back Unranked sat mixed in with ones nobody had ever
@@ -2871,6 +3094,11 @@ function ladderLP(s){ // absolute position on the ladder, in LP
 // × 100), which is what makes a fixed tier band possible at all.
 const TIER_SPAN=400;
 const LPC_W=200, LPC_H=88;
+/* Past this many checks a dot on every one stops being information and becomes a
+   string of beads — 25 dark-ringed dots over a line that already says where it
+   went, with the band captions hidden behind them. A dense chart is drawn as the
+   line and the latest reading; each dot still appears under the pointer. */
+const LPC_DENSE=12;
 // Which check stands for a day / week / month, op.gg-style: the last one in each
 // bucket, because that is the value the account actually ended the period on.
 // Needs timestamps; without them there are no periods to bucket into.
@@ -3143,10 +3371,10 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
        of its own target, with its outer half unreachable. Those two get a small
        outward reach back; the card clips, so it still cannot touch a neighbour. */
     const hl=anchor===0?-10:0, hr=anchor===100?-10:0;
-    return `<div class="lpc-pt" style="left:${xp.toFixed(2)}%;width:min(${w.toFixed(2)}%,28px);transform:translateX(-${anchor}%);--x:${anchor}%;--y:${py(p.v).toFixed(1)}px;--hl:${hl}px;--hr:${hr}px">`
+    return `<div class="lpc-pt${i===last?" now":""}" style="left:${xp.toFixed(2)}%;width:min(${w.toFixed(2)}%,28px);transform:translateX(-${anchor}%);--x:${anchor}%;--y:${py(p.v).toFixed(1)}px;--hl:${hl}px;--hr:${hr}px">`
       +`<span class="lpc-hit"></span>`
       +`<b style="top:${py(p.v).toFixed(1)}px"><i style="background:${tierColor(p.h.tier)}"></i>`
-      +`<span class="lpc-tip${side}${hi}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(dateLabel(p.h.t))} · ${esc(when)}</em>`:""}</span></b></div>`;
+      +`<span class="lpc-tip${side}${hi}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(dateLabel(p.h.t,"year"))} · ${esc(when)}</em>`:""}</span></b></div>`;
   }).join("");
 
   // Date axis. Ticks sit at the ends and at even time fractions between them, and
@@ -3155,9 +3383,10 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
   let axis="";
   if(timed){
     const n=Math.min(4,Math.max(2,Math.round(LPC_W/60)));
+    const span=t1-t0>300*86400000?"month":"";
     let prev=null;
     for(let k=0;k<n;k++){
-      const f=k/(n-1), txt=dateLabel(t0+(t1-t0)*f);
+      const f=k/(n-1), txt=dateLabel(t0+(t1-t0)*f,span);
       if(txt===prev)continue;
       prev=txt;
       const align=k===0?" l":k===n-1?" r":"";
@@ -3165,7 +3394,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     }
   }
 
-  return `<div class="lpc"><div class="lpc-plot">`
+  return `<div class="lpc${pts.length>LPC_DENSE?" dense":""}"><div class="lpc-plot">`
     +`<svg class="lpc-svg" viewBox="0 0 ${LPC_W} ${LPC_H}" preserveAspectRatio="none" role="img" aria-label="LP over the last ${pts.length} checks">`
     +`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="0">${stops}</linearGradient>`
     +`<linearGradient id="${aid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${cur}" stop-opacity=".3"/><stop offset="1" stop-color="${cur}" stop-opacity="0"/></linearGradient></defs>`
@@ -3181,10 +3410,15 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
 // Compact and unambiguous: "22 Jul" rather than 22/07 or 07/22, which mean
 // different days depending on where the reader lives.
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-function dateLabel(t){
+/* "31 Oct" carries no year, which is fine inside one — but an axis over two
+   seasons read "31 Oct · 16 Oct · 1 Oct", left to right, which looks like time
+   running backwards. Past a year's span the axis counts months with their year
+   ("Oct '24"), and a point's tip names the year whenever it is not this one. */
+function dateLabel(t,mode){
   const d=new Date(+t);
   if(isNaN(d))return"";
-  return d.getDate()+" "+MONTHS[d.getMonth()];
+  if(mode==="month")return MONTHS[d.getMonth()]+" ’"+String(d.getFullYear()).slice(2);
+  return d.getDate()+" "+MONTHS[d.getMonth()]+(mode==="year"&&d.getFullYear()!==new Date().getFullYear()?" "+d.getFullYear():"");
 }
 function postDiscord(content){
   if(!cfg.discordWebhook)return;
@@ -4580,7 +4814,9 @@ function poolLpTrend(pool){
   const sign=delta>0?"↑ +":delta<0?"↓ ":"→ ";
   const headline=sign+Math.abs(delta);
   const note=from+" → "+to+" · avg of counted accounts (Iron→Challenger scale)";
-  return {svg, note, tip:note, headline, delta};
+  // what fits under a tile: the window; the rest of the sentence is the tile's title
+  const window_=from+" → "+to;
+  return {svg, note, tip:note, headline, delta, span:window_};
 }
 // Back-compat for tests that still call the old name.
 function poolLpSpark(pool){const t=poolLpTrend(pool);return t?t.svg:""}
@@ -4639,27 +4875,53 @@ function openCompare(id){
   if(compareIds.length<2){toast("Pick one more account to compare ("+compareIds.length+"/2)");return}
   renderCompare();
 }
+/* A versus screen rather than two loose columns of grey lines: who, at what rank,
+   then the same facts side by side on one row each, with the better of a pair
+   lit — so the answer to "which one" is where the eye lands, not something read
+   off two lists and worked out. */
 function renderCompare(){
   const a=accounts.find(x=>x.id===compareIds[0]), b=accounts.find(x=>x.id===compareIds[1]);
   if(!a||!b){compareIds=[];return}
-  const cell=(acc)=>{
-    const s=acc.stats||{};
-    const tr=wrTrend(acc);
-    const peak=peakInfo(acc).peak;
-    return `<div class="cmp-col">
-      <div class="cmp-nm">${esc(acc.label||acc.gameName)}</div>
-      <div class="cmp-rk" style="color:${tierColor(s.tier)}">${esc(shortRank(s)||"—")}</div>
-      <div class="cmp-line">${esc(s.wins!=null?s.wins+"W":"—")} / ${esc(s.losses!=null?s.losses+"L":"—")}</div>
-      <div class="cmp-line">Peak ${esc(peak||"—")}</div>
-      <div class="cmp-line">WR trend ${tr?(tr.d>0?"+":"")+tr.d+" pp":"—"}</div>
-      <div class="cmp-line">Last played ${acc.lastPlayedAt?timeAgo(acc.lastPlayedAt):(acc.lastLoginAt?timeAgo(acc.lastLoginAt):(s.updatedAt?timeAgo(s.updatedAt):"never"))}</div>
+  const side=acc=>{
+    const s=acc.stats||{}, url=iconUrl(s), ranked=isRanked(acc);
+    const initial=(acc.label||acc.gameName||"?").trim().charAt(0).toUpperCase()||"?";
+    const rank=ranked?tierLabel(s):!hasReading(s)?"Never checked":s.found===false?"Not found":"Unranked";
+    return `<div class="cmp-side">
+      <span class="cmp-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}</span>
+      <div class="cmp-nm" title="${esc(acc.label||acc.gameName)}">${esc(acc.label||acc.gameName)}</div>
+      <div class="cmp-id">${esc(acc.gameName)}#${esc(acc.tagLine)} · ${esc(acc.region)}</div>
+      <div class="cmp-rk${ranked?"":" q"}" style="color:${tierColor(s.tier)}">${ranked?crest(s.tier,"cmp-crest"):""}<span>${esc(rank)}</span></div>
+      <div class="cmp-lp">${ranked&&s.lp!=null?esc(s.lp+" LP"):"&nbsp;"}</div>
     </div>`;
   };
+  const facts=acc=>{
+    const s=acc.stats||{}, wl=winLoss(s), tr=wrTrend(acc);
+    const seen=acc.lastPlayedAt||acc.lastLoginAt||s.updatedAt||0;
+    return {
+      record:wl.w!=null||wl.l!=null?(wl.w!=null?wl.w+"W":"—")+" "+(wl.l!=null?wl.l+"L":"—"):"—",
+      wr:wl.wr, peak:peakInfo(acc).peak||"—", trend:tr?(tr.d>0?"+":"")+tr.d+" pp":"—",
+      seen, level:s.level!=null?String(s.level):"—",
+    };
+  };
+  const fa=facts(a), fb=facts(b);
+  // -1 left is better, 1 right is, 0 neither (or nothing to compare)
+  const cmp=(x,y)=>x==null||y==null||x===y?0:(x>y?-1:1);
+  const row=(label,l,r,better)=>`<div class="cmp-row"><span class="${better<0?"win":""}">${esc(l)}</span>`
+    +`<span class="k">${esc(label)}</span><span class="${better>0?"win":""}">${esc(r)}</span></div>`;
+  const pct=v=>v==null?"—":v+"%";
+  setHTML($("cmpBody"),`<div class="cmp">
+    <div class="cmp-head">${side(a)}<div class="cmp-vs" aria-hidden="true"><span>VS</span></div>${side(b)}</div>
+    <div class="cmp-rows">`
+      +row("Record",fa.record,fb.record,0)
+      +row("Win rate",pct(fa.wr),pct(fb.wr),cmp(fa.wr,fb.wr))
+      +row("Peak",fa.peak,fb.peak,0)
+      +row("WR trend",fa.trend,fb.trend,0)
+      +row("Level",fa.level,fb.level,0)
+      +row("Last played",fa.seen?timeAgo(fa.seen):"never",fb.seen?timeAgo(fb.seen):"never",0)
+    +`</div></div>`);
   const modal=$("compareModal");
   if(!modal){compareIds=[];return}
   modal.classList.remove("hidden");
-  setHTML($("cmpBody"),`<div class="cmp-grid">${cell(a)}<div class="cmp-vs">vs</div>${cell(b)}</div>
-    <button class="btn" id="cmpClear" style="margin-top:12px">Clear selection</button>`);
   $("cmpClear").onclick=()=>{closeCompare()};
 }
 
@@ -5185,6 +5447,7 @@ function renderDash(){
   const bestTxt=best&&rankValue(best.stats)>=0?esc(best.label||best.gameName)+" <small>"+esc(shortRank(best.stats)||"")+"</small>":"—";
   const regCount={};allActive.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
   const regTxt=Object.entries(regCount).map(([r,n])=>r+" "+n).join(" · ");
+  const regN=Object.keys(regCount).length;
   const dist={};ranked.forEach(a=>{const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1});
   const neverN=countPool.filter(neverChecked).length;
   const un=countPool.filter(isUnrankedAnswer).length;
@@ -5197,8 +5460,8 @@ function renderDash(){
   let bk="";
   if(hasStorage){
     const remindDays=clampExportDays(cfg.exportRemindDays);
-    if(!cfg.lastExport)bk="No backup yet — hit Export once your accounts are in.";
-    else if(Date.now()-cfg.lastExport>remindDays*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago — consider exporting.";
+    if(!cfg.lastExport)bk="No backup yet.";
+    else if(Date.now()-cfg.lastExport>remindDays*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago.";
   }
   const dupN=countPool.filter(isDuplicate).length;
   const rotN=countPool.filter(needsRotation).length;
@@ -5222,9 +5485,10 @@ function renderDash(){
   <div class="dash">
     <div class="stat"><div class="k">Accounts</div><div class="v">${allActive.length} <small class="parts"><span>· ${allActive.filter(a=>a.fav).length} ★</span>${bannedN?` <span>· ${bannedN} banned</span>`:""}${archivedN?` <span>· ${archivedN} archived</span>`:""}</small></div></div>
     <div class="stat"><div class="k">Best account</div><div class="v" style="font-size:14px">${bestTxt}</div></div>
-    <div class="stat"><div class="k">Season W/L</div><div class="v">${W}W ${L}L <small>· ${wr} WR</small></div>
-      <div class="s-note">from ${pool.length} counted account${pool.length===1?"":"s"}</div></div>
-    <div class="stat"><div class="k">Regions</div><div class="v" style="font-size:14px">${esc(regTxt)||"—"}</div></div>
+    <div class="stat"><div class="k">Season W/L</div><div class="v nw">${W}<small>W</small> ${L}<small>L</small></div>
+      <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>
+    <div class="stat"><div class="k">Regions</div><div class="v">${regN||"—"}${regN?` <small>${regN===1?"region":"regions"}</small>`:""}</div>
+      ${regTxt?`<div class="s-note">${esc(regTxt)}</div>`:""}</div>
     ${neverN?`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
       <div class="v" style="color:var(--gold-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`:""}
     ${attentionN?`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
@@ -5235,12 +5499,12 @@ function renderDash(){
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`:""}
     ${rotN?`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
       <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`:""}
-    <div class="stat" id="ladderTrendStat">
+    <div class="stat" id="ladderTrendStat"${poolTrend?` title="${esc(poolTrend.note)}"`:""}>
       <div class="k">Group climb</div>
       ${poolTrend
-        ?`<div class="v">${esc(poolTrend.headline)} <small>ladder</small></div>
+        ?`<div class="v">${esc(poolTrend.headline)} <small>LP</small></div>
           <div class="v spark-wrap">${poolTrend.svg}</div>
-          <div class="s-note">${esc(poolTrend.note)}</div>`
+          <div class="s-note">${esc(poolTrend.span)}</div>`
         :`<div class="v">—</div><div class="s-note">needs ≥2 days of history on counted accounts</div>`}
     </div>
     <button class="stat stat-b${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"><div class="k">Needs refresh</div>
@@ -5254,10 +5518,39 @@ function renderDash(){
       +`<b class="${c.wr>=50?"wr-good":""}">${esc(c.wr)}%</b>`
       +`<i class="g">${esc(c.wins)}<em>-</em>${esc(c.losses)}</i></span>`).join("")}</div>`:""}
   </div></div>
-  ${bk?`<div style="font-size:12px;color:var(--muted);margin:-4px 0 16px">${bk}</div>`:""}`);
+  ${bk&&accounts.length&&!previewMode?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:""}`);
   dashJustOpened=false; // consumed by the render above
   bindSparkTip(el);
+  /* The reminder said "hit Export" — and Export lives two clicks away, inside the
+     ⋯ menu at the other end of the header. The way to act on it is now on it:
+     encrypted when there is a master password to encrypt with, plaintext (which
+     asks first whenever logins are in it) when there is not. */
+  const bkNow=el.querySelector("#bkNow");
+  if(bkNow)bkNow.onclick=()=>{vaultPassword?doExportEnc():doExport()};
+  balanceDash();
 }
+/* The figures are a grid that fits as many as it can per row, and how many there
+   are depends on the vault (six to eleven). Eight at 1024px came out six and two:
+   two tiles under a row of six, four empty cells beside them. Instead: as few rows
+   as the width needs, and the figures shared evenly across them — four and four. */
+function dashCols(n,width,min){
+  if(!n||!width)return 0;
+  const most=Math.max(1,Math.floor(width/min)), rows=Math.ceil(n/most);
+  return Math.ceil(n/rows);
+}
+function balanceDash(){
+  const d=document.querySelector("#dash .dash");
+  if(!d)return;
+  const tiles=[...d.children];
+  const narrow=!!(window.matchMedia&&matchMedia("(max-width:720px)").matches); // the .dash rule's own minimum there
+  const cols=dashCols(tiles.length,d.clientWidth,narrow?140:158);
+  if(!cols){d.style.removeProperty("--cols");return}
+  d.style.setProperty("--cols",cols);
+  // the hairline between tiles belongs inside a row, not down the left edge of one
+  tiles.forEach((t,i)=>t.classList.toggle("rs",i%cols===0));
+}
+if("ResizeObserver"in window)new ResizeObserver(()=>balanceDash()).observe($("dash"));
+else window.addEventListener("resize",balanceDash);
 
 /* Every tag in the vault, as a row of chips above the grid. On a vault with one
    tag on one account that is a single word floating in its own band, and on a
@@ -5595,7 +5888,7 @@ function rowHTML(a,i){
       <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wins}W ${losses}L</em>`
         :total>0?`<em>${wins!=null?wins+"W":losses+"L"}</em>`:""}</span>
       <span class="rw-rg">${esc(a.region)}</span>
-      <span class="rw-up${isStale(a)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
+      <span class="rw-up${isStale(a)||!hasReading(s)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     ${open?`<div class="rw-open">
@@ -5661,7 +5954,7 @@ function cardHTML(a,i){
     const dv=lastDelta(a);
     if(dv)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
   }
-  if(isClimbing(hist))deltaChip+='<span class="delta d-up" title="LP has gone up 3 checks in a row">🔥 Climbing</span>';
+  if(isClimbing(hist))deltaChip+='<span class="delta d-up" title="LP has gone up 3 checks in a row">'+icon("flame","flame")+' Climbing</span>';
   if(isDuplicate(a))deltaChip+='<span class="delta" title="Another card shares this Riot ID + region">Duplicate ID</span>';
   if(isUncertain(a))deltaChip+='<span class="delta" title="Parsed without op.gg meta description">Uncertain</span>';
   {
@@ -5805,7 +6098,7 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?"⚠ ":"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
+      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
       <!-- Three buttons, not five, and the ⋯ no longer unfolds a second toolbar
            into the card: it opens one shared floating menu (see cardMenuHTML).
            DPM moved in there with the rest — it is an outbound link you follow
@@ -6069,7 +6362,7 @@ function renderGrid(){
   }
   const grid=$("grid");
   if(accounts.length===0){
-    setHTML(grid,`<div class="hx" data-k="empty" style="grid-column:1/-1"><div class="hx-in empty"><div class="d"><span class="empty-gem"></span></div>No accounts yet. Hit <span style="color:var(--teal-txt)">+ Add account</span> to store your first smurf.<div style="margin-top:12px"><button id="bDemo">👁 Preview with example data</button></div></div></div>`);
+    setHTML(grid,`<div class="hx" data-k="empty" style="grid-column:1/-1"><div class="hx-in empty"><div class="d"><span class="empty-gem"></span></div>No accounts yet. Hit <span style="color:var(--teal-txt)">+ Add account</span> to store your first smurf.<div style="margin-top:12px"><button id="bDemo">${icon("eye")} Preview with example data</button></div></div></div>`);
   }else if(list.length===0){
     /* The zero-accounts state offers Add account and the demo; this one used to
        be a sentence and nothing else — on a page where the filters are spread
@@ -6279,11 +6572,11 @@ function renderPwMeter(){
   const p=$("fPass").value;
   const {score,label}=passwordStrength(p);
   const colors=["#ff6b6b","#ff6b6b","#e8c464","#e8c464","#4ade80"];
-  $("pwMeter").innerHTML=p?Array.from({length:5},(_,i)=>`<span style="flex:1;height:100%;border-radius:999px;transition:background .2s;background:${i<score?colors[score-1]:"var(--line)"}"></span>`).join(""):"";
+  $("pwMeter").innerHTML=p?Array.from({length:5},(_,i)=>`<span style="flex:1;height:100%;border-radius:1px;transition:background .2s;background:${i<score?colors[score-1]:"var(--line)"}"></span>`).join(""):"";
   $("pwMeterLabel").textContent=p?label:"";
 }
 function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted."}
-const DEFAULT_ACCENT="#d8b874", DEFAULT_ACCENT2="#2ee0c2";
+const DEFAULT_ACCENT="#c8aa6e", DEFAULT_ACCENT2="#0ac8b9";
 const DEFAULT_ATMOSPHERE="spotlight";
 const ATMOSPHERES=new Set(["spotlight","aurora","noir","lattice","stardust","void"]);
 function syncAtmosphereUI(mode){
@@ -7317,7 +7610,7 @@ function palCommands(){
   return [
     {k:"add",n:"Add account",s:"New entry in the vault",i:"plus",run:()=>openForm(null)},
     {k:"check",n:"Check all ranks",s:"Refresh everything currently shown",i:"refresh",run:()=>checkAll()},
-    {k:"stale",n:"Refresh stale accounts",s:"Only the ones actually out of date",i:"refresh",run:()=>$("bCheckStale").click()},
+    {k:"stale",n:"Refresh stale accounts",s:"Found accounts last read over 3 days ago",i:"refresh",run:()=>$("bCheckStale").click()},
     {k:"cards list wall layout",n:"Switch layout",s:"Cards, list, wall",i:"chart",run:()=>{
       const order=["cards","list","wall"];
       ui.density=order[(order.indexOf(ui.density)+1)%order.length];
@@ -7364,7 +7657,7 @@ function renderPalette(){
         +`${isRanked(a)?crest(s.tier):""}</span>`
         +`<span class="pal-t"><span class="pal-n">${esc(a.label||a.gameName)}</span>`
         +`<span class="pal-s">${esc(a.gameName)}#${esc(a.tagLine)} · ${esc(a.region)}</span></span>`
-        +`<span class="pal-r" style="color:${col}">${esc(isRanked(a)?shortRank(s)||"":isChecked(a)?"Unranked":"Never checked")}</span>`
+        +`<span class="pal-r${isRanked(a)?"":" q"}" style="color:${col}">${esc(isRanked(a)?shortRank(s)||"":isChecked(a)?"Unranked":"Never checked")}</span>`
         +`</button>`;
     }else{
       const c=it.c;
@@ -8037,7 +8330,6 @@ function boot(){
   $("sAutoEvery").innerHTML=AUTO_EVERY.map(o=>`<option value="${o.v}">${esc(o.label)}</option>`).join("");
   fillAutoLock($("sAutoLock"),0);
   $("baRegion").innerHTML=$("fRegion").innerHTML;
-  installCrestDefs();
   renderVersion();
   hasStorage=storageOK();
   if(!hasStorage){$("banner").classList.add("show")}

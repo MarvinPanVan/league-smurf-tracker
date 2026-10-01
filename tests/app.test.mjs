@@ -537,6 +537,265 @@ test("relock re-shows the lock screen and clears in-memory accounts; the same pa
   assert.equal(win.document.querySelectorAll(".card").length, 1, "the same account must come back after unlocking");
 });
 
+test("an empty password meter holds no band open in the Add form", () => {
+  const win = bootApp();
+  const meter = win.document.getElementById("pwMeter");
+  const word = win.document.getElementById("pwMeterLabel");
+  assert.ok(meter.closest(".pw-fld") && word.closest("label"), "the word rides the Password label");
+  const rule = html.match(/#pwMeter\{[^}]*\}/);
+  assert.ok(rule, "the meter has a rule of its own");
+  assert.match(rule[0], /position:absolute/, "out of the flow, so no height is reserved for it");
+  win.document.getElementById("bAdd").click();
+  const pass = win.document.getElementById("fPass");
+  pass.value = "Tr0ub4dor&3xyz!";
+  pass.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(meter.children.length, 5);
+  assert.notEqual(word.textContent, "");
+  pass.value = "";
+  pass.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(meter.children.length, 0);
+  assert.equal(word.textContent, "");
+});
+
+test("Help is a labelled list a newcomer can scan, and the terms survive word for word", () => {
+  const win = bootApp();
+  const help = win.document.querySelector("#help dl.help");
+  assert.ok(help, "a definition list, not one block of bold-led paragraphs");
+  const labels = [...help.querySelectorAll("dt")].map(d => d.textContent);
+  assert.equal(labels.length, help.querySelectorAll("dd").length, "every label has its text");
+  for (const l of ["Your data", "Rank checks", "Search", "Keys", "Using this app"]) assert.ok(labels.includes(l), l);
+  assert.equal(labels.at(-1), "Using this app", "the terms close it");
+  const terms = help.querySelector("dd.terms").textContent;
+  assert.equal(terms, "free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, "
+    + "publish a modified version, or use it for anything malicious or against Riot's terms.");
+  const codes = [...help.querySelectorAll("code")].map(c => c.textContent);
+  assert.ok(codes.includes("tier:diamond") && codes.includes(">diamond is:stale"), "operators look like what you type");
+  assert.ok(help.querySelectorAll("kbd").length >= 5, "and so do keys");
+});
+
+test("the colour miniature looks like the page it stands in for", () => {
+  const rule = sel => { const m = html.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\{[^}]*\\}")); return m && m[0]; };
+  assert.match(rule(".acc-prev-mark"), /rotate\(45deg\)/, "the turned gem, like the header's");
+  assert.match(rule(".brand-mark"), /rotate\(45deg\)/);
+  assert.doesNotMatch(rule(".acc-prev-rk"), /Cinzel/, "the rank set the way a card sets it");
+  assert.doesNotMatch(html.match(/\.acc-prev-cmd button,\.acc-prev-card \.bar button\{[^}]*\}/)[0], /Cinzel/, "and the actions too");
+  assert.doesNotMatch(rule(".acc-prev-rib i"), /999px/, "the ribbon is plates, not a pill");
+});
+
+test("on a phone the console's readout rides with the layout switch and the filters sit on a grid", () => {
+  const win = bootApp();
+  const count = win.document.getElementById("count"), density = win.document.getElementById("density");
+  assert.ok(count.parentElement === density.parentElement && count.parentElement.classList.contains("cmd-r"),
+    "the count and the switch wrap as one unit, so neither is left on a row alone");
+  const at = w => { const i = html.indexOf("@media (max-width:" + w + "px){\n    .cmd>#bCheckAll"); return i; };
+  assert.ok(at(560) > -1, "the primary takes the first row on a phone");
+  assert.match(html, /\.tools\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/, "two even columns of filters");
+  assert.match(html, /\.tools input\[type=search\]\{grid-column:1\/-1/, "with search across both");
+});
+
+test("every corner comes off the radius scale", () => {
+  // The tokens (3/4/6/8px), round (50%), square, and hairline 1–3px for bars and
+  // rails. Anything else is a radius somebody picked by eye — which is how the page
+  // ended up with twenty of them and nothing that read as one family.
+  const ok = v => /^(var\(--r-(xs|sm|md|lg)\)|calc\(var\(--r-(md|lg)\) - [12]px\)|50%|0|[123]px|inherit)$/.test(v);
+  const bad = [];
+  for (const m of html.matchAll(/border-radius:([^;}]+)/g)) {
+    const parts = m[1].trim().match(/calc\((?:[^()]|\([^()]*\))*\)|\S+/g);
+    if (!parts.every(ok) && m[1].trim() !== "99px") bad.push(m[1].trim());
+  }
+  assert.deepEqual(bad, [], "off-scale radii (99px is the scrollbar thumb, which the OS shapes anyway)");
+});
+
+test("a card's win-rate bar is drawn as a record, not as the goal rail's progress fill", () => {
+  const wr = html.match(/\.wrbar\{[^}]*\}/)[0], goal = html.match(/\.goal-bar\{[^}]*\}/)[0];
+  assert.match(wr, /--danger/, "the losses are the red remainder");
+  assert.doesNotMatch(goal, /--danger/, "a goal's remainder is distance, not losses");
+  assert.match(html, /\.wrbar::after\{[^}]*left:50%/, "and even is marked");
+  assert.match(html.match(/\.rw-bar\{[^}]*\}/)[0], /--danger/, "the list row draws the same record");
+  assert.match(html, /\.rw-bar::after\{[^}]*left:50%/);
+  const win = bootApp([{ id: "w1", region: "EUW", gameName: "W", tagLine: "1", status: "active",
+    stats: { found: true, tier: "GOLD", division: "I", lp: 10, wins: 42, losses: 58, updatedAt: 1 }, history: [], tags: [] }]);
+  assert.equal(win.document.querySelector(".card .wrbar i").style.width, "42%");
+});
+
+test("the dashboard shares its figures evenly across rows instead of leaving a stub row", () => {
+  const win = bootApp();
+  assert.equal(win.dashCols(8, 1338, 158), 8, "one row when they fit");
+  assert.equal(win.dashCols(8, 952, 158), 4, "eight at 1024px: four and four, not six and two");
+  assert.equal(win.dashCols(11, 1338, 158), 6, "eleven: six and five");
+  assert.equal(win.dashCols(8, 356, 140), 2, "a phone: two columns");
+  assert.equal(win.dashCols(8, 0, 158), 0, "no width (hidden, or jsdom): leave it to the CSS");
+  addRealAccount(win, "Dash", "1");
+  const d = win.document.querySelector("#dash .dash");
+  assert.ok(d, "the dashboard rendered");
+  Object.defineProperty(d, "clientWidth", { configurable: true, get: () => 952 });
+  win.balanceDash();
+  const n = d.children.length, cols = Number(d.style.getPropertyValue("--cols"));
+  assert.equal(cols, win.dashCols(n, 952, 158));
+  [...d.children].forEach((t, i) => assert.equal(t.classList.contains("rs"), i % cols === 0, "row starts lose the left hairline"));
+});
+
+test("ranks are set to be read: the text face, bold, and a state that is not a tier stays lighter", async () => {
+  const win = bootApp([
+    { id: "p1", region: "EUW", gameName: "Ranked", tagLine: "1", status: "active",
+      stats: { found: true, tier: "GOLD", division: "I", lp: 5, updatedAt: 1 }, history: [], tags: [] },
+    { id: "p2", region: "EUW", gameName: "Fresh", tagLine: "2", status: "active", stats: null, history: [], tags: [] },
+  ]);
+  win.openPalette();
+  const rows = [...win.document.querySelectorAll("#palList .pal-r")];
+  assert.equal(rows.length, 2);
+  const by = txt => rows.find(r => r.textContent.startsWith(txt));
+  assert.ok(!by("Gold").classList.contains("q"), "a tier is set bold");
+  assert.ok(by("Never checked").classList.contains("q"), "Never checked is not dressed as a tier");
+  const rule = html.match(/\.pal-r:not\(\.q\)[^{]*\{[^}]*\}/)[0];
+  assert.match(rule, /font-weight:700/);
+  assert.doesNotMatch(rule, /Cinzel|uppercase/, "not the inscription capitals — they read as costume, slowly");
+  for (const sel of [".rk-t{", ".rw-rank b{", ".t-rk{", ".acc-prev-rk{"]) {
+    const r = html.slice(html.indexOf(sel), html.indexOf("}", html.indexOf(sel)));
+    assert.doesNotMatch(r, /Cinzel|uppercase/, sel);
+  }
+});
+
+/* Measured in Chromium before the fix: at 390px the ⋯ menu ran from -75px to 163px,
+   at 768px from -68px — the tray sat left on its own row and the menu, right-anchored
+   to its button, hung off the screen's left edge. */
+test("the header tray keeps to the right edge, so the ⋯ menu opens on screen", () => {
+  assert.match(html, /\.top \.bar\{margin-left:auto/);
+  const win = bootApp();
+  const menu = win.document.getElementById("moreMenu");
+  assert.match(menu.getAttribute("style"), /right:0/, "the menu hangs leftward from its button");
+  assert.ok(menu.closest(".top .bar"), "from inside the tray");
+});
+
+test("the page speaks in line icons, not emoji", () => {
+  const h = n => ({ t: Date.now() - n * 86400000, tier: "GOLD", division: "II", lp: 10 + (3 - n) * 20 });
+  const win = bootApp([{ id: "up", region: "EUW", gameName: "Up", tagLine: "1", status: "active",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 70, updatedAt: Date.now() }, history: [h(3), h(2), h(1), h(0)], tags: [] }]);
+  const chip = [...win.document.querySelectorAll(".delta.d-up")].find(d => /Climbing/.test(d.textContent));
+  assert.ok(chip, "the climbing chip is drawn");
+  assert.ok(chip.querySelector("svg.ico.flame"), "with the flame, drawn rather than an emoji");
+  assert.doesNotMatch(chip.textContent, /\u{1F525}/u);
+  assert.ok(win.document.querySelector("#previewBanner svg.ico"), "the preview banner's eye is drawn too");
+  // UI markup only: the Discord post is a chat message, where an emoji belongs
+  const ui = html.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, "").replace(/postDiscord\([^\n]*/g, "");
+  assert.doesNotMatch(ui, /[\u{1F300}-\u{1FAFF}]/u, "no pictographic emoji left in the interface");
+});
+
+test("a chart over more than a year names the year, so its axis never reads backwards", () => {
+  const D = 86400000, now = Date.now();
+  const hist = Array.from({ length: 30 }, (_, k) => ({ t: now - 700 * D + Math.round(700 * D * k / 29), tier: "GOLD", division: "II", lp: 10 + k }));
+  const win = bootApp([{ id: "old", region: "EUW", gameName: "Old", tagLine: "1", status: "active",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 39, updatedAt: now }, history: hist, tags: [] }]);
+  const ticks = [...win.document.querySelectorAll('.card[data-id="old"] .lpc-tick')].map(e => e.textContent);
+  assert.ok(ticks.length >= 2, "the axis is drawn");
+  for (const tk of ticks) assert.match(tk, /^[A-Z][a-z]{2} \u2019\d\d$/, `month and year: ${tk}`);
+  const yrs = ticks.map(tk => +tk.slice(-2));
+  assert.deepEqual(yrs, [...yrs].sort((a, b) => a - b), "and the years only go forward");
+  runScript(win, `window.__tip = dateLabel(${now - 700 * D}, "year"); window.__near = dateLabel(${now}, "year"); window.__short = dateLabel(${now});`);
+  assert.match(win.__tip, /\d{4}$/, "a tip from another year says which");
+  assert.doesNotMatch(win.__near, /\d{4}$/, "this year's dates stay short");
+  assert.equal(win.__short, win.__near);
+});
+
+test("a dense chart is a line and its latest reading, a sparse one keeps a dot per check", () => {
+  const D = 86400000, now = Date.now();
+  const mk = (id, n) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 50, updatedAt: now },
+    history: Array.from({ length: n }, (_, k) => ({ t: now - (n - k) * D, tier: "GOLD", division: "II", lp: 20 + (k % 5) * 10 })), tags: [] });
+  const win = bootApp([mk("many", 20), mk("few", 6)]); // under 3 weeks, so the daily view keeps every check
+  const chart = id => win.document.querySelector(`.card[data-id="${id}"] .lpc`);
+  assert.ok(chart("many").classList.contains("dense"), "20 checks: dense");
+  assert.ok(!chart("few").classList.contains("dense"), "6 checks: every dot is information");
+  const pts = [...chart("many").querySelectorAll(".lpc-pt")];
+  assert.deepEqual(pts.map(p => p.classList.contains("now")), pts.map((_, i) => i === pts.length - 1), "only the latest is marked");
+  assert.match(html, /\.lpc\.dense \.lpc-pt:not\(\.now\):not\(:hover\) i\{transform:scale\(0\)\}/, "and the rest show on hover");
+});
+
+test("the backup reminder carries the way to act on it", () => {
+  const win = bootApp();
+  addRealAccount(win, "Keep", "1");
+  const btn = win.document.getElementById("bkNow");
+  assert.ok(btn, "the reminder has its own button, not a pointer at the ⋯ menu");
+  assert.doesNotMatch(win.document.querySelector(".bk-note").textContent, /hit Export/);
+  let downloads = 0;
+  win.URL.createObjectURL = () => "blob:x"; win.URL.revokeObjectURL = () => {};
+  const orig = win.HTMLAnchorElement.prototype.click;
+  win.HTMLAnchorElement.prototype.click = function () { downloads++; };
+  try { btn.click(); } finally { win.HTMLAnchorElement.prototype.click = orig; }
+  assert.equal(downloads, 1, "one click backs the vault up");
+  assert.ok(appGet(win, "cfg.lastExport") > 0, "and it counts as the backup it is");
+  runScript(win, "renderDash()");
+  assert.equal(win.document.getElementById("bkNow"), null, "so the reminder goes");
+});
+
+test("Login stays the most lit control on a card: filled, glossed and glowing", () => {
+  // It is what the app is used for. A calm-down pass once flattened it; this keeps it lit.
+  const rule = html.match(/\n  \.a-login\{[^}]*\}/)[0];
+  assert.match(rule, /background:linear-gradient/, "a gloss on the fill");
+  assert.match(rule, /box-shadow:0 /, "and a glow under it");
+});
+
+test("a stale card warns with a drawn mark, which a fresh card does not carry", () => {
+  const D = 86400000;
+  const win = bootApp([
+    { id: "s1", region: "EUW", gameName: "Old", tagLine: "1", status: "active",
+      stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() - 6 * D }, history: [], tags: [] },
+    { id: "f1", region: "EUW", gameName: "New", tagLine: "2", status: "active",
+      stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() - 3600000 }, history: [], tags: [] }]);
+  const upd = id => win.document.querySelector(`.card[data-id="${id}"] .upd`);
+  assert.ok(upd("s1").classList.contains("stale"));
+  assert.ok(upd("s1").querySelector("svg.ico"), "the warning is an icon, drawn the same everywhere");
+  assert.equal(upd("s1").textContent, "Updated 6 days ago", "not a \u26A0 character in the text");
+  assert.equal(upd("f1").querySelector("svg"), null, "a fresh card has nothing to warn about");
+});
+
+test("actions and window titles are set in the text face; Cinzel is the wordmark's alone", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const rule = css.match(/\.cmd>button,\.acts>button:not\(\.c-more\)[^{]*\{[^}]*\}/)[0];
+  assert.match(rule, /font-weight:600/);
+  assert.doesNotMatch(rule, /Cinzel|uppercase|letter-spacing/);
+  // Cinzel is the wordmark's now, and the wordmark's only
+  const users = [...css.matchAll(/([^{}]+)\{[^}]*Cinzel[^}]*\}/g)].map(m => m[1].trim());
+  assert.ok(users.every(sel => /hex-display|lock-wm|acc-prev-t/.test(sel)), users.join(" | "));
+});
+
+test("Refresh stale refreshes found accounts that have gone old, not ones with no profile yet", () => {
+  const D = 86400000, old = Date.now() - 6 * D, fresh = Date.now() - 3600000;
+  const acc = (id, stats, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active",
+    stats, history: [], tags: [] }, extra || {});
+  const win = bootApp([
+    acc("rankedOld", { found: true, tier: "GOLD", division: "II", lp: 5, level: 80, updatedAt: old }),
+    acc("unrankedOld", { found: true, tier: "UNRANKED", level: 31, updatedAt: old }),
+    acc("rankedFresh", { found: true, tier: "GOLD", division: "I", lp: 9, level: 90, updatedAt: fresh }),
+    acc("neverChecked", null),
+    acc("notFoundOld", { found: false, updatedAt: old }),
+    acc("bannedOld", { found: true, tier: "SILVER", division: "I", lp: 1, level: 50, updatedAt: old }, { status: "banned" }),
+  ]);
+  const btn = win.document.getElementById("bCheckStale");
+  assert.equal(btn.classList.contains("hidden"), false);
+  assert.equal(btn.textContent, "Refresh 2 stale", "the found ones that have gone old, ranked or not");
+  assert.match(win.document.querySelector("#count [data-flag='stale']").textContent, /^2 need a refresh$/,
+    "and the readout beside it counts the same two");
+  runScript(win, "window.__ids = null; checkAll = function (ids) { window.__ids = ids; };");
+  btn.click();
+  assert.deepEqual([...win.__ids].sort(), ["rankedOld", "unrankedOld"],
+    "never-checked and not-found accounts are not re-tried, banned ones are left alone");
+});
+
+test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
+  const win = bootApp();
+  const lock = win.document.getElementById("lock");
+  assert.ok(lock.querySelector(".brand-mark"), "the gem is on the gate");
+  const title = win.document.getElementById(lock.getAttribute("aria-labelledby"));
+  assert.ok(title && lock.contains(title), "the region is named by its own wordmark");
+  assert.equal(title.textContent, "Smurf Tracker");
+  assert.equal(win.document.getElementById("lockPass").getAttribute("aria-label"), "Master password",
+    "the field has a name that is not its placeholder");
+  assert.equal(win.document.getElementById("lockErr").getAttribute("role"), "alert", "a wrong password is announced");
+  assert.ok(win.document.getElementById("lockBtn").classList.contains("lock-go"), "one full-width action");
+  assert.equal(lock.querySelector(".bar"), null, "not a toolbar with one button in it");
+});
+
 test("opening one panel (settings/form/bulk-add/help) always closes the others", () => {
   const win = bootApp();
   const hidden = id => win.document.getElementById(id).classList.contains("hidden");
@@ -1027,7 +1286,7 @@ test("both accents persist, and leaving Settings unsaved puts the previewed colo
 });
 
 // the two the app ships with, which the resets have to land back on exactly
-const DEFAULT_ACCENT = "#d8b874", DEFAULT_ACCENT2 = "#2ee0c2";
+const DEFAULT_ACCENT = "#c8aa6e", DEFAULT_ACCENT2 = "#0ac8b9";
 
 /* Each colour gets its own way back. They preview like the pickers do rather than
    saving on the spot — a reset that wrote cfg immediately would be the one control
@@ -2446,7 +2705,8 @@ test("atmosphere previews live and only sticks after Save", () => {
   assert.deepEqual(tiles, ["spotlight", "aurora", "noir", "lattice", "stardust", "void"]);
 
   // colours sit above the atmosphere picker in Appearance
-  const appearance = win.document.querySelector("#settings .grp:last-of-type");
+  const appearance = [...win.document.querySelectorAll("#settings .grp")]
+    .find(g => g.querySelector(".grp-h").textContent.trim() === "Appearance");
   const accent = appearance.querySelector("#sAccent");
   const atm = appearance.querySelector("#sAtmosphere");
   assert.ok(accent && atm, "both live in Appearance");
@@ -2488,12 +2748,15 @@ test("atmosphere previews live and only sticks after Save", () => {
 test("the settings body is grouped rather than one flat run of fields", () => {
   const win = bootApp();
   const groups = [...win.document.querySelectorAll("#settings .grp-h")].map(g => g.textContent.trim());
-  assert.deepEqual(groups, ["Rank checks", "Device sync", "Automatic refresh", "Alerts", "Security", "Appearance"]);
+  // what most people change first; the plumbing (rank server, API key, sync) last,
+  // with sync after both of the things it needs
+  assert.deepEqual(groups, ["Appearance", "Automatic refresh", "Alerts", "Security", "Rank checks", "Device sync"]);
   // header and footer sit outside the scrolling middle, so Save is always reachable
   const body = win.document.querySelector("#settings .mdl-b");
   assert.ok(body, "there is a scroll region");
   assert.equal(body.contains(win.document.getElementById("sSave")), false, "Save is pinned, not scrolled");
   assert.ok(body.contains(win.document.getElementById("sBackend")), "the fields are the part that scrolls");
+  assert.doesNotMatch(body.textContent, /clear of it|not on top of it/, "the hint talks about colours, not about layout");
 });
 
 // ---- second review pass ----
@@ -2823,24 +3086,23 @@ const ladderSeed = () => {
   return out;
 };
 
-// Every crest points at a gradient in one shared <defs>. Minting a gradient per
-// crest would be sixty duplicate ids on a full vault — and, worse, would make each
-// card's markup differ from the last render, which is exactly what used to defeat
-// syncGrid's "has this changed?" check.
-test("every crest reference resolves against a single shared defs block", () => {
+// A crest used to point at a gradient in one shared <defs>; minting one per crest
+// would have been sixty duplicate ids, and made each card's markup differ from the
+// last render — which is what defeats syncGrid's "has this changed?" check. Crests
+// are now flat facets, so there are no ids to collide, and the invariant that
+// remains is the second one: a tier is the same markup every time.
+test("crests are cut in facets, lit the same way, and a tier is the same markup every render", () => {
   const win = bootApp(ladderSeed());
-  const defs = win.document.getElementById("crestDefs");
-  assert.ok(defs, "the defs block is installed at boot");
-  assert.equal(defs.querySelectorAll("linearGradient").length, 10, "one gradient per tier");
-
-  const refs = [...win.document.querySelectorAll('.crest path[fill^="url("]')];
-  assert.ok(refs.length >= 10, "the ladder draws crests");
-  for (const p of refs) {
-    const id = p.getAttribute("fill").match(/url\(#(.+?)\)/)[1];
-    assert.ok(win.document.getElementById(id), `#${id} exists`);
+  assert.equal(win.document.querySelectorAll(".crest [id], .crest [fill^='url(']").length, 0, "no gradients, no ids");
+  const gold = [...win.document.querySelectorAll(".rk-crest")].map(c => c.innerHTML);
+  assert.ok(gold.length >= 10, "the ladder draws crests");
+  runScript(win, "window.__a = crest('GOLD'); window.__b = crest('gold','x'); window.__fills = [...new Set([...crest('DIAMOND').matchAll(/fill=\"(#[0-9a-f]{6})\"/g)].map(m => m[1]))];");
+  assert.equal(win.__a.replace(/class="[^"]*"/, ""), win.__b.replace(/class="[^"]*"/, ""), "same tier, same paths");
+  assert.ok(win.__fills.length >= 3, "a light, a mid and a shadow tone — facets, not one flat fill");
+  for (const t of ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER"]) {
+    runScript(win, `window.__c = crest("${t}")`);
+    assert.match(win.__c, /<path d="M/, `${t} draws`);
   }
-  const ids = [...win.document.querySelectorAll("[id^=cr-]")].map(e => e.id);
-  assert.equal(new Set(ids).size, ids.length, "and no id is defined twice");
 });
 
 test("a ranked card carries its tier crest, an unranked one carries none", () => {
@@ -4496,18 +4758,56 @@ test("compare modal is in the document at boot and closes via Escape / closeAllP
   assert.equal(appGet(win, "compareIds.length"), 0);
 });
 
-test("compare W/L values are escaped in the modal HTML", () => {
+test("compare escapes every account-supplied string in the modal HTML", () => {
   const win = bootApp([
-    { id: "x1", region: "EUW", gameName: "X", tagLine: "A", status: "active",
+    { id: "x1", region: "EUW", gameName: "\"onerror", tagLine: "<b>", status: "active", label: "<img src=x>",
       stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: "<img>", losses: "\"onerror", updatedAt: 1 }, history: [], tags: [] },
     { id: "x2", region: "EUW", gameName: "Y", tagLine: "B", status: "active",
       stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: 1 }, history: [], tags: [] },
   ]);
   win.openCompare("x1");
   win.openCompare("x2");
-  const html = win.document.getElementById("cmpBody").innerHTML;
-  assert.doesNotMatch(html, /<img>/);
-  assert.match(html, /&lt;img&gt;/);
+  const body = win.document.getElementById("cmpBody");
+  // Serialised HTML leaves "<" bare inside attribute values, so ask the DOM what
+  // the strings became instead of pattern-matching markup.
+  assert.equal(body.querySelector(".cmp-nm").textContent, "<img src=x>");
+  assert.equal(body.querySelector(".cmp-nm").title, "<img src=x>", "and the tooltip holds the same text");
+  assert.equal(body.querySelector(".cmp-id").textContent, "\"onerror#<b> · EUW", "name and tag arrive as text");
+  assert.equal(body.querySelectorAll("img").length, 0, "no element came out of the data");
+});
+
+test("compare is a versus screen: one row per fact, the better win rate lit", () => {
+  const win = bootApp([
+    { id: "c1", region: "EUW", gameName: "Alpha", tagLine: "A", status: "active",
+      stats: { found: true, tier: "GOLD", division: "II", lp: 20, wins: 10, losses: 8, level: 40, updatedAt: 1 }, history: [], tags: [] },
+    { id: "c2", region: "KR", gameName: "Beta", tagLine: "B", status: "active",
+      stats: { found: true, tier: "PLATINUM", division: "IV", lp: 5, wins: 20, losses: 10, level: 90, updatedAt: 1 }, history: [], tags: [] },
+    { id: "c3", region: "NA", gameName: "Gamma", tagLine: "C", status: "active", stats: null, history: [], tags: [] },
+  ]);
+  win.openCompare("c1");
+  win.openCompare("c2");
+  const body = win.document.getElementById("cmpBody");
+  const sides = body.querySelectorAll(".cmp-side");
+  assert.equal(sides.length, 2);
+  assert.equal(sides[0].querySelector(".cmp-rk").textContent, "Gold II");
+  assert.equal(sides[1].querySelector(".cmp-lp").textContent, "5 LP");
+  const rows = [...body.querySelectorAll(".cmp-row")];
+  assert.deepEqual(rows.map(r => r.querySelector(".k").textContent),
+    ["Record", "Win rate", "Peak", "WR trend", "Level", "Last played"]);
+  const wr = rows[1].children;
+  assert.equal(wr[0].textContent, "56%");
+  assert.equal(wr[2].textContent, "67%");
+  assert.ok(wr[2].classList.contains("win") && !wr[0].classList.contains("win"), "the higher win rate is the lit one");
+  assert.equal(body.querySelectorAll(".cmp-row .win").length, 1, "only facts with a better side are lit");
+  const clear = win.document.getElementById("cmpClear");
+  assert.ok(clear.closest(".mdl-f") && !body.contains(clear), "Clear sits in the window's footer, not in the scroll");
+  win.closeCompare();
+  win.openCompare("c1");
+  win.openCompare("c3");
+  const q = win.document.querySelectorAll("#cmpBody .cmp-rk")[1];
+  assert.ok(q.classList.contains("q"), "a side with no rank is not dressed as one");
+  assert.equal(q.textContent, "Never checked");
+  assert.equal(win.document.querySelectorAll("#cmpBody .cmp-row .win").length, 0, "nothing to beat without a win rate");
 });
 
 test("closeAllPanels / closeCompare clears selection and hides Compare", () => {
@@ -6177,4 +6477,31 @@ test("a toast can use the width of a phone, not half of it", () => {
   assert.match(rule[0], /width:max-content/, "sized by its text rather than by the half-viewport left over");
   assert.match(rule[0], /max-width:min\(720px,calc\(100vw - 32px\)\)/,
     "never wider than the screen, nor than the measure a desktop always had");
+});
+
+/* Three tiles were laid out as prose: Season W/L broke "2311W / 2450L" over two
+   lines, Regions was a three-line paragraph in heading weight, and Group climb
+   ended in three lines of 9px explanation. And the four clickable tiles sat 7px
+   lower than the rest: every button gets a 7px flex gap, on top of the label's
+   own margin. Geometry is read from the declarations; the result was measured
+   in Chromium at 1440/1280/1024/768/390 — one baseline, no label wrapping. */
+test("the dashboard reads as one row of figures", () => {
+  const acc = (id, region, extra) => Object.assign({ id, gameName: id, tagLine: "1", region, status: "active",
+    tags: [], history: [], stats: { found: true, tier: "GOLD", division: "II", lp: 50, wins: 1200, losses: 1100,
+    updatedAt: Date.now() } }, extra);
+  const win = bootApp([acc("a", "EUW"), acc("b", "EUW"), acc("c", "KR")]);
+  const tile = name => [...win.document.querySelectorAll("#dash .stat")]
+    .find(s => s.querySelector(".k").textContent.trim() === name);
+
+  const wl = tile("Season W/L").querySelector(".v");
+  assert.ok(wl.classList.contains("nw"), "the record holds together on one line");
+  assert.match(wl.textContent.replace(/\s+/g, " "), /^3600W 3300L$/);
+  assert.match(tile("Season W/L").querySelector(".s-note").textContent, /52% WR/, "the rate moves under it");
+
+  const reg = tile("Regions");
+  assert.match(reg.querySelector(".v").textContent.replace(/\s+/g, " "), /^2 regions$/, "a figure, like every other tile");
+  assert.match(reg.querySelector(".s-note").textContent, /EUW 2 · KR 1/, "the breakdown is the note");
+
+  const rule = html.match(/\.stat-b\{[^}]*\}/);
+  assert.match(rule[0], /gap:0/, "a clickable tile does not inherit the button's flex gap");
 });
