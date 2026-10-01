@@ -1137,8 +1137,14 @@
   .c-gm,.c-kd{color:var(--faint);font-size:11px;text-align:right}
   .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;letter-spacing:.12em;
     pointer-events:none;line-height:1;opacity:.9}
-  .wrbar{height:5px;background:var(--panel2);border-radius:1px;overflow:hidden}
-  .wrbar i{display:block;height:100%;border-radius:1px}
+  /* Wins against losses, the way op.gg draws a record — not a fill on an empty
+     track. That was exactly the goal rail's picture two lines below, so a 42% win
+     rate and a goal 42% of the way there looked the same. The losses are the red
+     remainder, and a notch marks even. */
+  .wrbar{position:relative;height:4px;border-radius:1px;overflow:hidden;
+    background:color-mix(in srgb,var(--danger) 34%,var(--panel2))}
+  .wrbar i{display:block;height:100%;border-radius:1px 0 0 1px;box-shadow:1px 0 0 var(--bg)}
+  .wrbar::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--bg)}
   .delta{font-size:11px;padding:2px 8px;border-radius:var(--r-xs);font-weight:600;display:inline-block;white-space:nowrap}
   .d-up{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
   .d-down{color:var(--danger);background:color-mix(in srgb,var(--danger) 15%,transparent)}

@@ -606,6 +606,16 @@ test("every corner comes off the radius scale", () => {
   assert.deepEqual(bad, [], "off-scale radii (99px is the scrollbar thumb, which the OS shapes anyway)");
 });
 
+test("a card's win-rate bar is drawn as a record, not as the goal rail's progress fill", () => {
+  const wr = html.match(/\.wrbar\{[^}]*\}/)[0], goal = html.match(/\.goal-bar\{[^}]*\}/)[0];
+  assert.match(wr, /--danger/, "the losses are the red remainder");
+  assert.doesNotMatch(goal, /--danger/, "a goal's remainder is distance, not losses");
+  assert.match(html, /\.wrbar::after\{[^}]*left:50%/, "and even is marked");
+  const win = bootApp([{ id: "w1", region: "EUW", gameName: "W", tagLine: "1", status: "active",
+    stats: { found: true, tier: "GOLD", division: "I", lp: 10, wins: 42, losses: 58, updatedAt: 1 }, history: [], tags: [] }]);
+  assert.equal(win.document.querySelector(".card .wrbar i").style.width, "42%");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
