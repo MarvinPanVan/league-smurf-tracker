@@ -894,6 +894,35 @@ test("the release notes are the running version's own changelog entry", async ()
   for (const it of items) assert.ok(notes.includes("- " + it), it);
 });
 
+test("decay: Diamond and up are warned before their bank runs out, from the games seen between checks", () => {
+  const D = 86400000, now = Date.now();
+  const acc = (id, tier, rows, cur) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [],
+    history: rows.map(([ago, g]) => ({ t: now - ago * D, tier, division: tier === "DIAMOND" ? "II" : null, lp: 50, w: g, l: 0 })),
+    stats: { found: true, tier, division: tier === "DIAMOND" ? "II" : null, lp: 50, wins: cur, losses: 0, updatedAt: now - 3600000 } });
+  const win = bootApp([
+    acc("idle", "DIAMOND", [[20, 100]], 100),          // reached 20 days ago, no game since: 28 - 20 = 8, today ~7
+    acc("gone", "DIAMOND", [[40, 100]], 100),          // 40 days without a game: decaying
+    acc("active", "DIAMOND", [[20, 100], [1, 103]], 103), // three games since: banked again
+    acc("master", "MASTER", [[10, 300]], 300),         // Master: a 14-day bank, 10 days idle
+    acc("plat", "PLATINUM", [[60, 10]], 10),           // no decay below Diamond
+  ]);
+  const days = id => { runScript(win, `window.__d = decayDays(accounts.find(a => a.id === "${id}"))`); return win.__d; };
+  assert.equal(days("idle"), 7);
+  assert.ok(days("gone") < 0, "past the bank: decaying");
+  assert.ok(days("active") > 7, "games bank days again");
+  assert.equal(days("master"), 3, "Master: 14 days, not 28");
+  assert.equal(days("plat"), null, "Platinum does not decay");
+  const chip = id => [...win.document.querySelectorAll(`.card[data-id="${id}"] .delta`)].map(d => d.textContent.trim()).join("|");
+  assert.match(chip("idle"), /Decay in ~7d/);
+  assert.match(chip("gone"), /Decaying/);
+  assert.doesNotMatch(chip("active"), /Decay/);
+  const tile = win.document.querySelector('#dash [data-flag="decay"]');
+  assert.ok(tile, "the dashboard counts them");
+  assert.equal(tile.querySelector(".v").textContent, "3");
+  tile.click();
+  assert.deepEqual([...win.document.querySelectorAll(".card")].map(c => c.dataset.id).sort(), ["gone", "idle", "master"]);
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
