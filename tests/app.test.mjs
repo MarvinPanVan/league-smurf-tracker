@@ -557,6 +557,22 @@ test("an empty password meter holds no band open in the Add form", () => {
   assert.equal(word.textContent, "");
 });
 
+test("Help is a labelled list a newcomer can scan, and the terms survive word for word", () => {
+  const win = bootApp();
+  const help = win.document.querySelector("#help dl.help");
+  assert.ok(help, "a definition list, not one block of bold-led paragraphs");
+  const labels = [...help.querySelectorAll("dt")].map(d => d.textContent);
+  assert.equal(labels.length, help.querySelectorAll("dd").length, "every label has its text");
+  for (const l of ["Your data", "Rank checks", "Search", "Keys", "Using this app"]) assert.ok(labels.includes(l), l);
+  assert.equal(labels.at(-1), "Using this app", "the terms close it");
+  const terms = help.querySelector("dd.terms").textContent;
+  assert.equal(terms, "free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, "
+    + "publish a modified version, or use it for anything malicious or against Riot's terms.");
+  const codes = [...help.querySelectorAll("code")].map(c => c.textContent);
+  assert.ok(codes.includes("tier:diamond") && codes.includes(">diamond is:stale"), "operators look like what you type");
+  assert.ok(help.querySelectorAll("kbd").length >= 5, "and so do keys");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
