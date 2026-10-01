@@ -729,6 +729,14 @@ test("Login is a flat fill: primary on its card, without a glow repeated sixty t
   assert.doesNotMatch(rule + hover, /box-shadow:(?!none)/, "no glow");
 });
 
+test("a stale card says so in red with its dot, not with a warning glyph as well", () => {
+  const win = bootApp([{ id: "s1", region: "EUW", gameName: "Old", tagLine: "1", status: "active",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() - 6 * 86400000 }, history: [], tags: [] }]);
+  const upd = win.document.querySelector('.card[data-id="s1"] .upd');
+  assert.ok(upd.classList.contains("stale"));
+  assert.match(upd.textContent, /^Updated 6 days ago$/);
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
