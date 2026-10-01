@@ -3097,6 +3097,62 @@ test("the modal panels keep every control the app talks to", () => {
   assert.ok(win.document.getElementById("help").contains(win.document.getElementById("bHelpClose")));
 });
 
+test("themes: one click sets both colours and the atmosphere, kept only on Save", () => {
+  const win = bootApp();
+  const doc = win.document, root = doc.documentElement.style;
+  const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  const tiles = () => [...doc.querySelectorAll("#sThemes [data-theme]")];
+  const on = () => tiles().filter(t => t.getAttribute("aria-checked") === "true").map(t => t.dataset.theme);
+  doc.getElementById("bSettings").click();
+  assert.deepEqual(tiles().map(t => t.dataset.theme), ["hextech", "shadowisles", "noxus", "piltover", "freljord", "ionia", "void", "rank"]);
+  assert.deepEqual(on(), ["hextech"], "the defaults are the Hextech theme");
+  doc.querySelector('#sThemes [data-theme="noxus"]').click();
+  assert.equal(root.getPropertyValue("--gold"), "#b8c0c8");
+  assert.equal(root.getPropertyValue("--teal"), "#d33b3b");
+  assert.deepEqual(on(), ["noxus"]);
+  doc.getElementById("sClose").click();
+  assert.equal(root.getPropertyValue("--gold"), "#c8aa6e", "closing without saving puts it back");
+  assert.equal(doc.body.dataset.atmosphere, "spotlight");
+  doc.getElementById("bSettings").click();
+  doc.querySelector('#sThemes [data-theme="piltover"]').click();
+  assert.equal(doc.body.dataset.atmosphere, "lattice", "a theme brings its atmosphere");
+  doc.getElementById("sSave").click();
+  assert.equal(cfg().accent, "#e0a458");
+  assert.equal(cfg().accent2, "#3f9cff");
+  assert.equal(cfg().atmosphere, "lattice");
+  doc.getElementById("bSettings").click();
+  assert.deepEqual(on(), ["piltover"], "reopening shows the theme in force");
+  // a picker of your own is no theme at all
+  const pick = doc.getElementById("sAccent");
+  pick.value = "#123456"; pick.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.deepEqual(on(), []);
+});
+
+test("themes: My best rank follows the highest tier, and moves when you climb", () => {
+  const acc = (id, tier, division) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier, division, lp: 10, wins: 1, losses: 1, updatedAt: Date.now() } });
+  const win = bootApp([acc("g", "GOLD", "I"), acc("d", "DIAMOND", "IV"),
+    Object.assign(acc("b", "CHALLENGER", null), { status: "banned" })]);
+  const doc = win.document, root = doc.documentElement.style;
+  const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  doc.getElementById("bSettings").click();
+  doc.querySelector('#sThemes [data-theme="rank"]').click();
+  doc.getElementById("sSave").click();
+  assert.equal(cfg().rankTheme, true);
+  assert.equal(cfg().accent ?? null, null, "nothing fixed is stored; it is worked out");
+  assert.equal(root.getPropertyValue("--gold"), "#7ea6f0", "Diamond — a banned Challenger does not count");
+  assert.equal(root.getPropertyValue("--teal"), "#c8aa6e", "Diamond's blue sits near teal, so its partner is gold");
+  runScript(win, `{ const a = accounts.find(x => x.id === "g"); a.stats = Object.assign({}, a.stats, { tier: "EMERALD", division: "I" }); renderDash(); }`);
+  assert.equal(root.getPropertyValue("--gold"), "#7ea6f0", "a lower climb changes nothing");
+  runScript(win, `{ const a = accounts.find(x => x.id === "d"); a.stats = Object.assign({}, a.stats, { tier: "MASTER", division: null }); renderDash(); }`);
+  assert.equal(root.getPropertyValue("--gold"), "#b16ce8", "a new best tier recolours the app");
+  assert.equal(root.getPropertyValue("--teal"), "#0ac8b9", "Master's purple keeps the teal");
+  // and when the best one goes, the next best takes over
+  runScript(win, `accounts.find(x => x.id === "d").status = "banned"; renderDash();`);
+  assert.equal(root.getPropertyValue("--gold"), "#3ddc84");
+  assert.equal(root.getPropertyValue("--teal"), "#c8aa6e");
+});
+
 test("atmosphere previews live and only sticks after Save", () => {
   const win = bootApp();
   const body = win.document.body;
