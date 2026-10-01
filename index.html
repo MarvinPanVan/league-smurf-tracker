@@ -1601,6 +1601,21 @@
   /* a labelled group per concern, instead of eight unrelated fields in one grid */
   .grp{padding:20px 22px}
   .grp+.grp{border-top:1px solid var(--line)}
+  .stabs{display:flex;gap:2px;flex-shrink:0;padding:0 14px;border-bottom:1px solid var(--line);
+    overflow-x:auto;scrollbar-width:none}
+  .stabs::-webkit-scrollbar{display:none}
+  #settings .stabs button{background:none;border:0;border-radius:0;box-shadow:inset 0 -2px 0 transparent;
+    padding:12px 10px 11px;font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;flex-shrink:0}
+  #settings .stabs button:hover{color:var(--text);background:none}
+  #settings .stabs button[aria-selected="true"]{color:var(--gold-txt);box-shadow:inset 0 -2px 0 var(--gold)}
+  /* only the open tab's groups; the line between groups only between visible ones */
+  #settings .grp[data-tab]{display:none;border-top:0}
+  #settings[data-tab="look"] .grp[data-tab="look"],#settings[data-tab="checks"] .grp[data-tab="checks"],
+  #settings[data-tab="alerts"] .grp[data-tab="alerts"],#settings[data-tab="security"] .grp[data-tab="security"],
+  #settings[data-tab="sync"] .grp[data-tab="sync"],#settings[data-tab="backup"] .grp[data-tab="backup"]{display:block}
+  #settings .grp[data-tab="checks"]+.grp[data-tab="checks"]{border-top:1px solid var(--line)}
+  .grp-h.tab-same{display:none}
+  .bk-acts{display:flex;flex-wrap:wrap;gap:8px}
   .grp-h{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
     color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:9px}
   .grp-h::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
@@ -2051,16 +2066,26 @@
   </div></div></div>
 
   <!-- settings -->
-  <div id="settings" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div id="settings" class="modal hidden" data-tab="look" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
   <div class="mdl hx teal"><div class="hx-in mdl-in" style="position:relative">
     <div class="mdl-h">
       <span class="t" id="settingsTitle">Settings</span>
       <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     </div>
+    <!-- One section at a time. Seven groups in one scroll put the vault password
+         four screens below the colour pickers; a tab row is one click to any of them. -->
+    <div class="stabs" role="tablist" aria-label="Settings sections">
+      <button type="button" role="tab" data-stab="look" aria-selected="true">Appearance</button>
+      <button type="button" role="tab" data-stab="checks" aria-selected="false" tabindex="-1">Rank checks</button>
+      <button type="button" role="tab" data-stab="alerts" aria-selected="false" tabindex="-1">Alerts</button>
+      <button type="button" role="tab" data-stab="security" aria-selected="false" tabindex="-1">Security</button>
+      <button type="button" role="tab" data-stab="sync" aria-selected="false" tabindex="-1">Sync</button>
+      <button type="button" role="tab" data-stab="backup" aria-selected="false" tabindex="-1">Backup</button>
+    </div>
     <div class="mdl-b">
 
-      <div class="grp">
-        <div class="grp-h">Appearance</div>
+      <div class="grp" data-tab="look">
+        <div class="grp-h tab-same">Appearance</div>
         <div class="hint" style="margin-bottom:12px">Pick a colour and a preview of the homepage opens beside it. Colours and atmosphere change live; close without saving to put them back.</div>
         <div class="acc-swatches">
           <div class="acc-swatch">
@@ -2115,64 +2140,7 @@
         </div>
       </div>
 
-      <div class="grp">
-        <div class="grp-h">Automatic refresh</div>
-        <div class="chk">
-          <input type="checkbox" id="sAuto" style="width:auto">
-          <label for="sAuto">Auto-check stale accounts when opening the app</label>
-        </div>
-        <div class="sub-fld inline">
-          <label for="sAutoEvery">Refresh at most</label>
-          <select id="sAutoEvery"></select>
-        </div>
-        <div class="sub-fld">
-          <input type="checkbox" id="sAutoRanked" style="width:auto">
-          <label for="sAutoRanked" style="font-size:13px;color:var(--muted);max-width:560px">Ranked accounts only — skip unranked and never-placed ones, which answer the same every time</label>
-        </div>
-      </div>
-
-      <div class="grp">
-        <div class="grp-h">Alerts</div>
-        <div class="chk">
-          <input type="checkbox" id="sNotify" style="width:auto">
-          <label for="sNotify">Browser notifications for tier-ups and finished "Check all" runs</label>
-        </div>
-        <div class="fld fw" style="margin-top:14px">
-          <label>Discord webhook URL (optional — posts tier-ups to a channel)</label>
-          <input id="sDiscord" placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
-        </div>
-      </div>
-
-      <div class="grp">
-        <div class="grp-h">Security</div>
-        <div class="fld fw" style="margin-bottom:14px">
-          <label>Storage</label>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-            <span id="sStorageStatus" class="hint" style="margin:0;flex:1;min-width:200px"></span>
-            <button type="button" id="sStorageProtect" class="hidden">Protect</button>
-          </div>
-        </div>
-        <div class="fld fw">
-          <label>Master password — encrypts the whole vault at rest with AES-256. There is no recovery: lose the password and the vault is gone.</label>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <input type="password" id="sVaultPass" placeholder="New master password" autocomplete="new-password" style="flex:1;min-width:170px">
-            <button id="sVaultSet">Set / change</button>
-            <button id="sVaultRemove" class="b-danger">Remove protection</button>
-          </div>
-          <div id="sVaultStatus" class="hint" style="margin-top:2px"></div>
-        </div>
-        <div class="sub-fld inline" style="padding-left:0;margin-top:14px">
-          <label for="sAutoLock">Auto-lock after</label>
-          <select id="sAutoLock" aria-describedby="sAutoLockHint"></select>
-        </div>
-        <div id="sAutoLockHint" class="hint" style="margin-top:6px">Only applies while a master password is set. Off means the vault stays unlocked until you lock it.</div>
-        <div class="sub-fld" style="padding-left:0;margin-top:12px">
-          <button type="button" id="sLockNow" class="b-danger" title="Lock the vault now — needs the master password to open again">Lock now</button>
-          <div class="hint" style="margin-top:6px">Locks this tab immediately. Other open tabs keep their own unlock state until you reload them.</div>
-        </div>
-      </div>
-
-      <div class="grp">
+      <div class="grp" data-tab="checks">
         <div class="grp-h">Rank checks</div>
         <div class="formgrid">
           <div class="fld fw">
@@ -2216,15 +2184,69 @@
           <div class="fw hint">
             Check order: <b>backend URL → API key → free op.gg auto-fetch</b>. A worker with a Riot API key reads ranks from Riot directly, the most reliable source there is. With all three empty, checks use the free auto-fetch and cost nothing. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable, but only worth it for power users.
           </div>
-          <div class="fld">
-            <label>Remind me to export after (days)</label>
-            <input id="sExportDays" type="number" min="1" max="365" value="30" style="max-width:120px">
-          </div>
         </div>
       </div>
 
-      <div class="grp">
-        <div class="grp-h">Device sync</div>
+      <div class="grp" data-tab="checks">
+        <div class="grp-h">Automatic refresh</div>
+        <div class="chk">
+          <input type="checkbox" id="sAuto" style="width:auto">
+          <label for="sAuto">Auto-check stale accounts when opening the app</label>
+        </div>
+        <div class="sub-fld inline">
+          <label for="sAutoEvery">Refresh at most</label>
+          <select id="sAutoEvery"></select>
+        </div>
+        <div class="sub-fld">
+          <input type="checkbox" id="sAutoRanked" style="width:auto">
+          <label for="sAutoRanked" style="font-size:13px;color:var(--muted);max-width:560px">Ranked accounts only — skip unranked and never-placed ones, which answer the same every time</label>
+        </div>
+      </div>
+
+
+      <div class="grp" data-tab="alerts">
+        <div class="grp-h tab-same">Alerts</div>
+        <div class="chk">
+          <input type="checkbox" id="sNotify" style="width:auto">
+          <label for="sNotify">Browser notifications for tier-ups and finished "Check all" runs</label>
+        </div>
+        <div class="fld fw" style="margin-top:14px">
+          <label>Discord webhook URL (optional — posts tier-ups to a channel)</label>
+          <input id="sDiscord" placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
+        </div>
+      </div>
+
+      <div class="grp" data-tab="security">
+        <div class="grp-h tab-same">Security</div>
+        <div class="fld fw" style="margin-bottom:14px">
+          <label>Storage</label>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <span id="sStorageStatus" class="hint" style="margin:0;flex:1;min-width:200px"></span>
+            <button type="button" id="sStorageProtect" class="hidden">Protect</button>
+          </div>
+        </div>
+        <div class="fld fw">
+          <label>Master password — encrypts the whole vault at rest with AES-256. There is no recovery: lose the password and the vault is gone.</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <input type="password" id="sVaultPass" placeholder="New master password" autocomplete="new-password" style="flex:1;min-width:170px">
+            <button id="sVaultSet">Set / change</button>
+            <button id="sVaultRemove" class="b-danger">Remove protection</button>
+          </div>
+          <div id="sVaultStatus" class="hint" style="margin-top:2px"></div>
+        </div>
+        <div class="sub-fld inline" style="padding-left:0;margin-top:14px">
+          <label for="sAutoLock">Auto-lock after</label>
+          <select id="sAutoLock" aria-describedby="sAutoLockHint"></select>
+        </div>
+        <div id="sAutoLockHint" class="hint" style="margin-top:6px">Only applies while a master password is set. Off means the vault stays unlocked until you lock it.</div>
+        <div class="sub-fld" style="padding-left:0;margin-top:12px">
+          <button type="button" id="sLockNow" class="b-danger" title="Lock the vault now — needs the master password to open again">Lock now</button>
+          <div class="hint" style="margin-top:6px">Locks this tab immediately. Other open tabs keep their own unlock state until you reload them.</div>
+        </div>
+      </div>
+
+      <div class="grp" data-tab="sync">
+        <div class="grp-h tab-same">Device sync</div>
         <div class="fw hint" style="margin-bottom:10px">
           Pushes the <b>encrypted</b> vault blob to your worker (KV). Same sync token on phone and PC.
           Last write wins. Needs a master password (Security) and a Backend URL with a KV binding (Rank checks), both above.
@@ -2242,6 +2264,24 @@
           <button type="button" id="sSyncPull">Pull from cloud</button>
         </div>
         <div id="sSyncStatus" class="hint" style="margin-top:8px"></div>
+      </div>
+
+      <div class="grp" data-tab="backup">
+        <div class="grp-h tab-same">Backup</div>
+        <div class="hint" style="margin-bottom:6px">Your vault lives only in this browser. A backup file is the copy you can bring back if the browser loses it.</div>
+        <div id="sBackupLast" class="hint" style="margin-bottom:14px"></div>
+        <!-- the same actions as the ⋯ menu, where you would look for them in Settings -->
+        <div class="bk-acts">
+          <button type="button" data-proxy="bExportEnc" class="b-gold">Export encrypted backup…</button>
+          <button type="button" data-proxy="bExport">Export backup (JSON, plaintext)</button>
+          <button type="button" data-proxy="bExportCsv">Export as CSV</button>
+          <button type="button" data-proxy="bImport">Import backup</button>
+          <button type="button" data-proxy="bImportCsv">Import CSV</button>
+        </div>
+        <div class="sub-fld inline" style="padding-left:0;margin-top:16px">
+          <label for="sExportDays">Remind me to export after</label>
+          <input id="sExportDays" type="number" min="1" max="365" value="30" style="max-width:90px"> <span class="hint" style="margin:0">days</span>
+        </div>
       </div>
 
     </div>
@@ -6915,8 +6955,24 @@ function submitForm(){
 }
 
 // ---------- settings ----------
-function openSettings(){
+const SETTINGS_TABS=["look","checks","alerts","security","sync","backup"];
+function settingsTab(tab,focus){
+  if(!SETTINGS_TABS.includes(tab))tab="look";
+  const m=$("settings");m.dataset.tab=tab;
+  for(const b of m.querySelectorAll("[data-stab]")){
+    const on=b.dataset.stab===tab;
+    b.setAttribute("aria-selected",String(on));b.tabIndex=on?0:-1;
+    if(on&&focus)b.focus();
+  }
+  const body=m.querySelector(".mdl-b");if(body)body.scrollTop=0;
+}
+function updateBackupLast(){
+  const el=$("sBackupLast");if(!el)return;
+  el.textContent=cfg.lastExport?"Last backup: "+timeAgo(cfg.lastExport)+".":"No backup made from this browser yet.";
+}
+function openSettings(tab){
   closeAllPanels();
+  settingsTab(typeof tab==="string"?tab:"look");updateBackupLast();
   // Permission can be revoked in site settings while cfg still says on — don't
   // show the box checked for alerts that cannot fire.
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
@@ -7528,6 +7584,14 @@ document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.targ
 // applied to the whole page — the one close out of four that kept it.
 function closeSettings(){revertAccents();revertAtmosphere();settingsSaveGen++;$("settings").classList.add("hidden")}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
+$("settings").querySelector(".stabs").addEventListener("click",e=>{const b=e.target.closest("[data-stab]");if(b)settingsTab(b.dataset.stab)});
+$("settings").querySelector(".stabs").addEventListener("keydown",e=>{
+  const i=SETTINGS_TABS.indexOf($("settings").dataset.tab);
+  const to=e.key==="ArrowRight"?i+1:e.key==="ArrowLeft"?i-1:e.key==="Home"?0:e.key==="End"?SETTINGS_TABS.length-1:null;
+  if(to===null)return;
+  e.preventDefault();settingsTab(SETTINGS_TABS[(to+SETTINGS_TABS.length)%SETTINGS_TABS.length],true);
+});
+for(const b of document.querySelectorAll("#settings [data-proxy]"))b.addEventListener("click",()=>{const t=$(b.dataset.proxy);if(t)t.click();setTimeout(updateBackupLast,0)});
 $("sSave").addEventListener("click",async()=>{
   // Validate the two free-text URLs before touching cfg — a bail after partial
   // assignment left the session with the new API key / auto-check values even
@@ -8133,7 +8197,7 @@ $("setup").addEventListener("click",e=>{
   const a=b.dataset.setup;
   if(a==="add")openForm();
   else if(a==="check")$("bCheckAll").click();
-  else if(a==="lock"){openSettings();setTimeout(()=>{const f=$("sVaultPass");if(f){f.scrollIntoView&&f.scrollIntoView({block:"center"});f.focus()}},60)}
+  else if(a==="lock"){openSettings("security");setTimeout(()=>{const f=$("sVaultPass");if(f){f.scrollIntoView&&f.scrollIntoView({block:"center"});f.focus()}},60)}
   else if(a==="backup")vaultPassword?doExportEnc():doExport();
   else if(a==="hide"){cfg.setupHidden=true;saveCfg();renderSetup()}
 });

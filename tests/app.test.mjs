@@ -1105,6 +1105,45 @@ test("Recent form: a Riot-read account's Details fetch its last five ranked game
   await until(() => /No ranked games yet this season/.test(card("r").textContent), "Retry to fetch again");
 });
 
+test("Settings is six tabs, one section at a time, and a step that needs a field opens its tab", () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const doc = win.document, m = doc.getElementById("settings");
+  const tabs = [...m.querySelectorAll('[role="tab"]')];
+  assert.deepEqual(tabs.map(t => t.textContent.trim()), ["Appearance", "Rank checks", "Alerts", "Security", "Sync", "Backup"]);
+  const shown = () => [...m.querySelectorAll(".grp")].filter(g => win.getComputedStyle(g).display !== "none")
+    .map(g => g.querySelector(".grp-h").textContent.trim());
+  doc.getElementById("bSettings").click();
+  assert.deepEqual(shown(), ["Appearance"], "opens on Appearance, alone");
+  tabs[1].click();
+  assert.deepEqual(shown(), ["Rank checks", "Automatic refresh"], "the backend first, then when it runs");
+  assert.equal(tabs[1].getAttribute("aria-selected"), "true");
+  assert.equal(tabs[0].getAttribute("aria-selected"), "false");
+  // arrow keys walk the row, and wrap
+  tabs[1].dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  assert.equal(m.dataset.tab, "alerts");
+  tabs[2].dispatchEvent(new win.KeyboardEvent("keydown", { key: "End", bubbles: true }));
+  assert.equal(m.dataset.tab, "backup");
+  assert.equal(doc.activeElement, tabs[5], "focus follows the selection");
+  tabs[5].dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  assert.equal(m.dataset.tab, "look");
+  // the export reminder lives with the backups now, next to the backup buttons
+  const backup = m.querySelector('.grp[data-tab="backup"]');
+  assert.ok(backup.contains(doc.getElementById("sExportDays")));
+  assert.match(backup.textContent, /No backup made from this browser yet/);
+  let exported = 0;
+  doc.getElementById("bExportCsv").addEventListener("click", () => exported++);
+  backup.querySelector('[data-proxy="bExportCsv"]').click();
+  assert.equal(exported, 1, "a backup button does what its ⋯ menu twin does");
+  // reopening starts on Appearance again
+  win.closeAllPanels();
+  doc.getElementById("bSettings").click();
+  assert.equal(m.dataset.tab, "look");
+  win.closeAllPanels();
+  doc.querySelector('#setup [data-setup="lock"]').click();
+  assert.equal(m.dataset.tab, "security", "Set a master password lands on the password field's tab");
+  assert.deepEqual(shown(), ["Security"]);
+});
+
 test("Settings walks you through setting up a worker, and steps aside once you have one", () => {
   const win = bootApp();
   const guide = () => win.document.getElementById("sDeployHelp");
@@ -3110,9 +3149,12 @@ test("atmosphere previews live and only sticks after Save", () => {
 test("the settings body is grouped rather than one flat run of fields", () => {
   const win = bootApp();
   const groups = [...win.document.querySelectorAll("#settings .grp-h")].map(g => g.textContent.trim());
-  // what most people change first; the plumbing (rank server, API key, sync) last,
-  // with sync after both of the things it needs
-  assert.deepEqual(groups, ["Appearance", "Automatic refresh", "Alerts", "Security", "Rank checks", "Device sync"]);
+  // in the order of the tab row, which is one click to any of them; sync still
+  // comes after both of the things it needs (a master password and a worker)
+  assert.deepEqual(groups, ["Appearance", "Rank checks", "Automatic refresh", "Alerts", "Security", "Device sync", "Backup"]);
+  const tabOrder = [...win.document.querySelectorAll("#settings [data-stab]")].map(b => b.dataset.stab);
+  const grpOrder = [...new Set([...win.document.querySelectorAll("#settings .grp")].map(g => g.dataset.tab))];
+  assert.deepEqual(grpOrder, tabOrder, "the groups run in the tabs' order");
   // header and footer sit outside the scrolling middle, so Save is always reachable
   const body = win.document.querySelector("#settings .mdl-b");
   assert.ok(body, "there is a scroll region");
