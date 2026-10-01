@@ -84,7 +84,7 @@
 
   body{margin:0;position:relative;color:var(--text);
     font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
-    font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
     background:var(--bg);background-attachment:fixed}
   /* Atmosphere: Settings picks one of six looks.
      Spotlight + Aurora = fixed viewport light (stays while you scroll).
@@ -166,7 +166,7 @@
     font-family:'Cinzel',Georgia,serif;font-weight:700;text-transform:uppercase}
   .cmd>button,.acts>button:not(.c-more),.acts>.btn,.mdl-f>button,#lockBtn,#bExitPreview,#bDemo,#bClearFilters,
   #sSyncGen,#sSyncPush,#sSyncPull,#sVaultSet,#sVaultRemove,#sLockNow,#fGen,#cmpClear{
-    font-family:'Cinzel',Georgia,serif;font-weight:700;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase}
+    font-family:'Cinzel',Georgia,serif;font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
 
   /* ---- surfaces: rounded, gradient hairline, soft glass ---- */
   /* The client frames everything in metal: a gold edge lit from above that dims as
@@ -240,7 +240,7 @@
   .rib-seg:first-child{border-radius:var(--r-xs) 2px 2px var(--r-xs)}
   .rib-seg:last-child{border-radius:2px var(--r-xs) var(--r-xs) 2px}
   .rib-seg:only-child{border-radius:var(--r-xs)}
-  .rib-seg i{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.02em;
+  .rib-seg i{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.02em;
     color:#0b0e14;opacity:.72;font-variant-numeric:tabular-nums}
   .rib-seg:hover{background:var(--c);transform:none;border:0;filter:brightness(1.06)}
   .rib-seg:active{transform:none}
@@ -251,7 +251,7 @@
   .rib-bar:has(.rib-seg.on) .rib-seg:not(.on) i{opacity:.4}
   .rib-seg.on{background:var(--c);box-shadow:0 0 0 1px #0b0e14,0 0 14px -2px var(--c)}
   .rib-cap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
-    font-size:10.5px;letter-spacing:.02em;color:var(--faint)}
+    font-size:11px;letter-spacing:.02em;color:var(--faint)}
   .rib-cap b{font-weight:600;color:var(--muted)}
   .brand{display:flex;align-items:center;gap:16px;min-width:0}
   /* A gem set in a turned gold frame, rather than a rounded app-icon tile. */
@@ -336,7 +336,7 @@
   .b-danger:hover{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);
     background:color-mix(in srgb,var(--danger) 13%,var(--panel2))}
   /* utilities, not actions — no rim of their own inside the tray */
-  #bMore,#bHelp{width:34px;padding:8px 0;color:var(--muted);font-size:15px;
+  #bMore,#bHelp{width:34px;padding:8px 0;color:var(--muted);font-size:16px;
     background:none;border-color:transparent;box-shadow:none}
   #bMore:hover,#bHelp:hover{color:var(--text);background:#ffffff12;border-color:transparent}
   .bar{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
@@ -367,11 +367,11 @@
   .dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr))}
   .stat{padding:16px 20px;position:relative;overflow:hidden;min-width:0}
   .stat+.stat::before{content:"";position:absolute;left:0;top:15px;bottom:15px;width:1px;background:var(--line)}
-  .stat .k{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:7px}
+  .stat .k{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:7px}
   .stat .v{font-size:20px;font-weight:600;color:var(--text);line-height:1.25;letter-spacing:-.015em;font-variant-numeric:tabular-nums}
   /* nowrap, or a long enough figure breaks between the number and its unit and
      leaves "WR" alone on the next line. It wraps as one piece instead. */
-  .stat .v small{font-size:11.5px;color:var(--muted);font-weight:400;letter-spacing:0;white-space:nowrap}
+  .stat .v small{font-size:12px;color:var(--muted);font-weight:400;letter-spacing:0;white-space:nowrap}
   /* Except where the caption is a list — Accounts' "· 7 ★ · 5 banned · 5 archived"
      is wider than its tile, which is overflow:hidden, so nowrap cut it off at
      "archiv". It breaks between the pieces and never inside one. */
@@ -383,14 +383,14 @@
   .pool-spark .pool-hit{fill:transparent;stroke:none;cursor:pointer}
   .spark-tip{
     position:fixed;z-index:80;pointer-events:none;
-    padding:6px 9px;border-radius:var(--r-sm);font-size:11.5px;line-height:1.35;
+    padding:6px 9px;border-radius:var(--r-sm);font-size:12px;line-height:1.35;
     color:var(--text);background:var(--panel3);border:1px solid var(--line2);
     box-shadow:0 8px 24px #00000088;max-width:220px;white-space:pre-line;
     opacity:0;transform:translateY(4px);transition:opacity .12s ease,transform .12s ease;
   }
   .spark-tip.on{opacity:1;transform:none}
   .dash-toggle{display:flex;justify-content:flex-end;margin-bottom:14px}
-  .ghost-toggle{font-size:11.5px;padding:6px 13px;border-radius:var(--r-xs);color:var(--muted);
+  .ghost-toggle{font-size:12px;padding:6px 13px;border-radius:var(--r-xs);color:var(--muted);
     background:#ffffff09;border:1px solid var(--line);box-shadow:none}
   .ghost-toggle:hover{background:#ffffff14;border-color:var(--line2);color:var(--text)}
   .ghost-toggle .ico{transition:transform .22s cubic-bezier(.22,1,.36,1)}
@@ -422,10 +422,10 @@
   .stat-b:hover{background:#ffffff08;border:0}
   .stat-b.on{background:color-mix(in srgb,var(--gold) 11%,transparent);border:0;
     box-shadow:inset 2px 0 0 var(--gold)}
-  .s-note{font-size:10.5px;color:var(--faint);margin-top:4px;line-height:1.4}
+  .s-note{font-size:11px;color:var(--faint);margin-top:4px;line-height:1.4}
   .gem.cmb b{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .gem.cmb b.wr-good{color:var(--good)}
-  .gem.cmb i.g{font-style:normal;font-size:10.5px;font-weight:600;color:var(--faint);
+  .gem.cmb i.g{font-style:normal;font-size:11px;font-weight:600;color:var(--faint);
     font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:var(--r-xs);background:#ffffff0d}
   .gem.cmb i.g em{font-style:normal;opacity:.5;padding:0 1px}
   .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px;position:relative}
@@ -436,7 +436,7 @@
     background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent)}
   .hx-in>.dist::after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;pointer-events:none;
     transform:translateX(-50%) rotate(45deg);background:var(--bg);border:1px solid var(--gold)}
-  .dist .k{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-right:2px}
+  .dist .k{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-right:2px}
   .gem{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text)}
   /* the tier lozenge — scoped to a class rather than the bare tag, because every
      <i> inside a .gem was inheriting a 9px box and a 45° rotation, which is what
@@ -457,10 +457,10 @@
     border-bottom:1px solid color-mix(in srgb,var(--gold-dim) 40%,transparent);background:linear-gradient(180deg,#ffffff0a,transparent)}
   /* the count was a lone grey line under the grid, where it answered a question
      nobody was asking by then; beside the buttons it's a status readout */
-  .cmd-count{margin-left:auto;padding-right:3px;font-size:11.5px;color:var(--faint);
+  .cmd-count{margin-left:auto;padding-right:3px;font-size:12px;color:var(--faint);
     display:inline-flex;align-items:center;gap:9px;letter-spacing:.015em}
   .cmd-count b{font-weight:600;color:var(--muted)}
-  .cmd-count .warn{color:var(--danger);font-weight:600;font-size:11.5px;letter-spacing:.015em;
+  .cmd-count .warn{color:var(--danger);font-weight:600;font-size:12px;letter-spacing:.015em;
     padding:3px 9px;border-radius:var(--r-xs);background:none;border:1px solid transparent;box-shadow:none}
   .cmd-count .warn:hover{background:color-mix(in srgb,var(--danger) 13%,transparent);
     border-color:color-mix(in srgb,var(--danger) 34%,transparent)}
@@ -526,7 +526,7 @@
   @media(max-width:520px){.atm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .atm-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;
     padding:7px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);
-    color:var(--muted);font-size:11.5px;font-weight:600;text-align:left;box-shadow:none;
+    color:var(--muted);font-size:12px;font-weight:600;text-align:left;box-shadow:none;
     overflow:hidden;min-width:0;
     transition:border-color .16s ease,background .16s ease,color .16s ease,box-shadow .16s ease}
   .atm-tile:hover{background:var(--panel3);border-color:var(--line2);color:var(--text)}
@@ -566,7 +566,7 @@
      ease, so the old one snapped on and off. Keep the fade, but open quickly:
      a long delay felt like lag. */
   .atm-tip{max-height:0;opacity:0;overflow:hidden;margin-top:-5px;padding:0 2px;
-    color:var(--faint);font-size:10.5px;font-weight:450;line-height:1.4;
+    color:var(--faint);font-size:11px;font-weight:450;line-height:1.4;
     pointer-events:none;
     transition:max-height .22s cubic-bezier(.22,1,.36,1),opacity .18s ease,margin-top .18s ease;
     transition-delay:.06s}
@@ -591,13 +591,13 @@
     background:color-mix(in srgb,var(--danger) 9%,transparent);font-size:12px}
   .fb-n{font-weight:600;color:var(--danger)}
   .fb-l{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-  .failbar button{font-size:11.5px;padding:5px 10px}
+  .failbar button{font-size:12px;padding:5px 10px}
   .fb-x{padding:5px 9px;background:none;border-color:transparent;color:var(--faint)}
   /* what the stats panel just filtered on — invisible filters make a short grid
      look like a bug */
   .chips{display:flex;gap:7px;flex-wrap:wrap;padding:0 12px}
   .chips:not(:empty){padding:11px 12px;border-top:1px solid var(--line)}
-  .fchip{font-size:11.5px;font-weight:600;padding:4px 8px 4px 11px;gap:7px;border-radius:var(--r-xs);
+  .fchip{font-size:12px;font-weight:600;padding:4px 8px 4px 11px;gap:7px;border-radius:var(--r-xs);
     color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 45%,transparent);
     background:color-mix(in srgb,var(--gold) 12%,transparent)}
   .fchip span{opacity:.65;font-size:10px}
@@ -605,7 +605,7 @@
     border-color:color-mix(in srgb,var(--gold) 70%,transparent)}
   .fchip-all{color:var(--faint);background:none;border-color:var(--line);padding:4px 11px}
   .fchip-all:hover{color:var(--text);background:var(--panel3);border-color:var(--line2)}
-  input,select,textarea{font:inherit;font-size:13.5px;background:var(--panel2);border:1px solid var(--line);
+  input,select,textarea{font:inherit;font-size:14px;background:var(--panel2);border:1px solid var(--line);
     border-radius:var(--r-sm);color:var(--text);padding:9px 12px;
     transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
   input:hover,select:hover,textarea:hover{border-color:var(--line2)}
@@ -721,18 +721,18 @@
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center;margin-bottom:3px}
   .t-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
-  .t-pic b{font-size:19px;font-weight:600;color:var(--faint)}
+  .t-pic b{font-size:20px;font-weight:600;color:var(--faint)}
   .t-crest{position:absolute;right:-7px;top:-7px;width:21px;height:21px;
     filter:drop-shadow(0 1px 2px #000000cc)}
   .t-crest .crest{width:100%;height:100%}
   .t-lv{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);
-    font-style:normal;font-size:9px;font-weight:700;line-height:14px;padding:0 5px;
+    font-style:normal;font-size:10px;font-weight:700;line-height:14px;padding:0 5px;
     min-width:20px;text-align:center;border-radius:var(--r-xs);font-variant-numeric:tabular-nums;
     color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
   .t-nm{font-size:12px;font-weight:600;letter-spacing:-.01em;color:var(--text);max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:4px}
   .t-nm .rw-star .ico{width:10px;height:10px}
-  .t-rk{font-size:11.5px;font-weight:700;letter-spacing:.02em;max-width:100%;
+  .t-rk{font-size:12px;font-weight:700;letter-spacing:.02em;max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .t-lp{font-size:10px;font-weight:600;color:var(--faint);font-variant-numeric:tabular-nums}
   .grid.wall>.hx:hover{transform:translateY(-2px)}
@@ -755,7 +755,7 @@
   .lgrp-star{width:13px;height:13px;fill:var(--star);stroke:var(--star);flex-shrink:0}
   .lgrp-n{font-size:12px;letter-spacing:.1em}
   .lgrp-ln{flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
-  .lgrp-k{font-size:10.5px;font-weight:600;color:var(--faint);letter-spacing:.05em;
+  .lgrp-k{font-size:11px;font-weight:600;color:var(--faint);letter-spacing:.05em;
     font-variant-numeric:tabular-nums}
   .hx.row{padding:1px;background:#ffffff0d;border-radius:var(--r-md)}
   .hx.row:hover{background:#ffffff1c}
@@ -780,7 +780,7 @@
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center}
   .rw-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
-  .rw-pic b{font-size:15px;font-weight:600;color:var(--faint)}
+  .rw-pic b{font-size:16px;font-weight:600;color:var(--faint)}
   /* the tier, on the picture, the way the card puts it beside the rank */
   .rw-crest{position:absolute;right:-6px;top:-6px;width:17px;height:17px;
     filter:drop-shadow(0 1px 2px #000000cc)}
@@ -788,22 +788,22 @@
   /* same idea as the card: the level belongs to the picture, not to a column of
      performance numbers */
   .rw-lvb{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
-    font-style:normal;font-size:9px;font-weight:700;line-height:13px;padding:0 4px;
+    font-style:normal;font-size:10px;font-weight:700;line-height:13px;padding:0 4px;
     min-width:18px;text-align:center;border-radius:var(--r-xs);font-variant-numeric:tabular-nums;
     color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
   .rw-id{min-width:0;display:flex;flex-direction:column;gap:1px}
-  .rw-nm{font-size:14.5px;font-weight:600;letter-spacing:-.012em;color:var(--text);
+  .rw-nm{font-size:14px;font-weight:600;letter-spacing:-.012em;color:var(--text);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
   .rw-star{color:var(--star);display:inline-flex;flex-shrink:0}
   .rw-star .ico{width:11px;height:11px;fill:var(--star)}
   .rw-tag{font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rw-tags{display:flex;gap:4px;margin-top:3px;overflow:hidden}
-  .rw-tags i{font-style:normal;font-size:9.5px;letter-spacing:.02em;color:var(--muted);
+  .rw-tags i{font-style:normal;font-size:10px;letter-spacing:.02em;color:var(--muted);
     padding:1px 6px;border-radius:var(--r-xs);background:#ffffff0f;white-space:nowrap}
   /* the shape of the climb, which the list used to leave out entirely */
   .rw-spark{display:flex;align-items:center;height:30px}
   .spk{width:100%;height:100%;display:block}
-  .rw-check{font-size:10.5px;padding:4px 9px;gap:5px;opacity:0;color:var(--teal-txt);
+  .rw-check{font-size:11px;padding:4px 9px;gap:5px;opacity:0;color:var(--teal-txt);
     transition:opacity .15s ease,background .15s ease,border-color .15s ease}
   .rw-check .ico{width:11px;height:11px}
   .rw-main:hover .rw-check,.rw-check:focus-visible{opacity:1}
@@ -813,14 +813,14 @@
   .rw-rank em{font-style:normal;font-size:11px;font-weight:600;color:var(--muted);
     font-variant-numeric:tabular-nums}
   .rw-d,.rw-wr,.rw-lv{display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
-  .rw-wr b,.rw-lv b{font-size:12.5px;font-weight:700;color:var(--muted);line-height:1.1}
+  .rw-wr b,.rw-lv b{font-size:13px;font-weight:700;color:var(--muted);line-height:1.1}
   .rw-wr b.wr-good{color:var(--good)}
-  .rw-wr em,.rw-lv em{font-style:normal;font-size:9.5px;color:var(--faint);letter-spacing:.02em}
+  .rw-wr em,.rw-lv em{font-style:normal;font-size:10px;color:var(--faint);letter-spacing:.02em}
   /* Sixty rows of "47%" are sixty identical grey blocks. Sixty bars of differing
      length are a shape you can run your eye down. */
   .rw-bar{display:block;height:3px;border-radius:1px;background:#ffffff14;overflow:hidden}
   .rw-bar i{display:block;height:100%;border-radius:1px}
-  .rw-d .delta{font-size:10.5px;padding:2px 6px}
+  .rw-d .delta{font-size:11px;padding:2px 6px}
   .rw-rg{font-size:10px;font-weight:600;letter-spacing:.09em;color:var(--faint);text-align:center}
   /* An unranked row has nothing to say in four of its columns, and at full
      strength a wall of them drowns out the rows that do. */
@@ -837,7 +837,7 @@
     text-decoration-thickness:1.5px;text-decoration-color:currentColor;opacity:.62}
   .card.dead .lpc-wrap,.rw.dead .spk{filter:grayscale(.75);opacity:.55}
   .card.dead .wrbar,.rw.dead .rw-bar{filter:grayscale(.9);opacity:.5}
-  .rw-up{font-size:10.5px;color:var(--faint);text-align:right;white-space:nowrap;
+  .rw-up{font-size:11px;color:var(--faint);text-align:right;white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis}
   .rw-up.stale{color:var(--danger)}
   .rw-chev{width:14px;height:14px;color:var(--faint);transition:transform .24s cubic-bezier(.22,1,.36,1)}
@@ -882,6 +882,9 @@
      the LP change, and the rule above says which goes: the nice-to-know column. The
      change is still on the card, and in the chart when the row is opened. */
   @media (max-width:440px){
+    /* GRANDMASTER in the display caps is ~196px at 24, and a 360 phone's card
+       has less than that beside the crest and the LP chip */
+    .card .rk-t{font-size:20px} /* .card: the base rule comes later in the sheet */
     .rw-main{grid-template-columns:auto 36px minmax(0,1fr) 106px 16px;gap:8px}
     .rw-d{display:none}
   }
@@ -905,7 +908,7 @@
   .c-initial{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:50%;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));
     box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold-dim) 80%,transparent),0 0 0 2px #010a13,0 0 0 3px color-mix(in srgb,var(--gold-dim) 55%,transparent);
-    font-size:21px;font-weight:600;color:var(--faint);letter-spacing:-.02em}
+    font-size:20px;font-weight:600;color:var(--faint);letter-spacing:-.02em}
   .c-avatar{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;
     box-shadow:0 0 0 1px var(--gold-dim),0 0 0 2px #010a13,0 0 0 3px color-mix(in srgb,var(--gold) 55%,transparent),0 4px 12px #00000073}
   /* The rank crest rides the portrait; it moved to the top corner to make room
@@ -918,11 +921,11 @@
   .crest{display:block;flex-shrink:0;overflow:visible}
   .c-lvbadge{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);
     min-width:24px;padding:1px 6px;border-radius:var(--r-xs);text-align:center;
-    font-size:10.5px;font-weight:700;line-height:16px;letter-spacing:.01em;
+    font-size:11px;font-weight:700;line-height:16px;letter-spacing:.01em;
     font-variant-numeric:tabular-nums;color:var(--text);
     background:#0d1017;box-shadow:0 0 0 1px var(--line2),0 2px 8px #00000080}
   .c-id{min-width:0;flex:1}
-  .c-name{font-weight:600;font-size:17px;letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
+  .c-name{font-weight:600;font-size:18px;letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
   /* text-overflow only works on a box that holds the text itself. The wall tile and
      the list row had the name as a bare text node in a flex row, so it was sheared
      off mid-letter, no ellipsis, with the flag after it pushed out of sight — the
@@ -932,7 +935,7 @@
      was holding 114 px of a 234 px row and leaving the name 58 — four letters
      and an ellipsis. Short wording here, the full phrase in the title and
      everywhere else, and a cap so no future status can do it again. */
-  .stchip{font-size:9.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:6px;
+  .stchip{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:6px;
     flex:0 1 auto;min-width:0;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .c-chrome{display:flex;align-items:center;gap:9px;flex-shrink:0;align-self:flex-start}
   /* selection is chrome, not content — it stays out of the way until wanted */
@@ -943,7 +946,7 @@
   /* bare icon buttons — must beat the generic button rules */
   .rid,.star,.eye-btn,.panel-close{background:none;border:1px solid transparent;box-shadow:none;padding:0}
   .rid:hover,.star:hover,.eye-btn:hover{background:none;border-color:transparent}
-  .star{font-size:17px;color:var(--line2);line-height:1;display:inline-flex;transition:color .15s ease,transform .15s ease}
+  .star{font-size:18px;color:var(--line2);line-height:1;display:inline-flex;transition:color .15s ease,transform .15s ease}
   .star:hover{color:var(--star);transform:scale(1.12)}
   .star svg{fill:none;stroke:currentColor;stroke-width:1.7}
   .star.on{color:var(--star)}
@@ -969,7 +972,7 @@
     color:var(--muted);z-index:2;font-size:13px}
   .panel-close:hover{color:var(--danger);background:color-mix(in srgb,var(--danger) 13%,transparent);border-color:transparent}
 
-  .regiontag{font-size:10.5px;font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:var(--r-xs);flex-shrink:0;
+  .regiontag{font-size:11px;font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:var(--r-xs);flex-shrink:0;
     background:color-mix(in srgb,var(--teal) 12%,transparent);color:var(--teal-txt);
     border:1px solid color-mix(in srgb,var(--teal) 24%,transparent)}
   /* the rank is why the card exists, so it gets the card's largest type */
@@ -997,7 +1000,7 @@
   .rk{display:flex;align-items:center;gap:11px;min-width:0;white-space:nowrap;
     overflow:hidden}
   .rk-main{display:flex;flex-direction:column;gap:3px;min-width:0;line-height:1}
-  .rk-t{font-size:23px;letter-spacing:.02em;line-height:1.05;
+  .rk-t{font-size:24px;letter-spacing:.02em;line-height:1.05;
     overflow:hidden;text-overflow:ellipsis}
   /* No coloured glow. A 9px halo in the tier's own full-saturation colour around
      a 27px shape stops reading as a lit emblem and starts reading as a lit square
@@ -1008,13 +1011,13 @@
     filter:drop-shadow(0 1px 2px #000000a6)}
   .rk-lp{font-size:13px;font-weight:600;letter-spacing:.04em;margin:0;
     font-variant-numeric:tabular-nums;color:var(--muted);opacity:1}
-  .c-unchecked{font-size:17px;color:var(--faint);letter-spacing:-.02em}
+  .c-unchecked{font-size:18px;color:var(--faint);letter-spacing:-.02em}
   /* on an account with no rank yet, the level is the headline — it was set in
      10 px caps underneath a 23 px "Unranked" that answered nothing */
-  .c-lvl{font-size:15px;color:var(--faint);letter-spacing:.02em;font-weight:500;
+  .c-lvl{font-size:16px;color:var(--faint);letter-spacing:.02em;font-weight:500;
     display:flex;align-items:baseline;gap:8px}
-  .c-lvl .rk-lp{font-size:26px;color:var(--text);letter-spacing:-.03em}
-  .wl{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:4px}
+  .c-lvl .rk-lp{font-size:24px;color:var(--text);letter-spacing:-.03em}
+  .wl{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:4px}
   .wl b{color:var(--text);font-weight:500}
   /* winrate carries the verdict, so it gets the only colour on the line */
   .wrv{font-weight:600;color:var(--text)}
@@ -1023,23 +1026,23 @@
   /* labelled micro-stats instead of one muted run-on sentence */
   .c-stats{display:flex;flex-wrap:wrap;gap:7px 20px}
   .c-stats>div{display:flex;flex-direction:column;gap:2px;min-width:0}
-  .c-stats .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+  .c-stats .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
   .c-stats .v{font-size:13px;font-weight:500;color:var(--text);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
   /* This is the one thing on the card the user wrote themselves, so it reads as
      content on its own small surface rather than another grey caption line. */
-  .c-notes{font-size:12.5px;line-height:1.6;color:var(--text);opacity:.9;
+  .c-notes{font-size:13px;line-height:1.6;color:var(--text);opacity:.9;
     padding:9px 12px;border-radius:var(--r-sm);background:#ffffff08;border:1px solid #ffffff0d;
     transition:background .16s ease,border-color .16s ease}
   /* the note is the one field you actually keep rewriting, so it edits where it
      lives — no round trip through the Edit form */
   .c-notes[data-act]{cursor:text}
   .c-notes[data-act]:hover{background:#ffffff0f;border-color:#ffffff21}
-  .c-notes .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+  .c-notes .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
     display:flex;align-items:center;gap:5px;margin-bottom:4px}
   .c-notes .k .ico{width:11px;height:11px;opacity:0;transition:opacity .16s ease}
   .c-notes[data-act]:hover .k .ico{opacity:.85}
   .c-notes .none{color:var(--faint)}
-  .c-notes textarea{width:100%;font-size:12.5px;line-height:1.6;min-height:62px;display:block}
+  .c-notes textarea{width:100%;font-size:13px;line-height:1.6;min-height:62px;display:block}
   .c-notes.editing{border-color:color-mix(in srgb,var(--teal) 34%,transparent);background:#ffffff0d}
   /* An empty note is an invitation, not a panel. It still had a dashed box around
      it, which on a vault where almost nothing is annotated makes it the most
@@ -1062,7 +1065,7 @@
   .c-drawer{margin:0 -17px -17px;padding:11px 14px 12px;gap:11px;
     border:0;border-radius:0 0 calc(var(--r-lg) - 2px) calc(var(--r-lg) - 2px);
     background:none;color:var(--faint);
-    font-size:9.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+    font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
     transition:background .18s ease,color .18s ease}
   .c-drawer:hover{color:var(--teal-txt);border:0;
     background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--teal) 11%,transparent))}
@@ -1091,9 +1094,9 @@
   .sec-h{width:100%;display:flex;align-items:center;gap:11px;padding:10px 13px;
     background:none;border:0;border-radius:0;white-space:normal}
   .sec-h:hover{background:#ffffff09;border:0}
-  .sec-n{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+  .sec-n{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
     display:inline-flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0}
-  .sec-n i{font-style:normal;font-size:9.5px;letter-spacing:.03em;color:var(--faint);
+  .sec-n i{font-style:normal;font-size:10px;letter-spacing:.03em;color:var(--faint);
     padding:1px 6px;border-radius:var(--r-xs);background:#ffffff0f}
   .sec-p{margin-left:auto;font-size:12px;font-weight:600;letter-spacing:-.01em;color:var(--muted);
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
@@ -1107,14 +1110,14 @@
     animation:sectionIn .22s cubic-bezier(.22,1,.36,1) both}
   /* one fact, one line — folding it would cost a click to reveal nothing extra */
   .sec.flat{display:flex;align-items:center;gap:11px;padding:11px 13px}
-  .chp-h{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  .chp-h{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
     color:var(--faint);padding-bottom:5px;border-bottom:1px solid #ffffff12;margin-bottom:2px}
   .chp-h span:not(:first-child){text-align:right}
   .chp-h+.chp{border-top:0}
   .sea{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:3px 0;font-size:12px}
   .sea+.sea{border-top:1px solid #ffffff0a}
-  .s-yr{color:var(--faint);font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
-  .s-rk{font-weight:600;font-size:12.5px;letter-spacing:-.01em}
+  .s-yr{color:var(--faint);font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
+  .s-rk{font-weight:600;font-size:13px;letter-spacing:-.01em}
   /* a fixed grid, so the numbers line up into columns you can scan down */
   .chp{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:baseline;
     padding:3px 0;font-size:12px;font-variant-numeric:tabular-nums}
@@ -1123,11 +1126,11 @@
   .c-wr{font-weight:600;color:var(--muted);text-align:right}
   .c-wr.wr-good{color:var(--good)}
   .c-gm,.c-kd{color:var(--faint);font-size:11px;text-align:right}
-  .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:7.5px;font-weight:700;letter-spacing:.12em;
+  .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;letter-spacing:.12em;
     pointer-events:none;line-height:1;opacity:.9}
   .wrbar{height:5px;background:var(--panel2);border-radius:1px;overflow:hidden}
   .wrbar i{display:block;height:100%;border-radius:1px}
-  .delta{font-size:10.5px;padding:2px 8px;border-radius:var(--r-xs);font-weight:600;display:inline-block;white-space:nowrap}
+  .delta{font-size:11px;padding:2px 8px;border-radius:var(--r-xs);font-weight:600;display:inline-block;white-space:nowrap}
   .d-up{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
   .d-down{color:var(--danger);background:color-mix(in srgb,var(--danger) 15%,transparent)}
   /* ---- LP chart ----
@@ -1146,7 +1149,7 @@
   /* X is real time now, so the dates below are worth printing */
   .lpc-axis{position:relative;height:16px;border-top:1px solid var(--line)}
   .lpc-tick{position:absolute;top:3px;transform:translateX(-50%);white-space:nowrap;
-    font-size:8.5px;font-weight:500;letter-spacing:.04em;color:var(--faint);pointer-events:none}
+    font-size:9px;font-weight:500;letter-spacing:.04em;color:var(--faint);pointer-events:none}
   .lpc-tick.l{transform:none;left:5px!important}
   .lpc-tick.r{transform:none;left:auto!important;right:5px}
   .away-band{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;
@@ -1155,12 +1158,12 @@
     background:color-mix(in srgb,var(--teal) 8%,var(--panel));box-shadow:var(--sh-1);
     animation:barIn .3s cubic-bezier(.22,1,.36,1) both}
   .away-band.hidden{display:none}
-  .away-k{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-txt)}
+  .away-k{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-txt)}
   .away-band b{font-weight:600;color:var(--text)}
   .away-band .up{color:var(--good);font-weight:600}
   .away-band .down{color:var(--danger);font-weight:600}
   .away-band .sp{margin-left:auto;display:flex;gap:7px}
-  .away-band button{font-size:11.5px;padding:5px 11px}
+  .away-band button{font-size:12px;padding:5px 11px}
   @media (prefers-reduced-motion:reduce){.away-band{animation:none}}
 
   /* ---- quick find ---- */
@@ -1168,7 +1171,7 @@
   .modal .pal{margin-top:clamp(0px,9vh,110px);margin-bottom:auto}
   .pal-h{display:flex;align-items:center;gap:11px;padding:15px 18px;border-bottom:1px solid var(--line);flex-shrink:0}
   .pal-h .ico{width:17px;height:17px;color:var(--faint);flex-shrink:0}
-  .pal-h input{border:0;background:none;box-shadow:none;padding:0;font-size:15.5px;flex:1;min-width:0}
+  .pal-h input{border:0;background:none;box-shadow:none;padding:0;font-size:16px;flex:1;min-width:0}
   .pal-h input:focus{border:0;box-shadow:none;outline:none}
   .pal-list{flex:1;min-height:0;overflow:auto;padding:7px;display:flex;flex-direction:column;gap:1px;
     max-height:min(52vh,420px)}
@@ -1188,15 +1191,15 @@
     justify-content:center;background:#ffffff0d;color:var(--muted)}
   .pal-ico .ico{width:15px;height:15px}
   .pal-t{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px}
-  .pal-n{font-size:13.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pal-n{font-size:14px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pal-s{font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .pal-r{font-size:11.5px;font-weight:700;flex-shrink:0;letter-spacing:-.01em}
-  .pal-g{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+  .pal-r{font-size:12px;font-weight:700;flex-shrink:0;letter-spacing:-.01em}
+  .pal-g{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
     padding:9px 10px 4px}
   .pal-empty{padding:26px 14px;text-align:center;color:var(--faint);font-size:13px}
   .pal-f{display:flex;gap:16px;padding:9px 16px;border-top:1px solid var(--line);flex-shrink:0;
-    font-size:10.5px;color:var(--faint);background:#0b0e14b8}
-  .pal-f kbd{font-family:inherit;font-size:9.5px;padding:1px 5px;border-radius:4px;margin-right:3px;
+    font-size:11px;color:var(--faint);background:#0b0e14b8}
+  .pal-f kbd{font-family:inherit;font-size:10px;padding:1px 5px;border-radius:4px;margin-right:3px;
     background:#ffffff12;box-shadow:inset 0 0 0 1px var(--line2)}
   .to-top{position:fixed;right:clamp(14px,3vw,28px);bottom:clamp(14px,3vw,28px);z-index:55;
     width:40px;height:40px;padding:0;border-radius:50%;
@@ -1217,21 +1220,21 @@
   /* except while a point is being read — the tip wants that corner and you asked
      for the tip. Outranks the hover rule above on specificity. */
   .lpc-plot:has(.lpc-pt:hover) .lpc-range{opacity:0;pointer-events:none}
-  .lpc-range button{font-size:8.5px;font-weight:700;letter-spacing:.06em;line-height:1;
+  .lpc-range button{font-size:9px;font-weight:700;letter-spacing:.06em;line-height:1;
     padding:3px 5px;border-radius:5px;border:1px solid transparent;background:#ffffff0d;
     color:var(--faint);box-shadow:none}
   .lpc-range button:hover{background:#ffffff1c;border-color:transparent;color:var(--text)}
   .lpc-range button.on{background:color-mix(in srgb,var(--teal) 22%,transparent);color:var(--teal-txt)}
-  .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:8px;font-weight:600;letter-spacing:.09em;
+  .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:9px;font-weight:600;letter-spacing:.09em;
     text-transform:uppercase;pointer-events:none;opacity:.62;line-height:1}
   /* the ceiling the line is climbing back towards; left lane, with the band
      captions, and dropped rather than stacked when one is already there */
   .lpc-plot .lpc-peak{position:absolute;left:50%;transform:translateX(-50%);
-    font-size:7.5px;font-weight:700;letter-spacing:.12em;
+    font-size:9px;font-weight:700;letter-spacing:.12em;
     text-transform:uppercase;pointer-events:none;line-height:1;color:var(--gold-txt);opacity:.9}
   /* division numerals below Master, LP marks above it — opposite side to the tier
      names so the two never collide */
-  .lpc-plot .lpc-sub{position:absolute;right:6px;font-size:8px;font-weight:600;letter-spacing:.06em;
+  .lpc-plot .lpc-sub{position:absolute;right:6px;font-size:9px;font-weight:600;letter-spacing:.06em;
     color:#fff;opacity:.32;pointer-events:none;line-height:1;font-variant-numeric:tabular-nums}
   /* Each point owns the slice of the chart nearest to it, and the slices tile the
      chart exactly. The first version centred a fixed-width column on every point,
@@ -1262,7 +1265,7 @@
     white-space:nowrap;font-size:11px;font-weight:500;line-height:1.35;color:var(--text);
     padding:6px 9px;border-radius:var(--r-sm);background:#0c151f;border:1px solid color-mix(in srgb,var(--gold-dim) 70%,transparent);
     box-shadow:var(--sh-3)}
-  .lpc-tip em{display:block;font-style:normal;font-size:9.5px;color:var(--faint);margin-top:1px}
+  .lpc-tip em{display:block;font-style:normal;font-size:10px;color:var(--faint);margin-top:1px}
   .lpc-tip.l{left:-6px;transform:none}
   .lpc-tip.r{left:auto;right:-6px;transform:none}
   /* Below the dot when the dot sits too near the top for a tip to fit above it.
@@ -1273,30 +1276,30 @@
   .lpc-pt:hover .lpc-tip{opacity:1}
   .stale{color:var(--danger)}
   #toast button{margin-left:12px;font-size:12px;padding:3px 10px;color:var(--teal-txt)}
-  .meta{font-size:12.5px;color:var(--muted);line-height:1.65}
+  .meta{font-size:13px;color:var(--muted);line-height:1.65}
   .meta b{color:var(--text);font-weight:500}
   .meta .g{color:var(--gold-txt)}
   .ctags{display:flex;gap:6px;flex-wrap:wrap}
   .ctags span{font-size:11px;padding:3px 9px;border-radius:var(--r-xs);background:#ffffff0a;border:1px solid #ffffff0f;color:var(--muted)}
   .login{background:#00000038;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:13px;display:flex;flex-direction:column;gap:9px}
-  .login .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:7px}
+  .login .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:7px}
   .lrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
   .lrow .val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .lrow .mono{font-family:ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:.01em}
   .lrow .none{color:var(--faint)}
   /* The recovery facts are labelled; the credentials above them are not, because
      a username and a password are obvious from their shape and these are not. */
-  .lrow .lk{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  .lrow .lk{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
     color:var(--faint);margin-right:9px}
-  .lrow .lage{font-style:normal;font-size:10.5px;color:var(--faint);margin-left:9px}
+  .lrow .lage{font-style:normal;font-size:11px;color:var(--faint);margin-left:9px}
   /* Beside the name in all three layouts, because the point of the flag is that
      you spot it without having opened anything. */
   /* Drawn only when there is a goal. An account with nothing to climb towards
      should not be shown an empty progress bar to feel bad about. */
   .goal{display:flex;flex-direction:column;gap:5px;margin-top:-3px}
-  .goal-h{display:flex;align-items:baseline;gap:8px;font-size:10.5px}
-  .goal-h .k{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
-  .goal-t{font-weight:700;letter-spacing:-.01em;font-size:11.5px}
+  .goal-h{display:flex;align-items:baseline;gap:8px;font-size:11px}
+  .goal-h .k{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .goal-t{font-weight:700;letter-spacing:-.01em;font-size:12px}
   .goal-r{margin-left:auto;color:var(--faint);font-variant-numeric:tabular-nums;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .goal-bar{height:4px;border-radius:1px;background:#ffffff12;overflow:hidden}
@@ -1313,7 +1316,7 @@
   .c-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
   /* was a bare run-on caption floating above the buttons; now a dot-led timestamp
      with the source as its own tag, so it reads as a deliberate meta line */
-  .upd{font-size:10.5px;color:var(--faint);letter-spacing:.015em;display:inline-flex;align-items:center;gap:7px;min-width:0}
+  .upd{font-size:11px;color:var(--faint);letter-spacing:.015em;display:inline-flex;align-items:center;gap:7px;min-width:0}
   .upd::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.55;flex-shrink:0}
   .upd.stale{color:var(--danger)}
   .upd.stale::before{opacity:1}
@@ -1327,7 +1330,7 @@
      text happened to measure. */
   .acts{display:flex;gap:7px;flex-wrap:wrap}
   .acts button,.acts a{font-size:12px;padding:7px 12px;min-height:32px;text-decoration:none}
-  .c-more{min-width:36px;padding:7px 10px;font-size:15px;line-height:1;color:var(--muted);
+  .c-more{min-width:36px;padding:7px 10px;font-size:16px;line-height:1;color:var(--muted);
     letter-spacing:.08em}
   .c-more:hover{color:var(--text)}
   .c-more.on{background:var(--panel3);border-color:var(--line2);color:var(--text)}
@@ -1350,12 +1353,12 @@
   /* Named groups, not bare hairlines. A rule says "these are apart"; it never says
      what either side of it is. Same lockup as the list view's tier bands. */
   .cm-g{display:flex;align-items:center;gap:8px;padding:7px 11px 3px;
-    font-size:9px;font-weight:700;line-height:1;letter-spacing:.14em;text-transform:uppercase;
+    font-size:10px;font-weight:700;line-height:1;letter-spacing:.14em;text-transform:uppercase;
     color:var(--faint);user-select:none}
   .cm-g::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
   .cm-g:first-child{padding-top:3px}
   .card-menu button,.card-menu .cm-link{width:100%;justify-content:flex-start;gap:10px;
-    font-size:12.5px;font-weight:450;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
+    font-size:13px;font-weight:450;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
     background:none;border:1px solid transparent;box-shadow:none;color:var(--muted);
     text-decoration:none;display:inline-flex;align-items:center;cursor:pointer;text-align:left}
   .card-menu .ico{width:15px;height:15px;flex-shrink:0;color:var(--faint);
@@ -1375,7 +1378,7 @@
   /* The panel is the rank window's body now, and .mdl-b carries no padding of its
      own — the account form gets its 22px from .formgrid. This is that measure. */
   .rankpanel{display:flex;flex-direction:column;gap:14px;padding:20px 22px}
-  .rankpanel .k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+  .rankpanel .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
     color:var(--faint);display:block;margin-bottom:8px}
   /* Named fields that wrap, rather than a row of bare boxes sized to the shortest
      thing they might hold. Wide enough that four digits and a spinner are not
@@ -1412,12 +1415,20 @@
   .a-login:hover{background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 70%,#fff),var(--teal) 50%);border-color:var(--teal);color:var(--teal-ink);filter:brightness(1.06);
     box-shadow:0 7px 22px -6px color-mix(in srgb,var(--teal) 95%,transparent)}
 
+  /* One eyebrow. The small uppercase label over a figure is the most repeated
+     element on the page — ACCOUNTS, PEAK, GOAL, CURRENT, RANK SPREAD — and it was
+     set four sizes and seven trackings apart, from 9px to 10.5px and .1em to .16em,
+     so neighbouring labels never quite lined up. Colour still says how loud each
+     one is; the shape is now the same everywhere. */
+  .stat .k,.dist .k,.dash-filter .k,.c-stats .k,.c-notes .k,.sec-n,.chp-h,.away-k,.pal-g,.login .k,.lrow .lk,
+  .goal-h .k,.rankpanel .k,.grp-h,.cm-g,.c-drawer{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+
   /* ---- form + settings ---- */
   .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:22px}
   .fw{grid-column:1/-1}
   .fld{display:flex;flex-direction:column;gap:6px}
   /* sentence case, not micro-caps — several of these labels are full sentences */
-  .fld label{font-size:11.5px;font-weight:500;letter-spacing:.005em;color:var(--muted);line-height:1.45}
+  .fld label{font-size:12px;font-weight:500;letter-spacing:.005em;color:var(--muted);line-height:1.45}
   .hidden{display:none!important}
   .empty{padding:64px 24px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7}
   .empty .d{height:84px;margin-bottom:20px;display:flex;align-items:center;justify-content:center}
@@ -1460,7 +1471,7 @@
     border-bottom:1px solid var(--line);background:linear-gradient(180deg,#ffffff0a,transparent)}
   .mdl-h .t{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em;text-transform:uppercase;
     font-size:14px;color:var(--gold-txt)}
-  .mdl-h .s{font-size:11.5px;color:var(--faint);margin-left:auto;margin-right:34px;
+  .mdl-h .s{font-size:12px;color:var(--faint);margin-left:auto;margin-right:34px;
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .mdl-b{flex:1;min-height:0;overflow:auto;overflow-x:hidden}
   .mdl-f{display:flex;gap:9px;align-items:center;flex-wrap:wrap;flex-shrink:0;
@@ -1473,7 +1484,7 @@
     color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:9px}
   .grp-h::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
   .grp .formgrid{padding:0;gap:15px}
-  .hint{font-size:11.5px;color:var(--faint);line-height:1.55}
+  .hint{font-size:12px;color:var(--faint);line-height:1.55}
   /* align-items:flex-start so a label that wraps to two lines still starts level
      with its checkbox instead of floating half a line below it */
   /* Checkbox option rows: the label grows so a long line wraps cleanly.
@@ -1483,7 +1494,7 @@
   .sub-fld>label,.sub-fld>span{flex:1;min-width:0}
   .sub-fld.inline{align-items:center;gap:10px}
   .sub-fld.inline>label,.sub-fld.inline>span{flex:none;color:var(--muted);font-size:13px}
-  .sub-fld.inline select,.sub-fld.inline input[type=number]{width:auto;min-width:0;padding:6px 10px;font-size:12.5px}
+  .sub-fld.inline select,.sub-fld.inline input[type=number]{width:auto;min-width:0;padding:6px 10px;font-size:13px}
   .sub-fld input[type=checkbox]{margin-top:3px}
   .chk{display:flex;align-items:center;gap:9px}
   .chk label{font-size:13px;color:var(--text);line-height:1.45}
@@ -1733,7 +1744,7 @@
   }
   @media (pointer:coarse){
     .acts button,.acts a,.lbtns button{font-size:13px;padding:9px 13px}
-    .star{font-size:21px;padding:2px 6px 2px 0}
+    .star{font-size:20px;padding:2px 6px 2px 0}
     button,.btn{padding:10px 15px}
     .seg button{width:40px;height:36px;padding:0} /* keep fixed; don't inherit the fat button padding */
     input,select,textarea{font-size:16px}
