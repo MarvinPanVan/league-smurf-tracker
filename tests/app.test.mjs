@@ -729,12 +729,18 @@ test("Login stays the most lit control on a card: filled, glossed and glowing", 
   assert.match(rule, /box-shadow:0 /, "and a glow under it");
 });
 
-test("a stale card says so in red with its dot, not with a warning glyph as well", () => {
-  const win = bootApp([{ id: "s1", region: "EUW", gameName: "Old", tagLine: "1", status: "active",
-    stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() - 6 * 86400000 }, history: [], tags: [] }]);
-  const upd = win.document.querySelector('.card[data-id="s1"] .upd');
-  assert.ok(upd.classList.contains("stale"));
-  assert.match(upd.textContent, /^Updated 6 days ago$/);
+test("a stale card warns with a drawn mark, which a fresh card does not carry", () => {
+  const D = 86400000;
+  const win = bootApp([
+    { id: "s1", region: "EUW", gameName: "Old", tagLine: "1", status: "active",
+      stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() - 6 * D }, history: [], tags: [] },
+    { id: "f1", region: "EUW", gameName: "New", tagLine: "2", status: "active",
+      stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() - 3600000 }, history: [], tags: [] }]);
+  const upd = id => win.document.querySelector(`.card[data-id="${id}"] .upd`);
+  assert.ok(upd("s1").classList.contains("stale"));
+  assert.ok(upd("s1").querySelector("svg.ico"), "the warning is an icon, drawn the same everywhere");
+  assert.equal(upd("s1").textContent, "Updated 6 days ago", "not a \u26A0 character in the text");
+  assert.equal(upd("f1").querySelector("svg"), null, "a fresh card has nothing to warn about");
 });
 
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
