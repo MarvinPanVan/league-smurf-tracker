@@ -1008,6 +1008,26 @@ test("a new vault gets four set-up steps, each a button, until they are done or 
   assert.equal(appGet(win, "cfg.setupHidden"), true, "and it stays hidden");
 });
 
+test("compact cards leave the chart and stats under Details, and bring them back when opened", () => {
+  const now = Date.now(), D = 86400000;
+  const win = bootApp([{ id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: [],
+    history: [1, 2, 3].map(k => ({ t: now - (4 - k) * D, tier: "GOLD", division: "II", lp: 10 * k, w: k, l: 0 })),
+    stats: { found: true, tier: "GOLD", division: "II", lp: 30, wins: 3, losses: 0, level: 50, updatedAt: now } }]);
+  const card = () => win.document.querySelector('.card[data-id="c"]');
+  assert.equal(win.document.body.classList.contains("compact-cards"), false, "off by default");
+  win.document.getElementById("bSettings").click();
+  win.document.getElementById("sCompact").checked = true;
+  win.document.getElementById("sSave").click();
+  assert.ok(win.document.body.classList.contains("compact-cards"));
+  assert.equal(appGet(win, "cfg.compactCards"), true, "and it is remembered");
+  const rule = html.match(/body\.compact-cards \.card:not\(\.info-open\) \.lpc,[^{]*\{display:none\}/);
+  assert.ok(rule, "the chart and stats are hidden on a closed card");
+  const drawer = card().querySelector('[data-act="info"]');
+  assert.ok(drawer, "every card offers Details in compact mode, even one with no seasons to show");
+  drawer.click();
+  assert.ok(card().classList.contains("info-open"), "an opened card gets them back");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");

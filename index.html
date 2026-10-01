@@ -1086,6 +1086,7 @@
 
   /* labelled micro-stats instead of one muted run-on sentence */
   .c-stats{display:flex;flex-wrap:wrap;gap:7px 20px}
+  body.compact-cards .card:not(.info-open) .lpc,body.compact-cards .card:not(.info-open) .c-stats{display:none}
   .c-stats>div{display:flex;flex-direction:column;gap:2px;min-width:0}
   .c-stats .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
   .c-stats .v{font-size:13px;font-weight:500;color:var(--text);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
@@ -2088,6 +2089,10 @@
               <span class="atm-tip">Flat background. The UI is the atmosphere.</span>
             </button>
           </div>
+        </div>
+        <div class="chk" style="margin-top:16px">
+          <input type="checkbox" id="sCompact" style="width:auto">
+          <label for="sCompact">Compact cards — leave each card's chart and stats under its Details, so more cards fit on screen</label>
         </div>
       </div>
 
@@ -6201,7 +6206,7 @@ function cardHTML(a,i){
   // worth spotting get one.
   const railed=a.status&&a.status!=="active";
   const icon0=iconUrl(s);
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${railed?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}${openInfo.has(a.id)?" info-open":""}" data-id="${idAttr(a.id)}"${railed?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <div class="c-head">
       <div class="c-portrait">
@@ -6283,8 +6288,8 @@ function cardHTML(a,i){
         <button data-act="more" class="c-more${openMore.has(a.id)?" on":""}" aria-haspopup="menu" aria-expanded="${openMore.has(a.id)}" title="More actions" aria-label="More actions">⋯</button>
       </div>
     </div>
-    ${openInfo.has(a.id)?infoBlockHTML(a,rv("info")):""}
-    ${hasInfo(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="Past seasons, flex rank, champions">
+    ${openInfo.has(a.id)&&hasInfo(a)?infoBlockHTML(a,rv("info")):""}
+    ${hasInfo(a)||cfg.compactCards?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${cfg.compactCards?"Chart, stats, past seasons, flex rank, champions":"Past seasons, flex rank, champions"}">
       <span class="c-dl" aria-hidden="true"></span>
       <span class="c-dt">${open?"Close":"Details"}</span>
       <svg class="ico" viewBox="0 0 26 12" aria-hidden="true"><polyline points="2 3 13 10 24 3"/></svg>
@@ -6755,7 +6760,7 @@ function openSettings(){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";updateVaultStatus();updateSyncStatus();updateStorageStatus();$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";$("sCompact").checked=!!cfg.compactCards;updateVaultStatus();updateSyncStatus();updateStorageStatus();$("settings").classList.remove("hidden")
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -6807,6 +6812,12 @@ function applyAtmosphere(mode){
   syncAtmosphereUI(m);
   return m;
 }
+/* Compact cards: the chart and the stat row are the tallest parts of a card,
+   and in a big vault they are the parts you look at least often. Left under
+   Details they come back when that card is opened, so nothing is lost — the grid
+   just fits about twice as many cards on a screen. A class on the body, so the
+   switch costs no re-render. */
+function applyCompact(){document.body.classList.toggle("compact-cards",!!cfg.compactCards)}
 function revertAtmosphere(){applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE)}
 function hexToHsl(hex){
   const r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;
@@ -7398,6 +7409,8 @@ $("sSave").addEventListener("click",async()=>{
   // never picked anything along behind it.
   cfg.accent=$("sAccent").value===DEFAULT_ACCENT?null:$("sAccent").value;applyAccent(cfg.accent||DEFAULT_ACCENT);
   cfg.accent2=$("sAccent2").value===DEFAULT_ACCENT2?null:$("sAccent2").value;applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
+  // the Details handle depends on it, so the cards are redrawn when it changes
+  if(!!cfg.compactCards!==$("sCompact").checked){cfg.compactCards=$("sCompact").checked;applyCompact();renderGrid()}
   cfg.atmosphere=applyAtmosphere(document.body.dataset.atmosphere||DEFAULT_ATMOSPHERE);
   if(cfg.atmosphere===DEFAULT_ATMOSPHERE)cfg.atmosphere=null; // same idea as accents: no preference vs explicit default
   cfg.exportRemindDays=clampExportDays($("sExportDays")&&$("sExportDays").value);
@@ -8624,7 +8637,7 @@ function boot(){
   fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);
   if(cfg.accent)applyAccent(cfg.accent);
   if(cfg.accent2)applyAccent2(cfg.accent2);
-  applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);
+  applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyCompact();
   let raw=null;
   try{raw=hasStorage?localStorage.getItem(DB_KEY):null}catch(e){}
   const stored=readStoredVault(raw);
