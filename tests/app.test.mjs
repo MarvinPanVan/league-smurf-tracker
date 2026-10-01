@@ -537,6 +537,20 @@ test("relock re-shows the lock screen and clears in-memory accounts; the same pa
   assert.equal(win.document.querySelectorAll(".card").length, 1, "the same account must come back after unlocking");
 });
 
+test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
+  const win = bootApp();
+  const lock = win.document.getElementById("lock");
+  assert.ok(lock.querySelector(".brand-mark"), "the gem is on the gate");
+  const title = win.document.getElementById(lock.getAttribute("aria-labelledby"));
+  assert.ok(title && lock.contains(title), "the region is named by its own wordmark");
+  assert.equal(title.textContent, "Smurf Tracker");
+  assert.equal(win.document.getElementById("lockPass").getAttribute("aria-label"), "Master password",
+    "the field has a name that is not its placeholder");
+  assert.equal(win.document.getElementById("lockErr").getAttribute("role"), "alert", "a wrong password is announced");
+  assert.ok(win.document.getElementById("lockBtn").classList.contains("lock-go"), "one full-width action");
+  assert.equal(lock.querySelector(".bar"), null, "not a toolbar with one button in it");
+});
+
 test("opening one panel (settings/form/bulk-add/help) always closes the others", () => {
   const win = bootApp();
   const hidden = id => win.document.getElementById(id).classList.contains("hidden");

@@ -274,13 +274,13 @@
      patches mid-word that read as broken letters rather than shine. The ramp now
      spans only mid -> base -> light -> specular, a band that stays legible at
      any hue, with one narrow highlight doing the metallic work. */
-  h1{margin:0;font-weight:700;font-size:clamp(29px,4.2vw,41px);line-height:1.04;
+  h1,.lock-wm{margin:0;font-weight:700;font-size:clamp(29px,4.2vw,41px);line-height:1.04;
     background:linear-gradient(102deg,
       var(--gold-mid) 0%,var(--gold) 20%,var(--star) 36%,
       #fffaf0 44%,var(--star) 53%,var(--gold) 72%,var(--gold-mid) 100%);
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
     filter:drop-shadow(0 1px 1px #00000066)}
-  h1.hex-display{letter-spacing:.02em}
+  h1.hex-display,.lock-wm{letter-spacing:.02em}
   /* Replaces the full-width rule that used to sit here. That line started hard and
      faded into nothing, belonging to neither the header above nor the text below —
      a hairline down the side of the paragraph does the same separating job while
@@ -441,6 +441,10 @@
   .hx-in>.dist::after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;pointer-events:none;
     transform:translateX(-50%) rotate(45deg);background:var(--bg);border:1px solid var(--gold)}
   .dist .k{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-right:2px}
+  .hx-rule{position:relative;height:1px;width:100%;flex-shrink:0;
+    background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent)}
+  .hx-rule::after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;
+    transform:translateX(-50%) rotate(45deg);background:var(--bg);border:1px solid var(--gold)}
   .gem{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text)}
   /* the tier lozenge — scoped to a class rather than the bare tag, because every
      <i> inside a .gem was inheriting a 9px box and a 45° rotation, which is what
@@ -1618,6 +1622,23 @@
   .spin{display:inline-block;animation:sp 1s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
 
+  /* ---- lock screen ----
+     The one screen that is nothing but the brand, and it was a bare form pinned
+     near the top: no mark, no name, a button sized to its word. It is a gate now —
+     the gem, the wordmark, a gold rule, then one field and one full-width action. */
+  #lock{max-width:400px;margin:min(14vh,124px) auto 0}
+  .lock-in{display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px 34px 32px}
+  .lock-in .brand-mark{margin:6px 0 24px}
+  .lock-wm{font-size:30px}
+  .lock-sub{margin-top:8px;font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+  .lock-in .hx-rule{margin:24px 0 20px}
+  .lock-k{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt)}
+  .lock-txt{font-size:13px;color:var(--muted);margin:8px 0 18px;line-height:1.6}
+  #lockPass{width:100%}
+  .lock-err{align-self:stretch;text-align:left;color:var(--danger);font-size:12px;margin-top:8px}
+  .lock-go{width:100%;margin-top:14px;padding:11px 16px}
+  @media (max-width:440px){#lock{margin-top:8vh}.lock-in{padding:34px 22px 26px}.lock-wm{font-size:26px}}
+
   /* ---- entrances ----
      Panels toggle .hidden (display:none), which can't be transitioned. Taking an
      element out of display:none restarts its animations, so a rule scoped to the
@@ -1798,12 +1819,16 @@
 <body data-atmosphere="spotlight">
 <div class="wrap">
 
-  <div id="lock" class="hx teal hidden" style="max-width:430px;margin:min(16vh,130px) auto"><div class="hx-in" style="padding:28px">
-    <div class="hex-display" style="color:var(--gold-txt);font-size:14px;text-transform:uppercase;margin-bottom:12px">Vault locked</div>
-    <p style="font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.6">This vault is protected with a master password. Enter it to unlock.</p>
-    <input type="password" id="lockPass" placeholder="Master password" autocomplete="current-password" style="width:100%">
-    <div id="lockErr" style="color:var(--danger);font-size:12px;margin-top:6px;display:none">Wrong password — try again.</div>
-    <div class="bar" style="margin-top:12px"><button id="lockBtn" class="b-gold">Unlock</button></div>
+  <div id="lock" class="hx gold hidden" role="region" aria-labelledby="lockTitle"><div class="hx-in lock-in">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <div class="lock-wm hex-display" id="lockTitle">Smurf Tracker</div>
+    <div class="lock-sub">Summoner Vault</div>
+    <div class="hx-rule" aria-hidden="true"></div>
+    <div class="lock-k">Vault locked</div>
+    <p class="lock-txt">Enter your master password to open it.</p>
+    <input type="password" id="lockPass" placeholder="Master password" aria-label="Master password" autocomplete="current-password">
+    <div id="lockErr" class="lock-err" role="alert" style="display:none">Wrong password — try again.</div>
+    <button id="lockBtn" class="b-gold lock-go">Unlock</button>
   </div></div>
 
   <div id="appRoot" class="hidden">
