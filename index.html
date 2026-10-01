@@ -760,7 +760,11 @@
   .rw-id{min-width:0;display:flex;flex-direction:column;gap:1px}
   .rw-nm{font-size:14.5px;font-weight:600;letter-spacing:-.012em;color:var(--text);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
-  .rw-star{color:var(--star);display:inline-flex}
+  .rw-star{color:var(--star);display:inline-flex;flex-shrink:0}
+  /* text-overflow only works on a box that holds the text itself, and .t-nm and
+     .rw-nm are flex rows with the name as a bare text node — so it was sheared off
+     mid-letter, no ellipsis, with the flag after it pushed out of sight. */
+  .t-nm>.nm-t,.rw-nm>.nm-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rw-star .ico{width:11px;height:11px;fill:var(--star)}
   .rw-tag{font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rw-tags{display:flex;gap:4px;margin-top:3px;overflow:hidden}
@@ -5555,7 +5559,7 @@ function rowHTML(a,i){
       <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}">
       <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
       <span class="rw-id">
-        <span class="rw-nm" title="${esc(a.label||a.gameName)}">${esc(a.label||a.gameName)}${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
+        <span class="rw-nm" title="${esc(a.label||a.gameName)}"><span class="nm-t">${esc(a.label||a.gameName)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
         <span class="rw-tag">${esc(a.gameName)}#${esc(a.tagLine)}</span>
         ${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}
       </span>
@@ -5614,7 +5618,7 @@ function tileHTML(a){
     <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
-    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}${esc(a.label||a.gameName)}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
+    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
     <span class="t-rk" style="color:${col}">${esc(rank)}</span>
     ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
   </div></div>`;

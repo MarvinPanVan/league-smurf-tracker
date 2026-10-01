@@ -6038,3 +6038,28 @@ test("the Accounts tile's caption wraps between its pieces instead of being cut 
   assert.match(rule[0], /white-space:normal/);
   assert.match(piece[0], /white-space:nowrap/);
 });
+
+/* text-overflow only works on a block that holds the text itself. The wall tile's
+   and the list row's name boxes are flex containers with the name as a bare text
+   node beside the star and the flag, so a long name was sheared off mid-letter
+   with no ellipsis, and the flag after it was pushed out of sight — on exactly the
+   accounts the flag exists to point at. */
+test("a long name ellipsises in the wall and the list, and keeps its flag in view", () => {
+  const long = "This is an extremely long account label that will not fit anywhere";
+  const win = bootApp([{ id: "l1", label: long, gameName: "Long", tagLine: "1", region: "EUW", status: "active",
+    flagged: true, fav: true, tags: [], history: [], stats: null }]);
+  const doc = win.document;
+  for (const layout of ["wall", "list"]) {
+    doc.querySelector(`#density [data-density="${layout}"]`).click();
+    const box = doc.querySelector(layout === "wall" ? ".t-nm" : ".rw-nm");
+    const text = box.querySelector(".nm-t");
+    assert.ok(text, `${layout}: the name sits in an element of its own`);
+    assert.equal(text.textContent, long);
+    assert.ok(box.querySelector(".flagmark"), `${layout}: the flag is still there beside it`);
+  }
+  const rule = html.match(/\.t-nm>\.nm-t,\.rw-nm>\.nm-t\{[^}]*\}/);
+  assert.ok(rule, "one rule ellipsises both");
+  assert.match(rule[0], /text-overflow:ellipsis/);
+  assert.match(rule[0], /min-width:0/, "or the flex item never gets narrower than its text");
+  assert.match(html.match(/\.rw-star\{[^}]*\}/)[0], /flex-shrink:0/, "the star does not give way to the name either");
+});
