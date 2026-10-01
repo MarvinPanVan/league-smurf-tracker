@@ -5,6 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#010a13">
+<!-- What a shared link shows: Discord, Reddit, iMessage and friends render these as
+     a card. Sharing the link is how the licence asks for this to be passed on, and
+     without them it arrived as a bare URL. Absolute URLs, because a scraper does
+     not resolve relative ones. -->
+<meta name="description" content="Every League of Legends account in one place: ranks, LP history and logins. Runs in your browser — nothing leaves it.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Smurf Tracker">
+<meta property="og:title" content="Smurf Tracker — every League account in one place">
+<meta property="og:description" content="Ranks, LP history and logins for all your League of Legends accounts. Free, no sign-up, runs in your browser.">
+<meta property="og:url" content="https://marvinpanvan.github.io/league-smurf-tracker/">
+<meta property="og:image" content="https://marvinpanvan.github.io/league-smurf-tracker/icons/social.jpg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="Smurf Tracker: account cards with rank crests, LP charts and win rates">
+<meta name="twitter:card" content="summary_large_image">
 <title>Smurf Tracker — Summoner Vault</title>
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -372,6 +387,27 @@
   .bk-note .ico{color:var(--faint)}
   .bk-note button{padding:3px 9px;font-size:12px;font-weight:600;color:var(--gold-txt);background:none;
     border-color:color-mix(in srgb,var(--gold) 30%,transparent)}
+  .setup{margin:-2px 0 16px}
+  .setup-in{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 14px}
+  .setup-k{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt)}
+  .setup-k em{font-style:normal;color:var(--faint);letter-spacing:.04em;margin-left:6px}
+  .setup-steps{display:flex;gap:8px;flex-wrap:wrap;margin:0;padding:0;list-style:none;flex:1}
+  .setup-steps li{display:flex;align-items:center;gap:6px;font-size:13px}
+  .setup-steps li.done{color:var(--faint);padding:6px 4px}
+  .setup-steps li.done .ico{color:var(--good)}
+  .setup-steps li.done span{text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--faint) 60%,transparent)}
+  .setup-steps button{padding:6px 11px;font-size:13px;font-weight:600}
+  .setup-steps button b{display:inline-grid;place-items:center;width:18px;height:18px;flex-shrink:0;margin-right:2px;border-radius:50%;
+    font-size:11px;color:var(--bg);background:var(--gold-mid)}
+  .setup-x{padding:4px 8px;font-size:12px;color:var(--faint);background:none;border-color:transparent;box-shadow:none}
+  .setup-x:hover{color:var(--text);background:none;border-color:transparent}
+  @media (max-width:560px){
+    .setup-in{position:relative;gap:10px}
+    .setup-x{position:absolute;top:6px;right:6px}
+    .setup-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex-basis:100%;gap:6px}
+    .setup-steps button{width:100%;justify-content:flex-start;padding:7px 9px;font-size:12px}
+    .setup-steps li.done{font-size:12px}
+  }
   .bk-note button:hover{background:color-mix(in srgb,var(--gold) 10%,transparent);border-color:color-mix(in srgb,var(--gold) 55%,transparent)}
 
   /* ---- dashboard ---- */
@@ -1050,6 +1086,7 @@
 
   /* labelled micro-stats instead of one muted run-on sentence */
   .c-stats{display:flex;flex-wrap:wrap;gap:7px 20px}
+  body.compact-cards .card:not(.info-open) .lpc,body.compact-cards .card:not(.info-open) .c-stats{display:none}
   .c-stats>div{display:flex;flex-direction:column;gap:2px;min-width:0}
   .c-stats .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
   .c-stats .v{font-size:13px;font-weight:500;color:var(--text);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
@@ -1151,6 +1188,25 @@
   .c-wr{font-weight:600;color:var(--muted);text-align:right}
   .c-wr.wr-good{color:var(--good)}
   .c-gm,.c-kd{color:var(--faint);font-size:11px;text-align:right}
+  /* recent form: a pip per game, newest first, the way a match history reads */
+  .fm-pips{display:inline-flex;gap:3px;margin-left:7px;vertical-align:-1px}
+  .fm-pip{width:6px;height:11px;border-radius:2px;background:var(--danger)}
+  .fm-pip.w{background:var(--good)}
+  .fm-res{display:inline-block;width:1.3em;font-weight:700;font-size:11px;color:var(--danger)}
+  .fm-res.w{color:var(--good)}
+  .fm-retry{margin-left:8px;padding:2px 8px;font-size:11px}
+  /* Settings → the worker guide */
+  .guide{margin-top:8px;border:1px solid var(--line);border-radius:var(--r-md);background:#ffffff05;font-size:12.5px;color:var(--muted);line-height:1.55}
+  .guide summary{cursor:pointer;padding:10px 13px;font-weight:600;color:var(--text);list-style-position:inside}
+  .guide[open] summary{border-bottom:1px solid var(--line)}
+  .guide ol{margin:0;padding:10px 14px 4px 32px}
+  .guide li{margin-bottom:9px}
+  .guide li::marker{color:var(--gold-txt);font-weight:700}
+  .guide a{color:var(--teal-txt)}
+  .guide .guide-btn{display:inline-block;padding:3px 10px;border-radius:var(--r-sm);font-weight:600;text-decoration:none;
+    color:var(--text);border:1px solid color-mix(in srgb,var(--teal) 55%,transparent);background:color-mix(in srgb,var(--teal) 14%,transparent)}
+  .guide .guide-btn:hover{background:color-mix(in srgb,var(--teal) 24%,transparent)}
+  .guide-alt{padding:0 14px 11px;font-size:12px;color:var(--faint)}
   .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;letter-spacing:.12em;
     pointer-events:none;line-height:1;opacity:.9}
   /* Wins against losses, the way op.gg draws a record — not a fill on an empty
@@ -1165,6 +1221,10 @@
   .d-up{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
   .delta .ico.flame{width:1.15em;height:1.15em;color:#ff8f2e;fill:#ff8f2e;stroke-width:1.4;vertical-align:-.2em}
   .d-down{color:var(--danger);background:color-mix(in srgb,var(--danger) 15%,transparent)}
+  .d-warn{color:#f0b45a;background:color-mix(in srgb,#f0b45a 15%,transparent)}
+  .wl .ready{color:var(--teal-txt);font-weight:600}
+  .goal.lvl .goal-t{color:var(--teal-txt)}
+  .delta .ico{width:1em;height:1em;vertical-align:-.15em}
   /* ---- LP chart ----
      The old sparkline was a bare line with no scale: it told you the number went
      up or down but never how far, or across which ranks. This draws the actual
@@ -1358,6 +1418,9 @@
   .t-nm .flagmark .ico,.rw-nm .flagmark .ico{width:11px;height:11px}
   .lbtns{display:flex;gap:5px;flex-shrink:0}
   .lbtns button{font-size:11px;padding:4px 9px}
+  .login .lseq{width:100%;font-size:12px;font-weight:600;padding:8px 10px;color:var(--teal-txt);
+    border-color:color-mix(in srgb,var(--teal) 45%,transparent);background:color-mix(in srgb,var(--teal) 10%,transparent)}
+  .login .lseq:hover{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 18%,transparent);color:var(--teal-txt)}
   .c-foot{display:flex;flex-direction:column;align-items:stretch;gap:11px;
     border-top:1px solid var(--line);padding-top:12px;margin-top:auto}
   .c-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
@@ -1970,7 +2033,7 @@
       <dt>Cards</dt>
       <dd>The bar across a card's bottom edge opens <b>Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot.</dd>
       <dt>Search</dt>
-      <dd>Matches names, tags, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code>, <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
+      <dd>Matches names, tags, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code>, <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
       <dt>Quick find</dt>
       <dd><kbd>Ctrl</kbd><kbd>K</kbd> (or <kbd>⌘</kbd><kbd>K</kbd>) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.</dd>
       <dt>Keys</dt>
@@ -2046,6 +2109,10 @@
             </button>
           </div>
         </div>
+        <div class="chk" style="margin-top:16px">
+          <input type="checkbox" id="sCompact" style="width:auto">
+          <label for="sCompact">Compact cards — leave each card's chart and stats under its Details, so more cards fit on screen</label>
+        </div>
       </div>
 
       <div class="grp">
@@ -2078,6 +2145,13 @@
 
       <div class="grp">
         <div class="grp-h">Security</div>
+        <div class="fld fw" style="margin-bottom:14px">
+          <label>Storage</label>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <span id="sStorageStatus" class="hint" style="margin:0;flex:1;min-width:200px"></span>
+            <button type="button" id="sStorageProtect" class="hidden">Protect</button>
+          </div>
+        </div>
         <div class="fld fw">
           <label>Master password — encrypts the whole vault at rest with AES-256. There is no recovery: lose the password and the vault is gone.</label>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -2104,7 +2178,30 @@
           <div class="fld fw">
             <label>Backend URL (optional — your own rank server, e.g. Cloudflare Worker)</label>
             <input id="sBackend" placeholder="https://... — leave empty to use the free auto-fetch" autocomplete="off">
+            <div id="sBackendStatus" class="hint" style="margin-top:2px" aria-live="polite"></div>
           </div>
+          <!-- The whole setup, where you paste its result. It was one paragraph of
+               dashboard clicks; it is now the Deploy button and three pastes. -->
+          <details class="fw guide" id="sDeployHelp">
+            <summary>Set up your own worker — free, about 5 minutes</summary>
+            <ol>
+              <li><b>Riot API key</b> (optional, for ranks straight from Riot and your last 5 ranked games). Sign in at
+                <a href="https://developer.riotgames.com" target="_blank" rel="noreferrer">developer.riotgames.com</a> with your Riot account.
+                The <b>Development API Key</b> on your dashboard works at once but expires every 24 hours; for one that lasts,
+                <b>Register Product → Personal API Key</b>. Keep the key to yourself — it is a password.</li>
+              <li><a class="guide-btn" href="https://deploy.workers.cloudflare.com/?url=https://github.com/MarvinPanVan/league-smurf-tracker" target="_blank" rel="noreferrer">Deploy to Cloudflare</a>
+                and sign in (a free account is enough). Keep the copy of the repo it makes private. Paste your key where it asks for
+                <code>RIOT_API_KEY</code>, or leave it empty. Sync storage is set up for you.</li>
+              <li>Copy the <code>https://….workers.dev</code> address it gives you into <b>Backend URL</b> above, then <b>Save settings</b>.
+                The line under the field says what your worker has.</li>
+              <li><b>Adding or replacing the key later</b> (a development key needs this daily):
+                <a href="https://dash.cloudflare.com/?to=/:account/workers-and-pages" target="_blank" rel="noreferrer">Cloudflare → Workers &amp; Pages</a>
+                → your worker → <b>Settings → Variables and Secrets</b> → <code>RIOT_API_KEY</code>, type <b>Secret</b> → <b>Deploy</b>.</li>
+            </ol>
+            <div class="guide-alt">Rather paste the code by hand? Create a Worker, paste
+              <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>,
+              and bind a KV namespace named <code>VAULT</code> for sync.</div>
+          </details>
           <div class="fld fw">
             <label>Advanced: Anthropic API key (optional, stored only in this browser)</label>
             <input type="text" id="sKey" class="mask" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
@@ -2117,15 +2214,7 @@
             </select>
           </div>
           <div class="fw hint">
-            Check order: <b>backend URL → API key → free op.gg auto-fetch</b>. With all three empty, checks use the free auto-fetch and cost nothing. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable, but only worth it for power users.
-          </div>
-          <div class="fw hint" id="sDeployHelp" style="margin-top:8px">
-            <b>Deploy the worker:</b> Cloudflare → Workers → Create → paste
-            <code style="user-select:all">cloudflare-worker.js</code> from the repo → Deploy → paste the
-            <code>*.workers.dev</code> URL above. Check-all then uses one batch POST instead of N GETs.
-            For device sync, also bind a KV namespace named <code>VAULT</code> (Settings → Variables → KV bindings).
-            Raw file:
-            <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>
+            Check order: <b>backend URL → API key → free op.gg auto-fetch</b>. A worker with a Riot API key reads ranks from Riot directly, the most reliable source there is. With all three empty, checks use the free auto-fetch and cost nothing. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable, but only worth it for power users.
           </div>
           <div class="fld">
             <label>Remind me to export after (days)</label>
@@ -2246,7 +2335,7 @@
       <div class="fld"><label>Region</label>
         <select id="fRegion"></select>
       </div>
-      <div class="fld"><label>Riot name *</label><input id="fName" placeholder="Game name (before the #)" data-autofocus></div>
+      <div class="fld"><label>Riot name *</label><input id="fName" placeholder="Game name, or paste Name#TAG" data-autofocus></div>
       <div class="fld"><label>Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234 (no #)"></div>
       <div class="fld"><label>Login username</label><input id="fLogin" placeholder="Riot client login" autocomplete="off"></div>
       <div class="fld pw-fld"><label>Password <span id="pwMeterLabel"></span></label><div style="display:flex;gap:6px">
@@ -2305,6 +2394,8 @@
 
   <!-- dashboard -->
   <div id="dash"></div>
+  <!-- first steps, until they are done or hidden -->
+  <div id="setup"></div>
 
   <!-- toolbar -->
   <div class="console">
@@ -2525,8 +2616,18 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.0.0";
+const APP_VERSION="2.1.0";
 const APP_CHANGELOG=[
+  {v:"2.1.0",items:[
+    "Play next picks the account that needs a game; Diamond+ warns before decay",
+    "Stronger vault encryption — update every device you sync before pushing",
+    "Get set up walks a new vault through add, check, lock and back up",
+    "Paste Name#TAG into the name field; Copy username, then password",
+    "Your own worker in one click, and Riot's API with your key: renames followed, last 5 ranked games",
+    "Levelling accounts count down to 30; search is:decay, is:ready, is:leveling",
+    "Compact cards option; the browser is asked to keep your vault",
+    "Group climb no longer drops when you add a lower account",
+  ]},
   {v:"2.0.0",items:[
     "A new look from the League client: hextech gold on blue-black, gem-cut rank crests",
     "Cleaner type: ranks, buttons and titles in one clear face",
@@ -2642,7 +2743,7 @@ const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"
 // Only Sonnet 5 supports the newer dynamic-filtering web search; Haiku needs the basic one.
 const WEB_SEARCH_TOOL={"claude-sonnet-5":"web_search_20260209","claude-haiku-4-5":"web_search_20250305"};
 let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArchived:false,
-  flag:"",   // "" | "stale" | "unchecked" | "failed" | "attention" | "missing"
+  flag:"",   // "" | "stale" | "unchecked" | "failed" | "attention" | "missing" | "dup" | "rotate" | "decay"
   tier:"",   // a single tier, or "UNRANKED"; set by clicking the rank spread
   density:"cards"};
 // The three questions a vault of sixty accounts raises, as functions, because the
@@ -2697,6 +2798,61 @@ function rotationDays(a){
   const t=a.lastPlayedAt||a.lastLoginAt||(a.stats&&a.stats.updatedAt)||0;
   if(!t)return null;
   return Math.floor((Date.now()-t)/86400000);
+}
+/* Ranked decay, Diamond and up. Each tier has a bank of days: Diamond starts with
+   28 and banks 7 more per ranked game, up to 28; Master, Grandmaster and
+   Challenger start with 14 and bank 1 per game, up to 14. One day drains each
+   night, and once the bank is empty the account loses LP every day (50 in
+   Diamond, 75 above). Riot does not publish the bank, so this is an estimate from
+   what the app has seen: the season's game count at every check. It walks the
+   checks since the account reached Diamond (or since the season began), adds the
+   games played between two checks at the midpoint of that gap — the app knows how
+   many, not when — and drains a day per day. The more often an account is
+   checked, the closer it gets. Returns whole days left, below 0 when decaying. */
+const DECAY_RULES={DIAMOND:{cap:28,per:7,lp:50},MASTER:{cap:14,per:1,lp:75},GRANDMASTER:{cap:14,per:1,lp:75},CHALLENGER:{cap:14,per:1,lp:75}};
+function decayDays(a){
+  if(!isRanked(a)||a.status==="banned")return null;
+  const s=a.stats, tier=(s.tier||"").toUpperCase();
+  if(!DECAY_RULES[tier]||s.wins==null||s.losses==null||!s.updatedAt)return null;
+  const D=86400000;
+  const pts=(a.history||[]).filter(h=>+h.t&&h.w!=null&&h.l!=null&&+h.t<=+s.updatedAt)
+    .map(h=>({t:+h.t,tier:(h.tier||"").toUpperCase(),g:(Number(h.w)||0)+(Number(h.l)||0)}));
+  pts.push({t:+s.updatedAt,tier,g:(Number(s.wins)||0)+(Number(s.losses)||0)});
+  pts.sort((x,y)=>x.t-y.t);
+  // back to where this stretch at Diamond and up began (a lower tier, or a new season)
+  let i=pts.length-1;
+  while(i>0&&DECAY_RULES[pts[i-1].tier]&&pts[i-1].g<=pts[i].g)i--;
+  let rule=DECAY_RULES[pts[i].tier], bank=rule.cap;
+  for(let k=i+1;k<pts.length;k++){
+    const r=DECAY_RULES[pts[k].tier];
+    if(r.cap!==rule.cap){rule=r;bank=r.cap}   // promoted to Master or dropped to Diamond: that tier's own start
+    const half=(pts[k].t-pts[k-1].t)/D/2, games=Math.max(0,pts[k].g-pts[k-1].g);
+    bank=Math.max(0,bank-half);
+    if(games)bank=Math.min(rule.cap,bank+games*rule.per);
+    bank=Math.max(0,bank-half);
+  }
+  return Math.floor(bank-(Date.now()-pts[pts.length-1].t)/D);
+}
+/* Building an account: ranked opens at level 30 (and 20 champions owned, which no
+   source shows). Until then the level is the account's progress; at 30 and still
+   unranked it is ready to place. */
+function isLeveling(a){const s=a.stats;return isLive(a)&&!!s&&s.found!==false&&!isRanked(a)&&s.level!=null&&Number(s.level)<30}
+function isReadyForRanked(a){const s=a.stats;return isLive(a)&&!!s&&s.found!==false&&!isRanked(a)&&Number(s.level)>=30}
+// days are floored, so 0 is "less than one left" — "~0d" read as already gone
+function decayIn(d){return d<1?"<1d":"~"+d+"d"}
+function decayRisk(a){const d=decayDays(a);return isLive(a)&&d!==null&&d<=7}
+/* Which account to play next. One about to decay comes first — the soonest of
+   them — because that is LP to lose; after that, the active account left longest
+   without being played or opened. Resting, banned and archived accounts are out
+   by definition, and so is anything never read. Nothing is suggested until some
+   account has sat for 3 days: "play the one you played yesterday" is not advice. */
+function playNext(pool){
+  const live=(pool||accounts).filter(a=>isLive(a)&&(a.status||"active")==="active"&&isChecked(a)&&a.stats.found!==false);
+  const urgent=live.filter(decayRisk).sort((x,y)=>decayDays(x)-decayDays(y));
+  if(urgent.length){const a=urgent[0],d=decayDays(a);return{a,why:d<0?"decaying — play a ranked game":"decay in "+decayIn(d)}}
+  let best=null,days=-1;
+  for(const a of live){const d=rotationDays(a);if(d!=null&&d>days){best=a;days=d}}
+  return best&&days>=3?{a:best,why:days+" days since played"}:null;
 }
 function needsRotation(a){
   if(a.status==="banned"||a.archived)return false;
@@ -2817,7 +2973,53 @@ function storageOK(){try{localStorage.setItem("__t","1");localStorage.removeItem
    losing local changes on its next pull. Every other write is a real change and
    stamps a real revision. */
 let saveSeq=0, saveChain=Promise.resolve();
+/* The whole vault is localStorage, and by default a browser treats that as
+   disposable: Chrome and Firefox may clear it when the disk runs low, and Safari
+   clears it after seven days without a visit. Asking for persistent storage turns
+   it into data only the user can delete. Asked once, when the first account is
+   saved; Settings shows the answer and can ask again. Firefox asks the user; Chrome
+   and Safari decide by themselves (an installed or often-used site usually gets it). */
+async function storageState(){
+  try{
+    if(!navigator.storage||!navigator.storage.persisted)return"unknown";
+    return(await navigator.storage.persisted())?"protected":"open";
+  }catch(e){return"unknown"}
+}
+async function protectStorage(){
+  try{return !!(navigator.storage&&navigator.storage.persist&&await navigator.storage.persist())}catch(e){return false}
+}
+/* What the worker at the Backend URL has set up, so that a deploy can be checked
+   from here rather than by guesswork: a Riot API key, and storage for sync. An
+   older worker without /status answers with an error, which is reported as such. */
+async function updateBackendStatus(){
+  const el=$("sBackendStatus");if(!el)return;
+  const raw=($("sBackend").value||"").trim();
+  if(!raw){el.textContent="";return}
+  let u;try{u=new URL(raw)}catch(e){el.textContent="That is not a URL.";el.style.color="var(--danger)";return}
+  u.pathname=u.pathname.replace(/\/?$/,"/status");u.search="";
+  el.style.color="";el.textContent="Checking the worker…";
+  try{
+    const c=new AbortController();const t=setTimeout(()=>c.abort(),8000);
+    const res=await fetch(u.href,{signal:c.signal}).finally(()=>clearTimeout(t));
+    const d=await res.json().catch(()=>null);
+    if(d&&d.ok===true){
+      el.textContent=(d.riot?"Riot API key: set — ranks come from Riot":"Riot API key: not set — ranks come from op.gg (the guide below adds one)")
+        +" · "+(d.vault?"Sync storage: ready":"Sync storage: not bound");
+    }else el.textContent="Worker reached, but it is an older version — redeploy it for Riot API support and this status line.";
+  }catch(e){el.textContent="Could not reach the worker at that URL.";el.style.color="var(--danger)"}
+}
+async function updateStorageStatus(){
+  const el=$("sStorageStatus"),btn=$("sStorageProtect");
+  if(!el)return;
+  const st=await storageState();
+  el.textContent=st==="protected"?"Protected — this browser will not clear the vault on its own."
+    :st==="open"?"Not protected — the browser may clear it when space runs low, and Safari does after 7 days without a visit. Protect it, install the app, and keep a backup."
+    :"This browser does not say whether it keeps the vault — keep a backup.";
+  el.style.color=st==="open"?"var(--danger)":"";
+  btn.classList.toggle("hidden",st!=="open");
+}
 function saveDB(opts){invalidateDupCache();
+  if(accounts.length&&!previewMode&&hasStorage&&!cfg.persistAsked){cfg.persistAsked=true;saveCfg();protectStorage()}
   const keepRev=!!(opts&&opts.keepRev);
   const stampRev=()=>{if(!keepRev)touchVaultRev()};
   // Locked is a hard no — not a silent success. Import (and anything else that
@@ -2884,12 +3086,27 @@ function b64(bytes){
   return btoa(s);
 }
 function unb64(str){return Uint8Array.from(atob(str),c=>c.charCodeAt(0))}
-async function deriveKey(password,salt){
+/* Key stretching: what a stolen vault costs per password guess. 150 000 rounds of
+   PBKDF2-SHA256 was the figure when the vault was written; OWASP's current advice is
+   600 000. New saves use 600 000 and say so in the envelope, and a vault saved
+   before that (no count recorded) is read at 150 000 and rewritten at 600 000 on
+   its next save — so it upgrades itself the first time it is opened.
+   The count rides in the salt field ("600000$<salt>") rather than a field of its
+   own: a sync worker deployed from an older copy rebuilds the envelope from exactly
+   {__enc, salt, iv, data}, and would have dropped a new field on the floor —
+   leaving a vault that the next pull could not open. */
+const KDF_ITER=600000, KDF_ITER_LEGACY=150000;
+function saltField(salt,iter){return iter+"$"+b64(salt)}
+function readSaltField(f){
+  const i=String(f).indexOf("$");
+  return i<0?{salt:unb64(f),iter:KDF_ITER_LEGACY}:{salt:unb64(f.slice(i+1)),iter:parseInt(f.slice(0,i),10)||KDF_ITER_LEGACY};
+}
+async function deriveKey(password,salt,iter){
   const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),"PBKDF2",false,["deriveKey"]);
-  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:150000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:iter||KDF_ITER,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
 }
 /* The derived key, held for as long as the vault stays open.
-   Deriving it is 150 000 PBKDF2 rounds, and encryptData used to do that on every
+   Deriving it is 600 000 PBKDF2 rounds, and encryptData used to do that on every
    single save — with a save committed after each account, one "Check all ranks"
    over sixty accounts paid for sixty full derivations on top of the network work.
    The salt is what stops a precomputed table from attacking the password, so it
@@ -2898,25 +3115,28 @@ async function deriveKey(password,salt){
    the IV, and that is still drawn fresh for every single encryption below.
    The key itself is created non-extractable, so unlike the password beside it,
    it cannot be read back out of memory by script. */
-let vaultKey=null;   // {password, salt:Uint8Array, key:CryptoKey}
-async function keyFor(password,salt){
-  if(vaultKey&&vaultKey.password===password&&(!salt||b64(salt)===b64(vaultKey.salt)))return vaultKey;
+let vaultKey=null;   // {password, salt:Uint8Array, iter, key:CryptoKey}
+// With no salt this is the key new saves are written with, so a key cached from
+// reading an older, weaker envelope is not reused for writing.
+async function keyFor(password,salt,iter){
+  const it=iter||KDF_ITER;
+  if(vaultKey&&vaultKey.password===password&&vaultKey.iter===it&&(!salt||b64(salt)===b64(vaultKey.salt)))return vaultKey;
   const s=salt||crypto.getRandomValues(new Uint8Array(16));
-  vaultKey={password,salt:s,key:await deriveKey(password,s)};
+  vaultKey={password,salt:s,iter:it,key:await deriveKey(password,s,it)};
   return vaultKey;
 }
 function forgetVaultKey(){vaultKey=null}
 async function encryptData(password,obj){
-  const {salt,key}=await keyFor(password);
+  const {salt,key,iter}=await keyFor(password);
   const iv=crypto.getRandomValues(new Uint8Array(12));
   const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(JSON.stringify(obj)));
-  return {__enc:true,salt:b64(salt),iv:b64(iv),data:b64(new Uint8Array(ct))};
+  return {__enc:true,salt:saltField(salt,iter),iv:b64(iv),data:b64(new Uint8Array(ct))};
 }
 async function decryptData(password,envelope){
-  const salt=unb64(envelope.salt),iv=unb64(envelope.iv),data=unb64(envelope.data);
+  const {salt,iter}=readSaltField(envelope.salt),iv=unb64(envelope.iv),data=unb64(envelope.data);
   // Derived against the envelope's own salt and cached under it, so unlocking is
   // the last derivation that happens until the vault is locked again.
-  const {key}=await keyFor(password,salt);
+  const {key}=await keyFor(password,salt,iter);
   let pt;
   try{pt=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,data)}
   catch(e){forgetVaultKey();throw e}   // a key derived from a wrong guess must not linger
@@ -2978,6 +3198,7 @@ function sanitizeAccount(a){
   if(typeof a.tagLine==="string")a.tagLine=a.tagLine.trim();
   if(!Array.isArray(a.tags))a.tags=[];
   if(!Array.isArray(a.history))a.history=[];
+  if(a.puuid!=null&&!validPuuid(a.puuid))delete a.puuid;
   if(a.stats&&a.stats.seasons&&typeof a.stats.seasons==="object"){
     if(!Array.isArray(a.stats.seasons.solo))a.stats.seasons.solo=[];
     if(!Array.isArray(a.stats.seasons.flex))a.stats.seasons.flex=[];
@@ -3679,6 +3900,7 @@ async function copyText(v,label,sensitive){
   }
 }
 let lastCopiedSecret=null;
+const loginSeq=new Set();   // cards whose username is copied and whose password is next
 function uid(){return Date.now()+"-"+Math.random().toString(36).slice(2,7)}
 function cryptoInt(max){
   // Rejection sampling — a raw `% max` is slightly biased whenever max does not
@@ -4248,12 +4470,15 @@ function refreshCutoffs(){
 function mapBackendPayload(d){
   if(!d||typeof d!=="object")throw new Error("empty backend payload");
   if(d.ok===false&&d.found!==false)throw new Error(d.error||"backend row failed");
-  if(d.found===false)return {found:false,updatedAt:Date.now()};
+  if(d.found===false)return {found:false,updatedAt:Date.now(),riotError:d.riotError||null};
   // Require an explicit found:true (or a tier) so a half-empty error object is not
   // promoted to UNRANKED success.
   if(d.found!==true&&!d.tier)throw new Error("backend row missing rank");
   const uncertain=!!d.uncertain;
-  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),seasons:d.seasons||null,flex:normPeak(d.flex),champs:Array.isArray(d.champs)?d.champs.slice(0,10):null,lpAt:normLpAt(d.lpAt),icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,uncertain,source:d.source||null,updatedAt:Date.now()};
+  return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),seasons:d.seasons||null,flex:normPeak(d.flex),champs:Array.isArray(d.champs)?d.champs.slice(0,10):null,lpAt:normLpAt(d.lpAt),icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,uncertain,source:d.source||null,updatedAt:Date.now(),
+    puuid:validPuuid(d.puuid)?d.puuid:null,
+    riotId:d.riotId&&typeof d.riotId==="object"&&d.riotId.name&&d.riotId.tag?{name:String(d.riotId.name).slice(0,32),tag:String(d.riotId.tag).slice(0,8)}:null,
+    riotError:d.riotError||null};
 }
 async function fetchViaBackend(acc){
   const r=REGIONS[acc.region]||REGIONS.EUW;
@@ -4262,6 +4487,7 @@ async function fetchViaBackend(acc){
   url.searchParams.set("name",acc.gameName);
   url.searchParams.set("tag",acc.tagLine);
   url.searchParams.set("region",r.opgg);
+  if(validPuuid(acc.puuid))url.searchParams.set("puuid",acc.puuid);
   const text=await fetchWithTimeout(url.href,12000);
   return mapBackendPayload(JSON.parse(text));
 }
@@ -4272,12 +4498,12 @@ async function fetchViaBackendBatch(list){
   try{url=new URL(cfg.backendUrl)}catch(e){return null}
   const accounts=list.map(a=>{
     const r=REGIONS[a.region]||REGIONS.EUW;
-    return{name:a.gameName,tag:a.tagLine,region:r.opgg,id:a.id};
+    return{name:a.gameName,tag:a.tagLine,region:r.opgg,id:a.id,puuid:validPuuid(a.puuid)?a.puuid:undefined};
   });
   const c=new AbortController();const t=setTimeout(()=>c.abort(),45000);
   try{
     const res=await fetch(url.href,{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({accounts:accounts.map(({name,tag,region})=>({name,tag,region}))}),signal:c.signal});
+      body:JSON.stringify({accounts:accounts.map(({name,tag,region,puuid})=>({name,tag,region,puuid}))}),signal:c.signal});
     if(!res.ok)throw new Error("HTTP "+res.status);
     const data=await res.json();
     if(!data||!Array.isArray(data.results))throw new Error("bad batch response");
@@ -4535,7 +4761,33 @@ function rollNumber(el,from,to,suffix){
   };
   requestAnimationFrame(step);
 }
+/* Riot's account id, from a worker that has a Riot API key. It does not change
+   when the Riot ID does, so a renamed account keeps its card and history instead
+   of turning into "not found". A rename the worker reports is followed: the name
+   and tag on the card become the new ones (a change of letter case alone, quietly). */
+const PUUID_RE=/^[A-Za-z0-9_-]{30,100}$/;
+function validPuuid(p){return typeof p==="string"&&PUUID_RE.test(p)}
+let riotKeyWarned=false;
+function takeIdentity(acc,s){
+  if(!s)return;
+  if(validPuuid(s.puuid))acc.puuid=s.puuid;
+  const r=s.riotId;
+  if(r&&r.name&&r.tag&&(r.name!==acc.gameName||r.tag!==acc.tagLine)){
+    const was=acc.gameName+"#"+acc.tagLine, same=was.toLowerCase()===(r.name+"#"+r.tag).toLowerCase();
+    acc.gameName=r.name;acc.tagLine=r.tag;
+    if(!same)toast("Renamed on Riot: "+was+" is now "+r.name+"#"+r.tag);
+  }
+  // Once a session, not once per account: sixty toasts about one expired key help nobody.
+  if(s.riotError==="key"&&!riotKeyWarned){
+    riotKeyWarned=true;
+    toast("Your worker's Riot API key was refused, so this check used op.gg. Development keys expire after 24 hours.");
+  }
+  delete s.puuid;delete s.riotId;delete s.riotError;
+}
 function commitStats(id,acc,s){
+  takeIdentity(acc,s);
+  // a fresh read may mean fresh games — an open drawer fetches them again
+  if(formCache.has(id)){formCache.delete(id);if(openInfo.has(id))loadForm(id)}
   // A profile that does not exist is not a failed request to be retried later —
   // it means the Riot ID has moved, and every future check on this account will
   // fail the same way until somebody corrects it. Raise the flag once.
@@ -4781,16 +5033,28 @@ function poolLpTrend(pool){
   for(const days of series.values())for(const p of days)allT.add(p.t);
   const timeline=[...allT].sort((a,b)=>a-b);
   if(timeline.length<2)return null;
+  // Chained, not a plain average of whoever has a point that day: an account first
+  // checked mid-window used to drag the line by its distance from the rest, so
+  // adding a Silver account to a Diamond vault read as the group falling 300 LP.
+  // Each day moves the line by the average change of the accounts already
+  // counted; one that is new that day joins from there, moving nothing.
   const last=new Map();
   const days=[];
+  let level=0;
   for(const t of timeline){
+    let moved=0; const before=last.size;
     for(const key of keys){
       const hist=series.get(key);
-      while(hist.length&&hist[0].t<=t){last.set(key,hist[0].v);hist.shift()}
+      while(hist.length&&hist[0].t<=t){
+        const v=hist[0].v;hist.shift();
+        if(last.has(key))moved+=v-last.get(key);
+        last.set(key,v);
+      }
     }
     if(last.size<1)continue;
-    let sum=0; for(const v of last.values())sum+=v;
-    days.push({t,avg:sum/last.size,n:last.size});
+    if(!days.length){let sum=0;for(const v of last.values())sum+=v;level=sum/last.size}
+    else if(before)level+=moved/before;
+    days.push({t,avg:level,n:last.size});
   }
   if(days.length<2)return null;
   const pts=days.map(d=>d.avg);
@@ -4806,14 +5070,15 @@ function poolLpTrend(pool){
   const fmtDay=t=>new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
   const from=fmtDay(days[0].t), to=fmtDay(days[days.length-1].t);
   const dots=coords.map(c=>{
-    const label=fmtDay(c.d.t)+"\n~"+Math.round(c.v)+" ladder LP\n"+c.d.n+" counted account"+(c.d.n===1?"":"s");
+    const ch=Math.round(c.v-pts[0]);
+    const label=fmtDay(c.d.t)+"\n"+(ch>0?"+":ch<0?"−":"±")+Math.abs(ch)+" LP since "+fmtDay(days[0].t)+"\n"+c.d.n+" counted account"+(c.d.n===1?"":"s");
     return `<circle class="pool-hit" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="8" data-spark-tip="${esc(label)}"></circle>`
       +`<circle class="pool-dot" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.2"></circle>`;
   }).join("");
-  const svg=`<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="100%" height="28" preserveAspectRatio="none" role="img" aria-label="Average ladder position of counted accounts from ${esc(from)} to ${esc(to)}"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/>${dots}</svg>`;
+  const svg=`<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="100%" height="28" preserveAspectRatio="none" role="img" aria-label="Average climb of counted accounts from ${esc(from)} to ${esc(to)}"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/>${dots}</svg>`;
   const sign=delta>0?"↑ +":delta<0?"↓ ":"→ ";
   const headline=sign+Math.abs(delta);
-  const note=from+" → "+to+" · avg of counted accounts (Iron→Challenger scale)";
+  const note=from+" → "+to+" · the average climb of counted accounts; one added later counts from its first check";
   // what fits under a tile: the window; the rest of the sentence is the tile's title
   const window_=from+" → "+to;
   return {svg, note, tip:note, headline, delta, span:window_};
@@ -4930,7 +5195,7 @@ function renderCompare(){
 /* Sixty accounts is the point where "type some letters and see what sticks" stops
    being enough. The operators are the filters that already exist in the toolbar,
    reachable without leaving the keyboard:
-     tier:diamond   region:euw   is:stale|never|flagged|banned|fav|goal
+     tier:diamond   region:euw   is:stale|never|flagged|banned|fav|goal|decay|ready|leveling
      >plat  >=plat  <gold  <=gold      (rank at least / below)
    Anything not recognised as an operator stays a plain search term, so a stray
    colon in a note never silently swallows the rest of the query. */
@@ -4949,7 +5214,7 @@ function parseQuery(q){
       if(r){out.region=r;continue}
     }
     if((m=/^is:(.+)$/.exec(tok))){
-      if(["stale","never","flagged","banned","fav","goal"].includes(m[1])){out.is.push(m[1]);continue}
+      if(["stale","never","flagged","banned","fav","goal","decay","ready","leveling"].includes(m[1])){out.is.push(m[1]);continue}
     }
     if((m=/^(>=|>|<=|<)(.+)$/.exec(tok))){
       const t=TIER_ORDER.find(x=>x.toLowerCase().startsWith(m[2]));
@@ -4997,6 +5262,9 @@ function passesBaseFilters(a,Q,{forceActive=false}={}){
     if(f==="banned"&&a.status!=="banned")return false;
     if(f==="fav"&&!a.fav)return false;
     if(f==="goal"&&!(a.goal&&a.goal.tier))return false;
+    if(f==="decay"&&!decayRisk(a))return false;
+    if(f==="ready"&&!isReadyForRanked(a))return false;
+    if(f==="leveling"&&!isLeveling(a))return false;
   }
   if(Q.terms.length){
     const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,a.createdOn,a.birthdate,
@@ -5046,6 +5314,7 @@ function filtered(){
     if(ui.flag==="missing"&&(!isLive(a)||!(a.stats&&a.stats.found===false)))return false;
     if(ui.flag==="dup"&&!isDuplicate(a))return false;
     if(ui.flag==="rotate"&&!needsRotation(a))return false;
+    if(ui.flag==="decay"&&!decayRisk(a))return false;
     if(ui.tier){
       const t=(a.stats&&a.stats.found!==false&&a.stats.tier||"").toUpperCase();
       if(ui.tier==="UNRANKED"?!isUnrankedAnswer(a):t!==ui.tier)return false;
@@ -5280,7 +5549,7 @@ function render(){
   // No renderBulkBar() after renderGrid(): it ends with one, against the list it
   // has just built. Calling it again here filtered and sorted the whole vault a
   // second time to reach the same answer, on the hottest path in the app.
-  renderRibbon();renderDash();renderTagbar();renderChips();renderFilterOptions();renderGrid();
+  renderRibbon();renderDash();renderSetup();renderTagbar();renderChips();renderFilterOptions();renderGrid();
   renderRun();renderFailbar();
   for(const b of $("density").children){
     const on=b.dataset.density===ui.density;
@@ -5465,6 +5734,8 @@ function renderDash(){
   }
   const dupN=countPool.filter(isDuplicate).length;
   const rotN=countPool.filter(needsRotation).length;
+  const decayN=countPool.filter(decayRisk).length;
+  const next=playNext(countPool);
   const poolTrend=poolLpTrend(pool);
   // These are filter toggles, not links — they say so to a screen reader as well
   // as by lighting up.
@@ -5497,6 +5768,10 @@ function renderDash(){
       <div class="v" style="color:var(--danger)">${failedN}</div><div class="s-note">auto-fetch failed — enter rank by hand or retry</div></button>`:""}
     ${dupN?`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`:""}
+    ${next?`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
+      <div class="v" style="font-size:14px">${esc(next.a.label||next.a.gameName)}</div><div class="s-note">${esc(next.why)}</div></button>`:""}
+    ${decayN?`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left — estimated from the games seen between checks"><div class="k">Decay risk</div>
+      <div class="v" style="color:#f0b45a">${decayN}</div><div class="s-note">a week or less banked — play a ranked game</div></button>`:""}
     ${rotN?`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
       <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`:""}
     <div class="stat" id="ladderTrendStat"${poolTrend?` title="${esc(poolTrend.note)}"`:""}>
@@ -5518,7 +5793,7 @@ function renderDash(){
       +`<b class="${c.wr>=50?"wr-good":""}">${esc(c.wr)}%</b>`
       +`<i class="g">${esc(c.wins)}<em>-</em>${esc(c.losses)}</i></span>`).join("")}</div>`:""}
   </div></div>
-  ${bk&&accounts.length&&!previewMode?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:""}`);
+  ${bk&&accounts.length&&!previewMode&&!(setupVisible()&&!cfg.lastExport)?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:""}`);
   dashJustOpened=false; // consumed by the render above
   bindSparkTip(el);
   /* The reminder said "hit Export" — and Export lives two clicks away, inside the
@@ -5609,6 +5884,57 @@ function infoParts(a){
   return {solo:seasons.solo,flexHist:seasons.flex,
     champs:normChamps(s.champs)||[],flex:normPeak(s.flex)};
 }
+/* ---- recent form ----
+   The last five ranked solo games, from the worker's /form (Riot's match-v5). Only
+   an account the worker has read through Riot carries a puuid, so that is the
+   test. Fetched when an account's Details open, never in a batch: each costs six
+   Riot calls, against a personal key's hundred per two minutes. */
+const formCache=new Map(), FORM_TTL=5*60*1000;
+function canForm(a){return !!(a&&cfg.backendUrl&&validPuuid(a.puuid))}
+async function loadForm(id){
+  const acc=accounts.find(a=>a.id===id);
+  if(!acc||!canForm(acc))return;
+  const had=formCache.get(id);
+  if(had&&(had.state==="loading"||had.state==="ok"&&Date.now()-had.at<FORM_TTL))return;
+  formCache.set(id,{state:"loading"});
+  let next;
+  try{
+    const u=new URL(cfg.backendUrl);
+    u.pathname=u.pathname.replace(/\/?$/,"/form");u.search="";
+    u.searchParams.set("puuid",acc.puuid);
+    u.searchParams.set("region",(REGIONS[acc.region]||REGIONS.EUW).opgg);
+    const c=new AbortController();const t=setTimeout(()=>c.abort(),20000);
+    const res=await fetch(u.href,{signal:c.signal}).finally(()=>clearTimeout(t));
+    const d=await res.json().catch(()=>null);
+    if(res.ok&&d&&Array.isArray(d.games)){
+      const games=d.games.slice(0,5).filter(g=>g&&typeof g==="object").map(g=>({win:g.win===true,
+        champ:String(g.champ||"?").slice(0,24),kda:[g.k,g.d,g.a].map(n=>Number.isFinite(n)?n:"?").join("/"),
+        min:Number.isFinite(g.min)?g.min:null,at:Number.isFinite(g.at)?g.at:null}));
+      next={state:"ok",games,at:Date.now()};
+    }else next={state:"error",msg:res.status===503?"Riot's rate limit — try again in a minute"
+      :res.status===404?"Your worker has no Riot API key, or is an older version"
+      :"Could not load them"+(d&&d.error?" ("+String(d.error).slice(0,80)+")":"")};
+  }catch(e){next={state:"error",msg:"Could not reach your worker"}}
+  formCache.set(id,next);
+  if(accounts.some(a=>a.id===id))renderCard(id);
+}
+function formHTML(a){
+  if(!canForm(a))return"";
+  const f=formCache.get(a.id);
+  const flat=body=>`<div class="sec flat" data-k="sec-form"><span class="sec-n">Last 5 ranked</span>${body}</div>`;
+  if(!f||f.state==="loading")return flat(`<span class="sec-p">Loading…</span>`);
+  if(f.state==="error")return flat(`<span class="sec-p" title="${esc(f.msg)}">${esc(f.msg)}</span>`
+    +`<button class="fm-retry" data-act="formretry">Retry</button>`);
+  if(!f.games.length)return flat(`<span class="sec-p">No ranked games yet this season</span>`);
+  const w=f.games.filter(g=>g.win).length;
+  const pips=`<span class="fm-pips" aria-hidden="true">${f.games.map(g=>`<i class="fm-pip${g.win?" w":""}"></i>`).join("")}</span>`;
+  return secHTML(a,"form","Last 5 ranked",f.games.length,`${w}W ${f.games.length-w}L${pips}`,
+    f.games.map(g=>`<div class="chp">`
+      +`<span class="c-nm"><b class="fm-res${g.win?" w":""}">${g.win?"W":"L"}</b>${esc(g.champ)}</span>`
+      +`<span class="c-kd">${esc(g.kda)}</span>`
+      +`<span class="c-gm">${g.min!=null?esc(g.min)+" min":""}</span>`
+      +`<span class="c-gm">${g.at?esc(timeAgo(g.at)):""}</span></div>`).join(""));
+}
 function hasInfo(a){const p=infoParts(a);return !!(p.solo.length||p.flexHist.length||p.champs.length||p.flex)}
 // The one-line summary on the drawer pull, so the card says what is folded away
 // before you open it.
@@ -5638,7 +5964,7 @@ function secHTML(a,key,label,n,peek,body){
 }
 function infoBlockHTML(a,rev){
   const {solo,flexHist,champs,flex}=infoParts(a);
-  if(!solo.length&&!flexHist.length&&!champs.length&&!flex)return"";
+  if(!solo.length&&!flexHist.length&&!champs.length&&!flex&&!canForm(a))return"";
   // through tierLabel like everywhere else — the drawer was the fifth place
   // building this string by hand, and the fifth place printing "Challenger II"
   const rank=e=>tierLabel(e)+(e.lp!=null?" · "+e.lp+" LP":"");
@@ -5650,6 +5976,7 @@ function infoBlockHTML(a,rev){
   // one fact, one line — folding it would cost a click to reveal nothing extra
   if(flex)out+=`<div class="sec flat" data-k="sec-flex"><span class="sec-n">Flex rank</span>`
     +`<span class="sec-p" style="color:${tierColor(flex.tier)}">${esc(rank(flex))}</span></div>`;
+  out+=formHTML(a);
   if(solo.length)out+=secHTML(a,"solo","Past seasons · Solo",solo.length,seasonPeek(solo),rows(solo));
   if(flexHist.length)out+=secHTML(a,"flexhist","Past seasons · Flex",flexHist.length,seasonPeek(flexHist),rows(flexHist));
   if(champs.length){
@@ -5905,7 +6232,8 @@ function rowHTML(a,i){
         <button data-act="del" class="b-danger">${armedDelete===a.id?"Sure?":"Delete"}</button>
       </div>
       ${openLogin.has(a.id)?`<div class="login">
-        <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
+        ${a.login&&a.password?`<button class="lseq" data-act="copyseq">${loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`:""}
+      <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
         <div class="lrow"><span class="val mono ${a.password?"":"none"}">${a.password?(shownPw.has(a.id)?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${shownPw.has(a.id)?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
       </div>`:""}
     </div>`:""}
@@ -5955,6 +6283,15 @@ function cardHTML(a,i){
     if(dv)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
   }
   if(isClimbing(hist))deltaChip+='<span class="delta d-up" title="LP has gone up 3 checks in a row">'+icon("flame","flame")+' Climbing</span>';
+  {
+    const dd=decayDays(a);
+    if(dd!==null&&dd<=7){
+      const r=DECAY_RULES[(a.stats.tier||"").toUpperCase()];
+      const why=`Estimated from the games seen between checks. A ranked game banks ${r.per===1?"1 day":r.per+" days"}, up to ${r.cap}; past that the account loses ${r.lp} LP a day.`;
+      deltaChip+=dd<0?`<span class="delta d-down" title="${esc(why)}">${icon("alert")} Decaying</span>`
+        :`<span class="delta d-warn" title="${esc(why)}">${icon("alert")} Decay in ${decayIn(dd)}</span>`;
+    }
+  }
   if(isDuplicate(a))deltaChip+='<span class="delta" title="Another card shares this Riot ID + region">Duplicate ID</span>';
   if(isUncertain(a))deltaChip+='<span class="delta" title="Parsed without op.gg meta description">Uncertain</span>';
   {
@@ -5987,7 +6324,7 @@ function cardHTML(a,i){
   else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">Never checked</div>`;
   else if(s.found===false)rankBlock=`<div class="wl" style="color:var(--danger)">Not found — check name/tag/region</div>`;
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
-    <div class="wl">${s.level>=30?"Unranked this season":"Not level 30 yet"}</div>`;
+    ${s.level>=30?`<div class="wl"><span class="ready" title="Level 30 reached. Ranked also needs 20 champions owned, which the app cannot see.">Ready for ranked</span></div>`:""}`;
   else if(!isRanked(a))rankBlock=`<div class="rk" style="color:${col}"><span class="rk-main"><span class="rk-t">Unranked</span></span></div>
     <div class="wl">${total>0?wlTxt+(wr!==null?` · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:""):"No ranked games found"}</div>`;
   else rankBlock=`<div class="rk" style="color:${col}">${crest(s.tier,"rk-crest")}<span class="rk-main"><span class="rk-t">${esc(tierTxt)}</span>${lpTxt?`<span class="rk-lp">${esc(lpTxt)}</span>`:""}</span></div>
@@ -6031,7 +6368,7 @@ function cardHTML(a,i){
   // worth spotting get one.
   const railed=a.status&&a.status!=="active";
   const icon0=iconUrl(s);
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${railed?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}${openInfo.has(a.id)?" info-open":""}" data-id="${idAttr(a.id)}"${railed?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <div class="c-head">
       <div class="c-portrait">
@@ -6059,6 +6396,9 @@ function cardHTML(a,i){
       ${deltaChip?`<div class="c-deltas">${deltaChip}</div>`:""}
     </div>
     ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
+    ${levelLed&&s.level<30?`<div class="goal lvl" title="Ranked opens at level 30 (and 20 champions owned)">
+      <div class="goal-h"><span class="k">Ranked</span><span class="goal-t">at level 30</span><span class="goal-r">${30-s.level} level${30-s.level===1?"":"s"} to go</span></div>
+      <div class="goal-bar"><i style="width:${Math.max(3,Math.round(s.level/30*100))}%;background:var(--teal)"></i></div></div>`:""}
     ${(()=>{
       // The goal rail. Only drawn once there is a goal — an account with nothing to
       // climb towards should not be shown an empty progress bar.
@@ -6085,6 +6425,7 @@ function cardHTML(a,i){
     ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(a.tags||[]).length?`<div class="ctags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""}
     ${loginOpen?`<div class="login${rv("login")}">
+      ${a.login&&a.password?`<button class="lseq" data-act="copyseq">${loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`:""}
       <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
       <div class="lrow"><span class="val mono ${a.password?"":"none"}" style="font-family:${a.password?"":"inherit"}">${a.password?(pw?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${pw?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
       ${a.email?`<div class="lrow"><span class="val">${esc(a.email)}</span><span class="lbtns"><button data-act="copymail">Copy</button></span></div>`:""}
@@ -6109,8 +6450,8 @@ function cardHTML(a,i){
         <button data-act="more" class="c-more${openMore.has(a.id)?" on":""}" aria-haspopup="menu" aria-expanded="${openMore.has(a.id)}" title="More actions" aria-label="More actions">⋯</button>
       </div>
     </div>
-    ${openInfo.has(a.id)?infoBlockHTML(a,rv("info")):""}
-    ${hasInfo(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="Past seasons, flex rank, champions">
+    ${openInfo.has(a.id)&&(hasInfo(a)||canForm(a))?infoBlockHTML(a,rv("info")):""}
+    ${hasInfo(a)||cfg.compactCards||canForm(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${cfg.compactCards?"Chart, stats, past seasons, flex rank, champions":"Past seasons, flex rank, champions"}">
       <span class="c-dl" aria-hidden="true"></span>
       <span class="c-dt">${open?"Close":"Details"}</span>
       <svg class="ico" viewBox="0 0 26 12" aria-hidden="true"><polyline points="2 3 13 10 24 3"/></svg>
@@ -6530,7 +6871,22 @@ function openForm(acc){
   $("form").classList.remove("hidden");
 }
 function closeForm(){$("form").classList.add("hidden");editingId=null}
+/* A Riot ID is copied as one string — "Hide on Bush#EUW" from op.gg, the client,
+   a friend's message — and the form wanted it in two boxes, so a paste into the
+   name failed with "name and tag are required". A game name cannot contain "#",
+   so everything after the last one is the tag: pasted, it fills both fields;
+   typed, the "#" carries you on to the tag. */
+function splitRiotId(){
+  const f=$("fName"),v=f.value,i=v.lastIndexOf("#");
+  if(i<0)return;
+  const tag=v.slice(i+1).trim();
+  f.value=v.slice(0,i).trim();
+  if(tag)$("fTag").value=tag;
+  else $("fTag").focus();
+}
+$("fName").addEventListener("input",splitRiotId);
 function submitForm(){
+  splitRiotId();
   const gameName=$("fName").value.trim(), tagLine=$("fTag").value.trim().replace(/^#/,"");
   if(!gameName||!tagLine){toast("Riot name and tag are required");return}
   // Checked on edit too, not only on add: renaming one account onto another was
@@ -6566,7 +6922,7 @@ function openSettings(){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";updateVaultStatus();updateSyncStatus();$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";$("sCompact").checked=!!cfg.compactCards;updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden")
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -6575,7 +6931,32 @@ function renderPwMeter(){
   $("pwMeter").innerHTML=p?Array.from({length:5},(_,i)=>`<span style="flex:1;height:100%;border-radius:1px;transition:background .2s;background:${i<score?colors[score-1]:"var(--line)"}"></span>`).join(""):"";
   $("pwMeterLabel").textContent=p?label:"";
 }
-function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted."}
+function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted.";renderSetup()}
+/* Four things make a vault safe to rely on, and a first visit does the first and
+   usually stops: accounts in, ranks read, a master password, a backup. Until all
+   four are done (or the strip is hidden) they sit above the toolbar as one row of
+   steps, each a button that does it. The backup line in the dashboard stands
+   down while this is showing the same step. */
+function setupSteps(){
+  return [
+    {act:"add",done:accounts.length>0,label:"Add your accounts"},
+    {act:"check",done:accounts.some(isChecked),label:"Check their ranks"},
+    {act:"lock",done:!!vaultPassword,label:"Set a master password"},
+    {act:"backup",done:!!cfg.lastExport,label:"Back up"},
+  ];
+}
+function setupVisible(){return accounts.length>0&&!previewMode&&!cfg.setupHidden&&setupSteps().some(s=>!s.done)}
+function renderSetup(){
+  const el=$("setup");if(!el)return;
+  if(!setupVisible()){setHTML(el,"");return}
+  const steps=setupSteps(), left=steps.filter(s=>!s.done).length;
+  setHTML(el,`<div class="setup hx"><div class="hx-in setup-in">
+    <span class="setup-k">Get set up <em>${steps.length-left} of ${steps.length}</em></span>
+    <ol class="setup-steps">${steps.map((s,i)=>`<li class="${s.done?"done":""}">`
+      +(s.done?`${icon("check")}<span>${esc(s.label)}</span>`:`<button type="button" data-setup="${s.act}"><b>${i+1}</b>${esc(s.label)}</button>`)+`</li>`).join("")}</ol>
+    <button type="button" class="setup-x" data-setup="hide" title="Hide these steps">Hide</button>
+  </div></div>`);
+}
 const DEFAULT_ACCENT="#c8aa6e", DEFAULT_ACCENT2="#0ac8b9";
 const DEFAULT_ATMOSPHERE="spotlight";
 const ATMOSPHERES=new Set(["spotlight","aurora","noir","lattice","stardust","void"]);
@@ -6593,6 +6974,12 @@ function applyAtmosphere(mode){
   syncAtmosphereUI(m);
   return m;
 }
+/* Compact cards: the chart and the stat row are the tallest parts of a card,
+   and in a big vault they are the parts you look at least often. Left under
+   Details they come back when that card is opened, so nothing is lost — the grid
+   just fits about twice as many cards on a screen. A class on the body, so the
+   switch costs no re-render. */
+function applyCompact(){document.body.classList.toggle("compact-cards",!!cfg.compactCards)}
 function revertAtmosphere(){applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE)}
 function hexToHsl(hex){
   const r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;
@@ -6714,7 +7101,7 @@ function doExport(){
   const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),plaintext:true,accounts};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   downloadBlob(blob,"smurf-backup-plaintext-"+new Date().toISOString().slice(0,10)+".json");
-  cfg.lastExport=Date.now();saveCfg();
+  cfg.lastExport=Date.now();saveCfg();renderDash();renderSetup();
   toast("Plaintext backup exported — keep it private");
 }
 async function doExportEnc(){
@@ -6727,7 +7114,7 @@ async function doExportEnc(){
     const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),encrypted:true,envelope};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
     downloadBlob(blob,"smurf-backup-encrypted-"+new Date().toISOString().slice(0,10)+".json");
-    cfg.lastExport=Date.now();saveCfg();
+    cfg.lastExport=Date.now();saveCfg();renderDash();renderSetup();
     toast("Encrypted backup exported — same master password opens it");
   }catch(e){toast("Encrypted export failed: "+(e.message||"error"))}
 }
@@ -7184,6 +7571,8 @@ $("sSave").addEventListener("click",async()=>{
   // never picked anything along behind it.
   cfg.accent=$("sAccent").value===DEFAULT_ACCENT?null:$("sAccent").value;applyAccent(cfg.accent||DEFAULT_ACCENT);
   cfg.accent2=$("sAccent2").value===DEFAULT_ACCENT2?null:$("sAccent2").value;applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
+  // the Details handle depends on it, so the cards are redrawn when it changes
+  if(!!cfg.compactCards!==$("sCompact").checked){cfg.compactCards=$("sCompact").checked;applyCompact();renderGrid()}
   cfg.atmosphere=applyAtmosphere(document.body.dataset.atmosphere||DEFAULT_ATMOSPHERE);
   if(cfg.atmosphere===DEFAULT_ATMOSPHERE)cfg.atmosphere=null; // same idea as accents: no preference vs explicit default
   cfg.exportRemindDays=clampExportDays($("sExportDays")&&$("sExportDays").value);
@@ -7399,6 +7788,13 @@ $("sVaultRemove").addEventListener("click",async()=>{
 $("bHelp").addEventListener("click",()=>{const willShow=$("help").classList.contains("hidden");closeAllPanels();if(willShow)$("help").classList.remove("hidden")});
 $("bHelpClose").addEventListener("click",()=>{$("help").classList.add("hidden");cfg.seenHelp=true;saveCfg()});
 $("bExport").addEventListener("click",doExport);
+$("sBackend").addEventListener("change",updateBackendStatus);
+$("sStorageProtect").addEventListener("click",async()=>{
+  const ok=await protectStorage();
+  await updateStorageStatus();
+  toast(ok?"Storage protected — the browser will not clear the vault on its own"
+    :"The browser said no — installing the app or using it more often usually changes that. Keep a backup meanwhile.");
+});
 if($("bExportEnc"))$("bExportEnc").addEventListener("click",()=>{doExportEnc()});
 $("bExportCsv").addEventListener("click",doExportCSV);
 $("bImport").addEventListener("click",()=>$("fileIn").click());
@@ -7727,8 +8123,19 @@ $("ribbon").addEventListener("click",e=>{
 $("dash").addEventListener("click",e=>{
   const flag=e.target.closest("[data-flag]");
   if(flag){setChoreFlag(flag.dataset.flag);return}
+  const next=e.target.closest("[data-next]");
+  if(next){zoomToAccount(next.dataset.next);return}
   const tier=e.target.closest("[data-tier]");
   if(tier)setTierFilter(tier.dataset.tier);
+});
+$("setup").addEventListener("click",e=>{
+  const b=e.target.closest("[data-setup]");if(!b)return;
+  const a=b.dataset.setup;
+  if(a==="add")openForm();
+  else if(a==="check")$("bCheckAll").click();
+  else if(a==="lock"){openSettings();setTimeout(()=>{const f=$("sVaultPass");if(f){f.scrollIntoView&&f.scrollIntoView({block:"center"});f.focus()}},60)}
+  else if(a==="backup")vaultPassword?doExportEnc():doExport();
+  else if(a==="hide"){cfg.setupHidden=true;saveCfg();renderSetup()}
 });
 $("chips").addEventListener("click",e=>{
   const b=e.target.closest("[data-clear]");if(!b)return;
@@ -7893,6 +8300,24 @@ $("grid").addEventListener("keydown",e=>{
 // chips' "Clear all", which only drops the ones that have a chip — region and
 // status live in dropdowns and have none, and either of them alone can hide
 // every account.
+/* Bring one account into view and flash it, in whatever layout is showing. A
+   filter that hides it is cleared first — there would be nothing to scroll to. */
+function zoomToAccount(id){
+  const acc=accounts.find(a=>a.id===id);if(!acc)return;
+  if(!!acc.archived!==ui.showArchived){ui.showArchived=!!acc.archived;syncToggles()}
+  if(!filtered().some(a=>a.id===id)){
+    Object.assign(ui,{search:"",region:"",tag:null,favOnly:false,status:"",flag:"",tier:""});
+    $("tSearch").value="";syncToggles();
+  }
+  flashId=id;render();
+  const el=$("grid").querySelector(`[data-id="${idSel(id)}"]`);
+  // Guarded like the other two places that scroll something into view. Not
+  // being guarded here meant an environment without it threw in the middle of
+  // this handler, which took the timer below down with it — so the card stayed
+  // lit for the rest of the session instead of flashing once.
+  if(el&&el.scrollIntoView)el.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
+  setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
+}
 function clearFilters(){
   Object.assign(ui,{search:"",region:"",tag:null,favOnly:false,status:"",flag:"",tier:""});
   $("tSearch").value="";
@@ -7945,14 +8370,7 @@ async function onCardClick(e){
   // which of the sixty you landed on.
   else if(act==="zoom"){
     ui.density="cards";cfg.density="cards";saveCfg();
-    flashId=id;render();
-    const card=$("grid").querySelector(`.card[data-id="${idSel(id)}"]`);
-    // Guarded like the other two places that scroll something into view. Not
-    // being guarded here meant an environment without it threw in the middle of
-    // this handler, which took the timer below down with it — so the card stayed
-    // lit for the rest of the session instead of flashing once.
-    if(card&&card.scrollIntoView)card.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
-    setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
+    zoomToAccount(id);
   }
   else if(act==="more"){
     // Enter or Space on a button is a click with no pointer behind it: detail 0
@@ -7966,6 +8384,15 @@ async function onCardClick(e){
     else{renderGrid();renderDash()}
   }
   else if(act==="copyid")copyText(acc.gameName+"#"+acc.tagLine,"Riot ID");
+  /* Logging in is username, then password, into two boxes in the client. One
+     button walks through both: the first press copies the username and the
+     button becomes "Copy password"; the second copies that (cleared from the
+     clipboard after 30s, like any copied password) and starts over. */
+  else if(act==="copyseq"){
+    if(!loginSeq.has(id)){copyText(acc.login,"Username");loginSeq.add(id)}
+    else{copyText(acc.password,"Password",true);loginSeq.delete(id)}
+    renderCard(id);
+  }
   else if(act==="copylogin")copyText(acc.login,"Username");
   else if(act==="copypw")copyText(acc.password,"Password",true);
   else if(act==="copymail")copyText(acc.email,"Email");
@@ -7988,6 +8415,7 @@ async function onCardClick(e){
     // actually using the account. "Status: resting" was a label you had to keep up
     // by hand; this is the same fact, kept by itself.
     if(on){acc.lastLoginAt=Date.now();saveDB()}
+    loginSeq.delete(id);   // a fresh look at the login starts at the username
     renderCard(id);
   }
   else if(act==="edit")openForm(acc);
@@ -8002,7 +8430,9 @@ async function onCardClick(e){
   }
 
   else if(act==="range"){chartRange.set(id,btn.dataset.r);renderCard(id)}
-  else if(act==="info"){const on=!openInfo.has(id);on?openInfo.add(id):openInfo.delete(id);reveal=on?id+":info":null;renderCard(id)}
+  else if(act==="info"){const on=!openInfo.has(id);on?openInfo.add(id):openInfo.delete(id);reveal=on?id+":info":null;
+    if(on)loadForm(id);renderCard(id)}
+  else if(act==="formretry"){formCache.delete(id);loadForm(id);renderCard(id)}
   else if(act==="sec"){const k=id+"|"+btn.dataset.s;openSec.has(k)?openSec.delete(k):openSec.add(k);
     e.target.closest("#rankModal")?renderRankBody(id):renderCard(id)}
   else if(act==="rank")openRankModal(id);
@@ -8177,6 +8607,10 @@ async function tryUnlock(){
     $("lock").classList.add("hidden");
     lastActivity=Date.now();
     startApp();
+    // A vault written with the older, weaker key stretching is rewritten with the
+    // current one now that the password is in hand. Same data, same revision —
+    // sync must not see the upgrade as an edit.
+    if(readSaltField(currentEnvelope.salt).iter<KDF_ITER)saveDB({keepRev:true});
   }catch(e){
     $("lockErr").style.display="block";
     $("lockPass").value="";$("lockPass").focus();
@@ -8214,7 +8648,7 @@ function relock(){
   if(!envelope)envelope=currentEnvelope;
   // The derived key goes with the password: leaving it behind would keep the one
   // thing that opens the vault sitting in memory across a lock.
-  vaultPassword=null;forgetVaultKey();accounts=[];
+  vaultPassword=null;forgetVaultKey();accounts=[];formCache.clear();
   dismissToast(); // drop Delete→Undo before it can rehydrate secrets into a locked vault
   // Clear a copied account password if we still know what it was — lock does not
   // mean "leave the last password on the clipboard for thirty seconds". Write
@@ -8368,7 +8802,7 @@ function boot(){
   fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);
   if(cfg.accent)applyAccent(cfg.accent);
   if(cfg.accent2)applyAccent2(cfg.accent2);
-  applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);
+  applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyCompact();
   let raw=null;
   try{raw=hasStorage?localStorage.getItem(DB_KEY):null}catch(e){}
   const stored=readStoredVault(raw);

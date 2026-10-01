@@ -7,6 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { webcrypto } from "node:crypto";
 import { JSDOM } from "jsdom";
@@ -712,7 +713,8 @@ test("a dense chart is a line and its latest reading, a sparse one keeps a dot p
 });
 
 test("the backup reminder carries the way to act on it", () => {
-  const win = bootApp();
+  // (in a brand-new vault the setup steps carry the backup instead; hidden here)
+  const win = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, setupHidden: true })));
   addRealAccount(win, "Keep", "1");
   const btn = win.document.getElementById("bkNow");
   assert.ok(btn, "the reminder has its own button, not a pointer at the ⋯ menu");
@@ -724,8 +726,7 @@ test("the backup reminder carries the way to act on it", () => {
   try { btn.click(); } finally { win.HTMLAnchorElement.prototype.click = orig; }
   assert.equal(downloads, 1, "one click backs the vault up");
   assert.ok(appGet(win, "cfg.lastExport") > 0, "and it counts as the backup it is");
-  runScript(win, "renderDash()");
-  assert.equal(win.document.getElementById("bkNow"), null, "so the reminder goes");
+  assert.equal(win.document.getElementById("bkNow"), null, "so the reminder goes, straight away");
 });
 
 test("Login stays the most lit control on a card: filled, glossed and glowing", () => {
@@ -780,6 +781,367 @@ test("Refresh stale refreshes found accounts that have gone old, not ones with n
   btn.click();
   assert.deepEqual([...win.__ids].sort(), ["rankedOld", "unrankedOld"],
     "never-checked and not-found accounts are not re-tried, banned ones are left alone");
+});
+
+test("the vault asks the browser to keep it, once, and Settings says whether it does", async () => {
+  let asks = 0, granted = false;
+  const win = bootApp(undefined, w => {
+    Object.defineProperty(w.navigator, "storage", { configurable: true, value: {
+      persisted: async () => granted,
+      persist: async () => { asks++; return granted; },
+    } });
+  });
+  assert.equal(asks, 0, "an empty vault has nothing to keep yet");
+  addRealAccount(win, "Keep", "1");
+  await until(() => asks === 1, "the first saved account to ask for persistence");
+  addRealAccount(win, "Keep2", "2");
+  await tick(win);
+  assert.equal(asks, 1, "asked once, not on every save");
+
+  win.document.getElementById("bSettings").click();
+  const status = win.document.getElementById("sStorageStatus"), btn = win.document.getElementById("sStorageProtect");
+  await until(() => /Not protected/.test(status.textContent), "the status to say the vault can be cleared");
+  assert.equal(btn.classList.contains("hidden"), false, "with a way to ask again");
+  granted = true;
+  btn.click();
+  await until(() => /^Protected/.test(status.textContent), "the status to follow the answer");
+  assert.equal(asks, 2);
+  assert.ok(btn.classList.contains("hidden"), "nothing left to ask for");
+});
+
+test("a pasted Riot ID fills both the name and the tag", () => {
+  const win = bootApp();
+  win.document.getElementById("bAdd").click();
+  const name = win.document.getElementById("fName"), tag = win.document.getElementById("fTag");
+  name.value = "Hide on Bush#KR1";
+  name.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(name.value, "Hide on Bush");
+  assert.equal(tag.value, "KR1");
+  // typed: the "#" moves on to the tag box
+  name.value = "Faker#";
+  name.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(name.value, "Faker");
+  assert.equal(win.document.activeElement, tag);
+  // and a value set without an input event is split on save all the same
+  tag.value = "";
+  name.value = "Bot Diff#EUW";
+  win.document.getElementById("fSave").click();
+  const saved = JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.gameName === "Bot Diff");
+  assert.ok(saved, "saved with the name alone");
+  assert.equal(saved.tagLine, "EUW");
+});
+
+test("a shared link unfurls into a card: title, description and an image that exists", () => {
+  const win = bootApp();
+  const meta = (attr, key) => { const m = win.document.querySelector(`meta[${attr}="${key}"]`); return m && m.getAttribute("content"); };
+  assert.ok(meta("name", "description"));
+  assert.ok(meta("property", "og:title") && meta("property", "og:description"));
+  assert.equal(meta("name", "twitter:card"), "summary_large_image");
+  const img = meta("property", "og:image");
+  assert.match(img, /^https:\/\//, "absolute — link scrapers do not resolve relative URLs");
+  const local = path.join(__dirname, "..", img.replace(/^https:\/\/[^/]+\/[^/]+\//, ""));
+  assert.ok(fs.existsSync(local), "and the image is in the repo at that path: " + local);
+});
+
+test("the vault is stretched at 600 000 rounds, and an older vault upgrades itself on unlock", async () => {
+  // An envelope as the app wrote it before: 150 000 rounds, bare base64 salt.
+  const enc = new TextEncoder(), B = u => Buffer.from(u).toString("base64");
+  const salt = webcrypto.getRandomValues(new Uint8Array(16)), iv = webcrypto.getRandomValues(new Uint8Array(12));
+  const km = await webcrypto.subtle.importKey("raw", enc.encode("legacy-pass"), "PBKDF2", false, ["deriveKey"]);
+  const key = await webcrypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, km,
+    { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  const vault = [{ id: "v1", region: "EUW", gameName: "Old", tagLine: "1", status: "active", stats: null, history: [], tags: [] }];
+  const ct = await webcrypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(JSON.stringify(vault)));
+  const legacy = { __enc: true, salt: B(salt), iv: B(iv), data: B(new Uint8Array(ct)) };
+
+  const win = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker", JSON.stringify(legacy)));
+  assert.equal(win.document.getElementById("lock").classList.contains("hidden"), false);
+  const rev = appGet(win, "cfg.vaultRev");
+  win.document.getElementById("lockPass").value = "legacy-pass";
+  win.document.getElementById("lockBtn").click();
+  await until(() => win.document.getElementById("lock").classList.contains("hidden"), "the old vault to open");
+  assert.equal(win.document.querySelectorAll(".card").length, 1, "the same account inside");
+  await until(() => /^600000\$/.test(JSON.parse(win.localStorage.getItem("smurf-tracker")).salt),
+    "the vault to be rewritten at 600 000 rounds");
+  assert.equal(appGet(win, "cfg.vaultRev"), rev, "an upgrade is not an edit: sync must not see a new revision");
+
+  // and what it wrote opens again, through the same path
+  runScript(win, "relock()");
+  win.document.getElementById("lockPass").value = "legacy-pass";
+  win.document.getElementById("lockBtn").click();
+  await until(() => win.document.getElementById("lock").classList.contains("hidden"), "the upgraded vault to open");
+  assert.equal(win.document.querySelectorAll(".card").length, 1);
+});
+
+test("SECURITY.md states the key stretching the code actually uses", () => {
+  const doc = fs.readFileSync(path.join(__dirname, "..", "SECURITY.md"), "utf8");
+  const iter = Number(html.match(/const KDF_ITER=(\d+)/)[1]);
+  const spaced = iter.toLocaleString("en-US").replace(/,/g, " ");
+  assert.ok(doc.includes(spaced + " rounds"), `the doc says ${spaced} rounds`);
+  assert.match(doc, /plain text/i, "and says what is unprotected without a master password");
+});
+
+test("the release notes are the running version's own changelog entry", async () => {
+  const { execFileSync } = await import("node:child_process");
+  const out = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "notes-")), "notes.md");
+  const version = execFileSync(process.execPath, [".github/scripts/release-notes.mjs", out],
+    { cwd: path.join(__dirname, ".."), encoding: "utf8" }).trim();
+  const win = bootApp();
+  runScript(win, "window.__v = APP_VERSION; window.__log = JSON.stringify(APP_CHANGELOG);");
+  assert.equal(version, win.__v, "tags the version the app says it is");
+  const notes = fs.readFileSync(out, "utf8");
+  const items = JSON.parse(win.__log).find(e => e.v === version).items;
+  for (const it of items) assert.ok(notes.includes("- " + it), it);
+});
+
+test("decay: Diamond and up are warned before their bank runs out, from the games seen between checks", () => {
+  const D = 86400000, now = Date.now();
+  const acc = (id, tier, rows, cur) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [],
+    history: rows.map(([ago, g]) => ({ t: now - ago * D, tier, division: tier === "DIAMOND" ? "II" : null, lp: 50, w: g, l: 0 })),
+    stats: { found: true, tier, division: tier === "DIAMOND" ? "II" : null, lp: 50, wins: cur, losses: 0, updatedAt: now - 3600000 } });
+  const win = bootApp([
+    acc("idle", "DIAMOND", [[20, 100]], 100),          // reached 20 days ago, no game since: 28 - 20 = 8, today ~7
+    acc("gone", "DIAMOND", [[40, 100]], 100),          // 40 days without a game: decaying
+    acc("today", "DIAMOND", [[27.5, 100]], 100),       // half a day left
+    acc("active", "DIAMOND", [[20, 100], [1, 103]], 103), // three games since: banked again
+    acc("master", "MASTER", [[10, 300]], 300),         // Master: a 14-day bank, 10 days idle
+    acc("plat", "PLATINUM", [[60, 10]], 10),           // no decay below Diamond
+  ]);
+  const days = id => { runScript(win, `window.__d = decayDays(accounts.find(a => a.id === "${id}"))`); return win.__d; };
+  assert.equal(days("idle"), 7);
+  assert.ok(days("gone") < 0, "past the bank: decaying");
+  assert.ok(days("active") > 7, "games bank days again");
+  assert.equal(days("master"), 3, "Master: 14 days, not 28");
+  assert.equal(days("plat"), null, "Platinum does not decay");
+  const chip = id => [...win.document.querySelectorAll(`.card[data-id="${id}"] .delta`)].map(d => d.textContent.trim()).join("|");
+  assert.match(chip("idle"), /Decay in ~7d/);
+  assert.match(chip("gone"), /Decaying/);
+  assert.equal(days("today"), 0);
+  assert.match(chip("today"), /Decay in <1d/, "less than a day left is not \"~0d\"");
+  assert.doesNotMatch(chip("active"), /Decay/);
+  const tile = win.document.querySelector('#dash [data-flag="decay"]');
+  assert.ok(tile, "the dashboard counts them");
+  assert.equal(tile.querySelector(".v").textContent, "4");
+  tile.click();
+  assert.deepEqual([...win.document.querySelectorAll(".card")].map(c => c.dataset.id).sort(), ["gone", "idle", "master", "today"]);
+});
+
+test("a levelling account shows its way to ranked, and says when it is ready", () => {
+  const acc = (id, level) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "UNRANKED", level, wins: 0, losses: 0, updatedAt: Date.now() } });
+  const win = bootApp([acc("lv24", 24), acc("lv30", 31)]);
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  const rail = card("lv24").querySelector(".goal.lvl");
+  assert.ok(rail, "a rail toward level 30");
+  assert.match(rail.textContent, /at level 30\s*6 levels to go/);
+  assert.equal(rail.querySelector(".goal-bar i").style.width, "80%");
+  assert.ok(card("lv30").querySelector(".ready"), "level 30 and unranked: ready");
+  assert.equal(card("lv30").querySelector(".goal.lvl"), null, "no rail once it is there");
+  const search = q => { const el = win.document.getElementById("tSearch"); el.value = q; el.dispatchEvent(new win.Event("input", { bubbles: true })); };
+  search("is:ready");
+  return until(() => win.document.querySelectorAll(".card").length === 1, "is:ready to narrow").then(() => {
+    assert.equal(win.document.querySelector(".card").dataset.id, "lv30");
+    search("is:leveling");
+    return until(() => win.document.querySelector(".card") && win.document.querySelector(".card").dataset.id === "lv24", "is:leveling to narrow");
+  });
+});
+
+test("one button copies the username, then the password", async () => {
+  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [],
+    login: "riotuser", password: "hunter22!", stats: null }]);
+  const copied = [];
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async v => { copied.push(v); } } });
+  const card = () => win.document.querySelector('.card[data-id="L"]');
+  card().querySelector('[data-act="login"]').click();
+  const seq = () => card().querySelector('[data-act="copyseq"]');
+  assert.match(seq().textContent, /Copy username, then password/);
+  seq().click();
+  await until(() => copied.length === 1, "the username to be copied");
+  assert.equal(copied[0], "riotuser");
+  assert.match(seq().textContent, /^\s*Copy password$/, "the button moves on to the password");
+  seq().click();
+  await until(() => copied.length === 2, "the password to be copied");
+  assert.equal(copied[1], "hunter22!");
+  assert.match(seq().textContent, /Copy username, then password/, "and starts over");
+  await until(() => appGet(win, "lastCopiedSecret") === "hunter22!", "the password to be the secret that gets cleared later");
+});
+
+test("Play next names the account to play: about to decay first, then the longest left", () => {
+  const D = 86400000, now = Date.now();
+  const acc = (id, tier, playedAgo, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [],
+    history: [], lastPlayedAt: now - playedAgo * D,
+    stats: { found: true, tier, division: "II", lp: 20, wins: 10, losses: 10, level: 80, updatedAt: now - 3600000 } }, extra || {});
+  const sitting = bootApp([acc("recent", "GOLD", 1), acc("old", "GOLD", 20), acc("resting", "GOLD", 60, { status: "resting" })]);
+  const tile = w => w.document.querySelector("#dash [data-next]");
+  assert.equal(tile(sitting).dataset.next, "old", "the active account left longest; resting ones are not suggested");
+  assert.match(tile(sitting).textContent, /20 days since played/);
+  const urgent = acc("dia", "DIAMOND", 2, { history: [{ t: now - 25 * D, tier: "DIAMOND", division: "II", lp: 20, w: 10, l: 10 }] });
+  const both = bootApp([acc("old", "GOLD", 20), urgent]);
+  assert.equal(tile(both).dataset.next, "dia", "an account about to decay comes before one that has merely sat");
+  assert.match(tile(both).textContent, /decay in ~\dd/);
+  tile(both).click();
+  assert.equal(appGet(both, "flashId"), "dia", "clicking it brings that account into view");
+  // and the jump gets there even through a filter that hides the account
+  runScript(both, 'ui.search = "old"; render(); zoomToAccount("dia");');
+  assert.ok(both.document.querySelector('[data-id="dia"]'), "the filter hiding it is cleared");
+  assert.equal(appGet(both, "ui.search"), "");
+  const fresh = bootApp([acc("a", "GOLD", 0), acc("b", "GOLD", 1)]);
+  assert.equal(tile(fresh), null, "nothing has sat long enough to suggest");
+});
+
+test("a new vault gets four set-up steps, each a button, until they are done or hidden", async () => {
+  const win = bootApp();
+  const setup = () => win.document.querySelector("#setup .setup");
+  assert.equal(setup(), null, "an empty vault has the empty state, not a checklist");
+  addRealAccount(win, "First", "1");
+  assert.ok(setup(), "the steps appear once there is something to look after");
+  const steps = () => [...setup().querySelectorAll(".setup-steps li")].map(li => (li.classList.contains("done") ? "✓ " : "") + li.textContent.replace(/^\d/, "").trim());
+  assert.deepEqual(steps(), ["✓ Add your accounts", "Check their ranks", "Set a master password", "Back up"]);
+  assert.equal(win.document.getElementById("bkNow"), null, "the dashboard's backup line stands down while the steps carry it");
+  // a step's button does the thing
+  win.URL.createObjectURL = () => "blob:x"; win.URL.revokeObjectURL = () => {};
+  const orig = win.HTMLAnchorElement.prototype.click; win.HTMLAnchorElement.prototype.click = function () {};
+  try { setup().querySelector('[data-setup="backup"]').click(); } finally { win.HTMLAnchorElement.prototype.click = orig; }
+  assert.match(steps()[3], /^✓ Back up/, "and is ticked off at once");
+  setup().querySelector('[data-setup="lock"]').click();
+  assert.equal(win.document.getElementById("settings").classList.contains("hidden"), false, "the password step opens Settings");
+  win.closeAllPanels();
+  setup().querySelector('[data-setup="hide"]').click();
+  assert.equal(setup(), null, "hidden");
+  assert.equal(appGet(win, "cfg.setupHidden"), true, "and it stays hidden");
+});
+
+test("compact cards leave the chart and stats under Details, and bring them back when opened", () => {
+  const now = Date.now(), D = 86400000;
+  const win = bootApp([{ id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: [],
+    history: [1, 2, 3].map(k => ({ t: now - (4 - k) * D, tier: "GOLD", division: "II", lp: 10 * k, w: k, l: 0 })),
+    stats: { found: true, tier: "GOLD", division: "II", lp: 30, wins: 3, losses: 0, level: 50, updatedAt: now } }]);
+  const card = () => win.document.querySelector('.card[data-id="c"]');
+  assert.equal(win.document.body.classList.contains("compact-cards"), false, "off by default");
+  win.document.getElementById("bSettings").click();
+  win.document.getElementById("sCompact").checked = true;
+  win.document.getElementById("sSave").click();
+  assert.ok(win.document.body.classList.contains("compact-cards"));
+  assert.equal(appGet(win, "cfg.compactCards"), true, "and it is remembered");
+  const rule = html.match(/body\.compact-cards \.card:not\(\.info-open\) \.lpc,[^{]*\{display:none\}/);
+  assert.ok(rule, "the chart and stats are hidden on a closed card");
+  const drawer = card().querySelector('[data-act="info"]');
+  assert.ok(drawer, "every card offers Details in compact mode, even one with no seasons to show");
+  drawer.click();
+  assert.ok(card().classList.contains("info-open"), "an opened card gets them back");
+});
+
+test("Riot mode in the app: the puuid goes out with a check, comes back stored, and a rename is followed", async () => {
+  const P = "q".repeat(78);
+  const win = bootApp([{ id: "r", region: "EUW", gameName: "Old Name", tagLine: "OLD", status: "active", tags: [], history: [], stats: null, puuid: P }]);
+  let asked = null;
+  const reply = (obj, status = 200) => ({ ok: status < 400, status, text: async () => JSON.stringify(obj), json: async () => obj });
+  win.fetch = async u => { asked = String(u); return reply({ found: true, tier: "GOLD", division: "I", lp: 10, wins: 5, losses: 5, level: 99,
+    puuid: P, riotId: { name: "New Name", tag: "NEW" }, source: "riot" }); };
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev'");
+  runScript(win, "window.__r = fetchViaBackend(accounts[0])");
+  const s = await win.__r;
+  assert.match(asked, /[?&]puuid=q{78}/, "the stored puuid is sent, so the worker can skip a lookup and survive renames");
+  win.__s = s; runScript(win, "commitStats('r', accounts[0], window.__s)");
+  assert.equal(appGet(win, "accounts[0].gameName"), "New Name");
+  assert.equal(appGet(win, "accounts[0].tagLine"), "NEW");
+  assert.match(win.document.getElementById("toast").textContent, /Renamed on Riot: Old Name#OLD is now New Name#NEW/);
+  assert.equal(appGet(win, "accounts[0].stats.puuid"), undefined, "identity lives on the account, not in the reading");
+  assert.equal(appGet(win, "accounts[0].puuid"), P);
+});
+
+test("Riot mode in the app: a refused key is said once, and a junk puuid never sticks", () => {
+  const win = bootApp([
+    { id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null, puuid: "<script>" },
+    { id: "b", region: "EUW", gameName: "B", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  assert.equal(appGet(win, "accounts[0].puuid"), undefined, "an invalid puuid is dropped on load");
+  runScript(win, "window.__toasts = []; const _t = toast; toast = (m, ...r) => { window.__toasts.push(m); return _t(m, ...r); };");
+  for (const id of ["a", "b"])
+    runScript(win, `commitStats("${id}", accounts.find(x => x.id === "${id}"), {found:true,tier:"GOLD",division:"I",lp:1,updatedAt:Date.now(),riotError:"key"})`);
+  assert.equal(win.__toasts.filter(m => /Riot API key was refused/.test(m)).length, 1, "once a session, not once per account");
+});
+
+test("Recent form: a Riot-read account's Details fetch its last five ranked games once, and say why when they cannot", async () => {
+  const P = "q".repeat(78);
+  const win = bootApp([
+    { id: "r", region: "KR", gameName: "Faker", tagLine: "KR1", status: "active", tags: [], history: [], stats: null, puuid: P },
+    { id: "o", region: "EUW", gameName: "Scraped", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const card = id => win.document.querySelector(`#grid [data-id="${id}"]`);
+  assert.equal(card("r").querySelector('[data-act="info"]'), null, "no worker yet, so nothing to open");
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev/'; render()");
+  assert.equal(card("o").querySelector('[data-act="info"]'), null, "an account read without Riot has no puuid, so no form");
+  const reply = (obj, status = 200) => ({ ok: status < 400, status, json: async () => obj });
+  const asked = [];
+  const now = Date.now();
+  win.fetch = async u => { asked.push(String(u)); return reply({ games: [
+    { win: true, champ: "Ahri", k: 8, d: 2, a: 5, min: 31, at: now - 3600e3 },
+    { win: false, champ: "<img src=x onerror=alert(1)>", k: 1, d: 6, a: 2, min: 24, at: now - 7200e3 },
+    { win: true, champ: "Syndra", k: 4, d: 4, a: 9, min: 28, at: now - 9000e3 }] }); };
+  card("r").querySelector('[data-act="info"]').click();
+  assert.match(card("r").textContent, /Last 5 ranked\s*Loading…/, "says it is on its way");
+  await until(() => /2W 1L/.test(card("r").textContent), "the games to arrive");
+  assert.equal(asked.length, 1);
+  const u = new URL(asked[0]);
+  assert.equal(u.pathname, "/form");
+  assert.equal(u.searchParams.get("puuid"), P);
+  assert.equal(u.searchParams.get("region"), "kr", "match-v5 needs the region to pick its cluster");
+  assert.equal(card("r").querySelectorAll(".fm-pip").length, 3);
+  assert.equal(card("r").querySelectorAll(".fm-pip.w").length, 2);
+  card("r").querySelector('[data-act="sec"][data-s="form"]').click();
+  const rows = [...card("r").querySelectorAll('[data-k="sec-form"] .chp')].map(r => [...r.children].map(c => c.textContent).join("|"));
+  assert.equal(rows.length, 3);
+  assert.equal(rows[0], "WAhri|8/2/5|31 min|1 h ago");
+  assert.equal(card("r").querySelector('[data-k="sec-form"] img'), null, "a champion name is text, never markup");
+  card("r").querySelector('[data-act="info"]').click();
+  card("r").querySelector('[data-act="info"]').click();
+  await tick();
+  assert.equal(asked.length, 1, "reopening within five minutes reuses what was fetched — each costs six Riot calls");
+  win.fetch = async () => reply({ error: "Riot API rate limit" }, 503);
+  runScript(win, "formCache.clear(); closeCardPanels()");
+  card("r").querySelector('[data-act="info"]').click();
+  await until(() => /rate limit/.test(card("r").textContent), "the rate limit to be named");
+  win.fetch = async () => reply({ games: [] });
+  card("r").querySelector('[data-act="formretry"]').click();
+  await until(() => /No ranked games yet this season/.test(card("r").textContent), "Retry to fetch again");
+});
+
+test("Settings walks you through setting up a worker, and steps aside once you have one", () => {
+  const win = bootApp();
+  const guide = () => win.document.getElementById("sDeployHelp");
+  win.document.getElementById("bSettings").click();
+  assert.equal(guide().tagName, "DETAILS");
+  assert.equal(guide().open, true, "no worker yet: the steps are open");
+  const links = [...guide().querySelectorAll("a")];
+  const deploy = links.find(a => /deploy\.workers\.cloudflare\.com/.test(a.href));
+  assert.ok(deploy, "the Deploy to Cloudflare button");
+  assert.equal(new URL(deploy.href).searchParams.get("url"), "https://github.com/MarvinPanVan/league-smurf-tracker");
+  assert.ok(links.some(a => a.href.startsWith("https://developer.riotgames.com")), "where the Riot key comes from");
+  for (const a of links) {
+    assert.equal(a.target, "_blank", a.href);
+    assert.match(a.rel, /noreferrer/, a.href);
+  }
+  assert.match(guide().textContent, /RIOT_API_KEY/);
+  assert.match(guide().textContent, /Variables and Secrets/, "where to change the key later");
+  win.document.querySelector("#settings [data-close-panel]").click();
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev'");
+  win.fetch = async () => ({ ok: true, status: 200, json: async () => ({ ok: true, riot: true, vault: true }) });
+  win.document.getElementById("bSettings").click();
+  assert.equal(guide().open, false, "with a worker set, it folds away");
+});
+
+test("Settings says what the worker has set up", async () => {
+  const win = bootApp();
+  const reply = (obj, status = 200) => ({ ok: status < 400, status, json: async () => obj });
+  win.fetch = async u => { assert.match(String(u), /\/status$/); return reply({ ok: true, riot: true, vault: false }); };
+  win.document.getElementById("bSettings").click();
+  const el = win.document.getElementById("sStatus") || win.document.getElementById("sBackendStatus");
+  win.document.getElementById("sBackend").value = "https://smurf.example.workers.dev";
+  win.document.getElementById("sBackend").dispatchEvent(new win.Event("change", { bubbles: true }));
+  await until(() => /Riot API key: set/.test(el.textContent), "the status line to fill in");
+  assert.match(el.textContent, /Sync storage: not bound/);
+  win.fetch = async () => reply({ error: "missing name/tag" }, 400);
+  win.document.getElementById("sBackend").dispatchEvent(new win.Event("change", { bubbles: true }));
+  await until(() => /older version/.test(el.textContent), "an old worker to be named as one");
 });
 
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
@@ -5284,6 +5646,26 @@ test("dash shows Group climb with a working spark tip target", () => {
   assert.equal(tip.id, "sparkTip");
 });
 
+test("Group climb: an account added later joins the line instead of dragging it", () => {
+  const win = bootApp();
+  const day = 86400000;
+  const diamond = { id: "d", history: [
+    { t: 10 * day, tier: "DIAMOND", division: "IV", lp: 0 },
+    { t: 12 * day, tier: "DIAMOND", division: "IV", lp: 30 },
+    { t: 14 * day, tier: "DIAMOND", division: "IV", lp: 50 }] };
+  const silver = { id: "s", history: [
+    { t: 12 * day, tier: "SILVER", division: "II", lp: 10 },
+    { t: 14 * day, tier: "SILVER", division: "II", lp: 30 }] };
+  const t = win.poolLpTrend([diamond, silver]);
+  // Diamond +50 over the window; Silver +20 over the half it was counted for. The
+  // day Silver arrives moves nothing (Diamond's +30 alone), the last day averages
+  // the two (+20, +20). A plain average of whoever was counted read as a 660-LP fall.
+  assert.equal(t.delta, 50);
+  assert.equal(t.headline, "↑ +50");
+  assert.match(t.svg, /\+50 LP since/);
+  assert.equal(win.poolLpTrend([diamond]).delta, 50, "one account: the line is its own climb");
+});
+
 test("genSyncToken is long enough for the worker", () => {
   const win = bootApp();
   const t = win.genSyncToken();
@@ -5999,10 +6381,10 @@ test("a status chip says its piece without crowding out the account name", () =>
 test("the example data never says the same thing twice on one card", () => {
   const win = bootApp();
   win.document.getElementById("bDemo").click();
-  const card = [...win.document.querySelectorAll(".card")]
-    .find(c => /Not level 30 yet/.test(c.textContent));
+  const card = [...win.document.querySelectorAll(".card")].find(c => c.querySelector(".goal.lvl"));
   assert.ok(card, "the preview still has an account below level 30");
-  assert.equal(card.textContent.match(/Not level 30 yet/g).length, 1);
+  assert.equal(card.textContent.match(/to go/g).length, 1, "the distance to 30 is said once");
+  assert.equal(card.textContent.match(/Level \d/g).length, 1, "and so is the level");
 });
 
 /* A grid emptied by the filters was one sentence and nothing else. The filters sit

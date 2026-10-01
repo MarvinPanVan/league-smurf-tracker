@@ -9,6 +9,18 @@
 // -> {"results":[{"name":"...","tag":"...","region":"euw","ok":true,...} | {"ok":false,"error":"..."}]}
 //    Parallel scrapes on the worker so Check-all does one round-trip instead of N.
 //
+// Riot API (optional, recommended): add a secret RIOT_API_KEY to the worker. Rank,
+//   level and icon then come from Riot's own API instead of op.gg's web page, which
+//   breaks whenever op.gg changes its layout. op.gg is still the fallback (an
+//   expired key, a rate limit), and on a single lookup it still supplies what Riot
+//   does not have: peak, past seasons, champions. Riot's account id (puuid) comes
+//   back with each result; the app stores it and sends it as &puuid= / "puuid", so
+//   a renamed account keeps its history.
+//
+// GET /status -> {"ok":true,"riot":true|false,"vault":true|false}  (what this worker has set up)
+// GET /form?puuid=<puuid>&region=<euw|...> -> {"games":[{"win","champ","k","d","a","min","at"}]}
+//   The last five ranked solo games, from Riot's match-v5. Needs RIOT_API_KEY.
+//
 // Device sync (encrypted vault blob only — not a scrape cache):
 //   Bind a KV namespace as VAULT (or SMURF_VAULT) on the worker.
 //   GET  /vault   Authorization: Bearer <sync-token>
@@ -39,8 +51,15 @@ export default {
     try {
       const url = new URL(request.url);
       if (isVaultPath(url.pathname)) return await handleVault(request, env);
+      if (/\/status\/?$/.test(url.pathname)) return json({ ok: true, riot: !!riotKey(env), vault: !!vaultStore(env) }, 200);
+      if (/\/form\/?$/.test(url.pathname)) {
+        const key = riotKey(env);
+        if (!key) return json({ error: "no Riot API key on this worker" }, 404);
+        const r = await riotForm(url.searchParams.get("puuid"), (url.searchParams.get("region") || "euw").toLowerCase(), key);
+        return r.body ? json(r.body, 200) : json({ error: r.error }, r.status || 502);
+      }
 
-      if (request.method === "POST") return await handleBatch(request);
+      if (request.method === "POST") return await handleBatch(request, env);
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
 
       const name = url.searchParams.get("name");
@@ -48,7 +67,7 @@ export default {
       const region = (url.searchParams.get("region") || "euw").toLowerCase();
       if (!name || !tag) return json({ error: "missing name/tag" }, 400);
 
-      const result = await scrapeOne(name, tag, region);
+      const result = await lookupOne(name, tag, region, env, url.searchParams.get("puuid"));
       if (result.error && result.status) return json({ error: result.error }, result.status);
       return json(result.body, 200);
     } catch (e) {
@@ -134,7 +153,7 @@ export async function handleVault(request, env) {
   return json({ error: "method not allowed" }, 405);
 }
 
-async function handleBatch(request) {
+export async function handleBatch(request, env) {
   let body;
   try { body = await request.json(); }
   catch (e) { return json({ error: "invalid JSON body" }, 400); }
@@ -142,19 +161,185 @@ async function handleBatch(request) {
   if (!list || !list.length) return json({ error: "missing accounts[]" }, 400);
   if (list.length > BATCH_MAX) return json({ error: "max " + BATCH_MAX + " accounts per batch" }, 400);
 
-  const results = await Promise.all(list.map(async (a) => {
+  const key = riotKey(env);
+  const row = async (a) => {
     const name = a && a.name, tag = a && a.tag;
     const region = String((a && a.region) || "euw").toLowerCase();
     if (!name || !tag) return { name, tag, region, ok: false, error: "missing name/tag" };
     try {
-      const result = await scrapeOne(String(name), String(tag), region);
+      // In a batch the Riot path does not fall back to op.gg: a row it cannot answer
+      // is handed back as failed, and the app retries it on its own GET — a fresh
+      // request with a fresh subrequest budget.
+      const result = key
+        ? await riotOne(String(name), String(tag), region, key, a.puuid, false)
+        : await scrapeOne(String(name), String(tag), region);
       if (result.error) return { name, tag, region, ok: false, error: result.error };
       return { name, tag, region, ok: true, ...result.body };
     } catch (e) {
       return { name, tag, region, ok: false, error: (e && e.message) || "failed" };
     }
-  }));
+  };
+  if (!key) return json({ results: await Promise.all(list.map(row)) }, 200);
+
+  // A worker on the free plan may make 50 subrequests per request. A Riot lookup
+  // is 2 when the app already knows the account's puuid and 3 when it does not, so
+  // a batch of twenty can overrun it. Rows past the budget are handed back to be
+  // retried one at a time. Five at a time also keeps clear of Riot's 20-a-second
+  // limit for personal keys.
+  let budget = SUBREQUEST_BUDGET;
+  const plan = list.map(a => {
+    const cost = a && a.puuid ? 2 : 3;
+    if (budget < cost) return false;
+    budget -= cost; return true;
+  });
+  const results = new Array(list.length);
+  for (let i = 0; i < list.length; i += 5) {
+    await Promise.all(list.slice(i, i + 5).map(async (a, k) => {
+      const j = i + k;
+      results[j] = plan[j] ? await row(a)
+        : { name: a && a.name, tag: a && a.tag, region: a && a.region, ok: false, error: "deferred — over this request's budget" };
+    }));
+  }
   return json({ results }, 200);
+}
+
+/* ---- Riot API ---- */
+const SUBREQUEST_BUDGET = 48;
+// op.gg's region codes (what the app sends) to Riot's routing values. Account data
+// is global, so any cluster answers for any account; the nearest one is used.
+export const RIOT_PLATFORM = {
+  euw: "euw1", eune: "eun1", na: "na1", kr: "kr", jp: "jp1", br: "br1", lan: "la1", las: "la2",
+  oce: "oc1", tr: "tr1", ru: "ru", me: "me1", sg: "sg2", tw: "tw2", vn: "vn2", ph: "ph2", th: "th2",
+};
+const RIOT_CLUSTER = {
+  euw: "europe", eune: "europe", tr: "europe", ru: "europe", me: "europe",
+  na: "americas", br: "americas", lan: "americas", las: "americas",
+  kr: "asia", jp: "asia", oce: "asia", sg: "asia", tw: "asia", vn: "asia", ph: "asia", th: "asia",
+};
+function riotKey(env) {
+  const k = env && env.RIOT_API_KEY;
+  return typeof k === "string" && /^RGAPI-[0-9a-f-]{20,}$/i.test(k.trim()) ? k.trim() : null;
+}
+function riotGet(u, key) {
+  const c = new AbortController();
+  const t = setTimeout(() => c.abort(), 10000);
+  return fetch(u, { headers: { "X-Riot-Token": key }, signal: c.signal }).finally(() => clearTimeout(t));
+}
+function riotFailure(res, what) {
+  if (res.status === 401 || res.status === 403) return { error: "Riot API key rejected (" + res.status + ") — expired or wrong", riotError: "key", status: 502 };
+  if (res.status === 429) return { error: "Riot API rate limit", riotError: "rate", status: 503 };
+  return { error: "Riot " + what + " HTTP " + res.status, riotError: "http", status: 502 };
+}
+const PUUID_RE = /^[A-Za-z0-9_-]{30,100}$/;
+
+/* One account through Riot's API: account-v1 for the puuid and the current Riot ID,
+   summoner-v4 for level and icon, league-v4 for the ranks.
+   `withAccount` false skips account-v1 when the puuid is already known (a batch),
+   which is the difference between 2 and 3 subrequests. A puuid is encrypted per
+   API key, so one stored under an earlier key (a 24-hour development key, say)
+   answers 400/404 — the account is then found again by Riot ID. */
+export async function riotOne(name, tag, region, key, puuid, withAccount = true) {
+  const plat = RIOT_PLATFORM[region], cluster = RIOT_CLUSTER[region];
+  if (!plat || !cluster) return { error: "no Riot routing for region " + region, riotError: "http", status: 400 };
+  const known = typeof puuid === "string" && PUUID_RE.test(puuid) ? puuid : null;
+  let acct = null;
+  if (withAccount || !known) {
+    let res = known ? await riotGet(`https://${cluster}.api.riotgames.com/riot/account/v1/accounts/by-puuid/${known}`, key) : null;
+    if (!res || res.status === 400 || res.status === 404) {
+      res = await riotGet(`https://${cluster}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`, key);
+      if (res.status === 404) return { body: { found: false, source: "riot" } };
+    }
+    if (!res.ok) return riotFailure(res, "account");
+    acct = await res.json();
+  }
+  const id = acct ? acct.puuid : known;
+  const [sr, lr] = await Promise.all([
+    riotGet(`https://${plat}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${id}`, key),
+    riotGet(`https://${plat}.api.riotgames.com/lol/league/v4/entries/by-puuid/${id}`, key),
+  ]);
+  // A Riot account with no League profile on this server: the region is wrong.
+  if (sr.status === 404) return { body: { found: false, source: "riot" } };
+  if (!sr.ok) return riotFailure(sr, "summoner");
+  if (!lr.ok) return riotFailure(lr, "league");
+  const summ = await sr.json(), entries = await lr.json();
+  const queue = q => (Array.isArray(entries) ? entries : []).find(e => e && e.queueType === q);
+  const rank = e => e ? {
+    tier: String(e.tier || "").toUpperCase(),
+    division: MASTER_PLUS.includes(String(e.tier || "").toUpperCase()) ? null : (e.rank || null),
+    lp: e.leaguePoints ?? null,
+  } : { tier: "UNRANKED", division: null, lp: null };
+  const solo = queue("RANKED_SOLO_5x5"), flex = queue("RANKED_FLEX_SR");
+  return {
+    body: {
+      found: true,
+      ...rank(solo),
+      wins: solo ? solo.wins ?? null : null,
+      losses: solo ? solo.losses ?? null : null,
+      level: summ.summonerLevel ?? null,
+      flex: rank(flex),
+      icon: summ.profileIconId != null
+        ? `https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon${summ.profileIconId}.jpg` : null,
+      puuid: id,
+      riotId: acct ? { name: acct.gameName, tag: acct.tagLine } : null,
+      uncertain: false,
+      source: "riot",
+    },
+  };
+}
+
+// match-v5 routes by these four clusters, which are not account-v1's three
+const MATCH_CLUSTER = {
+  euw: "europe", eune: "europe", tr: "europe", ru: "europe", me: "europe",
+  na: "americas", br: "americas", lan: "americas", las: "americas",
+  kr: "asia", jp: "asia",
+  oce: "sea", sg: "sea", tw: "sea", vn: "sea", ph: "sea", th: "sea",
+};
+/* The last five ranked solo games (queue 420): the list of match ids, then each
+   match, reduced to this player's line. Six subrequests, asked for one account at
+   a time when its details are opened — never in a batch. */
+export async function riotForm(puuid, region, key) {
+  const cluster = MATCH_CLUSTER[region];
+  if (!cluster || !PUUID_RE.test(String(puuid || ""))) return { error: "bad puuid or region", status: 400 };
+  const base = `https://${cluster}.api.riotgames.com/lol/match/v5/matches`;
+  const ir = await riotGet(`${base}/by-puuid/${puuid}/ids?queue=420&count=5`, key);
+  if (!ir.ok) return riotFailure(ir, "match list");
+  const ids = (await ir.json()).slice(0, 5);
+  const matches = await Promise.all(ids.map(id => riotGet(`${base}/${encodeURIComponent(id)}`, key).catch(() => null)));
+  const games = [];
+  for (const m of matches) {
+    if (!m || !m.ok) continue;
+    const d = await m.json();
+    const info = d && d.info, p = info && (info.participants || []).find(x => x.puuid === puuid);
+    if (!p) continue;
+    games.push({ win: !!p.win, champ: String(p.championName || "?"), k: p.kills, d: p.deaths, a: p.assists,
+      min: Math.round((info.gameDuration || 0) / 60), at: info.gameEndTimestamp || info.gameCreation || null });
+  }
+  return { body: { games } };
+}
+
+/* One lookup, the way a single GET wants it. With a Riot key: Riot for the numbers,
+   then op.gg (best effort) for what Riot does not know — peak, past seasons,
+   champions, the dates LP was reached. Without one, or when Riot refuses, op.gg
+   alone, with Riot's complaint passed along so the app can say the key expired. */
+export async function lookupOne(name, tag, region, env, puuid) {
+  const key = riotKey(env);
+  if (!key) return scrapeOne(name, tag, region);
+  const r = await riotOne(name, tag, region, key, puuid, true);
+  if (r.body && r.body.found === false) return r;
+  if (r.body) {
+    try {
+      const now = r.body.riotId || { name, tag };   // a renamed account is on op.gg under its new name
+      const extra = await scrapeOne(now.name, now.tag, region);
+      if (extra.body && extra.body.found) {
+        const b = extra.body;
+        Object.assign(r.body, { peak: b.peak, seasons: b.seasons, champs: b.champs, lpAt: b.lpAt });
+      }
+    } catch (e) { /* the Riot numbers stand on their own */ }
+    return r;
+  }
+  const fallback = await scrapeOne(name, tag, region);
+  if (fallback.body) fallback.body.riotError = r.riotError;
+  return fallback;
 }
 
 function opggGet(u) {

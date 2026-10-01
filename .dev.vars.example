@@ -1,0 +1,6 @@
+# Your Riot Games API key, from https://developer.riotgames.com — optional.
+# With it the worker reads ranks from Riot directly; without it, from op.gg.
+# A development key expires after 24 hours and has to be pasted in again; a
+# personal API key does not. You can add or change it later under the worker's
+# Settings → Variables and Secrets.
+RIOT_API_KEY=

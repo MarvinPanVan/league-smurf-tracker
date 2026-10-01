@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import {
   parseRankText, parseLevelText, parsePeakText, parseSeasons, parseFlex,
   parseChampions, parseChampionTable, parseChampionsMeta, parseProfileIcon,
-  parseLpHistory, stripRows,
+  parseLpHistory, stripRows, riotOne, lookupOne, handleBatch, riotForm,
 } from "../cloudflare-worker.js";
 
 // The shape op.gg actually serves, reduced but structurally faithful — this is
@@ -490,4 +490,138 @@ test("OPTIONS preflight allows PUT and Authorization for vault sync", async () =
   assert.equal(res.status, 200);
   assert.match(res.headers.get("Access-Control-Allow-Methods") || "", /PUT/);
   assert.match(res.headers.get("Access-Control-Allow-Headers") || "", /Authorization/i);
+});
+
+/* ---- Riot API mode ----
+   A fake Riot: routes by URL, counts calls, and can be told to refuse the key or to
+   reject a puuid minted under another key. op.gg is answered with a 404 page unless
+   a test says otherwise. */
+const KEY = "RGAPI-12345678-abcd-ef01-2345-6789abcdef01";
+const PUUID = "p".repeat(78), OLD_PUUID = "o".repeat(78);
+function fakeRiot({ keyRejected = false, staleOld = true, tier = "DIAMOND", entries } = {}) {
+  const calls = [];
+  const res = (status, body) => new Response(typeof body === "string" ? body : JSON.stringify(body), { status });
+  globalThis.fetch = async (u, init) => {
+    const url = String(u); calls.push(url);
+    if (url.includes("op.gg")) return res(404, "not found");
+    if (keyRejected) return res(403, { status: { message: "Forbidden" } });
+    assert.equal(init.headers["X-Riot-Token"], KEY, "the key goes in the header, never the URL");
+    if (url.includes("/accounts/by-puuid/" + OLD_PUUID) && staleOld) return res(400, { status: { message: "Exception decrypting" } });
+    if (url.includes("/accounts/by-puuid/")) return res(200, { puuid: PUUID, gameName: "Renamed", tagLine: "NEW" });
+    if (url.includes("/accounts/by-riot-id/Nobody/")) return res(404, {});
+    if (url.includes("/accounts/by-riot-id/")) return res(200, { puuid: PUUID, gameName: "Hide on Bush", tagLine: "KR1" });
+    if (url.includes("/summoner/v4/summoners/by-puuid/")) return res(200, { profileIconId: 6, summonerLevel: 812 });
+    if (url.includes("/league/v4/entries/by-puuid/")) return res(200, entries || [
+      { queueType: "RANKED_SOLO_5x5", tier, rank: "II", leaguePoints: 45, wins: 120, losses: 100 },
+      { queueType: "RANKED_FLEX_SR", tier: "GOLD", rank: "I", leaguePoints: 3, wins: 4, losses: 2 }]);
+    return res(500, "unexpected " + url);
+  };
+  return calls;
+}
+
+test("Riot mode: Riot ID → puuid → summoner and league, shaped like an op.gg reading", async () => {
+  const calls = fakeRiot();
+  const r = await riotOne("Hide on Bush", "KR1", "kr", KEY, null, true);
+  assert.deepEqual({ tier: r.body.tier, division: r.body.division, lp: r.body.lp, wins: r.body.wins, losses: r.body.losses, level: r.body.level },
+    { tier: "DIAMOND", division: "II", lp: 45, wins: 120, losses: 100, level: 812 });
+  assert.deepEqual(r.body.flex, { tier: "GOLD", division: "I", lp: 3 });
+  assert.equal(r.body.puuid, PUUID);
+  assert.match(r.body.icon, /profileIcon6\.jpg$/);
+  assert.equal(r.body.source, "riot");
+  assert.ok(calls[0].startsWith("https://asia.api.riotgames.com/riot/account/v1/accounts/by-riot-id/Hide%20on%20Bush/KR1"));
+  assert.ok(calls.some(c => c.startsWith("https://kr.api.riotgames.com/lol/league/v4/entries/by-puuid/" + PUUID)));
+  assert.equal(calls.length, 3);
+});
+
+test("Riot mode: Master and up have no division; no solo entry is Unranked; a known puuid saves a call", async () => {
+  fakeRiot({ tier: "MASTER" });
+  assert.equal((await riotOne("a", "b", "euw", KEY, null)).body.division, null);
+  fakeRiot({ entries: [] });
+  const un = await riotOne("a", "b", "euw", KEY, null);
+  assert.equal(un.body.tier, "UNRANKED");
+  assert.equal(un.body.wins, null);
+  const calls = fakeRiot();
+  await riotOne("a", "b", "euw", KEY, PUUID, false);
+  assert.equal(calls.length, 2, "batch with a known puuid: summoner + league only");
+});
+
+test("Riot mode: a puuid from another key is found again by Riot ID; a rename comes back with it", async () => {
+  fakeRiot();
+  const stale = await riotOne("Hide on Bush", "KR1", "kr", KEY, OLD_PUUID, true);
+  assert.equal(stale.body.puuid, PUUID, "re-resolved under this key");
+  fakeRiot({ staleOld: false });
+  const renamed = await riotOne("Old Name", "OLD", "euw", KEY, OLD_PUUID, true);
+  assert.deepEqual(renamed.body.riotId, { name: "Renamed", tag: "NEW" }, "the current Riot ID, so the app can follow a rename");
+  fakeRiot();
+  assert.equal((await riotOne("Nobody", "X", "euw", KEY, null)).body.found, false);
+});
+
+test("Riot mode: a rejected key falls back to op.gg on a single lookup and says why", async () => {
+  fakeRiot({ keyRejected: true });
+  const r = await riotOne("a", "b", "euw", KEY, null);
+  assert.equal(r.riotError, "key");
+  const env = { RIOT_API_KEY: KEY };
+  const one = await lookupOne("a", "b", "euw", env, null);
+  // op.gg answers 404 in this fake, which is "not found" — what matters is that it was asked
+  assert.equal(one.body.found, false);
+  const noKey = await lookupOne("a", "b", "euw", { RIOT_API_KEY: "not-a-key" }, null);
+  assert.equal(noKey.body.source, undefined, "a malformed key is no key: straight to op.gg");
+});
+
+test("Riot mode: a batch stays inside the worker's subrequest budget and hands the rest back", async () => {
+  const calls = fakeRiot();
+  const accounts = Array.from({ length: 20 }, (_, i) => ({ name: "n" + i, tag: "t", region: "euw" }));
+  const req = new Request("https://w.example/", { method: "POST", body: JSON.stringify({ accounts }) });
+  const out = await (await handleBatch(req, { RIOT_API_KEY: KEY })).json();
+  const ok = out.results.filter(r => r.ok).length, deferred = out.results.filter(r => /deferred/.test(r.error || "")).length;
+  assert.equal(ok, 16, "16 × 3 = 48 subrequests");
+  assert.equal(deferred, 4, "the rest come back to be retried one at a time");
+  assert.ok(calls.length <= 50, `made ${calls.length} subrequests`);
+  fakeRiot();
+  const known = accounts.map(a => ({ ...a, puuid: PUUID }));
+  const out2 = await (await handleBatch(new Request("https://w.example/", { method: "POST", body: JSON.stringify({ accounts: known }) }), { RIOT_API_KEY: KEY })).json();
+  assert.equal(out2.results.filter(r => r.ok).length, 20, "with puuids known, all twenty fit");
+});
+
+test("/status says what the worker has set up, without revealing it", async () => {
+  const st = async env => (await worker.fetch(new Request("https://w.example/status"), env)).json();
+  assert.deepEqual(await st({}), { ok: true, riot: false, vault: false });
+  const full = await st({ RIOT_API_KEY: KEY, VAULT: {} });
+  assert.deepEqual(full, { ok: true, riot: true, vault: true });
+  assert.doesNotMatch(JSON.stringify(full), /RGAPI/);
+});
+
+/* The deploy button builds the worker from wrangler.jsonc and asks for the secrets in
+   .dev.vars.example. Both have to name what the worker actually reads. */
+test("the one-click deploy config matches what the worker reads", async () => {
+  const fs = await import("node:fs"), path = await import("node:path"), { fileURLToPath } = await import("node:url");
+  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const cfg = JSON.parse(fs.readFileSync(path.join(root, "wrangler.jsonc"), "utf8").replace(/^\s*\/\/.*$/gm, ""));
+  assert.ok(fs.existsSync(path.join(root, cfg.main)), "main points at the worker");
+  const src = fs.readFileSync(path.join(root, cfg.main), "utf8");
+  for (const kv of cfg.kv_namespaces) assert.match(src, new RegExp("env\\." + kv.binding + "\\b"), `the worker reads env.${kv.binding}`);
+  assert.ok(!cfg.kv_namespaces.some(k => k.id), "no namespace id: the deploy creates one in the deployer's account");
+  const vars = fs.readFileSync(path.join(root, ".dev.vars.example"), "utf8").match(/^[A-Z_]+(?==)/gm);
+  for (const v of vars) assert.match(src, new RegExp("env\\." + v + "\\b"), `the worker reads env.${v}`);
+  assert.deepEqual(vars, ["RIOT_API_KEY"]);
+});
+
+test("recent form: the last five ranked games, reduced to this player's line", async () => {
+  const calls = [];
+  globalThis.fetch = async u => {
+    const url = String(u); calls.push(url);
+    const res = b => new Response(JSON.stringify(b), { status: 200 });
+    if (url.includes("/ids?")) return res(["EUW1_1", "EUW1_2"]);
+    const n = url.endsWith("EUW1_1") ? 1 : 2;
+    return res({ info: { gameDuration: 1800, gameEndTimestamp: 1700000000000 + n, participants: [
+      { puuid: "x".repeat(78), win: n === 2, championName: "Zed", kills: 1, deaths: 1, assists: 1 },
+      { puuid: PUUID, win: n === 1, championName: n === 1 ? "Ahri" : "Lux", kills: 7, deaths: 2, assists: 9 }] } });
+  };
+  const r = await riotForm(PUUID, "euw", KEY);
+  assert.ok(calls[0].startsWith("https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/" + PUUID + "/ids?queue=420&count=5"));
+  assert.deepEqual(r.body.games.map(g => [g.win, g.champ, g.k, g.d, g.a, g.min]), [[true, "Ahri", 7, 2, 9, 30], [false, "Lux", 7, 2, 9, 30]]);
+  assert.equal((await riotForm("not-a-puuid", "euw", KEY)).status, 400);
+  const sea = []; globalThis.fetch = async u => { sea.push(String(u)); return new Response("[]", { status: 200 }); };
+  await riotForm(PUUID, "oce", KEY);
+  assert.match(sea[0], /^https:\/\/sea\.api\.riotgames\.com\//, "match-v5 routes Oceania through sea, not asia");
 });

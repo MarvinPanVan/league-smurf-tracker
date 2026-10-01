@@ -1,0 +1,13 @@
+// Smurf Tracker's optional backend, for Cloudflare Workers: rank checks (through
+// Riot's API when it has a key, op.gg otherwise) and encrypted device sync.
+// The "Deploy to Cloudflare" button in the README reads this file. It creates the
+// Worker, creates the KV namespace below for sync, and asks for the secret listed
+// in .dev.vars.example. Deploying by hand: `npx wrangler deploy` from this folder.
+{
+  "name": "smurf-tracker",
+  "main": "cloudflare-worker.js",
+  "compatibility_date": "2026-09-01",
+  "kv_namespaces": [
+    { "binding": "VAULT" }
+  ]
+}
