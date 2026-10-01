@@ -675,6 +675,22 @@ test("the page speaks in line icons, not emoji", () => {
   assert.doesNotMatch(ui, /[\u{1F300}-\u{1FAFF}]/u, "no pictographic emoji left in the interface");
 });
 
+test("a chart over more than a year names the year, so its axis never reads backwards", () => {
+  const D = 86400000, now = Date.now();
+  const hist = Array.from({ length: 30 }, (_, k) => ({ t: now - 700 * D + Math.round(700 * D * k / 29), tier: "GOLD", division: "II", lp: 10 + k }));
+  const win = bootApp([{ id: "old", region: "EUW", gameName: "Old", tagLine: "1", status: "active",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 39, updatedAt: now }, history: hist, tags: [] }]);
+  const ticks = [...win.document.querySelectorAll('.card[data-id="old"] .lpc-tick')].map(e => e.textContent);
+  assert.ok(ticks.length >= 2, "the axis is drawn");
+  for (const tk of ticks) assert.match(tk, /^[A-Z][a-z]{2} \u2019\d\d$/, `month and year: ${tk}`);
+  const yrs = ticks.map(tk => +tk.slice(-2));
+  assert.deepEqual(yrs, [...yrs].sort((a, b) => a - b), "and the years only go forward");
+  runScript(win, `window.__tip = dateLabel(${now - 700 * D}, "year"); window.__near = dateLabel(${now}, "year"); window.__short = dateLabel(${now});`);
+  assert.match(win.__tip, /\d{4}$/, "a tip from another year says which");
+  assert.doesNotMatch(win.__near, /\d{4}$/, "this year's dates stay short");
+  assert.equal(win.__short, win.__near);
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");

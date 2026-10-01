@@ -3342,7 +3342,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     return `<div class="lpc-pt" style="left:${xp.toFixed(2)}%;width:min(${w.toFixed(2)}%,28px);transform:translateX(-${anchor}%);--x:${anchor}%;--y:${py(p.v).toFixed(1)}px;--hl:${hl}px;--hr:${hr}px">`
       +`<span class="lpc-hit"></span>`
       +`<b style="top:${py(p.v).toFixed(1)}px"><i style="background:${tierColor(p.h.tier)}"></i>`
-      +`<span class="lpc-tip${side}${hi}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(dateLabel(p.h.t))} · ${esc(when)}</em>`:""}</span></b></div>`;
+      +`<span class="lpc-tip${side}${hi}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(dateLabel(p.h.t,"year"))} · ${esc(when)}</em>`:""}</span></b></div>`;
   }).join("");
 
   // Date axis. Ticks sit at the ends and at even time fractions between them, and
@@ -3351,9 +3351,10 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
   let axis="";
   if(timed){
     const n=Math.min(4,Math.max(2,Math.round(LPC_W/60)));
+    const span=t1-t0>300*86400000?"month":"";
     let prev=null;
     for(let k=0;k<n;k++){
-      const f=k/(n-1), txt=dateLabel(t0+(t1-t0)*f);
+      const f=k/(n-1), txt=dateLabel(t0+(t1-t0)*f,span);
       if(txt===prev)continue;
       prev=txt;
       const align=k===0?" l":k===n-1?" r":"";
@@ -3377,10 +3378,15 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
 // Compact and unambiguous: "22 Jul" rather than 22/07 or 07/22, which mean
 // different days depending on where the reader lives.
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-function dateLabel(t){
+/* "31 Oct" carries no year, which is fine inside one — but an axis over two
+   seasons read "31 Oct · 16 Oct · 1 Oct", left to right, which looks like time
+   running backwards. Past a year's span the axis counts months with their year
+   ("Oct '24"), and a point's tip names the year whenever it is not this one. */
+function dateLabel(t,mode){
   const d=new Date(+t);
   if(isNaN(d))return"";
-  return d.getDate()+" "+MONTHS[d.getMonth()];
+  if(mode==="month")return MONTHS[d.getMonth()]+" ’"+String(d.getFullYear()).slice(2);
+  return d.getDate()+" "+MONTHS[d.getMonth()]+(mode==="year"&&d.getFullYear()!==new Date().getFullYear()?" "+d.getFullYear():"");
 }
 function postDiscord(content){
   if(!cfg.discordWebhook)return;
