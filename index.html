@@ -1195,6 +1195,18 @@
   .fm-res{display:inline-block;width:1.3em;font-weight:700;font-size:11px;color:var(--danger)}
   .fm-res.w{color:var(--good)}
   .fm-retry{margin-left:8px;padding:2px 8px;font-size:11px}
+  /* Settings → the worker guide */
+  .guide{margin-top:8px;border:1px solid var(--line);border-radius:var(--r-md);background:#ffffff05;font-size:12.5px;color:var(--muted);line-height:1.55}
+  .guide summary{cursor:pointer;padding:10px 13px;font-weight:600;color:var(--text);list-style-position:inside}
+  .guide[open] summary{border-bottom:1px solid var(--line)}
+  .guide ol{margin:0;padding:10px 14px 4px 32px}
+  .guide li{margin-bottom:9px}
+  .guide li::marker{color:var(--gold-txt);font-weight:700}
+  .guide a{color:var(--teal-txt)}
+  .guide .guide-btn{display:inline-block;padding:3px 10px;border-radius:var(--r-sm);font-weight:600;text-decoration:none;
+    color:var(--text);border:1px solid color-mix(in srgb,var(--teal) 55%,transparent);background:color-mix(in srgb,var(--teal) 14%,transparent)}
+  .guide .guide-btn:hover{background:color-mix(in srgb,var(--teal) 24%,transparent)}
+  .guide-alt{padding:0 14px 11px;font-size:12px;color:var(--faint)}
   .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;letter-spacing:.12em;
     pointer-events:none;line-height:1;opacity:.9}
   /* Wins against losses, the way op.gg draws a record — not a fill on an empty
@@ -2168,6 +2180,28 @@
             <input id="sBackend" placeholder="https://... — leave empty to use the free auto-fetch" autocomplete="off">
             <div id="sBackendStatus" class="hint" style="margin-top:2px" aria-live="polite"></div>
           </div>
+          <!-- The whole setup, where you paste its result. It was one paragraph of
+               dashboard clicks; it is now the Deploy button and three pastes. -->
+          <details class="fw guide" id="sDeployHelp">
+            <summary>Set up your own worker — free, about 5 minutes</summary>
+            <ol>
+              <li><b>Riot API key</b> (optional, for ranks straight from Riot and your last 5 ranked games). Sign in at
+                <a href="https://developer.riotgames.com" target="_blank" rel="noreferrer">developer.riotgames.com</a> with your Riot account.
+                The <b>Development API Key</b> on your dashboard works at once but expires every 24 hours; for one that lasts,
+                <b>Register Product → Personal API Key</b>. Keep the key to yourself — it is a password.</li>
+              <li><a class="guide-btn" href="https://deploy.workers.cloudflare.com/?url=https://github.com/MarvinPanVan/league-smurf-tracker" target="_blank" rel="noreferrer">Deploy to Cloudflare</a>
+                and sign in (a free account is enough). Keep the copy of the repo it makes private. Paste your key where it asks for
+                <code>RIOT_API_KEY</code>, or leave it empty. Sync storage is set up for you.</li>
+              <li>Copy the <code>https://….workers.dev</code> address it gives you into <b>Backend URL</b> above, then <b>Save settings</b>.
+                The line under the field says what your worker has.</li>
+              <li><b>Adding or replacing the key later</b> (a development key needs this daily):
+                <a href="https://dash.cloudflare.com/?to=/:account/workers-and-pages" target="_blank" rel="noreferrer">Cloudflare → Workers &amp; Pages</a>
+                → your worker → <b>Settings → Variables and Secrets</b> → <code>RIOT_API_KEY</code>, type <b>Secret</b> → <b>Deploy</b>.</li>
+            </ol>
+            <div class="guide-alt">Rather paste the code by hand? Create a Worker, paste
+              <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>,
+              and bind a KV namespace named <code>VAULT</code> for sync.</div>
+          </details>
           <div class="fld fw">
             <label>Advanced: Anthropic API key (optional, stored only in this browser)</label>
             <input type="text" id="sKey" class="mask" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
@@ -2181,14 +2215,6 @@
           </div>
           <div class="fw hint">
             Check order: <b>backend URL → API key → free op.gg auto-fetch</b>. A worker with a Riot API key reads ranks from Riot directly, the most reliable source there is. With all three empty, checks use the free auto-fetch and cost nothing. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable, but only worth it for power users.
-          </div>
-          <div class="fw hint" id="sDeployHelp" style="margin-top:8px">
-            <b>Deploy the worker:</b> Cloudflare → Workers → Create → paste
-            <code style="user-select:all">cloudflare-worker.js</code> from the repo → Deploy → paste the
-            <code>*.workers.dev</code> URL above. Check-all then uses one batch POST instead of N GETs.
-            For device sync, also bind a KV namespace named <code>VAULT</code> (Settings → Variables → KV bindings).
-            Raw file:
-            <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>
           </div>
           <div class="fld">
             <label>Remind me to export after (days)</label>
@@ -2977,7 +3003,7 @@ async function updateBackendStatus(){
     const res=await fetch(u.href,{signal:c.signal}).finally(()=>clearTimeout(t));
     const d=await res.json().catch(()=>null);
     if(d&&d.ok===true){
-      el.textContent=(d.riot?"Riot API key: set — ranks come from Riot":"Riot API key: not set — ranks come from op.gg")
+      el.textContent=(d.riot?"Riot API key: set — ranks come from Riot":"Riot API key: not set — ranks come from op.gg (the guide below adds one)")
         +" · "+(d.vault?"Sync storage: ready":"Sync storage: not bound");
     }else el.textContent="Worker reached, but it is an older version — redeploy it for Riot API support and this status line.";
   }catch(e){el.textContent="Could not reach the worker at that URL.";el.style.color="var(--danger)"}
@@ -6896,7 +6922,7 @@ function openSettings(){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";$("sCompact").checked=!!cfg.compactCards;updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";$("sCompact").checked=!!cfg.compactCards;updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden")
 }
 function renderPwMeter(){
   const p=$("fPass").value;

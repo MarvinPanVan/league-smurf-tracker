@@ -1105,6 +1105,30 @@ test("Recent form: a Riot-read account's Details fetch its last five ranked game
   await until(() => /No ranked games yet this season/.test(card("r").textContent), "Retry to fetch again");
 });
 
+test("Settings walks you through setting up a worker, and steps aside once you have one", () => {
+  const win = bootApp();
+  const guide = () => win.document.getElementById("sDeployHelp");
+  win.document.getElementById("bSettings").click();
+  assert.equal(guide().tagName, "DETAILS");
+  assert.equal(guide().open, true, "no worker yet: the steps are open");
+  const links = [...guide().querySelectorAll("a")];
+  const deploy = links.find(a => /deploy\.workers\.cloudflare\.com/.test(a.href));
+  assert.ok(deploy, "the Deploy to Cloudflare button");
+  assert.equal(new URL(deploy.href).searchParams.get("url"), "https://github.com/MarvinPanVan/league-smurf-tracker");
+  assert.ok(links.some(a => a.href.startsWith("https://developer.riotgames.com")), "where the Riot key comes from");
+  for (const a of links) {
+    assert.equal(a.target, "_blank", a.href);
+    assert.match(a.rel, /noreferrer/, a.href);
+  }
+  assert.match(guide().textContent, /RIOT_API_KEY/);
+  assert.match(guide().textContent, /Variables and Secrets/, "where to change the key later");
+  win.document.querySelector("#settings [data-close-panel]").click();
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev'");
+  win.fetch = async () => ({ ok: true, status: 200, json: async () => ({ ok: true, riot: true, vault: true }) });
+  win.document.getElementById("bSettings").click();
+  assert.equal(guide().open, false, "with a worker set, it folds away");
+});
+
 test("Settings says what the worker has set up", async () => {
   const win = bootApp();
   const reply = (obj, status = 200) => ({ ok: status < 400, status, json: async () => obj });
