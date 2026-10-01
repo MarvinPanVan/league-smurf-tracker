@@ -1628,6 +1628,12 @@
   #settings .grp[data-tab="checks"]+.grp[data-tab="checks"]{border-top:1px solid var(--line)}
   .grp-h.tab-same{display:none}
   .bk-acts{display:flex;flex-wrap:wrap;gap:8px}
+  /* a three-way choice in Settings: one row, the chosen one lit */
+  .opt-seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--panel2)}
+  #settings .opt-seg button{border:0;border-radius:0;background:none;box-shadow:none;padding:7px 16px;font-size:13px;font-weight:600;color:var(--muted)}
+  #settings .opt-seg button+button{border-left:1px solid var(--line)}
+  #settings .opt-seg button:hover{color:var(--text);background:var(--panel3)}
+  #settings .opt-seg button[aria-checked="true"]{color:var(--gold-txt);background:color-mix(in srgb,var(--gold) 12%,var(--panel2))}
   .grp-h{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
     color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:9px}
   .grp-h::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
@@ -1876,6 +1882,22 @@
   /* the inner pane has to paint over the glow layer, not under it */
   .hx-in{position:relative;z-index:1}
   @keyframes gemGlow{50%{filter:brightness(1.22)}}
+  /* ---- Effects (Settings → Appearance) ----
+     Subtle: nothing moves under the pointer, nothing loops, the glows are quieter.
+     Off: nothing animates or glows at all. Reduce-motion is handled on its own
+     below, whichever is picked. */
+  body:is([data-fx="subtle"],[data-fx="off"]) :is(.grid>.hx,.grid.wall>.hx,.to-top,.star,.panel-close):hover,
+  body:is([data-fx="subtle"],[data-fx="off"]) :is(.acts button,.a-login):hover .ico{transform:none}
+  body:is([data-fx="subtle"],[data-fx="off"]) :is(.grid.boot>.hx,.brand-mark::before){animation:none}
+  body:is([data-fx="subtle"],[data-fx="off"]) .confetti{display:none}
+  body[data-fx="subtle"] .grid>.hx:hover::after{opacity:.4}
+  body[data-fx="subtle"] .a-login{box-shadow:0 2px 8px -5px color-mix(in srgb,var(--teal) 70%,transparent)}
+  body[data-fx="subtle"] .a-login:hover{box-shadow:0 3px 10px -5px color-mix(in srgb,var(--teal) 80%,transparent)}
+  body[data-fx="off"] *,body[data-fx="off"] *::before,body[data-fx="off"] *::after{animation:none!important;transition:none!important}
+  body[data-fx="off"] .grid>.hx::after{display:none}
+  body[data-fx="off"] :is(.a-login,.a-login:hover){box-shadow:none}
+  body[data-fx="off"] :is(.b-gold,.b-gold:hover){box-shadow:0 0 0 1px #010a13}
+  body[data-fx="off"] .brand-mark::before{box-shadow:inset 0 0 0 1px #ffffff45}
   /* Nothing here loops on its own except the header mark, the spinner and the
      sweep over a card being checked. A hidden tab stops being painted, but the
      animations are still live objects the compositor keeps ticking, and this app
@@ -2148,6 +2170,15 @@
               <span class="atm-tip">Flat background. The UI is the atmosphere.</span>
             </button>
           </div>
+        </div>
+        <div class="atm-block">
+          <div class="atm-h">Effects</div>
+          <div id="sEffects" class="opt-seg" role="radiogroup" aria-label="Effects">
+            <button type="button" role="radio" data-v="full">Full</button>
+            <button type="button" role="radio" data-v="subtle">Subtle</button>
+            <button type="button" role="radio" data-v="off">Off</button>
+          </div>
+          <div class="hint" style="margin-top:7px">Full: cards lift and glow under the pointer. Subtle: nothing moves under the pointer and the glow is quieter. Off: no animation and no glow. Your system's "reduce motion" setting is always respected.</div>
         </div>
         <div class="chk" style="margin-top:16px">
           <input type="checkbox" id="sCompact" style="width:auto">
@@ -6994,7 +7025,7 @@ function openSettings(tab){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";$("sCompact").checked=!!cfg.compactCards;updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";$("sCompact").checked=!!cfg.compactCards;updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden")
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -7051,6 +7082,10 @@ function applyAtmosphere(mode){
    Details they come back when that card is opened, so nothing is lost — the grid
    just fits about twice as many cards on a screen. A class on the body, so the
    switch costs no re-render. */
+// Effects: a body attribute, so the switch is one style pass and no re-render
+const EFFECTS=["full","subtle","off"];
+function syncOptSeg(id,v){const el=$(id);if(el)for(const b of el.querySelectorAll("[data-v]"))b.setAttribute("aria-checked",String(b.dataset.v===v))}
+function applyEffects(v){const f=EFFECTS.includes(v)?v:"full";document.body.dataset.fx=f;syncOptSeg("sEffects",f);return f}
 function applyCompact(){document.body.classList.toggle("compact-cards",!!cfg.compactCards)}
 function revertAtmosphere(){applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE)}
 /* ---- themes ----
@@ -7663,7 +7698,7 @@ document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.targ
 // Closing has to go through the same door as the ✕ and Escape do. Toggling the panel
 // shut from the ⋯ menu only hid it, which left a colour you had dragged but not saved
 // applied to the whole page — the one close out of four that kept it.
-function closeSettings(){revertAccents();revertAtmosphere();settingsSaveGen++;$("settings").classList.add("hidden")}
+function closeSettings(){revertAccents();revertAtmosphere();applyEffects(cfg.effects);settingsSaveGen++;$("settings").classList.add("hidden")}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
 $("settings").querySelector(".stabs").addEventListener("click",e=>{const b=e.target.closest("[data-stab]");if(b)settingsTab(b.dataset.stab)});
 $("settings").querySelector(".stabs").addEventListener("keydown",e=>{
@@ -7722,6 +7757,7 @@ $("sSave").addEventListener("click",async()=>{
   }
   // the Details handle depends on it, so the cards are redrawn when it changes
   if(!!cfg.compactCards!==$("sCompact").checked){cfg.compactCards=$("sCompact").checked;applyCompact();renderGrid()}
+  cfg.effects=applyEffects(document.body.dataset.fx);if(cfg.effects==="full")cfg.effects=null;
   cfg.atmosphere=applyAtmosphere(document.body.dataset.atmosphere||DEFAULT_ATMOSPHERE);
   if(cfg.atmosphere===DEFAULT_ATMOSPHERE)cfg.atmosphere=null; // same idea as accents: no preference vs explicit default
   cfg.exportRemindDays=clampExportDays($("sExportDays")&&$("sExportDays").value);
@@ -7741,6 +7777,7 @@ $("sAtmosphere").addEventListener("click",e=>{
   const b=e.target.closest("[data-atmosphere]");if(!b)return;
   applyAtmosphere(b.dataset.atmosphere); // preview only — Save keeps it, Close reverts
 });
+$("sEffects").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b)applyEffects(b.dataset.v)}); // preview; Save keeps it
 $("sThemes").addEventListener("click",e=>{const b=e.target.closest("[data-theme]");if(b)pickTheme(b.dataset.theme)});
 for(const id of ["sAccent","sAccent2"])$(id).addEventListener("input",()=>{pendingRankTheme=false;renderThemes()}); // your own colours: no theme
 
@@ -8955,7 +8992,7 @@ function boot(){
   fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);
   if(cfg.accent)applyAccent(cfg.accent);
   if(cfg.accent2)applyAccent2(cfg.accent2);
-  applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyCompact();
+  applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyCompact();
   let raw=null;
   try{raw=hasStorage?localStorage.getItem(DB_KEY):null}catch(e){}
   const stored=readStoredVault(raw);

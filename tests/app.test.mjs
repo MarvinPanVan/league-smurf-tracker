@@ -3097,6 +3097,31 @@ test("the modal panels keep every control the app talks to", () => {
   assert.ok(win.document.getElementById("help").contains(win.document.getElementById("bHelpClose")));
 });
 
+test("Effects: Full, Subtle or Off — previewed live, kept on Save, honoured on the next visit", () => {
+  const win = bootApp();
+  const doc = win.document;
+  const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  assert.equal(doc.body.dataset.fx, "full", "full by default");
+  doc.getElementById("bSettings").click();
+  const seg = doc.getElementById("sEffects");
+  const checked = () => [...seg.querySelectorAll("[data-v]")].filter(b => b.getAttribute("aria-checked") === "true").map(b => b.dataset.v);
+  assert.deepEqual(checked(), ["full"]);
+  seg.querySelector('[data-v="off"]').click();
+  assert.equal(doc.body.dataset.fx, "off", "previews at once");
+  doc.getElementById("sClose").click();
+  assert.equal(doc.body.dataset.fx, "full", "Close puts it back");
+  doc.getElementById("bSettings").click();
+  seg.querySelector('[data-v="subtle"]').click();
+  doc.getElementById("sSave").click();
+  assert.equal(cfg().effects, "subtle");
+  // the rules exist for each level: nothing lifts under the pointer, and Off stops animation outright
+  const css = [...doc.querySelectorAll("style")].map(s => s.textContent).join("\n");
+  assert.match(css, /body:is\(\[data-fx="subtle"\],\[data-fx="off"\]\)[^{]*\.grid>\.hx[^{]*:hover[^{]*\{transform:none\}/);
+  assert.match(css, /body\[data-fx="off"\] \*[^{]*\{animation:none!important;transition:none!important\}/);
+  const again = bootApp(null, w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, effects: "off" })));
+  assert.equal(again.document.body.dataset.fx, "off", "applied on boot");
+});
+
 test("themes: one click sets both colours and the atmosphere, kept only on Save", () => {
   const win = bootApp();
   const doc = win.document, root = doc.documentElement.style;
