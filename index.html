@@ -366,7 +366,9 @@
   /* ---- dashboard ---- */
   .dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr))}
   .stat{padding:16px 20px;position:relative;overflow:hidden;min-width:0}
+  .dash[style*="--cols"]{grid-template-columns:repeat(var(--cols),minmax(0,1fr))}
   .stat+.stat::before{content:"";position:absolute;left:0;top:15px;bottom:15px;width:1px;background:var(--line)}
+  .stat.rs::before{display:none}
   .stat .k{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:7px}
   .stat .v{font-size:20px;font-weight:600;color:var(--text);line-height:1.25;letter-spacing:-.015em;font-variant-numeric:tabular-nums}
   /* nowrap, or a long enough figure breaks between the number and its unit and
@@ -5453,7 +5455,30 @@ function renderDash(){
   ${bk?`<div style="font-size:12px;color:var(--muted);margin:-4px 0 16px">${bk}</div>`:""}`);
   dashJustOpened=false; // consumed by the render above
   bindSparkTip(el);
+  balanceDash();
 }
+/* The figures are a grid that fits as many as it can per row, and how many there
+   are depends on the vault (six to eleven). Eight at 1024px came out six and two:
+   two tiles under a row of six, four empty cells beside them. Instead: as few rows
+   as the width needs, and the figures shared evenly across them — four and four. */
+function dashCols(n,width,min){
+  if(!n||!width)return 0;
+  const most=Math.max(1,Math.floor(width/min)), rows=Math.ceil(n/most);
+  return Math.ceil(n/rows);
+}
+function balanceDash(){
+  const d=document.querySelector("#dash .dash");
+  if(!d)return;
+  const tiles=[...d.children];
+  const narrow=!!(window.matchMedia&&matchMedia("(max-width:720px)").matches); // the .dash rule's own minimum there
+  const cols=dashCols(tiles.length,d.clientWidth,narrow?140:158);
+  if(!cols){d.style.removeProperty("--cols");return}
+  d.style.setProperty("--cols",cols);
+  // the hairline between tiles belongs inside a row, not down the left edge of one
+  tiles.forEach((t,i)=>t.classList.toggle("rs",i%cols===0));
+}
+if("ResizeObserver"in window)new ResizeObserver(()=>balanceDash()).observe($("dash"));
+else window.addEventListener("resize",balanceDash);
 
 /* Every tag in the vault, as a row of chips above the grid. On a vault with one
    tag on one account that is a single word floating in its own band, and on a

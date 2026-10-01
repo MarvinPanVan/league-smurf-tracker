@@ -616,6 +616,23 @@ test("a card's win-rate bar is drawn as a record, not as the goal rail's progres
   assert.equal(win.document.querySelector(".card .wrbar i").style.width, "42%");
 });
 
+test("the dashboard shares its figures evenly across rows instead of leaving a stub row", () => {
+  const win = bootApp();
+  assert.equal(win.dashCols(8, 1338, 158), 8, "one row when they fit");
+  assert.equal(win.dashCols(8, 952, 158), 4, "eight at 1024px: four and four, not six and two");
+  assert.equal(win.dashCols(11, 1338, 158), 6, "eleven: six and five");
+  assert.equal(win.dashCols(8, 356, 140), 2, "a phone: two columns");
+  assert.equal(win.dashCols(8, 0, 158), 0, "no width (hidden, or jsdom): leave it to the CSS");
+  addRealAccount(win, "Dash", "1");
+  const d = win.document.querySelector("#dash .dash");
+  assert.ok(d, "the dashboard rendered");
+  Object.defineProperty(d, "clientWidth", { configurable: true, get: () => 952 });
+  win.balanceDash();
+  const n = d.children.length, cols = Number(d.style.getPropertyValue("--cols"));
+  assert.equal(cols, win.dashCols(n, 952, 158));
+  [...d.children].forEach((t, i) => assert.equal(t.classList.contains("rs"), i % cols === 0, "row starts lose the left hairline"));
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
