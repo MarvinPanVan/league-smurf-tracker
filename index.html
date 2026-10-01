@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#07080c">
+<meta name="theme-color" content="#010a13">
 <title>Smurf Tracker — Summoner Vault</title>
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -16,23 +16,29 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* surfaces — cool neutral dark, no more navy wash */
-    --bg:#07080c; --panel:#0f1116; --panel2:#161922; --panel3:#1e222d;
-    --line:#232733; --line2:#343b4c;
-    /* accent — live-overridden by the accent picker in Settings */
-    --gold:#d8b874; --gold-dim:#8a6a2e; --gold-mid:#c2a45f; --star:#f2d489;
+    /* Hextech. The League client is blue-black metal, not neutral grey, and its
+       text is warm parchment (#f0e6d2 / #a09b8c) where ours was blue-white — that
+       temperature, more than any one colour, is what made this read as a generic
+       dark app. Faint is lifted to 4.8:1 on a card: the old #5d6577 was 3.2:1,
+       below what small text needs to be read. */
+    --bg:#010a13; --panel:#0a1119; --panel2:#111a24; --panel3:#18222e;
+    --line:#1f2a34; --line2:#33414c;
+    /* accent — live-overridden by the accent picker in Settings. The defaults are
+       the client's own gold and blue; the derived ones are what applyAccent()
+       computes from them, so a reset lands exactly here. */
+    --gold:#c8aa6e; --gold-dim:#7b663b; --gold-mid:#b69b67; --star:#e9d7b3;
     /* The accent as *text*. A raw accent is picked to look good as a fill, and at
        full chroma on a near-black panel it vibrates and reads as glare rather than
        as a label — a deep one goes the other way and disappears. These two are the
        same hue held inside a band that stays legible either way, and every place
        the accent is used for type reads from them instead of the raw colour. */
-    --gold-txt:#e3c98f; --teal-txt:#63ecd3;
-    --text:#e9edf5; --muted:#8b93a6; --faint:#5d6577;
+    --gold-txt:#d2ba89; --teal-txt:#73e8df;
+    --text:#f0e6d2; --muted:#a09b8c; --faint:#85827a;
     /* secondary accent — also live-overridden from Settings. --teal-ink is the
        text colour for anything filled with --teal; applyAccent2 flips it between
        near-black and white by luminance, because a fixed dark ink goes unreadable
        the moment somebody picks a deep secondary. */
-    --teal:#2ee0c2; --teal-ink:#04211f; --danger:#ff6b6b; --good:#4ade80;
+    --teal:#0ac8b9; --teal-ink:#002e2a; --danger:#ff6b6b; --good:#4ade80;
     /* elevation */
     --sh-1:0 1px 2px #00000059;
     --sh-2:0 2px 4px #0000003d,0 8px 24px -10px #000000a8;
@@ -105,7 +111,7 @@
      point is "night", not another wash. */
   body[data-atmosphere="noir"]{
     background:
-      radial-gradient(ellipse 70% 55% at 50% 40%,#0c0e14 0%,var(--bg) 72%),
+      radial-gradient(ellipse 70% 55% at 50% 40%,#0a131d 0%,var(--bg) 72%),
       var(--bg);
     background-attachment:fixed}
   body[data-atmosphere="noir"]::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
@@ -148,7 +154,10 @@
   .hex-display{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em}
 
   /* ---- surfaces: rounded, gradient hairline, soft glass ---- */
-  .hx{border-radius:var(--r-lg);padding:1px;background:linear-gradient(155deg,#ffffff1f,#ffffff0a 38%,#ffffff05);box-shadow:var(--sh-2)}
+  /* The client frames everything in metal: a gold edge lit from above that dims as
+     it goes down. White glass edges were the other half of the generic look. */
+  .hx{border-radius:var(--r-lg);padding:1px;box-shadow:var(--sh-2);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 46%,transparent),color-mix(in srgb,var(--gold) 16%,transparent) 32%,color-mix(in srgb,var(--gold-dim) 30%,#0a1119) 100%)}
   /* No backdrop-filter here, deliberately. This surface is 96–98% opaque, so at
      most 4% of whatever is behind it comes through — and what is behind it is a
      smooth background gradient, which blurring leaves essentially unchanged.
@@ -161,15 +170,15 @@
      and there is one of it: the sticky console, the header tray, the toast and the
      chart tooltip. */
   .hx-in{border-radius:calc(var(--r-lg) - 1px);height:100%;
-    background:linear-gradient(180deg,#151922f5,#0f1218fa)}
+    background:linear-gradient(180deg,#0e1620f7,#091017fb)}
   /* A favourite has to be spottable at a glance across a full grid, so it gets a
      lit border plus a warm halo — the old faint gold edge was invisible in a row
      of cards. */
   .hx.gold{background:var(--gold-dim);
-    background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 95%,transparent),color-mix(in srgb,var(--gold) 34%,transparent) 42%,color-mix(in srgb,var(--gold) 12%,transparent));
+    background:linear-gradient(180deg,var(--star),var(--gold) 26%,var(--gold-dim) 72%,color-mix(in srgb,var(--gold-dim) 50%,#0a1119));
     box-shadow:var(--sh-2),0 0 30px -10px color-mix(in srgb,var(--gold) 60%,transparent)}
-  .hx.gold .hx-in{background:linear-gradient(180deg,#1b1812f5,#12131afa)}
-  .hx.teal{background:var(--teal);background:linear-gradient(155deg,color-mix(in srgb,var(--teal) 52%,transparent),color-mix(in srgb,var(--teal) 10%,transparent) 45%,#ffffff06)}
+  .hx.gold .hx-in{background:linear-gradient(180deg,#15150ff7,#0b1016fb)}
+  .hx.teal{background:var(--teal);background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 55%,transparent),color-mix(in srgb,var(--teal) 16%,transparent) 36%,#0a2a32)}
 
   /* ---- header ---- */
   .top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:22px;margin-bottom:16px}
@@ -181,7 +190,7 @@
      where the rest of the controls over those accounts live. What's left here is
      what it should have been: two app-level utilities — settings/backup and help
      — in a quiet tray, not a second, competing command centre. */
-  .top .bar{gap:3px;padding:5px;border:1px solid #ffffff10;border-radius:14px;
+  .top .bar{gap:3px;padding:5px;border:1px solid color-mix(in srgb,var(--gold-dim) 55%,transparent);border-radius:var(--r-md);
     background:linear-gradient(180deg,#ffffff0b,#ffffff05);
     backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
     box-shadow:var(--sh-1),inset 0 1px 0 #ffffff0d;
@@ -190,7 +199,7 @@
        menu's z-index inside it — without lifting the tray itself the menu paints
        under everything that follows in the document. */
     position:relative;z-index:30}
-  .top .bar:hover{border-color:#ffffff1c;box-shadow:var(--sh-2),inset 0 1px 0 #ffffff14}
+  .top .bar:hover{border-color:color-mix(in srgb,var(--gold) 50%,transparent);box-shadow:var(--sh-2),inset 0 1px 0 #ffffff14}
   .tray-sep{width:1px;align-self:stretch;margin:2px 3px;flex-shrink:0;
     background:linear-gradient(180deg,transparent,var(--line2),transparent)}
   /* The old header stacked a pill, then the title, then a rule — three full-width
@@ -416,11 +425,11 @@
      are — the row you work the collection from — and being sticky as one unit
      means the primary action stays reachable instead of scrolling off the top. */
   .console{position:sticky;top:0;z-index:10;margin:0 0 18px;
-    border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;
-    background:#0b0d13d9;backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
+    border:1px solid color-mix(in srgb,var(--gold-dim) 62%,transparent);border-radius:var(--r-md);overflow:hidden;
+    background:#050c14e0;backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
     box-shadow:var(--sh-1)}
   .cmd{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:11px 12px;
-    border-bottom:1px solid var(--line);background:linear-gradient(180deg,#ffffff0a,transparent)}
+    border-bottom:1px solid color-mix(in srgb,var(--gold-dim) 40%,transparent);background:linear-gradient(180deg,#ffffff0a,transparent)}
   /* the count was a lone grey line under the grid, where it answered a question
      nobody was asking by then; beside the buttons it's a status readout */
   .cmd-count{margin-left:auto;padding-right:3px;font-size:11.5px;color:var(--faint);
@@ -6283,7 +6292,7 @@ function renderPwMeter(){
   $("pwMeterLabel").textContent=p?label:"";
 }
 function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted."}
-const DEFAULT_ACCENT="#d8b874", DEFAULT_ACCENT2="#2ee0c2";
+const DEFAULT_ACCENT="#c8aa6e", DEFAULT_ACCENT2="#0ac8b9";
 const DEFAULT_ATMOSPHERE="spotlight";
 const ATMOSPHERES=new Set(["spotlight","aurora","noir","lattice","stardust","void"]);
 function syncAtmosphereUI(mode){

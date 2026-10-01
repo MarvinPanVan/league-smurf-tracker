@@ -1027,7 +1027,7 @@ test("both accents persist, and leaving Settings unsaved puts the previewed colo
 });
 
 // the two the app ships with, which the resets have to land back on exactly
-const DEFAULT_ACCENT = "#d8b874", DEFAULT_ACCENT2 = "#2ee0c2";
+const DEFAULT_ACCENT = "#c8aa6e", DEFAULT_ACCENT2 = "#0ac8b9";
 
 /* Each colour gets its own way back. They preview like the pickers do rather than
    saving on the spot — a reset that wrote cfg immediately would be the one control
