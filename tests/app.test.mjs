@@ -5875,3 +5875,32 @@ test("a stored status cannot break out of the status filter", () => {
   assert.equal(win.__pwned, undefined);
   assert.ok([...sel.options].some(o => o.value === evil), "it is still a value you can pick, verbatim");
 });
+
+/* Locking empties the grid so a revealed password cannot outlive it — but the
+   windows over the grid were left as they were. An auto-lock that landed while
+   an account was open for editing kept its login, password and email in the
+   form's fields, and the rank, compare and quick-find windows and the ⋯ menu
+   kept account names, all a devtools away from anyone at the keyboard. */
+test("locking empties the windows as well as the grid", async () => {
+  const seed = seededAccount();
+  Object.assign(seed[0], { login: "secret-login", password: "secret-pass", email: "me@mail.gg", notes: "private note" });
+  const win = bootApp(seed);
+  runScript(win, 'vaultPassword = "a-master-password";');
+  await win.saveDB();
+  await until(() => encrypted(win), "the vault to be written encrypted");
+
+  win.openRankModal("seed1"); win.closeRankModal();
+  cardMenu(win, "seed1").querySelector('[data-act="edit"]').click();   // Account… — the form, filled in
+  assert.equal(win.document.getElementById("fPass").value, "secret-pass", "the form is holding the login");
+  win.document.getElementById("baList").value = "Pasted Name#EUW";
+  win.relock();
+
+  const doc = win.document;
+  const leftovers = [...doc.querySelectorAll("input,textarea")].filter(el => el.value && el.type !== "checkbox"
+    && /secret|me@mail|private|Seeded|Main|Pasted/.test(el.value)).map(el => el.id + "=" + el.value);
+  assert.deepEqual(leftovers, [], "no field still holds vault content");
+  for (const id of ["formSub", "rankSub", "rankBody", "cardMenu"]) {
+    const el = doc.getElementById(id);
+    assert.doesNotMatch(el ? el.textContent : "", /Seeded|Main/, `#${id} no longer names the account`);
+  }
+});

@@ -7816,6 +7816,16 @@ function showLockScreen(envelope){
   $("lock").classList.remove("hidden");
   setTimeout(()=>$("lockPass").focus(),50);
 }
+/* The grid is emptied on a lock, but render() never rewrites the windows over it.
+   An auto-lock that landed while an account was open for editing left its login,
+   password and email sitting in the form's fields, and the rank, compare and quick-
+   find windows and the ⋯ menu went on naming accounts — hidden, and one devtools
+   away from whoever sits down at the keyboard next. Each one is rebuilt from the
+   vault when it next opens, so emptying them costs nothing. */
+function forgetVaultDom(){
+  for(const el of document.querySelectorAll("#form input,#form textarea,#baList,#palInput,#bulkTag,#sVaultPass"))el.value="";
+  for(const id of["formSub","rankSub","rankBody","cmpBody","cardMenu","palList","awayBand","toast"]){const el=$(id);if(el)el.textContent=""}
+}
 function relock(){
   closeCardMenu();   // floats on the body, so hiding #appRoot would leave it on screen
   let envelope=null;
@@ -7853,6 +7863,8 @@ function relock(){
   armedDelete=null;editingId=null;lastSelectedId=null;flashId=null;
   // an unsaved note draft is vault content too, and it was surviving the lock
   editingNote=null;noteDraft="";
+  lastFails=null; // the failbar names accounts, and render() below redraws it
+  forgetVaultDom();
   // Empty the grid rather than only hiding it. Locking used to leave every card
   // standing in the hidden #appRoot with everything still on it — including a
   // password that had been revealed just before — until the next unlock happened
