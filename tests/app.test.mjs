@@ -635,6 +635,21 @@ test("the dashboard shares its figures evenly across rows instead of leaving a s
   [...d.children].forEach((t, i) => assert.equal(t.classList.contains("rs"), i % cols === 0, "row starts lose the left hairline"));
 });
 
+test("quick find names a rank in the display face, and a state that is not one in the text face", async () => {
+  const win = bootApp([
+    { id: "p1", region: "EUW", gameName: "Ranked", tagLine: "1", status: "active",
+      stats: { found: true, tier: "GOLD", division: "I", lp: 5, updatedAt: 1 }, history: [], tags: [] },
+    { id: "p2", region: "EUW", gameName: "Fresh", tagLine: "2", status: "active", stats: null, history: [], tags: [] },
+  ]);
+  win.openPalette();
+  const rows = [...win.document.querySelectorAll("#palList .pal-r")];
+  assert.equal(rows.length, 2);
+  const by = txt => rows.find(r => r.textContent.startsWith(txt));
+  assert.ok(!by("Gold").classList.contains("q"), "a tier gets the display face");
+  assert.ok(by("Never checked").classList.contains("q"), "Never checked is not dressed as a tier");
+  assert.match(html, /\.pal-r:not\(\.q\)[^{]*\{\s*font-family:'Cinzel'/);
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");

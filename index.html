@@ -162,7 +162,7 @@
      headings, and the buttons that do something. Controls that set a filter or
      open a menu stay in the text face; so do states that are not ranks — "Never
      checked" is not a tier and should not be dressed as one. */
-  .rk-t,.rw:not(.rw-quiet) .rw-rank b,.tile:not(.rw-quiet) .t-rk,.cmp-rk:not(.q),.lgrp-n{
+  .rk-t,.rw:not(.rw-quiet) .rw-rank b,.tile:not(.rw-quiet) .t-rk,.cmp-rk:not(.q),.pal-r:not(.q),.lgrp-n{
     font-family:'Cinzel',Georgia,serif;font-weight:700;text-transform:uppercase}
   .cmd>button,.acts>button:not(.c-more),.acts>.btn,.mdl-f>button,#lockBtn,#bExitPreview,#bDemo,#bClearFilters,
   #sSyncGen,#sSyncPush,#sSyncPull,#sVaultSet,#sVaultRemove,#sLockNow,#fGen,#cmpClear{
@@ -7588,7 +7588,7 @@ function renderPalette(){
         +`${isRanked(a)?crest(s.tier):""}</span>`
         +`<span class="pal-t"><span class="pal-n">${esc(a.label||a.gameName)}</span>`
         +`<span class="pal-s">${esc(a.gameName)}#${esc(a.tagLine)} · ${esc(a.region)}</span></span>`
-        +`<span class="pal-r" style="color:${col}">${esc(isRanked(a)?shortRank(s)||"":isChecked(a)?"Unranked":"Never checked")}</span>`
+        +`<span class="pal-r${isRanked(a)?"":" q"}" style="color:${col}">${esc(isRanked(a)?shortRank(s)||"":isChecked(a)?"Unranked":"Never checked")}</span>`
         +`</button>`;
     }else{
       const c=it.c;
