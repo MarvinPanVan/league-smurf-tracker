@@ -54,6 +54,7 @@
        near-black and white by luminance, because a fixed dark ink goes unreadable
        the moment somebody picks a deep secondary. */
     --teal:#0ac8b9; --teal-ink:#002e2a; --danger:#ff6b6b; --good:#4ade80;
+    --ts:1; /* Settings → Text size: every font size in the app is multiplied by it */
     /* elevation */
     --sh-1:0 1px 2px #00000059;
     --sh-2:0 2px 4px #0000003d,0 8px 24px -10px #000000a8;
@@ -99,7 +100,7 @@
 
   body{margin:0;position:relative;color:var(--text);
     font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
-    font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    font-size:calc(14px*var(--ts));line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
     background:var(--bg);background-attachment:fixed}
   /* Atmosphere: Settings picks one of six looks.
      Spotlight + Aurora = fixed viewport light (stays while you scroll).
@@ -261,7 +262,7 @@
   .rib-seg:first-child{border-radius:var(--r-xs) 2px 2px var(--r-xs)}
   .rib-seg:last-child{border-radius:2px var(--r-xs) var(--r-xs) 2px}
   .rib-seg:only-child{border-radius:var(--r-xs)}
-  .rib-seg i{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.02em;
+  .rib-seg i{font-style:normal;font-size:calc(10px*var(--ts));font-weight:700;letter-spacing:.02em;
     color:#0b0e14;opacity:.72;font-variant-numeric:tabular-nums}
   .rib-seg:hover{background:var(--c);transform:none;border:0;filter:brightness(1.06)}
   .rib-seg:active{transform:none}
@@ -272,7 +273,7 @@
   .rib-bar:has(.rib-seg.on) .rib-seg:not(.on) i{opacity:.4}
   .rib-seg.on{background:var(--c);box-shadow:0 0 0 1px #0b0e14,0 0 14px -2px var(--c)}
   .rib-cap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
-    font-size:11px;letter-spacing:.02em;color:var(--faint)}
+    font-size:calc(11px*var(--ts));letter-spacing:.02em;color:var(--faint)}
   .rib-cap b{font-weight:600;color:var(--muted)}
   .brand{display:flex;align-items:center;gap:16px;min-width:0}
   /* A gem set in a turned gold frame, rather than a rounded app-icon tile. */
@@ -286,7 +287,7 @@
     box-shadow:0 0 20px color-mix(in srgb,var(--gold) 78%,transparent),inset 0 0 0 1px #ffffff45;
     animation:gemGlow 3.6s ease-in-out infinite}
   .brand-sub{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;
-    font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+    font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
   .brand-sub b{font-weight:600;letter-spacing:.14em;color:var(--gold-txt);padding:3px 9px;border-radius:var(--r-xs);
     background:color-mix(in srgb,var(--gold) 11%,transparent);
     border:1px solid color-mix(in srgb,var(--gold) 24%,transparent)}
@@ -295,7 +296,7 @@
      patches mid-word that read as broken letters rather than shine. The ramp now
      spans only mid -> base -> light -> specular, a band that stays legible at
      any hue, with one narrow highlight doing the metallic work. */
-  h1,.lock-wm{margin:0;font-weight:700;font-size:clamp(29px,4.2vw,41px);line-height:1.04;
+  h1,.lock-wm{margin:0;font-weight:700;font-size:calc(clamp(29px,4.2vw,41px)*var(--ts));line-height:1.04;
     background:linear-gradient(102deg,
       var(--gold-mid) 0%,var(--gold) 20%,var(--star) 36%,
       #fffaf0 44%,var(--star) 53%,var(--gold) 72%,var(--gold-mid) 100%);
@@ -306,12 +307,12 @@
      faded into nothing, belonging to neither the header above nor the text below —
      a hairline down the side of the paragraph does the same separating job while
      actually pointing at what it introduces. */
-  .sub{font-size:13px;color:var(--muted);margin:22px 0 30px;max-width:640px;line-height:1.65;
+  .sub{font-size:calc(13px*var(--ts));color:var(--muted);margin:22px 0 30px;max-width:640px;line-height:1.65;
     padding-left:15px;border-left:2px solid transparent;
     border-image:linear-gradient(180deg,color-mix(in srgb,var(--gold) 55%,transparent),transparent 88%) 1}
 
   /* ---- buttons ---- */
-  button,.btn{font:inherit;font-size:13px;font-weight:500;cursor:pointer;line-height:1.2;white-space:nowrap;
+  button,.btn{font:inherit;font-size:calc(13px*var(--ts));font-weight:500;cursor:pointer;line-height:1.2;white-space:nowrap;
     border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);color:var(--text);
     padding:8px 13px;display:inline-flex;align-items:center;justify-content:center;gap:7px;
     transition:background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease,transform .09s ease}
@@ -357,7 +358,7 @@
   .b-danger:hover{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);
     background:color-mix(in srgb,var(--danger) 13%,var(--panel2))}
   /* utilities, not actions — no rim of their own inside the tray */
-  #bMore,#bHelp{width:34px;padding:8px 0;color:var(--muted);font-size:16px;
+  #bMore,#bHelp{width:34px;padding:8px 0;color:var(--muted);font-size:calc(16px*var(--ts));
     background:none;border-color:transparent;box-shadow:none}
   #bMore:hover,#bHelp:hover{color:var(--text);background:#ffffff12;border-color:transparent}
   .bar{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
@@ -381,32 +382,32 @@
 
   /* ---- banners ---- */
   .banner{display:none;border:1px solid color-mix(in srgb,var(--danger) 45%,transparent);color:var(--danger);
-    background:color-mix(in srgb,var(--danger) 9%,var(--panel));padding:12px 16px;font-size:13px;margin-bottom:18px;border-radius:var(--r-md)}
+    background:color-mix(in srgb,var(--danger) 9%,var(--panel));padding:12px 16px;font-size:calc(13px*var(--ts));margin-bottom:18px;border-radius:var(--r-md)}
   .banner.show{display:block}
-  .bk-note{display:flex;align-items:center;gap:8px;margin:-4px 0 16px;font-size:12px;color:var(--muted)}
+  .bk-note{display:flex;align-items:center;gap:8px;margin:-4px 0 16px;font-size:calc(12px*var(--ts));color:var(--muted)}
   .bk-note .ico{color:var(--faint)}
-  .bk-note button{padding:3px 9px;font-size:12px;font-weight:600;color:var(--gold-txt);background:none;
+  .bk-note button{padding:3px 9px;font-size:calc(12px*var(--ts));font-weight:600;color:var(--gold-txt);background:none;
     border-color:color-mix(in srgb,var(--gold) 30%,transparent)}
   .setup{margin:-2px 0 16px}
   .setup-in{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 14px}
-  .setup-k{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt)}
+  .setup-k{font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt)}
   .setup-k em{font-style:normal;color:var(--faint);letter-spacing:.04em;margin-left:6px}
   .setup-steps{display:flex;gap:8px;flex-wrap:wrap;margin:0;padding:0;list-style:none;flex:1}
-  .setup-steps li{display:flex;align-items:center;gap:6px;font-size:13px}
+  .setup-steps li{display:flex;align-items:center;gap:6px;font-size:calc(13px*var(--ts))}
   .setup-steps li.done{color:var(--faint);padding:6px 4px}
   .setup-steps li.done .ico{color:var(--good)}
   .setup-steps li.done span{text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--faint) 60%,transparent)}
-  .setup-steps button{padding:6px 11px;font-size:13px;font-weight:600}
+  .setup-steps button{padding:6px 11px;font-size:calc(13px*var(--ts));font-weight:600}
   .setup-steps button b{display:inline-grid;place-items:center;width:18px;height:18px;flex-shrink:0;margin-right:2px;border-radius:50%;
-    font-size:11px;color:var(--bg);background:var(--gold-mid)}
-  .setup-x{padding:4px 8px;font-size:12px;color:var(--faint);background:none;border-color:transparent;box-shadow:none}
+    font-size:calc(11px*var(--ts));color:var(--bg);background:var(--gold-mid)}
+  .setup-x{padding:4px 8px;font-size:calc(12px*var(--ts));color:var(--faint);background:none;border-color:transparent;box-shadow:none}
   .setup-x:hover{color:var(--text);background:none;border-color:transparent}
   @media (max-width:560px){
     .setup-in{position:relative;gap:10px}
     .setup-x{position:absolute;top:6px;right:6px}
     .setup-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex-basis:100%;gap:6px}
-    .setup-steps button{width:100%;justify-content:flex-start;padding:7px 9px;font-size:12px}
-    .setup-steps li.done{font-size:12px}
+    .setup-steps button{width:100%;justify-content:flex-start;padding:7px 9px;font-size:calc(12px*var(--ts))}
+    .setup-steps li.done{font-size:calc(12px*var(--ts))}
   }
   .bk-note button:hover{background:color-mix(in srgb,var(--gold) 10%,transparent);border-color:color-mix(in srgb,var(--gold) 55%,transparent)}
 
@@ -416,11 +417,11 @@
   .dash[style*="--cols"]{grid-template-columns:repeat(var(--cols),minmax(0,1fr))}
   .stat+.stat::before{content:"";position:absolute;left:0;top:15px;bottom:15px;width:1px;background:var(--line)}
   .stat.rs::before{display:none}
-  .stat .k{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:7px}
-  .stat .v{font-size:20px;font-weight:600;color:var(--text);line-height:1.25;letter-spacing:-.015em;font-variant-numeric:tabular-nums}
+  .stat .k{font-size:calc(11px*var(--ts));font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:7px}
+  .stat .v{font-size:calc(20px*var(--ts));font-weight:600;color:var(--text);line-height:1.25;letter-spacing:-.015em;font-variant-numeric:tabular-nums}
   /* nowrap, or a long enough figure breaks between the number and its unit and
      leaves "WR" alone on the next line. It wraps as one piece instead. */
-  .stat .v small{font-size:12px;color:var(--muted);font-weight:400;letter-spacing:0;white-space:nowrap}
+  .stat .v small{font-size:calc(12px*var(--ts));color:var(--muted);font-weight:400;letter-spacing:0;white-space:nowrap}
   .stat .v.nw{white-space:nowrap}
   .stat .v.nw small{margin-left:1px}
   /* Except where the caption is a list — Accounts' "· 7 ★ · 5 banned · 5 archived"
@@ -428,28 +429,28 @@
      "archiv". It breaks between the pieces and never inside one. */
   .stat .v small.parts{white-space:normal}
   .stat .v small.parts>span{white-space:nowrap}
-  .stat .v.spark-wrap{font-size:12px;line-height:1.2;overflow:visible;max-width:100%;width:100%;position:relative}
+  .stat .v.spark-wrap{font-size:calc(12px*var(--ts));line-height:1.2;overflow:visible;max-width:100%;width:100%;position:relative}
   .pool-spark{display:block;width:100%;max-width:100%;height:28px;margin-top:4px;opacity:.85;overflow:visible;cursor:crosshair}
   .pool-spark circle.pool-dot{fill:var(--teal);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
   .pool-spark .pool-hit{fill:transparent;stroke:none;cursor:pointer}
   .spark-tip{
     position:fixed;z-index:80;pointer-events:none;
-    padding:6px 9px;border-radius:var(--r-sm);font-size:12px;line-height:1.35;
+    padding:6px 9px;border-radius:var(--r-sm);font-size:calc(12px*var(--ts));line-height:1.35;
     color:var(--text);background:var(--panel3);border:1px solid var(--line2);
     box-shadow:0 8px 24px #00000088;max-width:220px;white-space:pre-line;
     opacity:0;transform:translateY(4px);transition:opacity .12s ease,transform .12s ease;
   }
   .spark-tip.on{opacity:1;transform:none}
   .dash-toggle{display:flex;justify-content:flex-end;margin-bottom:14px}
-  .ghost-toggle{font-size:12px;padding:6px 13px;border-radius:var(--r-xs);color:var(--muted);
+  .ghost-toggle{font-size:calc(12px*var(--ts));padding:6px 13px;border-radius:var(--r-xs);color:var(--muted);
     background:#ffffff09;border:1px solid var(--line);box-shadow:none}
   .ghost-toggle:hover{background:#ffffff14;border-color:var(--line2);color:var(--text)}
   .ghost-toggle .ico{transition:transform .22s cubic-bezier(.22,1,.36,1)}
   .ghost-toggle.open .ico{transform:rotate(180deg)}
   .dash-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px 0}
   .dash-filter{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .dash-filter select{font-size:12px;padding:5px 28px 5px 10px;background-color:#ffffff08}
-  .dash-ex{font-size:11px;color:var(--faint)}
+  .dash-filter select{font-size:calc(12px*var(--ts));padding:5px 28px 5px 10px;background-color:#ffffff08}
+  .dash-ex{font-size:calc(11px*var(--ts));color:var(--faint)}
   /* Was a bare name, a percentage and a hanging "30G" all at different sizes with
      nothing holding them together — at eight across a row it read as debris. One
      pill per champion, with the games as a W-L pair rather than a count needing a
@@ -458,7 +459,7 @@
     background:#ffffff08;border:1px solid #ffffff0f}
   .gem.cmb .n{font-weight:500}
   /* every count in here answers "how many"; clicking it answers "which ones" */
-  .gem-b{border:1px solid transparent;border-radius:var(--r-xs);padding:4px 11px;background:none;font-size:12px}
+  .gem-b{border:1px solid transparent;border-radius:var(--r-xs);padding:4px 11px;background:none;font-size:calc(12px*var(--ts))}
   .gem-b b{font-weight:600;color:var(--faint)}
   .gem-b:hover{background:#ffffff0f;border-color:var(--line2)}
   .gem-b.on{background:color-mix(in srgb,var(--gold) 16%,transparent);
@@ -475,10 +476,10 @@
   .stat-b:hover{background:#ffffff08;border:0}
   .stat-b.on{background:color-mix(in srgb,var(--gold) 11%,transparent);border:0;
     box-shadow:inset 2px 0 0 var(--gold)}
-  .s-note{font-size:11px;color:var(--faint);margin-top:4px;line-height:1.4}
+  .s-note{font-size:calc(11px*var(--ts));color:var(--faint);margin-top:4px;line-height:1.4}
   .gem.cmb b{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .gem.cmb b.wr-good{color:var(--good)}
-  .gem.cmb i.g{font-style:normal;font-size:11px;font-weight:600;color:var(--faint);
+  .gem.cmb i.g{font-style:normal;font-size:calc(11px*var(--ts));font-weight:600;color:var(--faint);
     font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:var(--r-xs);background:#ffffff0d}
   .gem.cmb i.g em{font-style:normal;opacity:.5;padding:0 1px}
   .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px;position:relative}
@@ -489,12 +490,12 @@
     background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent)}
   .hx-in>.dist::after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;pointer-events:none;
     transform:translateX(-50%) rotate(45deg);background:var(--bg);border:1px solid var(--gold)}
-  .dist .k{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-right:2px}
+  .dist .k{font-size:calc(11px*var(--ts));font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-right:2px}
   .hx-rule{position:relative;height:1px;width:100%;flex-shrink:0;
     background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent)}
   .hx-rule::after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;
     transform:translateX(-50%) rotate(45deg);background:var(--bg);border:1px solid var(--gold)}
-  .gem{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text)}
+  .gem{display:inline-flex;align-items:center;gap:7px;font-size:calc(12px*var(--ts));color:var(--text)}
   /* the tier lozenge — scoped to a class rather than the bare tag, because every
      <i> inside a .gem was inheriting a 9px box and a 45° rotation, which is what
      turned the champion pills' W-L into a squashed diagonal smudge */
@@ -515,10 +516,10 @@
   /* the count was a lone grey line under the grid, where it answered a question
      nobody was asking by then; beside the buttons it's a status readout */
   .cmd-r{margin-left:auto;display:flex;align-items:center;gap:9px;min-width:0}
-  .cmd-count{padding-right:3px;font-size:12px;color:var(--faint);
+  .cmd-count{padding-right:3px;font-size:calc(12px*var(--ts));color:var(--faint);
     display:inline-flex;align-items:center;gap:9px;letter-spacing:.015em}
   .cmd-count b{font-weight:600;color:var(--muted)}
-  .cmd-count .warn{color:var(--danger);font-weight:600;font-size:12px;letter-spacing:.015em;
+  .cmd-count .warn{color:var(--danger);font-weight:600;font-size:calc(12px*var(--ts));letter-spacing:.015em;
     padding:3px 9px;border-radius:var(--r-xs);background:none;border:1px solid transparent;box-shadow:none}
   .cmd-count .warn:hover{background:color-mix(in srgb,var(--danger) 13%,transparent);
     border-color:color-mix(in srgb,var(--danger) 34%,transparent)}
@@ -579,12 +580,24 @@
      pixels and painted a useless horizontal scrollbar, and they also sat on top
      of neighbouring labels. */
   .atm-block{margin-top:18px}
-  .atm-block .atm-h{font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px}
+  .atm-block .atm-h,.grp>.atm-h{font-size:calc(12px*var(--ts));font-weight:600;color:var(--text);margin-bottom:8px}
+  /* themes: two colours side by side is the whole idea, so that is the tile */
+  .thm-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .thm{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:6px 6px 7px;min-width:0;
+    border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);box-shadow:none;
+    color:var(--muted);font-size:calc(12px*var(--ts));font-weight:600;text-align:left}
+  .thm:hover{background:var(--panel3);border-color:var(--line2);color:var(--text)}
+  .thm.on{border-color:color-mix(in srgb,var(--gold) 55%,var(--line2));color:var(--gold-txt);
+    background:color-mix(in srgb,var(--gold) 10%,var(--panel2));box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 28%,transparent)}
+  .thm:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  .thm-sw{display:block;height:24px;border-radius:var(--r-xs);border:1px solid #ffffff14;pointer-events:none}
+  .thm-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
+  .thm-n small{display:block;font-size:calc(10.5px*var(--ts));font-weight:500;color:var(--faint);white-space:normal;line-height:1.3}
   .atm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   @media(max-width:520px){.atm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .atm-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;
     padding:7px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);
-    color:var(--muted);font-size:12px;font-weight:600;text-align:left;box-shadow:none;
+    color:var(--muted);font-size:calc(12px*var(--ts));font-weight:600;text-align:left;box-shadow:none;
     overflow:hidden;min-width:0;
     transition:border-color .16s ease,background .16s ease,color .16s ease,box-shadow .16s ease}
   .atm-tile:hover{background:var(--panel3);border-color:var(--line2);color:var(--text)}
@@ -624,7 +637,7 @@
      ease, so the old one snapped on and off. Keep the fade, but open quickly:
      a long delay felt like lag. */
   .atm-tip{max-height:0;opacity:0;overflow:hidden;margin-top:-5px;padding:0 2px;
-    color:var(--faint);font-size:11px;font-weight:450;line-height:1.4;
+    color:var(--faint);font-size:calc(11px*var(--ts));font-weight:450;line-height:1.4;
     pointer-events:none;
     transition:max-height .22s cubic-bezier(.22,1,.36,1),opacity .18s ease,margin-top .18s ease;
     transition-delay:.06s}
@@ -641,29 +654,29 @@
   .run-fill{position:absolute;left:0;top:0;bottom:0;width:0;
     background:linear-gradient(90deg,color-mix(in srgb,var(--gold) 34%,transparent),color-mix(in srgb,var(--gold) 16%,transparent));
     transition:width .3s cubic-bezier(.22,1,.36,1)}
-  .run-txt{position:relative;padding:0 13px;font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--gold-txt);
+  .run-txt{position:relative;padding:0 13px;font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.02em;color:var(--gold-txt);
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* failures used to be a toast telling you to go and find them among sixty cards */
   .failbar{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:9px 13px;
     border-top:1px solid color-mix(in srgb,var(--danger) 30%,transparent);
-    background:color-mix(in srgb,var(--danger) 9%,transparent);font-size:12px}
+    background:color-mix(in srgb,var(--danger) 9%,transparent);font-size:calc(12px*var(--ts))}
   .fb-n{font-weight:600;color:var(--danger)}
   .fb-l{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-  .failbar button{font-size:12px;padding:5px 10px}
+  .failbar button{font-size:calc(12px*var(--ts));padding:5px 10px}
   .fb-x{padding:5px 9px;background:none;border-color:transparent;color:var(--faint)}
   /* what the stats panel just filtered on — invisible filters make a short grid
      look like a bug */
   .chips{display:flex;gap:7px;flex-wrap:wrap;padding:0 12px}
   .chips:not(:empty){padding:11px 12px;border-top:1px solid var(--line)}
-  .fchip{font-size:12px;font-weight:600;padding:4px 8px 4px 11px;gap:7px;border-radius:var(--r-xs);
+  .fchip{font-size:calc(12px*var(--ts));font-weight:600;padding:4px 8px 4px 11px;gap:7px;border-radius:var(--r-xs);
     color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 45%,transparent);
     background:color-mix(in srgb,var(--gold) 12%,transparent)}
-  .fchip span{opacity:.65;font-size:10px}
+  .fchip span{opacity:.65;font-size:calc(10px*var(--ts))}
   .fchip:hover{color:var(--gold-txt);background:color-mix(in srgb,var(--gold) 22%,transparent);
     border-color:color-mix(in srgb,var(--gold) 70%,transparent)}
   .fchip-all{color:var(--faint);background:none;border-color:var(--line);padding:4px 11px}
   .fchip-all:hover{color:var(--text);background:var(--panel3);border-color:var(--line2)}
-  input,select,textarea{font:inherit;font-size:14px;background:var(--panel2);border:1px solid var(--line);
+  input,select,textarea{font:inherit;font-size:calc(14px*var(--ts));background:var(--panel2);border:1px solid var(--line);
     border-radius:var(--r-sm);color:var(--text);padding:9px 12px;
     transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
   input:hover,select:hover,textarea:hover{border-color:var(--line2)}
@@ -712,13 +725,13 @@
     border-radius:0 0 var(--r-sm) var(--r-sm);border:1px solid var(--line);border-top:0;
     background:var(--panel2);
     color:var(--muted);box-shadow:0 3px 8px -4px #0009;
-    font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+    font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;
     transition:color .16s ease,border-color .16s ease,background .16s ease}
   .tag-handle:hover{color:var(--text);border-color:color-mix(in srgb,var(--gold) 38%,var(--line2));
     background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 17%,var(--panel2)),var(--panel2))}
   /* how many tags the vault has — a fact, not a filter, so it is not gold until one is */
   .tag-handle b{font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums;
-    font-size:10px;line-height:1.5;padding:0 6px;border-radius:var(--r-xs);
+    font-size:calc(10px*var(--ts));line-height:1.5;padding:0 6px;border-radius:var(--r-xs);
     color:var(--muted);background:#ffffff12;transition:color .16s ease,background .16s ease}
   .tag-handle:hover b{color:var(--text);background:#ffffff1f}
   .tag-ico{color:color-mix(in srgb,var(--gold) 42%,var(--muted));transition:color .16s ease}
@@ -735,7 +748,7 @@
   .tag-handle.open .tag-chev{transform:rotate(180deg)}
   .tag-list{display:flex;gap:7px;flex-wrap:wrap;padding-bottom:2px}
   @media (prefers-reduced-motion:reduce){.tag-handle,.tag-handle .ico{transition:none}}
-  .chip{font-size:12px;font-weight:500;padding:5px 12px;border:1px solid var(--line);border-radius:var(--r-xs);
+  .chip{font-size:calc(12px*var(--ts));font-weight:500;padding:5px 12px;border:1px solid var(--line);border-radius:var(--r-xs);
     background:var(--panel2);color:var(--muted);cursor:pointer;
     transition:background .15s ease,border-color .15s ease,color .15s ease}
   .chip:hover{color:var(--text);border-color:var(--line2);background:var(--panel3)}
@@ -779,20 +792,20 @@
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center;margin-bottom:3px}
   .t-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
-  .t-pic b{font-size:20px;font-weight:600;color:var(--faint)}
+  .t-pic b{font-size:calc(20px*var(--ts));font-weight:600;color:var(--faint)}
   .t-crest{position:absolute;right:-7px;top:-7px;width:21px;height:21px;
     filter:drop-shadow(0 1px 2px #000000cc)}
   .t-crest .crest{width:100%;height:100%}
   .t-lv{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);
-    font-style:normal;font-size:10px;font-weight:700;line-height:14px;padding:0 5px;
+    font-style:normal;font-size:calc(10px*var(--ts));font-weight:700;line-height:calc(14px*var(--ts));padding:0 5px;
     min-width:20px;text-align:center;border-radius:var(--r-xs);font-variant-numeric:tabular-nums;
     color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
-  .t-nm{font-size:12px;font-weight:600;letter-spacing:-.01em;color:var(--text);max-width:100%;
+  .t-nm{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:-.01em;color:var(--text);max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:4px}
   .t-nm .rw-star .ico{width:10px;height:10px}
-  .t-rk{font-size:12px;font-weight:700;max-width:100%;
+  .t-rk{font-size:calc(12px*var(--ts));font-weight:700;max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .t-lp{font-size:10px;font-weight:600;color:var(--faint);font-variant-numeric:tabular-nums}
+  .t-lp{font-size:calc(10px*var(--ts));font-weight:600;color:var(--faint);font-variant-numeric:tabular-nums}
   .grid.wall>.hx:hover{transform:translateY(-2px)}
   @media (max-width:520px){.grid.wall{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px}}
 
@@ -811,9 +824,9 @@
   .lgrp-crest{width:16px;height:16px;flex-shrink:0}
   .lgrp-dot{width:8px;height:8px;border-radius:2px;transform:rotate(45deg);flex-shrink:0;opacity:.8}
   .lgrp-star{width:13px;height:13px;fill:var(--star);stroke:var(--star);flex-shrink:0}
-  .lgrp-n{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+  .lgrp-n{font-size:calc(11px*var(--ts));font-weight:700;letter-spacing:.14em;text-transform:uppercase}
   .lgrp-ln{flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
-  .lgrp-k{font-size:11px;font-weight:600;color:var(--faint);letter-spacing:.05em;
+  .lgrp-k{font-size:calc(11px*var(--ts));font-weight:600;color:var(--faint);letter-spacing:.05em;
     font-variant-numeric:tabular-nums}
   .hx.row{padding:1px;background:#ffffff0d;border-radius:var(--r-md)}
   .hx.row:hover{background:#ffffff1c}
@@ -838,7 +851,7 @@
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center}
   .rw-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
-  .rw-pic b{font-size:16px;font-weight:600;color:var(--faint)}
+  .rw-pic b{font-size:calc(16px*var(--ts));font-weight:600;color:var(--faint)}
   /* the tier, on the picture, the way the card puts it beside the rank */
   .rw-crest{position:absolute;right:-6px;top:-6px;width:17px;height:17px;
     filter:drop-shadow(0 1px 2px #000000cc)}
@@ -846,34 +859,34 @@
   /* same idea as the card: the level belongs to the picture, not to a column of
      performance numbers */
   .rw-lvb{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
-    font-style:normal;font-size:10px;font-weight:700;line-height:13px;padding:0 4px;
+    font-style:normal;font-size:calc(10px*var(--ts));font-weight:700;line-height:calc(13px*var(--ts));padding:0 4px;
     min-width:18px;text-align:center;border-radius:var(--r-xs);font-variant-numeric:tabular-nums;
     color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
   .rw-id{min-width:0;display:flex;flex-direction:column;gap:1px}
-  .rw-nm{font-size:14px;font-weight:600;letter-spacing:-.012em;color:var(--text);
+  .rw-nm{font-size:calc(14px*var(--ts));font-weight:600;letter-spacing:-.012em;color:var(--text);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
   .rw-star{color:var(--star);display:inline-flex;flex-shrink:0}
   .rw-star .ico{width:11px;height:11px;fill:var(--star)}
-  .rw-tag{font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rw-tag{font-size:calc(11px*var(--ts));color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rw-tags{display:flex;gap:4px;margin-top:3px;overflow:hidden}
-  .rw-tags i{font-style:normal;font-size:10px;letter-spacing:.02em;color:var(--muted);
+  .rw-tags i{font-style:normal;font-size:calc(10px*var(--ts));letter-spacing:.02em;color:var(--muted);
     padding:1px 6px;border-radius:var(--r-xs);background:#ffffff0f;white-space:nowrap}
   /* the shape of the climb, which the list used to leave out entirely */
   .rw-spark{display:flex;align-items:center;height:30px}
   .spk{width:100%;height:100%;display:block}
-  .rw-check{font-size:11px;padding:4px 9px;gap:5px;opacity:0;color:var(--teal-txt);
+  .rw-check{font-size:calc(11px*var(--ts));padding:4px 9px;gap:5px;opacity:0;color:var(--teal-txt);
     transition:opacity .15s ease,background .15s ease,border-color .15s ease}
   .rw-check .ico{width:11px;height:11px}
   .rw-main:hover .rw-check,.rw-check:focus-visible{opacity:1}
   .rw-rank{display:flex;flex-direction:column;gap:0;overflow:hidden;white-space:nowrap}
-  .rw-rank b{font-size:14px;font-weight:700;
+  .rw-rank b{font-size:calc(14px*var(--ts));font-weight:700;
     overflow:hidden;text-overflow:ellipsis}
-  .rw-rank em{font-style:normal;font-size:11px;font-weight:600;color:var(--muted);
+  .rw-rank em{font-style:normal;font-size:calc(11px*var(--ts));font-weight:600;color:var(--muted);
     font-variant-numeric:tabular-nums}
   .rw-d,.rw-wr,.rw-lv{display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
-  .rw-wr b,.rw-lv b{font-size:13px;font-weight:700;color:var(--muted);line-height:1.1}
+  .rw-wr b,.rw-lv b{font-size:calc(13px*var(--ts));font-weight:700;color:var(--muted);line-height:1.1}
   .rw-wr b.wr-good{color:var(--good)}
-  .rw-wr em,.rw-lv em{font-style:normal;font-size:10px;color:var(--faint);letter-spacing:.02em}
+  .rw-wr em,.rw-lv em{font-style:normal;font-size:calc(10px*var(--ts));color:var(--faint);letter-spacing:.02em}
   /* Sixty rows of "47%" are sixty identical grey blocks. Sixty bars of differing
      length are a shape you can run your eye down. */
   /* drawn as a record, like the card's: wins, the losses as the remainder, even marked */
@@ -881,13 +894,13 @@
     background:color-mix(in srgb,var(--danger) 34%,var(--panel2))}
   .rw-bar i{display:block;height:100%;border-radius:1px 0 0 1px;box-shadow:1px 0 0 var(--bg)}
   .rw-bar::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--bg)}
-  .rw-d .delta{font-size:11px;padding:2px 6px}
-  .rw-rg{font-size:10px;font-weight:600;letter-spacing:.09em;color:var(--faint);text-align:center}
+  .rw-d .delta{font-size:calc(11px*var(--ts));padding:2px 6px}
+  .rw-rg{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.09em;color:var(--faint);text-align:center}
   /* An unranked row has nothing to say in four of its columns, and at full
      strength a wall of them drowns out the rows that do. */
   .rw-quiet .rw-pic{opacity:.62}
   .rw-quiet .rw-nm{color:var(--muted);font-weight:500}
-  .rw-quiet .rw-rank b{font-size:13px;font-weight:600}
+  .rw-quiet .rw-rank b{font-size:calc(13px*var(--ts));font-weight:600}
   /* A banned account was marked by a 3px rail and a chip, which is the same
      weight the app gives "resting". It isn't the same thing: nothing about that
      rank will ever change again. It should read as finished from across the room. */
@@ -898,7 +911,7 @@
     text-decoration-thickness:1.5px;text-decoration-color:currentColor;opacity:.62}
   .card.dead .lpc-wrap,.rw.dead .spk{filter:grayscale(.75);opacity:.55}
   .card.dead .wrbar,.rw.dead .rw-bar{filter:grayscale(.9);opacity:.5}
-  .rw-up{font-size:11px;color:var(--faint);text-align:right;white-space:nowrap;
+  .rw-up{font-size:calc(11px*var(--ts));color:var(--faint);text-align:right;white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis}
   .rw-up.stale{color:var(--danger)}
   .rw-chev{width:14px;height:14px;color:var(--faint);transition:transform .24s cubic-bezier(.22,1,.36,1)}
@@ -945,7 +958,7 @@
   @media (max-width:440px){
     /* a 360 phone's card has ~190px beside the crest and the LP chip, and
        "Grandmaster" at full size wants most of it */
-    .card .rk-t{font-size:20px} /* .card: the base rule comes later in the sheet */
+    .card .rk-t{font-size:calc(20px*var(--ts))} /* .card: the base rule comes later in the sheet */
     .rw-main{grid-template-columns:auto 36px minmax(0,1fr) 106px 16px;gap:8px}
     .rw-d{display:none}
   }
@@ -969,7 +982,7 @@
   .c-initial{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:50%;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));
     box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold-dim) 80%,transparent),0 0 0 2px #010a13,0 0 0 3px color-mix(in srgb,var(--gold-dim) 55%,transparent);
-    font-size:20px;font-weight:600;color:var(--faint);letter-spacing:-.02em}
+    font-size:calc(20px*var(--ts));font-weight:600;color:var(--faint);letter-spacing:-.02em}
   .c-avatar{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;
     box-shadow:0 0 0 1px var(--gold-dim),0 0 0 2px #010a13,0 0 0 3px color-mix(in srgb,var(--gold) 55%,transparent),0 4px 12px #00000073}
   /* The rank crest rides the portrait; it moved to the top corner to make room
@@ -982,11 +995,11 @@
   .crest{display:block;flex-shrink:0;overflow:visible}
   .c-lvbadge{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);
     min-width:24px;padding:1px 6px;border-radius:var(--r-xs);text-align:center;
-    font-size:11px;font-weight:700;line-height:16px;letter-spacing:.01em;
+    font-size:calc(11px*var(--ts));font-weight:700;line-height:calc(16px*var(--ts));letter-spacing:.01em;
     font-variant-numeric:tabular-nums;color:var(--text);
     background:#0d1017;box-shadow:0 0 0 1px var(--line2),0 2px 8px #00000080}
   .c-id{min-width:0;flex:1}
-  .c-name{font-weight:600;font-size:18px;letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
+  .c-name{font-weight:600;font-size:calc(18px*var(--ts));letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
   /* text-overflow only works on a box that holds the text itself. The wall tile and
      the list row had the name as a bare text node in a flex row, so it was sheared
      off mid-letter, no ellipsis, with the flag after it pushed out of sight — the
@@ -996,7 +1009,7 @@
      was holding 114 px of a 234 px row and leaving the name 58 — four letters
      and an ellipsis. Short wording here, the full phrase in the title and
      everywhere else, and a cap so no future status can do it again. */
-  .stchip{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:var(--r-xs);
+  .stchip{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:var(--r-xs);
     flex:0 1 auto;min-width:0;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .c-chrome{display:flex;align-items:center;gap:9px;flex-shrink:0;align-self:flex-start}
   /* selection is chrome, not content — it stays out of the way until wanted */
@@ -1007,7 +1020,7 @@
   /* bare icon buttons — must beat the generic button rules */
   .rid,.star,.eye-btn,.panel-close{background:none;border:1px solid transparent;box-shadow:none;padding:0}
   .rid:hover,.star:hover,.eye-btn:hover{background:none;border-color:transparent}
-  .star{font-size:18px;color:var(--line2);line-height:1;display:inline-flex;transition:color .15s ease,transform .15s ease}
+  .star{font-size:calc(18px*var(--ts));color:var(--line2);line-height:1;display:inline-flex;transition:color .15s ease,transform .15s ease}
   .star:hover{color:var(--star);transform:scale(1.12)}
   .star svg{fill:none;stroke:currentColor;stroke-width:1.7}
   .star.on{color:var(--star)}
@@ -1018,7 +1031,7 @@
   /* text-overflow on a <button> does nothing: the button's anonymous inner box
      doesn't shrink, so the label just got clipped mid-word with no ellipsis. The
      truncation has to happen on a real element inside it. */
-  .rid{font-size:12px;color:var(--muted);cursor:pointer;text-align:left;justify-content:flex-start;margin-top:2px;
+  .rid{font-size:calc(12px*var(--ts));color:var(--muted);cursor:pointer;text-align:left;justify-content:flex-start;margin-top:2px;
     letter-spacing:-.005em;transition:color .15s ease;width:100%;max-width:100%;
     display:flex;min-width:0;overflow:hidden}
   .rid>span{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1030,10 +1043,10 @@
   .eye-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:6px;color:var(--muted)}
   .eye-btn:hover{color:var(--text)}
   .panel-close{position:absolute;top:13px;right:13px;width:29px;height:29px;border-radius:var(--r-sm);
-    color:var(--muted);z-index:2;font-size:13px}
+    color:var(--muted);z-index:2;font-size:calc(13px*var(--ts))}
   .panel-close:hover{color:var(--danger);background:color-mix(in srgb,var(--danger) 13%,transparent);border-color:transparent}
 
-  .regiontag{font-size:11px;font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:var(--r-xs);flex-shrink:0;
+  .regiontag{font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:var(--r-xs);flex-shrink:0;
     background:color-mix(in srgb,var(--teal) 12%,transparent);color:var(--teal-txt);
     border:1px solid color-mix(in srgb,var(--teal) 24%,transparent)}
   /* the rank is why the card exists, so it gets the card's largest type */
@@ -1052,6 +1065,13 @@
      asking to be looked at. Anchored top-left, away from every chip and number.
      isolation:isolate is what lets z-index:-1 paint above the card's own
      background while still staying under every child. */
+  /* The champion the account plays most, faded into the top of the card under the
+     tier tint. Low and masked off well before the rank and the buttons, so it is
+     felt rather than read; nothing on the card depends on it. */
+  .c-art{position:absolute;left:0;right:0;top:0;width:100%;height:230px;z-index:-2;pointer-events:none;
+    object-fit:cover;object-position:center 18%;opacity:.28;
+    -webkit-mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%);mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%)}
+  .card.dead .c-art{filter:grayscale(1);opacity:.1}
   .c-tint{position:absolute;inset:0;z-index:-1;pointer-events:none;
     background:radial-gradient(125% 78% at 0% 0%,
       color-mix(in srgb,var(--tier) 15%,transparent),transparent 60%)}
@@ -1061,7 +1081,7 @@
   .rk{display:flex;align-items:center;gap:11px;min-width:0;white-space:nowrap;
     overflow:hidden}
   .rk-main{display:flex;flex-direction:column;gap:3px;min-width:0;line-height:1}
-  .rk-t{font-size:22px;letter-spacing:-.02em;line-height:1.1;
+  .rk-t{font-size:calc(22px*var(--ts));letter-spacing:-.02em;line-height:1.1;
     overflow:hidden;text-overflow:ellipsis}
   /* No coloured glow. A 9px halo in the tier's own full-saturation colour around
      a 27px shape stops reading as a lit emblem and starts reading as a lit square
@@ -1070,15 +1090,15 @@
      shadow to sit off the panel. */
   .rk-crest{width:28px;height:28px;flex-shrink:0;
     filter:drop-shadow(0 1px 2px #000000a6)}
-  .rk-lp{font-size:13px;font-weight:600;letter-spacing:.04em;margin:0;
+  .rk-lp{font-size:calc(13px*var(--ts));font-weight:600;letter-spacing:.04em;margin:0;
     font-variant-numeric:tabular-nums;color:var(--muted);opacity:1}
-  .c-unchecked{font-size:18px;color:var(--faint);letter-spacing:-.02em}
+  .c-unchecked{font-size:calc(18px*var(--ts));color:var(--faint);letter-spacing:-.02em}
   /* on an account with no rank yet, the level is the headline — it was set in
      10 px caps underneath a 23 px "Unranked" that answered nothing */
-  .c-lvl{font-size:16px;color:var(--faint);letter-spacing:.02em;font-weight:500;
+  .c-lvl{font-size:calc(16px*var(--ts));color:var(--faint);letter-spacing:.02em;font-weight:500;
     display:flex;align-items:baseline;gap:8px}
-  .c-lvl .rk-lp{font-size:24px;color:var(--text);letter-spacing:-.03em}
-  .wl{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:4px}
+  .c-lvl .rk-lp{font-size:calc(24px*var(--ts));color:var(--text);letter-spacing:-.03em}
+  .wl{font-size:calc(13px*var(--ts));color:var(--muted);font-variant-numeric:tabular-nums;margin-top:4px}
   .wl b{color:var(--text);font-weight:500}
   /* winrate carries the verdict, so it gets the only colour on the line */
   .wrv{font-weight:600;color:var(--text)}
@@ -1086,32 +1106,35 @@
 
   /* labelled micro-stats instead of one muted run-on sentence */
   .c-stats{display:flex;flex-wrap:wrap;gap:7px 20px}
-  body.compact-cards .card:not(.info-open) .lpc,body.compact-cards .card:not(.info-open) .c-stats{display:none}
+  /* Settings → On each card: a part left under Details is hidden on a closed card */
+  body.hide-chart .card:not(.info-open) .lpc,body.hide-stats .card:not(.info-open) .c-stats,
+  body.hide-wl .card:not(.info-open) .wrbar,body.hide-goal .card:not(.info-open) .goal,
+  body.hide-tags .card:not(.info-open) .ctags,body.hide-notes .card:not(.info-open) .c-notes:not(.editing){display:none}
   .c-stats>div{display:flex;flex-direction:column;gap:2px;min-width:0}
-  .c-stats .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
-  .c-stats .v{font-size:13px;font-weight:500;color:var(--text);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .c-stats .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+  .c-stats .v{font-size:calc(13px*var(--ts));font-weight:500;color:var(--text);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
   /* This is the one thing on the card the user wrote themselves, so it reads as
      content on its own small surface rather than another grey caption line. */
-  .c-notes{font-size:13px;line-height:1.6;color:var(--text);opacity:.9;
+  .c-notes{font-size:calc(13px*var(--ts));line-height:1.6;color:var(--text);opacity:.9;
     padding:9px 12px;border-radius:var(--r-sm);background:#ffffff08;border:1px solid #ffffff0d;
     transition:background .16s ease,border-color .16s ease}
   /* the note is the one field you actually keep rewriting, so it edits where it
      lives — no round trip through the Edit form */
   .c-notes[data-act]{cursor:text}
   .c-notes[data-act]:hover{background:#ffffff0f;border-color:#ffffff21}
-  .c-notes .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+  .c-notes .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
     display:flex;align-items:center;gap:5px;margin-bottom:4px}
   .c-notes .k .ico{width:11px;height:11px;opacity:0;transition:opacity .16s ease}
   .c-notes[data-act]:hover .k .ico{opacity:.85}
   .c-notes .none{color:var(--faint)}
-  .c-notes textarea{width:100%;font-size:13px;line-height:1.6;min-height:62px;display:block}
+  .c-notes textarea{width:100%;font-size:calc(13px*var(--ts));line-height:1.6;min-height:62px;display:block}
   .c-notes.editing{border-color:color-mix(in srgb,var(--teal) 34%,transparent);background:#ffffff0d}
   /* An empty note is an invitation, not a panel. It still had a dashed box around
      it, which on a vault where almost nothing is annotated makes it the most
      repeated element on the page — fifty-one outlined rectangles, all empty.
      One quiet line now; the box arrives with the note, or as soon as you click. */
   .c-notes.blank{display:flex;align-items:center;gap:6px;padding:3px 5px;
-    background:none;border:0;color:var(--faint);font-size:11px;opacity:.72}
+    background:none;border:0;color:var(--faint);font-size:calc(11px*var(--ts));opacity:.72}
   .c-notes.blank:hover{background:#ffffff0d;border:0;color:var(--muted);opacity:1}
   .c-notes.blank .ico{width:11px;height:11px;opacity:.8}
   /* ---- the details drawer ----
@@ -1127,7 +1150,7 @@
   .c-drawer{margin:0 -17px -17px;padding:11px 14px 12px;gap:11px;
     border:0;border-radius:0 0 calc(var(--r-lg) - 2px) calc(var(--r-lg) - 2px);
     background:none;color:var(--faint);
-    font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+    font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.16em;text-transform:uppercase;
     transition:background .18s ease,color .18s ease}
   .c-drawer:hover{color:var(--teal-txt);border:0;
     background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--teal) 11%,transparent))}
@@ -1156,11 +1179,11 @@
   .sec-h{width:100%;display:flex;align-items:center;gap:11px;padding:10px 13px;
     background:none;border:0;border-radius:0;white-space:normal}
   .sec-h:hover{background:#ffffff09;border:0}
-  .sec-n{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+  .sec-n{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
     display:inline-flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0}
-  .sec-n i{font-style:normal;font-size:10px;letter-spacing:.03em;color:var(--faint);
+  .sec-n i{font-style:normal;font-size:calc(10px*var(--ts));letter-spacing:.03em;color:var(--faint);
     padding:1px 6px;border-radius:var(--r-xs);background:#ffffff0f}
-  .sec-p{margin-left:auto;font-size:12px;font-weight:600;letter-spacing:-.01em;color:var(--muted);
+  .sec-p{margin-left:auto;font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:-.01em;color:var(--muted);
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
   .sec-p .c-nm{display:inline}
   .sec-h .ico{width:13px;height:13px;color:var(--faint);flex-shrink:0;
@@ -1172,31 +1195,31 @@
     animation:sectionIn .22s cubic-bezier(.22,1,.36,1) both}
   /* one fact, one line — folding it would cost a click to reveal nothing extra */
   .sec.flat{display:flex;align-items:center;gap:11px;padding:11px 13px}
-  .chp-h{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  .chp-h{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.1em;text-transform:uppercase;
     color:var(--faint);padding-bottom:5px;border-bottom:1px solid #ffffff12;margin-bottom:2px}
   .chp-h span:not(:first-child){text-align:right}
   .chp-h+.chp{border-top:0}
-  .sea{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:3px 0;font-size:12px}
+  .sea{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:3px 0;font-size:calc(12px*var(--ts))}
   .sea+.sea{border-top:1px solid #ffffff0a}
-  .s-yr{color:var(--faint);font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
-  .s-rk{font-weight:600;font-size:13px;letter-spacing:-.01em}
+  .s-yr{color:var(--faint);font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.09em;text-transform:uppercase}
+  .s-rk{font-weight:600;font-size:calc(13px*var(--ts));letter-spacing:-.01em}
   /* a fixed grid, so the numbers line up into columns you can scan down */
   .chp{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:baseline;
-    padding:3px 0;font-size:12px;font-variant-numeric:tabular-nums}
+    padding:3px 0;font-size:calc(12px*var(--ts));font-variant-numeric:tabular-nums}
   .chp+.chp{border-top:1px solid #ffffff0a}
   .c-nm{color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .c-wr{font-weight:600;color:var(--muted);text-align:right}
   .c-wr.wr-good{color:var(--good)}
-  .c-gm,.c-kd{color:var(--faint);font-size:11px;text-align:right}
+  .c-gm,.c-kd{color:var(--faint);font-size:calc(11px*var(--ts));text-align:right}
   /* recent form: a pip per game, newest first, the way a match history reads */
   .fm-pips{display:inline-flex;gap:3px;margin-left:7px;vertical-align:-1px}
   .fm-pip{width:6px;height:11px;border-radius:2px;background:var(--danger)}
   .fm-pip.w{background:var(--good)}
-  .fm-res{display:inline-block;width:1.3em;font-weight:700;font-size:11px;color:var(--danger)}
+  .fm-res{display:inline-block;width:1.3em;font-weight:700;font-size:calc(11px*var(--ts));color:var(--danger)}
   .fm-res.w{color:var(--good)}
-  .fm-retry{margin-left:8px;padding:2px 8px;font-size:11px}
+  .fm-retry{margin-left:8px;padding:2px 8px;font-size:calc(11px*var(--ts))}
   /* Settings → the worker guide */
-  .guide{margin-top:8px;border:1px solid var(--line);border-radius:var(--r-md);background:#ffffff05;font-size:12.5px;color:var(--muted);line-height:1.55}
+  .guide{margin-top:8px;border:1px solid var(--line);border-radius:var(--r-md);background:#ffffff05;font-size:calc(12.5px*var(--ts));color:var(--muted);line-height:1.55}
   .guide summary{cursor:pointer;padding:10px 13px;font-weight:600;color:var(--text);list-style-position:inside}
   .guide[open] summary{border-bottom:1px solid var(--line)}
   .guide ol{margin:0;padding:10px 14px 4px 32px}
@@ -1206,8 +1229,8 @@
   .guide .guide-btn{display:inline-block;padding:3px 10px;border-radius:var(--r-sm);font-weight:600;text-decoration:none;
     color:var(--text);border:1px solid color-mix(in srgb,var(--teal) 55%,transparent);background:color-mix(in srgb,var(--teal) 14%,transparent)}
   .guide .guide-btn:hover{background:color-mix(in srgb,var(--teal) 24%,transparent)}
-  .guide-alt{padding:0 14px 11px;font-size:12px;color:var(--faint)}
-  .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;letter-spacing:.12em;
+  .guide-alt{padding:0 14px 11px;font-size:calc(12px*var(--ts));color:var(--faint)}
+  .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:calc(9px*var(--ts));font-weight:700;letter-spacing:.12em;
     pointer-events:none;line-height:1;opacity:.9}
   /* Wins against losses, the way op.gg draws a record — not a fill on an empty
      track. That was exactly the goal rail's picture two lines below, so a 42% win
@@ -1217,7 +1240,7 @@
     background:color-mix(in srgb,var(--danger) 34%,var(--panel2))}
   .wrbar i{display:block;height:100%;border-radius:1px 0 0 1px;box-shadow:1px 0 0 var(--bg)}
   .wrbar::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--bg)}
-  .delta{font-size:11px;padding:2px 8px;border-radius:var(--r-xs);font-weight:600;display:inline-block;white-space:nowrap}
+  .delta{font-size:calc(11px*var(--ts));padding:2px 8px;border-radius:var(--r-xs);font-weight:600;display:inline-block;white-space:nowrap}
   .d-up{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
   .delta .ico.flame{width:1.15em;height:1.15em;color:#ff8f2e;fill:#ff8f2e;stroke-width:1.4;vertical-align:-.2em}
   .d-down{color:var(--danger);background:color-mix(in srgb,var(--danger) 15%,transparent)}
@@ -1241,21 +1264,21 @@
   /* X is real time now, so the dates below are worth printing */
   .lpc-axis{position:relative;height:16px;border-top:1px solid var(--line)}
   .lpc-tick{position:absolute;top:3px;transform:translateX(-50%);white-space:nowrap;
-    font-size:9px;font-weight:500;letter-spacing:.04em;color:var(--faint);pointer-events:none}
+    font-size:calc(9px*var(--ts));font-weight:500;letter-spacing:.04em;color:var(--faint);pointer-events:none}
   .lpc-tick.l{transform:none;left:5px!important}
   .lpc-tick.r{transform:none;left:auto!important;right:5px}
   .away-band{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;
-    padding:12px 15px;border-radius:var(--r-md);font-size:13px;
+    padding:12px 15px;border-radius:var(--r-md);font-size:calc(13px*var(--ts));
     border:1px solid color-mix(in srgb,var(--teal) 34%,transparent);
     background:color-mix(in srgb,var(--teal) 8%,var(--panel));box-shadow:var(--sh-1);
     animation:barIn .3s cubic-bezier(.22,1,.36,1) both}
   .away-band.hidden{display:none}
-  .away-k{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-txt)}
+  .away-k{font-size:calc(10px*var(--ts));font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-txt)}
   .away-band b{font-weight:600;color:var(--text)}
   .away-band .up{color:var(--good);font-weight:600}
   .away-band .down{color:var(--danger);font-weight:600}
   .away-band .sp{margin-left:auto;display:flex;gap:7px}
-  .away-band button{font-size:12px;padding:5px 11px}
+  .away-band button{font-size:calc(12px*var(--ts));padding:5px 11px}
   @media (prefers-reduced-motion:reduce){.away-band{animation:none}}
 
   /* ---- quick find ---- */
@@ -1263,7 +1286,7 @@
   .modal .pal{margin-top:clamp(0px,9vh,110px);margin-bottom:auto}
   .pal-h{display:flex;align-items:center;gap:11px;padding:15px 18px;border-bottom:1px solid var(--line);flex-shrink:0}
   .pal-h .ico{width:17px;height:17px;color:var(--faint);flex-shrink:0}
-  .pal-h input{border:0;background:none;box-shadow:none;padding:0;font-size:16px;flex:1;min-width:0}
+  .pal-h input{border:0;background:none;box-shadow:none;padding:0;font-size:calc(16px*var(--ts));flex:1;min-width:0}
   .pal-h input:focus{border:0;box-shadow:none;outline:none}
   .pal-list{flex:1;min-height:0;overflow:auto;padding:7px;display:flex;flex-direction:column;gap:1px;
     max-height:min(52vh,420px)}
@@ -1276,34 +1299,34 @@
     box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--teal) 32%,transparent)}
   .pal-pic{width:28px;height:28px;border-radius:50%;flex-shrink:0;position:relative;overflow:visible;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
-    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--faint)}
+    display:flex;align-items:center;justify-content:center;font-size:calc(12px*var(--ts));font-weight:600;color:var(--faint)}
   .pal-pic img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
   .pal-pic .crest{position:absolute;right:-5px;top:-5px;width:14px;height:14px}
   .pal-ico{width:28px;height:28px;border-radius:var(--r-sm);flex-shrink:0;display:flex;align-items:center;
     justify-content:center;background:#ffffff0d;color:var(--muted)}
   .pal-ico .ico{width:15px;height:15px}
   .pal-t{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px}
-  .pal-n{font-size:14px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .pal-s{font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .pal-r{font-size:12px;font-weight:700;flex-shrink:0;letter-spacing:-.01em}
-  .pal-g{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+  .pal-n{font-size:calc(14px*var(--ts));font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pal-s{font-size:calc(11px*var(--ts));color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pal-r{font-size:calc(12px*var(--ts));font-weight:700;flex-shrink:0;letter-spacing:-.01em}
+  .pal-g{font-size:calc(10px*var(--ts));font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
     padding:9px 10px 4px}
-  .pal-empty{padding:26px 14px;text-align:center;color:var(--faint);font-size:13px}
+  .pal-empty{padding:26px 14px;text-align:center;color:var(--faint);font-size:calc(13px*var(--ts))}
   .pal-f{display:flex;gap:16px;padding:9px 16px;border-top:1px solid var(--line);flex-shrink:0;
-    font-size:11px;color:var(--faint);background:#0b0e14b8}
-  .pal-f kbd{font-family:inherit;font-size:10px;padding:1px 5px;border-radius:var(--r-xs);margin-right:3px;
+    font-size:calc(11px*var(--ts));color:var(--faint);background:#0b0e14b8}
+  .pal-f kbd{font-family:inherit;font-size:calc(10px*var(--ts));padding:1px 5px;border-radius:var(--r-xs);margin-right:3px;
     background:#ffffff12;box-shadow:inset 0 0 0 1px var(--line2)}
   .help{display:grid;grid-template-columns:118px minmax(0,1fr);gap:0 22px;margin:0;padding:8px 24px 12px;
-    font-size:13px;line-height:1.7;color:var(--muted)}
+    font-size:calc(13px*var(--ts));line-height:1.7;color:var(--muted)}
   .help dt,.help dd{padding:13px 0;border-top:1px solid var(--line)}
   .help dt:first-of-type,.help dd:first-of-type{border-top:0}
-  .help dt{font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt);line-height:2.2}
+  .help dt{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt);line-height:2.2}
   .help dd{margin:0}
   .help dd.terms::first-letter{text-transform:uppercase}
   .help b{color:var(--text);font-weight:600}
-  .help code{font-size:12px;padding:1px 6px;white-space:nowrap}
+  .help code{font-size:calc(12px*var(--ts));padding:1px 6px;white-space:nowrap}
   .help kbd{display:inline-block;min-width:20px;padding:0 6px;margin:0 1px;border-radius:var(--r-xs);text-align:center;
-    font:600 11px/18px Inter,system-ui,sans-serif;color:var(--text);background:var(--panel3);
+    font:600 calc(11px*var(--ts))/calc(18px*var(--ts)) Inter,system-ui,sans-serif;color:var(--text);background:var(--panel3);
     box-shadow:inset 0 0 0 1px var(--line2),inset 0 -2px 0 var(--line2)}
   @media (max-width:560px){.help{grid-template-columns:1fr;padding:4px 18px 10px}
     .help dt{padding:14px 0 2px}.help dd{border-top:0;padding-top:0}}
@@ -1326,21 +1349,21 @@
   /* except while a point is being read — the tip wants that corner and you asked
      for the tip. Outranks the hover rule above on specificity. */
   .lpc-plot:has(.lpc-pt:hover) .lpc-range{opacity:0;pointer-events:none}
-  .lpc-range button{font-size:9px;font-weight:700;letter-spacing:.06em;line-height:1;
+  .lpc-range button{font-size:calc(9px*var(--ts));font-weight:700;letter-spacing:.06em;line-height:1;
     padding:3px 5px;border-radius:var(--r-xs);border:1px solid transparent;background:#ffffff0d;
     color:var(--faint);box-shadow:none}
   .lpc-range button:hover{background:#ffffff1c;border-color:transparent;color:var(--text)}
   .lpc-range button.on{background:color-mix(in srgb,var(--teal) 22%,transparent);color:var(--teal-txt)}
-  .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:9px;font-weight:600;letter-spacing:.09em;
+  .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:calc(9px*var(--ts));font-weight:600;letter-spacing:.09em;
     text-transform:uppercase;pointer-events:none;opacity:.62;line-height:1}
   /* the ceiling the line is climbing back towards; left lane, with the band
      captions, and dropped rather than stacked when one is already there */
   .lpc-plot .lpc-peak{position:absolute;left:50%;transform:translateX(-50%);
-    font-size:9px;font-weight:700;letter-spacing:.12em;
+    font-size:calc(9px*var(--ts));font-weight:700;letter-spacing:.12em;
     text-transform:uppercase;pointer-events:none;line-height:1;color:var(--gold-txt);opacity:.9}
   /* division numerals below Master, LP marks above it — opposite side to the tier
      names so the two never collide */
-  .lpc-plot .lpc-sub{position:absolute;right:6px;font-size:9px;font-weight:600;letter-spacing:.06em;
+  .lpc-plot .lpc-sub{position:absolute;right:6px;font-size:calc(9px*var(--ts));font-weight:600;letter-spacing:.06em;
     color:#fff;opacity:.32;pointer-events:none;line-height:1;font-variant-numeric:tabular-nums}
   /* Each point owns the slice of the chart nearest to it, and the slices tile the
      chart exactly. The first version centred a fixed-width column on every point,
@@ -1369,10 +1392,10 @@
      it — and at 96% the line showed straight through the text. */
   .lpc-tip{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;
     opacity:0;pointer-events:none;transition:opacity .13s ease;
-    white-space:nowrap;font-size:11px;font-weight:500;line-height:1.35;color:var(--text);
+    white-space:nowrap;font-size:calc(11px*var(--ts));font-weight:500;line-height:1.35;color:var(--text);
     padding:6px 9px;border-radius:var(--r-sm);background:#0c151f;border:1px solid color-mix(in srgb,var(--gold-dim) 70%,transparent);
     box-shadow:var(--sh-3)}
-  .lpc-tip em{display:block;font-style:normal;font-size:10px;color:var(--faint);margin-top:1px}
+  .lpc-tip em{display:block;font-style:normal;font-size:calc(10px*var(--ts));color:var(--faint);margin-top:1px}
   .lpc-tip.l{left:-6px;transform:none}
   .lpc-tip.r{left:auto;right:-6px;transform:none}
   /* Below the dot when the dot sits too near the top for a tip to fit above it.
@@ -1382,31 +1405,33 @@
   .lpc-tip.hi{bottom:auto;top:12px}
   .lpc-pt:hover .lpc-tip{opacity:1}
   .stale{color:var(--danger)}
-  #toast button{margin-left:12px;font-size:12px;padding:3px 10px;color:var(--teal-txt)}
-  .meta{font-size:13px;color:var(--muted);line-height:1.65}
+  #toast button{margin-left:12px;font-size:calc(12px*var(--ts));padding:3px 10px;color:var(--teal-txt)}
+  .meta{font-size:calc(13px*var(--ts));color:var(--muted);line-height:1.65}
   .meta b{color:var(--text);font-weight:500}
   .meta .g{color:var(--gold-txt)}
   .ctags{display:flex;gap:6px;flex-wrap:wrap}
-  .ctags span{font-size:11px;padding:3px 9px;border-radius:var(--r-xs);background:#ffffff0a;border:1px solid #ffffff0f;color:var(--muted)}
-  .login{background:#00000038;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:13px;display:flex;flex-direction:column;gap:9px}
-  .login .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:7px}
+  .ctags span{font-size:calc(11px*var(--ts));padding:3px 9px;border-radius:var(--r-xs);background:#ffffff0a;border:1px solid #ffffff0f;color:var(--muted)}
+  /* the role is read from recent games, not typed by you, so it is set apart from your tags */
+  .ctags .role-tag{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 35%,transparent);background:color-mix(in srgb,var(--teal) 8%,transparent)}
+  .login{background:#00000038;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:calc(13px*var(--ts));display:flex;flex-direction:column;gap:9px}
+  .login .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:7px}
   .lrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
   .lrow .val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .lrow .mono{font-family:ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:.01em}
   .lrow .none{color:var(--faint)}
   /* The recovery facts are labelled; the credentials above them are not, because
      a username and a password are obvious from their shape and these are not. */
-  .lrow .lk{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  .lrow .lk{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.1em;text-transform:uppercase;
     color:var(--faint);margin-right:9px}
-  .lrow .lage{font-style:normal;font-size:11px;color:var(--faint);margin-left:9px}
+  .lrow .lage{font-style:normal;font-size:calc(11px*var(--ts));color:var(--faint);margin-left:9px}
   /* Beside the name in all three layouts, because the point of the flag is that
      you spot it without having opened anything. */
   /* Drawn only when there is a goal. An account with nothing to climb towards
      should not be shown an empty progress bar to feel bad about. */
   .goal{display:flex;flex-direction:column;gap:5px;margin-top:-3px}
-  .goal-h{display:flex;align-items:baseline;gap:8px;font-size:11px}
-  .goal-h .k{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
-  .goal-t{font-weight:700;letter-spacing:-.01em;font-size:12px}
+  .goal-h{display:flex;align-items:baseline;gap:8px;font-size:calc(11px*var(--ts))}
+  .goal-h .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .goal-t{font-weight:700;letter-spacing:-.01em;font-size:calc(12px*var(--ts))}
   .goal-r{margin-left:auto;color:var(--faint);font-variant-numeric:tabular-nums;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .goal-bar{height:4px;border-radius:1px;background:#ffffff12;overflow:hidden}
@@ -1417,8 +1442,8 @@
   .flagmark .ico{width:12px;height:12px;stroke-width:2.2}
   .t-nm .flagmark .ico,.rw-nm .flagmark .ico{width:11px;height:11px}
   .lbtns{display:flex;gap:5px;flex-shrink:0}
-  .lbtns button{font-size:11px;padding:4px 9px}
-  .login .lseq{width:100%;font-size:12px;font-weight:600;padding:8px 10px;color:var(--teal-txt);
+  .lbtns button{font-size:calc(11px*var(--ts));padding:4px 9px}
+  .login .lseq{width:100%;font-size:calc(12px*var(--ts));font-weight:600;padding:8px 10px;color:var(--teal-txt);
     border-color:color-mix(in srgb,var(--teal) 45%,transparent);background:color-mix(in srgb,var(--teal) 10%,transparent)}
   .login .lseq:hover{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 18%,transparent);color:var(--teal-txt)}
   .c-foot{display:flex;flex-direction:column;align-items:stretch;gap:11px;
@@ -1426,7 +1451,7 @@
   .c-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
   /* was a bare run-on caption floating above the buttons; now a dot-led timestamp
      with the source as its own tag, so it reads as a deliberate meta line */
-  .upd{font-size:11px;color:var(--faint);letter-spacing:.015em;display:inline-flex;align-items:center;gap:7px;min-width:0}
+  .upd{font-size:calc(11px*var(--ts));color:var(--faint);letter-spacing:.015em;display:inline-flex;align-items:center;gap:7px;min-width:0}
   .upd::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.55;flex-shrink:0}
   .upd.stale{color:var(--danger)}
   /* Out of date: red, with a warning mark in place of the dot. It was a ⚠
@@ -1436,14 +1461,14 @@
   /* asOf is sometimes a source ("backend", a proxy name) and sometimes a date
      phrase op.gg printed ("updated today") — so no uppercasing, which would
      shout at a sentence fragment */
-  .src{font-size:10px;font-weight:500;letter-spacing:.01em;color:var(--faint);
+  .src{font-size:calc(10px*var(--ts));font-weight:500;letter-spacing:.01em;color:var(--faint);
     padding:2px 8px;border-radius:var(--r-xs);background:#ffffff0a;border:1px solid #ffffff0f;white-space:nowrap}
   /* 11.5px type in 6px of padding is a 26px target, and there were five of them
      in a row. Mobile already got 40px; the desktop was left with whatever the
      text happened to measure. */
   .acts{display:flex;gap:7px;flex-wrap:wrap}
-  .acts button,.acts a{font-size:12px;padding:7px 12px;min-height:32px;text-decoration:none}
-  .c-more{min-width:36px;padding:7px 10px;font-size:16px;line-height:1;color:var(--muted);
+  .acts button,.acts a{font-size:calc(12px*var(--ts));padding:7px 12px;min-height:32px;text-decoration:none}
+  .c-more{min-width:36px;padding:7px 10px;font-size:calc(16px*var(--ts));line-height:1;color:var(--muted);
     letter-spacing:.08em}
   .c-more:hover{color:var(--text)}
   .c-more.on{background:var(--panel3);border-color:var(--line2);color:var(--text)}
@@ -1466,12 +1491,12 @@
   /* Named groups, not bare hairlines. A rule says "these are apart"; it never says
      what either side of it is. Same lockup as the list view's tier bands. */
   .cm-g{display:flex;align-items:center;gap:8px;padding:7px 11px 3px;
-    font-size:10px;font-weight:700;line-height:1;letter-spacing:.14em;text-transform:uppercase;
+    font-size:calc(10px*var(--ts));font-weight:700;line-height:1;letter-spacing:.14em;text-transform:uppercase;
     color:var(--faint);user-select:none}
   .cm-g::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
   .cm-g:first-child{padding-top:3px}
   .card-menu button,.card-menu .cm-link{width:100%;justify-content:flex-start;gap:10px;
-    font-size:13px;font-weight:450;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
+    font-size:calc(13px*var(--ts));font-weight:450;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
     background:none;border:1px solid transparent;box-shadow:none;color:var(--muted);
     text-decoration:none;display:inline-flex;align-items:center;cursor:pointer;text-align:left}
   .card-menu .ico{width:15px;height:15px;flex-shrink:0;color:var(--faint);
@@ -1491,7 +1516,7 @@
   /* The panel is the rank window's body now, and .mdl-b carries no padding of its
      own — the account form gets its 22px from .formgrid. This is that measure. */
   .rankpanel{display:flex;flex-direction:column;gap:14px;padding:20px 22px}
-  .rankpanel .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+  .rankpanel .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;
     color:var(--faint);display:block;margin-bottom:8px}
   /* Named fields that wrap, rather than a row of bare boxes sized to the shortest
      thing they might hold. Wide enough that four digits and a spinner are not
@@ -1502,7 +1527,7 @@
   .rk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 14px}
   @media (max-width:560px){.rk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .rk-f{display:flex;flex-direction:column;gap:5px;min-width:0}
-  .rk-f>span{font-size:11px;font-weight:500;letter-spacing:.005em;color:var(--muted)}
+  .rk-f>span{font-size:calc(11px*var(--ts));font-weight:500;letter-spacing:.005em;color:var(--muted)}
   .rk-f>select,.rk-f>input{width:100%}
   /* The native steppers sit over the digits at this size and are no use for a
      season's win count anyway — these are numbers you type, not nudge. */
@@ -1510,7 +1535,7 @@
     font-variant-numeric:tabular-nums}
   .rk-f input[type=number]::-webkit-outer-spin-button,
   .rk-f input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;appearance:none;margin:0}
-  .rk-note{font-size:11px;color:var(--faint);margin-top:9px;line-height:1.5}
+  .rk-note{font-size:calc(11px*var(--ts));color:var(--faint);margin-top:9px;line-height:1.5}
   .rk-none{color:var(--faint);font-weight:450}
   /* The two folds run the full width of the window and re-pad their own contents
      back to the same measure, so a closed fold reads as a divider across it. */
@@ -1534,29 +1559,29 @@
      so neighbouring labels never quite lined up. Colour still says how loud each
      one is; the shape is now the same everywhere. */
   .stat .k,.dist .k,.dash-filter .k,.c-stats .k,.c-notes .k,.sec-n,.chp-h,.away-k,.pal-g,.login .k,.lrow .lk,
-  .goal-h .k,.rankpanel .k,.grp-h,.cm-g,.c-drawer{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+  .goal-h .k,.rankpanel .k,.grp-h,.cm-g,.c-drawer{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase}
 
   /* ---- form + settings ---- */
   .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:22px}
   .fw{grid-column:1/-1}
   .fld{display:flex;flex-direction:column;gap:6px}
   /* sentence case, not micro-caps — several of these labels are full sentences */
-  .fld label{font-size:12px;font-weight:500;letter-spacing:.005em;color:var(--muted);line-height:1.45}
+  .fld label{font-size:calc(12px*var(--ts));font-weight:500;letter-spacing:.005em;color:var(--muted);line-height:1.45}
   /* The strength meter held a 30px band open under the password even with no
      password in it, across both columns — the widest gap in the form, around
      nothing. The bar now sits in the grid's own gap and the word rides the label. */
   .pw-fld{position:relative}
   .pw-fld label{display:flex;justify-content:space-between;gap:10px}
-  #pwMeterLabel{font-size:11px;color:var(--faint)}
+  #pwMeterLabel{font-size:calc(11px*var(--ts));color:var(--faint)}
   #pwMeter{position:absolute;left:0;right:0;bottom:-9px;height:3px;display:flex;gap:4px}
   .hidden{display:none!important}
-  .empty{padding:64px 24px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7}
+  .empty{padding:64px 24px;text-align:center;color:var(--muted);font-size:calc(14px*var(--ts));line-height:1.7}
   .empty .d{height:84px;margin-bottom:20px;display:flex;align-items:center;justify-content:center}
   .empty-gem{width:52px;height:52px;display:inline-block;border-radius:var(--r-xs);transform:rotate(45deg);
     border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);
     background:linear-gradient(145deg,color-mix(in srgb,var(--gold) 22%,transparent),#0f1218);
     box-shadow:0 0 40px color-mix(in srgb,var(--gold) 22%,transparent),inset 0 0 0 1px #ffffff0f}
-  .count{margin-top:30px;text-align:center;font-size:12px;color:var(--faint)}
+  .count{margin-top:30px;text-align:center;font-size:calc(12px*var(--ts));color:var(--faint)}
   .count a{color:var(--gold-txt);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
   .count a:hover{border-bottom-color:currentColor}
   /* The version, hovering for what changed in it. Tabular figures so it doesn't
@@ -1591,8 +1616,8 @@
     border-bottom:1px solid var(--line);background:linear-gradient(180deg,#ffffff0a,transparent)}
   /* a window says what it is in plain words, at title size; the gold frame around it
      is the ornament */
-  .mdl-h .t{font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--text)}
-  .mdl-h .s{font-size:12px;color:var(--faint);margin-left:auto;margin-right:34px;
+  .mdl-h .t{font-size:calc(16px*var(--ts));font-weight:600;letter-spacing:-.01em;color:var(--text)}
+  .mdl-h .s{font-size:calc(12px*var(--ts));color:var(--faint);margin-left:auto;margin-right:34px;
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .mdl-b{flex:1;min-height:0;overflow:auto;overflow-x:hidden}
   .mdl-f{display:flex;gap:9px;align-items:center;flex-wrap:wrap;flex-shrink:0;
@@ -1601,11 +1626,48 @@
   /* a labelled group per concern, instead of eight unrelated fields in one grid */
   .grp{padding:20px 22px}
   .grp+.grp{border-top:1px solid var(--line)}
-  .grp-h{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  .stabs{display:flex;gap:2px;flex-shrink:0;padding:0 14px;border-bottom:1px solid var(--line);
+    overflow-x:auto;scrollbar-width:none}
+  .stabs::-webkit-scrollbar{display:none}
+  #settings .stabs button{background:none;border:0;border-radius:0;box-shadow:inset 0 -2px 0 transparent;
+    padding:12px 10px 11px;font-size:calc(13px*var(--ts));font-weight:600;color:var(--muted);white-space:nowrap;flex-shrink:0}
+  #settings .stabs button:hover{color:var(--text);background:none}
+  #settings .stabs button[aria-selected="true"]{color:var(--gold-txt);box-shadow:inset 0 -2px 0 var(--gold)}
+  /* only the open tab's groups; the line between groups only between visible ones */
+  #settings .grp[data-tab]{display:none;border-top:0}
+  #settings[data-tab="look"] .grp[data-tab="look"],#settings[data-tab="checks"] .grp[data-tab="checks"],
+  #settings[data-tab="alerts"] .grp[data-tab="alerts"],#settings[data-tab="security"] .grp[data-tab="security"],
+  #settings[data-tab="sync"] .grp[data-tab="sync"],#settings[data-tab="backup"] .grp[data-tab="backup"]{display:block}
+  #settings .grp[data-tab="checks"]+.grp[data-tab="checks"]{border-top:1px solid var(--line)}
+  .grp-h.tab-same{display:none}
+  .bk-acts{display:flex;flex-wrap:wrap;gap:8px}
+  /* streamer mode: blurred where it stands, so the layout does not jump */
+  body.streamer :is(.sens,.login .val,.c-notes textarea),
+  body.streamer :is(#fName,#fTag,#fLogin,#fPass,#fEmail,#fNotes,#fCreated,#fBirth,#baList){filter:blur(7px);user-select:none}
+  .streamer-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:var(--r-sm);font-size:calc(12px*var(--ts));font-weight:600;
+    color:#ffb4b4;border:1px solid #ff6b6b66;background:#ff6b6b17;box-shadow:none}
+  .streamer-pill:hover{color:#fff;border-color:#ff6b6baa;background:#ff6b6b26}
+  .streamer-pill i{width:7px;height:7px;border-radius:50%;background:#ff5b5b;box-shadow:0 0 8px #ff5b5b}
+  .part-chks{display:flex;flex-wrap:wrap;gap:6px}
+  .part-chks label{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--line);
+    border-radius:var(--r-sm);background:var(--panel2);font-size:calc(13px*var(--ts));color:var(--muted);cursor:pointer}
+  .part-chks label:has(input:checked){color:var(--text);border-color:var(--line2)}
+  .part-chks input{width:auto;margin:0}
+  #settings .link-btn{display:inline;padding:0;border:0;background:none;box-shadow:none;min-height:0;
+    color:var(--teal-txt);font:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+  html[data-ts="small"]{--ts:.9}
+  html[data-ts="large"]{--ts:1.15}
+  /* a three-way choice in Settings: one row, the chosen one lit */
+  .opt-seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--panel2)}
+  #settings .opt-seg button{border:0;border-radius:0;background:none;box-shadow:none;padding:7px 16px;font-size:calc(13px*var(--ts));font-weight:600;color:var(--muted)}
+  #settings .opt-seg button+button{border-left:1px solid var(--line)}
+  #settings .opt-seg button:hover{color:var(--text);background:var(--panel3)}
+  #settings .opt-seg button[aria-checked="true"]{color:var(--gold-txt);background:color-mix(in srgb,var(--gold) 12%,var(--panel2))}
+  .grp-h{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.16em;text-transform:uppercase;
     color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:9px}
   .grp-h::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
   .grp .formgrid{padding:0;gap:15px}
-  .hint{font-size:12px;color:var(--faint);line-height:1.55}
+  .hint{font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.55}
   /* align-items:flex-start so a label that wraps to two lines still starts level
      with its checkbox instead of floating half a line below it */
   /* Checkbox option rows: the label grows so a long line wraps cleanly.
@@ -1614,11 +1676,11 @@
   .sub-fld{padding-left:24px;margin-top:9px;display:flex;align-items:flex-start;gap:9px;flex-wrap:wrap}
   .sub-fld>label,.sub-fld>span{flex:1;min-width:0}
   .sub-fld.inline{align-items:center;gap:10px}
-  .sub-fld.inline>label,.sub-fld.inline>span{flex:none;color:var(--muted);font-size:13px}
-  .sub-fld.inline select,.sub-fld.inline input[type=number]{width:auto;min-width:0;padding:6px 10px;font-size:13px}
+  .sub-fld.inline>label,.sub-fld.inline>span{flex:none;color:var(--muted);font-size:calc(13px*var(--ts))}
+  .sub-fld.inline select,.sub-fld.inline input[type=number]{width:auto;min-width:0;padding:6px 10px;font-size:calc(13px*var(--ts))}
   .sub-fld input[type=checkbox]{margin-top:3px}
   .chk{display:flex;align-items:center;gap:9px}
-  .chk label{font-size:13px;color:var(--text);line-height:1.45}
+  .chk label{font-size:calc(13px*var(--ts));color:var(--text);line-height:1.45}
   /* ---- accent preview ----
      A colour swatch shows the colour; it cannot show what the colour does. The page
      sits behind this panel's blur, and a sample *under* the swatches is exactly where
@@ -1659,20 +1721,20 @@
     background:linear-gradient(145deg,var(--star),var(--gold) 55%,var(--gold-mid))}
   .acc-prev-brand{min-width:0}
   .acc-prev-t{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em;text-transform:uppercase;
-    font-size:12px;color:var(--gold-txt);line-height:1.2}
-  .acc-prev-sub{font-size:10px;color:var(--faint);margin-top:2px}
+    font-size:calc(12px*var(--ts));color:var(--gold-txt);line-height:1.2}
+  .acc-prev-sub{font-size:calc(10px*var(--ts));color:var(--faint);margin-top:2px}
   .acc-prev-sub b{color:var(--gold-txt);font-weight:600}
   .acc-prev-rib{display:flex;gap:2px;height:14px;padding:8px 14px 0}
   .acc-prev-rib i{flex:1;border-radius:1px;background:color-mix(in srgb,var(--c) 62%,#0b0e14)}
   .acc-prev-cmd{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;
     border-bottom:1px solid var(--line)}
-  .acc-prev-cmd button,.acc-prev-card .bar button{padding:5px 9px;font:600 11px/1.2 'Inter',system-ui,sans-serif}
+  .acc-prev-cmd button,.acc-prev-card .bar button{padding:5px 9px;font:600 calc(11px*var(--ts))/1.2 'Inter',system-ui,sans-serif}
   .acc-prev-tools{display:flex;gap:6px;align-items:center;padding:10px 14px 12px}
-  .acc-prev-tools input{flex:1;min-width:0;font-size:11px;padding:6px 9px;
+  .acc-prev-tools input{flex:1;min-width:0;font-size:calc(11px*var(--ts));padding:6px 9px;
     border-color:color-mix(in srgb,var(--teal) 60%,transparent);
     box-shadow:0 0 0 3px color-mix(in srgb,var(--teal) 13%,transparent);
     background-color:var(--panel3)}
-  .acc-prev-tools button{padding:5px 8px;font-size:11px}
+  .acc-prev-tools button{padding:5px 8px;font-size:calc(11px*var(--ts))}
   .acc-prev-tools button.on{color:var(--star);
     border-color:color-mix(in srgb,var(--star) 55%,transparent)}
   .acc-prev-side{flex:1 1 42%;min-width:0;padding:12px;display:flex;flex-direction:column;
@@ -1680,13 +1742,13 @@
   .acc-prev-card{padding:11px 12px;border:1px solid var(--line);border-radius:var(--r-sm);
     background:var(--panel);box-shadow:inset 0 1px 0 #ffffff08;flex:1}
   .acc-prev-card-h{display:flex;flex-wrap:wrap;align-items:center;gap:4px 7px;margin-bottom:6px}
-  .acc-prev-nm{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap}
-  .acc-prev-star{color:var(--star);font-size:13px;line-height:1;margin-left:auto}
-  .acc-prev-rk{flex-basis:100%;font:700 14px/1.1 'Inter',system-ui,sans-serif;letter-spacing:-.01em;color:#7ea6f0}
-  .acc-prev-rk small{font:600 11px Inter,system-ui,sans-serif;text-transform:none;color:var(--muted);margin-left:4px}
-  .acc-prev-wl{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .acc-prev-nm{font-size:calc(13px*var(--ts));font-weight:600;color:var(--text);white-space:nowrap}
+  .acc-prev-star{color:var(--star);font-size:calc(13px*var(--ts));line-height:1;margin-left:auto}
+  .acc-prev-rk{flex-basis:100%;font:700 calc(14px*var(--ts))/1.1 'Inter',system-ui,sans-serif;letter-spacing:-.01em;color:#7ea6f0}
+  .acc-prev-rk small{font:600 calc(11px*var(--ts)) Inter,system-ui,sans-serif;text-transform:none;color:var(--muted);margin-left:4px}
+  .acc-prev-wl{font-size:calc(11px*var(--ts));color:var(--muted);margin-bottom:8px}
   .acc-prev-card .bar{gap:6px}
-  .acc-reset{width:27px;height:27px;padding:0;font-size:13px;color:var(--muted)}
+  .acc-reset{width:27px;height:27px;padding:0;font-size:calc(13px*var(--ts));color:var(--muted)}
   .acc-reset:hover{color:var(--text)}
   @media (max-width:620px){
     .acc-prev{flex-direction:column;width:min(340px,calc(100vw - 24px))}
@@ -1730,7 +1792,7 @@
     width:max-content;max-width:min(720px,calc(100vw - 32px));
     background:#161a23f2;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
     border:1px solid color-mix(in srgb,var(--gold-dim) 70%,transparent);border-radius:var(--r-md);color:var(--text);
-    padding:11px 20px;font-size:13px;font-weight:500;box-shadow:var(--sh-3)}
+    padding:11px 20px;font-size:calc(13px*var(--ts));font-weight:500;box-shadow:var(--sh-3)}
 
   .spin{display:inline-block;animation:sp 1s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
@@ -1742,15 +1804,15 @@
   #lock{max-width:400px;margin:min(14vh,124px) auto 0}
   .lock-in{display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px 34px 32px}
   .lock-in .brand-mark{margin:6px 0 24px}
-  .lock-wm{font-size:30px}
-  .lock-sub{margin-top:8px;font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+  .lock-wm{font-size:calc(30px*var(--ts))}
+  .lock-sub{margin-top:8px;font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
   .lock-in .hx-rule{margin:24px 0 20px}
-  .lock-k{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt)}
-  .lock-txt{font-size:13px;color:var(--muted);margin:8px 0 18px;line-height:1.6}
+  .lock-k{font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt)}
+  .lock-txt{font-size:calc(13px*var(--ts));color:var(--muted);margin:8px 0 18px;line-height:1.6}
   #lockPass{width:100%}
-  .lock-err{align-self:stretch;text-align:left;color:var(--danger);font-size:12px;margin-top:8px}
+  .lock-err{align-self:stretch;text-align:left;color:var(--danger);font-size:calc(12px*var(--ts));margin-top:8px}
   .lock-go{width:100%;margin-top:14px;padding:11px 16px}
-  @media (max-width:440px){#lock{margin-top:8vh}.lock-in{padding:34px 22px 26px}.lock-wm{font-size:26px}}
+  @media (max-width:440px){#lock{margin-top:8vh}.lock-in{padding:34px 22px 26px}.lock-wm{font-size:calc(26px*var(--ts))}}
 
   /* ---- entrances ----
      Panels toggle .hidden (display:none), which can't be transitioned. Taking an
@@ -1797,25 +1859,25 @@
     background:linear-gradient(150deg,var(--panel3),var(--panel2));
     box-shadow:0 0 0 1px var(--gold-dim),0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold) 55%,transparent)}
   .cmp-pic img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
-  .cmp-pic b{font-size:20px;font-weight:600;color:var(--faint)}
-  .cmp-nm{font-size:16px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cmp-id{font-size:11px;color:var(--faint);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cmp-rk{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:18px;line-height:1.1}
-  .cmp-rk.q{font-family:inherit;text-transform:none;font-weight:600;font-size:14px;color:var(--faint)!important}
+  .cmp-pic b{font-size:calc(20px*var(--ts));font-weight:600;color:var(--faint)}
+  .cmp-nm{font-size:calc(16px*var(--ts));font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmp-id{font-size:calc(11px*var(--ts));color:var(--faint);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmp-rk{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:calc(18px*var(--ts));line-height:1.1}
+  .cmp-rk.q{font-family:inherit;text-transform:none;font-weight:600;font-size:calc(14px*var(--ts));color:var(--faint)!important}
   .cmp-crest{width:22px;height:22px}
-  .cmp-lp{font-size:12px;font-weight:600;color:var(--muted)}
+  .cmp-lp{font-size:calc(12px*var(--ts));font-weight:600;color:var(--muted)}
   .cmp-vs{width:38px;height:38px;margin-top:30px;display:grid;place-items:center;transform:rotate(45deg);
     background:linear-gradient(135deg,#1e2328,#0a1119);border:1px solid var(--gold-dim);
     box-shadow:0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold-dim) 60%,transparent)}
-  .cmp-vs span{transform:rotate(-45deg);font-weight:700;font-size:11px;letter-spacing:.06em;color:var(--gold-txt)}
+  .cmp-vs span{transform:rotate(-45deg);font-weight:700;font-size:calc(11px*var(--ts));letter-spacing:.06em;color:var(--gold-txt)}
   .cmp-rows{border-top:1px solid var(--line)}
   .cmp-row{display:grid;grid-template-columns:minmax(0,1fr) 92px minmax(0,1fr);gap:10px;align-items:center;
-    padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;font-variant-numeric:tabular-nums;color:var(--text)}
+    padding:9px 0;border-bottom:1px solid var(--line);font-size:calc(13px*var(--ts));font-variant-numeric:tabular-nums;color:var(--text)}
   .cmp-row:last-child{border-bottom:0}
   .cmp-row>:first-child{text-align:right}
-  .cmp-row .k{text-align:center;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  .cmp-row .k{text-align:center;font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
   .cmp-row .win{color:var(--gold-txt);font-weight:600}
-  .toast-log{max-width:420px;font-size:12px;line-height:1.45}
+  .toast-log{max-width:420px;font-size:calc(12px*var(--ts));line-height:1.45}
 
   .panel-close{transition:color .16s,background .16s,transform .2s cubic-bezier(.22,1,.36,1)}
   .panel-close:hover{transform:rotate(90deg)}
@@ -1849,6 +1911,22 @@
   /* the inner pane has to paint over the glow layer, not under it */
   .hx-in{position:relative;z-index:1}
   @keyframes gemGlow{50%{filter:brightness(1.22)}}
+  /* ---- Effects (Settings → Appearance) ----
+     Subtle: nothing moves under the pointer, nothing loops, the glows are quieter.
+     Off: nothing animates or glows at all. Reduce-motion is handled on its own
+     below, whichever is picked. */
+  body:is([data-fx="subtle"],[data-fx="off"]) :is(.grid>.hx,.grid.wall>.hx,.to-top,.star,.panel-close):hover,
+  body:is([data-fx="subtle"],[data-fx="off"]) :is(.acts button,.a-login):hover .ico{transform:none}
+  body:is([data-fx="subtle"],[data-fx="off"]) :is(.grid.boot>.hx,.brand-mark::before){animation:none}
+  body:is([data-fx="subtle"],[data-fx="off"]) .confetti{display:none}
+  body[data-fx="subtle"] .grid>.hx:hover::after{opacity:.4}
+  body[data-fx="subtle"] .a-login{box-shadow:0 2px 8px -5px color-mix(in srgb,var(--teal) 70%,transparent)}
+  body[data-fx="subtle"] .a-login:hover{box-shadow:0 3px 10px -5px color-mix(in srgb,var(--teal) 80%,transparent)}
+  body[data-fx="off"] *,body[data-fx="off"] *::before,body[data-fx="off"] *::after{animation:none!important;transition:none!important}
+  body[data-fx="off"] .grid>.hx::after{display:none}
+  body[data-fx="off"] :is(.a-login,.a-login:hover){box-shadow:none}
+  body[data-fx="off"] :is(.b-gold,.b-gold:hover){box-shadow:0 0 0 1px #010a13}
+  body[data-fx="off"] .brand-mark::before{box-shadow:inset 0 0 0 1px #ffffff45}
   /* Nothing here loops on its own except the header mark, the spinner and the
      sweep over a card being checked. A hidden tab stops being painted, but the
      animations are still live objects the compositor keeps ticking, and this app
@@ -1901,11 +1979,11 @@
     html{scroll-behavior:auto}
   }
   @media (pointer:coarse){
-    .acts button,.acts a,.lbtns button{font-size:13px;padding:9px 13px}
-    .star{font-size:20px;padding:2px 6px 2px 0}
+    .acts button,.acts a,.lbtns button{font-size:calc(13px*var(--ts));padding:9px 13px}
+    .star{font-size:calc(20px*var(--ts));padding:2px 6px 2px 0}
     button,.btn{padding:10px 15px}
     .seg button{width:40px;height:36px;padding:0} /* keep fixed; don't inherit the fat button padding */
-    input,select,textarea{font-size:16px}
+    input,select,textarea{font-size:calc(16px*var(--ts))}
   }
   @media (max-width:760px){
     .top{align-items:flex-start;gap:16px}
@@ -1940,10 +2018,10 @@
        above it, so DIAMOND II reads on one line instead of breaking at the space */
     .cmp{padding:18px 14px 4px}
     .cmp-head{gap:8px}
-    .cmp-rk{flex-direction:column;gap:4px;font-size:15px}
+    .cmp-rk{flex-direction:column;gap:4px;font-size:calc(15px*var(--ts))}
     .cmp-rk>span{white-space:nowrap}
     .cmp-vs{width:30px;height:30px;margin-top:24px}
-    .cmp-row{grid-template-columns:minmax(0,1fr) 86px minmax(0,1fr);gap:8px;font-size:12px}
+    .cmp-row{grid-template-columns:minmax(0,1fr) 86px minmax(0,1fr);gap:8px;font-size:calc(12px*var(--ts))}
     .cmp-row .k{white-space:nowrap}}
 </style>
 </head>
@@ -1976,6 +2054,7 @@
          underneath. This is what the middle is for. -->
     <div id="ribbon" class="ribbon"></div>
     <div class="bar">
+      <button id="streamerPill" class="streamer-pill hidden" title="Streamer mode is on: Riot IDs, logins, emails and notes are hidden. Click to show them again."><i aria-hidden="true"></i>Streamer mode</button>
       <button id="bDashToggle" class="ghost-toggle" title="Season totals, champion pool, account counts"></button>
       <div style="position:relative">
         <button id="bMore" title="Export, import, settings">⋯</button>
@@ -1987,6 +2066,8 @@
           <button id="bImportCsv" style="justify-content:flex-start;width:100%">Import CSV</button>
           <div style="border-top:1px solid var(--line);margin:2px 0"></div>
           <button id="bBulkAdd" style="justify-content:flex-start;width:100%">Bulk add accounts…</button>
+          <button id="bNewSeason" style="justify-content:flex-start;width:100%" title="Move every ranked account's current rank into its Past seasons">New season…</button>
+          <button id="bStreamer" style="justify-content:flex-start;width:100%" title="Hide Riot IDs, logins, emails and notes while you stream or share your screen (H)">Streamer mode</button>
           <div style="border-top:1px solid var(--line);margin:2px 0"></div>
           <button id="bDeleteAll" class="b-danger" style="justify-content:flex-start;width:100%" title="Wipe every account — useful for clearing out demo/test data">Delete all accounts</button>
           <div style="border-top:1px solid var(--line);margin:2px 0"></div>
@@ -2008,7 +2089,7 @@
        grid and had to spot what moved. -->
   <div id="awayBand" class="away-band hidden"></div>
 
-  <div id="previewBanner" class="hidden" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border:1px solid color-mix(in srgb,var(--gold) 42%,transparent);background:color-mix(in srgb,var(--gold) 9%,transparent);color:var(--text);padding:13px 16px;border-radius:var(--r-md);font-size:13px;margin-bottom:18px">
+  <div id="previewBanner" class="hidden" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border:1px solid color-mix(in srgb,var(--gold) 42%,transparent);background:color-mix(in srgb,var(--gold) 9%,transparent);color:var(--text);padding:13px 16px;border-radius:var(--r-md);font-size:calc(13px*var(--ts));margin-bottom:18px">
     <span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> <b>Preview mode</b> — this is example data to show you the layout. Nothing here is saved.</span>
     <button id="bExitPreview" class="b-gold">Exit preview</button>
   </div>
@@ -2033,17 +2114,17 @@
       <dt>Cards</dt>
       <dd>The bar across a card's bottom edge opens <b>Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot.</dd>
       <dt>Search</dt>
-      <dd>Matches names, tags, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code>, <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
+      <dd>Matches names, tags, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code> <code>champ:yasuo</code> (played this season, or in its top mastery) <code>role:mid</code> (from the last five ranked games), <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
       <dt>Quick find</dt>
       <dd><kbd>Ctrl</kbd><kbd>K</kbd> (or <kbd>⌘</kbd><kbd>K</kbd>) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.</dd>
       <dt>Keys</dt>
-      <dd><kbd>/</kbd> search · <kbd>n</kbd> new account · <kbd>Esc</kbd> closes panels · shift-click a card's checkbox to select a range.</dd>
+      <dd><kbd>/</kbd> search · <kbd>n</kbd> new account · <kbd>f</kbd> favorites · <kbd>h</kbd> streamer mode (hides Riot IDs, logins, emails and notes; its red marker in the header turns it off) · <kbd>Esc</kbd> closes panels · shift-click a card's checkbox to select a range.</dd>
       <dt>Goals</dt>
       <dd>Set a target rank in a card's <b>Rank</b> panel and the card grows a rail showing how far there is left, plus a rough estimate once there's a fortnight of checks to work from.</dd>
       <dt>Extra privacy</dt>
       <dd>Set a master password in <b>Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.</dd>
       <dt>More</dt>
-      <dd>The <b>⋯</b> menu has bulk add (paste a list of Name#TAG) and CSV import · archive an account to hide it without deleting (toggle <b>Archived</b> in the toolbar) · pick your own primary and secondary colors in Settings.</dd>
+      <dd>The <b>⋯</b> menu has bulk add (paste Name#TAGs, an op.gg multi-search link or the lobby chat), CSV import, <b>New season</b> (every rank into Past seasons at once, with Undo) and streamer mode · archive an account to hide it without deleting (toggle <b>Archived</b> in the toolbar) · <b>Settings → Appearance</b> has themes, effects, text size and what each card shows.</dd>
       <dt>Using this app</dt>
       <dd class="terms">free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.</dd>
     </dl></div>
@@ -2051,26 +2132,39 @@
   </div></div></div>
 
   <!-- settings -->
-  <div id="settings" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div id="settings" class="modal hidden" data-tab="look" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
   <div class="mdl hx teal"><div class="hx-in mdl-in" style="position:relative">
     <div class="mdl-h">
       <span class="t" id="settingsTitle">Settings</span>
       <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     </div>
+    <!-- One section at a time. Seven groups in one scroll put the vault password
+         four screens below the colour pickers; a tab row is one click to any of them. -->
+    <div class="stabs" role="tablist" aria-label="Settings sections">
+      <button type="button" role="tab" data-stab="look" aria-selected="true">Appearance</button>
+      <button type="button" role="tab" data-stab="checks" aria-selected="false" tabindex="-1">Rank checks</button>
+      <button type="button" role="tab" data-stab="alerts" aria-selected="false" tabindex="-1">Alerts</button>
+      <button type="button" role="tab" data-stab="security" aria-selected="false" tabindex="-1">Security</button>
+      <button type="button" role="tab" data-stab="sync" aria-selected="false" tabindex="-1">Sync</button>
+      <button type="button" role="tab" data-stab="backup" aria-selected="false" tabindex="-1">Backup</button>
+    </div>
     <div class="mdl-b">
 
-      <div class="grp">
-        <div class="grp-h">Appearance</div>
-        <div class="hint" style="margin-bottom:12px">Pick a colour and a preview of the homepage opens beside it. Colours and atmosphere change live; close without saving to put them back.</div>
+      <div class="grp" data-tab="look">
+        <div class="grp-h tab-same">Appearance</div>
+        <div class="atm-h">Theme</div>
+        <div id="sThemes" class="thm-grid" role="radiogroup" aria-label="Theme"></div>
+        <div class="atm-h" style="margin-top:18px">Your own colours</div>
+        <div class="hint" style="margin-bottom:12px">Pick a colour and a preview of the homepage opens beside it. Everything here changes live; close without saving to put it back.</div>
         <div class="acc-swatches">
           <div class="acc-swatch">
             <input type="color" id="sAccent" aria-label="Primary accent color">
-            <span style="font-size:12px;color:var(--muted);line-height:1.4">Primary<br><span style="color:var(--faint)">title, favorites, scrollbar</span></span>
+            <span style="font-size:calc(12px*var(--ts));color:var(--muted);line-height:1.4">Primary<br><span style="color:var(--faint)">title, favorites, scrollbar</span></span>
             <button id="sAccentReset1" class="acc-reset" type="button" title="Back to the default primary" aria-label="Reset the primary color">↺</button>
           </div>
           <div class="acc-swatch">
             <input type="color" id="sAccent2" aria-label="Secondary accent color">
-            <span style="font-size:12px;color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login, Refresh, Add, focus rings</span></span>
+            <span style="font-size:calc(12px*var(--ts));color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login, Refresh, Add, focus rings</span></span>
             <button id="sAccentReset2" class="acc-reset" type="button" title="Back to the default secondary" aria-label="Reset the secondary color">↺</button>
           </div>
         </div>
@@ -2109,70 +2203,37 @@
             </button>
           </div>
         </div>
-        <div class="chk" style="margin-top:16px">
-          <input type="checkbox" id="sCompact" style="width:auto">
-          <label for="sCompact">Compact cards — leave each card's chart and stats under its Details, so more cards fit on screen</label>
+        <div class="atm-block">
+          <div class="atm-h">Effects</div>
+          <div id="sEffects" class="opt-seg" role="radiogroup" aria-label="Effects">
+            <button type="button" role="radio" data-v="full">Full</button>
+            <button type="button" role="radio" data-v="subtle">Subtle</button>
+            <button type="button" role="radio" data-v="off">Off</button>
+          </div>
+          <div class="hint" style="margin-top:7px">Full: cards lift and glow under the pointer. Subtle: nothing moves under the pointer and the glow is quieter. Off: no animation and no glow. Your system's "reduce motion" setting is always respected.</div>
         </div>
-      </div>
-
-      <div class="grp">
-        <div class="grp-h">Automatic refresh</div>
-        <div class="chk">
-          <input type="checkbox" id="sAuto" style="width:auto">
-          <label for="sAuto">Auto-check stale accounts when opening the app</label>
+        <div class="atm-block">
+          <div class="atm-h">Text size</div>
+          <div id="sTextSize" class="opt-seg" role="radiogroup" aria-label="Text size">
+            <button type="button" role="radio" data-v="small">Small</button>
+            <button type="button" role="radio" data-v="default">Default</button>
+            <button type="button" role="radio" data-v="large">Large</button>
+          </div>
+          <div class="hint" style="margin-top:7px">Only the type changes size; the layout stays put. Small fits more on a screen, Large reads easier from further away.</div>
         </div>
-        <div class="sub-fld inline">
-          <label for="sAutoEvery">Refresh at most</label>
-          <select id="sAutoEvery"></select>
-        </div>
-        <div class="sub-fld">
-          <input type="checkbox" id="sAutoRanked" style="width:auto">
-          <label for="sAutoRanked" style="font-size:13px;color:var(--muted);max-width:560px">Ranked accounts only — skip unranked and never-placed ones, which answer the same every time</label>
-        </div>
-      </div>
-
-      <div class="grp">
-        <div class="grp-h">Alerts</div>
-        <div class="chk">
-          <input type="checkbox" id="sNotify" style="width:auto">
-          <label for="sNotify">Browser notifications for tier-ups and finished "Check all" runs</label>
-        </div>
-        <div class="fld fw" style="margin-top:14px">
-          <label>Discord webhook URL (optional — posts tier-ups to a channel)</label>
-          <input id="sDiscord" placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
-        </div>
-      </div>
-
-      <div class="grp">
-        <div class="grp-h">Security</div>
-        <div class="fld fw" style="margin-bottom:14px">
-          <label>Storage</label>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-            <span id="sStorageStatus" class="hint" style="margin:0;flex:1;min-width:200px"></span>
-            <button type="button" id="sStorageProtect" class="hidden">Protect</button>
+        <div class="atm-block">
+          <div class="atm-h">On each card</div>
+          <div id="sCardParts" class="part-chks"></div>
+          <div class="hint" style="margin-top:7px">What you untick waits under each card's <b>Details</b>, so cards get shorter and more fit on a screen.
+            <button type="button" id="sCompact" class="link-btn">Compact: chart and stats under Details</button></div>
+          <div class="chk" style="margin-top:12px">
+            <input type="checkbox" id="sChampArt" style="width:auto">
+            <label for="sChampArt">Champion art: the champion each account plays most, faded into the top of its card (images from Riot's Data Dragon)</label>
           </div>
         </div>
-        <div class="fld fw">
-          <label>Master password — encrypts the whole vault at rest with AES-256. There is no recovery: lose the password and the vault is gone.</label>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <input type="password" id="sVaultPass" placeholder="New master password" autocomplete="new-password" style="flex:1;min-width:170px">
-            <button id="sVaultSet">Set / change</button>
-            <button id="sVaultRemove" class="b-danger">Remove protection</button>
-          </div>
-          <div id="sVaultStatus" class="hint" style="margin-top:2px"></div>
-        </div>
-        <div class="sub-fld inline" style="padding-left:0;margin-top:14px">
-          <label for="sAutoLock">Auto-lock after</label>
-          <select id="sAutoLock" aria-describedby="sAutoLockHint"></select>
-        </div>
-        <div id="sAutoLockHint" class="hint" style="margin-top:6px">Only applies while a master password is set. Off means the vault stays unlocked until you lock it.</div>
-        <div class="sub-fld" style="padding-left:0;margin-top:12px">
-          <button type="button" id="sLockNow" class="b-danger" title="Lock the vault now — needs the master password to open again">Lock now</button>
-          <div class="hint" style="margin-top:6px">Locks this tab immediately. Other open tabs keep their own unlock state until you reload them.</div>
-        </div>
       </div>
 
-      <div class="grp">
+      <div class="grp" data-tab="checks">
         <div class="grp-h">Rank checks</div>
         <div class="formgrid">
           <div class="fld fw">
@@ -2200,7 +2261,7 @@
             </ol>
             <div class="guide-alt">Rather paste the code by hand? Create a Worker, paste
               <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>,
-              and bind a KV namespace named <code>VAULT</code> for sync.</div>
+              bind a KV namespace named <code>VAULT</code> for sync, and add the Cron Trigger <code>17 9 * * *</code> for Discord alerts.</div>
           </details>
           <div class="fld fw">
             <label>Advanced: Anthropic API key (optional, stored only in this browser)</label>
@@ -2216,15 +2277,75 @@
           <div class="fw hint">
             Check order: <b>backend URL → API key → free op.gg auto-fetch</b>. A worker with a Riot API key reads ranks from Riot directly, the most reliable source there is. With all three empty, checks use the free auto-fetch and cost nothing. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable, but only worth it for power users.
           </div>
-          <div class="fld">
-            <label>Remind me to export after (days)</label>
-            <input id="sExportDays" type="number" min="1" max="365" value="30" style="max-width:120px">
-          </div>
         </div>
       </div>
 
-      <div class="grp">
-        <div class="grp-h">Device sync</div>
+      <div class="grp" data-tab="checks">
+        <div class="grp-h">Automatic refresh</div>
+        <div class="chk">
+          <input type="checkbox" id="sAuto" style="width:auto">
+          <label for="sAuto">Auto-check stale accounts when opening the app</label>
+        </div>
+        <div class="sub-fld inline">
+          <label for="sAutoEvery">Refresh at most</label>
+          <select id="sAutoEvery"></select>
+        </div>
+        <div class="sub-fld">
+          <input type="checkbox" id="sAutoRanked" style="width:auto">
+          <label for="sAutoRanked" style="font-size:calc(13px*var(--ts));color:var(--muted);max-width:560px">Ranked accounts only — skip unranked and never-placed ones, which answer the same every time</label>
+        </div>
+      </div>
+
+
+      <div class="grp" data-tab="alerts">
+        <div class="grp-h tab-same">Alerts</div>
+        <div class="chk">
+          <input type="checkbox" id="sNotify" style="width:auto">
+          <label for="sNotify">Browser notifications for tier-ups and finished "Check all" runs</label>
+        </div>
+        <div class="fld fw" style="margin-top:14px">
+          <label>Discord webhook URL (optional — posts tier-ups to a channel)</label>
+          <input id="sDiscord" placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
+        </div>
+        <div class="chk" style="margin-top:16px">
+          <input type="checkbox" id="sWatch" style="width:auto">
+          <label for="sWatch">Decay alerts on Discord, even with the app closed: once a day your worker checks your Diamond+ accounts and posts to the webhook above when one is about to decay</label>
+        </div>
+        <div id="sWatchStatus" class="hint" style="margin-top:6px" aria-live="polite"></div>
+        <div class="hint" style="margin-top:4px">Needs your worker (Rank checks) and the webhook above. Your worker then keeps a short list: those accounts' Riot IDs, labels and decay estimates, never logins.</div>
+      </div>
+
+      <div class="grp" data-tab="security">
+        <div class="grp-h tab-same">Security</div>
+        <div class="fld fw" style="margin-bottom:14px">
+          <label>Storage</label>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <span id="sStorageStatus" class="hint" style="margin:0;flex:1;min-width:200px"></span>
+            <button type="button" id="sStorageProtect" class="hidden">Protect</button>
+          </div>
+        </div>
+        <div class="fld fw">
+          <label>Master password — encrypts the whole vault at rest with AES-256. There is no recovery: lose the password and the vault is gone.</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <input type="password" id="sVaultPass" placeholder="New master password" autocomplete="new-password" style="flex:1;min-width:170px">
+            <button id="sVaultSet">Set / change</button>
+            <button id="sVaultRemove" class="b-danger">Remove protection</button>
+          </div>
+          <div id="sVaultStatus" class="hint" style="margin-top:2px"></div>
+        </div>
+        <div class="sub-fld inline" style="padding-left:0;margin-top:14px">
+          <label for="sAutoLock">Auto-lock after</label>
+          <select id="sAutoLock" aria-describedby="sAutoLockHint"></select>
+        </div>
+        <div id="sAutoLockHint" class="hint" style="margin-top:6px">Only applies while a master password is set. Off means the vault stays unlocked until you lock it.</div>
+        <div class="sub-fld" style="padding-left:0;margin-top:12px">
+          <button type="button" id="sLockNow" class="b-danger" title="Lock the vault now — needs the master password to open again">Lock now</button>
+          <div class="hint" style="margin-top:6px">Locks this tab immediately. Other open tabs keep their own unlock state until you reload them.</div>
+        </div>
+      </div>
+
+      <div class="grp" data-tab="sync">
+        <div class="grp-h tab-same">Device sync</div>
         <div class="fw hint" style="margin-bottom:10px">
           Pushes the <b>encrypted</b> vault blob to your worker (KV). Same sync token on phone and PC.
           Last write wins. Needs a master password (Security) and a Backend URL with a KV binding (Rank checks), both above.
@@ -2242,6 +2363,24 @@
           <button type="button" id="sSyncPull">Pull from cloud</button>
         </div>
         <div id="sSyncStatus" class="hint" style="margin-top:8px"></div>
+      </div>
+
+      <div class="grp" data-tab="backup">
+        <div class="grp-h tab-same">Backup</div>
+        <div class="hint" style="margin-bottom:6px">Your vault lives only in this browser. A backup file is the copy you can bring back if the browser loses it.</div>
+        <div id="sBackupLast" class="hint" style="margin-bottom:14px"></div>
+        <!-- the same actions as the ⋯ menu, where you would look for them in Settings -->
+        <div class="bk-acts">
+          <button type="button" data-proxy="bExportEnc" class="b-gold">Export encrypted backup…</button>
+          <button type="button" data-proxy="bExport">Export backup (JSON, plaintext)</button>
+          <button type="button" data-proxy="bExportCsv">Export as CSV</button>
+          <button type="button" data-proxy="bImport">Import backup</button>
+          <button type="button" data-proxy="bImportCsv">Import CSV</button>
+        </div>
+        <div class="sub-fld inline" style="padding-left:0;margin-top:16px">
+          <label for="sExportDays">Remind me to export after</label>
+          <input id="sExportDays" type="number" min="1" max="365" value="30" style="max-width:90px"> <span class="hint" style="margin:0">days</span>
+        </div>
       </div>
 
     </div>
@@ -2309,7 +2448,7 @@
     </div>
     <div class="mdl-b">
     <div class="formgrid">
-      <div class="fw hint">One account per line, as <code>Name#TAG</code>. They all get the region below; add logins and notes to each one afterwards.</div>
+      <div class="fw hint">Paste <code>Name#TAG</code>s (one a line, or comma-separated), an <b>op.gg multi-search link</b>, or lines from the <b>lobby chat</b> ("Name #TAG joined the lobby"). A link brings its own region; the rest get the region below. Add logins and notes to each afterwards.</div>
       <div class="fld"><label>Region for all</label><select id="baRegion"></select></div>
       <div class="fld fw"><label>Accounts</label><textarea id="baList" data-autofocus rows="6" placeholder="Hide on Bush#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
     </div>
@@ -2433,7 +2572,7 @@
     </select>
     <button id="tFav" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Favorites</button>
     <button id="tArchived" aria-pressed="false" title="Show archived accounts instead of active ones">Archived</button>
-    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;padding:0 4px">
+    <label style="display:flex;align-items:center;gap:6px;font-size:calc(12px*var(--ts));color:var(--muted);cursor:pointer;padding:0 4px">
       <input type="checkbox" id="tSelectAll" style="width:auto">Select all shown
     </label>
   </div>
@@ -2443,7 +2582,7 @@
        negative margin it rides up on is predictable. -->
   <div id="tagbar" class="tagbar"></div>
   <div id="bulkbar" class="hidden" style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--teal) 38%,transparent);border-radius:var(--r-md);background:color-mix(in srgb,var(--teal) 7%,var(--panel));box-shadow:var(--sh-1)">
-    <span id="bulkCount" style="font-size:12px;color:var(--teal-txt);font-weight:600;letter-spacing:.02em"></span>
+    <span id="bulkCount" style="font-size:calc(12px*var(--ts));color:var(--teal-txt);font-weight:600;letter-spacing:.02em"></span>
     <select id="bulkStatus">
       <option value="">Set status…</option>
       <option value="active">Active</option>
@@ -2463,7 +2602,7 @@
   <!-- Filled from APP_VERSION at boot rather than typed in here, so the number in
        the footer can never disagree with the one the changelog toast announces. -->
   <div class="count" style="margin-top:8px">© 2026 MarvinPanVan · Smurf Tracker — not affiliated with Riot Games · Discord: marvinpanvan · <span id="appVer" class="ver"></span></div>
-  <div class="count" style="margin-top:4px;font-size:11px">Free for personal use. Do not resell, rebrand, publish modified versions, or use for anything malicious. <a href="https://github.com/MarvinPanVan/league-smurf-tracker/blob/main/LICENSE" target="_blank" rel="noreferrer" style="color:var(--gold-txt)">Terms</a></div>
+  <div class="count" style="margin-top:4px;font-size:calc(11px*var(--ts))">Free for personal use. Do not resell, rebrand, publish modified versions, or use for anything malicious. <a href="https://github.com/MarvinPanVan/league-smurf-tracker/blob/main/LICENSE" target="_blank" rel="noreferrer" style="color:var(--gold-txt)">Terms</a></div>
 
   <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
   <input type="file" id="fileInCsv" accept=".csv,text/csv" class="hidden">
@@ -2616,8 +2755,19 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.1.0";
+const APP_VERSION="2.2.0";
 const APP_CHANGELOG=[
+  {v:"2.2.0",items:[
+    "Themes: a whole look in one click, or colours that follow your best rank",
+    "Streamer mode (H) hides Riot IDs, logins, emails and notes",
+    "Settings in tabs; Effects and Text size; choose what each card shows",
+    "Champion art: each account's most-played champion, faded into its card",
+    "This week on the dashboard; New season resets every rank at once, with Undo",
+    "Bulk add reads op.gg multi-search links and the lobby chat",
+    "With a Riot key: mastery, win streaks and roles; search champ: and role:",
+    "Decay alerts on Discord, even with the app closed (redeploy your worker)",
+    "App icon shortcuts: Check all ranks, Add account",
+  ]},
   {v:"2.1.0",items:[
     "Play next picks the account that needs a game; Diamond+ warns before decay",
     "Stronger vault encryption — update every device you sync before pushing",
@@ -2811,6 +2961,12 @@ function rotationDays(a){
    checked, the closer it gets. Returns whole days left, below 0 when decaying. */
 const DECAY_RULES={DIAMOND:{cap:28,per:7,lp:50},MASTER:{cap:14,per:1,lp:75},GRANDMASTER:{cap:14,per:1,lp:75},CHALLENGER:{cap:14,per:1,lp:75}};
 function decayDays(a){
+  const st=decayState(a);
+  return st?Math.floor(st.bank-(Date.now()-st.at)/86400000):null;
+}
+// The bank of decay protection as of the latest reading — what decayDays counts
+// down from, and what the worker's daily alert check carries forward.
+function decayState(a){
   if(!isRanked(a)||a.status==="banned")return null;
   const s=a.stats, tier=(s.tier||"").toUpperCase();
   if(!DECAY_RULES[tier]||s.wins==null||s.losses==null||!s.updatedAt)return null;
@@ -2831,7 +2987,8 @@ function decayDays(a){
     if(games)bank=Math.min(rule.cap,bank+games*rule.per);
     bank=Math.max(0,bank-half);
   }
-  return Math.floor(bank-(Date.now()-pts[pts.length-1].t)/D);
+  const last=pts[pts.length-1];
+  return{bank,at:last.t,games:last.g,tier:last.tier};
 }
 /* Building an account: ranked opens at level 30 (and 20 champions owned, which no
    source shows). Until then the level is the account's progress; at 30 and still
@@ -3199,6 +3356,9 @@ function sanitizeAccount(a){
   if(!Array.isArray(a.tags))a.tags=[];
   if(!Array.isArray(a.history))a.history=[];
   if(a.puuid!=null&&!validPuuid(a.puuid))delete a.puuid;
+  if(a.mastery!=null){a.mastery=normMastery(a.mastery);if(!a.mastery)delete a.mastery}
+  if(a.masteryAt!=null&&!(Number(a.masteryAt)>0))delete a.masteryAt;
+  if(a.recent!=null){a.recent=normRecent(a.recent);if(!a.recent)delete a.recent}
   if(a.stats&&a.stats.seasons&&typeof a.stats.seasons==="object"){
     if(!Array.isArray(a.stats.seasons.solo))a.stats.seasons.solo=[];
     if(!Array.isArray(a.stats.seasons.flex))a.stats.seasons.flex=[];
@@ -3640,6 +3800,53 @@ function dateLabel(t,mode){
   if(isNaN(d))return"";
   if(mode==="month")return MONTHS[d.getMonth()]+" ’"+String(d.getFullYear()).slice(2);
   return d.getDate()+" "+MONTHS[d.getMonth()]+(mode==="year"&&d.getFullYear()!==new Date().getFullYear()?" "+d.getFullYear():"");
+}
+/* ---- Discord alerts while the app is closed ----
+   The app keeps the worker's watch list current: Diamond+ accounts, each with the
+   decay estimate as of its latest reading. The worker's daily cron does the rest.
+   A token of this browser's own owns the list on the worker (see /watch). */
+function watchUrl(){
+  try{const u=new URL(cfg.backendUrl);u.pathname=u.pathname.replace(/\/?$/,"/watch");u.search="";return u.href}catch(e){return""}
+}
+function watchList(){
+  return accounts.filter(a=>isLive(a)&&isRanked(a)).map(a=>{const st=decayState(a);return st?{a,st}:null}).filter(Boolean)
+    .sort((x,y)=>(x.st.bank-(Date.now()-x.st.at)/864e5)-(y.st.bank-(Date.now()-y.st.at)/864e5)).slice(0,20)
+    .map(({a,st})=>({name:a.gameName,tag:a.tagLine,region:(REGIONS[a.region]||REGIONS.EUW).opgg,puuid:validPuuid(a.puuid)?a.puuid:undefined,
+      label:a.label||undefined,tier:st.tier,division:a.stats.division||null,lp:a.stats.lp??null,games:st.games,bank:Math.round(st.bank*100)/100,at:st.at}));
+}
+let watchTakenSaid=false, watchSyncT=0;
+async function syncWatch(force){
+  if(!cfg.watch||!cfg.backendUrl||!cfg.discordWebhook||!cfg.watchToken||previewMode||vaultLocked())return false;
+  if(!force&&Date.now()-(cfg.watchSyncedAt||0)<10*60000)return false;
+  try{
+    const res=await fetch(watchUrl(),{method:"PUT",headers:{"Content-Type":"application/json",Authorization:"Bearer "+cfg.watchToken},
+      body:JSON.stringify({webhook:cfg.discordWebhook,accounts:watchList()})});
+    const d=await res.json().catch(()=>null);
+    if(res.ok){cfg.watchSyncedAt=Date.now();saveCfg();return true}
+    if(res.status===409&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker already sends decay alerts for another browser — turn them off there first")}
+    else if((res.status===405||res.status===404&&!d)&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker is an older version without decay alerts — redeploy it (Settings → Rank checks → the guide)")}
+    else if(d&&d.code==="no_kv")toast("Decay alerts need sync storage on your worker (a KV namespace bound as VAULT)");
+  }catch(e){}
+  return false;
+}
+// after a check the estimates move; a few seconds' wait lets a whole Check all land first
+function syncWatchSoon(){clearTimeout(watchSyncT);watchSyncT=setTimeout(()=>syncWatch(true),4000)}
+async function stopWatch(){
+  if(!cfg.watchToken||!cfg.backendUrl)return;
+  try{await fetch(watchUrl(),{method:"DELETE",headers:{Authorization:"Bearer "+cfg.watchToken}})}catch(e){}
+}
+async function updateWatchStatus(){
+  const el=$("sWatchStatus");if(!el)return;
+  if(!cfg.watch){el.textContent="";return}
+  try{
+    const res=await fetch(watchUrl(),{headers:{Authorization:"Bearer "+cfg.watchToken}});
+    const d=await res.json().catch(()=>null);
+    el.textContent=res.ok&&d?"On — watching "+d.accounts+" account"+(d.accounts===1?"":"s")
+      +(d.lastRun?" · last checked "+timeAgo(d.lastRun):" · first check at the next daily run")+(d.lastSent?" · last alert "+timeAgo(d.lastSent):"")
+      :res.status===409?"Another browser owns the alerts on this worker."
+      :res.status===405?"Your worker is an older version without decay alerts — redeploy it, then save here again."
+      :"On, but the worker does not have the list yet — it is sent after your next check.";
+  }catch(e){el.textContent="On — could not reach the worker to check."}
 }
 function postDiscord(content){
   if(!cfg.discordWebhook)return;
@@ -4478,7 +4685,7 @@ function mapBackendPayload(d){
   return {found:true,tier:(d.tier||"UNRANKED").toUpperCase(),division:d.division||null,lp:d.lp??null,wins:d.wins??null,losses:d.losses??null,level:d.level??null,peak:normPeak(d.peak),seasons:d.seasons||null,flex:normPeak(d.flex),champs:Array.isArray(d.champs)?d.champs.slice(0,10):null,lpAt:normLpAt(d.lpAt),icon:safeIconUrl(d.icon),mmr:d.mmr||null,avgRecent:d.avgRecent||null,asOf:"backend",note:null,uncertain,source:d.source||null,updatedAt:Date.now(),
     puuid:validPuuid(d.puuid)?d.puuid:null,
     riotId:d.riotId&&typeof d.riotId==="object"&&d.riotId.name&&d.riotId.tag?{name:String(d.riotId.name).slice(0,32),tag:String(d.riotId.tag).slice(0,8)}:null,
-    riotError:d.riotError||null};
+    riotError:d.riotError||null,mastery:normMastery(d.mastery)};
 }
 async function fetchViaBackend(acc){
   const r=REGIONS[acc.region]||REGIONS.EUW;
@@ -4488,6 +4695,7 @@ async function fetchViaBackend(acc){
   url.searchParams.set("tag",acc.tagLine);
   url.searchParams.set("region",r.opgg);
   if(validPuuid(acc.puuid))url.searchParams.set("puuid",acc.puuid);
+  if(wantsMastery(acc))url.searchParams.set("mastery","1");
   const text=await fetchWithTimeout(url.href,12000);
   return mapBackendPayload(JSON.parse(text));
 }
@@ -4498,12 +4706,12 @@ async function fetchViaBackendBatch(list){
   try{url=new URL(cfg.backendUrl)}catch(e){return null}
   const accounts=list.map(a=>{
     const r=REGIONS[a.region]||REGIONS.EUW;
-    return{name:a.gameName,tag:a.tagLine,region:r.opgg,id:a.id,puuid:validPuuid(a.puuid)?a.puuid:undefined};
+    return{name:a.gameName,tag:a.tagLine,region:r.opgg,id:a.id,puuid:validPuuid(a.puuid)?a.puuid:undefined,mastery:wantsMastery(a)||undefined};
   });
   const c=new AbortController();const t=setTimeout(()=>c.abort(),45000);
   try{
     const res=await fetch(url.href,{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({accounts:accounts.map(({name,tag,region,puuid})=>({name,tag,region,puuid}))}),signal:c.signal});
+      body:JSON.stringify({accounts:accounts.map(({name,tag,region,puuid,mastery})=>({name,tag,region,puuid,mastery}))}),signal:c.signal});
     if(!res.ok)throw new Error("HTTP "+res.status);
     const data=await res.json();
     if(!data||!Array.isArray(data.results))throw new Error("bad batch response");
@@ -4555,6 +4763,43 @@ function normLpAt(p){
   return{t,tier,division:normDivision(tier,DIV_ORDER[div]!==undefined?div:null),
     lp:p.lp==null||p.lp===""?null:(Number(p.lp)||0)};
 }
+/* Champion mastery, from a worker with a Riot key: the account's top five, kept on
+   the account (not on a reading) because it changes over weeks, not games. It is
+   asked for at most every three days per account — one more Riot call a lookup. */
+const MASTERY_EVERY=3*86400000;
+function normMastery(list){
+  if(!Array.isArray(list))return null;
+  const out=list.slice(0,5).map(m=>m&&typeof m==="object"&&typeof m.name==="string"&&/^[A-Za-z0-9 '.&-]{1,24}$/.test(m.name)?{
+    name:m.name,level:Number.isFinite(m.level)?Math.max(0,Math.min(1000,Math.round(m.level))):null,
+    points:Number.isFinite(m.points)?Math.max(0,Math.round(m.points)):null}:null).filter(Boolean);
+  return out.length?out:null;
+}
+/* The last five ranked games, kept on the account from the latest /form answer
+   (Details opened, or a single Refresh), so a card can say "3W streak" and which
+   role the account has been played in without asking Riot again. */
+const ROLES=["Top","Jungle","Mid","Bot","Support"];
+function normRecent(r){
+  if(!r||typeof r!=="object"||!(Number(r.at)>0)||!Array.isArray(r.games))return null;
+  const games=r.games.slice(0,5).filter(g=>g&&typeof g==="object").map(g=>({win:g.win===true,
+    champ:typeof g.champ==="string"&&/^[A-Za-z0-9 '.&-]{1,24}$/.test(g.champ)?g.champ:null,
+    role:ROLES.includes(g.role)?g.role:null,at:Number.isFinite(g.at)?g.at:null}));
+  return games.length?{at:Number(r.at),games}:null;
+}
+const RECENT_FOR=7*86400000; // older than a week, a streak is history, not form
+function streakOf(a){
+  const r=normRecent(a.recent);if(!r||Date.now()-r.at>RECENT_FOR)return null;
+  const g=r.games.slice().sort((x,y)=>(y.at||0)-(x.at||0));
+  let n=0;while(n<g.length&&g[n].win===g[0].win)n++;
+  return n>=3?{win:g[0].win,n}:null;
+}
+function mainRole(a){
+  const r=normRecent(a.recent);if(!r)return null;
+  const count={};for(const g of r.games)if(g.role)count[g.role]=(count[g.role]||0)+1;
+  const best=Object.entries(count).sort((x,y)=>y[1]-x[1])[0];
+  return best&&best[1]>=3?best[0]:null;
+}
+function wantsMastery(a){return !!cfg.backendUrl&&!(Number(a.masteryAt)>Date.now()-MASTERY_EVERY)}
+function fmtPoints(n){return n==null?"":n>=1e6?(n/1e6).toFixed(n>=1e7?0:1).replace(/\.0$/,"")+"M":n>=1e3?Math.round(n/1e3)+"k":String(n)}
 function normChamps(list){
   if(!Array.isArray(list))return null;
   const num=(v,d)=>v==null||v===""||isNaN(Number(v))?d:Number(v);
@@ -4775,17 +5020,19 @@ function takeIdentity(acc,s){
   if(r&&r.name&&r.tag&&(r.name!==acc.gameName||r.tag!==acc.tagLine)){
     const was=acc.gameName+"#"+acc.tagLine, same=was.toLowerCase()===(r.name+"#"+r.tag).toLowerCase();
     acc.gameName=r.name;acc.tagLine=r.tag;
-    if(!same)toast("Renamed on Riot: "+was+" is now "+r.name+"#"+r.tag);
+    if(!same)toast(streamerOn()?"Renamed on Riot: "+plainName(acc)+" follows its new Riot ID":"Renamed on Riot: "+was+" is now "+r.name+"#"+r.tag);
   }
   // Once a session, not once per account: sixty toasts about one expired key help nobody.
   if(s.riotError==="key"&&!riotKeyWarned){
     riotKeyWarned=true;
     toast("Your worker's Riot API key was refused, so this check used op.gg. Development keys expire after 24 hours.");
   }
-  delete s.puuid;delete s.riotId;delete s.riotError;
+  if(s.mastery){acc.mastery=s.mastery;acc.masteryAt=Date.now()}
+  delete s.puuid;delete s.riotId;delete s.riotError;delete s.mastery;
 }
 function commitStats(id,acc,s){
   takeIdentity(acc,s);
+  if(cfg.watch&&s&&DECAY_RULES[String(s.tier||"").toUpperCase()])syncWatchSoon();
   // a fresh read may mean fresh games — an open drawer fetches them again
   if(formCache.has(id)){formCache.delete(id);if(openInfo.has(id))loadForm(id)}
   // A profile that does not exist is not a failed request to be retried later —
@@ -4937,10 +5184,10 @@ async function checkAll(ids){
   for(const acc of list){
     if(run.stop)break;
     if(done.has(acc.id))continue;
-    run.current=acc.label||acc.gameName;renderRun();
+    run.current=plainName(acc);renderRun();
     // null = superseded/deleted; "missing" = found:false; false = transport fail; true = refreshed.
     const result=await check(acc.id);
-    if(result===false)run.failed.push({id:acc.id,name:acc.label||acc.gameName});
+    if(result===false)run.failed.push({id:acc.id,name:plainName(acc)});
     else if(result===true)run.ok++;
     else if(result==="missing")run.missing++;
     run.done++;renderRun();
@@ -4985,6 +5232,12 @@ function markPlayed(id){
 function seasonReset(id){
   const a=accounts.find(x=>x.id===id); if(!a||!a.stats){toast("Nothing to reset");return}
   openMore.delete(id);
+  seasonResetCore(a);
+  renderCard(id); renderDash(); renderRibbon();
+  saveThen("Season reset — previous rank kept in Past seasons");
+}
+// The data side of a season reset, shared by one account's ⋯ menu and New season.
+function seasonResetCore(a){
   const s=a.stats;
   const seasons=normSeasons(s.seasons)||{solo:[],flex:[]};
   if(s.tier&&s.tier!=="UNRANKED"){
@@ -5003,8 +5256,48 @@ function seasonReset(id){
     note:null,updatedAt:Date.now(),seasonResetAt:Date.now()
   };
   a.goal=null;
-  renderCard(id); renderDash(); renderRibbon();
-  saveThen("Season reset — previous rank kept in Past seasons");
+}
+/* New season: the same reset for every ranked account at once, for the day a
+   split ends, instead of thirty trips through thirty ⋯ menus. Archived and
+   never-ranked accounts are left alone. One Undo puts them all back. */
+function newSeasonAll(){
+  const list=accounts.filter(a=>!a.archived&&isRanked(a));
+  if(!list.length){toast("No ranked accounts to start a new season for");return}
+  if(!confirm("Start a new season for "+list.length+" ranked account"+(list.length===1?"":"s")+"?\n\nEach one's current rank moves into its Past seasons, and it shows as unranked until it is checked again."))return;
+  const before=new Map(list.map(a=>[a.id,JSON.parse(JSON.stringify(a))]));
+  for(const a of list)seasonResetCore(a);
+  render();
+  saveThen(list.length+" account"+(list.length===1?"":"s")+" moved to the new season","Undo",()=>{
+    accounts=accounts.map(a=>before.has(a.id)?before.get(a.id):a);
+    render();saveThen("New season undone");
+  });
+}
+/* This week: the last seven days at a glance — LP gained across the counted
+   accounts, games played and who climbed most. Not "since your last visit",
+   which the band over the grid already says: the same week however often the
+   app is opened. Like Group climb, an account first checked during the week
+   counts from that check, and a new season inside the week starts it afresh
+   rather than reading as a fall to Iron. */
+function weekRecap(pool,now=Date.now()){
+  const from=now-7*86400000;
+  let lp=0,games=0,moved=0,best=null;
+  for(const a of pool||[]){
+    const pts=(a.history||[]).filter(h=>+h.t&&+h.t<=now&&ladderLP(h)!=null).sort((x,y)=>x.t-y.t);
+    if(!pts.length)continue;
+    const last=pts[pts.length-1];
+    if(last.t<from)continue; // not checked this week: no telling what it did
+    let start=pts[0];
+    for(let i=0;i<pts.length;i++){
+      if(pts[i].t<=from)start=pts[i];
+      else if(i&&seasonBreak(pts[i-1],pts[i]))start=pts[i];
+    }
+    if(start===last)continue;
+    const d=ladderLP(last)-ladderLP(start);
+    lp+=d;moved++;
+    if(last.w!=null&&last.l!=null&&start.w!=null&&start.l!=null)games+=Math.max(0,(last.w+last.l)-(start.w+start.l));
+    if(d>0&&(!best||d>best.d))best={a,d:Math.round(d)};
+  }
+  return moved?{lp:Math.round(lp),games,moved,best}:null;
 }
 function poolLpTrend(pool){
   // Average absolute ladder position across the counted pool (same scale as the
@@ -5153,8 +5446,8 @@ function renderCompare(){
     const rank=ranked?tierLabel(s):!hasReading(s)?"Never checked":s.found===false?"Not found":"Unranked";
     return `<div class="cmp-side">
       <span class="cmp-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}</span>
-      <div class="cmp-nm" title="${esc(acc.label||acc.gameName)}">${esc(acc.label||acc.gameName)}</div>
-      <div class="cmp-id">${esc(acc.gameName)}#${esc(acc.tagLine)} · ${esc(acc.region)}</div>
+      <div class="cmp-nm" title="${esc(plainName(acc))}">${nameOf(acc)}</div>
+      <div class="cmp-id">${sens(esc(acc.gameName)+"#"+esc(acc.tagLine))} · ${esc(acc.region)}</div>
       <div class="cmp-rk${ranked?"":" q"}" style="color:${tierColor(s.tier)}">${ranked?crest(s.tier,"cmp-crest"):""}<span>${esc(rank)}</span></div>
       <div class="cmp-lp">${ranked&&s.lp!=null?esc(s.lp+" LP"):"&nbsp;"}</div>
     </div>`;
@@ -5195,12 +5488,12 @@ function renderCompare(){
 /* Sixty accounts is the point where "type some letters and see what sticks" stops
    being enough. The operators are the filters that already exist in the toolbar,
    reachable without leaving the keyboard:
-     tier:diamond   region:euw   is:stale|never|flagged|banned|fav|goal|decay|ready|leveling
+     tier:diamond   region:euw   champ:yasuo   role:mid   is:stale|never|flagged|banned|fav|goal|decay|ready|leveling
      >plat  >=plat  <gold  <=gold      (rank at least / below)
    Anything not recognised as an operator stays a plain search term, so a stray
    colon in a note never silently swallows the rest of the query. */
 function parseQuery(q){
-  const out={terms:[],tier:"",region:"",is:[],min:null,max:null};
+  const out={terms:[],tier:"",region:"",is:[],min:null,max:null,champ:[],role:""};
   for(const raw of String(q||"").trim().split(/\s+/)){
     if(!raw)continue;
     const tok=raw.toLowerCase();
@@ -5213,6 +5506,12 @@ function parseQuery(q){
       const r=Object.keys(REGIONS).find(x=>x.toLowerCase()===m[1]||x.toLowerCase().startsWith(m[1]));
       if(r){out.region=r;continue}
     }
+    // champ:yasuo — played this season (op.gg's list) or in its top mastery
+    if((m=/^role:(.+)$/.exec(tok))){
+      const r=ROLES.find(x=>x.toLowerCase().startsWith(m[1]))||({mid:"Mid",adc:"Bot",bottom:"Bot",sup:"Support",supp:"Support",jg:"Jungle",jng:"Jungle"})[m[1]];
+      if(r){out.role=r;continue}
+    }
+    if((m=/^(?:champ|c):(.+)$/.exec(tok))){out.champ.push(m[1].replace(/[^a-z0-9]/g,""));continue}
     if((m=/^is:(.+)$/.exec(tok))){
       if(["stale","never","flagged","banned","fav","goal","decay","ready","leveling"].includes(m[1])){out.is.push(m[1]);continue}
     }
@@ -5254,6 +5553,11 @@ function passesBaseFilters(a,Q,{forceActive=false}={}){
     if(i<0)return false;
     if(Q.min!=null&&i<Q.min)return false;
     if(Q.max!=null&&i>=Q.max)return false;
+  }
+  if(Q.role&&mainRole(a)!==Q.role)return false;
+  for(const c of Q.champ||[]){
+    const names=[...(normChamps(a.stats&&a.stats.champs)||[]),...(normMastery(a.mastery)||[])].map(x=>x.name.toLowerCase().replace(/[^a-z0-9]/g,""));
+    if(!names.some(n=>n.startsWith(c)))return false;
   }
   for(const f of Q.is){
     if(f==="stale"&&(!isLive(a)||!isStale(a)))return false;
@@ -5694,6 +5998,7 @@ function syncDashToggle(){
   setHTML(b,icon("chevron")+" "+(cfg.dashCollapsed?"Show stats":"Hide stats"));
 }
 function renderDash(){
+  applyRankTheme(); // a new best tier is news the dashboard already gets; the colours follow it
   const el=$("dash");
   const Q=parseQuery(ui.search);
   // Chore counts use the same toolbar filters as the grid (region/tag/search/…),
@@ -5713,7 +6018,7 @@ function renderDash(){
   let best=null;
   pool.forEach(a=>{if(rankValue(a.stats)>rankValue(best&&best.stats))best=a});
   const topChamps=mergeChampions(pool);
-  const bestTxt=best&&rankValue(best.stats)>=0?esc(best.label||best.gameName)+" <small>"+esc(shortRank(best.stats)||"")+"</small>":"—";
+  const bestTxt=best&&rankValue(best.stats)>=0?nameOf(best)+" <small>"+esc(shortRank(best.stats)||"")+"</small>":"—";
   const regCount={};allActive.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
   const regTxt=Object.entries(regCount).map(([r,n])=>r+" "+n).join(" · ");
   const regN=Object.keys(regCount).length;
@@ -5736,7 +6041,7 @@ function renderDash(){
   const rotN=countPool.filter(needsRotation).length;
   const decayN=countPool.filter(decayRisk).length;
   const next=playNext(countPool);
-  const poolTrend=poolLpTrend(pool);
+  const poolTrend=poolLpTrend(pool), week=weekRecap(pool);
   // These are filter toggles, not links — they say so to a screen reader as well
   // as by lighting up.
   const gem=(tier,label,n,colour)=>`<button class="gem gem-b${ui.tier===tier?" on":""}" data-tier="${tier}" aria-pressed="${ui.tier===tier}" title="Show only these">`
@@ -5755,7 +6060,7 @@ function renderDash(){
   </div>
   <div class="dash">
     <div class="stat"><div class="k">Accounts</div><div class="v">${allActive.length} <small class="parts"><span>· ${allActive.filter(a=>a.fav).length} ★</span>${bannedN?` <span>· ${bannedN} banned</span>`:""}${archivedN?` <span>· ${archivedN} archived</span>`:""}</small></div></div>
-    <div class="stat"><div class="k">Best account</div><div class="v" style="font-size:14px">${bestTxt}</div></div>
+    <div class="stat"><div class="k">Best account</div><div class="v" style="font-size:calc(14px*var(--ts))">${bestTxt}</div></div>
     <div class="stat"><div class="k">Season W/L</div><div class="v nw">${W}<small>W</small> ${L}<small>L</small></div>
       <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>
     <div class="stat"><div class="k">Regions</div><div class="v">${regN||"—"}${regN?` <small>${regN===1?"region":"regions"}</small>`:""}</div>
@@ -5769,11 +6074,18 @@ function renderDash(){
     ${dupN?`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`:""}
     ${next?`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
-      <div class="v" style="font-size:14px">${esc(next.a.label||next.a.gameName)}</div><div class="s-note">${esc(next.why)}</div></button>`:""}
+      <div class="v" style="font-size:calc(14px*var(--ts))">${nameOf(next.a)}</div><div class="s-note">${esc(next.why)}</div></button>`:""}
     ${decayN?`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left — estimated from the games seen between checks"><div class="k">Decay risk</div>
       <div class="v" style="color:#f0b45a">${decayN}</div><div class="s-note">a week or less banked — play a ranked game</div></button>`:""}
     ${rotN?`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
       <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`:""}
+    ${week?(()=>{
+      const note=(week.games?week.games+" game"+(week.games===1?"":"s")+" · ":"")
+        +(week.best?"best "+nameOf(week.best.a)+" +"+week.best.d:week.moved+" account"+(week.moved===1?"":"s")+" checked");
+      const inner=`<div class="k">This week</div><div class="v">${week.lp>0?"+":week.lp<0?"−":""}${Math.abs(week.lp)} <small>LP</small></div><div class="s-note">${note}</div>`;
+      return week.best?`<button class="stat stat-b" id="weekStat" data-next="${idAttr(week.best.a.id)}" title="The last seven days across the counted accounts — click to see the best climber">${inner}</button>`
+        :`<div class="stat" id="weekStat" title="The last seven days across the counted accounts">${inner}</div>`;
+    })():""}
     <div class="stat" id="ladderTrendStat"${poolTrend?` title="${esc(poolTrend.note)}"`:""}>
       <div class="k">Group climb</div>
       ${poolTrend
@@ -5908,9 +6220,11 @@ async function loadForm(id){
     const d=await res.json().catch(()=>null);
     if(res.ok&&d&&Array.isArray(d.games)){
       const games=d.games.slice(0,5).filter(g=>g&&typeof g==="object").map(g=>({win:g.win===true,
-        champ:String(g.champ||"?").slice(0,24),kda:[g.k,g.d,g.a].map(n=>Number.isFinite(n)?n:"?").join("/"),
+        champ:String(g.champ||"?").slice(0,24),role:ROLES.includes(g.role)?g.role:null,kda:[g.k,g.d,g.a].map(n=>Number.isFinite(n)?n:"?").join("/"),
         min:Number.isFinite(g.min)?g.min:null,at:Number.isFinite(g.at)?g.at:null}));
       next={state:"ok",games,at:Date.now()};
+      const keep=accounts.find(a=>a.id===id);
+      if(keep&&!previewMode){keep.recent=normRecent({at:Date.now(),games});if(!keep.recent)delete keep.recent;saveDB()}
     }else next={state:"error",msg:res.status===503?"Riot's rate limit — try again in a minute"
       :res.status===404?"Your worker has no Riot API key, or is an older version"
       :"Could not load them"+(d&&d.error?" ("+String(d.error).slice(0,80)+")":"")};
@@ -5935,7 +6249,55 @@ function formHTML(a){
       +`<span class="c-gm">${g.min!=null?esc(g.min)+" min":""}</span>`
       +`<span class="c-gm">${g.at?esc(timeAgo(g.at)):""}</span></div>`).join(""));
 }
-function hasInfo(a){const p=infoParts(a);return !!(p.solo.length||p.flexHist.length||p.champs.length||p.flex)}
+/* ---- champion art ----
+   From Riot's Data Dragon, which serves splash art by champion id ("MonkeyKing",
+   "Kaisa"), not by the name people see. Most names map by squeezing out spaces
+   and punctuation; the ones that do not are listed. An <img loading="lazy"> and
+   not a CSS background, so a card far down the page fetches nothing until it is
+   near the screen, and one that fails to load is simply removed. */
+const CHAMP_ID_FIX={"wukong":"MonkeyKing","nunu & willump":"Nunu","renata glasc":"Renata","kai'sa":"Kaisa","cho'gath":"Chogath",
+  "vel'koz":"Velkoz","kha'zix":"Khazix","bel'veth":"Belveth","leblanc":"Leblanc","fiddlesticks":"Fiddlesticks"};
+function champKey(name){
+  const n=String(name||"").trim();
+  if(!n||!/^[A-Za-z0-9 '.&-]+$/.test(n))return null; // what champion names are made of, and nothing else
+  const fixed=CHAMP_ID_FIX[n.toLowerCase()];if(fixed)return fixed;
+  const k=n.split(/[^A-Za-z0-9]+/).filter(Boolean).map(w=>w[0].toUpperCase()+w.slice(1)).join("");
+  return /^[A-Za-z][A-Za-z0-9]{1,29}$/.test(k)?k:null;
+}
+let pendingChampArt=null;
+function champArtOn(){return pendingChampArt===null?cfg.champArt!==false:pendingChampArt}
+function mainChamp(a){const c=normChamps(a.stats&&a.stats.champs);return c&&c.length?c[0].name:null}
+function champArtHTML(a){
+  if(!champArtOn())return"";
+  const k=champKey(mainChamp(a));if(!k)return"";
+  return`<img class="c-art" src="https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${k}_0.jpg" alt="" aria-hidden="true" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
+}
+/* ---- streamer mode ----
+   For streaming or sharing the screen: whatever would let a viewer find an
+   account — its Riot ID, login, email, notes, or a name that is only its Riot
+   name — is blurred on screen and left out of tooltips and messages. The
+   labels you gave your accounts stay: you chose those. One key (H) or the ⋯
+   menu turns it on; turning it off takes a click on the header's pill, so a
+   stray key can never reveal anything mid-stream. */
+function streamerOn(){return !!cfg.streamer}
+function sens(html){return`<span class="sens">${html}</span>`}
+function nameOf(a){return a.label?esc(a.label):sens(esc(a.gameName||""))}
+function plainName(a){return a.label||(streamerOn()?"an unlabelled account":a.gameName||"")}
+function applyStreamer(){
+  const on=streamerOn();
+  document.body.classList.toggle("streamer",on);
+  const pill=$("streamerPill");if(pill)pill.classList.toggle("hidden",!on);
+  const b=$("bStreamer");if(b)b.textContent=on?"Streamer mode: on":"Streamer mode";
+}
+function setStreamer(on){
+  cfg.streamer=on?true:null;saveCfg();applyStreamer();render();
+  toast(on?"Streamer mode on — Riot IDs, logins, emails and notes are hidden":"Streamer mode off");
+}
+function drawerTitle(){
+  const h=new Set(cardHidden());
+  return CARD_PARTS.filter(([k])=>h.has(k)).map(p=>p[1]).concat(["past seasons, flex rank, champions"]).join(", ").replace(/^./,c=>c.toUpperCase());
+}
+function hasInfo(a){const p=infoParts(a);return !!(p.solo.length||p.flexHist.length||p.champs.length||p.flex||(a.mastery&&a.mastery.length))}
 // The one-line summary on the drawer pull, so the card says what is folded away
 // before you open it.
 function infoPeek(a){
@@ -5964,7 +6326,8 @@ function secHTML(a,key,label,n,peek,body){
 }
 function infoBlockHTML(a,rev){
   const {solo,flexHist,champs,flex}=infoParts(a);
-  if(!solo.length&&!flexHist.length&&!champs.length&&!flex&&!canForm(a))return"";
+  const mastery=normMastery(a.mastery)||[];
+  if(!solo.length&&!flexHist.length&&!champs.length&&!flex&&!mastery.length&&!canForm(a))return"";
   // through tierLabel like everywhere else — the drawer was the fifth place
   // building this string by hand, and the fifth place printing "Challenger II"
   const rank=e=>tierLabel(e)+(e.lp!=null?" · "+e.lp+" LP":"");
@@ -5993,6 +6356,13 @@ function infoBlockHTML(a,rev){
         +`<span class="c-wr${c.wr>=50?" wr-good":""}">${esc(c.wr)}%</span>`
         +(kdaCol?`<span class="c-kd">${c.kda!=null?esc(c.kda):"—"}</span>`:""))).join(""));
   }
+  if(mastery.length){
+    const top=mastery[0];
+    out+=secHTML(a,"mastery","Mastery",mastery.length,
+      `<span class="c-nm">${esc(top.name)}</span>${top.level!=null?" · M"+esc(top.level):""}`,
+      mastery.map(m=>`<div class="chp" style="grid-template-columns:1fr auto auto"><span class="c-nm">${esc(m.name)}</span>`
+        +`<span class="c-gm">${m.level!=null?"M"+esc(m.level):""}</span><span class="c-kd">${esc(fmtPoints(m.points))}${m.points!=null?" pts":""}</span></div>`).join(""));
+  }
   return `<div class="login info${rev||""}">${out}</div>`;
 }
 // Split out of cardHTML so opening the editor can swap this one block instead of
@@ -6002,7 +6372,7 @@ function noteBlockHTML(a,rev){
     +`<textarea data-f="notetext" rows="3" placeholder="Anything worth remembering about this account…">${esc(noteDraft)}</textarea></div>`;
   // Always clickable, so there is no separate "add a note" action to find — an
   // empty one is just a quiet line rather than a filled box.
-  if(a.notes)return`<div class="c-notes" data-act="noteedit" title="Click to edit"><span class="k">Notes ${icon("pencil")}</span>${esc(a.notes)}</div>`;
+  if(a.notes)return`<div class="c-notes" data-act="noteedit" title="Click to edit"><span class="k">Notes ${icon("pencil")}</span>${sens(esc(a.notes))}</div>`;
   return`<div class="c-notes blank" data-act="noteedit" title="Click to write a note">${icon("pencil")} Add a note</div>`;
 }
 // Replace only the note block, leaving the rest of the card's DOM alone. Going
@@ -6116,7 +6486,7 @@ function openRankModal(id){
   const m=$("rankModal");
   m.dataset.id=id;
   $("rankTitle").textContent="Rank by hand";
-  $("rankSub").textContent=(a.label&&a.label!==a.gameName?a.label+" · ":"")+a.gameName+"#"+a.tagLine;
+  $("rankSub").textContent=streamerOn()?(a.label||"Riot ID hidden"):(a.label&&a.label!==a.gameName?a.label+" · ":"")+a.gameName+"#"+a.tagLine;
   renderRankBody(id,true);
   m.classList.remove("hidden");
 }
@@ -6202,8 +6572,8 @@ function rowHTML(a,i){
       <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}">
       <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
       <span class="rw-id">
-        <span class="rw-nm" title="${esc(a.label||a.gameName)}"><span class="nm-t">${esc(a.label||a.gameName)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
-        <span class="rw-tag">${esc(a.gameName)}#${esc(a.tagLine)}</span>
+        <span class="rw-nm" title="${esc(plainName(a))}"><span class="nm-t">${nameOf(a)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
+        <span class="rw-tag sens">${esc(a.gameName)}#${esc(a.tagLine)}</span>
         ${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}
       </span>
       <span class="rw-spark">${sparkline(a.history,col)
@@ -6257,12 +6627,12 @@ function tileHTML(a){
     if(s.lp!=null)lp=s.lp+" LP";
   }else rank="Unranked";
   const st=STATUS[a.status]||STATUS.active;
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc((a.label||a.gameName)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
-    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
+    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
     <span class="t-rk" style="color:${col}">${esc(rank)}</span>
     ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
   </div></div>`;
@@ -6283,6 +6653,7 @@ function cardHTML(a,i){
     if(dv)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
   }
   if(isClimbing(hist))deltaChip+='<span class="delta d-up" title="LP has gone up 3 checks in a row">'+icon("flame","flame")+' Climbing</span>';
+  {const st=streakOf(a);if(st)deltaChip+=`<span class="delta ${st.win?"d-up":"d-down"} streak" title="The last ${st.n} ranked games were all ${st.win?"wins":"losses"}">${st.n}${st.win?"W":"L"} streak</span>`}
   {
     const dd=decayDays(a);
     if(dd!==null&&dd<=7){
@@ -6369,7 +6740,7 @@ function cardHTML(a,i){
   const railed=a.status&&a.status!=="active";
   const icon0=iconUrl(s);
   return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}${openInfo.has(a.id)?" info-open":""}" data-id="${idAttr(a.id)}"${railed?` style="--st:${st.color}"`:""}>
-    ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
+    ${champArtHTML(a)}${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <div class="c-head">
       <div class="c-portrait">
         <span class="c-initial">${esc(initial)}</span>
@@ -6382,8 +6753,8 @@ function cardHTML(a,i){
       <div class="c-id">
         <!-- the name is ellipsised at the card's width, so the full one has to be
              available somewhere; hovering is the only place left for it -->
-        <div class="c-name"><span title="${esc(a.label||a.gameName)}">${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f" title="${esc(st.label)}">${esc(st.short||st.label)}</span>`:""}</div>
-        <button class="rid" data-act="copyid" title="Copy Riot ID"><span>${esc(a.gameName)}<b>#${esc(a.tagLine)}</b></span></button>
+        <div class="c-name"><span title="${esc(plainName(a))}"${a.label?"":' class="sens"'}>${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f" title="${esc(st.label)}">${esc(st.short||st.label)}</span>`:""}</div>
+        <button class="rid" data-act="copyid" title="Copy Riot ID"><span class="sens">${esc(a.gameName)}<b>#${esc(a.tagLine)}</b></span></button>
       </div>
       <div class="c-chrome">
         <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select for bulk actions">
@@ -6423,7 +6794,8 @@ function cardHTML(a,i){
     ${rankChart(hist,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(hist),a.id,peakV,peak)}
     ${microStats.length?`<div class="c-stats">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
-    ${(a.tags||[]).length?`<div class="ctags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""}
+    ${(()=>{const role=mainRole(a),tags=a.tags||[];
+      return role||tags.length?`<div class="ctags">${role?`<span class="role-tag" title="Played in 3 or more of the last 5 ranked games">${esc(role)}</span>`:""}${tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""})()}
     ${loginOpen?`<div class="login${rv("login")}">
       ${a.login&&a.password?`<button class="lseq" data-act="copyseq">${loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`:""}
       <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
@@ -6451,7 +6823,7 @@ function cardHTML(a,i){
       </div>
     </div>
     ${openInfo.has(a.id)&&(hasInfo(a)||canForm(a))?infoBlockHTML(a,rv("info")):""}
-    ${hasInfo(a)||cfg.compactCards||canForm(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${cfg.compactCards?"Chart, stats, past seasons, flex rank, champions":"Past seasons, flex rank, champions"}">
+    ${hasInfo(a)||cardHidden().length||canForm(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${esc(drawerTitle())}">
       <span class="c-dl" aria-hidden="true"></span>
       <span class="c-dt">${open?"Close":"Details"}</span>
       <svg class="ico" viewBox="0 0 26 12" aria-hidden="true"><polyline points="2 3 13 10 24 3"/></svg>
@@ -6897,7 +7269,7 @@ function submitForm(){
       &&a.gameName.toLowerCase()===gameName.toLowerCase()
       &&a.tagLine.toLowerCase()===tagLine.toLowerCase()
       &&a.region===$("fRegion").value);
-    if(dup){toast("Already in the vault: "+(dup.label||dup.gameName));return}
+    if(dup){toast("Already in the vault: "+plainName(dup));return}
   }
   const data={label:$("fLabel").value.trim(),region:$("fRegion").value,gameName,tagLine,status:$("fStatus").value,
     login:$("fLogin").value,password:$("fPass").value,email:$("fEmail").value.trim(),
@@ -6915,14 +7287,30 @@ function submitForm(){
 }
 
 // ---------- settings ----------
-function openSettings(){
+const SETTINGS_TABS=["look","checks","alerts","security","sync","backup"];
+function settingsTab(tab,focus){
+  if(!SETTINGS_TABS.includes(tab))tab="look";
+  const m=$("settings");m.dataset.tab=tab;
+  for(const b of m.querySelectorAll("[data-stab]")){
+    const on=b.dataset.stab===tab;
+    b.setAttribute("aria-selected",String(on));b.tabIndex=on?0:-1;
+    if(on&&focus)b.focus();
+  }
+  const body=m.querySelector(".mdl-b");if(body)body.scrollTop=0;
+}
+function updateBackupLast(){
+  const el=$("sBackupLast");if(!el)return;
+  el.textContent=cfg.lastExport?"Last backup: "+timeAgo(cfg.lastExport)+".":"No backup made from this browser yet.";
+}
+function openSettings(tab){
   closeAllPanels();
+  settingsTab(typeof tab==="string"?tab:"look");updateBackupLast();
   // Permission can be revoked in site settings while cfg still says on — don't
   // show the box checked for alerts that cannot fire.
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";$("sCompact").checked=!!cfg.compactCards;updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden")
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -6979,8 +7367,92 @@ function applyAtmosphere(mode){
    Details they come back when that card is opened, so nothing is lost — the grid
    just fits about twice as many cards on a screen. A class on the body, so the
    switch costs no re-render. */
-function applyCompact(){document.body.classList.toggle("compact-cards",!!cfg.compactCards)}
+// Effects: a body attribute, so the switch is one style pass and no re-render
+const EFFECTS=["full","subtle","off"];
+function syncOptSeg(id,v){const el=$(id);if(el)for(const b of el.querySelectorAll("[data-v]"))b.setAttribute("aria-checked",String(b.dataset.v===v))}
+const TEXT_SIZES=["small","default","large"];
+function applyTextSize(v){
+  const t=TEXT_SIZES.includes(v)?v:"default";
+  if(t==="default")delete document.documentElement.dataset.ts;else document.documentElement.dataset.ts=t;
+  syncOptSeg("sTextSize",t);return t;
+}
+function applyEffects(v){const f=EFFECTS.includes(v)?v:"full";document.body.dataset.fx=f;syncOptSeg("sEffects",f);return f}
+const CARD_PARTS=[["chart","LP chart"],["stats","Peak & stats"],["wl","Win/loss bar"],["goal","Goal & level bar"],["tags","Tags"],["notes","Notes"]];
+let pendingCardHide=null; // Settings' choice before Save
+function cardHidden(){
+  const list=pendingCardHide||cfg.cardHide;
+  return Array.isArray(list)?list.filter(k=>CARD_PARTS.some(p=>p[0]===k)):[];
+}
+function applyCompact(){const h=new Set(cardHidden());for(const[k]of CARD_PARTS)document.body.classList.toggle("hide-"+k,h.has(k))}
+function renderCardParts(){
+  const el=$("sCardParts");if(!el)return;const h=new Set(cardHidden());
+  setHTML(el,CARD_PARTS.map(([k,n])=>`<label><input type="checkbox" data-part="${k}"${h.has(k)?"":" checked"}> ${esc(n)}</label>`).join(""));
+}
+function previewCardParts(list){pendingCardHide=list;applyCompact();renderCardParts();renderGrid()}
 function revertAtmosphere(){applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE)}
+/* ---- themes ----
+   Two accents and an atmosphere picked to go together, so a new look is one
+   click instead of two colour pickers and a guess. The pickers stay underneath
+   for anyone who wants their own. "My best rank" is not a fixed pair: it follows
+   the highest tier in the vault, and moves when you climb. */
+const THEMES=[
+  {k:"hextech",n:"Hextech",a:"#c8aa6e",b:"#0ac8b9",atm:"spotlight"},
+  {k:"shadowisles",n:"Shadow Isles",a:"#7fe8c9",b:"#1fae8a",atm:"noir"},
+  {k:"noxus",n:"Noxus",a:"#b8c0c8",b:"#d33b3b",atm:"spotlight"},
+  {k:"piltover",n:"Piltover",a:"#e0a458",b:"#3f9cff",atm:"lattice"},
+  {k:"freljord",n:"Freljord",a:"#d6ecff",b:"#5bb8f5",atm:"stardust"},
+  {k:"ionia",n:"Ionia",a:"#f0a6c4",b:"#4fcf9f",atm:"spotlight"},
+  {k:"void",n:"Void",a:"#b07cff",b:"#e04fd0",atm:"aurora"},
+];
+let pendingRankTheme=null; // Settings' choice before Save; null means "as saved"
+function rankThemeOn(){return pendingRankTheme===null?!!cfg.rankTheme:pendingRankTheme}
+function bestTierNow(){
+  let best=null,v=-Infinity;
+  for(const a of accounts){
+    if(!isLive(a)||!isRanked(a))continue;
+    const x=rankValue(a.stats);if(x>v){v=x;best=String(a.stats.tier).toUpperCase()}
+  }
+  return best;
+}
+// the tier's own colour leads; its partner is the default teal unless the tier
+// sits near teal on the wheel (Platinum, Emerald, Diamond), where gold keeps the
+// two accents apart
+function rankThemeColours(tier){
+  const a=TIER_COLORS[tier];
+  if(!a||tier==="UNRANKED")return{a:DEFAULT_ACCENT,b:DEFAULT_ACCENT2};
+  const d=Math.abs(hexToHsl(a)[0]-hexToHsl(DEFAULT_ACCENT2)[0]);
+  return{a,b:Math.min(d,360-d)<45?DEFAULT_ACCENT:DEFAULT_ACCENT2};
+}
+let rankThemeApplied;
+function applyRankTheme(force){
+  if(!rankThemeOn())return;
+  const tier=bestTierNow();
+  if(!force&&tier===rankThemeApplied)return; // an accent change restyles the page: only on a new best
+  rankThemeApplied=tier;
+  const c=rankThemeColours(tier);
+  applyAccent(c.a);applyAccent2(c.b);
+  if($("sAccent")){$("sAccent").value=c.a;$("sAccent2").value=c.b}
+}
+function renderThemes(){
+  const el=$("sThemes");if(!el)return;
+  const pa=$("sAccent").value.toLowerCase(), pb=$("sAccent2").value.toLowerCase(), rank=rankThemeOn();
+  const tile=(k,name,sw,on,sub)=>`<button type="button" role="radio" class="thm${on?" on":""}" data-theme="${k}" aria-checked="${on}">`
+    +`<span class="thm-sw" style="background:${sw}" aria-hidden="true"></span><span class="thm-n">${esc(name)}${sub?`<small>${esc(sub)}</small>`:""}</span></button>`;
+  const ladder=TIER_ORDER.map((t,i)=>`${TIER_COLORS[t]} ${Math.round(i/(TIER_ORDER.length-1)*100)}%`).join(",");
+  setHTML(el,THEMES.map(t=>tile(t.k,t.n,`linear-gradient(110deg,${t.a} 0 50%,${t.b} 50% 100%)`,!rank&&pa===t.a&&pb===t.b)).join("")
+    +tile("rank","My best rank",`linear-gradient(90deg,${ladder})`,rank,"follows your highest tier"));
+}
+function pickTheme(k){
+  cancelAccentPreview();
+  if(k==="rank"){pendingRankTheme=true;rankThemeApplied=undefined;applyRankTheme(true)}
+  else{
+    const t=THEMES.find(x=>x.k===k);if(!t)return;
+    pendingRankTheme=false;
+    $("sAccent").value=t.a;$("sAccent2").value=t.b;
+    applyAccent(t.a);applyAccent2(t.b);applyAtmosphere(t.atm);
+  }
+  renderThemes();
+}
 function hexToHsl(hex){
   const r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;
   const max=Math.max(r,g,b),min=Math.min(r,g,b);let h,s,l=(max+min)/2;
@@ -7078,8 +7550,10 @@ function cancelAccentPreview(){clearTimeout(accentTimer);accentTimer=0;accentQue
 function revertAccents(){
   cancelAccentPreview();
   hideAccPrev();
+  pendingRankTheme=null;
   applyAccent(cfg.accent||DEFAULT_ACCENT);
   applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
+  if(cfg.rankTheme)applyRankTheme(true);
 }
 function notify(title,body){
   if(!cfg.notify||!("Notification"in window)||Notification.permission!=="granted")return;
@@ -7288,16 +7762,19 @@ function loadDemo(){
   const mk=o=>Object.assign({id:uid(),fav:false,status:"active",tags:[],history:[],login:"",password:"",email:"",notes:"",label:"",demo:true},o);
   accounts=[
     mk({label:"Main smurf",gameName:"Hide on Bush",tagLine:"0001",region:"EUW",fav:true,tags:["mid","ranked-ready"],login:"demo_user1",password:"demo-pass-1",email:"smurf1@mail.gg",notes:"Elementalist Lux, honor 3",
-      stats:{found:true,tier:"PLATINUM",division:"II",lp:61,wins:38,losses:29,level:214,icon:"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",mmr:"~2140",avgRecent:"Platinum II",asOf:"updated today",updatedAt:now-2*3600000},
+      stats:{found:true,tier:"PLATINUM",division:"II",lp:61,wins:38,losses:29,level:214,icon:"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",mmr:"~2140",avgRecent:"Platinum II",asOf:"updated today",updatedAt:now-2*3600000,
+        champs:[{name:"Lux",games:24,wins:15,losses:9,wr:63,kda:"3.4"},{name:"Ahri",games:18,wins:10,losses:8,wr:56,kda:"2.9"},{name:"Syndra",games:9,wins:4,losses:5,wr:44,kda:"2.1"}]},
       history:[
         {t:now-24*D,tier:"GOLD",division:"II",lp:40},{t:now-20*D,tier:"GOLD",division:"I",lp:15},{t:now-16*D,tier:"GOLD",division:"I",lp:78},
         {t:now-12*D,tier:"PLATINUM",division:"IV",lp:12},{t:now-9*D,tier:"PLATINUM",division:"IV",lp:55},{t:now-6*D,tier:"PLATINUM",division:"III",lp:31},
         {t:now-3*D,tier:"PLATINUM",division:"III",lp:74},{t:now-2*3600000,tier:"PLATINUM",division:"II",lp:61}]}),
     mk({label:"ADC acc",gameName:"Bot Diff",tagLine:"EUW",region:"EUW",tags:["adc"],login:"demo_user2",password:"demo-pass-2",email:"smurf2@mail.gg",notes:"Spirit Blossom Yasuo",
-      stats:{found:true,tier:"GOLD",division:"III",lp:22,wins:21,losses:24,level:167,mmr:"~1650",avgRecent:"Gold III",asOf:"updated 4 days ago",updatedAt:now-4*D},
+      stats:{found:true,tier:"GOLD",division:"III",lp:22,wins:21,losses:24,level:167,mmr:"~1650",avgRecent:"Gold III",asOf:"updated 4 days ago",updatedAt:now-4*D,
+        champs:[{name:"Jinx",games:20,wins:10,losses:10,wr:50,kda:"2.6"},{name:"Kai'Sa",games:15,wins:7,losses:8,wr:47,kda:"2.4"}]},
       history:[{t:now-14*D,tier:"GOLD",division:"II",lp:35},{t:now-10*D,tier:"GOLD",division:"II",lp:8},{t:now-7*D,tier:"GOLD",division:"III",lp:71},{t:now-4*D,tier:"GOLD",division:"III",lp:22}]}),
     mk({label:"EUNE fill acc",gameName:"Coinflip Queue",tagLine:"EUNE",region:"EUNE",tags:["fill"],login:"demo_user3",password:"demo-pass-3",
-      stats:{found:true,tier:"SILVER",division:"I",lp:89,wins:15,losses:11,level:98,mmr:"~1420",avgRecent:"Silver I",asOf:"updated yesterday",updatedAt:now-1*D},
+      stats:{found:true,tier:"SILVER",division:"I",lp:89,wins:15,losses:11,level:98,mmr:"~1420",avgRecent:"Silver I",asOf:"updated yesterday",updatedAt:now-1*D,
+        champs:[{name:"Thresh",games:14,wins:9,losses:5,wr:64,kda:"3.1"},{name:"Lee Sin",games:8,wins:4,losses:4,wr:50,kda:"2.2"}]},
       history:[{t:now-8*D,tier:"SILVER",division:"II",lp:60},{t:now-5*D,tier:"SILVER",division:"II",lp:95},{t:now-1*D,tier:"SILVER",division:"I",lp:89}]}),
     mk({label:"Fresh leveling acc",gameName:"NewSmurf",tagLine:"2026",region:"EUW",status:"resting",tags:["leveling"],login:"demo_user4",password:"demo-pass-4",
       stats:{found:true,tier:"UNRANKED",division:null,lp:null,wins:null,losses:null,level:23,mmr:null,avgRecent:null,asOf:"updated 6 days ago",note:null,updatedAt:now-6*D}}),
@@ -7384,6 +7861,8 @@ document.addEventListener("keydown",e=>{
   if(e.key==="/"&&!typing){e.preventDefault();$("tSearch").focus()}
   if(e.key==="n"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();openForm(null)}
   if(e.key==="f"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$("tFav").click()}
+  // H only ever hides: turning streamer mode off is the pill's job, never a stray key
+  if((e.key==="h"||e.key==="H")&&!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();if(!streamerOn())setStreamer(true);else toast("Streamer mode is on — click its pill in the header to turn it off")}
   if(e.key==="Escape"){
     if($("accPrev").classList.contains("show")){hideAccPrev();return}
     // Whatever a card has unfolded goes first — that is what is in front of you,
@@ -7526,8 +8005,19 @@ document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.targ
 // Closing has to go through the same door as the ✕ and Escape do. Toggling the panel
 // shut from the ⋯ menu only hid it, which left a colour you had dragged but not saved
 // applied to the whole page — the one close out of four that kept it.
-function closeSettings(){revertAccents();revertAtmosphere();settingsSaveGen++;$("settings").classList.add("hidden")}
+function closeSettings(){revertAccents();revertAtmosphere();applyEffects(cfg.effects);applyTextSize(cfg.textSize);if(pendingCardHide||pendingChampArt!==null){pendingCardHide=null;pendingChampArt=null;applyCompact();renderGrid()}settingsSaveGen++;$("settings").classList.add("hidden")}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
+$("bNewSeason").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");newSeasonAll()});
+$("bStreamer").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");setStreamer(!streamerOn())});
+$("streamerPill").addEventListener("click",()=>setStreamer(false));
+$("settings").querySelector(".stabs").addEventListener("click",e=>{const b=e.target.closest("[data-stab]");if(b)settingsTab(b.dataset.stab)});
+$("settings").querySelector(".stabs").addEventListener("keydown",e=>{
+  const i=SETTINGS_TABS.indexOf($("settings").dataset.tab);
+  const to=e.key==="ArrowRight"?i+1:e.key==="ArrowLeft"?i-1:e.key==="Home"?0:e.key==="End"?SETTINGS_TABS.length-1:null;
+  if(to===null)return;
+  e.preventDefault();settingsTab(SETTINGS_TABS[(to+SETTINGS_TABS.length)%SETTINGS_TABS.length],true);
+});
+for(const b of document.querySelectorAll("#settings [data-proxy]"))b.addEventListener("click",()=>{const t=$(b.dataset.proxy);if(t)t.click();setTimeout(updateBackupLast,0)});
 $("sSave").addEventListener("click",async()=>{
   // Validate the two free-text URLs before touching cfg — a bail after partial
   // assignment left the session with the new API key / auto-check values even
@@ -7564,15 +8054,27 @@ $("sSave").addEventListener("click",async()=>{
   cfg.backendUrl=backendOk;$("sBackend").value=backendOk;
   cfg.notify=wantNotify;
   cfg.discordWebhook=whOk;$("sDiscord").value=whOk;
+  const wantWatch=$("sWatch").checked&&!!backendOk&&!!whOk;
+  if($("sWatch").checked&&!wantWatch)notifyNote+=" — decay alerts need the worker and the Discord webhook";
+  if(wantWatch){if(!cfg.watchToken)cfg.watchToken=genSyncToken();const was=cfg.watch;cfg.watch=true;if(!was)setTimeout(()=>syncWatch(true).then(updateWatchStatus),0)}
+  else if(cfg.watch){stopWatch();cfg.watch=null}
+  $("sWatch").checked=wantWatch;
   cfg.autoLockMin=clampAutoLock($("sAutoLock").value);
   // null, not the default's own hex, when that is what the picker is sitting on:
   // "no colour chosen" is a different thing to store than "chose exactly this one",
   // and it is what lets the default move later without dragging every vault that
   // never picked anything along behind it.
-  cfg.accent=$("sAccent").value===DEFAULT_ACCENT?null:$("sAccent").value;applyAccent(cfg.accent||DEFAULT_ACCENT);
-  cfg.accent2=$("sAccent2").value===DEFAULT_ACCENT2?null:$("sAccent2").value;applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
+  cfg.rankTheme=rankThemeOn()||null;pendingRankTheme=null;
+  if(cfg.rankTheme){cfg.accent=null;cfg.accent2=null;applyRankTheme(true)} // computed, so nothing fixed to store
+  else{
+    cfg.accent=$("sAccent").value===DEFAULT_ACCENT?null:$("sAccent").value;applyAccent(cfg.accent||DEFAULT_ACCENT);
+    cfg.accent2=$("sAccent2").value===DEFAULT_ACCENT2?null:$("sAccent2").value;applyAccent2(cfg.accent2||DEFAULT_ACCENT2);
+  }
   // the Details handle depends on it, so the cards are redrawn when it changes
-  if(!!cfg.compactCards!==$("sCompact").checked){cfg.compactCards=$("sCompact").checked;applyCompact();renderGrid()}
+  if(pendingChampArt!==null){cfg.champArt=pendingChampArt?null:false;pendingChampArt=null;renderGrid()}
+  if(pendingCardHide){cfg.cardHide=pendingCardHide.length?pendingCardHide:null;delete cfg.compactCards;pendingCardHide=null;applyCompact();renderGrid()}
+  cfg.effects=applyEffects(document.body.dataset.fx);if(cfg.effects==="full")cfg.effects=null;
+  cfg.textSize=applyTextSize(document.documentElement.dataset.ts);if(cfg.textSize==="default")cfg.textSize=null;
   cfg.atmosphere=applyAtmosphere(document.body.dataset.atmosphere||DEFAULT_ATMOSPHERE);
   if(cfg.atmosphere===DEFAULT_ATMOSPHERE)cfg.atmosphere=null; // same idea as accents: no preference vs explicit default
   cfg.exportRemindDays=clampExportDays($("sExportDays")&&$("sExportDays").value);
@@ -7592,6 +8094,18 @@ $("sAtmosphere").addEventListener("click",e=>{
   const b=e.target.closest("[data-atmosphere]");if(!b)return;
   applyAtmosphere(b.dataset.atmosphere); // preview only — Save keeps it, Close reverts
 });
+$("sCardParts").addEventListener("change",e=>{
+  const h=new Set(cardHidden()),k=e.target.dataset.part;if(!k)return;
+  e.target.checked?h.delete(k):h.add(k);previewCardParts([...h]);
+});
+document.addEventListener("error",e=>{const t=e.target;if(t&&t.classList&&t.classList.contains("c-art"))t.remove()},true);
+$("sChampArt").addEventListener("change",e=>{pendingChampArt=e.target.checked;renderGrid()});
+$("sCompact").addEventListener("click",()=>previewCardParts([...new Set([...cardHidden(),"chart","stats"])]));
+$("sTextSize").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b)applyTextSize(b.dataset.v)});
+$("sEffects").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b)applyEffects(b.dataset.v)}); // preview; Save keeps it
+$("sThemes").addEventListener("click",e=>{const b=e.target.closest("[data-theme]");if(b)pickTheme(b.dataset.theme)});
+for(const id of ["sAccent","sAccent2"])$(id).addEventListener("input",()=>{pendingRankTheme=false;renderThemes()}); // your own colours: no theme
+
 $("sAccent").addEventListener("input",e=>previewAccent("primary",e.target.value));
 $("sAccent2").addEventListener("input",e=>previewAccent("secondary",e.target.value));
 $("sAccent").addEventListener("change",e=>commitAccent("primary",e.target.value));
@@ -7730,6 +8244,7 @@ function resetAccent(which){
   accPrevSuppressUntil=Date.now()+350;
   if(which==="primary"){$("sAccent").value=DEFAULT_ACCENT;applyAccent(DEFAULT_ACCENT)}
   else{$("sAccent2").value=DEFAULT_ACCENT2;applyAccent2(DEFAULT_ACCENT2)}
+  pendingRankTheme=false;renderThemes();
 }
 $("sAccentReset1").addEventListener("click",()=>resetAccent("primary"));
 $("sAccentReset2").addEventListener("click",()=>resetAccent("secondary"));
@@ -7817,16 +8332,57 @@ $("bBulkAdd").addEventListener("click",()=>{
   $("bulkAdd").classList.remove("hidden");
 });
 $("baCancel").addEventListener("click",()=>$("bulkAdd").classList.add("hidden"));
-$("baSave").addEventListener("click",()=>{
-  const region=$("baRegion").value;
-  const lines=$("baList").value.split("\n").map(l=>l.trim()).filter(Boolean);
-  if(!lines.length){toast("Paste at least one Name#TAG line");return}
-  let added=0,skipped=0,bad=0;
-  for(const line of lines){
+/* What Bulk add understands. People have their accounts in three shapes: a list
+   of Riot IDs, an op.gg multi-search link (which also says the region), and
+   whatever the client's lobby chat printed when the accounts joined. Every one
+   of them comes down to name, tag and maybe a region. */
+function regionFromOpgg(code){code=String(code||"").toLowerCase();return Object.keys(REGIONS).find(k=>REGIONS[k].opgg===code)||null}
+function splitId(item){
+  const t=String(item||"").trim();if(!t)return null;
+  let m=t.match(/^(.+?)\s*#\s*([^\s#]+)$/);
+  if(!m)m=t.match(/^(.+)-([A-Za-z0-9]{2,5})$/); // op.gg's URL form: Name-TAG
+  if(!m)return null;
+  const gameName=m[1].trim(),tagLine=m[2].trim();
+  return gameName&&tagLine?{gameName,tagLine}:null;
+}
+function parseBulk(text,fallbackRegion){
+  const out=[],seen=new Set();let bad=0;
+  const add=(id,region)=>{
+    if(!id){bad++;return}
+    const r=region||fallbackRegion, k=(id.gameName+"#"+id.tagLine+"@"+r).toLowerCase();
+    if(seen.has(k))return;seen.add(k);out.push({...id,region:r});
+  };
+  for(const raw of String(text||"").split("\n")){
+    const line=raw.trim();if(!line)continue;
+    const url=line.match(/https?:\/\/[^\s]*op\.gg\/[^\s]+/i);
+    if(url){
+      let u;try{u=new URL(url[0])}catch(e){bad++;continue}
+      const path=u.pathname.split("/").filter(Boolean).map(x=>decodeURIComponent(x));
+      const ms=path.indexOf("multisearch"), sm=path.indexOf("summoners");
+      if(ms>=0){
+        const region=regionFromOpgg(path[ms+1]);
+        const list=(u.searchParams.get("summoners")||"").split(/[,\n]/).map(x=>x.trim()).filter(Boolean);
+        if(!list.length)bad++;
+        for(const item of list)add(splitId(item),region);
+      }else if(sm>=0&&path[sm+2])add(splitId(path[sm+2]),regionFromOpgg(path[sm+1]));
+      else bad++;
+      continue;
+    }
+    // the client's chat: "Name #TAG joined the lobby", "... left the room."
+    const chat=line.match(/^(.+?)\s*#\s*([A-Za-z0-9]{2,5})\s+(?:joined|left) the (?:lobby|room|chat)\b/i);
+    if(chat){add({gameName:chat[1].trim(),tagLine:chat[2]});continue}
+    const parts=line.split(",").map(x=>x.trim()).filter(Boolean);
+    if(parts.length>1&&parts.every(x=>x.includes("#"))){for(const x of parts)add(splitId(x));continue}
     const m=line.match(/^(.+)#(\S+)$/);
-    if(!m){bad++;continue}
-    const gameName=m[1].trim(),tagLine=m[2].trim();
-    if(!gameName||!tagLine){bad++;continue}
+    add(m&&m[1].trim()&&m[2].trim()?{gameName:m[1].trim(),tagLine:m[2].trim()}:null);
+  }
+  return{entries:out,bad};
+}
+$("baSave").addEventListener("click",()=>{
+  const parsed=parseBulk($("baList").value,$("baRegion").value);
+  if(!parsed.entries.length&&!parsed.bad){toast("Paste at least one Name#TAG, an op.gg link or the lobby chat");return}
+  let added=0,skipped=0,bad=parsed.bad;
+  for(const{gameName,tagLine,region}of parsed.entries){
     const dup=accounts.find(a=>a.gameName.toLowerCase()===gameName.toLowerCase()&&a.tagLine.toLowerCase()===tagLine.toLowerCase()&&a.region===region);
     if(dup){skipped++;continue}
     accounts.push({id:uid(),fav:false,stats:null,label:"",region,gameName,tagLine,status:"active",login:"",password:"",email:"",tags:[],notes:"",history:[]});
@@ -7951,7 +8507,7 @@ function renderAwayBand(){
   if(sum.down.length)bits.push(`<span class="down">${sum.down.length} fell</span>`);
   const star=best&&(!worst||best.d>=-worst.d)?best:worst;
   setHTML(el,`<span class="away-k">While you were away</span>`
-    +`<span>${bits.join(" · ")}${star?` — biggest mover <b>${esc(star.a.label||star.a.gameName)}</b> `
+    +`<span>${bits.join(" · ")}${star?` — biggest mover <b>${nameOf(star.a)}</b> `
       +`<span class="${star.d>0?"up":"down"}">${star.d>0?"+":""}${star.d} LP</span>`:""}</span>`
     +`<span class="sp"><button id="awayShow">Sort by movement</button><button id="awayHide">Dismiss</button></span>`);
   el.classList.remove("hidden");
@@ -8013,6 +8569,8 @@ function palCommands(){
       cfg.density=ui.density;saveCfg();openInfo.clear();render();
     }},
     {k:"settings",n:"Settings",s:"Rank checks, alerts, security, appearance",i:"user",run:()=>openSettings()},
+    {k:"newseason",n:"New season",s:"Move every ranked account's rank into Past seasons",i:"refresh",run:()=>newSeasonAll()},
+    {k:"streamer",n:"Streamer mode",s:"Hide Riot IDs, logins, emails and notes on screen (H)",i:"eye",run:()=>setStreamer(!streamerOn())},
     {k:"export backup",n:"Export backup",s:"Download the vault as JSON",i:"clipboard",run:()=>doExport()},
     {k:"help",n:"Help",s:"How this works",i:"note",run:()=>$("bHelp").click()},
   ];
@@ -8051,8 +8609,8 @@ function renderPalette(){
       html+=`<button class="pal-i${sel}" data-i="${i}" role="option" aria-selected="${i===palSel}">`
         +`<span class="pal-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" onerror="markIconDead(this)">`:esc(initial)}`
         +`${isRanked(a)?crest(s.tier):""}</span>`
-        +`<span class="pal-t"><span class="pal-n">${esc(a.label||a.gameName)}</span>`
-        +`<span class="pal-s">${esc(a.gameName)}#${esc(a.tagLine)} · ${esc(a.region)}</span></span>`
+        +`<span class="pal-t"><span class="pal-n">${nameOf(a)}</span>`
+        +`<span class="pal-s">${sens(esc(a.gameName)+"#"+esc(a.tagLine))} · ${esc(a.region)}</span></span>`
         +`<span class="pal-r${isRanked(a)?"":" q"}" style="color:${col}">${esc(isRanked(a)?shortRank(s)||"":isChecked(a)?"Unranked":"Never checked")}</span>`
         +`</button>`;
     }else{
@@ -8133,7 +8691,7 @@ $("setup").addEventListener("click",e=>{
   const a=b.dataset.setup;
   if(a==="add")openForm();
   else if(a==="check")$("bCheckAll").click();
-  else if(a==="lock"){openSettings();setTimeout(()=>{const f=$("sVaultPass");if(f){f.scrollIntoView&&f.scrollIntoView({block:"center"});f.focus()}},60)}
+  else if(a==="lock"){openSettings("security");setTimeout(()=>{const f=$("sVaultPass");if(f){f.scrollIntoView&&f.scrollIntoView({block:"center"});f.focus()}},60)}
   else if(a==="backup")vaultPassword?doExportEnc():doExport();
   else if(a==="hide"){cfg.setupHidden=true;saveCfg();renderSetup()}
 });
@@ -8471,7 +9029,7 @@ async function onCardClick(e){
     closeRankModal();
     commitStats(id,acc,s);toast("Rank saved");
   }
-  else if(act==="check")check(id);
+  else if(act==="check")check(id).then(r=>{const a=accounts.find(x=>x.id===id);if(r===true&&a&&canForm(a))loadForm(id)});
   else if(act==="del"){
     if(armedDelete===id){
       const idx=accounts.findIndex(a=>a.id===id);const removed=accounts[idx];
@@ -8559,6 +9117,17 @@ function showChangelogIfNeeded(){
   if(!entry||!entry.items||!entry.items.length)return;
   toast("v"+entry.v+": "+entry.items.slice(0,2).join(" · ")+(entry.items.length>2?"…":""));
 }
+// The installed app's icon shortcuts (manifest.json) open the page with
+// ?action=…. It is read once and wiped from the address bar, so a reload or a
+// bookmark of that address does not do it again; a locked vault runs it after
+// the unlock, when startApp first gets to it.
+let startAction=null;
+try{startAction=new URLSearchParams(location.search).get("action");if(startAction)history.replaceState(null,"",location.pathname+location.hash)}catch(e){}
+function runStartAction(){
+  const a=startAction;startAction=null;
+  if(a==="add")openForm(null);
+  else if(a==="checkall"){if(accounts.length)checkAll();else toast("No accounts to check yet — add one first")}
+}
 function startApp(){
   $("appRoot").classList.remove("hidden");
   syncLockTimer();
@@ -8571,6 +9140,8 @@ function startApp(){
   setTimeout(()=>$("grid").classList.remove("boot"),1200);
   if(!cfg.seenHelp&&accounts.length===0)$("help").classList.remove("hidden");
   showChangelogIfNeeded();
+  if(startAction)setTimeout(runStartAction,0); // after boot's own first paint
+  if(cfg.watch)setTimeout(()=>syncWatch(false),1500); // at most every ten minutes
   if(cfg.autoCheck){
     const staleAccs=accounts.filter(autoCheckDue);
     if(staleAccs.length){
@@ -8780,6 +9351,10 @@ function boot(){
   if(MODEL_ALIASES[cfg.model]){cfg.model=MODEL_ALIASES[cfg.model];saveCfg()}
   {
     let cfgDirty=false;
+    // 2.1's Compact cards was one switch for the chart and the stats; it is now
+    // those two parts in the per-part list, so a vault that had it keeps the look
+    if(cfg.compactCards===true&&!Array.isArray(cfg.cardHide)){cfg.cardHide=["chart","stats"];cfgDirty=true}
+    if("compactCards"in cfg){delete cfg.compactCards;cfgDirty=true}
     const every=coerceAutoEvery(cfg.autoEveryHours);
     if(cfg.autoEveryHours!==every){cfg.autoEveryHours=every;cfgDirty=true}
     if(cfg.discordWebhook){
@@ -8802,7 +9377,7 @@ function boot(){
   fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);
   if(cfg.accent)applyAccent(cfg.accent);
   if(cfg.accent2)applyAccent2(cfg.accent2);
-  applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyCompact();
+  applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);applyCompact();applyStreamer();
   let raw=null;
   try{raw=hasStorage?localStorage.getItem(DB_KEY):null}catch(e){}
   const stored=readStoredVault(raw);

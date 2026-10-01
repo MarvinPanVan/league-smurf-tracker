@@ -26,5 +26,33 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Check all ranks",
+      "short_name": "Check all",
+      "description": "Open Smurf Tracker and check every account's rank",
+      "url": "./index.html?action=checkall",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Add account",
+      "short_name": "Add account",
+      "description": "Open Smurf Tracker on a new account",
+      "url": "./index.html?action=add",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }

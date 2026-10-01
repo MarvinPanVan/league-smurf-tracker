@@ -39,7 +39,8 @@ in Safari after 7 days without a visit. The app asks the browser to keep the vau
 | A rank check with an Anthropic API key set | The Riot ID and region                  | api.anthropic.com |
 | Tier-up alerts, if you set a Discord webhook | The account label and the tiers        | Your Discord webhook |
 | **Device sync**, if you set it up      | The **encrypted** vault only (ciphertext)   | Your own Cloudflare worker's KV |
-| Loading the page                       | Ordinary requests for fonts and rank icons  | Google Fonts, op.gg's image CDN |
+| **Discord decay alerts**, if you turn them on | Your Diamond+ accounts' Riot IDs, labels and decay estimates, and your Discord webhook URL, in plain text | Your own Cloudflare worker's KV; the worker posts to your webhook |
+| Loading the page                       | Ordinary requests for fonts, rank icons and, unless you turn it off, champion art (the request names the champion) | Google Fonts, op.gg's image CDN, Riot's Data Dragon |
 
 Logins, passwords and emails are never sent anywhere, except inside the encrypted
 blob when you use device sync.

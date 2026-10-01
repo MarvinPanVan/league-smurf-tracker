@@ -1011,24 +1011,210 @@ test("a new vault gets four set-up steps, each a button, until they are done or 
   assert.equal(appGet(win, "cfg.setupHidden"), true, "and it stays hidden");
 });
 
-test("compact cards leave the chart and stats under Details, and bring them back when opened", () => {
+test("app icon shortcuts: the manifest offers Check all and Add account, and the page does each once", async () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "manifest.json"), "utf8"));
+  assert.deepEqual(manifest.shortcuts.map(s => s.url), ["./index.html?action=checkall", "./index.html?action=add"]);
+  for (const s of manifest.shortcuts) assert.ok(fs.existsSync(path.join(__dirname, "..", s.icons[0].src)), s.icons[0].src);
+  const add = bootApp(null, w => w.history.replaceState(null, "", "/index.html?action=add"));
+  await until(() => !add.document.getElementById("form").classList.contains("hidden"), "the Add form to open");
+  assert.equal(add.location.search, "", "and the address is cleaned, so a reload does not repeat it");
+  let checked = 0;
+  const seed = [{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }];
+  const chk = bootApp(seed, w => { w.history.replaceState(null, "", "/index.html?action=checkall"); });
+  runScript(chk, "checkAll = () => { window.__checked = (window.__checked || 0) + 1; }");
+  await until(() => chk.__checked === 1, "Check all to start");
+});
+
+test("This week: LP and games over the last seven days, the best climber one click away", () => {
+  const D = 86400000, now = Date.now();
+  const pt = (ago, tier, division, lp, w, l) => ({ t: now - ago * D, tier, division, lp, w, l });
+  const acc = (id, history, label) => ({ id, label, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history,
+    stats: { found: true, tier: history.at(-1).tier, division: history.at(-1).division, lp: history.at(-1).lp, wins: history.at(-1).w, losses: history.at(-1).l, updatedAt: now - history.at(-1).t } });
+  const win = bootApp([
+    acc("climber", [pt(9, "GOLD", "II", 10, 50, 50), pt(8, "GOLD", "II", 20, 52, 50), pt(2, "GOLD", "II", 80, 57, 50)], "Climber"),
+    acc("newbie", [pt(4, "SILVER", "I", 10, 5, 5), pt(1, "SILVER", "I", 30, 7, 6)]),       // first checked mid-week
+    acc("idle", [pt(20, "PLATINUM", "IV", 10, 9, 9), pt(10, "PLATINUM", "IV", 50, 11, 9)]),  // not checked this week
+    acc("reset", [pt(6, "DIAMOND", "I", 90, 200, 180), pt(3, "IRON", "IV", 0, 1, 1), pt(1, "IRON", "IV", 40, 3, 1)]), // new season mid-week
+  ]);
+  win.__pool = win.eval("accounts");
+  runScript(win, "window.__w = weekRecap(window.__pool)");
+  const w = win.__w;
+  assert.equal(w.lp, 60 + 20 + 40, "climber +60 since the week began, newbie +20 since its first check, reset +40 since the new season");
+  assert.equal(w.games, 5 + 3 + 2, "games the same way");
+  assert.equal(w.moved, 3, "an account not checked this week is not counted as flat");
+  assert.equal(w.best.a.id, "climber");
+  const tile = win.document.getElementById("weekStat");
+  assert.match(tile.textContent, /This week\s*\+120\s*LP\s*10 games · best Climber \+60/);
+  tile.click();
+  assert.equal(appGet(win, "flashId"), "climber", "the tile takes you to the best climber");
+});
+
+test("New season resets every ranked account at once, leaves the rest, and one Undo puts them all back", async () => {
+  const acc = (id, tier, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [],
+    history: [{ t: Date.now() - 86400000, tier, division: tier === "UNRANKED" ? null : "II", lp: 40 }],
+    stats: { found: true, tier, division: tier === "UNRANKED" ? null : "II", lp: tier === "UNRANKED" ? null : 40, wins: 5, losses: 5, updatedAt: Date.now() } }, extra);
+  const win = bootApp([acc("g", "GOLD"), acc("d", "DIAMOND", { goal: { tier: "MASTER", division: null, lp: 0 } }),
+    acc("u", "UNRANKED"), acc("old", "SILVER", { archived: true })]);
+  const doc = win.document;
+  let asked = "";
+  win.confirm = m => { asked = m; return true; };
+  doc.getElementById("bNewSeason").click();
+  assert.match(asked, /new season for 2 ranked accounts/, "says how many, before doing anything");
+  const get = id => win.eval("accounts").find(a => a.id === id);
+  assert.equal(get("g").stats.tier, "UNRANKED");
+  assert.equal(get("d").stats.tier, "UNRANKED");
+  assert.equal(get("d").stats.seasons.solo[0].tier, "DIAMOND", "the old rank is kept in Past seasons");
+  assert.equal(get("d").goal, null);
+  assert.equal(get("old").stats.tier, "SILVER", "archived accounts are left alone");
+  await until(() => /2 accounts moved to the new season/.test(doc.getElementById("toast").textContent), "the toast");
+  doc.getElementById("toastBtn").click();
+  assert.equal(get("g").stats.tier, "GOLD", "Undo puts them back");
+  assert.equal(get("d").stats.tier, "DIAMOND");
+  assert.equal(JSON.stringify(get("d").goal), JSON.stringify({ tier: "MASTER", division: null, lp: 0 }), "goal included");
+  win.confirm = () => false;
+  doc.getElementById("bNewSeason").click();
+  assert.equal(get("g").stats.tier, "GOLD", "a No changes nothing");
+});
+
+test("Bulk add reads Riot IDs, op.gg multi-search links and the lobby chat, each with the right region", async () => {
+  const win = bootApp([{ id: "x", region: "EUW", gameName: "Already", tagLine: "HERE", status: "active", tags: [], history: [], stats: null }]);
+  const doc = win.document;
+  doc.getElementById("bBulkAdd").click();
+  doc.getElementById("baRegion").value = "EUW";
+  doc.getElementById("baList").value = [
+    "Plain One#EUW",
+    "Comma A#1A, Comma B#2B",
+    "https://op.gg/lol/multisearch/kr?summoners=Hide%20on%20bush%23KR1%2CFaker%23T1",
+    "https://www.op.gg/summoners/na/Doublelift-NA1",
+    "Lobby Guy #EUNE joined the lobby",
+    "Lobby Guy #EUNE left the lobby",
+    "Champ Pick#4444 joined the room.",
+    "Already#HERE",
+    "just some words",
+  ].join("\n");
+  doc.getElementById("baSave").click();
+  const got = Object.fromEntries(win.eval("accounts").map(a => [a.gameName + "#" + a.tagLine, a.region]));
+  assert.deepEqual(got, {
+    "Already#HERE": "EUW",
+    "Plain One#EUW": "EUW", "Comma A#1A": "EUW", "Comma B#2B": "EUW",
+    "Hide on bush#KR1": "KR", "Faker#T1": "KR", "Doublelift#NA1": "NA",
+    "Lobby Guy#EUNE": "EUW", "Champ Pick#4444": "EUW",
+  });
+  await until(() => /8 added, 1 duplicate skipped, 1 line couldn't be parsed/.test(doc.getElementById("toast").textContent), "the count");
+});
+
+test("Streamer mode: Riot IDs, logins, emails and notes are hidden on screen and in messages; H only turns it on", () => {
+  const acc = (id, extra) => Object.assign({ id, region: "EUW", gameName: "Secret" + id, tagLine: "TAG" + id, status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: Date.now() } }, extra);
+  const win = bootApp([acc("1", { label: "Main", notes: "honor 3, Elementalist Lux", login: "mylogin", password: "pw", email: "me@mail.gg" }), acc("2", {})]);
+  const doc = win.document, body = doc.body;
+  const card = id => doc.querySelector(`.card[data-id="${id}"]`);
+  const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  const key = k => doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: k, bubbles: true }));
+  assert.equal(body.classList.contains("streamer"), false);
+  assert.ok(doc.getElementById("streamerPill").classList.contains("hidden"));
+  doc.getElementById("bStreamer").click();
+  assert.ok(body.classList.contains("streamer"), "on from the ⋯ menu");
+  assert.equal(cfg().streamer, true, "and it survives a reload mid-stream");
+  assert.equal(doc.getElementById("streamerPill").classList.contains("hidden"), false, "the header says so");
+  const css = [...doc.querySelectorAll("style")].map(s => s.textContent).join("\n");
+  assert.match(css, /body\.streamer :is\(\.sens,\.login \.val,\.c-notes textarea\)[^{]*\{filter:blur/);
+  assert.match(css, /body\.streamer :is\(#fName,#fTag,#fLogin,#fPass,#fEmail,#fNotes/, "the edit form too");
+  // every Riot ID sits inside something blurred
+  for (const id of ["1", "2"]) assert.ok(card(id).querySelector(".rid .sens").textContent.includes("Secret" + id));
+  assert.equal(card("1").querySelector(".c-name").textContent.trim(), "Main", "a label you chose stays readable");
+  assert.ok(card("2").querySelector(".c-name .sens"), "a name that is only the Riot name is blurred");
+  assert.equal(card("1").querySelector(".c-name .sens"), null);
+  assert.doesNotMatch(card("2").querySelector(".c-name span").getAttribute("title"), /Secret2/, "and kept out of its tooltip");
+  assert.ok(card("1").querySelector(".c-notes .sens").textContent.includes("Elementalist"), "notes are blurred");
+  // messages carry no Riot ID either
+  runScript(win, `commitStats("2", accounts.find(a => a.id === "2"), {found:true,tier:"GOLD",division:"I",lp:1,updatedAt:Date.now(),
+    puuid:"${"q".repeat(78)}",riotId:{name:"NewSecret",tag:"NEW"}})`);
+  assert.doesNotMatch(doc.getElementById("toast").textContent, /Secret|NEW/);
+  // other views
+  doc.querySelector('#density [data-density="list"]').click();
+  assert.ok(doc.querySelector('#grid [data-id="1"] .rw-tag.sens'), "the list's Riot ID column");
+  doc.querySelector('#density [data-density="wall"]').click();
+  assert.doesNotMatch(doc.querySelector('#grid .tile[data-id="2"]').getAttribute("title") || "", /Secret/, "the wall's tooltips");
+  // H turns it on, never off; the pill turns it off
+  doc.getElementById("streamerPill").click();
+  assert.equal(body.classList.contains("streamer"), false);
+  key("h");
+  assert.ok(body.classList.contains("streamer"), "H hides");
+  key("h");
+  assert.ok(body.classList.contains("streamer"), "a second H does not reveal");
+});
+
+test("champion art: the most-played champion's splash, by Data Dragon id, lazy, gone if it fails, and switchable off", () => {
+  const acc = (id, champs) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: Date.now(), champs } });
+  const win = bootApp([acc("a", [{ name: "Kai'Sa", games: 30, wins: 15, losses: 15, wr: 50 }, { name: "Jinx", games: 3, wr: 50 }]),
+    acc("b", [{ name: "Dr. Mundo", games: 5, wr: 60 }]), acc("c", null)]);
+  const doc = win.document;
+  const key = n => { win.__n = n; runScript(win, "window.__k = champKey(window.__n)"); return win.__k; };
+  for (const [name, id] of [["Kai'Sa", "Kaisa"], ["Wukong", "MonkeyKing"], ["Nunu & Willump", "Nunu"], ["Dr. Mundo", "DrMundo"],
+    ["Jarvan IV", "JarvanIV"], ["Rek'Sai", "RekSai"], ["K'Sante", "KSante"], ["LeBlanc", "Leblanc"], ["Miss Fortune", "MissFortune"],
+    ["FiddleSticks", "Fiddlesticks"], ["MonkeyKing", "MonkeyKing"], ["Renata Glasc", "Renata"]])
+    assert.equal(key(name), id, name);
+  assert.equal(key('"><img src=x>'), null, "anything that is not a plain id makes no URL at all");
+  const art = id => doc.querySelector(`.card[data-id="${id}"] .c-art`);
+  assert.equal(art("a").getAttribute("src"), "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Kaisa_0.jpg", "the top champion, by id");
+  assert.equal(art("a").getAttribute("loading"), "lazy");
+  assert.equal(art("a").getAttribute("alt"), "", "decoration, not content");
+  assert.match(art("b").getAttribute("src"), /\/DrMundo_0\.jpg$/);
+  assert.equal(art("c"), null, "no champion data, no picture");
+  art("b").dispatchEvent(new win.Event("error"));
+  assert.equal(art("b"), null, "a picture that fails to load goes away");
+  doc.getElementById("bSettings").click();
+  const box = doc.getElementById("sChampArt");
+  assert.equal(box.checked, true, "on by default");
+  box.checked = false; box.dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert.equal(art("a"), null, "previews off at once");
+  doc.getElementById("sSave").click();
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).champArt, false);
+  assert.equal(doc.querySelectorAll(".c-art").length, 0, "and stays off: nothing is requested");
+});
+
+test("On each card: any part can wait under Details, Compact is chart and stats, and 2.1's switch carries over", () => {
   const now = Date.now(), D = 86400000;
-  const win = bootApp([{ id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: [],
+  const acc = { id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: ["mid"], notes: "honor 3",
     history: [1, 2, 3].map(k => ({ t: now - (4 - k) * D, tier: "GOLD", division: "II", lp: 10 * k, w: k, l: 0 })),
-    stats: { found: true, tier: "GOLD", division: "II", lp: 30, wins: 3, losses: 0, level: 50, updatedAt: now } }]);
-  const card = () => win.document.querySelector('.card[data-id="c"]');
-  assert.equal(win.document.body.classList.contains("compact-cards"), false, "off by default");
-  win.document.getElementById("bSettings").click();
-  win.document.getElementById("sCompact").checked = true;
-  win.document.getElementById("sSave").click();
-  assert.ok(win.document.body.classList.contains("compact-cards"));
-  assert.equal(appGet(win, "cfg.compactCards"), true, "and it is remembered");
-  const rule = html.match(/body\.compact-cards \.card:not\(\.info-open\) \.lpc,[^{]*\{display:none\}/);
-  assert.ok(rule, "the chart and stats are hidden on a closed card");
+    stats: { found: true, tier: "GOLD", division: "II", lp: 30, wins: 3, losses: 0, level: 50, updatedAt: now } };
+  const win = bootApp([acc]);
+  const doc = win.document, body = doc.body;
+  const card = () => doc.querySelector('.card[data-id="c"]');
+  const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  assert.equal(card().querySelector('[data-act="info"]'), null, "nothing hidden and nothing to show: no Details handle");
+  doc.getElementById("bSettings").click();
+  const box = k => doc.querySelector(`#sCardParts [data-part="${k}"]`);
+  assert.deepEqual([...doc.querySelectorAll("#sCardParts [data-part]")].map(b => b.dataset.part), ["chart", "stats", "wl", "goal", "tags", "notes"]);
+  assert.ok([...doc.querySelectorAll("#sCardParts [data-part]")].every(b => b.checked), "everything shows by default");
+  box("tags").checked = false; box("tags").dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert.ok(body.classList.contains("hide-tags"), "previews at once");
+  assert.ok(card().querySelector('[data-act="info"]'), "and the card grows a Details handle to find them under");
+  doc.getElementById("sClose").click();
+  assert.equal(body.classList.contains("hide-tags"), false, "Close puts it back");
+  assert.equal(card().querySelector('[data-act="info"]'), null);
+  doc.getElementById("bSettings").click();
+  doc.getElementById("sCompact").click();
+  assert.equal(box("chart").checked, false);
+  assert.equal(box("stats").checked, false);
+  assert.equal(box("notes").checked, true, "Compact is the chart and the stats, nothing else");
+  doc.getElementById("sSave").click();
+  assert.deepEqual(cfg().cardHide, ["chart", "stats"]);
+  const css = [...doc.querySelectorAll("style")].map(s => s.textContent).join("\n");
+  for (const [cls, part] of [["chart", ".lpc"], ["stats", ".c-stats"], ["wl", ".wrbar"], ["goal", ".goal"], ["tags", ".ctags"], ["notes", ".c-notes"]])
+    assert.ok(css.includes(`body.hide-${cls} .card:not(.info-open) ${part}`), `${cls} hides ${part} on a closed card`);
   const drawer = card().querySelector('[data-act="info"]');
-  assert.ok(drawer, "every card offers Details in compact mode, even one with no seasons to show");
+  assert.match(drawer.title, /^LP chart, Peak & stats, past seasons/, "the handle says what is under it");
   drawer.click();
   assert.ok(card().classList.contains("info-open"), "an opened card gets them back");
+  // a vault that turned Compact on in 2.1 opens looking the same
+  const old = bootApp([acc], w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, compactCards: true })));
+  assert.ok(old.document.body.classList.contains("hide-chart") && old.document.body.classList.contains("hide-stats"));
+  const saved = JSON.parse(old.localStorage.getItem("smurf-tracker-cfg"));
+  assert.deepEqual(saved.cardHide, ["chart", "stats"]);
+  assert.equal("compactCards" in saved, false);
 });
 
 test("Riot mode in the app: the puuid goes out with a check, comes back stored, and a rename is followed", async () => {
@@ -1059,6 +1245,68 @@ test("Riot mode in the app: a refused key is said once, and a junk puuid never s
   for (const id of ["a", "b"])
     runScript(win, `commitStats("${id}", accounts.find(x => x.id === "${id}"), {found:true,tier:"GOLD",division:"I",lp:1,updatedAt:Date.now(),riotError:"key"})`);
   assert.equal(win.__toasts.filter(m => /Riot API key was refused/.test(m)).length, 1, "once a session, not once per account");
+});
+
+test("Streaks and roles: the last five games are kept, a card says 3W streak and Mid, and role: finds it", async () => {
+  const P = "q".repeat(78), now = Date.now(), H = 3600e3;
+  const acc = (id, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: ["mine"], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: now }, puuid: P }, extra);
+  const old = { at: now - 9 * 24 * H, games: [1, 2, 3].map(i => ({ win: true, role: "Top", at: now - (9 * 24 + i) * H })) };
+  const win = bootApp([acc("a"), acc("stale", { recent: old }), acc("junk", { recent: { at: "x", games: [] } })]);
+  assert.equal(appGet(win, 'accounts.find(a => a.id === "junk").recent'), undefined, "junk is dropped on load");
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev'; render()");
+  const g = (win, role, h) => ({ win, champ: "Ahri", role, k: 1, d: 1, a: 1, min: 30, at: now - h * H });
+  win.fetch = async () => ({ ok: true, status: 200, json: async () => ({ games: [g(true, "Mid", 1), g(true, "Mid", 2), g(true, "Mid", 3), g(false, "Mid", 4), g(true, "Support", 5)] }) });
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  card("a").querySelector('[data-act="info"]').click();
+  await until(() => card("a").querySelector(".streak"), "the streak chip");
+  assert.equal(card("a").querySelector(".streak").textContent.trim(), "3W streak");
+  assert.equal(card("a").querySelector(".ctags .role-tag").textContent, "Mid", "4 of 5 in Mid");
+  assert.deepEqual([...card("a").querySelectorAll(".ctags span")].map(s => s.textContent), ["Mid", "mine"], "set apart from, and ahead of, your own tags");
+  const saved = JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.id === "a").recent;
+  assert.equal(saved.games.length, 5, "kept on the account");
+  assert.deepEqual(Object.keys(saved.games[0]).sort(), ["at", "champ", "role", "win"], "only what a streak and a role need");
+  assert.equal(card("stale").querySelector(".streak"), null, "a week-old streak is history, not form");
+  assert.equal(card("stale").querySelector(".role-tag").textContent, "Top", "the role still stands");
+  const shown = q => { runScript(win, `ui.search = ${JSON.stringify(q)}; renderGrid()`); return [...win.document.querySelectorAll("#grid .card")].map(c => c.dataset.id).sort(); };
+  assert.deepEqual(shown("role:mid"), ["a"]);
+  assert.deepEqual(shown("role:top"), ["stale"]);
+  assert.deepEqual(shown("role:jg"), []);
+});
+
+test("Mastery: asked for every three days, kept on the account, shown under Details, found with champ:", async () => {
+  const P = "q".repeat(78), now = Date.now(), D = 86400000;
+  const acc = (id, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: now }, puuid: P }, extra);
+  const win = bootApp([acc("fresh", { masteryAt: now - D, mastery: [{ name: "Lux", level: 7, points: 250000 }] }),
+    acc("due", { masteryAt: now - 4 * D }), acc("never", {}),
+    acc("junk", { mastery: [{ name: "<img src=x>", level: 7, points: 1 }, "nope"], masteryAt: "soon" })]);
+  assert.equal(appGet(win, 'accounts.find(a => a.id === "junk").mastery'), undefined, "junk is dropped on load");
+  assert.equal(appGet(win, 'accounts.find(a => a.id === "junk").masteryAt'), undefined);
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev'");
+  // the batch asks only for the accounts that are due
+  let body = null;
+  win.fetch = async (u, init) => { body = JSON.parse(init.body); return { ok: true, status: 200, json: async () => ({ results: body.accounts.map(() => ({ ok: true, found: true, tier: "GOLD" })) }) }; };
+  runScript(win, `window.__b = fetchViaBackendBatch(accounts.filter(a => a.id !== "junk"))`);
+  await win.__b;
+  assert.deepEqual(body.accounts.map(a => a.mastery ?? false), [false, true, true]);
+  // a reading that carries mastery puts it on the account, stamped
+  runScript(win, `commitStats("due", accounts.find(a => a.id === "due"), mapBackendPayload({ found: true, tier: "GOLD", division: "I", lp: 5,
+    mastery: [{ name: "Yasuo", level: 7, points: 1234567 }, { name: "Ahri", level: 5, points: 40211 }] }))`);
+  assert.equal(appGet(win, 'accounts.find(a => a.id === "due").mastery[0].name'), "Yasuo");
+  assert.ok(appGet(win, 'accounts.find(a => a.id === "due").masteryAt') > now - 1000);
+  assert.equal(appGet(win, 'accounts.find(a => a.id === "due").stats.mastery'), undefined, "kept on the account, not the reading");
+  // Details shows it
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  card("due").querySelector('[data-act="info"]').click();
+  assert.match(card("due").querySelector('[data-k="sec-mastery"]').textContent, /Mastery\s*2\s*Yasuo · M7/);
+  card("due").querySelector('[data-act="sec"][data-s="mastery"]').click();
+  assert.match(card("due").querySelector('[data-k="sec-mastery"]').textContent, /Yasuo\s*M7\s*1\.2M pts/);
+  // and champ: finds it, by mastery or by this season's champions
+  const shown = q => { runScript(win, `ui.search = ${JSON.stringify(q)}; renderGrid()`); return [...win.document.querySelectorAll("#grid .card")].map(c => c.dataset.id).sort(); };
+  assert.deepEqual(shown("champ:yas"), ["due"]);
+  assert.deepEqual(shown("champ:lux"), ["fresh"]);
+  assert.deepEqual(shown("c:ah"), ["due"]);
 });
 
 test("Recent form: a Riot-read account's Details fetch its last five ranked games once, and say why when they cannot", async () => {
@@ -1103,6 +1351,99 @@ test("Recent form: a Riot-read account's Details fetch its last five ranked game
   win.fetch = async () => reply({ games: [] });
   card("r").querySelector('[data-act="formretry"]').click();
   await until(() => /No ranked games yet this season/.test(card("r").textContent), "Retry to fetch again");
+});
+
+test("Settings is six tabs, one section at a time, and a step that needs a field opens its tab", () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const doc = win.document, m = doc.getElementById("settings");
+  const tabs = [...m.querySelectorAll('[role="tab"]')];
+  assert.deepEqual(tabs.map(t => t.textContent.trim()), ["Appearance", "Rank checks", "Alerts", "Security", "Sync", "Backup"]);
+  const shown = () => [...m.querySelectorAll(".grp")].filter(g => win.getComputedStyle(g).display !== "none")
+    .map(g => g.querySelector(".grp-h").textContent.trim());
+  doc.getElementById("bSettings").click();
+  assert.deepEqual(shown(), ["Appearance"], "opens on Appearance, alone");
+  tabs[1].click();
+  assert.deepEqual(shown(), ["Rank checks", "Automatic refresh"], "the backend first, then when it runs");
+  assert.equal(tabs[1].getAttribute("aria-selected"), "true");
+  assert.equal(tabs[0].getAttribute("aria-selected"), "false");
+  // arrow keys walk the row, and wrap
+  tabs[1].dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  assert.equal(m.dataset.tab, "alerts");
+  tabs[2].dispatchEvent(new win.KeyboardEvent("keydown", { key: "End", bubbles: true }));
+  assert.equal(m.dataset.tab, "backup");
+  assert.equal(doc.activeElement, tabs[5], "focus follows the selection");
+  tabs[5].dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  assert.equal(m.dataset.tab, "look");
+  // the export reminder lives with the backups now, next to the backup buttons
+  const backup = m.querySelector('.grp[data-tab="backup"]');
+  assert.ok(backup.contains(doc.getElementById("sExportDays")));
+  assert.match(backup.textContent, /No backup made from this browser yet/);
+  let exported = 0;
+  doc.getElementById("bExportCsv").addEventListener("click", () => exported++);
+  backup.querySelector('[data-proxy="bExportCsv"]').click();
+  assert.equal(exported, 1, "a backup button does what its ⋯ menu twin does");
+  // reopening starts on Appearance again
+  win.closeAllPanels();
+  doc.getElementById("bSettings").click();
+  assert.equal(m.dataset.tab, "look");
+  win.closeAllPanels();
+  doc.querySelector('#setup [data-setup="lock"]').click();
+  assert.equal(m.dataset.tab, "security", "Set a master password lands on the password field's tab");
+  assert.deepEqual(shown(), ["Security"]);
+});
+
+test("Discord decay alerts: switched on in Alerts, the worker gets a list of Diamond+ estimates and a token of its own", async () => {
+  const now = Date.now(), D = 86400000;
+  const acc = (id, tier, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [],
+    history: [{ t: now - 10 * D, tier, division: "II", lp: 40, w: 100, l: 90 }],
+    stats: { found: true, tier, division: "II", lp: 40, wins: 100, losses: 90, updatedAt: now - D } }, extra);
+  const win = bootApp([acc("d", "DIAMOND", { label: "Main" }), acc("g", "GOLD"), acc("banned", "DIAMOND", { status: "banned" })]);
+  const doc = win.document;
+  const calls = [];
+  win.fetch = async (u, init = {}) => {
+    calls.push({ url: String(u), method: init.method || "GET", auth: init.headers && init.headers.Authorization, body: init.body && JSON.parse(init.body) });
+    return { ok: true, status: 200, json: async () => ({ ok: true, accounts: 1, lastRun: now - 3600e3, lastSent: null }) };
+  };
+  doc.getElementById("bSettings").click();
+  doc.getElementById("sBackend").value = "https://w.example.workers.dev";
+  doc.getElementById("sWatch").checked = true;
+  doc.getElementById("sSave").click();
+  await until(() => /decay alerts need the worker and the Discord webhook/.test(doc.getElementById("toast").textContent), "the missing webhook named");
+  assert.equal(appGet(win, "cfg.watch"), undefined, "no webhook, no alerts");
+  doc.getElementById("bSettings").click();
+  doc.getElementById("sDiscord").value = "https://discord.com/api/webhooks/1/abc";
+  doc.getElementById("sWatch").checked = true;
+  doc.getElementById("sSave").click();
+  await until(() => calls.some(c => c.method === "PUT"), "the list to go to the worker");
+  const put = calls.find(c => c.method === "PUT");
+  assert.equal(put.url, "https://w.example.workers.dev/watch");
+  assert.match(put.auth, /^Bearer \S{16,}$/, "a token of its own");
+  assert.equal(put.auth, "Bearer " + appGet(win, "cfg.watchToken"));
+  assert.notEqual(appGet(win, "cfg.watchToken"), appGet(win, "cfg.syncToken"), "not the sync token");
+  assert.equal(put.body.webhook, "https://discord.com/api/webhooks/1/abc");
+  assert.deepEqual(put.body.accounts.map(a => a.name), ["d"], "Diamond and up, live accounts only");
+  const a = put.body.accounts[0];
+  assert.equal(a.label, "Main");
+  assert.equal(a.games, 190);
+  assert.equal(a.region, "euw");
+  assert.ok(a.bank > 0 && a.bank <= 28 && a.at === now - D, "the bank as of the latest reading, which the worker carries on");
+  assert.equal("login" in a || "password" in a || "email" in a, false, "never a login");
+  // a new reading of a Diamond+ account sends the list again (soon, once a Check all has landed)
+  runScript(win, "window.__soon = 0; syncWatchSoon = () => window.__soon++;");
+  runScript(win, `commitStats("d", accounts.find(x => x.id === "d"), {found:true,tier:"DIAMOND",division:"I",lp:5,wins:101,losses:90,updatedAt:Date.now()})`);
+  runScript(win, `commitStats("g", accounts.find(x => x.id === "g"), {found:true,tier:"GOLD",division:"I",lp:5,wins:1,losses:0,updatedAt:Date.now()})`);
+  assert.equal(win.__soon, 1, "a Gold reading cannot change a decay estimate");
+  doc.getElementById("bSettings").click();
+  await until(() => /On — watching 1 account · last checked 1 h ago/.test(doc.getElementById("sWatchStatus").textContent), "the status line");
+  // a worker deployed before alerts existed answers 405: say so instead of failing quietly
+  win.fetch = async () => ({ ok: false, status: 405, json: async () => ({ error: "method not allowed" }) });
+  runScript(win, "updateWatchStatus()");
+  await until(() => /older version without decay alerts — redeploy/.test(doc.getElementById("sWatchStatus").textContent), "the old worker named");
+  win.fetch = async (u, init = {}) => { calls.push({ method: init.method || "GET" }); return { ok: true, status: 200, json: async () => ({ ok: true }) }; };
+  doc.getElementById("sWatch").checked = false;
+  doc.getElementById("sSave").click();
+  await until(() => calls.some(c => c.method === "DELETE"), "switching off to stop it on the worker");
+  assert.equal(appGet(win, "cfg.watch"), null);
 });
 
 test("Settings walks you through setting up a worker, and steps aside once you have one", () => {
@@ -3058,6 +3399,111 @@ test("the modal panels keep every control the app talks to", () => {
   assert.ok(win.document.getElementById("help").contains(win.document.getElementById("bHelpClose")));
 });
 
+test("Effects: Full, Subtle or Off — previewed live, kept on Save, honoured on the next visit", () => {
+  const win = bootApp();
+  const doc = win.document;
+  const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  assert.equal(doc.body.dataset.fx, "full", "full by default");
+  doc.getElementById("bSettings").click();
+  const seg = doc.getElementById("sEffects");
+  const checked = () => [...seg.querySelectorAll("[data-v]")].filter(b => b.getAttribute("aria-checked") === "true").map(b => b.dataset.v);
+  assert.deepEqual(checked(), ["full"]);
+  seg.querySelector('[data-v="off"]').click();
+  assert.equal(doc.body.dataset.fx, "off", "previews at once");
+  doc.getElementById("sClose").click();
+  assert.equal(doc.body.dataset.fx, "full", "Close puts it back");
+  doc.getElementById("bSettings").click();
+  seg.querySelector('[data-v="subtle"]').click();
+  doc.getElementById("sSave").click();
+  assert.equal(cfg().effects, "subtle");
+  // the rules exist for each level: nothing lifts under the pointer, and Off stops animation outright
+  const css = [...doc.querySelectorAll("style")].map(s => s.textContent).join("\n");
+  assert.match(css, /body:is\(\[data-fx="subtle"\],\[data-fx="off"\]\)[^{]*\.grid>\.hx[^{]*:hover[^{]*\{transform:none\}/);
+  assert.match(css, /body\[data-fx="off"\] \*[^{]*\{animation:none!important;transition:none!important\}/);
+  const again = bootApp(null, w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, effects: "off" })));
+  assert.equal(again.document.body.dataset.fx, "off", "applied on boot");
+});
+
+test("Text size: every font size scales with one setting, and nothing else moves", () => {
+  const win = bootApp();
+  const doc = win.document, html = doc.documentElement;
+  const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  // every size in the app goes through --ts — a hard-coded one would stay put at Large
+  const all = [...doc.querySelectorAll("style")].map(s => s.textContent).join("\n") + html.outerHTML;
+  assert.doesNotMatch(all, /font-size:\s*[\d.]+px/, "no font-size bypasses the scale");
+  assert.doesNotMatch(all, /font:\s*\d{3} [\d.]+px/, "nor a font shorthand");
+  assert.match(all, /--ts:1;/);
+  assert.match(all, /html\[data-ts="large"\]\{--ts:1\.15\}/);
+  assert.equal(html.dataset.ts, undefined, "default: no attribute at all");
+  doc.getElementById("bSettings").click();
+  doc.querySelector('#sTextSize [data-v="large"]').click();
+  assert.equal(html.dataset.ts, "large", "previews at once");
+  doc.getElementById("sClose").click();
+  assert.equal(html.dataset.ts, undefined, "Close puts it back");
+  doc.getElementById("bSettings").click();
+  doc.querySelector('#sTextSize [data-v="small"]').click();
+  doc.getElementById("sSave").click();
+  assert.equal(cfg().textSize, "small");
+  const again = bootApp(null, w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, textSize: "large" })));
+  assert.equal(again.document.documentElement.dataset.ts, "large", "applied on boot");
+});
+
+test("themes: one click sets both colours and the atmosphere, kept only on Save", () => {
+  const win = bootApp();
+  const doc = win.document, root = doc.documentElement.style;
+  const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  const tiles = () => [...doc.querySelectorAll("#sThemes [data-theme]")];
+  const on = () => tiles().filter(t => t.getAttribute("aria-checked") === "true").map(t => t.dataset.theme);
+  doc.getElementById("bSettings").click();
+  assert.deepEqual(tiles().map(t => t.dataset.theme), ["hextech", "shadowisles", "noxus", "piltover", "freljord", "ionia", "void", "rank"]);
+  assert.deepEqual(on(), ["hextech"], "the defaults are the Hextech theme");
+  doc.querySelector('#sThemes [data-theme="noxus"]').click();
+  assert.equal(root.getPropertyValue("--gold"), "#b8c0c8");
+  assert.equal(root.getPropertyValue("--teal"), "#d33b3b");
+  assert.deepEqual(on(), ["noxus"]);
+  doc.getElementById("sClose").click();
+  assert.equal(root.getPropertyValue("--gold"), "#c8aa6e", "closing without saving puts it back");
+  assert.equal(doc.body.dataset.atmosphere, "spotlight");
+  doc.getElementById("bSettings").click();
+  doc.querySelector('#sThemes [data-theme="piltover"]').click();
+  assert.equal(doc.body.dataset.atmosphere, "lattice", "a theme brings its atmosphere");
+  doc.getElementById("sSave").click();
+  assert.equal(cfg().accent, "#e0a458");
+  assert.equal(cfg().accent2, "#3f9cff");
+  assert.equal(cfg().atmosphere, "lattice");
+  doc.getElementById("bSettings").click();
+  assert.deepEqual(on(), ["piltover"], "reopening shows the theme in force");
+  // a picker of your own is no theme at all
+  const pick = doc.getElementById("sAccent");
+  pick.value = "#123456"; pick.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.deepEqual(on(), []);
+});
+
+test("themes: My best rank follows the highest tier, and moves when you climb", () => {
+  const acc = (id, tier, division) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier, division, lp: 10, wins: 1, losses: 1, updatedAt: Date.now() } });
+  const win = bootApp([acc("g", "GOLD", "I"), acc("d", "DIAMOND", "IV"),
+    Object.assign(acc("b", "CHALLENGER", null), { status: "banned" })]);
+  const doc = win.document, root = doc.documentElement.style;
+  const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
+  doc.getElementById("bSettings").click();
+  doc.querySelector('#sThemes [data-theme="rank"]').click();
+  doc.getElementById("sSave").click();
+  assert.equal(cfg().rankTheme, true);
+  assert.equal(cfg().accent ?? null, null, "nothing fixed is stored; it is worked out");
+  assert.equal(root.getPropertyValue("--gold"), "#7ea6f0", "Diamond — a banned Challenger does not count");
+  assert.equal(root.getPropertyValue("--teal"), "#c8aa6e", "Diamond's blue sits near teal, so its partner is gold");
+  runScript(win, `{ const a = accounts.find(x => x.id === "g"); a.stats = Object.assign({}, a.stats, { tier: "EMERALD", division: "I" }); renderDash(); }`);
+  assert.equal(root.getPropertyValue("--gold"), "#7ea6f0", "a lower climb changes nothing");
+  runScript(win, `{ const a = accounts.find(x => x.id === "d"); a.stats = Object.assign({}, a.stats, { tier: "MASTER", division: null }); renderDash(); }`);
+  assert.equal(root.getPropertyValue("--gold"), "#b16ce8", "a new best tier recolours the app");
+  assert.equal(root.getPropertyValue("--teal"), "#0ac8b9", "Master's purple keeps the teal");
+  // and when the best one goes, the next best takes over
+  runScript(win, `accounts.find(x => x.id === "d").status = "banned"; renderDash();`);
+  assert.equal(root.getPropertyValue("--gold"), "#3ddc84");
+  assert.equal(root.getPropertyValue("--teal"), "#c8aa6e");
+});
+
 test("atmosphere previews live and only sticks after Save", () => {
   const win = bootApp();
   const body = win.document.body;
@@ -3110,9 +3556,12 @@ test("atmosphere previews live and only sticks after Save", () => {
 test("the settings body is grouped rather than one flat run of fields", () => {
   const win = bootApp();
   const groups = [...win.document.querySelectorAll("#settings .grp-h")].map(g => g.textContent.trim());
-  // what most people change first; the plumbing (rank server, API key, sync) last,
-  // with sync after both of the things it needs
-  assert.deepEqual(groups, ["Appearance", "Automatic refresh", "Alerts", "Security", "Rank checks", "Device sync"]);
+  // in the order of the tab row, which is one click to any of them; sync still
+  // comes after both of the things it needs (a master password and a worker)
+  assert.deepEqual(groups, ["Appearance", "Rank checks", "Automatic refresh", "Alerts", "Security", "Device sync", "Backup"]);
+  const tabOrder = [...win.document.querySelectorAll("#settings [data-stab]")].map(b => b.dataset.stab);
+  const grpOrder = [...new Set([...win.document.querySelectorAll("#settings .grp")].map(g => g.dataset.tab))];
+  assert.deepEqual(grpOrder, tabOrder, "the groups run in the tabs' order");
   // header and footer sit outside the scrolling middle, so Save is always reachable
   const body = win.document.querySelector("#settings .mdl-b");
   assert.ok(body, "there is a scroll region");

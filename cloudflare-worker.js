@@ -18,7 +18,10 @@
 //   a renamed account keeps its history.
 //
 // GET /status -> {"ok":true,"riot":true|false,"vault":true|false}  (what this worker has set up)
-// GET /form?puuid=<puuid>&region=<euw|...> -> {"games":[{"win","champ","k","d","a","min","at"}]}
+// A lookup (GET with &mastery=1, or a batch row with "mastery":true) also returns the
+//   account's top five champions by mastery, when there is a Riot key:
+//   "mastery":[{"name":"Ahri","level":7,"points":312045}, ...]
+// GET /form?puuid=<puuid>&region=<euw|...> -> {"games":[{"win","champ","role","k","d","a","min","at"}]}
 //   The last five ranked solo games, from Riot's match-v5. Needs RIOT_API_KEY.
 //
 // Device sync (encrypted vault blob only — not a scrape cache):
@@ -27,6 +30,15 @@
 //   PUT  /vault   Authorization: Bearer <sync-token>
 //        body: {"updatedAt": <ms>, "envelope": {"__enc":true,"salt","iv","data"}}
 //   Last-write-wins on updatedAt; older PUT → 409 with the stored record.
+//
+// Discord alerts while the app is closed (needs the KV binding above):
+//   PUT    /watch  Authorization: Bearer <watch-token>
+//          body: {"webhook": <Discord webhook URL>, "accounts": [{name, tag, region, puuid?, label?,
+//                 tier, games, bank, at}]}   (Diamond and up; bank = days of decay protection at `at`)
+//   GET    /watch  -> {"ok":true,"accounts":n,"lastRun":ms|null,"lastSent":ms|null}
+//   DELETE /watch  stops it.
+//   One list per worker, owned by the token that set it up. The daily cron in
+//   wrangler.jsonc re-reads each account and posts when one is about to decay.
 //
 // -> HTTP 4xx/5xx on transient failures (missing params, op.gg unreachable, page didn't parse) —
 //    the app falls back to the free proxy chain / manual entry on any non-2xx response.
@@ -41,7 +53,7 @@ const VAULT_MAX_BYTES = 1_500_000; // ~1.5 MB ciphertext envelope
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
@@ -51,6 +63,7 @@ export default {
     try {
       const url = new URL(request.url);
       if (isVaultPath(url.pathname)) return await handleVault(request, env);
+      if (isWatchPath(url.pathname)) return await handleWatch(request, env);
       if (/\/status\/?$/.test(url.pathname)) return json({ ok: true, riot: !!riotKey(env), vault: !!vaultStore(env) }, 200);
       if (/\/form\/?$/.test(url.pathname)) {
         const key = riotKey(env);
@@ -67,14 +80,143 @@ export default {
       const region = (url.searchParams.get("region") || "euw").toLowerCase();
       if (!name || !tag) return json({ error: "missing name/tag" }, 400);
 
-      const result = await lookupOne(name, tag, region, env, url.searchParams.get("puuid"));
+      const result = await lookupOne(name, tag, region, env, url.searchParams.get("puuid"), url.searchParams.get("mastery") === "1");
       if (result.error && result.status) return json({ error: result.error }, result.status);
       return json(result.body, 200);
     } catch (e) {
       return json({ error: "worker error: " + (e && e.message) }, 500);
     }
   },
+  // the daily cron (wrangler.jsonc): decay alerts on Discord
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(runWatch(env));
+  },
 };
+
+/* ---- Discord alerts while the app is closed ----
+   The app hands this worker a short watch list: Riot IDs, labels, and each Diamond+
+   account's decay estimate, never logins, plus a Discord webhook. Once a day the
+   worker re-reads those accounts, carries the estimate forward the way the app does,
+   and posts when one enters "decays within two days" or "decaying". One message per
+   change of state, not one a day. One list per worker: the token that set it up
+   owns it, so nobody else who finds the URL can point it at their own channel. */
+const WATCH_KEY = "watch:slot", WATCH_MAX = 20;
+const DECAY = { DIAMOND: { cap: 28, per: 7, lp: 50 }, MASTER: { cap: 14, per: 1, lp: 75 },
+  GRANDMASTER: { cap: 14, per: 1, lp: 75 }, CHALLENGER: { cap: 14, per: 1, lp: 75 } };
+const DISCORD_RE = /^https:\/\/(?:(?:canary|ptb)\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+$/;
+export function isWatchPath(pathname) {
+  const p = String(pathname || "").replace(/\/+$/, "") || "/";
+  return p === "/watch" || p.endsWith("/watch");
+}
+function cleanWatchAccount(a) {
+  if (!a || typeof a !== "object") return null;
+  const str = (v, n) => typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null;
+  const name = str(a.name, 32), tag = str(a.tag, 8), region = String(a.region || "").toLowerCase();
+  const tier = String(a.tier || "").toUpperCase(), rule = DECAY[tier];
+  if (!name || !tag || !RIOT_PLATFORM[region] || !rule) return null;
+  const games = Number(a.games), bank = Number(a.bank), at = Number(a.at);
+  if (!Number.isFinite(games) || games < 0 || !Number.isFinite(bank) || !Number.isFinite(at) || at <= 0) return null;
+  return { name, tag, region, puuid: typeof a.puuid === "string" && PUUID_RE.test(a.puuid) ? a.puuid : null,
+    label: str(a.label, 40), tier, division: str(a.division, 4), lp: Number.isFinite(Number(a.lp)) ? Number(a.lp) : null,
+    games, bank: Math.max(0, Math.min(rule.cap, bank)), at };
+}
+export async function handleWatch(request, env) {
+  const store = vaultStore(env);
+  if (!store) return json({ error: "alerts need a KV namespace bound as VAULT on this worker", code: "no_kv" }, 503);
+  const token = bearerToken(request);
+  if (!token || token.length < 16) return json({ error: "missing or short watch token" }, 401);
+  const owner = (await vaultKeyFromToken(token)).slice(6);
+  let slot = null;
+  try { slot = JSON.parse((await store.get(WATCH_KEY)) || "null"); } catch (e) { slot = null; }
+  if (slot && slot.owner !== owner) return json({ error: "this worker already sends alerts for another browser", code: "taken" }, 409);
+  if (request.method === "GET") {
+    if (!slot) return json({ error: "not watching" }, 404);
+    return json({ ok: true, accounts: slot.accounts.length, lastRun: slot.lastRun || null, lastSent: slot.lastSent || null }, 200);
+  }
+  if (request.method === "DELETE") {
+    if (slot) await store.delete(WATCH_KEY);
+    return json({ ok: true }, 200);
+  }
+  if (request.method === "PUT") {
+    let body;
+    try { body = await request.json(); } catch (e) { return json({ error: "invalid JSON body" }, 400); }
+    if (!DISCORD_RE.test(String(body && body.webhook || ""))) return json({ error: "not a Discord webhook URL" }, 400);
+    const list = Array.isArray(body.accounts) ? body.accounts : [];
+    if (list.length > WATCH_MAX) return json({ error: "at most " + WATCH_MAX + " accounts" }, 400);
+    const accounts = list.map(cleanWatchAccount).filter(Boolean);
+    // an alert already sent stays sent across the app's refreshes of the list
+    const was = new Map(((slot && slot.accounts) || []).map(a => [`${a.name}#${a.tag}@${a.region}`.toLowerCase(), a.alerted]));
+    for (const a of accounts) a.alerted = was.get(`${a.name}#${a.tag}@${a.region}`.toLowerCase()) || null;
+    await store.put(WATCH_KEY, JSON.stringify({ owner, webhook: body.webhook, accounts,
+      lastRun: slot ? slot.lastRun || null : null, lastSent: slot ? slot.lastSent || null : null }));
+    return json({ ok: true, accounts: accounts.length }, 200);
+  }
+  return json({ error: "method not allowed" }, 405);
+}
+// Half the gap's decay before the games and half after, as the app counts it.
+export function carryBank(bank, rule, days, games) {
+  let b = Math.max(0, bank - days / 2);
+  if (games > 0) b = Math.min(rule.cap, b + games * rule.per);
+  return Math.max(0, b - days / 2);
+}
+async function readSolo(a, env) {
+  const key = riotKey(env);
+  if (key && a.puuid) {
+    const r = await riotGet(`https://${RIOT_PLATFORM[a.region]}.api.riotgames.com/lol/league/v4/entries/by-puuid/${a.puuid}`, key);
+    if (r.ok) {
+      const e = (await r.json()).find(x => x && x.queueType === "RANKED_SOLO_5x5");
+      if (!e) return { tier: "UNRANKED", games: 0 };
+      const tier = String(e.tier || "").toUpperCase();
+      return { tier, division: MASTER_PLUS.includes(tier) ? null : e.rank || null, lp: e.leaguePoints ?? null, games: (e.wins || 0) + (e.losses || 0) };
+    }
+  }
+  const s = await scrapeOne(a.name, a.tag, a.region);
+  if (!s.body || !s.body.found || s.body.wins == null) return null;
+  return { tier: String(s.body.tier || "").toUpperCase(), division: s.body.division || null, lp: s.body.lp ?? null, games: (s.body.wins || 0) + (s.body.losses || 0) };
+}
+function alertText(a, state, rule, days) {
+  const who = a.label || a.name;
+  const rank = a.tier.charAt(0) + a.tier.slice(1).toLowerCase() + (a.division ? " " + a.division : "") + (a.lp != null ? " · " + a.lp + " LP" : "");
+  return state === "now"
+    ? `📉 **${who}** (${rank}) is decaying: −${rule.lp} LP a day until it plays a ranked game.`
+    : `⏳ **${who}** (${rank}) decays in ~${days} day${days === 1 ? "" : "s"}. One ranked game banks ${rule.per === 1 ? "a day" : rule.per + " days"}.`;
+}
+export async function runWatch(env, now = Date.now()) {
+  const store = vaultStore(env);
+  if (!store) return { ran: false };
+  let slot = null;
+  try { slot = JSON.parse((await store.get(WATCH_KEY)) || "null"); } catch (e) { slot = null; }
+  if (!slot || !Array.isArray(slot.accounts)) return { ran: false };
+  const posts = [];
+  for (const a of slot.accounts) {
+    let cur = null;
+    try { cur = await readSolo(a, env); } catch (e) { cur = null; }
+    if (!cur) continue;                              // unreadable today: tomorrow, from the same estimate
+    const rule = DECAY[cur.tier], before = DECAY[a.tier];
+    let bank = 0;
+    if (rule) {
+      if (cur.games < a.games || !before || before.cap !== rule.cap) bank = rule.cap; // new season, or a new tier's own start
+      else bank = carryBank(a.bank, rule, (now - a.at) / 86400000, cur.games - a.games);
+    }
+    Object.assign(a, { tier: cur.tier, division: cur.division ?? null, lp: cur.lp ?? null, games: cur.games, bank, at: now });
+    const days = Math.floor(bank);
+    const state = !rule ? null : bank <= 0 ? "now" : days <= 2 ? "soon" : null;
+    if (state && state !== a.alerted) posts.push(alertText(a, state, rule, days));
+    a.alerted = state;
+  }
+  let sent = 0;
+  for (const content of posts) {
+    try {
+      const r = await fetch(slot.webhook, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, allowed_mentions: { parse: [] } }) });
+      if (r.ok) sent++;
+    } catch (e) { /* the next change of state will try again */ }
+  }
+  slot.lastRun = now;
+  if (sent) slot.lastSent = now;
+  await store.put(WATCH_KEY, JSON.stringify(slot));
+  return { ran: true, posts: posts.length, sent };
+}
 
 export function isVaultPath(pathname) {
   const p = String(pathname || "").replace(/\/+$/, "") || "/";
@@ -171,7 +313,7 @@ export async function handleBatch(request, env) {
       // is handed back as failed, and the app retries it on its own GET — a fresh
       // request with a fresh subrequest budget.
       const result = key
-        ? await riotOne(String(name), String(tag), region, key, a.puuid, false)
+        ? await riotOne(String(name), String(tag), region, key, a.puuid, false, !!a.mastery)
         : await scrapeOne(String(name), String(tag), region);
       if (result.error) return { name, tag, region, ok: false, error: result.error };
       return { name, tag, region, ok: true, ...result.body };
@@ -186,9 +328,11 @@ export async function handleBatch(request, env) {
   // a batch of twenty can overrun it. Rows past the budget are handed back to be
   // retried one at a time. Five at a time also keeps clear of Riot's 20-a-second
   // limit for personal keys.
-  let budget = SUBREQUEST_BUDGET;
+  // Mastery is one more call a row, and naming the champions costs two the first
+  // time an isolate needs Data Dragon's list; that pair is set aside up front.
+  let budget = SUBREQUEST_BUDGET - (list.some(a => a && a.mastery) && !champNamesFresh() ? 2 : 0);
   const plan = list.map(a => {
-    const cost = a && a.puuid ? 2 : 3;
+    const cost = (a && a.puuid ? 2 : 3) + (a && a.mastery ? 1 : 0);
     if (budget < cost) return false;
     budget -= cost; return true;
   });
@@ -238,7 +382,7 @@ const PUUID_RE = /^[A-Za-z0-9_-]{30,100}$/;
    which is the difference between 2 and 3 subrequests. A puuid is encrypted per
    API key, so one stored under an earlier key (a 24-hour development key, say)
    answers 400/404 — the account is then found again by Riot ID. */
-export async function riotOne(name, tag, region, key, puuid, withAccount = true) {
+export async function riotOne(name, tag, region, key, puuid, withAccount = true, withMastery = false) {
   const plat = RIOT_PLATFORM[region], cluster = RIOT_CLUSTER[region];
   if (!plat || !cluster) return { error: "no Riot routing for region " + region, riotError: "http", status: 400 };
   const known = typeof puuid === "string" && PUUID_RE.test(puuid) ? puuid : null;
@@ -253,9 +397,10 @@ export async function riotOne(name, tag, region, key, puuid, withAccount = true)
     acct = await res.json();
   }
   const id = acct ? acct.puuid : known;
-  const [sr, lr] = await Promise.all([
+  const [sr, lr, mastery] = await Promise.all([
     riotGet(`https://${plat}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${id}`, key),
     riotGet(`https://${plat}.api.riotgames.com/lol/league/v4/entries/by-puuid/${id}`, key),
+    withMastery ? riotMastery(plat, id, key) : null,
   ]);
   // A Riot account with no League profile on this server: the region is wrong.
   if (sr.status === 404) return { body: { found: false, source: "riot" } };
@@ -281,10 +426,41 @@ export async function riotOne(name, tag, region, key, puuid, withAccount = true)
         ? `https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon${summ.profileIconId}.jpg` : null,
       puuid: id,
       riotId: acct ? { name: acct.gameName, tag: acct.tagLine } : null,
+      ...(mastery ? { mastery } : {}),
       uncertain: false,
       source: "riot",
     },
   };
+}
+
+/* Champion mastery, top five. Riot answers with champion numbers, so the names come
+   from Data Dragon's champion list, kept for a day in the isolate. Best effort:
+   a failure here leaves the rank reading untouched and simply has no mastery. */
+let champNameCache = null;
+function champNamesFresh() { return !!(champNameCache && Date.now() - champNameCache.at < 86400000); }
+export function resetChampNames() { champNameCache = null; }
+async function champNames() {
+  if (champNamesFresh()) return champNameCache.map;
+  const vr = await fetch("https://ddragon.leagueoflegends.com/api/versions.json");
+  if (!vr.ok) return null;
+  const v = (await vr.json())[0];
+  const cr = await fetch(`https://ddragon.leagueoflegends.com/cdn/${encodeURIComponent(v)}/data/en_US/champion.json`);
+  if (!cr.ok) return null;
+  const map = {};
+  for (const c of Object.values((await cr.json()).data || {})) map[String(c.key)] = c.name;
+  champNameCache = { map, at: Date.now() };
+  return map;
+}
+async function riotMastery(plat, puuid, key) {
+  try {
+    const [res, names] = await Promise.all([
+      riotGet(`https://${plat}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${puuid}/top?count=5`, key),
+      champNames(),
+    ]);
+    if (!res.ok || !names) return null;
+    return (await res.json()).slice(0, 5).filter(m => names[String(m.championId)])
+      .map(m => ({ name: names[String(m.championId)], level: m.championLevel ?? null, points: m.championPoints ?? null }));
+  } catch (e) { return null; }
 }
 
 // match-v5 routes by these four clusters, which are not account-v1's three
@@ -297,6 +473,7 @@ const MATCH_CLUSTER = {
 /* The last five ranked solo games (queue 420): the list of match ids, then each
    match, reduced to this player's line. Six subrequests, asked for one account at
    a time when its details are opened — never in a batch. */
+const ROLE_NAME = { TOP: "Top", JUNGLE: "Jungle", MIDDLE: "Mid", BOTTOM: "Bot", UTILITY: "Support" };
 export async function riotForm(puuid, region, key) {
   const cluster = MATCH_CLUSTER[region];
   if (!cluster || !PUUID_RE.test(String(puuid || ""))) return { error: "bad puuid or region", status: 400 };
@@ -311,7 +488,7 @@ export async function riotForm(puuid, region, key) {
     const d = await m.json();
     const info = d && d.info, p = info && (info.participants || []).find(x => x.puuid === puuid);
     if (!p) continue;
-    games.push({ win: !!p.win, champ: String(p.championName || "?"), k: p.kills, d: p.deaths, a: p.assists,
+    games.push({ win: !!p.win, champ: String(p.championName || "?"), role: ROLE_NAME[p.teamPosition] || null, k: p.kills, d: p.deaths, a: p.assists,
       min: Math.round((info.gameDuration || 0) / 60), at: info.gameEndTimestamp || info.gameCreation || null });
   }
   return { body: { games } };
@@ -321,10 +498,10 @@ export async function riotForm(puuid, region, key) {
    then op.gg (best effort) for what Riot does not know — peak, past seasons,
    champions, the dates LP was reached. Without one, or when Riot refuses, op.gg
    alone, with Riot's complaint passed along so the app can say the key expired. */
-export async function lookupOne(name, tag, region, env, puuid) {
+export async function lookupOne(name, tag, region, env, puuid, withMastery = false) {
   const key = riotKey(env);
   if (!key) return scrapeOne(name, tag, region);
-  const r = await riotOne(name, tag, region, key, puuid, true);
+  const r = await riotOne(name, tag, region, key, puuid, true, withMastery);
   if (r.body && r.body.found === false) return r;
   if (r.body) {
     try {
