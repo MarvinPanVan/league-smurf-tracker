@@ -818,8 +818,14 @@
     .rw-main{grid-template-columns:auto 40px minmax(120px,1.4fr) 92px minmax(92px,1fr) 56px 16px;gap:10px}
     .rw-wr,.rw-up{display:none}
   }
+  /* Fixed minimums here — 110px of name, 90px of rank, 54px of change — came to 36px
+     more than a 390px row holds, so every row overflowed: "Diamond IV" was cut to
+     "Diamond…", the LP pill was sliced and the chevron fell off the edge. The rank
+     and the change get the width their longest label needs ("Grandmaster", a four-
+     figure drop), fixed so they still line up from row to row; the name takes what
+     is left and ellipsises. */
   @media (max-width:720px){
-    .rw-main{grid-template-columns:auto 36px minmax(110px,1.5fr) minmax(90px,1fr) 54px 16px;gap:10px;
+    .rw-main{grid-template-columns:auto 36px minmax(0,1fr) 106px 58px 16px;gap:10px;
       min-height:52px;padding:12px 12px;align-items:center}
     .rw-spark,.rw-tags{display:none}
     .rw-check{opacity:1} /* thumb-friendly: always show Refresh on phones */
@@ -832,6 +838,13 @@
     .dash{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
     .stat{padding:14px 14px}
     .bulkchk{opacity:1} /* selection without needing hover */
+  }
+  /* On the smallest phones the rank and a name you can read do not both fit beside
+     the LP change, and the rule above says which goes: the nice-to-know column. The
+     change is still on the card, and in the chart when the row is opened. */
+  @media (max-width:440px){
+    .rw-main{grid-template-columns:auto 36px minmax(0,1fr) 106px 16px;gap:8px}
+    .rw-d{display:none}
   }
   @supports (padding:max(0px)){
     body{padding-bottom:max(12px,env(safe-area-inset-bottom))}

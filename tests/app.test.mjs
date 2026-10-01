@@ -5966,3 +5966,26 @@ test("Tab stays inside Settings", () => {
   assert.equal(tab(true), true, "Shift+Tab from there goes round the other way");
   assert.equal(doc.activeElement, close);
 });
+
+/* On a phone the list row was laid out as fixed minimums — 110px of name, 90px of
+   rank, 54px of LP change — that add up to 36px more than a 390px row holds. So
+   every row overflowed its own box: the rank was cut to "Diamond…", which is the
+   one part of it that says where the account is, the LP pill was sliced through
+   and the chevron was off the edge altogether (Chromium: 40 of 40 rows). Nothing
+   lays out in jsdom, so this guards the declarations; the fix was measured there. */
+test("on a phone a list row fits its rank instead of cutting it short", () => {
+  const at = html.indexOf("@media (max-width:720px){\n    .rw-main{");
+  assert.ok(at > -1, "the phone list rule is still there");
+  const phone = html.slice(at, html.indexOf("}", at));
+  assert.match(phone, /grid-template-columns:auto 36px minmax\(0,1fr\) 106px 58px 16px/,
+    "the name takes what is left; rank and change are wide enough for their longest labels, and fixed so they line up");
+  const n = html.indexOf("@media (max-width:440px){");
+  assert.ok(n > at, "and a narrower step for the smallest phones, after it so it wins");
+  const small = html.slice(n, html.indexOf("\n  }", n));
+  assert.match(small, /\.rw-main\{grid-template-columns:auto 36px minmax\(0,1fr\) 106px 16px;/,
+    "where the change gives its column up rather than the rank");
+  assert.match(small, /\.rw-d\{display:none\}/);
+  // 390 − 32 of page gutter − 24 of row padding, against what the columns need there
+  const fixed = 15 + 36 + 106 + 16 + 4 * 8;
+  assert.ok(390 - 32 - 24 - fixed >= 100, "which leaves a phone a name column of 100px or more");
+});
