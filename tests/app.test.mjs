@@ -1247,6 +1247,33 @@ test("Riot mode in the app: a refused key is said once, and a junk puuid never s
   assert.equal(win.__toasts.filter(m => /Riot API key was refused/.test(m)).length, 1, "once a session, not once per account");
 });
 
+test("Streaks and roles: the last five games are kept, a card says 3W streak and Mid, and role: finds it", async () => {
+  const P = "q".repeat(78), now = Date.now(), H = 3600e3;
+  const acc = (id, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: ["mine"], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: now }, puuid: P }, extra);
+  const old = { at: now - 9 * 24 * H, games: [1, 2, 3].map(i => ({ win: true, role: "Top", at: now - (9 * 24 + i) * H })) };
+  const win = bootApp([acc("a"), acc("stale", { recent: old }), acc("junk", { recent: { at: "x", games: [] } })]);
+  assert.equal(appGet(win, 'accounts.find(a => a.id === "junk").recent'), undefined, "junk is dropped on load");
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev'; render()");
+  const g = (win, role, h) => ({ win, champ: "Ahri", role, k: 1, d: 1, a: 1, min: 30, at: now - h * H });
+  win.fetch = async () => ({ ok: true, status: 200, json: async () => ({ games: [g(true, "Mid", 1), g(true, "Mid", 2), g(true, "Mid", 3), g(false, "Mid", 4), g(true, "Support", 5)] }) });
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  card("a").querySelector('[data-act="info"]').click();
+  await until(() => card("a").querySelector(".streak"), "the streak chip");
+  assert.equal(card("a").querySelector(".streak").textContent.trim(), "3W streak");
+  assert.equal(card("a").querySelector(".ctags .role-tag").textContent, "Mid", "4 of 5 in Mid");
+  assert.deepEqual([...card("a").querySelectorAll(".ctags span")].map(s => s.textContent), ["Mid", "mine"], "set apart from, and ahead of, your own tags");
+  const saved = JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.id === "a").recent;
+  assert.equal(saved.games.length, 5, "kept on the account");
+  assert.deepEqual(Object.keys(saved.games[0]).sort(), ["at", "champ", "role", "win"], "only what a streak and a role need");
+  assert.equal(card("stale").querySelector(".streak"), null, "a week-old streak is history, not form");
+  assert.equal(card("stale").querySelector(".role-tag").textContent, "Top", "the role still stands");
+  const shown = q => { runScript(win, `ui.search = ${JSON.stringify(q)}; renderGrid()`); return [...win.document.querySelectorAll("#grid .card")].map(c => c.dataset.id).sort(); };
+  assert.deepEqual(shown("role:mid"), ["a"]);
+  assert.deepEqual(shown("role:top"), ["stale"]);
+  assert.deepEqual(shown("role:jg"), []);
+});
+
 test("Mastery: asked for every three days, kept on the account, shown under Details, found with champ:", async () => {
   const P = "q".repeat(78), now = Date.now(), D = 86400000;
   const acc = (id, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],

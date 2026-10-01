@@ -1411,6 +1411,8 @@
   .meta .g{color:var(--gold-txt)}
   .ctags{display:flex;gap:6px;flex-wrap:wrap}
   .ctags span{font-size:calc(11px*var(--ts));padding:3px 9px;border-radius:var(--r-xs);background:#ffffff0a;border:1px solid #ffffff0f;color:var(--muted)}
+  /* the role is read from recent games, not typed by you, so it is set apart from your tags */
+  .ctags .role-tag{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 35%,transparent);background:color-mix(in srgb,var(--teal) 8%,transparent)}
   .login{background:#00000038;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:calc(13px*var(--ts));display:flex;flex-direction:column;gap:9px}
   .login .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:7px}
   .lrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -2112,7 +2114,7 @@
       <dt>Cards</dt>
       <dd>The bar across a card's bottom edge opens <b>Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot.</dd>
       <dt>Search</dt>
-      <dd>Matches names, tags, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code> <code>champ:yasuo</code> (played this season, or in its top mastery), <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
+      <dd>Matches names, tags, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code> <code>champ:yasuo</code> (played this season, or in its top mastery) <code>role:mid</code> (from the last five ranked games), <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
       <dt>Quick find</dt>
       <dd><kbd>Ctrl</kbd><kbd>K</kbd> (or <kbd>⌘</kbd><kbd>K</kbd>) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.</dd>
       <dt>Keys</dt>
@@ -3332,6 +3334,7 @@ function sanitizeAccount(a){
   if(a.puuid!=null&&!validPuuid(a.puuid))delete a.puuid;
   if(a.mastery!=null){a.mastery=normMastery(a.mastery);if(!a.mastery)delete a.mastery}
   if(a.masteryAt!=null&&!(Number(a.masteryAt)>0))delete a.masteryAt;
+  if(a.recent!=null){a.recent=normRecent(a.recent);if(!a.recent)delete a.recent}
   if(a.stats&&a.stats.seasons&&typeof a.stats.seasons==="object"){
     if(!Array.isArray(a.stats.seasons.solo))a.stats.seasons.solo=[];
     if(!Array.isArray(a.stats.seasons.flex))a.stats.seasons.flex=[];
@@ -4700,6 +4703,30 @@ function normMastery(list){
     points:Number.isFinite(m.points)?Math.max(0,Math.round(m.points)):null}:null).filter(Boolean);
   return out.length?out:null;
 }
+/* The last five ranked games, kept on the account from the latest /form answer
+   (Details opened, or a single Refresh), so a card can say "3W streak" and which
+   role the account has been played in without asking Riot again. */
+const ROLES=["Top","Jungle","Mid","Bot","Support"];
+function normRecent(r){
+  if(!r||typeof r!=="object"||!(Number(r.at)>0)||!Array.isArray(r.games))return null;
+  const games=r.games.slice(0,5).filter(g=>g&&typeof g==="object").map(g=>({win:g.win===true,
+    champ:typeof g.champ==="string"&&/^[A-Za-z0-9 '.&-]{1,24}$/.test(g.champ)?g.champ:null,
+    role:ROLES.includes(g.role)?g.role:null,at:Number.isFinite(g.at)?g.at:null}));
+  return games.length?{at:Number(r.at),games}:null;
+}
+const RECENT_FOR=7*86400000; // older than a week, a streak is history, not form
+function streakOf(a){
+  const r=normRecent(a.recent);if(!r||Date.now()-r.at>RECENT_FOR)return null;
+  const g=r.games.slice().sort((x,y)=>(y.at||0)-(x.at||0));
+  let n=0;while(n<g.length&&g[n].win===g[0].win)n++;
+  return n>=3?{win:g[0].win,n}:null;
+}
+function mainRole(a){
+  const r=normRecent(a.recent);if(!r)return null;
+  const count={};for(const g of r.games)if(g.role)count[g.role]=(count[g.role]||0)+1;
+  const best=Object.entries(count).sort((x,y)=>y[1]-x[1])[0];
+  return best&&best[1]>=3?best[0]:null;
+}
 function wantsMastery(a){return !!cfg.backendUrl&&!(Number(a.masteryAt)>Date.now()-MASTERY_EVERY)}
 function fmtPoints(n){return n==null?"":n>=1e6?(n/1e6).toFixed(n>=1e7?0:1).replace(/\.0$/,"")+"M":n>=1e3?Math.round(n/1e3)+"k":String(n)}
 function normChamps(list){
@@ -5389,12 +5416,12 @@ function renderCompare(){
 /* Sixty accounts is the point where "type some letters and see what sticks" stops
    being enough. The operators are the filters that already exist in the toolbar,
    reachable without leaving the keyboard:
-     tier:diamond   region:euw   champ:yasuo   is:stale|never|flagged|banned|fav|goal|decay|ready|leveling
+     tier:diamond   region:euw   champ:yasuo   role:mid   is:stale|never|flagged|banned|fav|goal|decay|ready|leveling
      >plat  >=plat  <gold  <=gold      (rank at least / below)
    Anything not recognised as an operator stays a plain search term, so a stray
    colon in a note never silently swallows the rest of the query. */
 function parseQuery(q){
-  const out={terms:[],tier:"",region:"",is:[],min:null,max:null,champ:[]};
+  const out={terms:[],tier:"",region:"",is:[],min:null,max:null,champ:[],role:""};
   for(const raw of String(q||"").trim().split(/\s+/)){
     if(!raw)continue;
     const tok=raw.toLowerCase();
@@ -5408,6 +5435,10 @@ function parseQuery(q){
       if(r){out.region=r;continue}
     }
     // champ:yasuo — played this season (op.gg's list) or in its top mastery
+    if((m=/^role:(.+)$/.exec(tok))){
+      const r=ROLES.find(x=>x.toLowerCase().startsWith(m[1]))||({mid:"Mid",adc:"Bot",bottom:"Bot",sup:"Support",supp:"Support",jg:"Jungle",jng:"Jungle"})[m[1]];
+      if(r){out.role=r;continue}
+    }
     if((m=/^(?:champ|c):(.+)$/.exec(tok))){out.champ.push(m[1].replace(/[^a-z0-9]/g,""));continue}
     if((m=/^is:(.+)$/.exec(tok))){
       if(["stale","never","flagged","banned","fav","goal","decay","ready","leveling"].includes(m[1])){out.is.push(m[1]);continue}
@@ -5451,6 +5482,7 @@ function passesBaseFilters(a,Q,{forceActive=false}={}){
     if(Q.min!=null&&i<Q.min)return false;
     if(Q.max!=null&&i>=Q.max)return false;
   }
+  if(Q.role&&mainRole(a)!==Q.role)return false;
   for(const c of Q.champ||[]){
     const names=[...(normChamps(a.stats&&a.stats.champs)||[]),...(normMastery(a.mastery)||[])].map(x=>x.name.toLowerCase().replace(/[^a-z0-9]/g,""));
     if(!names.some(n=>n.startsWith(c)))return false;
@@ -6116,9 +6148,11 @@ async function loadForm(id){
     const d=await res.json().catch(()=>null);
     if(res.ok&&d&&Array.isArray(d.games)){
       const games=d.games.slice(0,5).filter(g=>g&&typeof g==="object").map(g=>({win:g.win===true,
-        champ:String(g.champ||"?").slice(0,24),kda:[g.k,g.d,g.a].map(n=>Number.isFinite(n)?n:"?").join("/"),
+        champ:String(g.champ||"?").slice(0,24),role:ROLES.includes(g.role)?g.role:null,kda:[g.k,g.d,g.a].map(n=>Number.isFinite(n)?n:"?").join("/"),
         min:Number.isFinite(g.min)?g.min:null,at:Number.isFinite(g.at)?g.at:null}));
       next={state:"ok",games,at:Date.now()};
+      const keep=accounts.find(a=>a.id===id);
+      if(keep&&!previewMode){keep.recent=normRecent({at:Date.now(),games});if(!keep.recent)delete keep.recent;saveDB()}
     }else next={state:"error",msg:res.status===503?"Riot's rate limit — try again in a minute"
       :res.status===404?"Your worker has no Riot API key, or is an older version"
       :"Could not load them"+(d&&d.error?" ("+String(d.error).slice(0,80)+")":"")};
@@ -6547,6 +6581,7 @@ function cardHTML(a,i){
     if(dv)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
   }
   if(isClimbing(hist))deltaChip+='<span class="delta d-up" title="LP has gone up 3 checks in a row">'+icon("flame","flame")+' Climbing</span>';
+  {const st=streakOf(a);if(st)deltaChip+=`<span class="delta ${st.win?"d-up":"d-down"} streak" title="The last ${st.n} ranked games were all ${st.win?"wins":"losses"}">${st.n}${st.win?"W":"L"} streak</span>`}
   {
     const dd=decayDays(a);
     if(dd!==null&&dd<=7){
@@ -6687,7 +6722,8 @@ function cardHTML(a,i){
     ${rankChart(hist,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(hist),a.id,peakV,peak)}
     ${microStats.length?`<div class="c-stats">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
-    ${(a.tags||[]).length?`<div class="ctags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""}
+    ${(()=>{const role=mainRole(a),tags=a.tags||[];
+      return role||tags.length?`<div class="ctags">${role?`<span class="role-tag" title="Played in 3 or more of the last 5 ranked games">${esc(role)}</span>`:""}${tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""})()}
     ${loginOpen?`<div class="login${rv("login")}">
       ${a.login&&a.password?`<button class="lseq" data-act="copyseq">${loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`:""}
       <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
@@ -8916,7 +8952,7 @@ async function onCardClick(e){
     closeRankModal();
     commitStats(id,acc,s);toast("Rank saved");
   }
-  else if(act==="check")check(id);
+  else if(act==="check")check(id).then(r=>{const a=accounts.find(x=>x.id===id);if(r===true&&a&&canForm(a))loadForm(id)});
   else if(act==="del"){
     if(armedDelete===id){
       const idx=accounts.findIndex(a=>a.id===id);const removed=accounts[idx];
