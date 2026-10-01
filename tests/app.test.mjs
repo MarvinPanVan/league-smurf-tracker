@@ -611,6 +611,8 @@ test("a card's win-rate bar is drawn as a record, not as the goal rail's progres
   assert.match(wr, /--danger/, "the losses are the red remainder");
   assert.doesNotMatch(goal, /--danger/, "a goal's remainder is distance, not losses");
   assert.match(html, /\.wrbar::after\{[^}]*left:50%/, "and even is marked");
+  assert.match(html.match(/\.rw-bar\{[^}]*\}/)[0], /--danger/, "the list row draws the same record");
+  assert.match(html, /\.rw-bar::after\{[^}]*left:50%/);
   const win = bootApp([{ id: "w1", region: "EUW", gameName: "W", tagLine: "1", status: "active",
     stats: { found: true, tier: "GOLD", division: "I", lp: 10, wins: 42, losses: 58, updatedAt: 1 }, history: [], tags: [] }]);
   assert.equal(win.document.querySelector(".card .wrbar i").style.width, "42%");

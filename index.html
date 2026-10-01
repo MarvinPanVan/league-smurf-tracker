@@ -829,8 +829,11 @@
   .rw-wr em,.rw-lv em{font-style:normal;font-size:10px;color:var(--faint);letter-spacing:.02em}
   /* Sixty rows of "47%" are sixty identical grey blocks. Sixty bars of differing
      length are a shape you can run your eye down. */
-  .rw-bar{display:block;height:3px;border-radius:1px;background:#ffffff14;overflow:hidden}
-  .rw-bar i{display:block;height:100%;border-radius:1px}
+  /* drawn as a record, like the card's: wins, the losses as the remainder, even marked */
+  .rw-bar{position:relative;display:block;height:3px;border-radius:1px;overflow:hidden;
+    background:color-mix(in srgb,var(--danger) 34%,var(--panel2))}
+  .rw-bar i{display:block;height:100%;border-radius:1px 0 0 1px;box-shadow:1px 0 0 var(--bg)}
+  .rw-bar::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--bg)}
   .rw-d .delta{font-size:11px;padding:2px 6px}
   .rw-rg{font-size:10px;font-weight:600;letter-spacing:.09em;color:var(--faint);text-align:center}
   /* An unranked row has nothing to say in four of its columns, and at full
