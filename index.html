@@ -1294,6 +1294,7 @@
   .lpc-pt i{position:absolute;left:0;top:0;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;
     box-shadow:0 0 0 2px #0d1017;transition:transform .15s cubic-bezier(.34,1.56,.64,1)}
   .lpc-pt:hover i{transform:scale(1.55)}
+  .lpc.dense .lpc-pt:not(.now):not(:hover) i{transform:scale(0)}
   /* Opaque, not glass. This is the one surface that is always read against a busy
      background — the line, the band captions and the LP numerals all pass under
      it — and at 96% the line showed straight through the text. */
@@ -3067,6 +3068,11 @@ function ladderLP(s){ // absolute position on the ladder, in LP
 // × 100), which is what makes a fixed tier band possible at all.
 const TIER_SPAN=400;
 const LPC_W=200, LPC_H=88;
+/* Past this many checks a dot on every one stops being information and becomes a
+   string of beads — 25 dark-ringed dots over a line that already says where it
+   went, with the band captions hidden behind them. A dense chart is drawn as the
+   line and the latest reading; each dot still appears under the pointer. */
+const LPC_DENSE=12;
 // Which check stands for a day / week / month, op.gg-style: the last one in each
 // bucket, because that is the value the account actually ended the period on.
 // Needs timestamps; without them there are no periods to bucket into.
@@ -3339,7 +3345,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
        of its own target, with its outer half unreachable. Those two get a small
        outward reach back; the card clips, so it still cannot touch a neighbour. */
     const hl=anchor===0?-10:0, hr=anchor===100?-10:0;
-    return `<div class="lpc-pt" style="left:${xp.toFixed(2)}%;width:min(${w.toFixed(2)}%,28px);transform:translateX(-${anchor}%);--x:${anchor}%;--y:${py(p.v).toFixed(1)}px;--hl:${hl}px;--hr:${hr}px">`
+    return `<div class="lpc-pt${i===last?" now":""}" style="left:${xp.toFixed(2)}%;width:min(${w.toFixed(2)}%,28px);transform:translateX(-${anchor}%);--x:${anchor}%;--y:${py(p.v).toFixed(1)}px;--hl:${hl}px;--hr:${hr}px">`
       +`<span class="lpc-hit"></span>`
       +`<b style="top:${py(p.v).toFixed(1)}px"><i style="background:${tierColor(p.h.tier)}"></i>`
       +`<span class="lpc-tip${side}${hi}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(dateLabel(p.h.t,"year"))} · ${esc(when)}</em>`:""}</span></b></div>`;
@@ -3362,7 +3368,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     }
   }
 
-  return `<div class="lpc"><div class="lpc-plot">`
+  return `<div class="lpc${pts.length>LPC_DENSE?" dense":""}"><div class="lpc-plot">`
     +`<svg class="lpc-svg" viewBox="0 0 ${LPC_W} ${LPC_H}" preserveAspectRatio="none" role="img" aria-label="LP over the last ${pts.length} checks">`
     +`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="0">${stops}</linearGradient>`
     +`<linearGradient id="${aid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${cur}" stop-opacity=".3"/><stop offset="1" stop-color="${cur}" stop-opacity="0"/></linearGradient></defs>`

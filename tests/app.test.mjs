@@ -691,6 +691,20 @@ test("a chart over more than a year names the year, so its axis never reads back
   assert.equal(win.__short, win.__near);
 });
 
+test("a dense chart is a line and its latest reading, a sparse one keeps a dot per check", () => {
+  const D = 86400000, now = Date.now();
+  const mk = (id, n) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 50, updatedAt: now },
+    history: Array.from({ length: n }, (_, k) => ({ t: now - (n - k) * D, tier: "GOLD", division: "II", lp: 20 + (k % 5) * 10 })), tags: [] });
+  const win = bootApp([mk("many", 20), mk("few", 6)]); // under 3 weeks, so the daily view keeps every check
+  const chart = id => win.document.querySelector(`.card[data-id="${id}"] .lpc`);
+  assert.ok(chart("many").classList.contains("dense"), "20 checks: dense");
+  assert.ok(!chart("few").classList.contains("dense"), "6 checks: every dot is information");
+  const pts = [...chart("many").querySelectorAll(".lpc-pt")];
+  assert.deepEqual(pts.map(p => p.classList.contains("now")), pts.map((_, i) => i === pts.length - 1), "only the latest is marked");
+  assert.match(html, /\.lpc\.dense \.lpc-pt:not\(\.now\):not\(:hover\) i\{transform:scale\(0\)\}/, "and the rest show on hover");
+});
+
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
   const win = bootApp();
   const lock = win.document.getElementById("lock");
