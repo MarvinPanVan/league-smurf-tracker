@@ -3479,6 +3479,25 @@ test("themes: one click sets both colours and the atmosphere, kept only on Save"
   assert.deepEqual(on(), []);
 });
 
+test("swatches draw cleanly: no border for a gradient to repeat under, a smoothed split, and an opaque tray frame", () => {
+  const win = bootApp();
+  const css = [...win.document.querySelectorAll("style")].map(s => s.textContent).join("\n");
+  // A background repeats under its own border, so a gradient swatch with a border
+  // showed a sliver of its other end along each edge. The edge is an inset shadow.
+  for (const sel of [".thm-sw", ".atm-mini"]) {
+    const rule = css.match(new RegExp("\\" + sel + "\\{([^}]*)\\}"))[1];
+    assert.match(rule, /border:0/, sel + " has no border");
+    assert.match(rule, /box-shadow:inset 0 0 0 1px/, sel + " draws its edge as an inset shadow");
+  }
+  win.document.getElementById("bSettings").click();
+  const sw = win.document.querySelector('#sThemes [data-theme="noxus"] .thm-sw').getAttribute("style");
+  assert.match(sw, /calc\(50% - \.6px\).*calc\(50% \+ \.6px\)/, "the diagonal blends over a pixel instead of stepping");
+  // the tray's frame is solid: a see-through one took on the colour of whatever wash was behind it
+  const tray = css.match(/\.top \.bar\{[^}]*\}/)[0];
+  assert.match(tray, /border:1px solid color-mix\(in srgb,var\(--gold-dim\) \d+%,var\(--line2\)\)/);
+  assert.doesNotMatch(css.match(/\.top \.bar:hover\{[^}]*\}/)[0], /transparent\)/);
+});
+
 test("themes: My best rank follows the highest tier, and moves when you climb", () => {
   const acc = (id, tier, division) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
     stats: { found: true, tier, division, lp: 10, wins: 1, losses: 1, updatedAt: Date.now() } });

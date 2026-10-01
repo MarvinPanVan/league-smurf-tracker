@@ -227,7 +227,11 @@
      It keeps to the right edge when the header wraps. Left-aligned on a row of its
      own it read as a stray, and the ⋯ menu, which hangs leftward from its button,
      opened off the left of a phone screen with "Export backup" cut to "ackup". */
-  .top .bar{margin-left:auto;gap:3px;padding:5px;border:1px solid color-mix(in srgb,var(--gold-dim) 55%,transparent);border-radius:var(--r-md);
+  /* An opaque line, tinted by the accent. It was the accent at 55% over
+     whatever was behind, and the tray blurs and saturates what is behind it,
+     so on a theme's coloured wash the frame came out two-toned: the wash's
+     colour along one edge, the accent along the other. */
+  .top .bar{margin-left:auto;gap:3px;padding:5px;border:1px solid color-mix(in srgb,var(--gold-dim) 45%,var(--line2));border-radius:var(--r-md);
     background:linear-gradient(180deg,#ffffff0b,#ffffff05);
     backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
     box-shadow:var(--sh-1),inset 0 1px 0 #ffffff0d;
@@ -236,7 +240,7 @@
        menu's z-index inside it — without lifting the tray itself the menu paints
        under everything that follows in the document. */
     position:relative;z-index:30}
-  .top .bar:hover{border-color:color-mix(in srgb,var(--gold) 50%,transparent);box-shadow:var(--sh-2),inset 0 1px 0 #ffffff14}
+  .top .bar:hover{border-color:color-mix(in srgb,var(--gold) 45%,var(--line2));box-shadow:var(--sh-2),inset 0 1px 0 #ffffff14}
   .tray-sep{width:1px;align-self:stretch;margin:2px 3px;flex-shrink:0;
     background:linear-gradient(180deg,transparent,var(--line2),transparent)}
   /* The old header stacked a pill, then the title, then a rule — three full-width
@@ -590,7 +594,9 @@
   .thm.on{border-color:color-mix(in srgb,var(--gold) 55%,var(--line2));color:var(--gold-txt);
     background:color-mix(in srgb,var(--gold) 10%,var(--panel2));box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 28%,transparent)}
   .thm:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-  .thm-sw{display:block;height:24px;border-radius:var(--r-xs);border:1px solid #ffffff14;pointer-events:none}
+  /* No border: a background repeats under its own border, so each end showed a
+     sliver of the other colour. The edge is an inset shadow drawn over it instead. */
+  .thm-sw{display:block;height:24px;border-radius:var(--r-xs);border:0;box-shadow:inset 0 0 0 1px #ffffff1f;pointer-events:none}
   .thm-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
   .thm-n small{display:block;font-size:calc(10.5px*var(--ts));font-weight:500;color:var(--faint);white-space:normal;line-height:1.3}
   .atm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
@@ -605,7 +611,9 @@
     background:color-mix(in srgb,var(--gold) 10%,var(--panel2));color:var(--gold-txt);
     box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 28%,transparent)}
   .atm-tile:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-  .atm-mini{display:block;height:46px;border-radius:var(--r-xs);border:1px solid #ffffff12;
+  /* the edge is an inset shadow, not a border, for the same reason as .thm-sw:
+     the glow at the top repeated under a border and showed along the bottom */
+  .atm-mini{display:block;height:46px;border-radius:var(--r-xs);border:0;box-shadow:inset 0 0 0 1px #ffffff12;
     background:var(--bg);overflow:hidden;position:relative;pointer-events:none;flex-shrink:0}
   .atm-mini::after{content:"";position:absolute;inset:0;opacity:.04;pointer-events:none;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
@@ -7439,7 +7447,7 @@ function renderThemes(){
   const tile=(k,name,sw,on,sub)=>`<button type="button" role="radio" class="thm${on?" on":""}" data-theme="${k}" aria-checked="${on}">`
     +`<span class="thm-sw" style="background:${sw}" aria-hidden="true"></span><span class="thm-n">${esc(name)}${sub?`<small>${esc(sub)}</small>`:""}</span></button>`;
   const ladder=TIER_ORDER.map((t,i)=>`${TIER_COLORS[t]} ${Math.round(i/(TIER_ORDER.length-1)*100)}%`).join(",");
-  setHTML(el,THEMES.map(t=>tile(t.k,t.n,`linear-gradient(110deg,${t.a} 0 50%,${t.b} 50% 100%)`,!rank&&pa===t.a&&pb===t.b)).join("")
+  setHTML(el,THEMES.map(t=>tile(t.k,t.n,`linear-gradient(110deg,${t.a} 0 calc(50% - .6px),${t.b} calc(50% + .6px) 100%)`,!rank&&pa===t.a&&pb===t.b)).join("")
     +tile("rank","My best rank",`linear-gradient(90deg,${ladder})`,rank,"follows your highest tier"));
 }
 function pickTheme(k){
