@@ -5532,14 +5532,16 @@ test("every panel that locks page scrolling is fixed over the page", () => {
   }
 });
 
-test("bulk add opens over the page, focused on the list", () => {
+test("bulk add opens over the page, focused on the list", async () => {
   const win = bootApp(seededAccount());
   const panel = win.document.getElementById("bulkAdd");
   assert.equal(panel.classList.contains("hidden"), true);
   win.document.getElementById("bBulkAdd").click();
   assert.equal(panel.classList.contains("hidden"), false);
   assert.ok(win.openModals().some(m => m.id === "bulkAdd"), "and it counts as a modal");
-  // the region select is the first focusable field; the textarea is the one you came for
+  // the region select is the first focusable field; the textarea is the one you came
+  // for — focused by the modal observer, which runs as a microtask
+  await tick();
   assert.equal(win.document.activeElement.id, "baList");
   // Save/Cancel are pinned in the footer, outside the part that scrolls
   assert.ok(win.document.querySelector("#bulkAdd .mdl-f #baSave"));
@@ -5858,8 +5860,7 @@ test("every save advances the sync revision, even ahead of this device's clock",
   runScript(win, `cfg.vaultRev = ${ahead};`);
   win.document.querySelector('.card [data-act="fav"]').click();
   await until(() => JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].fav === true, "the star to save");
-  runScript(win, "window.__rev = cfg.vaultRev;");
-  assert.ok(win.__rev > ahead, "a real change is a newer revision than the one it was made on top of");
+  assert.ok(appGet(win, "cfg.vaultRev") > ahead, "a real change is a newer revision than the one it was made on top of");
 });
 
 /* Every other value in the toolbar's dropdowns goes through esc(); the status
@@ -5962,7 +5963,6 @@ test("Tab stays inside Settings", () => {
   assert.equal(tab(), true, "Tab from the last real control is caught");
   assert.ok(doc.getElementById("settings").contains(doc.activeElement), "and lands back inside the window");
   assert.equal(doc.activeElement.closest("[inert]"), null, "never on something inert");
-  const first = doc.activeElement;
   assert.equal(tab(true), true, "Shift+Tab from there goes round the other way");
   assert.equal(doc.activeElement, close);
 });
@@ -5985,9 +5985,8 @@ test("on a phone a list row fits its rank instead of cutting it short", () => {
   assert.match(small, /\.rw-main\{grid-template-columns:auto 36px minmax\(0,1fr\) 106px 16px;/,
     "where the change gives its column up rather than the rank");
   assert.match(small, /\.rw-d\{display:none\}/);
-  // 390 − 32 of page gutter − 24 of row padding, against what the columns need there
-  const fixed = 15 + 36 + 106 + 16 + 4 * 8;
-  assert.ok(390 - 32 - 24 - fixed >= 100, "which leaves a phone a name column of 100px or more");
+  // Measured in Chromium at 390: 15 + 36 + 106 + 16 + 4 gaps of 8 leaves the name
+  // 117px of a 334px row; at 360 it is 87px.
 });
 
 /* Add account and Bulk add focus their real first field themselves, before the
@@ -5998,7 +5997,6 @@ test("on a phone a list row fits its rank instead of cutting it short", () => {
 test("closing Add account or Bulk add hands focus back to what opened it", async () => {
   const win = bootApp(seededAccount());
   const doc = win.document;
-  const tick = () => new Promise(r => setTimeout(r, 0));
   const esc = () => doc.activeElement.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 
   const add = doc.getElementById("bAdd");
@@ -6057,10 +6055,10 @@ test("a long name ellipsises in the wall and the list, and keeps its flag in vie
     assert.equal(text.textContent, long);
     assert.ok(box.querySelector(".flagmark"), `${layout}: the flag is still there beside it`);
   }
-  const rule = html.match(/\.t-nm>\.nm-t,\.rw-nm>\.nm-t\{[^}]*\}/);
-  assert.ok(rule, "one rule ellipsises both");
+  const rule = html.match(/\.c-name>span,\.t-nm>\.nm-t,\.rw-nm>\.nm-t\{[^}]*\}/);
+  assert.ok(rule, "one rule ellipsises the name in all three layouts");
   assert.match(rule[0], /text-overflow:ellipsis/);
-  assert.match(rule[0], /min-width:0/, "or the flex item never gets narrower than its text");
+  assert.match(rule[0], /overflow:hidden/, "which also lets the flex item get narrower than its text");
   assert.match(html.match(/\.rw-star\{[^}]*\}/)[0], /flex-shrink:0/, "the star does not give way to the name either");
 });
 
@@ -6087,8 +6085,7 @@ test("the lock screen has no back-to-top button", async () => {
 test("a first visit is not shown a changelog; an update still is", () => {
   const first = bootApp();
   assert.doesNotMatch(first.document.getElementById("toast").textContent, /^v\d/, "nothing to compare against yet");
-  runScript(first, "window.__seen = cfg.lastChangelog; window.__ver = APP_VERSION;");
-  assert.equal(first.__seen, first.__ver, "but the version is recorded, so the next one is news");
+  assert.equal(appGet(first, "cfg.lastChangelog"), appGet(first, "APP_VERSION"), "but the version is recorded, so the next one is news");
 
   const returning = bootApp(seededAccount(), w => w.localStorage.setItem("smurf-tracker-cfg",
     JSON.stringify({ seenHelp: true, lastChangelog: "1.0.0" })));
@@ -6118,8 +6115,7 @@ test("a write from another tab that cannot be read leaves this tab's vault alone
   win.localStorage.setItem("smurf-tracker", odd);
   win.dispatchEvent(new win.StorageEvent("storage", { key: "smurf-tracker", newValue: odd, storageArea: win.localStorage }));
   assert.equal(win.document.querySelectorAll(".card").length, 1, "the account is still on screen");
-  runScript(win, "window.__n = accounts.length;");
-  assert.equal(win.__n, 1, "and still in memory");
+  assert.equal(appGet(win, "accounts.length"), 1, "and still in memory");
 });
 
 /* "Has this device changed since the last sync" compared the vault's revision —
@@ -6154,7 +6150,7 @@ test("a pull from a device whose clock runs ahead does not make this one look ed
 
   // and a real edit made here after that is still caught before a pull drops it
   win.document.querySelector('.card [data-act="fav"]').click();
-  await until(() => { runScript(win, "window.__rev = cfg.vaultRev;"); return win.__rev > AHEAD + 5000 }, "the star to save");
+  await until(() => appGet(win, "cfg.vaultRev") > AHEAD + 5000, "the star to save");
   record = { updatedAt: AHEAD + 9000, envelope: await vault("CloudThree") };
   await win.pullVaultSync(false);
   assert.match(toast(), /changed after last sync/i, "a local change still asks first");

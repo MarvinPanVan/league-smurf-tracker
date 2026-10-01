@@ -761,10 +761,6 @@
   .rw-nm{font-size:14.5px;font-weight:600;letter-spacing:-.012em;color:var(--text);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
   .rw-star{color:var(--star);display:inline-flex;flex-shrink:0}
-  /* text-overflow only works on a box that holds the text itself, and .t-nm and
-     .rw-nm are flex rows with the name as a bare text node — so it was sheared off
-     mid-letter, no ellipsis, with the flag after it pushed out of sight. */
-  .t-nm>.nm-t,.rw-nm>.nm-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rw-star .ico{width:11px;height:11px;fill:var(--star)}
   .rw-tag{font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rw-tags{display:flex;gap:4px;margin-top:3px;overflow:hidden}
@@ -889,7 +885,11 @@
     background:#0d1017;box-shadow:0 0 0 1px var(--line2),0 2px 8px #00000080}
   .c-id{min-width:0;flex:1}
   .c-name{font-weight:600;font-size:17px;letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
-  .c-name>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* text-overflow only works on a box that holds the text itself. The wall tile and
+     the list row had the name as a bare text node in a flex row, so it was sheared
+     off mid-letter, no ellipsis, with the flag after it pushed out of sight — the
+     card never did, because its name was already a span of its own. */
+  .c-name>span,.t-nm>.nm-t,.rw-nm>.nm-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* The chip may not take the room the account name needs: "Resting / unused"
      was holding 114 px of a 234 px row and leaving the name 58 — four letters
      and an ellipsis. Short wording here, the full phrase in the title and
@@ -1790,7 +1790,7 @@
     <b style="color:var(--text)">Using this app:</b> free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.<br>
     <b style="color:var(--text)">More:</b> <b style="color:var(--text)">⋯</b> menu has bulk add (paste a list of Name#TAG) and CSV import · archive an account to hide it without deleting (toggle <b style="color:var(--text)">Archived</b> in the toolbar) · shift-click a card's checkbox to select a range · <b style="color:var(--text)">n</b> for a new account · click a card's note to rewrite it on the spot · pick your own primary and secondary colors in Settings.
     </div>
-    <div class="mdl-f"><button id="bHelpClose" class="b-gold">Got it</button></div>
+    <div class="mdl-f"><button id="bHelpClose" class="b-gold" data-autofocus>Got it</button></div>
   </div></div></div>
 
   <!-- settings -->
@@ -2031,7 +2031,7 @@
     <div class="formgrid">
       <div class="fw hint">One account per line, format <code>Name#TAG</code>. All get the region below — edit individually afterward for logins/notes.</div>
       <div class="fld"><label>Region for all</label><select id="baRegion"></select></div>
-      <div class="fld fw"><label>Accounts</label><textarea id="baList" rows="6" placeholder="Hide on Bush#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
+      <div class="fld fw"><label>Accounts</label><textarea id="baList" data-autofocus rows="6" placeholder="Hide on Bush#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
     </div>
     </div>
     <div class="mdl-f">
@@ -2055,7 +2055,7 @@
       <div class="fld"><label>Region</label>
         <select id="fRegion"></select>
       </div>
-      <div class="fld"><label>Riot name *</label><input id="fName" placeholder="Game name (before the #)"></div>
+      <div class="fld"><label>Riot name *</label><input id="fName" placeholder="Game name (before the #)" data-autofocus></div>
       <div class="fld"><label>Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234 (no #)"></div>
       <div class="fld"><label>Login username</label><input id="fLogin" placeholder="Riot client login" autocomplete="off"></div>
       <div class="fld"><label>Password</label><div style="display:flex;gap:6px">
@@ -3216,6 +3216,11 @@ function vaultSyncUrl(){
     return u.href;
   }catch(e){return""}
 }
+/* Both ends of a sync agree on `rev` now. Every path that completes one — push,
+   pull, and the pull that finds nothing to do — records the same two facts, and a
+   path that recorded only the time is what made a later pull compare the other
+   device's clock against this one's. */
+function markSynced(rev){cfg.lastSyncAt=Date.now();cfg.syncedRev=rev;saveCfg()}
 function genSyncToken(){
   const b=crypto.getRandomValues(new Uint8Array(24));
   return b64(b).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
@@ -3285,7 +3290,7 @@ async function pushVaultSync(){
     }
     if(!res.ok){toast("Push failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
     currentEnvelope=envelope;
-    cfg.lastSyncAt=Date.now(); cfg.syncedRev=updatedAt; saveCfg();
+    markSynced(updatedAt);
     updateSyncStatus();
     toast("Vault pushed to cloud");
   }catch(e){toast("Push failed: "+(e.message||"network"))}
@@ -3322,7 +3327,7 @@ async function pullVaultSync(force){
     const lastSync=Number(cfg.syncedRev)||Number(cfg.lastSyncAt)||0;
     // Same revision already on disk — nothing to apply (avoids a rewrite + rev bump).
     if(!force&&remoteAt>0&&remoteAt===localAt&&accounts.length){
-      cfg.lastSyncAt=Date.now(); cfg.syncedRev=remoteAt; saveCfg();
+      markSynced(remoteAt);
       updateSyncStatus();
       toast("Already in sync with cloud");
       return;
@@ -3352,9 +3357,7 @@ async function pullVaultSync(force){
     accounts=next.map(sanitizeAccount).filter(Boolean);
     currentEnvelope=data.envelope;
     cfg.vaultRev=remoteAt||Date.now();
-    cfg.lastSyncAt=Date.now();
-    cfg.syncedRev=cfg.vaultRev;
-    saveCfg();
+    markSynced(cfg.vaultRev);
     // keepRev: this vault *is* the cloud's revision now. Stamping a fresh one
     // would make the next pull think this device had changed since the sync it
     // just performed.
@@ -5948,7 +5951,8 @@ function bindCardMenuTracking(on){
     window.removeEventListener("resize",cardMenuTrack);
   }
 }
-function openCardMenu(id,anchor){
+// `focusFirst` when the keyboard opened it: the menu is where the keyboard goes next.
+function openCardMenu(id,anchor,focusFirst){
   const others=[...openMore].filter(x=>x!==id);
   openMore.clear();openMore.add(id);
   cardMenuAnchor=anchor||null;
@@ -5957,6 +5961,7 @@ function openCardMenu(id,anchor){
   renderCardMenu();
   if(window.requestAnimationFrame)requestAnimationFrame(placeCardMenu); // measure once laid out
   bindCardMenuTracking(true);
+  if(focusFirst)focusCardMenuItem(0);
 }
 function closeCardMenu(){
   if(!openMore.size&&!cardMenuAnchor)return false;
@@ -6214,12 +6219,9 @@ function openForm(acc){
   // Which one, in the header: over the page the card being edited is behind the
   // backdrop, so the panel is the only thing left saying what it is editing.
   $("formSub").textContent=acc?acc.gameName+"#"+acc.tagLine:"";
+  // The modal observer focuses the name, which carries data-autofocus — the first
+  // field is the optional label, and the one you came here to type is the name.
   $("form").classList.remove("hidden");
-  // Focused before the observer that manages modal focus gets a look in, so it
-  // leaves this alone: the first field is the optional label, and the one you
-  // came here to type is the name.
-  noteModalReturn();
-  $("fName").focus();
 }
 function closeForm(){$("form").classList.add("hidden");editingId=null}
 function submitForm(){
@@ -6762,29 +6764,28 @@ document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListene
 const MODALS=["settings","help","form","rankModal","palette","compareModal","bulkAdd"];
 let modalReturn=null;
 function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains("hidden"))}
-/* Where focus goes back to when the last window closes. <body> means nothing had
-   focus, and restoring to it would be a no-op that still counts as handled; a field
-   inside an open window is one its opener focused itself before the observer below
-   ran, and is no way back either. Those openers call this first, for that reason. */
-function noteModalReturn(){
-  const a=document.activeElement;
-  if(!modalReturn&&a&&a!==document.body&&!openModals().some(m=>m.contains(a)))modalReturn=a;
-}
 function syncModals(){
   const open=openModals();
   document.body.classList.toggle("modal-open",open.length>0);
   if(open.length){
-    noteModalReturn();
+    if(!modalReturn){
+      const a=document.activeElement;
+      // body means nothing had focus; restoring to it later would be a no-op that
+      // still counts as "handled", so don't record it
+      modalReturn=a&&a!==document.body?a:null;
+    }
     const el=open[0];
     if(!el.contains(document.activeElement)){
-      // Help's primary action is Got it — landing on ✕ reads as "leave", not "read".
-      if(el.id==="help"){const got=$("bHelpClose");if(got)got.focus()}
-      else{
-        // the first real field, not the ✕ — landing on Close reads as "are you sure
-        // you meant to open this".
-        const first=el.querySelector("input:not([type=hidden]),select,textarea")||el.querySelector("button");
-        if(first)first.focus();
-      }
+      /* Where a window wants to start is marked in its markup — Help on Got it,
+         since landing on ✕ reads as "leave", not "read"; Add account on the name
+         and Bulk add on the list, past the optional field above each. Two of those
+         used to focus themselves before this ran, which this then recorded as the
+         way back, and closing them dropped focus on <body>. Otherwise the first
+         real field, not the ✕ — landing on Close reads as "are you sure you meant
+         to open this". */
+      const first=el.querySelector("[data-autofocus]")
+        ||el.querySelector("input:not([type=hidden]),select,textarea")||el.querySelector("button");
+      if(first)first.focus();
     }
   }else if(modalReturn){
     // Back to whatever opened it, so the keyboard doesn't restart at the top of
@@ -7109,12 +7110,9 @@ $("bBulkAdd").addEventListener("click",()=>{
   if(previewMode){previewMode=false;accounts=[];render()}
   closeAllPanels();
   $("baList").value="";
+  // The list carries data-autofocus: the first field is the region select, and
+  // the one you came here to fill is the list.
   $("bulkAdd").classList.remove("hidden");
-  // Before the modal observer gets a look in, the same way openForm does: the
-  // first focusable field is the region select, and the one you came here to
-  // fill is the list.
-  noteModalReturn();
-  $("baList").focus();
 });
 $("baCancel").addEventListener("click",()=>$("bulkAdd").classList.add("hidden"));
 $("baSave").addEventListener("click",()=>{
@@ -7571,8 +7569,8 @@ $("grid").addEventListener("keydown",e=>{
   if(e.key==="ArrowDown"&&e.target&&e.target.dataset&&e.target.dataset.act==="more"){
     const card=e.target.closest("[data-id]");if(!card)return;
     e.preventDefault();
-    if(!openMore.has(card.dataset.id))openCardMenu(card.dataset.id,e.target);
-    focusCardMenuItem(0);
+    if(openMore.has(card.dataset.id))focusCardMenuItem(0);
+    else openCardMenu(card.dataset.id,e.target,true);
     return;
   }
   const ta=e.target;
@@ -7651,12 +7649,9 @@ async function onCardClick(e){
     setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1500);
   }
   else if(act==="more"){
+    // Enter or Space on a button is a click with no pointer behind it: detail 0
     if(openMore.has(id))closeCardMenu();
-    else{
-      openCardMenu(id,btn);
-      // Enter or Space on a button is a click with no pointer behind it
-      if(e.detail===0)focusCardMenuItem(0);
-    }
+    else openCardMenu(id,btn,e.detail===0);
   }
   else if(act==="fav"){
     acc.fav=!acc.fav;reveal=acc.fav?id+":fav":null;saveDB();
@@ -7821,15 +7816,10 @@ function renderVersion(){
   if(items.length)el.title="New in v"+APP_VERSION+":\n• "+items.join("\n• ");
   else el.removeAttribute("title");
 }
-/* "What's new" is only news to somebody who had the version before. A first visit
-   used to get a toast about the tag handle's count, over the top of the welcome
-   window; it records the version quietly instead, so the next update is news. */
-let firstVisit=false;
 function showChangelogIfNeeded(){
   if(cfg.lastChangelog===APP_VERSION)return;
   const entry=APP_CHANGELOG.find(e=>e.v===APP_VERSION);
   cfg.lastChangelog=APP_VERSION;saveCfg();
-  if(firstVisit)return;
   if(!entry||!entry.items||!entry.items.length)return;
   toast("v"+entry.v+": "+entry.items.slice(0,2).join(" · ")+(entry.items.length>2?"…":""));
 }
@@ -7912,11 +7902,7 @@ function forgetVaultDom(){
 function relock(){
   closeCardMenu();   // floats on the body, so hiding #appRoot would leave it on screen
   let envelope=null;
-  try{
-    const raw=hasStorage?localStorage.getItem(DB_KEY):null;
-    const parsed=raw?JSON.parse(raw):null;
-    if(parsed&&parsed.__enc)envelope=parsed;
-  }catch(e){}
+  try{const stored=readStoredVault(hasStorage?localStorage.getItem(DB_KEY):null);envelope=stored&&stored.envelope||null}catch(e){}
   // Disk may briefly lack an envelope (quota mid-write, failed set-password). Prefer
   // the envelope we unlocked with over fail-opening with secrets still in memory.
   if(!envelope)envelope=currentEnvelope;
@@ -7997,13 +7983,13 @@ function readStoredVault(raw){
   try{parsed=JSON.parse(raw)}catch(e){return null}
   if(parsed==null)return{accounts:[]};
   if(parsed.__enc)return{envelope:parsed};
-  if(Array.isArray(parsed))return{accounts:parsed.map(sanitizeAccount).filter(Boolean)};
   /* An export file is {app, version, accounts}, not a bare array. Dropping that
      into localStorage — or restoring a backup with a tool that writes the file
      body straight into the key — used to boot an empty vault: Array.isArray on
      the object is false, and nothing else looked. The next saveDB writes the
      array shape back, so this is only a one-time rescue. */
-  if(Array.isArray(parsed.accounts))return{accounts:parsed.accounts.map(sanitizeAccount).filter(Boolean)};
+  const list=Array.isArray(parsed)?parsed:Array.isArray(parsed.accounts)?parsed.accounts:null;
+  if(list)return{accounts:list.map(sanitizeAccount).filter(Boolean)};
   // The encrypted export is the same rescue for the other kind of backup file.
   if(parsed.envelope&&parsed.envelope.__enc)return{envelope:parsed.envelope};
   return null;
@@ -8042,9 +8028,16 @@ function boot(){
   renderVersion();
   hasStorage=storageOK();
   if(!hasStorage){$("banner").classList.add("show")}
-  // A first visit has neither settings nor a vault — a vault without settings is
-  // an older build's, and its owner is exactly who the changelog is for.
-  try{const c=hasStorage?localStorage.getItem(CFG_KEY):null;firstVisit=hasStorage&&!c&&!localStorage.getItem(DB_KEY);if(c)cfg=Object.assign(cfg,JSON.parse(c))}catch(e){}
+  try{
+    const c=hasStorage?localStorage.getItem(CFG_KEY):null;
+    if(c)cfg=Object.assign(cfg,JSON.parse(c));
+    /* "What's new" is only news to somebody who had the version before. A first
+       visit — no settings and no vault; a vault without settings is an older
+       build's, and its owner is exactly who the changelog is for — used to get a
+       toast about the tag handle's count over the welcome window. It records the
+       version quietly instead, so the next update is the one it hears about. */
+    else if(hasStorage&&!localStorage.getItem(DB_KEY)){cfg.lastChangelog=APP_VERSION;saveCfg()}
+  }catch(e){}
   if(MODEL_ALIASES[cfg.model]){cfg.model=MODEL_ALIASES[cfg.model];saveCfg()}
   {
     let cfgDirty=false;
@@ -8074,10 +8067,9 @@ function boot(){
   let raw=null;
   try{raw=hasStorage?localStorage.getItem(DB_KEY):null}catch(e){}
   const stored=readStoredVault(raw);
-  let envelope=null;
-  if(stored){envelope=stored.envelope||null;if(stored.accounts)accounts=stored.accounts}
-  else keepUnreadableVault(raw);
-  if(envelope)showLockScreen(envelope);
+  if(!stored)keepUnreadableVault(raw);
+  else if(stored.accounts)accounts=stored.accounts;
+  if(stored&&stored.envelope)showLockScreen(stored.envelope);
   else startApp();
 }
 boot();
