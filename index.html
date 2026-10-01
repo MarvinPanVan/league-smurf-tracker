@@ -1188,6 +1188,13 @@
   .c-wr{font-weight:600;color:var(--muted);text-align:right}
   .c-wr.wr-good{color:var(--good)}
   .c-gm,.c-kd{color:var(--faint);font-size:11px;text-align:right}
+  /* recent form: a pip per game, newest first, the way a match history reads */
+  .fm-pips{display:inline-flex;gap:3px;margin-left:7px;vertical-align:-1px}
+  .fm-pip{width:6px;height:11px;border-radius:2px;background:var(--danger)}
+  .fm-pip.w{background:var(--good)}
+  .fm-res{display:inline-block;width:1.3em;font-weight:700;font-size:11px;color:var(--danger)}
+  .fm-res.w{color:var(--good)}
+  .fm-retry{margin-left:8px;padding:2px 8px;font-size:11px}
   .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;letter-spacing:.12em;
     pointer-events:none;line-height:1;opacity:.9}
   /* Wins against losses, the way op.gg draws a record — not a fill on an empty
@@ -4741,6 +4748,8 @@ function takeIdentity(acc,s){
 }
 function commitStats(id,acc,s){
   takeIdentity(acc,s);
+  // a fresh read may mean fresh games — an open drawer fetches them again
+  if(formCache.has(id)){formCache.delete(id);if(openInfo.has(id))loadForm(id)}
   // A profile that does not exist is not a failed request to be retried later —
   // it means the Riot ID has moved, and every future check on this account will
   // fail the same way until somebody corrects it. Raise the flag once.
@@ -5824,6 +5833,57 @@ function infoParts(a){
   return {solo:seasons.solo,flexHist:seasons.flex,
     champs:normChamps(s.champs)||[],flex:normPeak(s.flex)};
 }
+/* ---- recent form ----
+   The last five ranked solo games, from the worker's /form (Riot's match-v5). Only
+   an account the worker has read through Riot carries a puuid, so that is the
+   test. Fetched when an account's Details open, never in a batch: each costs six
+   Riot calls, against a personal key's hundred per two minutes. */
+const formCache=new Map(), FORM_TTL=5*60*1000;
+function canForm(a){return !!(a&&cfg.backendUrl&&validPuuid(a.puuid))}
+async function loadForm(id){
+  const acc=accounts.find(a=>a.id===id);
+  if(!acc||!canForm(acc))return;
+  const had=formCache.get(id);
+  if(had&&(had.state==="loading"||had.state==="ok"&&Date.now()-had.at<FORM_TTL))return;
+  formCache.set(id,{state:"loading"});
+  let next;
+  try{
+    const u=new URL(cfg.backendUrl);
+    u.pathname=u.pathname.replace(/\/?$/,"/form");u.search="";
+    u.searchParams.set("puuid",acc.puuid);
+    u.searchParams.set("region",(REGIONS[acc.region]||REGIONS.EUW).opgg);
+    const c=new AbortController();const t=setTimeout(()=>c.abort(),20000);
+    const res=await fetch(u.href,{signal:c.signal}).finally(()=>clearTimeout(t));
+    const d=await res.json().catch(()=>null);
+    if(res.ok&&d&&Array.isArray(d.games)){
+      const games=d.games.slice(0,5).filter(g=>g&&typeof g==="object").map(g=>({win:g.win===true,
+        champ:String(g.champ||"?").slice(0,24),kda:[g.k,g.d,g.a].map(n=>Number.isFinite(n)?n:"?").join("/"),
+        min:Number.isFinite(g.min)?g.min:null,at:Number.isFinite(g.at)?g.at:null}));
+      next={state:"ok",games,at:Date.now()};
+    }else next={state:"error",msg:res.status===503?"Riot's rate limit — try again in a minute"
+      :res.status===404?"Your worker has no Riot API key, or is an older version"
+      :"Could not load them"+(d&&d.error?" ("+String(d.error).slice(0,80)+")":"")};
+  }catch(e){next={state:"error",msg:"Could not reach your worker"}}
+  formCache.set(id,next);
+  if(accounts.some(a=>a.id===id))renderCard(id);
+}
+function formHTML(a){
+  if(!canForm(a))return"";
+  const f=formCache.get(a.id);
+  const flat=body=>`<div class="sec flat" data-k="sec-form"><span class="sec-n">Last 5 ranked</span>${body}</div>`;
+  if(!f||f.state==="loading")return flat(`<span class="sec-p">Loading…</span>`);
+  if(f.state==="error")return flat(`<span class="sec-p" title="${esc(f.msg)}">${esc(f.msg)}</span>`
+    +`<button class="fm-retry" data-act="formretry">Retry</button>`);
+  if(!f.games.length)return flat(`<span class="sec-p">No ranked games yet this season</span>`);
+  const w=f.games.filter(g=>g.win).length;
+  const pips=`<span class="fm-pips" aria-hidden="true">${f.games.map(g=>`<i class="fm-pip${g.win?" w":""}"></i>`).join("")}</span>`;
+  return secHTML(a,"form","Last 5 ranked",f.games.length,`${w}W ${f.games.length-w}L${pips}`,
+    f.games.map(g=>`<div class="chp">`
+      +`<span class="c-nm"><b class="fm-res${g.win?" w":""}">${g.win?"W":"L"}</b>${esc(g.champ)}</span>`
+      +`<span class="c-kd">${esc(g.kda)}</span>`
+      +`<span class="c-gm">${g.min!=null?esc(g.min)+" min":""}</span>`
+      +`<span class="c-gm">${g.at?esc(timeAgo(g.at)):""}</span></div>`).join(""));
+}
 function hasInfo(a){const p=infoParts(a);return !!(p.solo.length||p.flexHist.length||p.champs.length||p.flex)}
 // The one-line summary on the drawer pull, so the card says what is folded away
 // before you open it.
@@ -5853,7 +5913,7 @@ function secHTML(a,key,label,n,peek,body){
 }
 function infoBlockHTML(a,rev){
   const {solo,flexHist,champs,flex}=infoParts(a);
-  if(!solo.length&&!flexHist.length&&!champs.length&&!flex)return"";
+  if(!solo.length&&!flexHist.length&&!champs.length&&!flex&&!canForm(a))return"";
   // through tierLabel like everywhere else — the drawer was the fifth place
   // building this string by hand, and the fifth place printing "Challenger II"
   const rank=e=>tierLabel(e)+(e.lp!=null?" · "+e.lp+" LP":"");
@@ -5865,6 +5925,7 @@ function infoBlockHTML(a,rev){
   // one fact, one line — folding it would cost a click to reveal nothing extra
   if(flex)out+=`<div class="sec flat" data-k="sec-flex"><span class="sec-n">Flex rank</span>`
     +`<span class="sec-p" style="color:${tierColor(flex.tier)}">${esc(rank(flex))}</span></div>`;
+  out+=formHTML(a);
   if(solo.length)out+=secHTML(a,"solo","Past seasons · Solo",solo.length,seasonPeek(solo),rows(solo));
   if(flexHist.length)out+=secHTML(a,"flexhist","Past seasons · Flex",flexHist.length,seasonPeek(flexHist),rows(flexHist));
   if(champs.length){
@@ -6338,8 +6399,8 @@ function cardHTML(a,i){
         <button data-act="more" class="c-more${openMore.has(a.id)?" on":""}" aria-haspopup="menu" aria-expanded="${openMore.has(a.id)}" title="More actions" aria-label="More actions">⋯</button>
       </div>
     </div>
-    ${openInfo.has(a.id)&&hasInfo(a)?infoBlockHTML(a,rv("info")):""}
-    ${hasInfo(a)||cfg.compactCards?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${cfg.compactCards?"Chart, stats, past seasons, flex rank, champions":"Past seasons, flex rank, champions"}">
+    ${openInfo.has(a.id)&&(hasInfo(a)||canForm(a))?infoBlockHTML(a,rv("info")):""}
+    ${hasInfo(a)||cfg.compactCards||canForm(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${cfg.compactCards?"Chart, stats, past seasons, flex rank, champions":"Past seasons, flex rank, champions"}">
       <span class="c-dl" aria-hidden="true"></span>
       <span class="c-dt">${open?"Close":"Details"}</span>
       <svg class="ico" viewBox="0 0 26 12" aria-hidden="true"><polyline points="2 3 13 10 24 3"/></svg>
@@ -8318,7 +8379,9 @@ async function onCardClick(e){
   }
 
   else if(act==="range"){chartRange.set(id,btn.dataset.r);renderCard(id)}
-  else if(act==="info"){const on=!openInfo.has(id);on?openInfo.add(id):openInfo.delete(id);reveal=on?id+":info":null;renderCard(id)}
+  else if(act==="info"){const on=!openInfo.has(id);on?openInfo.add(id):openInfo.delete(id);reveal=on?id+":info":null;
+    if(on)loadForm(id);renderCard(id)}
+  else if(act==="formretry"){formCache.delete(id);loadForm(id);renderCard(id)}
   else if(act==="sec"){const k=id+"|"+btn.dataset.s;openSec.has(k)?openSec.delete(k):openSec.add(k);
     e.target.closest("#rankModal")?renderRankBody(id):renderCard(id)}
   else if(act==="rank")openRankModal(id);
@@ -8534,7 +8597,7 @@ function relock(){
   if(!envelope)envelope=currentEnvelope;
   // The derived key goes with the password: leaving it behind would keep the one
   // thing that opens the vault sitting in memory across a lock.
-  vaultPassword=null;forgetVaultKey();accounts=[];
+  vaultPassword=null;forgetVaultKey();accounts=[];formCache.clear();
   dismissToast(); // drop Delete→Undo before it can rehydrate secrets into a locked vault
   // Clear a copied account password if we still know what it was — lock does not
   // mean "leave the last password on the clipboard for thirty seconds". Write

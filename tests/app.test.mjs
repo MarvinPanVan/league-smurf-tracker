@@ -1058,6 +1058,50 @@ test("Riot mode in the app: a refused key is said once, and a junk puuid never s
   assert.equal(win.__toasts.filter(m => /Riot API key was refused/.test(m)).length, 1, "once a session, not once per account");
 });
 
+test("Recent form: a Riot-read account's Details fetch its last five ranked games once, and say why when they cannot", async () => {
+  const P = "q".repeat(78);
+  const win = bootApp([
+    { id: "r", region: "KR", gameName: "Faker", tagLine: "KR1", status: "active", tags: [], history: [], stats: null, puuid: P },
+    { id: "o", region: "EUW", gameName: "Scraped", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const card = id => win.document.querySelector(`#grid [data-id="${id}"]`);
+  assert.equal(card("r").querySelector('[data-act="info"]'), null, "no worker yet, so nothing to open");
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev/'; render()");
+  assert.equal(card("o").querySelector('[data-act="info"]'), null, "an account read without Riot has no puuid, so no form");
+  const reply = (obj, status = 200) => ({ ok: status < 400, status, json: async () => obj });
+  const asked = [];
+  const now = Date.now();
+  win.fetch = async u => { asked.push(String(u)); return reply({ games: [
+    { win: true, champ: "Ahri", k: 8, d: 2, a: 5, min: 31, at: now - 3600e3 },
+    { win: false, champ: "<img src=x onerror=alert(1)>", k: 1, d: 6, a: 2, min: 24, at: now - 7200e3 },
+    { win: true, champ: "Syndra", k: 4, d: 4, a: 9, min: 28, at: now - 9000e3 }] }); };
+  card("r").querySelector('[data-act="info"]').click();
+  assert.match(card("r").textContent, /Last 5 ranked\s*Loading…/, "says it is on its way");
+  await until(() => /2W 1L/.test(card("r").textContent), "the games to arrive");
+  assert.equal(asked.length, 1);
+  const u = new URL(asked[0]);
+  assert.equal(u.pathname, "/form");
+  assert.equal(u.searchParams.get("puuid"), P);
+  assert.equal(u.searchParams.get("region"), "kr", "match-v5 needs the region to pick its cluster");
+  assert.equal(card("r").querySelectorAll(".fm-pip").length, 3);
+  assert.equal(card("r").querySelectorAll(".fm-pip.w").length, 2);
+  card("r").querySelector('[data-act="sec"][data-s="form"]').click();
+  const rows = [...card("r").querySelectorAll('[data-k="sec-form"] .chp')].map(r => [...r.children].map(c => c.textContent).join("|"));
+  assert.equal(rows.length, 3);
+  assert.equal(rows[0], "WAhri|8/2/5|31 min|1 h ago");
+  assert.equal(card("r").querySelector('[data-k="sec-form"] img'), null, "a champion name is text, never markup");
+  card("r").querySelector('[data-act="info"]').click();
+  card("r").querySelector('[data-act="info"]').click();
+  await tick();
+  assert.equal(asked.length, 1, "reopening within five minutes reuses what was fetched — each costs six Riot calls");
+  win.fetch = async () => reply({ error: "Riot API rate limit" }, 503);
+  runScript(win, "formCache.clear(); closeCardPanels()");
+  card("r").querySelector('[data-act="info"]').click();
+  await until(() => /rate limit/.test(card("r").textContent), "the rate limit to be named");
+  win.fetch = async () => reply({ games: [] });
+  card("r").querySelector('[data-act="formretry"]').click();
+  await until(() => /No ranked games yet this season/.test(card("r").textContent), "Retry to fetch again");
+});
+
 test("Settings says what the worker has set up", async () => {
   const win = bootApp();
   const reply = (obj, status = 200) => ({ ok: status < 400, status, json: async () => obj });
