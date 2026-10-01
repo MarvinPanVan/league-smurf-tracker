@@ -6078,3 +6078,19 @@ test("the lock screen has no back-to-top button", async () => {
   assert.ok(doc.getElementById("appRoot").contains(doc.getElementById("toTop")),
     "it is inside #appRoot, so hiding the app hides it, whatever the observer thinks of the header");
 });
+
+/* The changelog toast keys off cfg.lastChangelog, which a first visit does not
+   have — so somebody opening the app for the first time was told, over the top
+   of the welcome window, that "the tag handle's count is grey until one is
+   filtering", about a release they had never seen the one before of. A first
+   visit records the version quietly; an update still announces itself. */
+test("a first visit is not shown a changelog; an update still is", () => {
+  const first = bootApp();
+  assert.doesNotMatch(first.document.getElementById("toast").textContent, /^v\d/, "nothing to compare against yet");
+  runScript(first, "window.__seen = cfg.lastChangelog; window.__ver = APP_VERSION;");
+  assert.equal(first.__seen, first.__ver, "but the version is recorded, so the next one is news");
+
+  const returning = bootApp(seededAccount(), w => w.localStorage.setItem("smurf-tracker-cfg",
+    JSON.stringify({ seenHelp: true, lastChangelog: "1.0.0" })));
+  assert.match(returning.document.getElementById("toast").textContent, /^v\d/, "someone on an older version hears what changed");
+});

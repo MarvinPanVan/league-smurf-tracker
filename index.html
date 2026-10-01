@@ -7820,10 +7820,15 @@ function renderVersion(){
   if(items.length)el.title="New in v"+APP_VERSION+":\n• "+items.join("\n• ");
   else el.removeAttribute("title");
 }
+/* "What's new" is only news to somebody who had the version before. A first visit
+   used to get a toast about the tag handle's count, over the top of the welcome
+   window; it records the version quietly instead, so the next update is news. */
+let firstVisit=false;
 function showChangelogIfNeeded(){
   if(cfg.lastChangelog===APP_VERSION)return;
   const entry=APP_CHANGELOG.find(e=>e.v===APP_VERSION);
   cfg.lastChangelog=APP_VERSION;saveCfg();
+  if(firstVisit)return;
   if(!entry||!entry.items||!entry.items.length)return;
   toast("v"+entry.v+": "+entry.items.slice(0,2).join(" · ")+(entry.items.length>2?"…":""));
 }
@@ -7991,7 +7996,7 @@ function boot(){
   renderVersion();
   hasStorage=storageOK();
   if(!hasStorage){$("banner").classList.add("show")}
-  try{const c=hasStorage?localStorage.getItem(CFG_KEY):null;if(c)cfg=Object.assign(cfg,JSON.parse(c))}catch(e){}
+  try{const c=hasStorage?localStorage.getItem(CFG_KEY):null;firstVisit=hasStorage&&!c;if(c)cfg=Object.assign(cfg,JSON.parse(c))}catch(e){}
   if(MODEL_ALIASES[cfg.model]){cfg.model=MODEL_ALIASES[cfg.model];saveCfg()}
   {
     let cfgDirty=false;
