@@ -2965,24 +2965,23 @@ const ladderSeed = () => {
   return out;
 };
 
-// Every crest points at a gradient in one shared <defs>. Minting a gradient per
-// crest would be sixty duplicate ids on a full vault — and, worse, would make each
-// card's markup differ from the last render, which is exactly what used to defeat
-// syncGrid's "has this changed?" check.
-test("every crest reference resolves against a single shared defs block", () => {
+// A crest used to point at a gradient in one shared <defs>; minting one per crest
+// would have been sixty duplicate ids, and made each card's markup differ from the
+// last render — which is what defeats syncGrid's "has this changed?" check. Crests
+// are now flat facets, so there are no ids to collide, and the invariant that
+// remains is the second one: a tier is the same markup every time.
+test("crests are cut in facets, lit the same way, and a tier is the same markup every render", () => {
   const win = bootApp(ladderSeed());
-  const defs = win.document.getElementById("crestDefs");
-  assert.ok(defs, "the defs block is installed at boot");
-  assert.equal(defs.querySelectorAll("linearGradient").length, 10, "one gradient per tier");
-
-  const refs = [...win.document.querySelectorAll('.crest path[fill^="url("]')];
-  assert.ok(refs.length >= 10, "the ladder draws crests");
-  for (const p of refs) {
-    const id = p.getAttribute("fill").match(/url\(#(.+?)\)/)[1];
-    assert.ok(win.document.getElementById(id), `#${id} exists`);
+  assert.equal(win.document.querySelectorAll(".crest [id], .crest [fill^='url(']").length, 0, "no gradients, no ids");
+  const gold = [...win.document.querySelectorAll(".rk-crest")].map(c => c.innerHTML);
+  assert.ok(gold.length >= 10, "the ladder draws crests");
+  runScript(win, "window.__a = crest('GOLD'); window.__b = crest('gold','x'); window.__fills = [...new Set([...crest('DIAMOND').matchAll(/fill=\"(#[0-9a-f]{6})\"/g)].map(m => m[1]))];");
+  assert.equal(win.__a.replace(/class="[^"]*"/, ""), win.__b.replace(/class="[^"]*"/, ""), "same tier, same paths");
+  assert.ok(win.__fills.length >= 3, "a light, a mid and a shadow tone — facets, not one flat fill");
+  for (const t of ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER"]) {
+    runScript(win, `window.__c = crest("${t}")`);
+    assert.match(win.__c, /<path d="M/, `${t} draws`);
   }
-  const ids = [...win.document.querySelectorAll("[id^=cr-]")].map(e => e.id);
-  assert.equal(new Set(ids).size, ids.length, "and no id is defined twice");
 });
 
 test("a ranked card carries its tier crest, an unranked one carries none", () => {

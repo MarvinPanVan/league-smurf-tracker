@@ -2428,20 +2428,43 @@ const TIER_COLORS={IRON:"#8a8a8a",BRONZE:"#b0765a",SILVER:"#a8bdd0",GOLD:"#e6c15
    Silver, cut gems for Gold through Diamond, crowned gems with escalating wings
    above that. `d` is the body, `c` a crown behind it, `w` wings, `s` a star,
    `f` facet lines scored over the top. */
+/* Every crest is cut like a gem: flat facets in three tones of its tier colour,
+   lit from the top left on all ten, so the ladder reads as one family. It used to
+   be one white-to-colour gloss gradient laid over each silhouette — the same
+   shine on everything, which is what made them read as blobs at 16px. The
+   silhouettes are unchanged; only the cut is new. Each facet is [tone, path]:
+   L light, T table (the top face of a cut stone), M the tier colour, D shadow,
+   W white. */
+const crestPoly=pts=>"M"+pts.map(p=>p.join(" ")).join("L")+"Z";
+const crestScale=(pts,f)=>pts.map(([x,y])=>[+(12+(x-12)*f).toFixed(2),+(12+(y-12)*f).toFixed(2)]);
+// a bevelled stone: one facet per edge between the outline and a smaller table
+const crestRing=(outer,f,tones)=>{const inner=crestScale(outer,f);
+  return [...outer.map((o,k)=>{const n=(k+1)%outer.length;return [tones[k],crestPoly([o,outer[n],inner[n],inner[k]])]}),["T",crestPoly(inner)]]};
+// the apex body: a hexagon cut into six facets from its centre
+const crestHex=(cy,r)=>{const h=r*.866,c=[12,cy],pts=[[12,cy-r],[12+h,cy-r/2],[12+h,cy+r/2],[12,cy+r],[12-h,cy+r/2],[12-h,cy-r/2]];
+  return pts.map((p,k)=>[["L","M","D","D","M","L"][k],crestPoly([c,p,pts[(k+1)%6]])])};
+const CREST_HEX=[[12,2.5],[20,7.1],[20,16.9],[12,21.5],[4,16.9],[4,7.1]];
+const CREST_OCT=[[8.4,3],[15.6,3],[20,7.4],[20,16.6],[15.6,21],[8.4,21],[4,16.6],[4,7.4]];
 const CRESTS={
-  IRON:{d:"M6.5 6.5h11l2.5 11H4z"},
-  BRONZE:{d:"M4.5 5h15v6.5c0 4.2-3.4 7-7.5 9.5-4.1-2.5-7.5-5.3-7.5-9.5z"},
-  SILVER:{d:"M4.5 4.5h6L12 6.4l1.5-1.9h6V11c0 4.2-3.4 7-7.5 9.5C7.9 18 4.5 15.2 4.5 11z",f:["M12 9.2l3.4 2 3.4-2"]},
-  GOLD:{d:"M12 2.5l8 4.6v9.8L12 21.5l-8-4.6V7.1z",f:["M12 6.6l4.4 2.5v5.8L12 17.4l-4.4-2.5V9.1z"]},
-  PLATINUM:{d:"M8.4 3h7.2L20 7.4v9.2L15.6 21H8.4L4 16.6V7.4z",f:["M8.4 3l3.6 4.6L15.6 3","M4 16.6L12 12l8 4.6","M12 7.6v4.4"]},
-  EMERALD:{d:"M8 3h8l4 4v10l-4 4H8l-4-4V7z",f:["M8.6 7.4h6.8v9.2H8.6z"]},
-  DIAMOND:{d:"M6.8 3.5h10.4L21.5 9.5 12 21 2.5 9.5z",f:["M2.5 9.5h19","M6.8 3.5L8.8 9.5 12 21 15.2 9.5 17.2 3.5"]},
-  MASTER:{d:"M12 8.6l6.2 3.6v6.2L12 22l-6.2-3.6v-6.2z",c:"M4.6 9.4L3.4 3.2l4 3L12 1l4.6 5.2 4-3-1.2 6.2z"},
-  GRANDMASTER:{d:"M12 9.2l5.8 3.4v5.8L12 21.8l-5.8-3.4v-5.8z",c:"M5.2 10L4 4.2l3.9 2.9L12 2.2l4.1 4.9L20 4.2 18.8 10z",
-    w:["M6 12.6L.5 9.4l.4 6.4z","M18 12.6l5.5-3.2-.4 6.4z"]},
-  CHALLENGER:{d:"M12 9.8l5.4 3.1v5.4L12 21.4l-5.4-3.1v-5.4z",c:"M5.4 10.6L4.2 5.2 7.9 8 12 3.4 16.1 8l3.7-2.8-1.2 5.4z",
-    w:["M5.8 13L0 9.6l.4 6.8z","M18.2 13L24 9.6l-.4 6.8z"],
-    s:"M12 0l.9 2 2.1.3-1.55 1.5.4 2.1L12 4.9l-1.85 1 .4-2.1L9 2.3l2.1-.3z"}
+  IRON:[["L","M7 6.5h10l.6 3.5H6.4z"],["M","M6.4 10h11.2l3.2 8H3.2z"],["D","M3.2 18h17.6l-.8 1.6H4z"]],
+  BRONZE:[["L","M12 4.5H4.5V11c0 4.3 3.4 7.1 7.5 9.7z"],["M","M12 4.5h7.5V11c0 4.3-3.4 7.1-7.5 9.7z"],
+    ["T","M12 8.2l3.6 2.1v3.9L12 16.4l-3.6-2.2v-3.9z"]],
+  SILVER:[["L","M4.5 4.5h6L12 6.4V20.6C7.9 18.1 4.5 15.3 4.5 11z"],["M","M19.5 4.5h-6L12 6.4V20.6c4.1-2.5 7.5-5.3 7.5-9.6z"],
+    ["T","M4.5 9l7.5 4.2L19.5 9v2.6l-7.5 4.2-7.5-4.2z"]],
+  GOLD:crestRing(CREST_HEX,.55,["L","M","D","D","M","L"]),
+  PLATINUM:crestRing(CREST_OCT,.5,["L","L","M","D","D","D","M","L"]),
+  EMERALD:(()=>{const A=[8,3],B=[16,3],C=[20,7],D=[20,17],E=[16,21],F=[8,21],G=[4,17],H=[4,7],
+    p=[8.6,7.4],q=[15.4,7.4],r=[15.4,16.6],s=[8.6,16.6];
+    return [["L",crestPoly([A,B,q,p])],["L",crestPoly([B,C,q])],["M",crestPoly([C,D,r,q])],["D",crestPoly([D,E,r])],
+      ["D",crestPoly([E,F,s,r])],["D",crestPoly([F,G,s])],["M",crestPoly([G,H,p,s])],["L",crestPoly([H,A,p])],["T",crestPoly([p,q,r,s])]]})(),
+  DIAMOND:[["L","M6.8 3.5L2.5 9.5h6.3z"],["T","M6.8 3.5h10.4l-2 6H8.8z"],["M","M17.2 3.5l4.3 6h-6.3z"],
+    ["M","M2.5 9.5h6.3L12 21z"],["L","M8.8 9.5h6.4L12 21z"],["D","M15.2 9.5h6.3L12 21z"]],
+  MASTER:[["L","M4.6 9.4 3.4 3.2l4 3L12 1v8.4z"],["M","M19.4 9.4l1.2-6.2-4 3L12 1v8.4z"],...crestHex(15.3,6.9)],
+  GRANDMASTER:[["M","M6 12.6L.5 9.4l.4 6.4z"],["D","M18 12.6l5.5-3.2-.4 6.4z"],
+    ["L","M5.2 10 4 4.2l3.9 2.9L12 2.2V10z"],["M","M18.8 10 20 4.2l-3.9 2.9L12 2.2V10z"],...crestHex(15.5,6.3)],
+  CHALLENGER:[["M","M5.8 13 0 9.6l.4 6.8z"],["D","M18.2 13 24 9.6l-.4 6.8z"],
+    ["L","M5.4 10.6 4.2 5.2 7.9 8 12 3.4v7.2z"],["M","M18.6 10.6l1.2-5.4L16.1 8 12 3.4v7.2z"],...crestHex(15.6,5.8),
+    ["W","M12 0l.9 2 2.1.3-1.55 1.5.4 2.1L12 4.9l-1.85 1 .4-2.1L9 2.3l2.1-.3z"]]
 };
 const DIV_ORDER={IV:0,III:1,II:2,I:3};
 const STALE_MS=3*24*3600*1000;
@@ -2963,36 +2986,24 @@ function ageFrom(iso){
 }
 function timeAgo(ts){if(!ts)return null;const s=Math.floor((Date.now()-ts)/1000);if(s<60)return"just now";const m=Math.floor(s/60);if(m<60)return m+" min ago";const h=Math.floor(m/60);if(h<24)return h+" h ago";const d=Math.floor(h/24);return d+(d===1?" day ago":" days ago")}
 function tierColor(t){return TIER_COLORS[(t||"UNRANKED").toUpperCase()]||TIER_COLORS.UNRANKED}
-/* One <defs> for the whole document instead of one per crest. Sixty cards each
-   carrying their own gradient definition would be sixty duplicate ids — invalid
-   markup, and pointless, since every crest of a tier wants exactly the same ramp.
-   Tier colours are fixed constants, not the accent the picker drives, so this is
-   written once at boot and never touched again. */
-function installCrestDefs(){
-  if($("crestDefs"))return;
-  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
-  svg.id="crestDefs";svg.setAttribute("width","0");svg.setAttribute("height","0");
-  svg.setAttribute("aria-hidden","true");svg.style.cssText="position:absolute;pointer-events:none";
-  svg.innerHTML="<defs>"+TIER_ORDER.map(t=>{const c=TIER_COLORS[t];
-    return `<linearGradient id="cr-${t}" x1="0" y1="0" x2=".35" y2="1">`
-      +`<stop offset="0" stop-color="#fff" stop-opacity=".78"/>`
-      +`<stop offset=".42" stop-color="${c}"/>`
-      +`<stop offset="1" stop-color="${c}" stop-opacity=".5"/></linearGradient>`;
-  }).join("")+"</defs>";
-  document.body.appendChild(svg);
-}
 // Sized by CSS through `cls`, never by attributes — the same markup is the 13px
 // mark on a row, the 20px badge on a portrait and the 80px watermark on a card.
+function crestMix(hex,to,amt){
+  const n=parseInt(hex.slice(1),16),t=to==="w"?255:0;
+  return "#"+[16,8,0].map(sh=>Math.round(((n>>sh)&255)*(1-amt)+t*amt).toString(16).padStart(2,"0")).join("");
+}
+// Built once per tier and reused: the same tier is the same markup on every render,
+// which is what lets the grid's "has this card changed?" check skip it.
+const crestCache={};
 function crest(tier,cls){
   const t=(tier||"").toUpperCase(), c=CRESTS[t];
   if(!c)return "";
-  let s=`<svg class="crest${cls?" "+cls:""}" viewBox="0 0 24 24" aria-hidden="true">`;
-  if(c.w)for(const w of c.w)s+=`<path d="${w}" fill="${TIER_COLORS[t]}" opacity=".6"/>`;
-  if(c.c)s+=`<path d="${c.c}" fill="url(#cr-${t})"/>`;
-  if(c.s)s+=`<path d="${c.s}" fill="#fff" opacity=".92"/>`;
-  s+=`<path d="${c.d}" fill="url(#cr-${t})"/>`;
-  if(c.f)for(const f of c.f)s+=`<path d="${f}" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="1"/>`;
-  return s+"</svg>";
+  if(!crestCache[t]){
+    const col=TIER_COLORS[t];
+    const tone={L:crestMix(col,"w",.38),T:crestMix(col,"w",.2),M:col,D:crestMix(col,"k",.34),W:"#fff"};
+    crestCache[t]=c.map(([k,d])=>`<path d="${d}" fill="${tone[k]}"/>`).join("");
+  }
+  return `<svg class="crest${cls?" "+cls:""}" viewBox="0 0 24 24" aria-hidden="true">${crestCache[t]}</svg>`;
 }
 /* Below the ladder there are three more states, and they all used to tie at -1 —
    so an account that came back Unranked sat mixed in with ones nobody had ever
@@ -8273,7 +8284,6 @@ function boot(){
   $("sAutoEvery").innerHTML=AUTO_EVERY.map(o=>`<option value="${o.v}">${esc(o.label)}</option>`).join("");
   fillAutoLock($("sAutoLock"),0);
   $("baRegion").innerHTML=$("fRegion").innerHTML;
-  installCrestDefs();
   renderVersion();
   hasStorage=storageOK();
   if(!hasStorage){$("banner").classList.add("show")}
