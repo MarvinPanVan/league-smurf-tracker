@@ -749,14 +749,14 @@ test("a stale card warns with a drawn mark, which a fresh card does not carry", 
   assert.equal(upd("f1").querySelector("svg"), null, "a fresh card has nothing to warn about");
 });
 
-test("actions are set in the text face, a weight up, not in spaced capitals", () => {
+test("actions and window titles are set in the text face; Cinzel is the wordmark's alone", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
   const rule = css.match(/\.cmd>button,\.acts>button:not\(\.c-more\)[^{]*\{[^}]*\}/)[0];
   assert.match(rule, /font-weight:600/);
   assert.doesNotMatch(rule, /Cinzel|uppercase|letter-spacing/);
   // Cinzel is the wordmark's now, and the wordmark's only
   const users = [...css.matchAll(/([^{}]+)\{[^}]*Cinzel[^}]*\}/g)].map(m => m[1].trim());
-  assert.ok(users.every(sel => /hex-display|lock-wm|acc-prev-t|\.mdl-h \.t|cmp-vs/.test(sel)), users.join(" | "));
+  assert.ok(users.every(sel => /hex-display|lock-wm|acc-prev-t/.test(sel)), users.join(" | "));
 });
 
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
