@@ -1392,6 +1392,55 @@ test("Settings is six tabs, one section at a time, and a step that needs a field
   assert.deepEqual(shown(), ["Security"]);
 });
 
+test("Discord decay alerts: switched on in Alerts, the worker gets a list of Diamond+ estimates and a token of its own", async () => {
+  const now = Date.now(), D = 86400000;
+  const acc = (id, tier, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [],
+    history: [{ t: now - 10 * D, tier, division: "II", lp: 40, w: 100, l: 90 }],
+    stats: { found: true, tier, division: "II", lp: 40, wins: 100, losses: 90, updatedAt: now - D } }, extra);
+  const win = bootApp([acc("d", "DIAMOND", { label: "Main" }), acc("g", "GOLD"), acc("banned", "DIAMOND", { status: "banned" })]);
+  const doc = win.document;
+  const calls = [];
+  win.fetch = async (u, init = {}) => {
+    calls.push({ url: String(u), method: init.method || "GET", auth: init.headers && init.headers.Authorization, body: init.body && JSON.parse(init.body) });
+    return { ok: true, status: 200, json: async () => ({ ok: true, accounts: 1, lastRun: now - 3600e3, lastSent: null }) };
+  };
+  doc.getElementById("bSettings").click();
+  doc.getElementById("sBackend").value = "https://w.example.workers.dev";
+  doc.getElementById("sWatch").checked = true;
+  doc.getElementById("sSave").click();
+  await until(() => /decay alerts need the worker and the Discord webhook/.test(doc.getElementById("toast").textContent), "the missing webhook named");
+  assert.equal(appGet(win, "cfg.watch"), undefined, "no webhook, no alerts");
+  doc.getElementById("bSettings").click();
+  doc.getElementById("sDiscord").value = "https://discord.com/api/webhooks/1/abc";
+  doc.getElementById("sWatch").checked = true;
+  doc.getElementById("sSave").click();
+  await until(() => calls.some(c => c.method === "PUT"), "the list to go to the worker");
+  const put = calls.find(c => c.method === "PUT");
+  assert.equal(put.url, "https://w.example.workers.dev/watch");
+  assert.match(put.auth, /^Bearer \S{16,}$/, "a token of its own");
+  assert.equal(put.auth, "Bearer " + appGet(win, "cfg.watchToken"));
+  assert.notEqual(appGet(win, "cfg.watchToken"), appGet(win, "cfg.syncToken"), "not the sync token");
+  assert.equal(put.body.webhook, "https://discord.com/api/webhooks/1/abc");
+  assert.deepEqual(put.body.accounts.map(a => a.name), ["d"], "Diamond and up, live accounts only");
+  const a = put.body.accounts[0];
+  assert.equal(a.label, "Main");
+  assert.equal(a.games, 190);
+  assert.equal(a.region, "euw");
+  assert.ok(a.bank > 0 && a.bank <= 28 && a.at === now - D, "the bank as of the latest reading, which the worker carries on");
+  assert.equal("login" in a || "password" in a || "email" in a, false, "never a login");
+  // a new reading of a Diamond+ account sends the list again (soon, once a Check all has landed)
+  runScript(win, "window.__soon = 0; syncWatchSoon = () => window.__soon++;");
+  runScript(win, `commitStats("d", accounts.find(x => x.id === "d"), {found:true,tier:"DIAMOND",division:"I",lp:5,wins:101,losses:90,updatedAt:Date.now()})`);
+  runScript(win, `commitStats("g", accounts.find(x => x.id === "g"), {found:true,tier:"GOLD",division:"I",lp:5,wins:1,losses:0,updatedAt:Date.now()})`);
+  assert.equal(win.__soon, 1, "a Gold reading cannot change a decay estimate");
+  doc.getElementById("bSettings").click();
+  await until(() => /On — watching 1 account · last checked 1 h ago/.test(doc.getElementById("sWatchStatus").textContent), "the status line");
+  doc.getElementById("sWatch").checked = false;
+  doc.getElementById("sSave").click();
+  await until(() => calls.some(c => c.method === "DELETE"), "switching off to stop it on the worker");
+  assert.equal(appGet(win, "cfg.watch"), null);
+});
+
 test("Settings walks you through setting up a worker, and steps aside once you have one", () => {
   const win = bootApp();
   const guide = () => win.document.getElementById("sDeployHelp");

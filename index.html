@@ -2261,7 +2261,7 @@
             </ol>
             <div class="guide-alt">Rather paste the code by hand? Create a Worker, paste
               <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>,
-              and bind a KV namespace named <code>VAULT</code> for sync.</div>
+              bind a KV namespace named <code>VAULT</code> for sync, and add the Cron Trigger <code>17 9 * * *</code> for Discord alerts.</div>
           </details>
           <div class="fld fw">
             <label>Advanced: Anthropic API key (optional, stored only in this browser)</label>
@@ -2307,6 +2307,12 @@
           <label>Discord webhook URL (optional — posts tier-ups to a channel)</label>
           <input id="sDiscord" placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
         </div>
+        <div class="chk" style="margin-top:16px">
+          <input type="checkbox" id="sWatch" style="width:auto">
+          <label for="sWatch">Decay alerts on Discord, even with the app closed: once a day your worker checks your Diamond+ accounts and posts to the webhook above when one is about to decay</label>
+        </div>
+        <div id="sWatchStatus" class="hint" style="margin-top:6px" aria-live="polite"></div>
+        <div class="hint" style="margin-top:4px">Needs your worker (Rank checks) and the webhook above. Your worker then keeps a short list: those accounts' Riot IDs, labels and decay estimates, never logins.</div>
       </div>
 
       <div class="grp" data-tab="security">
@@ -2944,6 +2950,12 @@ function rotationDays(a){
    checked, the closer it gets. Returns whole days left, below 0 when decaying. */
 const DECAY_RULES={DIAMOND:{cap:28,per:7,lp:50},MASTER:{cap:14,per:1,lp:75},GRANDMASTER:{cap:14,per:1,lp:75},CHALLENGER:{cap:14,per:1,lp:75}};
 function decayDays(a){
+  const st=decayState(a);
+  return st?Math.floor(st.bank-(Date.now()-st.at)/86400000):null;
+}
+// The bank of decay protection as of the latest reading — what decayDays counts
+// down from, and what the worker's daily alert check carries forward.
+function decayState(a){
   if(!isRanked(a)||a.status==="banned")return null;
   const s=a.stats, tier=(s.tier||"").toUpperCase();
   if(!DECAY_RULES[tier]||s.wins==null||s.losses==null||!s.updatedAt)return null;
@@ -2964,7 +2976,8 @@ function decayDays(a){
     if(games)bank=Math.min(rule.cap,bank+games*rule.per);
     bank=Math.max(0,bank-half);
   }
-  return Math.floor(bank-(Date.now()-pts[pts.length-1].t)/D);
+  const last=pts[pts.length-1];
+  return{bank,at:last.t,games:last.g,tier:last.tier};
 }
 /* Building an account: ranked opens at level 30 (and 20 champions owned, which no
    source shows). Until then the level is the account's progress; at 30 and still
@@ -3776,6 +3789,50 @@ function dateLabel(t,mode){
   if(isNaN(d))return"";
   if(mode==="month")return MONTHS[d.getMonth()]+" ’"+String(d.getFullYear()).slice(2);
   return d.getDate()+" "+MONTHS[d.getMonth()]+(mode==="year"&&d.getFullYear()!==new Date().getFullYear()?" "+d.getFullYear():"");
+}
+/* ---- Discord alerts while the app is closed ----
+   The app keeps the worker's watch list current: Diamond+ accounts, each with the
+   decay estimate as of its latest reading. The worker's daily cron does the rest.
+   A token of this browser's own owns the list on the worker (see /watch). */
+function watchUrl(){
+  try{const u=new URL(cfg.backendUrl);u.pathname=u.pathname.replace(/\/?$/,"/watch");u.search="";return u.href}catch(e){return""}
+}
+function watchList(){
+  return accounts.filter(a=>isLive(a)&&isRanked(a)).map(a=>{const st=decayState(a);return st?{a,st}:null}).filter(Boolean)
+    .sort((x,y)=>(x.st.bank-(Date.now()-x.st.at)/864e5)-(y.st.bank-(Date.now()-y.st.at)/864e5)).slice(0,20)
+    .map(({a,st})=>({name:a.gameName,tag:a.tagLine,region:(REGIONS[a.region]||REGIONS.EUW).opgg,puuid:validPuuid(a.puuid)?a.puuid:undefined,
+      label:a.label||undefined,tier:st.tier,division:a.stats.division||null,lp:a.stats.lp??null,games:st.games,bank:Math.round(st.bank*100)/100,at:st.at}));
+}
+let watchTakenSaid=false, watchSyncT=0;
+async function syncWatch(force){
+  if(!cfg.watch||!cfg.backendUrl||!cfg.discordWebhook||!cfg.watchToken||previewMode||vaultLocked())return false;
+  if(!force&&Date.now()-(cfg.watchSyncedAt||0)<10*60000)return false;
+  try{
+    const res=await fetch(watchUrl(),{method:"PUT",headers:{"Content-Type":"application/json",Authorization:"Bearer "+cfg.watchToken},
+      body:JSON.stringify({webhook:cfg.discordWebhook,accounts:watchList()})});
+    const d=await res.json().catch(()=>null);
+    if(res.ok){cfg.watchSyncedAt=Date.now();saveCfg();return true}
+    if(res.status===409&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker already sends decay alerts for another browser — turn them off there first")}
+    else if(d&&d.code==="no_kv")toast("Decay alerts need sync storage on your worker (a KV namespace bound as VAULT)");
+  }catch(e){}
+  return false;
+}
+// after a check the estimates move; a few seconds' wait lets a whole Check all land first
+function syncWatchSoon(){clearTimeout(watchSyncT);watchSyncT=setTimeout(()=>syncWatch(true),4000)}
+async function stopWatch(){
+  if(!cfg.watchToken||!cfg.backendUrl)return;
+  try{await fetch(watchUrl(),{method:"DELETE",headers:{Authorization:"Bearer "+cfg.watchToken}})}catch(e){}
+}
+async function updateWatchStatus(){
+  const el=$("sWatchStatus");if(!el)return;
+  if(!cfg.watch){el.textContent="";return}
+  try{
+    const res=await fetch(watchUrl(),{headers:{Authorization:"Bearer "+cfg.watchToken}});
+    const d=await res.json().catch(()=>null);
+    el.textContent=res.ok&&d?"On — watching "+d.accounts+" account"+(d.accounts===1?"":"s")
+      +(d.lastRun?" · last checked "+timeAgo(d.lastRun):" · first check at the next daily run")+(d.lastSent?" · last alert "+timeAgo(d.lastSent):"")
+      :res.status===409?"Another browser owns the alerts on this worker.":"On, but the worker does not have the list yet — it is sent after your next check.";
+  }catch(e){el.textContent="On — could not reach the worker to check."}
 }
 function postDiscord(content){
   if(!cfg.discordWebhook)return;
@@ -4961,6 +5018,7 @@ function takeIdentity(acc,s){
 }
 function commitStats(id,acc,s){
   takeIdentity(acc,s);
+  if(cfg.watch&&s&&DECAY_RULES[String(s.tier||"").toUpperCase()])syncWatchSoon();
   // a fresh read may mean fresh games — an open drawer fetches them again
   if(formCache.has(id)){formCache.delete(id);if(openInfo.has(id))loadForm(id)}
   // A profile that does not exist is not a failed request to be retried later —
@@ -7238,7 +7296,7 @@ function openSettings(tab){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden")
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden")
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -7982,6 +8040,11 @@ $("sSave").addEventListener("click",async()=>{
   cfg.backendUrl=backendOk;$("sBackend").value=backendOk;
   cfg.notify=wantNotify;
   cfg.discordWebhook=whOk;$("sDiscord").value=whOk;
+  const wantWatch=$("sWatch").checked&&!!backendOk&&!!whOk;
+  if($("sWatch").checked&&!wantWatch)notifyNote+=" — decay alerts need the worker and the Discord webhook";
+  if(wantWatch){if(!cfg.watchToken)cfg.watchToken=genSyncToken();const was=cfg.watch;cfg.watch=true;if(!was)setTimeout(()=>syncWatch(true).then(updateWatchStatus),0)}
+  else if(cfg.watch){stopWatch();cfg.watch=null}
+  $("sWatch").checked=wantWatch;
   cfg.autoLockMin=clampAutoLock($("sAutoLock").value);
   // null, not the default's own hex, when that is what the picker is sitting on:
   // "no colour chosen" is a different thing to store than "chose exactly this one",
@@ -9064,6 +9127,7 @@ function startApp(){
   if(!cfg.seenHelp&&accounts.length===0)$("help").classList.remove("hidden");
   showChangelogIfNeeded();
   if(startAction)setTimeout(runStartAction,0); // after boot's own first paint
+  if(cfg.watch)setTimeout(()=>syncWatch(false),1500); // at most every ten minutes
   if(cfg.autoCheck){
     const staleAccs=accounts.filter(autoCheckDue);
     if(staleAccs.length){
