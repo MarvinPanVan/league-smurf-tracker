@@ -170,7 +170,10 @@ async function readSolo(a, env) {
       return { tier, division: MASTER_PLUS.includes(tier) ? null : e.rank || null, lp: e.leaguePoints ?? null, games: (e.wins || 0) + (e.losses || 0) };
     }
   }
-  const s = await scrapeOne(a.name, a.tag, a.region);
+  // rank and games are all the decay check needs: the profile page, not the
+  // champions page as well, so twenty accounts stay inside a run's 50 requests
+  // with room for the Discord posts
+  const s = await scrapeOne(a.name, a.tag, a.region, { champions: false });
   if (!s.body || !s.body.found || s.body.wins == null) return null;
   return { tier: String(s.body.tier || "").toUpperCase(), division: s.body.division || null, lp: s.body.lp ?? null, games: (s.body.wins || 0) + (s.body.losses || 0) };
 }
@@ -528,7 +531,7 @@ function opggGet(u) {
   }).finally(() => clearTimeout(t));
 }
 
-async function scrapeOne(name, tag, region) {
+async function scrapeOne(name, tag, region, { champions = true } = {}) {
   const base = `https://op.gg/lol/summoners/${encodeURIComponent(region)}/${encodeURIComponent(name)}-${encodeURIComponent(tag)}`;
   let res;
   try {
@@ -556,7 +559,7 @@ async function scrapeOne(name, tag, region) {
   // Champions only after a successful profile parse — a miss used to still burn a
   // subrequest (×20 in a batch), which sits close to Workers' subrequest limit.
   let champHtml = null;
-  try {
+  if (champions) try {
     const champs = await opggGet(base + "/champions");
     if (champs.ok) champHtml = await champs.text();
   } catch (e) { /* optional */ }
