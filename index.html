@@ -6038,7 +6038,10 @@ function renderDash(){
   let best=null;
   pool.forEach(a=>{if(rankValue(a.stats)>rankValue(best&&best.stats))best=a});
   const topChamps=mergeChampions(pool);
-  const bestTxt=best&&rankValue(best.stats)>=0?nameOf(best)+" <small>"+esc(shortRank(best.stats)||"")+"</small>":"—";
+  // the rank breaks between its pieces ("Grandmaster" / "· 874 LP") rather than
+  // running out of a narrow column as one unbreakable line
+  const bestTxt=best&&rankValue(best.stats)>=0?nameOf(best)+' <small class="parts">'
+    +String(shortRank(best.stats)||"").split(" · ").map((x,i)=>`<span>${i?"· ":""}${esc(x)}</span>`).join(" ")+"</small>":"—";
   const regCount={};allActive.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
   const regTxt=Object.entries(regCount).map(([r,n])=>r+" "+n).join(" · ");
   const regN=Object.keys(regCount).length;

@@ -1358,6 +1358,15 @@ test("Recent form: a Riot-read account's Details fetch its last five ranked game
   await until(() => /No ranked games yet this season/.test(card("r").textContent), "Retry to fetch again");
 });
 
+test("the Best account tile's rank can break between its pieces in a narrow column", () => {
+  const win = bootApp([{ id: "g", label: "Smurf10", region: "EUW", gameName: "g", tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GRANDMASTER", division: null, lp: 874, wins: 1, losses: 1, updatedAt: Date.now() } }]);
+  const tile = [...win.document.querySelectorAll("#dash .stat")].find(s => s.querySelector(".k").textContent === "Best account");
+  const small = tile.querySelector(".v small");
+  assert.ok(small.classList.contains("parts"), "the wrapping kind of small");
+  assert.deepEqual([...small.querySelectorAll("span")].map(s => s.textContent), ["Grandmaster", "· 874 LP"]);
+});
+
 test("on a phone the set-up steps wrap their labels instead of cutting them off", () => {
   const css = html.slice(0, html.indexOf("</style>"));
   const rule = css.match(/\.setup-steps button\{width:100%;[^}]*\}/);
