@@ -1,65 +1,93 @@
 # Smurf Tracker
 
-A single-file, local-only tracker for League of Legends smurf accounts: rank, W/L, login, notes, skins, tags, status. No backend, no account, no build step — open the HTML file (or host it) and it just works.
+[![tests](https://github.com/MarvinPanVan/league-smurf-tracker/actions/workflows/test.yml/badge.svg)](https://github.com/MarvinPanVan/league-smurf-tracker/actions/workflows/test.yml)
+[![release](https://img.shields.io/github/v/release/MarvinPanVan/league-smurf-tracker?label=version)](https://github.com/MarvinPanVan/league-smurf-tracker/releases)
 
-**[Try it live](https://marvinpanvan.github.io/league-smurf-tracker/)** — runs entirely in your browser, nothing you enter there ever reaches a server.
+Every League account you own in one place: rank, LP history, logins, notes. It runs in your browser with nothing to install, no sign-up and no server.
 
-## Features
+**[Open Smurf Tracker →](https://marvinpanvan.github.io/league-smurf-tracker/)**
 
-- **Rank tracking**: current tier/division/LP, W/L, summoner level, peak rank, climbing streak badge, tier-up celebration (toast, browser notification, optional Discord webhook).
-- **A real LP chart, not a sparkline**: the ladder is drawn as a coloured band per tier, so a promotion reads as leaving the green rather than as a line that went up a bit. X is real time with a date axis — a week's break is a gap, not another evenly spaced dot — and the Grandmaster/Challenger floors are drawn in where the view reaches them. Switch it between daily, weekly and monthly points.
-- **Details per account**: past seasons (solo and flex), flex rank and the champions played this season, each folded behind a heading so the card stays readable. Notes edit in place on the card.
-- **Three layouts**: cards for browsing, a one-line-per-account list for working through a big vault (click a row to unfold the same chart and details), or a wall of crest tiles for seeing the whole collection at once.
-- **Login vault**: username/password/email per account, hidden by default, with a strength meter and safe password generator (always mixes upper/lower/digit/symbol) when adding one. Optional AES-256 master-password encryption with auto-lock after idle time.
-- **Organize**: favorites, tags, search, filters for region/status/tier/"never checked"/"needs refresh", sort by rank, name, level, LP change or last updated, archive accounts you're not using without deleting them, bulk actions (multi-select with shift-click range, set status/tag/delete for several at once).
-- **Automatic rank checks**: pulls from op.gg for free, no API key needed. Refresh everything at once with progress, a Stop button and a list of anything that failed, or let it auto-check stale accounts on open at an interval you set. If auto-fetch is ever blocked, enter the rank by hand and the history, chart and stats all work the same.
-- **Combined stats**: total W/L, best account, rank spread and best champions across a pool you control — set a tier floor or exclude individual accounts, so one silver account you never play doesn't drag the summary down.
-- **Backup**: Export/Import as JSON (plaintext, clearly labeled) or an AES-encrypted JSON when a master password is set, plus CSV, merge or replace, and a bulk-paste importer for adding a list of `Name#TAG` accounts at once.
-- **Personalize**: pick your own primary and secondary accent colors instead of the default gold and teal.
+![Smurf Tracker: the dashboard and account cards](docs/screenshots/cards.jpg)
 
-## Your data
+## What it does
 
-Everything lives in this browser's `localStorage`, on your device only — nothing is uploaded anywhere. **Clearing browser data wipes it**, so use **Export** for backups. Login passwords are stored in plain text in `localStorage` (labeled as such in the UI) — fine for a personal single-user tool on your own machine, but don't put this on a shared/public computer without being aware of that.
+- **Ranks without the busywork.** One click checks every account. Each card shows the tier, LP, win rate and level, plus an LP chart that draws the ladder as bands, so a promotion looks like one. Past seasons, flex rank and your champions sit under **Details**.
+- **Tells you what to play.** **Play next** picks the account that needs a game: one about to decay first, otherwise the one you have left longest. **Decay risk** estimates how many days a Diamond+ account has banked from the games seen between checks. **Needs refresh** counts the accounts whose rank is old.
+- **Logins kept safe.** Username, password and email per account, hidden until you ask. Set a master password and everything is encrypted (AES-256, 600 000 PBKDF2 rounds), with auto-lock. **Copy username, then password** fills a login screen in two pastes, and copied passwords clear after 30 seconds.
+- **Three layouts.** Cards to browse, a list to work through a big vault, or a wall of rank crests to see the whole collection at once.
+- **Finds things fast.** Search names, tags and ranks, or combine filters like `>diamond is:stale`, `region:euw` or `is:decay`. Accounts still levelling show how far they are from 30, and `is:ready` lists the ones that can play ranked.
+- **Backups and sync.** Export a plain or encrypted backup, import a list of `Name#TAG`s at once, or sync phone and PC through your own worker. Only the encrypted vault is uploaded.
 
-## Getting started
+| List | Wall | Phone |
+|---|---|---|
+| ![List view](docs/screenshots/list.jpg) | ![Wall view](docs/screenshots/wall.jpg) | ![On a phone](docs/screenshots/phone.jpg) |
 
-Just open `index.html` in a browser, or use the [live version](https://marvinpanvan.github.io/league-smurf-tracker/) and bookmark it — your data still only lives in *your* browser either way, hosting just saves you from double-clicking a local file. Want your own copy instead of sharing the one above? Fork the repo, GitHub Pages picks it up automatically since it's already named `index.html` at the repo root.
+## Get started
 
-Empty vault? Hit **👁 Preview with example data** to see the layout with example accounts — it's a preview only, nothing is saved, and there's a one-click **Exit preview** banner the whole time. If you ever end up with real example/test accounts saved by mistake, **⋯ → Delete all accounts** clears the vault in one shot.
+1. **[Open the app](https://marvinpanvan.github.io/league-smurf-tracker/)**. Want to look around first? **Preview with example data** shows it full, and saves nothing.
+2. **+ Add account**, then paste a Riot ID like `Faker#KR1` into the name field: it splits itself.
+3. Follow **Get set up**: check ranks, set a master password, back up.
+4. **Install it** (your browser's *Install app*, or *Add to Home Screen* on iPhone). It opens like an app and works offline. On iPhone this also stops Safari deleting your data after 7 days away.
 
-## Optional: your own rank-check backend
+Your data lives in this browser only. Read **[SECURITY.md](SECURITY.md)** for exactly what is stored, what is encrypted, and what ever leaves your device. In short, keep a backup.
 
-By default rank checks go through free public CORS proxies scraping op.gg — reliable most of the time, but not guaranteed. For something you control:
+## Optional: your own worker
 
-1. Deploy [`cloudflare-worker.js`](cloudflare-worker.js) as a Cloudflare Worker (free tier, no credit card needed):
-   - [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Create Worker** → give it a name → **Deploy**.
-   - **Edit code** → paste in the full contents of `cloudflare-worker.js` → **Deploy**.
-   - Copy the resulting `https://<name>.<you>.workers.dev` URL.
-2. In the app: **Settings** → paste the URL into **Backend URL** → **Save settings**.
+Out of the box, rank checks read op.gg through free public proxies. That works most of the time, but the proxies are other people's servers and can be slow or down. Your own [Cloudflare Worker](cloudflare-worker.js) is free, takes about five minutes, and gets you:
 
-The app tries your backend URL first, then an optional Anthropic API key (power-user option), then the free proxy chain, and falls back to entering the rank by hand.
+- faster, more reliable checks, plus the champion table and the dates your LP was actually reached;
+- **device sync** (the encrypted vault, nothing else);
+- with a Riot API key: ranks straight from Riot, accounts that keep their history when renamed, and your **last 5 ranked games** under Details.
 
-A worker also gets you the things the free proxies can't reach reliably: the per-champion season table (it lives on op.gg's `/champions` sub-page, which the worker fetches in parallel) and the timestamp op.gg records for when your current LP was actually reached, so a check made a week later dates the point correctly instead of stamping it "now".
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/MarvinPanVan/league-smurf-tracker)
 
-### Device sync (optional)
+1. Click **Deploy to Cloudflare** and sign in (a free account is enough).
+2. Cloudflare copies this repo into your GitHub account. Keep that copy private: it is yours alone, as the [terms](#terms-of-use) allow.
+3. It asks for `RIOT_API_KEY`. Paste a key if you have one (see below), or leave it empty for now.
+4. When it finishes, copy the `https://….workers.dev` address.
+5. In the app: **Settings → Backend URL**, paste it, **Save**. The line under the field says what your worker has: the Riot key, and sync storage.
 
-Same worker can store an **encrypted** vault blob so phone and PC share accounts:
+<details>
+<summary>Without the button (paste the code by hand)</summary>
 
-1. In the worker: **Settings → Variables → KV namespace bindings** → bind a namespace as `VAULT` (or `SMURF_VAULT`) → redeploy.
-2. In the app: set a **master password**, paste the Backend URL, **Generate** a sync token, then **Push to cloud** / **Pull from cloud**.
-3. Use the **same token + same master password** on every device. Last write wins; if the other side is newer you get a conflict hint.
+1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Create Worker** → name it → **Deploy**.
+2. **Edit code** → paste the whole of [`cloudflare-worker.js`](cloudflare-worker.js) → **Deploy**.
+3. For sync: **Storage & Databases → KV** → create a namespace, then in the worker **Settings → Bindings → Add → KV namespace**, variable name `VAULT`.
+4. Copy the `workers.dev` address into **Settings → Backend URL** in the app.
 
-Only ciphertext is uploaded. There is no scrape/rank cache on the worker — don't spam op.gg.
+</details>
+
+### A Riot API key
+
+With a key, your worker asks Riot's own API. Without one, it reads op.gg.
+
+1. Sign in at [developer.riotgames.com](https://developer.riotgames.com) with your Riot account and accept the developer terms.
+2. Your dashboard shows a **Development API Key** straight away. It works at once but **expires every 24 hours**, so it is for trying things out.
+3. For a key that lasts, choose **Register Product → Personal API Key** and describe the tool: something like *"A personal tracker for my own League accounts: it reads their rank and recent ranked games. Only I use it."* Riot reviews the request, which can take a while.
+4. Put the key in your worker: Cloudflare dashboard → **Workers & Pages** → your worker → **Settings → Variables and Secrets → Add**. Choose type **Secret**, name it `RIOT_API_KEY`, paste the key and **Deploy**.
+5. Reopen **Settings** in the app. It should say **Riot API key: set**.
+
+A personal key allows 100 requests every 2 minutes, roughly 40 accounts. A bigger **Check all** gets the rest from op.gg, so nothing fails. If the key expires or is wrong, the app says so once and carries on with op.gg.
+
+### Device sync
+
+1. Set a **master password**; only the encrypted vault is ever uploaded.
+2. With the Backend URL saved, **Generate** a sync token in Settings.
+3. On each device, use the **same token and the same master password**, then **Push to cloud** and **Pull from cloud**. The newest write wins, and you are warned if the other side is newer.
+
+Keep every synced device on the latest version: since 2.1 the vault uses stronger encryption, which older versions cannot open. Reloading the page updates it.
 
 ## Development
 
-The test suite in [`tests/`](tests/) uses jsdom + Node's built-in test runner and boots the actual `index.html` in a simulated browser — no logic is duplicated into the tests, so a test failing means the shipped file is wrong. It covers the op.gg parsers against real page markup, rank sorting and the ladder maths, XSS escaping, the vault encryption round-trip, DOM patching identity, the filter/stats interplay, and a regression test for every bug that has been found and fixed.
+`index.html` is the whole app: one file, no build step. The test suite in [`tests/`](tests/) boots that exact file in jsdom with Node's built-in runner, so nothing is copied into the tests and a red test means the shipped page is wrong. It covers the op.gg parsers against real markup, the ladder maths, escaping, the vault encryption, the worker, and a regression test for every bug fixed so far.
 
 ```bash
 cd tests
 npm install
 npm test
 ```
+
+**Releasing.** Bump `APP_VERSION`, add its entry to `APP_CHANGELOG` (the in-app toast shows the first two lines), and bump the cache name in `sw.js`. When the tests pass on `main`, a GitHub Release is published automatically, with that changelog entry as its notes.
 
 ## Terms of use
 
