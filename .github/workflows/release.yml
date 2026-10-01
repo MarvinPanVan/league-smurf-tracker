@@ -1,0 +1,40 @@
+# Publishes a GitHub Release whenever main carries an APP_VERSION that has none yet.
+# Runs after the test workflow succeeds on main, so a red build is never released.
+# The notes are the version's entry in index.html's APP_CHANGELOG: the same list the
+# app's own update toast shows, so the two cannot disagree.
+name: release
+
+on:
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Read the version and its changelog
+        id: ver
+        run: echo "version=$(node .github/scripts/release-notes.mjs notes.md)" >> "$GITHUB_OUTPUT"
+      - name: Release it, unless it already is
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.ver.outputs.version }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "v$VERSION is already released"; exit 0
+          fi
+          gh release create "v$VERSION" --target "$SHA" --title "v$VERSION" --notes-file notes.md

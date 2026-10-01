@@ -7,6 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { webcrypto } from "node:crypto";
 import { JSDOM } from "jsdom";
@@ -878,6 +879,19 @@ test("SECURITY.md states the key stretching the code actually uses", () => {
   const spaced = iter.toLocaleString("en-US").replace(/,/g, " ");
   assert.ok(doc.includes(spaced + " rounds"), `the doc says ${spaced} rounds`);
   assert.match(doc, /plain text/i, "and says what is unprotected without a master password");
+});
+
+test("the release notes are the running version's own changelog entry", async () => {
+  const { execFileSync } = await import("node:child_process");
+  const out = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "notes-")), "notes.md");
+  const version = execFileSync(process.execPath, [".github/scripts/release-notes.mjs", out],
+    { cwd: path.join(__dirname, ".."), encoding: "utf8" }).trim();
+  const win = bootApp();
+  runScript(win, "window.__v = APP_VERSION; window.__log = JSON.stringify(APP_CHANGELOG);");
+  assert.equal(version, win.__v, "tags the version the app says it is");
+  const notes = fs.readFileSync(out, "utf8");
+  const items = JSON.parse(win.__log).find(e => e.v === version).items;
+  for (const it of items) assert.ok(notes.includes("- " + it), it);
 });
 
 test("the lock screen carries the brand: mark, wordmark, a labelled field, an announced error", () => {
