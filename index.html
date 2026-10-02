@@ -1096,9 +1096,11 @@
      felt rather than read; nothing on the card depends on it. 2.3.0 tried 18%,
      and on a real iPad it nearly vanished, so it is back at 28%. */
   .c-art{position:absolute;left:0;right:0;top:0;width:100%;height:230px;z-index:-2;pointer-events:none;
-    object-fit:cover;object-position:center 18%;opacity:.28;
+    object-fit:cover;object-position:center 18%;opacity:var(--art-op,.28);
     -webkit-mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%);mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%)}
-  .card.dead .c-art{filter:grayscale(1);opacity:.1}
+  /* --art-op: Card art… → Strength. Set on the root for every card, or on one
+     card's own picture; a banned card keeps its art at about a third of that. */
+  .card.dead .c-art{filter:grayscale(1);opacity:calc(var(--art-op,.28) * .36)}
   .c-tint{position:absolute;inset:0;z-index:-1;pointer-events:none;
     background:radial-gradient(125% 78% at 0% 0%,
       color-mix(in srgb,var(--tier) 15%,transparent),transparent 60%)}
@@ -2118,6 +2120,26 @@
   .ap-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--faint);
     font-size:calc(13px*var(--ts))}
   .ap-empty .ico{display:block;width:30px;height:30px;margin:0 auto 8px;color:var(--gold-dim)}
+  /* Strength: a strip of card with the art at the chosen strength behind a name
+     and a rank, because the full splash above says nothing about how it will
+     sit behind text */
+  .ap-str{display:grid;grid-template-columns:minmax(0,230px) minmax(0,1fr);gap:18px;align-items:center;
+    padding:12px 22px;border-top:1px solid var(--line)}
+  .ap-prev{position:relative;height:76px;border-radius:var(--r-sm);overflow:hidden;isolation:isolate;
+    background:linear-gradient(180deg,#0e1620,#091017);box-shadow:0 0 0 1px var(--line)}
+  .ap-prev img{position:absolute;inset:0;width:100%;height:100%;z-index:-1;object-fit:cover;object-position:center 18%;
+    -webkit-mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%);mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%)}
+  .ap-prev-t{position:absolute;left:12px;right:12px;top:11px;display:flex;flex-direction:column;gap:3px;min-width:0}
+  .ap-prev-t b{font-size:calc(14px*var(--ts));font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ap-prev-t span{font-size:calc(13px*var(--ts));font-weight:600}
+  .ap-ctl{display:flex;flex-direction:column;gap:7px;min-width:0}
+  .ap-ctl .lbl{display:flex;justify-content:space-between;gap:10px;font-size:calc(12px*var(--ts));color:var(--muted)}
+  .ap-ctl output{font-variant-numeric:tabular-nums;font-weight:600;color:var(--text)}
+  .ap-ctl input[type=range]{width:100%;height:22px;padding:0;margin:0;border:0;background:none;box-shadow:none;accent-color:var(--gold)}
+  .ap-opts{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap}
+  .ap-all{display:inline-flex;align-items:center;gap:8px;font-size:calc(13px*var(--ts));color:var(--text);cursor:pointer}
+  .ap-opts .hint{font-size:calc(12px*var(--ts))}
+  @media (max-width:620px){.ap-str{grid-template-columns:1fr;gap:10px;padding:12px 16px}.ap-prev{height:64px}}
   .ap-off{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 22px;font-size:calc(12px*var(--ts));
     color:var(--muted);background:color-mix(in srgb,var(--gold) 8%,transparent);border-top:1px solid var(--line)}
   .ap-off button{padding:5px 10px;font-size:calc(12px*var(--ts))}
@@ -2412,7 +2434,7 @@
       <dt>Layouts</dt>
       <dd>Cards for browsing, the list for working through the vault a row at a time, and the wall for seeing all sixty at once — click any tile to land back on that account's card.</dd>
       <dt>Cards</dt>
-      <dd>The bar across a card's bottom edge opens <b>Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot, or its fields (honor, skins, Blue Essence…) to edit them — <b>Fields…</b> in the account form picks which ones, and adds your own · <b>Card art…</b> in the ⋯ menu sets the champion and skin behind a card.</dd>
+      <dd>The bar across a card's bottom edge opens <b>Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot, or its fields (honor, skins, Blue Essence…) to edit them — <b>Fields…</b> in the account form picks which ones, and adds your own · <b>Card art…</b> in the ⋯ menu sets the champion and skin behind a card, and how strongly it shows — on that card or on all of them.</dd>
       <dt>Search</dt>
       <dd>Matches names, tags, notes and skins, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code> <code>champ:yasuo</code> (played this season, or in its top mastery) <code>role:mid</code> (from the last five ranked games), <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
       <dt>Quick find</dt>
@@ -2959,6 +2981,14 @@
       </div>
       <div class="ap-top">
         <div class="ap-hero" id="apHero"></div>
+        <div class="ap-str">
+          <div class="ap-prev" id="apPrev" aria-hidden="true"></div>
+          <div class="ap-ctl">
+            <label class="lbl" for="apOp"><span>Strength on the card</span><output id="apOpV" for="apOp"></output></label>
+            <input type="range" id="apOp" min="0" max="60" step="1">
+            <div class="ap-opts"><label class="ap-all"><input type="checkbox" id="apOpAll"> All cards</label><span class="hint" id="apOpHint"></span></div>
+          </div>
+        </div>
         <div class="ap-off hidden" id="apOff"><span>Champion art is turned off, so cards show none.</span>
           <button type="button" id="apTurnOn">Turn it on</button></div>
         <div class="ap-bar" id="apBarChamps">
@@ -2971,7 +3001,7 @@
       </div>
       <div class="mdl-b"><div class="ap-grid" id="apGrid" role="group" aria-label="Choices"></div></div>
       <div class="mdl-f">
-        <button type="button" id="apUse" class="b-gold">Use this art</button>
+        <button type="button" id="apUse" class="b-gold">Save</button>
         <button type="button" id="apCancel">Cancel</button>
         <button type="button" id="apAuto" class="sp">Back to most-played</button>
       </div>
@@ -3750,6 +3780,7 @@ function sanitizeAccount(a){
   if(a.masteryAt!=null&&!(Number(a.masteryAt)>0))delete a.masteryAt;
   if(a.recent!=null){a.recent=normRecent(a.recent);if(!a.recent)delete a.recent}
   if(a.art!=null){a.art=normArt(a.art);if(!a.art)delete a.art}
+  if("artOp" in a){const n=normArtOp(a.artOp);if(n==null)delete a.artOp;else a.artOp=n}
   if("info" in a){a.info=normInfo(a.info);if(!a.info)delete a.info}
   if(a.stats&&a.stats.seasons&&typeof a.stats.seasons==="object"){
     if(!Array.isArray(a.stats.seasons.solo))a.stats.seasons.solo=[];
@@ -6684,10 +6715,22 @@ function artOf(a){
 }
 const splashUrl=(c,n)=>DD+"/cdn/img/champion/splash/"+c+"_"+n+".jpg";
 const apPortraitUrl=(c,n)=>DD+"/cdn/img/champion/loading/"+c+"_"+n+".jpg";
+/* How strongly the art shows, in percent: one value for every card
+   (cfg.artOpacity), and any card can have its own (a.artOp). 0 hides it — and
+   then nothing is fetched for that card either. */
+const ART_OP_DEFAULT=28, ART_OP_MAX=60;
+function normArtOp(v){const n=Number(v);return v!=null&&v!==""&&Number.isInteger(n)&&n>=0&&n<=ART_OP_MAX?n:null}
+function artOpGlobal(){const n=normArtOp(cfg.artOpacity);return n==null?ART_OP_DEFAULT:n}
+function artOpOf(a){const own=normArtOp(a&&a.artOp);return own==null?artOpGlobal():own}
+function applyArtOpacity(){
+  const r=document.documentElement.style, n=artOpGlobal();
+  if(n===ART_OP_DEFAULT)r.removeProperty("--art-op");else r.setProperty("--art-op",String(n/100));
+}
 function champArtHTML(a){
-  if(!champArtOn())return"";
+  if(!champArtOn()||!artOpOf(a))return"";
   const art=artOf(a);if(!art)return"";
-  return`<img class="c-art" src="${splashUrl(art.champ,art.skin)}" alt="" aria-hidden="true" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
+  const own=normArtOp(a.artOp);
+  return`<img class="c-art" src="${splashUrl(art.champ,art.skin)}"${own!=null?` style="--art-op:${own/100}"`:""} alt="" aria-hidden="true" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
 }
 /* ---- Data Dragon: the champion list and each champion's skins ----
    Riot's public static data, the same place the splash art comes from. Fetched
@@ -6756,7 +6799,10 @@ function openArtPicker(id){
   const own=normArt(acc.art), auto=champKey(mainChamp(acc));
   const start=own||(auto?{champ:auto,skin:0}:null);
   Object.assign(ap,{id,champ:start?start.champ:null,skin:start?start.skin:0,name:own&&own.name||"",
-    view:start?"skins":"champs",q:"",skins:null,err:null,gen:ap.gen+1,focusTile:!!start});
+    view:start?"skins":"champs",q:"",skins:null,err:null,gen:ap.gen+1,focusTile:!!start,
+    picked:false,op:artOpOf(acc),opAll:normArtOp(acc.artOp)==null,opTouched:false});
+  $("apOp").value=String(ap.op);$("apOpAll").checked=ap.opAll;
+  $("apPrev").dataset.k="";
   $("apSearch").value="";
   $("apSub").innerHTML=nameOf(acc);
   $("apHero").dataset.k="";
@@ -6876,15 +6922,43 @@ function renderArtPicker(){
     ap.focusTile=false;
     if(!$("artPicker").classList.contains("hidden"))tile.focus();
   }
-  const use=$("apUse");
-  use.disabled=!ap.champ||!!own&&own.champ===ap.champ&&own.skin===ap.skin;
+  apStrength(acc);
+  $("apUse").disabled=!(apArtChanged(acc)||apOpChanged(acc));
   const auto=acc&&champKey(mainChamp(acc));
   $("apAuto").classList.toggle("hidden",!own);
   $("apAuto").textContent=auto?"Back to most-played":"Remove the art";
 }
+// A pick only counts once a tile is chosen: changing just the strength must not
+// pin the most-played champion as this card's art for good.
+function apArtChanged(acc){
+  const own=acc&&normArt(acc.art);
+  return !!acc&&ap.picked&&!!ap.champ&&!(own&&own.champ===ap.champ&&own.skin===ap.skin);
+}
+function apOpChanged(acc){
+  if(!acc||!ap.opTouched)return false;
+  const g=artOpGlobal(), own=normArtOp(acc.artOp);
+  if(ap.opAll)return ap.op!==g||accounts.some(a=>normArtOp(a.artOp)!=null);
+  return (ap.op===g?null:ap.op)!==own;
+}
+function apStrength(acc){
+  $("apOpV").textContent=ap.op?ap.op+"%":"Hidden";
+  const others=accounts.filter(a=>a!==acc&&normArtOp(a.artOp)!=null).length;
+  $("apOpHint").textContent=ap.opAll?(others?"including "+others+" set on "+(others===1?"its":"their")+" own":"")
+    :"Only this card";
+  // the strip: this card's name and rank over the art, at the strength chosen
+  const el=$("apPrev"), k=ap.champ?ap.champ+"_"+ap.skin:"";
+  if(el.dataset.k!==k){
+    el.dataset.k=k;
+    el.innerHTML=(k?`<img alt="" decoding="async" referrerpolicy="no-referrer" src="${splashUrl(ap.champ,ap.skin)}">`:"")+`<div class="ap-prev-t"></div>`;
+  }
+  const img=el.querySelector("img");if(img)img.style.opacity=String(ap.op/100);
+  const s=acc&&acc.stats, ranked=acc&&isRanked(acc);
+  el.querySelector(".ap-prev-t").innerHTML=acc?`<b>${esc(plainName(acc))}</b><span style="color:${ranked?tierColor(s.tier):"var(--muted)"}">`
+    +`${esc(ranked?tierLabel(s)+(s.lp!=null?" · "+s.lp+" LP":""):"Unranked")}</span>`:"";
+}
 function apPickChamp(id){
   const acc=apAcc(), own=acc&&normArt(acc.art);
-  ap.champ=id;ap.view="skins";ap.err=null;
+  ap.champ=id;ap.view="skins";ap.err=null;ap.picked=true;
   // back on the champion that is already on the card: start on its skin, not the default
   ap.skin=own&&own.champ===id?own.skin:0;ap.name=own&&own.champ===id&&own.name||"";
   ap.focusTile=true;
@@ -6894,16 +6968,29 @@ function apPickChamp(id){
 }
 function apPickSkin(num){
   const s=ap.skins&&ap.skins.find(x=>x.num===num);if(!s)return;
-  ap.skin=num;ap.name=s.name;
+  ap.skin=num;ap.name=s.name;ap.picked=true;
   renderArtPicker();
 }
 function apSave(){
-  const acc=apAcc();if(!acc||!ap.champ)return;
-  const art=normArt({champ:ap.champ,skin:ap.skin,name:apLabel()});if(!art)return;
-  acc.art=art;
+  const acc=apAcc();if(!acc)return;
+  const msgs=[], artChanged=apArtChanged(acc), opChanged=apOpChanged(acc), all=ap.opAll;
+  if(!artChanged&&!opChanged)return;
+  if(artChanged){const art=normArt({champ:ap.champ,skin:ap.skin,name:apLabel()});if(art){acc.art=art;msgs.push("Card art: "+apLabel())}}
+  if(opChanged){
+    if(all){
+      // all means all: the cards that had their own strength take this one too
+      if(ap.op===ART_OP_DEFAULT)delete cfg.artOpacity;else cfg.artOpacity=ap.op;
+      saveCfg();applyArtOpacity();
+      for(const a of accounts)delete a.artOp;
+      msgs.push(ap.op?"All cards at "+ap.op+"%":"Art hidden on every card");
+    }else{
+      if(ap.op===artOpGlobal())delete acc.artOp;else acc.artOp=ap.op;
+      msgs.push(ap.op?"This card at "+ap.op+"%":"Art hidden on this card");
+    }
+  }
   closeArtPicker();
-  renderCard(acc.id);
-  saveThen(champArtOn()?"Card art: "+apLabel():"Saved — turn on Champion art in Settings to see it");
+  if(opChanged&&all)renderGrid();else renderCard(acc.id);
+  saveThen(champArtOn()?msgs.join(" · "):"Saved — turn on Champion art in Settings to see it");
 }
 function apAuto(){
   const acc=apAcc();if(!acc)return;
@@ -6981,6 +7068,8 @@ $("apBack").addEventListener("click",()=>{
   $("apSearch").focus();
 });
 $("apUse").addEventListener("click",apSave);
+$("apOp").addEventListener("input",e=>{ap.op=normArtOp(Number(e.target.value))??ap.op;ap.opTouched=true;renderArtPicker()});
+$("apOpAll").addEventListener("change",e=>{ap.opAll=e.target.checked;ap.opTouched=true;renderArtPicker()});
 $("apAuto").addEventListener("click",apAuto);
 $("apCancel").addEventListener("click",closeArtPicker);
 $("apTurnOn").addEventListener("click",()=>{cfg.champArt=null;saveCfg();renderGrid();renderArtPicker();toast("Champion art is on")});
@@ -10709,7 +10798,7 @@ function boot(){
   fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);
   if(cfg.accent)applyAccent(cfg.accent);
   if(cfg.accent2)applyAccent2(cfg.accent2);
-  applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);applyCompact();applyStreamer();
+  applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);applyCompact();applyStreamer();applyArtOpacity();
   let raw=null;
   try{raw=hasStorage?localStorage.getItem(DB_KEY):null}catch(e){}
   const stored=readStoredVault(raw);
