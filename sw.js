@@ -2,7 +2,7 @@
 // (e.g. GitHub Pages) — service workers cannot register on file:// pages, so
 // opening the HTML file directly just skips all of this, which is fine.
 // Bump SW cache so each release reaches hosted installs.
-const CACHE = "smurf-tracker-cache-v86";
+const CACHE = "smurf-tracker-cache-v87";
 // index.html is the shell; "./" was a redundant second cache of the same document.
 const ASSETS = [
   "./index.html",
