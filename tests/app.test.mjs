@@ -1290,6 +1290,135 @@ test("card art: Escape closes the picker, a stored pick is checked like any othe
   assert.equal(doc.getElementById("artPicker").classList.contains("hidden"), true, "Escape closes it like every other window");
 });
 
+/* Notes with fields: what used to be typed as "honor 3, 140 champs, Elementalist
+   Lux" by hand, kept as fields that every card shows the same way. */
+const fieldsAcc = (id, info, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+  stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: Date.now() }, info }, extra || {});
+
+test("note fields: shown on the card as facts, skins and a penalty line, searchable, and checked like any other field", async () => {
+  const win = bootApp([fieldsAcc("a", { honor: 4, owned: 142, be: 34250, rp: 500, twofa: false, penalty: "14-day chat restriction",
+    skins: ["Elementalist Lux", "Spirit Blossom Yasuo", 7, "elementalist lux"], own: { "Bought from": "G2G", Price: 12.5, "Phone linked": true, __proto__x: 1 } }, { notes: "duo only" }),
+    fieldsAcc("b", { honor: 9, owned: -1, be: "lots", twofa: "yes", skins: "Lux", own: [1] }),
+    fieldsAcc("c", { skins: Array.from({ length: 9 }, (_, i) => "Skin " + i) })]);
+  const doc = win.document, card = id => doc.querySelector(`.card[data-id="${id}"]`);
+  const facts = id => [...card(id).querySelectorAll(".ni > .ni-row:not(.ni-skins) .ni-f")].map(f => f.textContent.trim());
+  assert.deepEqual(facts("a"), ["Honor 4", "142 champions", "34,250 BE", "No 2-step", "Price 12.5", "Phone linked", "__proto__x 1"],
+    "in the list's order; RP is off unless you switch it on; your own fields after the built-in ones");
+  assert.equal(card("a").querySelectorAll(".ni-pips i.on").length, 4, "honor as pips");
+  assert.deepEqual([...card("a").querySelectorAll(".ni-skins .ni-f")].map(f => f.textContent), ["Elementalist Lux", "Spirit Blossom Yasuo"],
+    "skins as their own row, without the number or the same skin twice");
+  assert.ok(card("a").querySelector(".ni-pen .sens"), "the penalty is a line of its own, hidden in streamer mode");
+  assert.match(card("a").querySelector(".ni-pen").textContent, /14-day chat restriction/);
+  assert.equal(card("a").querySelector(".ni-kv .k2").textContent, "Bought from");
+  assert.ok(card("a").querySelector(".ni-kv .v2 .sens"), "your own text is hidden in streamer mode too");
+  assert.match(card("a").querySelector(".nt").textContent, /duo only/, "and the free note is still there under them");
+  assert.equal(card("b").querySelector(".ni"), null, "nothing in b's fields was a real value");
+  assert.match(card("b").querySelector(".c-notes.blank").textContent, /Add a note/);
+  assert.deepEqual([...card("c").querySelectorAll(".ni-skins .ni-f")].map(f => f.textContent).slice(-2), ["Skin 5", "+3 more"], "nine skins: six and a count");
+  runScript(win, "window.__s = JSON.stringify(accounts.map(a => a.info || null))");
+  const mem = JSON.parse(win.__s);
+  assert.equal(mem[1], null, "b's fields are dropped in memory");
+  assert.equal(JSON.stringify(Object.keys(mem[0].own)), JSON.stringify(["Bought from", "Price", "Phone linked", "__proto__x"]));
+  // a field literally named __proto__ can only arrive as raw JSON, and is not kept
+  const raw = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker",
+    '[{"id":"r","region":"EUW","gameName":"R","tagLine":"1","status":"active","tags":[],"history":[],"info":{"own":{"__proto__":"x","ok":"y"}}}]'));
+  runScript(raw, "window.__o = JSON.stringify(accounts[0].info.own) + Object.getPrototypeOf(accounts[0].info.own === Object.prototype)");
+  assert.match(raw.__o, /^\{"ok":"y"\}/);
+  const search = doc.getElementById("tSearch");
+  for (const [q, n] of [["spirit blossom", 1], ["g2g", 1], ["chat restriction", 1], ["skin 8", 1], ["34250", 0]]) {
+    search.value = q; search.dispatchEvent(new win.Event("input", { bubbles: true }));
+    await until(() => doc.querySelectorAll("#grid .card").length === n, "search " + q + " to find " + n);
+  }
+});
+
+test("note fields: a click on them opens the account form at Notes, and saving keeps a switched-off field's value", async () => {
+  const win = bootApp([fieldsAcc("a", { honor: 4, rp: 500, skins: ["Elementalist Lux"], penalty: "old ban" }), fieldsAcc("z", null)]);
+  const doc = win.document, $ = id => doc.getElementById(id);
+  doc.querySelector('.card[data-id="a"] .ni').click();
+  assert.equal($("form").classList.contains("hidden"), false, "the account form opens");
+  assert.ok(doc.querySelector('#fInfo [data-nf="honor"] [aria-checked="true"][data-autofocus]'), "starting at the first field, not the name");
+  assert.equal($("fName").hasAttribute("data-autofocus"), false);
+  assert.equal(doc.querySelector('#fInfo [data-nf="honor"] [aria-checked="true"]').dataset.v, "4");
+  assert.equal(doc.querySelector('#fInfo [data-nf="rp"]'), null, "RP is off, so it has no control");
+  doc.querySelector('#fInfo [data-nf="honor"] [data-v="2"]').click();
+  doc.querySelector('#fInfo [data-nf="skins"]').value = "Elementalist Lux, Arcade Ahri,, ";
+  doc.querySelector('#fInfo [data-nf="owned"]').value = "4000";
+  doc.querySelector('#fInfo [data-nf="twofa"]').value = "1";
+  doc.querySelector('#fInfo [data-nf="penalty"]').value = "  ";
+  $("fSave").click();
+  await until(() => JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].info.honor === 2, "saved");
+  assert.equal(JSON.stringify(JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].info),
+    JSON.stringify({ honor: 2, owned: 999, rp: 500, twofa: true, skins: ["Elementalist Lux", "Arcade Ahri"] }),
+    "a number past the field's top is kept at the top; an emptied field is gone; RP, switched off, keeps its value");
+  // an empty card offers the fields as a second way in, and opening the form for a
+  // name edit still starts at the name
+  doc.querySelector('.card[data-id="z"] .c-notes.blank [data-act="notefields"]').click();
+  assert.equal($("form").classList.contains("hidden"), false);
+  assert.ok(doc.querySelector("#fInfo [data-autofocus]"));
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  cardMenu(win, "z").querySelector('[data-act="edit"]').click();
+  assert.equal($("fName").hasAttribute("data-autofocus"), true, "Account… starts at the name as before");
+  assert.equal(doc.querySelector("#fInfo [data-autofocus]"), null);
+});
+
+test("Fields…: built-ins switch off and on, your own are added, renamed and removed, and their values follow the name", async () => {
+  const win = bootApp([fieldsAcc("a", { be: 100, own: { "Bought from": "G2G" } }), fieldsAcc("b", { own: { "bought FROM": "Eldorado" } })]);
+  const doc = win.document, $ = id => doc.getElementById(id);
+  const stored = () => JSON.parse(win.localStorage.getItem("smurf-tracker"));
+  const cfgNF = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).noteFields;
+  const change = el => el.dispatchEvent(new win.Event("change", { bubbles: true }));
+  cardMenu(win, "a").querySelector('[data-act="edit"]').click();
+  $("fFieldsBtn").click();
+  assert.equal($("fFieldsBtn").getAttribute("aria-expanded"), "true");
+  const own = () => [...doc.querySelectorAll("#fFieldsCfg [data-own-label]")].map(i => i.value);
+  assert.deepEqual(own(), ["Bought from"], "a field no list has defined yet is found on the accounts, once, whatever its case");
+  // typed but not saved yet, and it must survive the list changing under it
+  doc.querySelector('#fInfo [data-nf="own"]').value = "Fiverr";
+  const be = doc.querySelector('#fFieldsCfg [data-nf-on="be"]');
+  be.checked = false; change(be);
+  assert.deepEqual(cfgNF().off.sort(), ["be", "rp"]);
+  assert.equal(doc.querySelector('#fInfo [data-nf="be"]'), null, "Blue Essence leaves the form");
+  assert.doesNotMatch(doc.querySelector('.card[data-id="a"] .c-notes').textContent, /BE/, "and the card");
+  assert.equal(doc.querySelector('#fInfo [data-nf="own"]').value, "Fiverr", "what was typed is still there");
+  $("nfNewLabel").value = "Server"; $("nfNewKind").value = "text";
+  $("nfAdd").click();
+  assert.deepEqual(own(), ["Bought from", "Server"]);
+  $("nfNewLabel").value = "server"; $("nfAdd").click();
+  assert.deepEqual(own(), ["Bought from", "Server"], "no second field of the same name");
+  const ren = doc.querySelector('#fFieldsCfg [data-own-label="0"]');
+  ren.value = "Source"; change(ren);
+  assert.equal(doc.querySelector('#fInfo [data-label="Source"]').value, "Fiverr", "renamed with the typed value in it");
+  await until(() => stored()[1].info && stored()[1].info.own.Source === "Eldorado", "b's value moved to the new name");
+  assert.deepEqual(cfgNF().custom, [{ label: "Source", kind: "text" }, { label: "Server", kind: "text" }]);
+  doc.querySelector('#fInfo [data-label="Server"]').value = "EUW-2";
+  $("fSave").click();
+  await until(() => stored()[0].info.own.Server === "EUW-2", "a's own fields saved");
+  assert.equal(JSON.stringify(stored()[0].info), JSON.stringify({ be: 100, own: { Source: "Fiverr", Server: "EUW-2" } }), "BE kept while it is off");
+  cardMenu(win, "a").querySelector('[data-act="edit"]').click();
+  $("fFieldsBtn").click();
+  let asked = "";
+  win.confirm = m => { asked = m; return true; };
+  doc.querySelector('#fFieldsCfg [data-own-del="0"]').click();
+  assert.match(asked, /Remove “Source”\? 2 accounts have values in it/);
+  assert.deepEqual(own(), ["Server"]);
+  await until(() => !stored()[1].info, "b had only that field, so b has no fields left");
+  assert.equal(JSON.stringify(stored()[0].info.own), JSON.stringify({ Server: "EUW-2" }));
+});
+
+test("note fields come back from this app's own CSV export, and a third-party CSV's extra columns stay out", () => {
+  const win = bootApp([fieldsAcc("a", { honor: 5, twofa: true, skins: ["A", "B"], own: { Price: 3 } })]);
+  runScript(win, `{
+    const header = ["gameName","tagLine","favorite","lastUpdated","Honor level","2-step verification","Skins","Price","Bought from","Phone"];
+    const row = {"Honor level":"5","2-step verification":"yes","Skins":"A|B","Price":"3","Bought from":"G2G","Phone":"no"};
+    window.__i = JSON.stringify(csvNoteInfo(header, n => row[n] || ""));
+  }`);
+  assert.equal(win.__i, JSON.stringify({ honor: 5, twofa: true, skins: ["A", "B"], own: { Price: 3, "Bought from": "G2G", Phone: false } }));
+});
+
+test("streamer mode blurs the note fields that could say who you are", () => {
+  assert.match(html, /body\.streamer :is\(#fName[^)]*\.nf-sens\)\{filter:blur/, "the free-text fields in the form");
+});
+
 test("On each card: any part can wait under Details, Compact is chart and stats, and 2.1's switch carries over", () => {
   const now = Date.now(), D = 86400000;
   const acc = { id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: ["mid"], notes: "honor 3",

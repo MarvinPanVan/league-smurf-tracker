@@ -1149,6 +1149,70 @@
     background:none;border:0;color:var(--faint);font-size:calc(11px*var(--ts));opacity:.72}
   .c-notes.blank:hover{background:#ffffff0d;border:0;color:var(--muted);opacity:1}
   .c-notes.blank .ico{width:11px;height:11px;opacity:.8}
+  /* ---- note fields on the card ----
+     Honor, skins, Blue Essence and the rest, each in the same place on every
+     card, so sixty accounts can be read down a column instead of one paragraph
+     at a time. Numbers are facts on plates; skins are the gold ones, being what
+     the account is worth to you; a penalty is the one red line. */
+  .c-notes .nt{white-space:pre-line}
+  .c-notes .ni{display:flex;flex-direction:column;gap:7px;margin:2px 0 1px;cursor:pointer}
+  .c-notes .ni+.nt{margin-top:8px;padding-top:8px;border-top:1px solid #ffffff0d}
+  .c-notes.editing .ni{cursor:default;margin-bottom:9px}
+  .ni-row{display:flex;flex-wrap:wrap;gap:5px}
+  .ni-f{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:var(--r-xs);
+    font-size:calc(11px*var(--ts));line-height:1.35;color:var(--muted);background:#ffffff0a;border:1px solid #ffffff12;
+    font-variant-numeric:tabular-nums;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .ni-f b{color:var(--text);font-weight:600}
+  .ni-f .ico{width:12px;height:12px;flex-shrink:0}
+  .ni-f.ok{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 30%,transparent);background:color-mix(in srgb,var(--teal) 8%,transparent)}
+  .ni-f.warn{color:#f0c674;border-color:#f0c67440;background:#f0c67412}
+  .ni-pips{display:inline-flex;gap:2px}
+  .ni-pips i{width:6px;height:6px;transform:rotate(45deg);border-radius:1px;background:#ffffff1f}
+  .ni-pips i.on{background:var(--gold);box-shadow:0 0 6px -1px var(--gold)}
+  .ni-skins span{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 26%,transparent);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 12%,transparent),color-mix(in srgb,var(--gold) 4%,transparent))}
+  .ni-skins span.more{color:var(--faint);background:none;border-style:dashed}
+  .ni-pen{display:flex;align-items:flex-start;gap:7px;padding:6px 9px;border-radius:var(--r-xs);font-size:calc(12px*var(--ts));line-height:1.45;
+    color:#ffc4c4;background:#ff6b6b12;border:1px solid #ff6b6b2e}
+  .ni-pen .ico{width:13px;height:13px;flex-shrink:0;margin-top:2px;color:var(--danger)}
+  .ni-kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 10px;font-size:calc(12px*var(--ts));line-height:1.45}
+  .ni-kv .k2{color:var(--faint)}
+  .ni-kv .v2{color:var(--text);overflow-wrap:anywhere}
+  /* the second way in from an empty note, for when what you want to write down
+     is a field; shown on hover where there is hover, always where there isn't */
+  .c-notes.blank{gap:4px}
+  .c-notes.blank button{all:unset;display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:2px 4px;border-radius:var(--r-xs)}
+  .c-notes.blank button:focus-visible{outline:2px solid var(--teal-txt);outline-offset:1px}
+  .c-notes.blank .nf-link{margin-left:auto;color:var(--faint)}
+  .c-notes.blank .nf-link:hover{color:var(--gold-txt)}
+  @media (hover:hover){
+    .c-notes.blank .nf-link{opacity:0;transition:opacity .16s ease}
+    :is(.card,.rw):hover .c-notes.blank .nf-link,.c-notes.blank .nf-link:focus-visible{opacity:1}
+  }
+  /* ---- note fields in the account form ---- */
+  /* .fld is a column further down the sheet; this one row of it is a header */
+  .fld.nf-head{flex-direction:row;align-items:center;gap:10px;padding-top:18px;border-top:1px solid var(--line)}
+  .nf-head .nf-t{font-size:calc(14px*var(--ts));font-weight:600;color:var(--text)}
+  .nf-head .hint{flex:1;min-width:0}
+  .nf-head button{padding:6px 11px;font-size:calc(12px*var(--ts))}
+  .nf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(150px,100%),1fr));gap:14px 16px}
+  /* grid items keep their content's width as a floor unless told otherwise, and
+     a row of input, kind and button is wider than a phone's single column */
+  .formgrid>*,.nf-grid>*{min-width:0}
+  .nf-grid .fld.wide{grid-column:1/-1}
+  .nf-honor{width:100%}
+  .nf-honor button{flex:1;width:auto;min-width:0;height:36px;font-size:calc(13px*var(--ts));font-weight:600;color:var(--muted)}
+  .nf-cfg{border:1px solid var(--line);border-radius:var(--r-md);background:#00000026;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+  .nf-cfg .grp-h{color:var(--faint)}
+  .nf-on{display:flex;flex-wrap:wrap;gap:8px 18px}
+  .nf-on label{display:inline-flex;align-items:center;gap:7px;font-size:calc(13px*var(--ts));color:var(--text);cursor:pointer}
+  .nf-own{display:flex;flex-direction:column;gap:8px}
+  .nf-own .row{display:flex;gap:8px;align-items:stretch}
+  .nf-own .row input{flex:1;min-width:0}
+  .nf-own .row select{width:128px;flex-shrink:0}
+  .nf-own .row button{flex-shrink:0;min-width:58px;padding:7px 10px}
+  .nf-own .none{font-size:calc(12px*var(--ts));color:var(--faint)}
+  @media (max-width:560px){.nf-cfg{padding:12px}.nf-own .row{gap:6px}.nf-own .row select{width:94px}.nf-own .row button{min-width:42px}}
   /* ---- the details drawer ----
      Details was one button among six in the action row — a poor home for the one
      control that changes the card's height, and easy to miss among five things
@@ -1655,7 +1719,7 @@
   .bk-acts{display:flex;flex-wrap:wrap;gap:8px}
   /* streamer mode: blurred where it stands, so the layout does not jump */
   body.streamer :is(.sens,.login .val,.c-notes textarea),
-  body.streamer :is(#fName,#fTag,#fLogin,#fPass,#fEmail,#fNotes,#fCreated,#fBirth,#baList){filter:blur(7px);user-select:none}
+  body.streamer :is(#fName,#fTag,#fLogin,#fPass,#fEmail,#fNotes,#fCreated,#fBirth,#baList,.nf-sens){filter:blur(7px);user-select:none}
   .streamer-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:var(--r-sm);font-size:calc(12px*var(--ts));font-weight:600;
     color:#ffb4b4;border:1px solid #ff6b6b66;background:#ff6b6b17;box-shadow:none}
   .streamer-pill:hover{color:#fff;border-color:#ff6b6baa;background:#ff6b6b26}
@@ -2595,7 +2659,15 @@
           <option value="banned">Banned</option>
         </select>
       </div>
-      <div class="fld fw"><label>Notes / skins</label><textarea id="fNotes" rows="2" placeholder="e.g. Elementalist Lux, Spirit Blossom Yasuo"></textarea></div>
+      <!-- Notes, with the things people kept typing into them by hand as fields
+           of their own. Which fields, and any of your own, is one list for the
+           whole vault: Fields… -->
+      <div class="fld fw nf-head" id="fNotesHead"><span class="nf-t">Notes</span>
+        <span class="hint">Shown on the card, and searchable.</span>
+        <button type="button" id="fFieldsBtn" aria-expanded="false" aria-controls="fFieldsCfg">Fields…</button></div>
+      <div class="fw nf-cfg hidden" id="fFieldsCfg"></div>
+      <div class="fw nf-grid" id="fInfo"></div>
+      <div class="fld fw"><label for="fNotes">Anything else</label><textarea id="fNotes" rows="2" placeholder="Free text — whatever doesn't fit a field"></textarea></div>
     </div>
     </div>
     <div class="mdl-f">
@@ -3488,6 +3560,7 @@ function sanitizeAccount(a){
   if(a.masteryAt!=null&&!(Number(a.masteryAt)>0))delete a.masteryAt;
   if(a.recent!=null){a.recent=normRecent(a.recent);if(!a.recent)delete a.recent}
   if(a.art!=null){a.art=normArt(a.art);if(!a.art)delete a.art}
+  if("info" in a){a.info=normInfo(a.info);if(!a.info)delete a.info}
   if(a.stats&&a.stats.seasons&&typeof a.stats.seasons==="object"){
     if(!Array.isArray(a.stats.seasons.solo))a.stats.seasons.solo=[];
     if(!Array.isArray(a.stats.seasons.flex))a.stats.seasons.flex=[];
@@ -5701,7 +5774,7 @@ function passesBaseFilters(a,Q,{forceActive=false}={}){
     if(f==="leveling"&&!isLeveling(a))return false;
   }
   if(Q.terms.length){
-    const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,a.createdOn,a.birthdate,
+    const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,noteFieldsText(a),a.createdOn,a.birthdate,
       a.flagged?"flagged attention":"",(a.tags||[]).join(" "),a.stats?(a.stats.tier||"")+" "+(shortRank(a.stats)||""):"",(STATUS[a.status]||STATUS.active).label].join(" ").toLowerCase();
     if(!Q.terms.every(t=>hay.includes(t)))return false;
   }
@@ -6757,15 +6830,137 @@ function infoBlockHTML(a,rev){
   }
   return `<div class="login info${rev||""}">${out}</div>`;
 }
+/* ---- note fields ----
+   What people kept typing into Notes by hand — "honor 3, 140 champs, Elementalist
+   Lux, 2FA on" — as fields: the same place on every card, searchable, and not a
+   paragraph to read sixty times. The built-in ones can each be switched off;
+   your own are kept on the account by name ({own: {"Bought from": "G2G"}}), so
+   a backup or a synced device shows them even where the field list itself has
+   never been set up — it is inferred from what the accounts carry. */
+const NOTE_FIELDS=[
+  {k:"honor",label:"Honor level",kind:"honor"},
+  {k:"owned",label:"Champions owned",kind:"num",max:999},
+  {k:"be",label:"Blue Essence",kind:"num",max:99999999},
+  {k:"rp",label:"RP",kind:"num",max:9999999},
+  {k:"twofa",label:"2-step verification",kind:"bool"},
+  {k:"skins",label:"Skins",kind:"list"},
+  {k:"penalty",label:"Penalties / bans",kind:"text"},
+];
+const NOTE_OFF_DEFAULT=["rp"];
+const NF_KINDS={text:"Text",num:"Number",bool:"Yes / no"};
+const NF_MAX_OWN=12;
+function nfLabel(s){
+  const t=typeof s==="string"?s.replace(/\s+/g," ").trim().slice(0,32):"";
+  return t&&!/^(__proto__|constructor|prototype)$/i.test(t)?t:"";
+}
+function nfInt(x,max){const n=Number(x);return Number.isInteger(n)&&n>=0&&n<=max?n:null}
+function normInfo(v){
+  if(!v||typeof v!=="object"||Array.isArray(v))return null;
+  const o={};
+  {const n=nfInt(v.honor,5);if(v.honor!=null&&n!=null)o.honor=n}
+  for(const f of NOTE_FIELDS)if(f.kind==="num"&&v[f.k]!=null){const n=nfInt(v[f.k],f.max);if(n!=null)o[f.k]=n}
+  if(typeof v.twofa==="boolean")o.twofa=v.twofa;
+  if(Array.isArray(v.skins)){
+    const seen=new Set();
+    const s=v.skins.filter(x=>typeof x==="string").map(x=>x.replace(/\s+/g," ").trim().slice(0,60))
+      .filter(x=>x&&!seen.has(x.toLowerCase())&&seen.add(x.toLowerCase())).slice(0,40);
+    if(s.length)o.skins=s;
+  }
+  if(typeof v.penalty==="string"){const t=v.penalty.trim().slice(0,200);if(t)o.penalty=t}
+  if(v.own&&typeof v.own==="object"&&!Array.isArray(v.own)){
+    const own={};let n=0;
+    for(const[k0,x]of Object.entries(v.own)){
+      const k=nfLabel(k0);if(!k||Object.keys(own).some(y=>y.toLowerCase()===k.toLowerCase())||n>=24)continue;
+      if(typeof x==="boolean"||typeof x==="number"&&Number.isFinite(x)&&Math.abs(x)<1e12){own[k]=x;n++}
+      else if(typeof x==="string"){const t=x.trim().slice(0,200);if(t){own[k]=t;n++}}
+    }
+    if(n)o.own=own;
+  }
+  return Object.keys(o).length?o:null;
+}
+function normNoteFields(v){
+  const o=v&&typeof v==="object"&&!Array.isArray(v)?v:{};
+  const off=Array.isArray(o.off)?[...new Set(o.off.filter(k=>NOTE_FIELDS.some(f=>f.k===k)))]:NOTE_OFF_DEFAULT.slice();
+  const seen=new Set(), custom=[];
+  for(const c of Array.isArray(o.custom)?o.custom:[]){
+    const label=nfLabel(c&&c.label);
+    if(!label||seen.has(label.toLowerCase())||!NF_KINDS[c.kind]||custom.length>=NF_MAX_OWN)continue;
+    seen.add(label.toLowerCase());custom.push({label,kind:c.kind});
+  }
+  return{off,custom};
+}
+const nfKindOf=v=>typeof v==="boolean"?"bool":typeof v==="number"?"num":"text";
+// Your own fields: the list from Fields…, then any name an account carries that
+// the list doesn't have yet — so nothing an import brought in goes unseen.
+function ownFields(){
+  const list=normNoteFields(cfg.noteFields).custom.map(c=>({...c}));
+  const seen=new Set(list.map(c=>c.label.toLowerCase()));
+  for(const a of accounts){
+    const own=a.info&&a.info.own;if(!own||typeof own!=="object")continue;
+    for(const[k,v]of Object.entries(own)){
+      const label=nfLabel(k);
+      if(label&&!seen.has(label.toLowerCase())){seen.add(label.toLowerCase());list.push({label,kind:nfKindOf(v),inferred:true})}
+    }
+  }
+  return list;
+}
+function noteFields(){
+  const {off}=normNoteFields(cfg.noteFields);
+  return NOTE_FIELDS.filter(f=>!off.includes(f.k)).concat(ownFields().map(c=>({k:"own",label:c.label,kind:c.kind,own:true})));
+}
+function nfValue(info,f){
+  if(!info)return null;
+  if(!f.own)return info[f.k]==null?null:info[f.k];
+  const own=info.own||{}, k=Object.keys(own).find(x=>x.toLowerCase()===f.label.toLowerCase());
+  return k==null?null:own[k];
+}
+const fmtN=n=>Number(n).toLocaleString("en-US",{maximumFractionDigits:2});
+// Everything a search should find in the fields, as one string
+function noteFieldsText(a){
+  const info=normInfo(a.info);if(!info)return"";
+  return noteFields().map(f=>{const v=nfValue(info,f);
+    return v==null?"":Array.isArray(v)?v.join(" "):typeof v==="string"?v:""}).filter(Boolean).join(" ");
+}
+function noteFactsHTML(a,clickable){
+  const info=normInfo(a.info);if(!info)return"";
+  const facts=[], kv=[];let skins="", pen="";
+  for(const f of noteFields()){
+    const v=nfValue(info,f);if(v==null)continue;
+    if(f.k==="honor")facts.push(`<span class="ni-f" title="Honor level ${v} of 5"><span class="ni-pips" aria-hidden="true">${[1,2,3,4,5].map(i=>`<i${i<=v?' class="on"':""}></i>`).join("")}</span>Honor <b>${v}</b></span>`);
+    else if(f.k==="twofa")facts.push(v?`<span class="ni-f ok" title="2-step verification is on">${icon("check")}2-step on</span>`
+      :`<span class="ni-f warn" title="2-step verification is off">${icon("alert")}No 2-step</span>`);
+    else if(f.k==="owned")facts.push(`<span class="ni-f"><b>${fmtN(v)}</b> champion${v===1?"":"s"}</span>`);
+    else if(f.k==="be")facts.push(`<span class="ni-f" title="Blue Essence"><b>${fmtN(v)}</b> BE</span>`);
+    else if(f.k==="rp")facts.push(`<span class="ni-f"><b>${fmtN(v)}</b> RP</span>`);
+    else if(f.k==="skins"){
+      const shown=v.slice(0,6);
+      skins=`<div class="ni-row ni-skins" title="${esc(v.join(", "))}">${shown.map(s=>`<span class="ni-f">${esc(s)}</span>`).join("")}`
+        +(v.length>6?`<span class="ni-f more">+${v.length-6} more</span>`:"")+`</div>`;
+    }
+    else if(f.k==="penalty")pen=`<div class="ni-pen">${icon("alert")}<span>${sens(esc(v))}</span></div>`;
+    // your own fields are shown by what the value is, not by what the list says it
+    // should be — a kind changed after the fact still shows what was stored
+    else if(typeof v==="boolean")facts.push(`<span class="ni-f${v?" ok":""}">${v?icon("check"):""}${esc(f.label)}${v?"":": no"}</span>`);
+    else if(typeof v==="number")facts.push(`<span class="ni-f">${esc(f.label)} <b>${fmtN(v)}</b></span>`);
+    else kv.push(`<span class="k2">${esc(f.label)}</span><span class="v2">${sens(esc(v))}</span>`);
+  }
+  const body=(facts.length?`<div class="ni-row">${facts.join("")}</div>`:"")+skins+pen+(kv.length?`<div class="ni-kv">${kv.join("")}</div>`:"");
+  return body?`<div class="ni"${clickable?' data-act="notefields" title="Click to edit these fields"':""}>${body}</div>`:"";
+}
 // Split out of cardHTML so opening the editor can swap this one block instead of
 // rebuilding the card around it — see syncNoteBlock.
 function noteBlockHTML(a,rev){
-  if(editingNote===a.id)return`<div class="c-notes editing${rev||""}"><span class="k">Notes</span>`
+  // The fields stay in view above the text being written, but only the text
+  // edits here: they open the account form, which a click inside an open editor
+  // must not do — it would take the focus the editor saves on losing.
+  if(editingNote===a.id)return`<div class="c-notes editing${rev||""}"><span class="k">Notes</span>${noteFactsHTML(a,false)}`
     +`<textarea data-f="notetext" rows="3" placeholder="Anything worth remembering about this account…">${esc(noteDraft)}</textarea></div>`;
   // Always clickable, so there is no separate "add a note" action to find — an
   // empty one is just a quiet line rather than a filled box.
-  if(a.notes)return`<div class="c-notes" data-act="noteedit" title="Click to edit"><span class="k">Notes ${icon("pencil")}</span>${sens(esc(a.notes))}</div>`;
-  return`<div class="c-notes blank" data-act="noteedit" title="Click to write a note">${icon("pencil")} Add a note</div>`;
+  const facts=noteFactsHTML(a,true);
+  if(a.notes||facts)return`<div class="c-notes" data-act="noteedit" title="Click to edit the note"><span class="k">Notes ${icon("pencil")}</span>${facts}${a.notes?`<div class="nt">${sens(esc(a.notes))}</div>`:""}</div>`;
+  return`<div class="c-notes blank"><button type="button" data-act="noteedit" title="Click to write a note">${icon("pencil")} Add a note</button>`
+    +`<button type="button" class="nf-link" data-act="notefields" title="Honor, skins, Blue Essence and more">Honor, skins…</button></div>`;
 }
 // Replace only the note block, leaving the rest of the card's DOM alone. Going
 // through renderGrid meant every card on screen was thrown away and rebuilt just
@@ -7607,7 +7802,176 @@ function closeCompare(){
   // kept showing "Unselect compare" until something else refreshed the grid.
   if(had)render();
 }
-function openForm(acc){
+/* ---- note fields in the account form ----
+   One control per field in the list, filled from the account; saving writes
+   back only the fields shown, so a field switched off keeps what it held. */
+function renderInfoFields(info,focusFirst){
+  const box=$("fInfo");if(!box)return;
+  const fs=noteFields();
+  box.innerHTML=fs.map((f,i)=>{
+    const v=nfValue(info,f), id="nf"+i, at=f.own?` data-label="${esc(f.label)}"`:"";
+    if(f.kind==="honor"){
+      const cur=v==null?"":String(v);
+      return`<div class="fld"><label id="${id}">Honor level</label><div class="seg nf-honor" role="radiogroup" aria-labelledby="${id}" data-nf="honor">`
+        +["",0,1,2,3,4,5].map(n=>`<button type="button" role="radio" data-v="${n}" aria-checked="${String(n)===cur}" tabindex="${String(n)===cur?0:-1}"`
+          +` class="${String(n)===cur?"on":""}" title="${n===""?"Not set":"Honor level "+n}">${n===""?"—":n}</button>`).join("")+`</div></div>`;
+    }
+    if(f.kind==="bool"){
+      const val=v===true?"1":v===false?"0":"";
+      const [y,n]=f.k==="twofa"?["On","Off"]:["Yes","No"];
+      return`<div class="fld"><label for="${id}">${esc(f.label)}</label><select id="${id}" data-nf="${f.k}"${at}>`
+        +`<option value=""${val===""?" selected":""}>Not set</option><option value="1"${val==="1"?" selected":""}>${y}</option><option value="0"${val==="0"?" selected":""}>${n}</option></select></div>`;
+    }
+    if(f.kind==="num"){
+      const val=typeof v==="number"?String(v):"";
+      return`<div class="fld"><label for="${id}">${esc(f.label)}</label><input id="${id}" type="number" inputmode="${f.own?"decimal":"numeric"}" data-nf="${f.k}"${at}`
+        +(f.own?' step="any"':` min="0" max="${f.max}" step="1"`)+` value="${esc(val)}" placeholder="—"></div>`;
+    }
+    if(f.kind==="list")return`<div class="fld wide"><label for="${id}">${esc(f.label)}</label><input id="${id}" data-nf="skins" autocomplete="off"`
+      +` value="${esc((v||[]).join(", "))}" placeholder="Comma-separated — e.g. Elementalist Lux, Spirit Blossom Yasuo"></div>`;
+    const val=v==null?"":String(v);
+    return`<div class="fld wide"><label for="${id}">${esc(f.label)}</label><input id="${id}" class="nf-sens" data-nf="${f.k}"${at} autocomplete="off" value="${esc(val)}"`
+      +` placeholder="${f.k==="penalty"?"e.g. 14-day chat restriction, ends 12 Oct":"—"}"></div>`;
+  }).join("");
+  for(const el of box.querySelectorAll("[data-autofocus]"))el.removeAttribute("data-autofocus");
+  if(focusFirst){const first=box.querySelector('[aria-checked="true"],input,select');if(first)first.setAttribute("data-autofocus","")}
+}
+function readInfoFields(base){
+  const out=Object.assign({},normInfo(base)||{});
+  out.own=Object.assign({},out.own||{});
+  const fs=noteFields(), box=$("fInfo");
+  const ctl=[...box.querySelectorAll("[data-nf]")];
+  for(const f of fs){
+    const el=f.own?ctl.find(x=>x.dataset.nf==="own"&&x.dataset.label===f.label):ctl.find(x=>x.dataset.nf===f.k);
+    if(!el)continue;
+    let v=null;
+    if(f.kind==="honor"){const b=el.querySelector('[aria-checked="true"]');v=b&&b.dataset.v!==""?Number(b.dataset.v):null}
+    else if(f.kind==="list")v=el.value.split(/[,\n]/).map(x=>x.trim()).filter(Boolean);
+    else if(f.kind==="bool")v=el.value===""?null:el.value==="1";
+    else if(f.kind==="num"){
+      const t=el.value.trim(), n=Number(t);
+      // a number past what the field holds is kept at its top rather than lost
+      v=t===""||!Number.isFinite(n)?null:f.own?n:Math.min(f.max,Math.max(0,Math.round(n)));
+    }
+    else v=el.value.trim()||null;
+    if(f.own){
+      for(const k of Object.keys(out.own))if(k.toLowerCase()===f.label.toLowerCase())delete out.own[k];
+      if(v!=null)out.own[f.label]=v;
+    }else{
+      delete out[f.k];
+      if(v!=null&&!(Array.isArray(v)&&!v.length))out[f.k]=v;
+    }
+  }
+  return normInfo(out);
+}
+$("fInfo").addEventListener("click",e=>{
+  const b=e.target.closest('[data-nf="honor"] button');if(!b)return;
+  for(const x of b.parentNode.children){const on=x===b;x.classList.toggle("on",on);x.setAttribute("aria-checked",String(on));x.tabIndex=on?0:-1}
+});
+$("fInfo").addEventListener("keydown",e=>{
+  const b=e.target.closest('[data-nf="honor"] button');if(!b)return;
+  const d={ArrowRight:1,ArrowDown:1,ArrowLeft:-1,ArrowUp:-1}[e.key];if(!d)return;
+  e.preventDefault();
+  const all=[...b.parentNode.children], t=all[(all.indexOf(b)+d+all.length)%all.length];
+  t.click();t.focus();
+});
+/* Fields…: the list itself. Switching one off hides it everywhere and keeps
+   what it holds; removing one of your own takes its values with it, after
+   saying how many accounts that touches. */
+function renderFieldsCfg(){
+  const box=$("fFieldsCfg");if(!box||box.classList.contains("hidden"))return;
+  const {off}=normNoteFields(cfg.noteFields), own=ownFields();
+  const kinds=k=>Object.entries(NF_KINDS).map(([v,t])=>`<option value="${v}"${v===k?" selected":""}>${t}</option>`).join("");
+  box.innerHTML=`<div class="grp-h">On every account</div>`
+    +`<div class="nf-on">${NOTE_FIELDS.map(f=>`<label><input type="checkbox" data-nf-on="${f.k}"${off.includes(f.k)?"":" checked"}> ${esc(f.label)}</label>`).join("")}</div>`
+    +`<div class="grp-h">Your own</div><div class="nf-own">`
+    +(own.length?own.map((c,i)=>`<div class="row"><input data-own-label="${i}" value="${esc(c.label)}" maxlength="32" aria-label="Field name">`
+      +`<select data-own-kind="${i}" aria-label="Kind of field">${kinds(c.kind)}</select>`
+      +`<button type="button" data-own-del="${i}" title="Remove this field" aria-label="Remove ${esc(c.label)}">✕</button></div>`).join("")
+      :`<span class="none">Anything else you track on every account — where it came from, what it cost, the recovery question.</span>`)
+    +(own.length<NF_MAX_OWN?`<div class="row"><input id="nfNewLabel" maxlength="32" placeholder="New field, e.g. Bought from" aria-label="New field name">`
+      +`<select id="nfNewKind" aria-label="Kind of field">${kinds("text")}</select><button type="button" id="nfAdd">Add</button></div>`
+      :`<span class="none">That's ${NF_MAX_OWN}, the most a vault can have.</span>`)
+    +`</div>`;
+}
+// Every change to the list: store it, then redraw the fields with what was typed
+// into them kept, and the cards with the new list.
+function setNoteFields(off,custom,rename){
+  // read against the list as it was, before it changes under the form
+  const typed=readInfoFields(formInfoBase)||{};
+  if(rename&&typed.own){
+    const k=Object.keys(typed.own).find(x=>x.toLowerCase()===rename[0].toLowerCase());
+    if(k!=null){typed.own[rename[1]]=typed.own[k];delete typed.own[k]}
+  }
+  cfg.noteFields={off,custom:custom.map(c=>({label:c.label,kind:c.kind}))};saveCfg();
+  renderInfoFields(typed);
+  renderFieldsCfg();renderGrid();
+}
+let formInfoBase=null;
+$("fFieldsBtn").addEventListener("click",()=>{
+  const box=$("fFieldsCfg"), open=box.classList.contains("hidden");
+  box.classList.toggle("hidden",!open);$("fFieldsBtn").setAttribute("aria-expanded",String(open));
+  renderFieldsCfg();
+  if(open){const first=box.querySelector("input");if(first)first.focus()}
+});
+$("fFieldsCfg").addEventListener("change",e=>{
+  const t=e.target, {off}=normNoteFields(cfg.noteFields), own=ownFields();
+  if(t.dataset.nfOn){
+    const k=t.dataset.nfOn, next=t.checked?off.filter(x=>x!==k):off.concat(k);
+    setNoteFields(next,own);
+  }else if(t.dataset.ownKind!=null){
+    const c=own[+t.dataset.ownKind];if(!c||!NF_KINDS[t.value])return;
+    c.kind=t.value;setNoteFields(off,own);
+  }else if(t.dataset.ownLabel!=null){
+    const c=own[+t.dataset.ownLabel];if(!c)return;
+    const to=nfLabel(t.value);
+    if(!to||own.some(x=>x!==c&&x.label.toLowerCase()===to.toLowerCase())){
+      toast(to?"There is already a field called "+to:"A field needs a name");t.value=c.label;return;
+    }
+    if(to===c.label)return;
+    // the values are stored under the name, so they move with it
+    let moved=0;
+    for(const a of accounts){
+      const o=a.info&&a.info.own;if(!o)continue;
+      const k=Object.keys(o).find(x=>x.toLowerCase()===c.label.toLowerCase());
+      if(k!=null){const v=o[k];delete o[k];o[to]=v;moved++}
+    }
+    if(formInfoBase&&formInfoBase.own){const o=formInfoBase.own,k=Object.keys(o).find(x=>x.toLowerCase()===c.label.toLowerCase());if(k!=null){o[to]=o[k];delete o[k]}}
+    const from=c.label;c.label=to;
+    setNoteFields(off,own,[from,to]);
+    if(moved)saveDB();
+  }
+});
+$("fFieldsCfg").addEventListener("click",e=>{
+  const del=e.target.closest("[data-own-del]");
+  if(del){
+    const {off}=normNoteFields(cfg.noteFields), own=ownFields(), c=own[+del.dataset.ownDel];if(!c)return;
+    const holders=accounts.filter(a=>a.info&&a.info.own&&Object.keys(a.info.own).some(k=>k.toLowerCase()===c.label.toLowerCase()));
+    if(holders.length&&!confirm(`Remove “${c.label}”? ${holders.length} account${holders.length===1?" has a value":"s have values"} in it, and ${holders.length===1?"it goes":"they go"} too.`))return;
+    for(const a of holders){
+      for(const k of Object.keys(a.info.own))if(k.toLowerCase()===c.label.toLowerCase())delete a.info.own[k];
+      a.info=normInfo(a.info);if(!a.info)delete a.info;
+    }
+    if(formInfoBase&&formInfoBase.own)for(const k of Object.keys(formInfoBase.own))if(k.toLowerCase()===c.label.toLowerCase())delete formInfoBase.own[k];
+    const box=$("fInfo"), el=[...box.querySelectorAll('[data-nf="own"]')].find(x=>x.dataset.label===c.label);
+    if(el)el.closest(".fld").remove(); // what was typed into it goes with it
+    setNoteFields(off,own.filter(x=>x!==c));
+    if(holders.length)saveDB();
+    return;
+  }
+  if(e.target.closest("#nfAdd"))addOwnField();
+});
+$("fFieldsCfg").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="nfNewLabel"){e.preventDefault();addOwnField()}});
+function addOwnField(){
+  const {off}=normNoteFields(cfg.noteFields), own=ownFields();
+  const label=nfLabel($("nfNewLabel").value), kind=$("nfNewKind").value;
+  if(!label){toast("Name the field first");$("nfNewLabel").focus();return}
+  if(own.some(x=>x.label.toLowerCase()===label.toLowerCase())){toast("There is already a field called "+label);return}
+  if(own.length>=NF_MAX_OWN||!NF_KINDS[kind])return;
+  setNoteFields(off,own.concat({label,kind}));
+  const n=$("nfNewLabel");if(n)n.focus();
+}
+function openForm(acc,focus){
   if(!acc&&previewMode){previewMode=false;accounts=[];render()}
   closeAllPanels();
   editingId=acc?acc.id:null;
@@ -7626,6 +7990,12 @@ function openForm(acc){
   renderPwMeter();
   $("fTags").value=acc?(acc.tags||[]).join(", "):"";
   $("fNotes").value=acc?acc.notes||"":"";
+  formInfoBase=acc?normInfo(acc.info):null;
+  $("fFieldsCfg").classList.add("hidden");$("fFieldsBtn").setAttribute("aria-expanded","false");
+  // From a card's note fields, the window starts at them rather than at the name
+  const atNotes=focus==="notes";
+  $("fName").toggleAttribute("data-autofocus",!atNotes);
+  renderInfoFields(formInfoBase,atNotes);
   $("fSave").textContent=acc?"Save changes":"Add account";
   $("formTitle").textContent=acc?"Edit account":"Add account";
   // Which one, in the header: over the page the card being edited is behind the
@@ -7634,6 +8004,7 @@ function openForm(acc){
   // The modal observer focuses the name, which carries data-autofocus — the first
   // field is the optional label, and the one you came here to type is the name.
   $("form").classList.remove("hidden");
+  if(atNotes)requestAnimationFrame(()=>{const h=$("fNotesHead");if(h&&h.scrollIntoView)h.scrollIntoView({block:"start"})});
 }
 function closeForm(){$("form").classList.add("hidden");editingId=null}
 /* A Riot ID is copied as one string — "Hide on Bush#EUW" from op.gg, the client,
@@ -7670,11 +8041,12 @@ function submitForm(){
     // and survive a JSON round trip without a timezone deciding to shift them by a
     // day — which a Date object serialised to UTC absolutely will.
     createdOn:$("fCreated").value||"",birthdate:$("fBirth").value||"",
-    tags:parseTags($("fTags").value),notes:$("fNotes").value.trim()};
+    tags:parseTags($("fTags").value),notes:$("fNotes").value.trim(),info:readInfoFields(formInfoBase)};
   if(editingId){
-    const a=accounts.find(x=>x.id===editingId);if(a)Object.assign(a,data);
+    const a=accounts.find(x=>x.id===editingId);if(a){Object.assign(a,data);if(!a.info)delete a.info}
   }else{
-    accounts.push(Object.assign({id:uid(),fav:false,stats:null},data));
+    const a=Object.assign({id:uid(),fav:false,stats:null},data);if(!a.info)delete a.info;
+    accounts.push(a);
   }
   saveDB();closeForm();render();
 }
@@ -8005,14 +8377,19 @@ function csvCell(v){
 }
 function doExportCSV(){
   if(previewMode){toast("Exit preview before exporting — this is example data, not your vault");return}
-  const cols=["label","gameName","tagLine","region","status","tier","division","lp","wins","losses","level","login","password","email","createdOn","birthdate","tags","notes","favorite","lastUpdated"];
+  // The note fields go on the end, so every column a spreadsheet already reads by
+  // position stays where it was.
+  const nf=noteFields();
+  const cols=["label","gameName","tagLine","region","status","tier","division","lp","wins","losses","level","login","password","email","createdOn","birthdate","tags","notes","favorite","lastUpdated"]
+    .concat(nf.map(f=>f.label));
   const rows=accounts.map(a=>{
-    const s=a.stats||{};
+    const s=a.stats||{}, info=normInfo(a.info);
+    const extra=nf.map(f=>{const v=nfValue(info,f);return v==null?"":Array.isArray(v)?v.join("|"):typeof v==="boolean"?(v?"yes":"no"):String(v)});
     return [
       a.label||"",a.gameName,a.tagLine,a.region,a.status||"active",
       s.tier||"",s.division||"",s.lp??"",s.wins??"",s.losses??"",s.level??"",
       a.login||"",a.password||"",a.email||"",a.createdOn||"",a.birthdate||"",(a.tags||[]).join("|"),a.notes||"",
-      a.fav?"yes":"no",s.updatedAt?new Date(s.updatedAt).toISOString():""
+      a.fav?"yes":"no",s.updatedAt?new Date(s.updatedAt).toISOString():"",...extra
     ].map(csvCell).join(",");
   });
   const csv=[cols.join(","),...rows].join("\r\n");
@@ -8102,6 +8479,21 @@ function parseCSV(text){
   if(field.length||row.length){row.push(field);rows.push(row)}
   return rows.filter(r=>r.length>1||r[0]);
 }
+// The note-field columns this app's own export puts after lastUpdated, read back by
+// their names; your own fields come back as the kind the field list says they are.
+function csvNoteInfo(header,get){
+  const out={own:{}}, kinds=new Map(ownFields().map(c=>[c.label.toLowerCase(),c.kind]));
+  for(const name of header.slice(header.indexOf("lastUpdated")+1)){
+    const raw=String(get(name)||"").trim();if(!raw)continue;
+    const f=NOTE_FIELDS.find(x=>x.label===name);
+    const kind=f?f.kind:kinds.get(name.toLowerCase())||(raw==="yes"||raw==="no"?"bool":/^-?\d+(\.\d+)?$/.test(raw)?"num":"text");
+    const v=kind==="list"?raw.split("|"):kind==="bool"?(raw==="yes"?true:raw==="no"?false:null)
+      :kind==="num"||kind==="honor"?Number(raw):raw;
+    if(v==null||Number.isNaN(v))continue;
+    if(f)out[f.k]=v;else out.own[name]=v;
+  }
+  return normInfo(out);
+}
 function doImportCSV(file){
   if(vaultLocked()){toast("Unlock the vault before importing");return}
   if(previewMode){previewMode=false;accounts=[]}
@@ -8130,7 +8522,7 @@ function doImportCSV(file){
           label:get("label"),region:normRegion(get("region")),gameName,tagLine,status:normStatus(get("status")),
           login:get("login"),password:get("password"),email:get("email"),notes:get("notes"),
           createdOn:get("createdOn"),birthdate:get("birthdate"),
-          fav:get("favorite")==="yes",
+          fav:get("favorite")==="yes",info:ownExport?csvNoteInfo(header,get):null,
           stats:tier?{found:true,tier,division:normDivision(tier,get("division")||null),lp:get("lp")?+get("lp"):null,wins:get("wins")?+get("wins"):null,losses:get("losses")?+get("losses"):null,level:get("level")?+get("level"):null,mmr:null,avgRecent:null,asOf:"CSV import",note:null,updatedAt:get("lastUpdated")?new Date(get("lastUpdated")).getTime()||null:null}:null
         });
       }).filter(Boolean)
@@ -8163,14 +8555,16 @@ function loadDemo(){
   const now=Date.now(),D=86400000;
   const mk=o=>Object.assign({id:uid(),fav:false,status:"active",tags:[],history:[],login:"",password:"",email:"",notes:"",label:"",demo:true},o);
   accounts=[
-    mk({label:"Main smurf",gameName:"Hide on Bush",tagLine:"0001",region:"EUW",fav:true,tags:["mid","ranked-ready"],login:"demo_user1",password:"demo-pass-1",email:"smurf1@mail.gg",notes:"Elementalist Lux, honor 3",
+    mk({label:"Main smurf",gameName:"Hide on Bush",tagLine:"0001",region:"EUW",fav:true,tags:["mid","ranked-ready"],login:"demo_user1",password:"demo-pass-1",email:"smurf1@mail.gg",notes:"Climbing account — keep it out of decay",
+      info:{honor:3,owned:96,be:23400,twofa:true,skins:["Elementalist Lux","Star Guardian Ahri","Arcade Kai'Sa"]},
       stats:{found:true,tier:"PLATINUM",division:"II",lp:61,wins:38,losses:29,level:214,icon:"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",mmr:"~2140",avgRecent:"Platinum II",asOf:"updated today",updatedAt:now-2*3600000,
         champs:[{name:"Lux",games:24,wins:15,losses:9,wr:63,kda:"3.4"},{name:"Ahri",games:18,wins:10,losses:8,wr:56,kda:"2.9"},{name:"Syndra",games:9,wins:4,losses:5,wr:44,kda:"2.1"}]},
       history:[
         {t:now-24*D,tier:"GOLD",division:"II",lp:40},{t:now-20*D,tier:"GOLD",division:"I",lp:15},{t:now-16*D,tier:"GOLD",division:"I",lp:78},
         {t:now-12*D,tier:"PLATINUM",division:"IV",lp:12},{t:now-9*D,tier:"PLATINUM",division:"IV",lp:55},{t:now-6*D,tier:"PLATINUM",division:"III",lp:31},
         {t:now-3*D,tier:"PLATINUM",division:"III",lp:74},{t:now-2*3600000,tier:"PLATINUM",division:"II",lp:61}]}),
-    mk({label:"ADC acc",gameName:"Bot Diff",tagLine:"EUW",region:"EUW",tags:["adc"],login:"demo_user2",password:"demo-pass-2",email:"smurf2@mail.gg",notes:"Spirit Blossom Yasuo",
+    mk({label:"ADC acc",gameName:"Bot Diff",tagLine:"EUW",region:"EUW",tags:["adc"],login:"demo_user2",password:"demo-pass-2",email:"smurf2@mail.gg",notes:"",
+      info:{honor:2,owned:41,be:6150,twofa:false,skins:["Spirit Blossom Yasuo"]},
       stats:{found:true,tier:"GOLD",division:"III",lp:22,wins:21,losses:24,level:167,mmr:"~1650",avgRecent:"Gold III",asOf:"updated 4 days ago",updatedAt:now-4*D,
         champs:[{name:"Jinx",games:20,wins:10,losses:10,wr:50,kda:"2.6"},{name:"Kai'Sa",games:15,wins:7,losses:8,wr:47,kda:"2.4"}]},
       history:[{t:now-14*D,tier:"GOLD",division:"II",lp:35},{t:now-10*D,tier:"GOLD",division:"II",lp:8},{t:now-7*D,tier:"GOLD",division:"III",lp:71},{t:now-4*D,tier:"GOLD",division:"III",lp:22}]}),
@@ -8180,7 +8574,8 @@ function loadDemo(){
       history:[{t:now-8*D,tier:"SILVER",division:"II",lp:60},{t:now-5*D,tier:"SILVER",division:"II",lp:95},{t:now-1*D,tier:"SILVER",division:"I",lp:89}]}),
     mk({label:"Fresh leveling acc",gameName:"NewSmurf",tagLine:"2026",region:"EUW",status:"resting",tags:["leveling"],login:"demo_user4",password:"demo-pass-4",
       stats:{found:true,tier:"UNRANKED",division:null,lp:null,wins:null,losses:null,level:23,mmr:null,avgRecent:null,asOf:"updated 6 days ago",note:null,updatedAt:now-6*D}}),
-    mk({label:"RIP acc",gameName:"Chat Restricted",tagLine:"4444",region:"EUNE",status:"banned",tags:["dead"],notes:"perma for chat, had Prestige K/DA Akali",
+    mk({label:"RIP acc",gameName:"Chat Restricted",tagLine:"4444",region:"EUNE",status:"banned",tags:["dead"],notes:"",
+      info:{honor:0,skins:["Prestige K/DA Akali"],penalty:"Permanent ban for chat"},
       stats:{found:true,tier:"BRONZE",division:"I",lp:12,wins:40,losses:52,level:301,asOf:"before the ban",updatedAt:now-40*D},
       history:[{t:now-50*D,tier:"BRONZE",division:"II",lp:30},{t:now-40*D,tier:"BRONZE",division:"I",lp:12}]})
   ];
@@ -9399,6 +9794,7 @@ async function onCardClick(e){
   }
   else if(act==="edit")openForm(acc);
   else if(act==="art")openArtPicker(id);
+  else if(act==="notefields"){commitNote();openForm(acc,"notes")}
   else if(act==="exstats"){acc.excludeStats=!acc.excludeStats;renderCard(id);renderDash();saveThen(acc.excludeStats?"Left out of the combined stats":"Counted in the combined stats again")}
   else if(act==="archive"){acc.archived=true;render();saveThen("Archived — toggle \"Archived\" in the toolbar to see it again")}
   else if(act==="unarchive"){acc.archived=false;render();saveThen("Restored to active accounts")}
