@@ -35,9 +35,14 @@
        text is warm parchment (#f0e6d2 / #a09b8c) where ours was blue-white — that
        temperature, more than any one colour, is what made this read as a generic
        dark app. Faint is lifted to 4.8:1 on a card: the old #5d6577 was 3.2:1,
-       below what small text needs to be read. */
+       below what small text needs to be read.
+       2.3.3, after a week on an iPad: the hairlines were 1.25:1 against a card —
+       a button's outline and a field's edge were there in the file and nowhere on
+       the screen. Dividers now sit at about 1.55:1, the edges of things you can
+       press or type into (--edge) at 2:1, hover at 2.5:1, and faint text at
+       5.5:1 instead of 4.8. Still hairlines, still quiet; now visible. */
     --bg:#010a13; --panel:#0a1119; --panel2:#111a24; --panel3:#18222e;
-    --line:#1f2a34; --line2:#33414c;
+    --line:#2c3a47; --edge:#3a4a59; --line2:#4a5a69;
     /* accent — live-overridden by the accent picker in Settings. The defaults are
        the client's own gold and blue; the derived ones are what applyAccent()
        computes from them, so a reset lands exactly here. */
@@ -48,7 +53,7 @@
        same hue held inside a band that stays legible either way, and every place
        the accent is used for type reads from them instead of the raw colour. */
     --gold-txt:#d2ba89; --teal-txt:#73e8df;
-    --text:#f0e6d2; --muted:#a09b8c; --faint:#85827a;
+    --text:#f0e6d2; --muted:#a09b8c; --faint:#938e83;
     /* secondary accent — also live-overridden from Settings. --teal-ink is the
        text colour for anything filled with --teal; applyAccent2 flips it between
        near-black and white by luminance, because a fixed dark ink goes unreadable
@@ -317,7 +322,7 @@
 
   /* ---- buttons ---- */
   button,.btn{font:inherit;font-size:calc(13px*var(--ts));font-weight:500;cursor:pointer;line-height:1.2;white-space:nowrap;
-    border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);color:var(--text);
+    border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--panel2);color:var(--text);
     padding:8px 13px;display:inline-flex;align-items:center;justify-content:center;gap:7px;
     transition:background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease,transform .09s ease}
   button:hover,.btn:hover{background:var(--panel3);border-color:var(--line2)}
@@ -382,7 +387,7 @@
   input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;height:14px;width:14px;cursor:pointer;
     background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b93a6' stroke-width='2.4' stroke-linecap='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E") center/contain no-repeat}
   code{font-family:ui-monospace,'SF Mono',Consolas,monospace;font-size:.92em;padding:2px 6px;border-radius:var(--r-xs);
-    background:#ffffff0d;border:1px solid #ffffff12;color:var(--text)}
+    background:#ffffff0f;border:1px solid #ffffff21;color:var(--text)}
 
   /* ---- banners ---- */
   .banner{display:none;border:1px solid color-mix(in srgb,var(--danger) 45%,transparent);color:var(--danger);
@@ -450,7 +455,7 @@
   .spark-tip.on{opacity:1;transform:none}
   .dash-toggle{display:flex;justify-content:flex-end;margin-bottom:14px}
   .ghost-toggle{font-size:calc(12px*var(--ts));padding:6px 13px;border-radius:var(--r-xs);color:var(--muted);
-    background:#ffffff09;border:1px solid var(--line);box-shadow:none}
+    background:#ffffff09;border:1px solid var(--edge);box-shadow:none}
   .ghost-toggle:hover{background:#ffffff14;border-color:var(--line2);color:var(--text)}
   .ghost-toggle .ico{transition:transform .22s cubic-bezier(.22,1,.36,1)}
   .ghost-toggle.open .ico{transform:rotate(180deg)}
@@ -463,7 +468,7 @@
      pill per champion, with the games as a W-L pair rather than a count needing a
      unit letter glued to it. */
   .gem.cmb{gap:7px;padding:3px 4px 3px 10px;border-radius:var(--r-xs);
-    background:#ffffff08;border:1px solid #ffffff0f}
+    background:#ffffff08;border:1px solid #ffffff1c}
   .gem.cmb .n{font-weight:500}
   /* every count in here answers "how many"; clicking it answers "which ones" */
   .gem-b{border:1px solid transparent;border-radius:var(--r-xs);padding:4px 11px;background:none;font-size:calc(12px*var(--ts))}
@@ -486,8 +491,8 @@
   .s-note{font-size:calc(11px*var(--ts));color:var(--faint);margin-top:4px;line-height:1.4}
   .gem.cmb b{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .gem.cmb b.wr-good{color:var(--good)}
-  .gem.cmb i.g{font-style:normal;font-size:calc(11px*var(--ts));font-weight:600;color:var(--faint);
-    font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:var(--r-xs);background:#ffffff0d}
+  .gem.cmb i.g{font-style:normal;font-size:calc(11px*var(--ts));font-weight:600;color:var(--muted);
+    font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:var(--r-xs);background:#ffffff12}
   .gem.cmb i.g em{font-style:normal;opacity:.5;padding:0 1px}
   .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px;position:relative}
   /* The client divides with a gold hairline that is brightest in the middle and a
@@ -543,7 +548,7 @@
   /* layout switch: segmented control. Kept fully isolated from the global
      button chrome — that rule transitions border-color + translateY on hover,
      which made the dividers flash and the icons look like they squeezed. */
-  .seg{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:var(--r-sm);
+  .seg{display:inline-flex;align-items:stretch;border:1px solid var(--edge);border-radius:var(--r-sm);
     overflow:hidden;background:var(--panel2);flex-shrink:0}
   .seg button{
     box-sizing:border-box;width:36px;height:32px;padding:0;margin:0;gap:0;
@@ -591,7 +596,7 @@
   /* themes: two colours side by side is the whole idea, so that is the tile */
   .thm-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
   .thm{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:6px 6px 7px;min-width:0;
-    border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);box-shadow:none;
+    border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--panel2);box-shadow:none;
     color:var(--muted);font-size:calc(12px*var(--ts));font-weight:600;text-align:left}
   .thm:hover{background:var(--panel3);border-color:var(--line2);color:var(--text)}
   .thm.on{border-color:color-mix(in srgb,var(--gold) 55%,var(--line2));color:var(--gold-txt);
@@ -605,7 +610,7 @@
   .atm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   @media(max-width:520px){.atm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .atm-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;
-    padding:7px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);
+    padding:7px;border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--panel2);
     color:var(--muted);font-size:calc(12px*var(--ts));font-weight:600;text-align:left;box-shadow:none;
     overflow:hidden;min-width:0;
     transition:border-color .16s ease,background .16s ease,color .16s ease,box-shadow .16s ease}
@@ -685,9 +690,9 @@
   .fchip span{opacity:.65;font-size:calc(10px*var(--ts))}
   .fchip:hover{color:var(--gold-txt);background:color-mix(in srgb,var(--gold) 22%,transparent);
     border-color:color-mix(in srgb,var(--gold) 70%,transparent)}
-  .fchip-all{color:var(--faint);background:none;border-color:var(--line);padding:4px 11px}
+  .fchip-all{color:var(--faint);background:none;border-color:var(--edge);padding:4px 11px}
   .fchip-all:hover{color:var(--text);background:var(--panel3);border-color:var(--line2)}
-  input,select,textarea{font:inherit;font-size:calc(14px*var(--ts));background:var(--panel2);border:1px solid var(--line);
+  input,select,textarea{font:inherit;font-size:calc(14px*var(--ts));background:var(--panel2);border:1px solid var(--edge);
     border-radius:var(--r-sm);color:var(--text);padding:9px 12px;
     transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
   input:hover,select:hover,textarea:hover{border-color:var(--line2)}
@@ -733,7 +738,7 @@
      at rest, because a glyph is identity and a lit pill full of a number is status.
      Everything else waits for .lit. */
   .tag-handle{gap:7px;padding:4px 11px 5px;min-height:0;
-    border-radius:0 0 var(--r-sm) var(--r-sm);border:1px solid var(--line);border-top:0;
+    border-radius:0 0 var(--r-sm) var(--r-sm);border:1px solid var(--edge);border-top:0;
     background:var(--panel2);
     color:var(--muted);box-shadow:0 3px 8px -4px #0009;
     font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;
@@ -759,7 +764,7 @@
   .tag-handle.open .tag-chev{transform:rotate(180deg)}
   .tag-list{display:flex;gap:7px;flex-wrap:wrap;padding-bottom:2px}
   @media (prefers-reduced-motion:reduce){.tag-handle,.tag-handle .ico{transition:none}}
-  .chip{font-size:calc(12px*var(--ts));font-weight:500;padding:5px 12px;border:1px solid var(--line);border-radius:var(--r-xs);
+  .chip{font-size:calc(12px*var(--ts));font-weight:500;padding:5px 12px;border:1px solid var(--edge);border-radius:var(--r-xs);
     background:var(--panel2);color:var(--muted);cursor:pointer;
     transition:background .15s ease,border-color .15s ease,color .15s ease}
   .chip:hover{color:var(--text);border-color:var(--line2);background:var(--panel3)}
@@ -1137,8 +1142,8 @@
   .c-stats .v{font-size:calc(13px*var(--ts));font-weight:500;color:var(--text);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
   /* This is the one thing on the card the user wrote themselves, so it reads as
      content on its own small surface rather than another grey caption line. */
-  .c-notes{font-size:calc(13px*var(--ts));line-height:1.6;color:var(--text);opacity:.9;
-    padding:9px 12px;border-radius:var(--r-sm);background:#ffffff08;border:1px solid #ffffff0d;
+  .c-notes{font-size:calc(13px*var(--ts));line-height:1.6;color:var(--text);
+    padding:9px 12px;border-radius:var(--r-sm);background:#ffffff0a;border:1px solid #ffffff1a;
     transition:background .16s ease,border-color .16s ease}
   /* the note is the one field you actually keep rewriting, so it edits where it
      lives — no round trip through the Edit form */
@@ -1157,7 +1162,7 @@
      repeated element on the page — fifty-one outlined rectangles, all empty.
      One quiet line now; the box arrives with the note, or as soon as you click. */
   .c-notes.blank{display:flex;align-items:center;gap:6px;padding:3px 5px;
-    background:none;border:0;color:var(--faint);font-size:calc(11px*var(--ts));opacity:.72}
+    background:none;border:0;color:var(--faint);font-size:calc(11px*var(--ts));opacity:.9}
   .c-notes.blank:hover{background:#ffffff0d;border:0;color:var(--muted);opacity:1}
   .c-notes.blank .ico{width:11px;height:11px;opacity:.8}
   /* ---- note fields on the card ----
@@ -1167,7 +1172,7 @@
      the account is worth to you; a penalty is the one red line. */
   .c-notes .nt{white-space:pre-line}
   .c-notes .ni{display:flex;flex-direction:column;gap:7px;margin:2px 0 1px;cursor:pointer}
-  .c-notes .ni+.nt{margin-top:8px;padding-top:8px;border-top:1px solid #ffffff0d}
+  .c-notes .ni+.nt{margin-top:8px;padding-top:8px;border-top:1px solid #ffffff17}
   .c-notes.editing .ni{cursor:default;margin-bottom:9px}
   .ni-row{display:flex;flex-wrap:wrap;gap:5px}
   /* Read on a tablet across the room, these were grey words on a plate barely
@@ -1266,7 +1271,7 @@
      most of the question — the peak of those seasons, the champion actually
      played — with the rows one click behind it. */
   .login.info{gap:0;padding:0;overflow:hidden}
-  .sec{border-top:1px solid #ffffff0d}
+  .sec{border-top:1px solid #ffffff17}
   .sec:first-child{border-top:0}
   .sec-h{width:100%;display:flex;align-items:center;gap:11px;padding:10px 13px;
     background:none;border:0;border-radius:0;white-space:normal}
@@ -1292,13 +1297,13 @@
   .chp-h span:not(:first-child){text-align:right}
   .chp-h+.chp{border-top:0}
   .sea{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:3px 0;font-size:calc(12px*var(--ts))}
-  .sea+.sea{border-top:1px solid #ffffff0a}
+  .sea+.sea{border-top:1px solid #ffffff12}
   .s-yr{color:var(--faint);font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.09em;text-transform:uppercase}
   .s-rk{font-weight:600;font-size:calc(13px*var(--ts));letter-spacing:-.01em}
   /* a fixed grid, so the numbers line up into columns you can scan down */
   .chp{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:baseline;
     padding:3px 0;font-size:calc(12px*var(--ts));font-variant-numeric:tabular-nums}
-  .chp+.chp{border-top:1px solid #ffffff0a}
+  .chp+.chp{border-top:1px solid #ffffff12}
   .c-nm{color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .c-wr{font-weight:600;color:var(--muted);text-align:right}
   .c-wr.wr-good{color:var(--good)}
@@ -1447,7 +1452,7 @@
   .lpc-range button:hover{background:#ffffff1c;border-color:transparent;color:var(--text)}
   .lpc-range button.on{background:color-mix(in srgb,var(--teal) 22%,transparent);color:var(--teal-txt)}
   .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:calc(9px*var(--ts));font-weight:600;letter-spacing:.09em;
-    text-transform:uppercase;pointer-events:none;opacity:.62;line-height:1}
+    text-transform:uppercase;pointer-events:none;opacity:.82;line-height:1}
   /* the ceiling the line is climbing back towards; left lane, with the band
      captions, and dropped rather than stacked when one is already there */
   .lpc-plot .lpc-peak{position:absolute;left:50%;transform:translateX(-50%);
@@ -1456,7 +1461,7 @@
   /* division numerals below Master, LP marks above it — opposite side to the tier
      names so the two never collide */
   .lpc-plot .lpc-sub{position:absolute;right:6px;font-size:calc(9px*var(--ts));font-weight:600;letter-spacing:.06em;
-    color:#fff;opacity:.32;pointer-events:none;line-height:1;font-variant-numeric:tabular-nums}
+    color:#fff;opacity:.5;pointer-events:none;line-height:1;font-variant-numeric:tabular-nums}
   /* Each point owns the slice of the chart nearest to it, and the slices tile the
      chart exactly. The first version centred a fixed-width column on every point,
      which meant the outermost ones hung ~56 px past the edge of the chart — far
@@ -1502,7 +1507,7 @@
   .meta b{color:var(--text);font-weight:500}
   .meta .g{color:var(--gold-txt)}
   .ctags{display:flex;gap:6px;flex-wrap:wrap}
-  .ctags span{font-size:calc(11px*var(--ts));padding:3px 9px;border-radius:var(--r-xs);background:#ffffff0a;border:1px solid #ffffff0f;color:var(--muted)}
+  .ctags span{font-size:calc(11px*var(--ts));padding:3px 9px;border-radius:var(--r-xs);background:#ffffff0d;border:1px solid #ffffff1f;color:var(--muted)}
   /* the role is read from recent games, not typed by you, so it is set apart from your tags */
   .ctags .role-tag{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 35%,transparent);background:color-mix(in srgb,var(--teal) 8%,transparent)}
   .login{background:#00000038;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:calc(13px*var(--ts));display:flex;flex-direction:column;gap:9px}
@@ -1554,7 +1559,7 @@
      phrase op.gg printed ("updated today") — so no uppercasing, which would
      shout at a sentence fragment */
   .src{font-size:calc(10px*var(--ts));font-weight:500;letter-spacing:.01em;color:var(--faint);
-    padding:2px 8px;border-radius:var(--r-xs);background:#ffffff0a;border:1px solid #ffffff0f;white-space:nowrap}
+    padding:2px 8px;border-radius:var(--r-xs);background:#ffffff0d;border:1px solid #ffffff1c;white-space:nowrap}
   /* 11.5px type in 6px of padding is a 26px target, and there were five of them
      in a row. Mobile already got 40px; the desktop was left with whatever the
      text happened to measure. */
@@ -1642,7 +1647,7 @@
   .rankpanel .sec:last-child{border-bottom:1px solid var(--line)}
   /* DPM and OP.GG are the same kind of thing — an outbound profile link — so they
      look the same. The gold tint implied a hierarchy that isn't there. */
-  .a-dpm{border:1px solid var(--line);color:var(--text);font-weight:500;background:var(--panel2)}
+  .a-dpm{border:1px solid var(--edge);color:var(--text);font-weight:500;background:var(--panel2)}
   .a-dpm:hover{color:var(--text);border-color:var(--line2);background:var(--panel3)}
   .a-login{background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 82%,#fff),var(--teal) 45%,color-mix(in srgb,var(--teal) 78%,#000));
     border-color:var(--teal);color:var(--teal-ink);font-weight:700;
@@ -1746,7 +1751,7 @@
   .streamer-pill:hover{color:#fff;border-color:#ff6b6baa;background:#ff6b6b26}
   .streamer-pill i{width:7px;height:7px;border-radius:50%;background:#ff5b5b;box-shadow:0 0 8px #ff5b5b}
   .part-chks{display:flex;flex-wrap:wrap;gap:6px}
-  .part-chks label{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--line);
+  .part-chks label{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--edge);
     border-radius:var(--r-sm);background:var(--panel2);font-size:calc(13px*var(--ts));color:var(--muted);cursor:pointer}
   .part-chks label:has(input:checked){color:var(--text);border-color:var(--line2)}
   .part-chks input{width:auto;margin:0}
@@ -1755,7 +1760,7 @@
   html[data-ts="small"]{--ts:.9}
   html[data-ts="large"]{--ts:1.15}
   /* a three-way choice in Settings: one row, the chosen one lit */
-  .opt-seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--panel2)}
+  .opt-seg{display:inline-flex;border:1px solid var(--edge);border-radius:var(--r-sm);overflow:hidden;background:var(--panel2)}
   #settings .opt-seg button{border:0;border-radius:0;background:none;box-shadow:none;padding:7px 16px;font-size:calc(13px*var(--ts));font-weight:600;color:var(--muted)}
   #settings .opt-seg button+button{border-left:1px solid var(--line)}
   #settings .opt-seg button:hover{color:var(--text);background:var(--panel3)}
@@ -2072,7 +2077,7 @@
   .sh-which button.on b{color:inherit}
   .sh-opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:10px}
   .sh-opt{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:var(--r-sm);cursor:pointer;
-    border:1px solid var(--line);background:#ffffff05;transition:border-color .16s ease,background .16s ease}
+    border:1px solid var(--edge);background:#ffffff05;transition:border-color .16s ease,background .16s ease}
   .sh-opt:hover{border-color:var(--line2);background:#ffffff0a}
   .sh-opt:has(input:checked){border-color:color-mix(in srgb,var(--teal) 40%,transparent);background:color-mix(in srgb,var(--teal) 6%,transparent)}
   .sh-opt input{margin-top:2px;flex-shrink:0}
@@ -3015,7 +3020,7 @@ const REGIONS={
   SG:{opgg:"sg",full:"Southeast Asia"},TW:{opgg:"tw",full:"Taiwan"},VN:{opgg:"vn",full:"Vietnam"}
 };
 const TIER_ORDER=["IRON","BRONZE","SILVER","GOLD","PLATINUM","EMERALD","DIAMOND","MASTER","GRANDMASTER","CHALLENGER"];
-const TIER_COLORS={IRON:"#8a8a8a",BRONZE:"#b0765a",SILVER:"#a8bdd0",GOLD:"#e6c15a",PLATINUM:"#4fd1c5",EMERALD:"#3ddc84",DIAMOND:"#7ea6f0",MASTER:"#b16ce8",GRANDMASTER:"#e05656",CHALLENGER:"#f4d688",UNRANKED:"#5b7a99"};
+const TIER_COLORS={IRON:"#8a8a8a",BRONZE:"#b0765a",SILVER:"#a8bdd0",GOLD:"#e6c15a",PLATINUM:"#4fd1c5",EMERALD:"#3ddc84",DIAMOND:"#7ea6f0",MASTER:"#b16ce8",GRANDMASTER:"#e05656",CHALLENGER:"#f4d688",UNRANKED:"#7090b0"};
 /* ---- tier crests ----
    Ten emblems, one per tier, drawn here rather than fetched. The app is a single
    file that has to keep working offline, and Riot's own rank art is neither ours
@@ -3106,7 +3111,7 @@ function fillAutoLock(sel,current){
 }
 // label is the full wording — dropdowns, search text, toasts. short is what fits
 // on a card next to the account name.
-const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{label:"Resting / unused",short:"Resting",color:"#7a94ab"},restricted:{label:"Chat/ranked restricted",short:"Restricted",color:"#f4d688"},banned:{label:"Banned",short:"Banned",color:"#d06060"}};
+const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{label:"Resting / unused",short:"Resting",color:"#7a94ab"},restricted:{label:"Chat/ranked restricted",short:"Restricted",color:"#f4d688"},banned:{label:"Banned",short:"Banned",color:"#e47474"}};
 
 // ---------- state ----------
 let accounts=[];

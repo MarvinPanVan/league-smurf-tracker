@@ -643,6 +643,26 @@ test("the ⋯ menus are solid, and their items read in the text colour", () => {
   assert.doesNotMatch(html.match(/\.card-menu \.ico\{([^}]*)\}/)[1], /--faint/, "and their marks are not the faintest grey");
 });
 
+/* On an iPad at arm's length the hairlines were 1.25:1 against a card: a button's
+   outline and a field's edge existed in the stylesheet and nowhere on the screen.
+   The tokens hold a floor now, and everything you can press or type into is
+   drawn with --edge, not with the divider colour. */
+test("dividers, control edges and faint text stay visible on a card", () => {
+  const tok = n => html.match(new RegExp("--" + n + ":(#[0-9a-f]{6})"))[1];
+  const lum = h => { const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(v => v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4)); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+  const card = "#0e1620";
+  assert.ok(ratio(tok("line"), card) >= 1.5, "dividers at " + ratio(tok("line"), card).toFixed(2));
+  assert.ok(ratio(tok("edge"), card) >= 1.9, "control edges at " + ratio(tok("edge"), card).toFixed(2));
+  assert.ok(ratio(tok("line2"), card) > ratio(tok("edge"), card), "hover is a step above rest");
+  assert.ok(ratio(tok("faint"), card) >= 5.3, "faint text at " + ratio(tok("faint"), card).toFixed(2));
+  assert.match(html, /button,\.btn\{[^}]*border:1px solid var\(--edge\)/, "buttons");
+  assert.match(html, /input,select,textarea\{[^}]*border:1px solid var\(--edge\)/, "fields");
+  for (const sel of [".tag-handle", ".chip", ".ghost-toggle", ".thm", ".opt-seg"])
+    assert.doesNotMatch(html.match(new RegExp("\\n  \\" + sel + "\\{([^}]*)\\}"))[1], /border[^;]*var\(--line\)/, sel + " is pressed, so it has an edge, not a divider");
+  assert.doesNotMatch(html.match(/\.c-notes\{([^}]*)\}/)[1], /opacity:/, "the note isn't dimmed as a whole");
+});
+
 test("every corner comes off the radius scale", () => {
   // The tokens (3/4/6/8px), round (50%), square, and hairline 1–3px for bars and
   // rails. Anything else is a radius somebody picked by eye — which is how the page
