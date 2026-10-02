@@ -1953,6 +1953,112 @@
   .cmp-row>:first-child{text-align:right}
   .cmp-row .k{text-align:center;font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
   .cmp-row .win{color:var(--gold-txt);font-weight:600}
+  /* ---- a shared snapshot: the page a link opens ----
+     Somebody else's screen, so it is made to be looked at rather than worked in:
+     whose and when at the top, the best rank as the headline, then the accounts
+     as cards with their art properly visible — a banner, not the faint glow the
+     app keeps behind a card you read all day. */
+  body.snap-mode .wrap{display:none}
+  .snap{max-width:1180px;margin:0 auto;padding:22px clamp(16px,4vw,40px) 56px}
+  .sn-wait{padding:30vh 0;text-align:center;color:var(--faint);font-size:calc(13px*var(--ts))}
+  .sn-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:clamp(30px,7vw,64px)}
+  .sn-brand{display:flex;align-items:center;gap:13px;color:var(--text);text-decoration:none}
+  .sn-brand .brand-mark{width:30px;height:30px;margin:4px}
+  .sn-brand .brand-mark::before{width:12px;height:12px}
+  .sn-brand .hex-display{font-size:calc(15px*var(--ts));font-weight:600}
+  .sn-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:var(--r-xs);
+    font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.06em;color:var(--teal-txt);
+    background:color-mix(in srgb,var(--teal) 9%,transparent);border:1px solid color-mix(in srgb,var(--teal) 30%,transparent)}
+  .sn-pill .ico{width:13px;height:13px}
+  .sn-hero{text-align:center}
+  .sn-eyebrow{font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--gold-txt)}
+  .sn-title{margin:12px auto 10px;max-width:22ch;font-size:calc(clamp(30px,5.4vw,48px)*var(--ts));font-weight:600;letter-spacing:-.025em;
+    line-height:1.08;color:#fff;overflow-wrap:anywhere;text-shadow:0 2px 30px color-mix(in srgb,var(--gold) 30%,transparent)}
+  .sn-sub{font-size:calc(14px*var(--ts));color:var(--muted)}
+  .sn-sum{max-width:880px;margin:30px auto 0;text-align:left}
+  .sn-sum .hx-in{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr))}
+  .sn-sum .cell{padding:18px 20px;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:3px;border-left:1px solid #ffffff12}
+  .sn-sum .cell:first-child{border-left:0;flex-direction:row;align-items:center;justify-content:flex-start;gap:16px}
+  .sn-sum .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .sn-sum b{display:block;font-size:calc(22px*var(--ts));font-weight:600;letter-spacing:-.01em;color:var(--text);
+    font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sn-sum em{font-style:normal;font-size:calc(12px*var(--ts));color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sn-sum .cell:first-child>div{min-width:0;display:flex;flex-direction:column;gap:3px}
+  .sn-best-c{width:54px;height:54px;flex-shrink:0;filter:drop-shadow(0 4px 14px #0009)}
+  .sn-dist{display:flex;gap:2px;height:5px;max-width:880px;margin:16px auto 0;border-radius:2px;overflow:hidden}
+  .sn-dist i{display:block;min-width:4px}
+  .sn-legend{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:calc(11px*var(--ts));color:var(--muted)}
+  .sn-legend span{display:inline-flex;align-items:center;gap:6px}
+  .sn-legend span::before{content:"";width:7px;height:7px;border-radius:1px;transform:rotate(45deg);background:var(--c)}
+  .sn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:18px;margin-top:clamp(34px,6vw,52px)}
+  .sn-card{animation:cardIn .5s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--i) * 45ms)}
+  .sn-c{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:12px;padding:0 18px 18px}
+  .sn-art{position:relative;height:118px;margin:0 -18px;overflow:hidden;
+    background:radial-gradient(120% 140% at 50% 0%,color-mix(in srgb,var(--tier) 26%,transparent),transparent 70%)}
+  .sn-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;opacity:.62}
+  .sn-art::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(180deg,transparent 30%,color-mix(in srgb,#0b1016 88%,transparent) 88%,#0b1016),
+      linear-gradient(90deg,color-mix(in srgb,var(--tier) 16%,transparent),transparent 60%)}
+  .sn-card.dead .sn-art img{filter:grayscale(1);opacity:.25}
+  .sn-head{position:relative;z-index:1;display:flex;align-items:flex-end;gap:12px;margin-top:-44px}
+  .sn-crest{width:62px;height:62px;flex-shrink:0;display:grid;place-items:center;border-radius:50%;
+    background:radial-gradient(circle at 50% 35%,#18222e,#05080d);
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--tier) 55%,transparent),0 0 0 4px #0b1016,0 8px 24px -6px color-mix(in srgb,var(--tier) 70%,transparent)}
+  .sn-crest-i{width:40px;height:40px}
+  .sn-crest b{font-size:calc(22px*var(--ts));font-weight:600;color:var(--faint)}
+  .sn-id{flex:1;min-width:0;padding-bottom:4px}
+  .sn-nm{display:flex;align-items:center;gap:6px;font-size:calc(17px*var(--ts));font-weight:600;color:#fff;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sn-fav .ico{width:14px;height:14px;color:var(--gold);fill:var(--gold)}
+  .sn-rid{font-size:calc(12px*var(--ts));color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sn-head .regiontag{margin-bottom:6px}
+  .sn-rank{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
+  .sn-rank b{font-size:calc(22px*var(--ts));font-weight:600;letter-spacing:-.01em;color:var(--tier)}
+  .sn-rank span{font-size:calc(14px*var(--ts));font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums}
+  .sn-rank .stchip{font-size:calc(11px*var(--ts));padding:2px 8px;border-radius:var(--r-xs);font-weight:600}
+  .sn-wl{display:flex;justify-content:space-between;gap:10px;font-size:calc(12px*var(--ts));color:var(--muted);font-variant-numeric:tabular-nums}
+  .sn-wl b{font-weight:600;color:var(--text)}
+  .sn-wl b.wr-good,.sn-sum b.wr-good{color:var(--good)}
+  .sn-spk{height:44px;margin:2px 0}
+  .sn-meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:calc(12px*var(--ts));color:var(--text)}
+  .sn-meta i{font-style:normal;font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-right:7px}
+  .sn-notes{margin-top:2px}
+  .sn-notes .sk{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 26%,transparent);background:color-mix(in srgb,var(--gold) 8%,transparent)}
+  .sn-empty{text-align:center;color:var(--muted);margin-top:40px}
+  .sn-foot{margin-top:clamp(44px,8vw,72px);text-align:center;font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.7}
+  .sn-foot p{margin:0 auto 16px;max-width:52ch}
+  .sn-foot .btn,.sn-err .btn{text-decoration:none;padding:10px 18px;font-weight:600}
+  .sn-err{max-width:480px;margin:16vh auto 0;text-align:center}
+  .sn-err .hx-in{padding:34px 28px 30px}
+  .sn-err .brand-mark{margin:4px auto 22px}
+  .sn-err h1{font-size:calc(20px*var(--ts));font-weight:600;margin:0 0 8px}
+  .sn-err p{font-size:calc(13px*var(--ts));color:var(--muted);line-height:1.6;margin:0 0 20px}
+  @media (max-width:760px){
+    .sn-sum .hx-in{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .sn-sum .cell{padding:14px 12px}
+    .sn-sum .cell:first-child{grid-column:1/-1;justify-content:center;border-bottom:1px solid #ffffff12}
+    .sn-sum .cell:nth-child(2){border-left:0}
+    .sn-sum b{font-size:calc(18px*var(--ts))}
+  }
+  @media (prefers-reduced-motion:reduce){.sn-card{animation:none}}
+  /* ---- the share window ---- */
+  .sh-intro{font-size:calc(13px*var(--ts));color:var(--muted);line-height:1.6;margin:0 0 18px}
+  .sh-intro b{color:var(--text);font-weight:600}
+  .sh-body{display:flex;flex-direction:column;gap:18px}
+  .sh-which{display:flex;width:100%}
+  .sh-which button{flex:1;width:auto;height:38px;gap:6px;font-size:calc(13px*var(--ts));font-weight:600;color:var(--muted)}
+  .sh-which button b{font-weight:600;font-size:calc(11px*var(--ts));color:var(--faint);font-variant-numeric:tabular-nums}
+  .sh-which button.on b{color:inherit}
+  .sh-opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:10px}
+  .sh-opt{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:var(--r-sm);cursor:pointer;
+    border:1px solid var(--line);background:#ffffff05;transition:border-color .16s ease,background .16s ease}
+  .sh-opt:hover{border-color:var(--line2);background:#ffffff0a}
+  .sh-opt:has(input:checked){border-color:color-mix(in srgb,var(--teal) 40%,transparent);background:color-mix(in srgb,var(--teal) 6%,transparent)}
+  .sh-opt input{margin-top:2px;flex-shrink:0}
+  .sh-opt span{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .sh-opt b{font-size:calc(13px*var(--ts));font-weight:600;color:var(--text)}
+  .sh-opt em{font-style:normal;font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.45}
+  #shSize{font-variant-numeric:tabular-nums}
   /* ---- card art picker ----
      The League client's own skin selector is the shape people already know: the
      splash large up top, the choices as tall portraits underneath. The champion
@@ -2182,6 +2288,8 @@
 </style>
 </head>
 <body data-atmosphere="spotlight">
+<!-- A shared snapshot opens here instead of the app: see openSnapshot -->
+<main id="snapView" class="snap hidden"></main>
 <div class="wrap">
 
   <div id="lock" class="hx gold hidden" role="region" aria-labelledby="lockTitle"><div class="hx-in lock-in">
@@ -2221,6 +2329,7 @@
           <button id="bImport" style="justify-content:flex-start;width:100%">Import backup</button>
           <button id="bImportCsv" style="justify-content:flex-start;width:100%">Import CSV</button>
           <div style="border-top:1px solid var(--line);margin:2px 0"></div>
+          <button id="bShare" style="justify-content:flex-start;width:100%" title="A read-only page of your ranks, in a link — no logins, ever">Share a snapshot…</button>
           <button id="bBulkAdd" style="justify-content:flex-start;width:100%">Bulk add accounts…</button>
           <button id="bNewSeason" style="justify-content:flex-start;width:100%" title="Move every ranked account's current rank into its Past seasons">New season…</button>
           <button id="bStreamer" style="justify-content:flex-start;width:100%" title="Hide Riot IDs, logins, emails and notes while you stream or share your screen (H)">Streamer mode</button>
@@ -2830,6 +2939,32 @@
         <button type="button" id="apUse" class="b-gold">Use this art</button>
         <button type="button" id="apCancel">Cancel</button>
         <button type="button" id="apAuto" class="sp">Back to most-played</button>
+      </div>
+    </div></div>
+  </div>
+
+  <div id="shareModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+    <div class="mdl narrow hx teal"><div class="hx-in mdl-in">
+      <div class="mdl-h"><span class="t" id="shTitle">Share a snapshot</span>
+        <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+      </div>
+      <div class="mdl-b"><div class="grp sh-body">
+        <p class="sh-intro">A read-only page of your ranks, in one link. Nothing is uploaded — <b>the link is the page</b>, and it shows
+          what it showed today. Logins, passwords, emails and notes are never in it.</p>
+        <div class="fld"><label for="shName">Title</label><input id="shName" maxlength="60" placeholder="My League accounts" autocomplete="off" data-autofocus></div>
+        <div class="fld"><label id="shWhichL">Accounts</label><div class="seg sh-which" id="shWhich" role="radiogroup" aria-labelledby="shWhichL"></div></div>
+        <div class="sh-opts">
+          <label class="sh-opt"><input type="checkbox" id="shIds"><span><b>Riot IDs</b><em>Off: your labels only, so nobody can look the accounts up.</em></span></label>
+          <label class="sh-opt"><input type="checkbox" id="shArt" checked><span><b>Champion art</b><em>Each card's art, as a banner.</em></span></label>
+          <label class="sh-opt"><input type="checkbox" id="shHist" checked><span><b>LP history</b><em>The climb as a line on each card.</em></span></label>
+          <label class="sh-opt"><input type="checkbox" id="shNotes"><span><b>Honor &amp; skins</b><em>From the note fields — nothing else from notes.</em></span></label>
+        </div>
+      </div></div>
+      <div class="mdl-f">
+        <button type="button" id="shCopy" class="b-gold">Copy link</button>
+        <button type="button" id="shOpen">Preview</button>
+        <button type="button" id="shCancel">Cancel</button>
+        <span class="sp hint" id="shSize"></span>
       </div>
     </div></div>
   </div>
@@ -6737,6 +6872,269 @@ $("apUse").addEventListener("click",apSave);
 $("apAuto").addEventListener("click",apAuto);
 $("apCancel").addEventListener("click",closeArtPicker);
 $("apTurnOn").addEventListener("click",()=>{cfg.champArt=null;saveCfg();renderGrid();renderArtPicker();toast("Champion art is on")});
+/* ---- share a read-only snapshot ----
+   A page of your ranks for somebody else, carried entirely in the link. The data
+   is the part after "#", which a browser never sends to any server — so nothing
+   is uploaded, stored or kept anywhere, and the link is the whole page. It holds
+   only what the share window lists: never a login, password, email or note, and
+   no Riot ID unless you tick the box. Opening one never reads or writes the
+   opener's own vault or settings (see openSnapshot). */
+const SNAP_HOME="https://marvinpanvan.github.io/league-smurf-tracker/";
+const SNAP_MAX_HASH=16000, SNAP_MAX_JSON=200000, SNAP_MAX_ACC=60, SNAP_HIST=16;
+let snapMode=false;
+function b64url(bytes){return b64(bytes).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+function unb64url(s){s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";return unb64(s)}
+// Through a CompressionStream and back out, stopping at `cap` bytes so a small
+// link can't unpack into something enormous.
+async function pipeBytes(bytes,stream,cap){
+  const w=stream.writable.getWriter();
+  w.write(bytes).catch(()=>{});w.close().catch(()=>{});
+  const r=stream.readable.getReader(), chunks=[];let n=0;
+  for(;;){
+    const{done,value}=await r.read();if(done)break;
+    n+=value.length;
+    if(cap&&n>cap){try{r.cancel()}catch(e){}throw new Error("too large")}
+    chunks.push(value);
+  }
+  const out=new Uint8Array(n);let o=0;for(const c of chunks){out.set(c,o);o+=c.length}
+  return out;
+}
+// "1." compressed, "0." plain for a browser without CompressionStream
+async function snapEncode(obj){
+  const bytes=new TextEncoder().encode(JSON.stringify(obj));
+  if(typeof CompressionStream==="function"){
+    try{return"1."+b64url(await pipeBytes(bytes,new CompressionStream("deflate-raw")))}catch(e){}
+  }
+  return"0."+b64url(bytes);
+}
+async function snapDecode(str){
+  str=String(str||"");
+  const m=str.length<=SNAP_MAX_HASH&&/^([01])\.([A-Za-z0-9_-]+)$/.exec(str);
+  if(!m)throw new Error("not a snapshot");
+  let bytes=unb64url(m[2]);
+  if(m[1]==="1"){
+    if(typeof DecompressionStream!=="function")throw new Error("this browser can't unpack it");
+    bytes=await pipeBytes(bytes,new DecompressionStream("deflate-raw"),SNAP_MAX_JSON);
+  }else if(bytes.length>SNAP_MAX_JSON)throw new Error("too large");
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+// A rank as [tier index, division or 0, LP]: four short values instead of a word
+const snapRank=s=>{
+  const t=TIER_ORDER.indexOf(String(s&&s.tier||"").toUpperCase());
+  if(t<0)return null;
+  const lp=Number(s.lp);
+  return[t,normDivision(TIER_ORDER[t],s.division)||0,Number.isFinite(lp)?Math.max(0,Math.min(9999,Math.round(lp))):0];
+};
+function snapAccounts(which){
+  const live=accounts.filter(a=>!a.archived);
+  if(which==="fav")return live.filter(a=>a.fav);
+  if(which==="sel")return live.filter(a=>selected.has(a.id));
+  if(which==="ranked")return live.filter(isRanked);
+  return live;
+}
+function snapColours(){
+  const cs=getComputedStyle(document.documentElement), hex=v=>/^#[0-9a-f]{6}$/i.test(v)?v.toLowerCase():null;
+  return[hex(cs.getPropertyValue("--gold").trim())||DEFAULT_ACCENT,hex(cs.getPropertyValue("--teal").trim())||DEFAULT_ACCENT2];
+}
+function buildSnapshot(o){
+  const now=Date.now();let k=0;
+  const list=snapAccounts(o.which).slice(0,SNAP_MAX_ACC).map(a=>{
+    const s=a.stats&&a.stats.found!==false?a.stats:null, x={};
+    const rid=(a.gameName||"")+"#"+(a.tagLine||"");
+    x.n=(a.label||"").trim().slice(0,40)||(o.ids?rid.slice(0,40):"Account "+(++k));
+    if(o.ids&&a.label)x.i=rid.slice(0,40);
+    if(REGIONS[a.region])x.r=a.region;
+    const rk=isRanked(a)?snapRank(s):null;
+    if(rk){
+      x.k=rk;
+      const wl=winLoss(s);
+      if(wl.w!=null)x.w=Math.min(99999,wl.w);if(wl.l!=null)x.l=Math.min(99999,wl.l);
+      const pk=peakInfo(a);if(pk.peakV!=null&&pk.peak)x.p=pk.peak.slice(0,40);
+    }
+    if(s&&Number.isInteger(+s.level)&&+s.level>0)x.lv=Math.min(9999,+s.level);
+    if(o.hist&&rk){
+      const h=(a.history||[]).filter(e=>e&&ladderLP(e)!==null&&Number(e.t)>0).slice(-SNAP_HIST);
+      if(h.length>1)x.h=h.map(e=>[Math.max(0,Math.round((now-e.t)/864e5*10)/10),...snapRank(e)]);
+    }
+    if(o.art){const art=artOf(a);if(art)x.c=[art.champ,art.skin]}
+    if(o.notes){
+      const info=normInfo(a.info);
+      if(info&&info.honor!=null)x.hn=info.honor;
+      if(info&&info.skins)x.sk=info.skins.slice(0,8);
+    }
+    if(a.status&&a.status!=="active"&&STATUS[a.status])x.st=a.status;
+    if(a.fav)x.f=1;
+    return x;
+  });
+  return{v:1,t:String(o.title||"").replace(/\s+/g," ").trim().slice(0,60),at:Math.floor(now/60000)*60000,c:snapColours(),a:list};
+}
+// Everything in a link is somebody else's input: every value is checked for
+// shape and range here, and only what passes reaches the page, through esc().
+function normSnap(o){
+  if(!o||typeof o!=="object"||o.v!==1||!Array.isArray(o.a))return null;
+  const str=(v,n)=>typeof v==="string"?v.replace(/[\u0000-\u001f\u007f]/g," ").replace(/\s+/g," ").trim().slice(0,n):"";
+  const int=(v,lo,hi)=>Number.isInteger(v)&&v>=lo&&v<=hi?v:null;
+  const rank=k=>{
+    if(!Array.isArray(k))return null;
+    const t=int(k[0],0,TIER_ORDER.length-1);if(t==null)return null;
+    const tier=TIER_ORDER[t];
+    return{tier,division:hasDivisions(tier)&&["I","II","III","IV"].includes(k[1])?k[1]:null,lp:int(k[2],0,9999)??0};
+  };
+  const hex=v=>typeof v==="string"&&/^#[0-9a-f]{6}$/i.test(v)?v:null;
+  const accs=o.a.slice(0,SNAP_MAX_ACC).filter(x=>x&&typeof x==="object"&&!Array.isArray(x)).map(x=>({
+    name:str(x.n,40)||"Account", rid:str(x.i,40), region:REGIONS[x.r]?x.r:"",
+    rank:rank(x.k), w:int(x.w,0,99999), l:int(x.l,0,99999), level:int(x.lv,1,9999), peak:str(x.p,40),
+    hist:(Array.isArray(x.h)?x.h.slice(-SNAP_HIST):[]).map(e=>{
+      if(!Array.isArray(e)||typeof e[0]!=="number"||!(e[0]>=0&&e[0]<5000))return null;
+      const r=rank(e.slice(1));return r?{d:e[0],...r}:null;
+    }).filter(Boolean),
+    art:Array.isArray(x.c)?normArt({champ:x.c[0],skin:x.c[1]}):null,
+    honor:int(x.hn,0,5), skins:(Array.isArray(x.sk)?x.sk:[]).map(s=>str(s,60)).filter(Boolean).slice(0,8),
+    status:typeof x.st==="string"&&x.st!=="active"&&Object.prototype.hasOwnProperty.call(STATUS,x.st)?x.st:"",
+    fav:x.f===1,
+  }));
+  const at=Number(o.at);
+  return{title:str(o.t,60),at:Number.isFinite(at)&&at>0&&at<8.64e15?at:null,
+    colors:Array.isArray(o.c)?[hex(o.c[0]),hex(o.c[1])]:[null,null],accounts:accs};
+}
+// Where a link should point: the page itself when it is hosted somewhere, the
+// published app when it is a file on this computer nobody else can open.
+function snapBase(){return/^https?:$/.test(location.protocol)&&!/^(localhost|127\.|\[::1\])/.test(location.hostname)?location.origin+location.pathname:SNAP_HOME}
+const snapDay=ts=>{const d=new Date(ts);return d.getDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]+" "+d.getFullYear()};
+function snapCardHTML(a,i){
+  const r=a.rank, col=r?tierColor(r.tier):"#8a8f98";
+  const total=(a.w||0)+(a.l||0), wr=a.w!=null&&a.l!=null&&total?Math.round(a.w/total*100):null;
+  const label=r?tierLabel(r):"Unranked";
+  const st=a.status?STATUS[a.status]:null;
+  const spk=a.hist.length>1?sparkline(a.hist,col):"";
+  const days=a.hist.length>1?Math.max(1,Math.round(a.hist[0].d-a.hist[a.hist.length-1].d)):0;
+  const meta=[a.peak?`<span><i>Peak</i>${esc(a.peak)}</span>`:"",a.level?`<span><i>Level</i>${esc(a.level)}</span>`:"",
+    total?`<span><i>Games</i>${esc(total)}</span>`:""].filter(Boolean).join("");
+  const notes=(a.honor!=null?`<span class="ni-f"><span class="ni-pips" aria-hidden="true">${[1,2,3,4,5].map(n=>`<i${n<=a.honor?' class="on"':""}></i>`).join("")}</span>Honor <b>${a.honor}</b></span>`:"")
+    +a.skins.map(s=>`<span class="ni-f sk">${esc(s)}</span>`).join("");
+  return`<article class="hx${a.fav?" gold":""} sn-card${a.status==="banned"?" dead":""}" style="--tier:${col};--i:${i}"><div class="hx-in sn-c">
+    <div class="sn-art">${a.art?`<img src="${splashUrl(a.art.champ,a.art.skin)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">`:""}</div>
+    <div class="sn-head">
+      <span class="sn-crest">${r?crest(r.tier,"sn-crest-i"):`<b>${esc(a.name.charAt(0).toUpperCase())}</b>`}</span>
+      <div class="sn-id"><div class="sn-nm">${esc(a.name)}${a.fav?`<span class="sn-fav" title="Favorite">${icon("star")}</span>`:""}</div>
+        ${a.rid?`<div class="sn-rid">${esc(a.rid)}</div>`:""}</div>
+      ${a.region?`<span class="regiontag">${esc(a.region)}</span>`:""}
+    </div>
+    <div class="sn-rank"><b>${esc(label)}</b>${r&&!st?`<span>${esc(r.lp)} LP</span>`:""}${st?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.short||st.label)}</span>`:""}</div>
+    ${wr!=null?`<div class="sn-wl"><span>${esc(a.w)}W ${esc(a.l)}L</span><b class="${wr>=50?"wr-good":""}">${wr}% WR</b></div>
+      <div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
+    ${spk?`<div class="sn-spk" title="Last ${days} day${days===1?"":"s"}">${spk}</div>`:""}
+    ${meta?`<div class="sn-meta">${meta}</div>`:""}
+    ${notes?`<div class="ni-row sn-notes">${notes}</div>`:""}
+  </div></article>`;
+}
+function snapHTML(s){
+  const list=s.accounts.slice().sort((x,y)=>(y.rank?ladderLP(y.rank):-1)-(x.rank?ladderLP(x.rank):-1)||(y.level||0)-(x.level||0));
+  const ranked=list.filter(a=>a.rank), best=ranked[0];
+  const w=list.reduce((n,a)=>n+(a.w||0),0), l=list.reduce((n,a)=>n+(a.l||0),0);
+  const wr=w+l?Math.round(w/(w+l)*100):null;
+  const regions=[...new Set(list.map(a=>a.region).filter(Boolean))];
+  const tiers=TIER_ORDER.slice().reverse().map(t=>[t,ranked.filter(a=>a.rank.tier===t).length]).filter(x=>x[1]);
+  const nice=t=>t.charAt(0)+t.slice(1).toLowerCase();
+  const home=snapBase();
+  return`<header class="sn-top">
+      <a class="sn-brand" href="${esc(home)}"><span class="brand-mark" aria-hidden="true"></span><span class="hex-display">Smurf Tracker</span></a>
+      <span class="sn-pill">${icon("eye")}Read-only snapshot</span>
+    </header>
+    <section class="sn-hero">
+      ${s.at?`<div class="sn-eyebrow">Shared ${esc(snapDay(s.at))}</div>`:""}
+      <h1 class="sn-title">${esc(s.title||"League accounts")}</h1>
+      <div class="sn-sub">${list.length} account${list.length===1?"":"s"}${regions.length?" · "+regions.map(esc).join(", "):""}</div>
+      ${list.length?`<div class="hx gold sn-sum"><div class="hx-in">
+        <div class="cell sn-best">${best?crest(best.rank.tier,"sn-best-c"):""}<div><span class="k">Highest</span>
+          <b style="color:${best?tierColor(best.rank.tier):"var(--muted)"}">${best?esc(tierLabel(best.rank)):"Unranked"}</b>
+          <em>${best?esc(best.rank.lp+" LP · "+best.name):"No ranked account in this snapshot"}</em></div></div>
+        <div class="cell"><span class="k">Ranked</span><b>${ranked.length}</b><em>of ${list.length}</em></div>
+        <div class="cell"><span class="k">Games</span><b>${(w+l).toLocaleString("en-US")}</b><em>this season</em></div>
+        <div class="cell"><span class="k">Win rate</span><b class="${wr!=null&&wr>=50?"wr-good":""}">${wr!=null?wr+"%":"—"}</b><em>${w+l?w+"W "+l+"L":"no games"}</em></div>
+      </div></div>`:""}
+      ${tiers.length>1?`<div class="sn-dist" aria-hidden="true">${tiers.map(([t,n])=>`<i style="flex:${n};background:${tierColor(t)}"></i>`).join("")}</div>
+        <div class="sn-legend">${tiers.map(([t,n])=>`<span style="--c:${tierColor(t)}">${esc(nice(t))} ${n}</span>`).join("")}</div>`:""}
+    </section>
+    ${list.length?`<section class="sn-grid" aria-label="Accounts">${list.map(snapCardHTML).join("")}</section>`
+      :`<p class="sn-empty">This snapshot has no accounts in it.</p>`}
+    <footer class="sn-foot">
+      <p>A snapshot${s.at?" taken "+esc(snapDay(s.at)):""} — it doesn't update. Logins, emails and notes are never part of one.</p>
+      <a class="btn b-gold" href="${esc(home)}">Track your own accounts</a>
+    </footer>`;
+}
+function snapErrorHTML(){
+  return`<div class="sn-err hx gold"><div class="hx-in">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <h1>This snapshot link is broken</h1>
+    <p>Part of it may have been cut off when it was copied. Ask for the link again, and paste all of it.</p>
+    <a class="btn b-gold" href="${esc(snapBase())}">Open Smurf Tracker</a></div></div>`;
+}
+/* The viewer. It runs instead of the app, before anything has read this
+   browser's storage, and switches storage off for the rest of the page's life:
+   saveCfg and saveDB both check hasStorage, so nothing here can write over the
+   opener's own vault or settings — not a shortcut, not leaving the tab. */
+async function openSnapshot(code){
+  snapMode=true;hasStorage=false;
+  document.body.classList.add("snap-mode");
+  const root=$("snapView");root.classList.remove("hidden");
+  root.innerHTML=`<p class="sn-wait">Opening the snapshot…</p>`;
+  let s=null;
+  try{s=normSnap(await snapDecode(code))}catch(e){s=null}
+  if(!s){root.innerHTML=snapErrorHTML();document.title="Snapshot · Smurf Tracker";return}
+  if(s.colors[0])applyAccent(s.colors[0]);
+  if(s.colors[1])applyAccent2(s.colors[1]);
+  document.title=(s.title||"League accounts")+" · Smurf Tracker";
+  root.innerHTML=snapHTML(s);
+}
+window.addEventListener("error",e=>{const t=e.target;if(snapMode&&t&&t.closest&&t.closest(".sn-art"))t.remove()},true);
+// Pasting a snapshot link into a tab that already has the app open changes only
+// the part after #, which reloads nothing; going back out of one is the same.
+window.addEventListener("hashchange",()=>{if(snapMode||/^#s=/.test(location.hash))location.reload()});
+
+/* ---- the share window ---- */
+const share={which:"ranked",gen:0,url:""};
+function shareCounts(){return{ranked:snapAccounts("ranked").length,fav:snapAccounts("fav").length,sel:snapAccounts("sel").length,all:snapAccounts("all").length}}
+function openShare(){
+  if(previewMode){toast("Exit preview first — this is example data, not your accounts");return}
+  if(!accounts.some(a=>!a.archived)){toast("Add an account first — there is nothing to share yet");return}
+  closeAllPanels();
+  const n=shareCounts();
+  share.which=selected.size&&n.sel?"sel":n.ranked?"ranked":"all";
+  if(!$("shName").value)$("shName").value="";
+  $("shArt").checked=champArtOn();
+  renderShare();
+  $("shareModal").classList.remove("hidden");
+}
+function closeShare(){share.gen++;const m=$("shareModal");if(m)m.classList.add("hidden")}
+function shareOpts(){
+  return{which:share.which,title:$("shName").value||"My League accounts",ids:$("shIds").checked,art:$("shArt").checked,
+    hist:$("shHist").checked,notes:$("shNotes").checked};
+}
+function renderShare(){
+  const n=shareCounts();
+  const seg=[["ranked","Ranked"],["fav","Favorites"],["sel","Selected"],["all","All"]];
+  setHTML($("shWhich"),seg.map(([k,t])=>`<button type="button" role="radio" data-which="${k}" aria-checked="${share.which===k}" class="${share.which===k?"on":""}"${n[k]?"":" disabled"}>${t} <b>${n[k]}</b></button>`).join(""));
+  updateShareLink();
+}
+async function updateShareLink(){
+  const g=++share.gen, o=shareOpts(), count=snapAccounts(o.which).length;
+  $("shCopy").disabled=$("shOpen").disabled=!count;
+  if(!count){$("shSize").textContent="No accounts to share in this group.";share.url="";return}
+  const code=await snapEncode(buildSnapshot(o));
+  if(g!==share.gen)return;
+  share.url=snapBase()+"#s="+code;
+  share.local=location.href.split("#")[0]+"#s="+code;
+  const kb=Math.max(.1,Math.round(share.url.length/102.4)/10);
+  $("shSize").textContent=Math.min(count,SNAP_MAX_ACC)+" account"+(count===1?"":"s")+" · "+kb+" KB link"+(count>SNAP_MAX_ACC?" (the first "+SNAP_MAX_ACC+")":"");
+}
+$("shWhich").addEventListener("click",e=>{const b=e.target.closest("[data-which]");if(!b||b.disabled)return;share.which=b.dataset.which;renderShare()});
+for(const id of["shIds","shArt","shHist","shNotes"])$(id).addEventListener("change",updateShareLink);
+$("shName").addEventListener("input",updateShareLink);
+$("shCopy").addEventListener("click",async()=>{await updateShareLink();if(share.url)copyText(share.url,"Snapshot link")});
+$("shOpen").addEventListener("click",async()=>{await updateShareLink();if(share.local)window.open(share.local,"_blank","noopener")});
+$("shCancel").addEventListener("click",closeShare);
+$("bShare").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");openShare()});
 /* ---- streamer mode ----
    For streaming or sharing the screen: whatever would let a viewer find an
    account — its Riot ID, login, email, notes, or a name that is only its Riot
@@ -7792,6 +8190,7 @@ function closeAllPanels(){
   closePalette();
   closeCompare();
   closeArtPicker();
+  closeShare();
 }
 function closeCompare(){
   const had=compareIds.length>0;
@@ -8624,6 +9023,7 @@ $("fTogglePass").addEventListener("click",()=>{
   setPassShown(hidden);
 });
 document.addEventListener("keydown",e=>{
+  if(snapMode)return; // a snapshot has no app behind it to drive
   /* The lock screen is a vault nobody can read. Focus on Unlock is a BUTTON, so
      `typing` is false, and f / n / / used to fire underneath: unlock, and the
      Favorites filter is on (accounts look "missing") or the add form is open.
@@ -8734,7 +9134,7 @@ document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListene
 // Driven by an observer rather than by each of the eight places that add or
 // remove .hidden on these two. Wiring it into every call site works right up
 // until the ninth one is added and quietly doesn't lock the page.
-const MODALS=["settings","help","form","rankModal","palette","compareModal","bulkAdd","artPicker"];
+const MODALS=["settings","help","form","rankModal","palette","compareModal","bulkAdd","artPicker","shareModal"];
 let modalReturn=null;
 function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains("hidden"))}
 function syncModals(){
@@ -10076,7 +10476,7 @@ function relock(){
 // Another tab wrote the vault — lock (or reload plaintext) so this tab cannot
 // keep editing a stale in-memory copy and then overwrite the other tab's save.
 window.addEventListener("storage",e=>{
-  if(!e||e.key!==DB_KEY||e.storageArea!==localStorage)return;
+  if(snapMode||!e||e.key!==DB_KEY||e.storageArea!==localStorage)return;
   if(previewMode)return;
   if(vaultPassword&&!vaultLocked()){
     relock();
@@ -10098,7 +10498,7 @@ window.addEventListener("storage",e=>{
    (a sync token just generated, the backend URL) was written straight back out by
    the other the next time it saved anything at all. Adopted as it lands instead. */
 window.addEventListener("storage",e=>{
-  if(!e||e.key!==CFG_KEY||e.storageArea!==localStorage||!e.newValue)return;
+  if(snapMode||!e||e.key!==CFG_KEY||e.storageArea!==localStorage||!e.newValue)return;
   try{Object.assign(cfg,JSON.parse(e.newValue))}catch(err){return}
   syncLockTimer(); // the auto-lock minutes may be what changed
 });
@@ -10149,6 +10549,9 @@ function keepUnreadableVault(raw){
   $("banner").classList.add("show");
 }
 function boot(){
+  // A snapshot link is somebody else's page, opened before this browser's own
+  // vault or settings have been read — and they never are, in this tab.
+  {const m=/^#s=(.+)$/.exec(location.hash||"");if(m){openSnapshot(m[1]);return}}
   $("fRegion").innerHTML=Object.keys(REGIONS).map(r=>`<option value="${r}">${esc(r)} — ${esc(REGIONS[r].full)}</option>`).join("");
   $("sAutoEvery").innerHTML=AUTO_EVERY.map(o=>`<option value="${o.v}">${esc(o.label)}</option>`).join("");
   fillAutoLock($("sAutoLock"),0);

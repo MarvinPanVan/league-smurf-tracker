@@ -11,6 +11,7 @@ import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { webcrypto } from "node:crypto";
 import { JSDOM } from "jsdom";
+import { deflateRawSync } from "node:zlib";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const htmlPath = path.join(__dirname, "..", "index.html");
@@ -1417,6 +1418,144 @@ test("note fields come back from this app's own CSV export, and a third-party CS
 
 test("streamer mode blurs the note fields that could say who you are", () => {
   assert.match(html, /body\.streamer :is\(#fName[^)]*\.nf-sens\)\{filter:blur/, "the free-text fields in the form");
+});
+
+/* A snapshot is a page carried in a link: "#s=0.<base64url JSON>" plain, or
+   "#s=1.<base64url deflate-raw>" where the browser can compress. */
+const b64u = buf => Buffer.from(buf).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const snapCode = (obj, packed) => packed ? "1." + b64u(deflateRawSync(Buffer.from(JSON.stringify(obj)))) : "0." + b64u(Buffer.from(JSON.stringify(obj)));
+const viewSnap = (code, tweak) => bootApp(undefined, w => {
+  w.history.replaceState(null, "", "#s=" + code);
+  if (tweak) tweak(w);
+});
+const snapAcc = (id, extra) => Object.assign({ id, region: "EUW", gameName: "Secret" + id, tagLine: "TAG" + id, status: "active", tags: ["mid"], history: [],
+  login: "login-" + id, password: "pw-" + id, email: id + "@mail.gg", notes: "private note " + id, birthdate: "2000-01-02",
+  stats: { found: true, tier: "GOLD", division: "II", lp: 40, wins: 30, losses: 20, level: 120, updatedAt: Date.now() } }, extra || {});
+
+test("snapshot: the link carries ranks and what you ticked, never a login, password, email or note", () => {
+  const D = 864e5, now = Date.now();
+  const win = bootApp([
+    snapAcc("a", { label: "Main", fav: true, art: { champ: "Ahri", skin: 7 }, info: { honor: 4, skins: ["Arcade Ahri"], penalty: "chat ban", own: { Bought: "G2G" } },
+      history: [1, 2, 3].map(k => ({ t: now - (4 - k) * D, tier: "GOLD", division: "III", lp: 20 * k, w: k, l: 0 })) }),
+    snapAcc("b", { status: "banned", stats: { found: true, tier: "UNRANKED", level: 40, updatedAt: now } }),
+    snapAcc("c", { archived: true }),
+  ]);
+  const build = o => { win.__o = o; runScript(win, "window.__s = JSON.stringify(buildSnapshot(window.__o))"); return win.__s; };
+  const base = { which: "all", title: "  My   <b>accounts</b> ", ids: false, art: true, hist: true, notes: true };
+  const json = build(base), snap = JSON.parse(json);
+  for (const secret of ["login-", "pw-", "@mail.gg", "private note", "2000-01-02", "Secret", "TAG", "chat ban", "G2G", "mid"])
+    assert.ok(!json.includes(secret), "no " + secret + " in " + json);
+  assert.equal(snap.t, "My <b>accounts</b>", "the title as typed, spaces tidied (it is escaped where it is shown)");
+  assert.deepEqual(snap.a.map(a => a.n), ["Main", "Account 1"], "labels, or a stand-in — and no archived account");
+  assert.deepEqual(snap.a[0].k, [3, "II", 40]);
+  assert.deepEqual(snap.a[0].c, ["Ahri", 7], "the card's own art");
+  assert.equal(snap.a[0].hn, 4); assert.deepEqual(snap.a[0].sk, ["Arcade Ahri"]);
+  assert.equal(snap.a[0].h.length, 3);
+  assert.equal(snap.a[1].k, undefined, "unranked has no rank");
+  assert.equal(snap.a[1].st, "banned");
+  const bare = JSON.parse(build({ ...base, which: "ranked", art: false, hist: false, notes: false }));
+  assert.deepEqual(bare.a.map(a => a.n), ["Main"], "Ranked leaves the unranked one out");
+  assert.ok(!("c" in bare.a[0]) && !("h" in bare.a[0]) && !("hn" in bare.a[0]) && !("sk" in bare.a[0]), "unticked means left out");
+  const ids = JSON.parse(build({ ...base, ids: true }));
+  assert.equal(ids.a[0].i, "Secreta#TAGa", "Riot IDs only when ticked");
+  assert.equal(ids.a[1].n, "Secretb#TAGb", "and an unlabelled account goes by its Riot ID");
+});
+
+test("snapshot viewer: draws the page from the link, and opening it never reads or writes this browser's own vault", async () => {
+  const D = 864e5;
+  const obj = { v: 1, t: "Marvin's <img src=x onerror=alert(1)>", at: Date.UTC(2026, 9, 2), c: ["#ff0000", "red;}"], a: [
+    { n: "Main", r: "EUW", k: [4, "II", 61], w: 38, l: 29, lv: 214, p: "Platinum I · 10 LP", f: 1, c: ["Ahri", 7], hn: 3, sk: ["Arcade Ahri", "<b>x</b>"],
+      h: [[3, 3, "I", 80], [2, 4, "IV", 10], [0, 4, "II", 61]] },
+    { n: "Chall", r: "KR", k: [9, "I", 1200], w: 300, l: 250 },
+    { n: "Odd", r: "MARS", k: [99, "V", -5], c: ['x"><img', 1], st: "nonsense" },
+    { n: "Gone", st: "banned", k: [1, "I", 12] },
+    "not an account",
+  ] };
+  const vault = JSON.stringify([snapAcc("mine")]), cfg = JSON.stringify({ seenHelp: true, accent: "#123456" });
+  for (const packed of [false, true]) {
+    const win = viewSnap(snapCode(obj, packed), w => {
+      w.localStorage.setItem("smurf-tracker", vault); w.localStorage.setItem("smurf-tracker-cfg", cfg);
+      if (packed) w.DecompressionStream = globalThis.DecompressionStream;
+    });
+    const doc = win.document;
+    await until(() => doc.querySelector(".sn-card"), "the snapshot to render (" + (packed ? "compressed" : "plain") + ")");
+    assert.equal(doc.getElementById("appRoot").classList.contains("hidden"), true, "the app never starts");
+    assert.equal(doc.getElementById("lock").classList.contains("hidden"), true, "nor asks to unlock anything");
+    assert.equal(doc.querySelector(".sn-title").textContent, "Marvin's <img src=x onerror=alert(1)>", "the title is text");
+    assert.equal(doc.querySelectorAll("#snapView img:not([src^='https://ddragon'])").length, 0, "no image a link could smuggle in");
+    assert.match(doc.title, /^Marvin's .* · Smurf Tracker$/);
+    const cards = [...doc.querySelectorAll(".sn-card")];
+    assert.deepEqual(cards.map(c => c.querySelector(".sn-nm").textContent), ["Chall", "Main", "Gone", "Odd"], "best first; the one that wasn't an account is dropped");
+    assert.equal(cards[1].querySelector(".sn-rank b").textContent, "Platinum II");
+    assert.equal(cards[0].querySelector(".sn-rank b").textContent, "Challenger", "no division above Master, whatever the link says");
+    assert.equal(cards[3].querySelector(".sn-rank b").textContent, "Unranked", "a tier that does not exist is no rank");
+    assert.equal(cards[3].querySelector(".sn-art img"), null, "and art that is not an id is no art");
+    assert.equal(cards[3].querySelector(".regiontag"), null, "nor a region that is not one");
+    assert.match(cards[1].querySelector(".sn-art img").getAttribute("src"), /\/splash\/Ahri_7\.jpg$/);
+    assert.ok(cards[1].querySelector(".sn-spk svg"), "the climb as a line");
+    assert.equal(cards[1].querySelector(".sn-notes").textContent.includes("<b>x</b>"), true, "skin names are text");
+    assert.ok(cards[2].classList.contains("dead"), "banned looks it");
+    assert.equal(doc.querySelector(".sn-best b").textContent, "Challenger");
+    assert.equal(doc.documentElement.style.getPropertyValue("--gold"), "#ff0000", "the sharer's colour");
+    assert.equal(doc.documentElement.style.getPropertyValue("--teal"), "", "and not one that isn't a colour");
+    // shortcuts, leaving the tab: none of it may reach storage
+    for (const key of ["n", "h", "f", "/"]) doc.dispatchEvent(new win.KeyboardEvent("keydown", { key, bubbles: true }));
+    doc.dispatchEvent(new win.Event("visibilitychange")); win.dispatchEvent(new win.Event("pagehide"));
+    assert.equal(doc.getElementById("form").classList.contains("hidden"), true, "n opens nothing");
+    await tick(50);
+    assert.equal(win.localStorage.getItem("smurf-tracker"), vault, "the vault is untouched");
+    assert.equal(win.localStorage.getItem("smurf-tracker-cfg"), cfg, "and so are the settings");
+  }
+});
+
+test("snapshot viewer: a cut-off or forged link is a broken-link page, and the sizes are capped", async () => {
+  for (const code of ["1.AAAA", "0.%%%", "0." + b64u(Buffer.from("{nope")), snapCode({ v: 2, a: [] }), "2." + b64u(Buffer.from("{}")), "0." + "A".repeat(20000)]) {
+    const win = viewSnap(code, w => { w.DecompressionStream = globalThis.DecompressionStream; });
+    await until(() => win.document.querySelector(".sn-err"), "the broken-link page for " + code.slice(0, 12));
+    assert.match(win.document.querySelector(".sn-err").textContent, /broken/);
+  }
+  // a small link that unpacks into something enormous stops at the cap
+  const bomb = "1." + b64u(deflateRawSync(Buffer.from('{"v":1,"a":[],"t":"' + "x".repeat(5e6) + '"}')));
+  assert.ok(bomb.length < 16000, "the bomb fits in a link");
+  const win = viewSnap(bomb, w => { w.DecompressionStream = globalThis.DecompressionStream; });
+  await until(() => win.document.querySelector(".sn-err"), "the cap to refuse it");
+  const many = viewSnap(snapCode({ v: 1, t: "x", a: Array.from({ length: 90 }, (_, i) => ({ n: "A" + i })) }));
+  await until(() => many.document.querySelector(".sn-card"), "the big one");
+  assert.equal(many.document.querySelectorAll(".sn-card").length, 60, "sixty accounts at most");
+});
+
+test("share window: from the ⋯ menu, counts per group, and Copy link puts this page's link with the snapshot on the clipboard", async () => {
+  let copied = null;
+  const win = bootApp([snapAcc("a", { label: "Main", fav: true }), snapAcc("b", { label: "Alt", stats: null })], w => {
+    Object.defineProperty(w.navigator, "clipboard", { value: { writeText: async t => { copied = t; } }, configurable: true });
+  });
+  const doc = win.document, $ = id => doc.getElementById(id);
+  $("bMore").click(); $("bShare").click();
+  assert.equal($("shareModal").classList.contains("hidden"), false);
+  const seg = () => [...doc.querySelectorAll("#shWhich [data-which]")].map(b => b.textContent.replace(/\s+/g, " ").trim() + (b.disabled ? " (off)" : "") + (b.classList.contains("on") ? " *" : ""));
+  assert.deepEqual(seg(), ["Ranked 1 *", "Favorites 1", "Selected 0 (off)", "All 2"]);
+  doc.querySelector('#shWhich [data-which="all"]').click();
+  $("shName").value = "Squad"; $("shName").dispatchEvent(new win.Event("input"));
+  await until(() => /2 accounts/.test($("shSize").textContent), "the size line");
+  $("shCopy").click();
+  await until(() => copied, "the clipboard");
+  assert.match(copied, /^https:\/\/example\.com\/index\.html#s=[01]\.[A-Za-z0-9_-]+$/);
+  const view = viewSnap(copied.split("#s=")[1], w => { w.DecompressionStream = globalThis.DecompressionStream; });
+  await until(() => view.document.querySelector(".sn-card"), "the link to open");
+  assert.equal(view.document.querySelector(".sn-title").textContent, "Squad");
+  assert.deepEqual([...view.document.querySelectorAll(".sn-nm")].map(n => n.textContent), ["Main", "Alt"]);
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal($("shareModal").classList.contains("hidden"), true, "Escape closes it");
+});
+
+test("share window: not for example data, and not for an empty vault", () => {
+  const win = bootApp();
+  win.document.getElementById("bShare").click();
+  assert.equal(win.document.getElementById("shareModal").classList.contains("hidden"), true);
+  win.document.getElementById("bDemo").click();
+  win.document.getElementById("bShare").click();
+  assert.equal(win.document.getElementById("shareModal").classList.contains("hidden"), true, "preview data is not yours to share");
+  assert.match(win.document.getElementById("toast").textContent, /Exit preview/);
 });
 
 test("On each card: any part can wait under Details, Compact is chart and stats, and 2.1's switch carries over", () => {
