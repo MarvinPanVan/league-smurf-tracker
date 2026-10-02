@@ -2377,9 +2377,9 @@
       <dt>Layouts</dt>
       <dd>Cards for browsing, the list for working through the vault a row at a time, and the wall for seeing all sixty at once — click any tile to land back on that account's card.</dd>
       <dt>Cards</dt>
-      <dd>The bar across a card's bottom edge opens <b>Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot.</dd>
+      <dd>The bar across a card's bottom edge opens <b>Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot, or its fields (honor, skins, Blue Essence…) to edit them — <b>Fields…</b> in the account form picks which ones, and adds your own · <b>Card art…</b> in the ⋯ menu sets the champion and skin behind a card.</dd>
       <dt>Search</dt>
-      <dd>Matches names, tags, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code> <code>champ:yasuo</code> (played this season, or in its top mastery) <code>role:mid</code> (from the last five ranked games), <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
+      <dd>Matches names, tags, notes and skins, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code> <code>champ:yasuo</code> (played this season, or in its top mastery) <code>role:mid</code> (from the last five ranked games), <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
       <dt>Quick find</dt>
       <dd><kbd>Ctrl</kbd><kbd>K</kbd> (or <kbd>⌘</kbd><kbd>K</kbd>) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.</dd>
       <dt>Keys</dt>
@@ -2389,7 +2389,7 @@
       <dt>Extra privacy</dt>
       <dd>Set a master password in <b>Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.</dd>
       <dt>More</dt>
-      <dd>The <b>⋯</b> menu has bulk add (paste Name#TAGs, an op.gg multi-search link or the lobby chat), CSV import, <b>New season</b> (every rank into Past seasons at once, with Undo) and streamer mode · archive an account to hide it without deleting (toggle <b>Archived</b> in the toolbar) · <b>Settings → Appearance</b> has themes, effects, text size and what each card shows.</dd>
+      <dd>The <b>⋯</b> menu has bulk add (paste Name#TAGs, an op.gg multi-search link or the lobby chat), CSV import, <b>New season</b> (every rank into Past seasons at once, with Undo), streamer mode and <b>Share a snapshot</b> — a read-only page of your ranks in one link, with no logins, emails or notes in it · archive an account to hide it without deleting (toggle <b>Archived</b> in the toolbar) · <b>Settings → Appearance</b> has themes, effects, text size and what each card shows.</dd>
       <dt>Using this app</dt>
       <dd class="terms">free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.</dd>
     </dl></div>
@@ -3080,8 +3080,14 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.2.1";
+const APP_VERSION="2.3.0";
 const APP_CHANGELOG=[
+  {v:"2.3.0",items:[
+    "Share a snapshot: a read-only page of your ranks in one link (⋯ menu)",
+    "Card art… picks any champion and skin for a card; the art is subtler",
+    "Notes get fields: honor, skins, Blue Essence, 2-step, penalties, your own",
+    "Snapshots never carry logins, emails or notes, and nothing is uploaded",
+  ]},
   {v:"2.2.1",items:[
     "Theme swatches and the header tray draw cleanly on every theme",
     "Leaving Settings by Escape or ✕ now undoes every unsaved preview",
