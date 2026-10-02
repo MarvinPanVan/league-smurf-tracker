@@ -1184,6 +1184,112 @@ test("champion art: the most-played champion's splash, by Data Dragon id, lazy, 
   assert.equal(doc.querySelectorAll(".c-art").length, 0, "and stays off: nothing is requested");
 });
 
+/* Data Dragon stood in for: the version list, the champion list (with one id
+   that is not an id), and skin lists — one champion fails once, so Try again has
+   something to do. Every request is recorded so the test can say where they went. */
+function dataDragon(w, calls) {
+  let wukongFails = 1;
+  const json = data => ({ ok: true, status: 200, json: async () => data });
+  w.fetch = async url => {
+    url = String(url); calls.push(url);
+    if (url.endsWith("/api/versions.json")) return json(["lolpatch_7.20", "15.19.1", "15.18.1"]);
+    if (url.endsWith("/cdn/15.19.1/data/en_US/champion.json")) return json({ data: {
+      Ahri: { id: "Ahri", name: "Ahri" }, Kaisa: { id: "Kaisa", name: "Kai'Sa" }, MonkeyKing: { id: "MonkeyKing", name: "Wukong" },
+      Evil: { id: 'x"><img src=x>', name: "Evil" } } });
+    if (url.endsWith("/champion/Kaisa.json")) return json({ data: { Kaisa: { skins: [
+      { num: 0, name: "default" }, { num: 1, name: "Bullet Angel Kai'Sa" }, { num: 14, name: "K/DA ALL OUT Kai'Sa" }] } } });
+    if (url.endsWith("/champion/Ahri.json")) return json({ data: { Ahri: { skins: [
+      { num: 0, name: "default" }, { num: 7, name: "Arcade <Ahri>" }, { num: "8", name: "not a number" }] } } });
+    if (url.endsWith("/champion/MonkeyKing.json")) {
+      if (wukongFails-- > 0) return { ok: false, status: 503, json: async () => ({}) };
+      return json({ data: { MonkeyKing: { skins: [{ num: 0, name: "default" }, { num: 1, name: "Volcanic Wukong" }] } } });
+    }
+    throw new Error("unexpected fetch " + url);
+  };
+}
+
+test("card art: any champion and any skin from the ⋯ menu, kept on the account, and back to most-played", async () => {
+  const calls = [];
+  const acc = { id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: Date.now(),
+      champs: [{ name: "Kai'Sa", games: 30, wr: 50 }] } };
+  const win = bootApp([acc], w => dataDragon(w, calls));
+  const doc = win.document, $ = id => doc.getElementById(id);
+  const art = () => doc.querySelector('.card[data-id="a"] .c-art').getAttribute("src");
+  const skins = () => [...doc.querySelectorAll("#apGrid [data-skin]")];
+  const hero = () => $("apHero").querySelector("img").getAttribute("src");
+  cardMenu(win, "a").querySelector('[data-act="art"]').click();
+  assert.equal($("artPicker").classList.contains("hidden"), false, "the picker opens");
+  assert.match(hero(), /\/splash\/Kaisa_0\.jpg$/, "starting from what the card shows now: the most-played champion");
+  await until(() => skins().length === 3, "Kai'Sa's skins");
+  assert.match($("apHero").textContent, /On the card now · most-played/);
+  assert.match(skins()[0].querySelector("img").getAttribute("src"), /\/loading\/Kaisa_0\.jpg$/, "portraits from the loading screen art");
+  assert.ok(skins()[0].querySelector(".cur"), "the skin the card shows is marked");
+  assert.equal($("apAuto").classList.contains("hidden"), true, "nothing of your own to go back from yet");
+  skins()[2].click();
+  assert.match(hero(), /\/splash\/Kaisa_14\.jpg$/, "the splash follows the pick");
+  assert.match($("apHero").textContent, /K\/DA ALL OUT Kai'Sa/);
+  assert.equal(skins()[2].getAttribute("aria-pressed"), "true");
+
+  $("apBack").click();
+  const champs = () => [...doc.querySelectorAll("#apGrid [data-champ]")];
+  await until(() => champs().length === 3, "the champion list");
+  assert.deepEqual(champs().map(b => b.textContent), ["Ahri", "Kai'Sa", "Wukong"], "by name, and an id that is not an id is left out");
+  assert.match(champs()[0].querySelector("img").getAttribute("src"), /\/cdn\/15\.19\.1\/img\/champion\/Ahri\.png$/, "icons from the newest real version");
+  const search = $("apSearch");
+  search.value = "monkey"; search.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.deepEqual(champs().map(b => b.textContent), ["Wukong"], "found by id as well as by name");
+  search.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  await until(() => doc.querySelector('#apGrid [data-ap="retry"]'), "the failed skin list");
+  assert.match($("apGrid").textContent, /Couldn't reach Riot's Data Dragon/);
+  doc.querySelector('#apGrid [data-ap="retry"]').click();
+  await until(() => skins().length === 2, "Wukong's skins on the second try");
+
+  $("apBack").click();
+  search.value = "ahri"; search.dispatchEvent(new win.Event("input", { bubbles: true }));
+  champs()[0].click();
+  await until(() => skins().length === 2, "Ahri's skins, without the one whose number is a string");
+  assert.equal(skins()[1].querySelector(".nm").innerHTML, "Arcade &lt;Ahri&gt;", "names from Data Dragon are text");
+  skins()[1].click();
+  $("apUse").click();
+  assert.equal($("artPicker").classList.contains("hidden"), true, "Use this art closes the picker");
+  assert.match(art(), /\/splash\/Ahri_7\.jpg$/, "and the card shows it");
+  await until(() => JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].art, "saved");
+  assert.equal(JSON.stringify(JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].art),
+    JSON.stringify({ champ: "Ahri", skin: 7, name: "Arcade <Ahri>" }));
+
+  cardMenu(win, "a").querySelector('[data-act="art"]').click();
+  assert.match(hero(), /\/splash\/Ahri_7\.jpg$/, "reopened on your own pick");
+  await until(() => skins().length === 2, "skins again");
+  assert.equal(skins()[1].getAttribute("aria-pressed"), "true");
+  assert.equal($("apUse").disabled, true, "nothing to use: it is already on the card");
+  assert.equal($("apAuto").classList.contains("hidden"), false);
+  $("apAuto").click();
+  assert.match(art(), /\/splash\/Kaisa_0\.jpg$/, "back to the most-played champion");
+  await until(() => !("art" in JSON.parse(win.localStorage.getItem("smurf-tracker"))[0]), "the pick is gone from storage");
+  assert.ok(calls.every(u => u.startsWith("https://ddragon.leagueoflegends.com/")), "only ever Data Dragon: " + calls.join(" "));
+  assert.equal(calls.filter(u => u.endsWith("versions.json")).length, 1, "the version is asked once a session");
+});
+
+test("card art: Escape closes the picker, a stored pick is checked like any other field, and works without champion data", async () => {
+  const acc = (id, art) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [], art });
+  const win = bootApp([acc("ok", { champ: "Jinx", skin: 4, name: "<b>Mafia</b>" }), acc("bad1", { champ: 'x"><img src=x>', skin: 1 }),
+    acc("bad2", { champ: "Ahri", skin: -1 }), acc("bad3", { champ: "Ahri", skin: 2.5 }), acc("bad4", "Ahri")]);
+  const doc = win.document;
+  const art = id => doc.querySelector(`.card[data-id="${id}"] .c-art`);
+  assert.match(art("ok").getAttribute("src"), /\/splash\/Jinx_4\.jpg$/, "no games needed: your pick is the picture");
+  for (const id of ["bad1", "bad2", "bad3", "bad4"]) assert.equal(art(id), null, id + " shows nothing");
+  runScript(win, "saveDB()");
+  await until(() => !JSON.parse(win.localStorage.getItem("smurf-tracker")).some(a => a.id !== "ok" && "art" in a), "bad picks dropped on save");
+  const stored = JSON.parse(win.localStorage.getItem("smurf-tracker"));
+  assert.equal(JSON.stringify(stored.find(a => a.id === "ok").art), JSON.stringify({ champ: "Jinx", skin: 4, name: "<b>Mafia</b>" }), "a good one kept as it was");
+  cardMenu(win, "ok").querySelector('[data-act="art"]').click();
+  assert.equal(doc.getElementById("artPicker").classList.contains("hidden"), false);
+  assert.equal(doc.querySelector("#apHero b").innerHTML, "&lt;b&gt;Mafia&lt;/b&gt;", "the stored name is text");
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(doc.getElementById("artPicker").classList.contains("hidden"), true, "Escape closes it like every other window");
+});
+
 test("On each card: any part can wait under Details, Compact is chart and stats, and 2.1's switch carries over", () => {
   const now = Date.now(), D = 86400000;
   const acc = { id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: ["mid"], notes: "honor 3",
@@ -6634,7 +6740,7 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
     ["Edit", "Look up", "Mark", "Vault", "Remove"],
     "named groups — a hairline never says what either side of it is");
   const items = [...m.querySelectorAll("button,.cm-link")];
-  assert.equal(items.length, 11, "every action still reachable");
+  assert.equal(items.length, 12, "every action still reachable");
   for (const b of items) assert.ok(b.querySelector("svg.ico"), `"${b.textContent.trim()}" carries a mark`);
   // The account name used to sit at the top as the one row that was not an item,
   // which is exactly the row that got clipped once the list had to scroll.
@@ -6993,9 +7099,9 @@ test("the clickable dashboard tiles share a baseline with the plain ones", () =>
 /* The desktop rank window was fixed to always name the account it opened for. The
    phone hid that line with every other modal caption — which put it straight back
    into the state the bug had it in: a rank form with no name on it. */
-test("on a phone the rank window still says whose rank it is", () => {
+test("on a phone the rank window and the card art picker still say whose account it is", () => {
   const hide = html.indexOf(".mdl-h .s{display:none}");
-  const show = html.indexOf("#rankModal .mdl-h .s{display:block");
+  const show = html.indexOf(":is(#rankModal,#artPicker) .mdl-h .s{display:block");
   assert.ok(hide > -1, "modal captions are still hidden on narrow screens");
   assert.ok(show > hide, "and the rank window's own rule comes after it, so it wins");
 });

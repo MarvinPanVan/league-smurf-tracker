@@ -1788,8 +1788,8 @@
        account you are editing. Hiding it put the phone back in the state the
        desktop had before it was fixed — a rank form with no name on it. It goes
        under the title instead of beside it. */
-    #rankModal .mdl-h{flex-wrap:wrap}
-    #rankModal .mdl-h .s{display:block;width:100%;margin:3px 34px 0 0}
+    :is(#rankModal,#artPicker) .mdl-h{flex-wrap:wrap}
+    :is(#rankModal,#artPicker) .mdl-h .s{display:block;width:100%;margin:3px 34px 0 0}
     .grp,.mdl-h,.mdl-f{padding-left:16px;padding-right:16px}
   }
 
@@ -1889,6 +1889,82 @@
   .cmp-row>:first-child{text-align:right}
   .cmp-row .k{text-align:center;font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
   .cmp-row .win{color:var(--gold-txt);font-weight:600}
+  /* ---- card art picker ----
+     The League client's own skin selector is the shape people already know: the
+     splash large up top, the choices as tall portraits underneath. The champion
+     list before it is the client's square icons, searchable, since nobody scrolls
+     a hundred and seventy of anything. */
+  #artPicker .mdl{max-width:780px}
+  .ap-top{flex-shrink:0;border-bottom:1px solid var(--line)}
+  .ap-hero{position:relative;height:clamp(150px,30vw,236px);overflow:hidden;background:
+    radial-gradient(120% 90% at 70% 0%,color-mix(in srgb,var(--gold) 14%,transparent),transparent 60%),
+    linear-gradient(180deg,var(--panel2),var(--bg))}
+  .ap-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;
+    opacity:0;transform:scale(1.025);transition:opacity .35s ease,transform .6s cubic-bezier(.22,1,.36,1)}
+  .ap-hero img.ld{opacity:1;transform:none}
+  .ap-hero::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg,transparent 38%,#010a13cc 82%,var(--bg)),linear-gradient(90deg,#010a1399,transparent 55%)}
+  .ap-cap{position:absolute;left:22px;right:22px;bottom:15px;z-index:1;min-width:0}
+  .ap-cap b{display:block;font-size:calc(22px*var(--ts));font-weight:600;letter-spacing:-.01em;color:#fff;
+    text-shadow:0 2px 12px #000c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ap-cap span{display:block;margin-top:3px;font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--gold-txt)}
+  .ap-badge{position:absolute;top:13px;left:16px;z-index:1;display:inline-flex;align-items:center;gap:6px;
+    padding:4px 9px;border-radius:var(--r-xs);font-size:calc(11px*var(--ts));font-weight:600;color:var(--text);
+    background:#010a13b3;border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .ap-badge .ico{width:12px;height:12px;color:var(--gold-txt)}
+  .ap-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--faint);
+    font-size:calc(13px*var(--ts))}
+  .ap-empty .ico{display:block;width:30px;height:30px;margin:0 auto 8px;color:var(--gold-dim)}
+  .ap-off{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 22px;font-size:calc(12px*var(--ts));
+    color:var(--muted);background:color-mix(in srgb,var(--gold) 8%,transparent);border-top:1px solid var(--line)}
+  .ap-off button{padding:5px 10px;font-size:calc(12px*var(--ts))}
+  .ap-bar{display:flex;align-items:center;gap:10px;padding:12px 22px}
+  .ap-bar input{flex:1;min-width:0}
+  .ap-bar .ap-t{font-size:calc(14px*var(--ts));font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ap-bar .ap-n{margin-left:auto;font-size:calc(12px*var(--ts));color:var(--faint);white-space:nowrap}
+  .ap-back{padding:6px 11px 6px 8px}
+  .ap-back .ico{width:15px;height:15px;transform:rotate(90deg)}
+  .ap-grid{display:grid;gap:10px;padding:16px 22px 20px;align-content:start}
+  .ap-grid.ch{grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:12px 8px}
+  .ap-grid.sk{grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:12px}
+  .ap-ch,.ap-sk{all:unset;box-sizing:border-box;cursor:pointer;position:relative;min-width:0}
+  .ap-ch{display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 2px;border-radius:var(--r-sm)}
+  .ap-ch i{display:block;width:54px;height:54px;border-radius:var(--r-sm);overflow:hidden;
+    background:var(--panel3);box-shadow:0 0 0 1px var(--line2);transition:box-shadow .16s ease,transform .16s ease}
+  .ap-ch img{display:block;width:100%;height:100%;transform:scale(1.1)}
+  .ap-ch span{max-width:100%;font-size:calc(11px*var(--ts));color:var(--muted);text-align:center;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ap-ch:hover i{box-shadow:0 0 0 1px var(--gold-mid);transform:translateY(-2px)}
+  .ap-ch:hover span{color:var(--text)}
+  .ap-ch.on i{box-shadow:0 0 0 2px var(--gold),0 0 16px -4px var(--gold)}
+  .ap-ch.on span{color:var(--gold-txt);font-weight:600}
+  .ap-sk{display:block;aspect-ratio:3/4;border-radius:var(--r-md);overflow:hidden;background:var(--panel3);
+    box-shadow:0 0 0 1px var(--line2),var(--sh-2);transition:box-shadow .18s ease,transform .18s cubic-bezier(.22,1,.36,1)}
+  .ap-sk img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 12%}
+  .ap-sk::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,#010a13e6)}
+  .ap-sk .nm{position:absolute;left:9px;right:9px;bottom:8px;z-index:1;font-size:calc(12px*var(--ts));font-weight:600;
+    line-height:1.25;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .ap-sk .cur{position:absolute;top:7px;left:7px;z-index:1;padding:2px 6px;border-radius:var(--r-xs);
+    font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.04em;color:var(--teal-ink);background:var(--teal)}
+  .ap-sk:hover{transform:translateY(-3px);box-shadow:0 0 0 1px var(--gold-mid),var(--sh-3)}
+  .ap-sk.on{box-shadow:0 0 0 2px var(--gold),0 0 22px -6px var(--gold),var(--sh-3)}
+  .ap-sk.on::before{content:"";position:absolute;top:7px;right:7px;z-index:2;width:20px;height:20px;border-radius:50%;
+    background:var(--gold) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23010a13' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/12px no-repeat}
+  .ap-sk.dead img{display:none}
+  .ap-ch:focus-visible,.ap-sk:focus-visible{outline:2px solid var(--teal-txt);outline-offset:3px}
+  .ap-sk.skel,.ap-ch.skel i{cursor:default;background:linear-gradient(100deg,var(--panel2) 30%,var(--panel3) 50%,var(--panel2) 70%) 0 0/300% 100%;
+    animation:apShim 1.3s linear infinite}
+  .ap-ch.skel span{width:70%;height:9px;border-radius:2px;background:var(--panel2)}
+  @keyframes apShim{to{background-position:-150% 0}}
+  .ap-msg{grid-column:1/-1;padding:26px 6px;text-align:center;color:var(--muted);font-size:calc(13px*var(--ts));line-height:1.55}
+  .ap-msg button{margin-top:10px}
+  @media (max-width:620px){
+    .ap-cap,.ap-bar,.ap-off{padding-left:16px;padding-right:16px}.ap-cap{left:16px;right:16px}
+    .ap-grid{padding:14px 16px 18px}
+    .ap-grid.sk{grid-template-columns:repeat(auto-fill,minmax(102px,1fr));gap:10px}
+  }
   .toast-log{max-width:420px;font-size:calc(12px*var(--ts));line-height:1.45}
 
   .panel-close{transition:color .16s,background .16s,transform .2s cubic-bezier(.22,1,.36,1)}
@@ -2660,6 +2736,32 @@
     </div></div>
   </div>
 
+  <div id="artPicker" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="apTitle">
+    <div class="mdl hx teal"><div class="hx-in mdl-in">
+      <div class="mdl-h"><span class="t" id="apTitle">Card art</span><span class="s" id="apSub"></span>
+        <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+      </div>
+      <div class="ap-top">
+        <div class="ap-hero" id="apHero"></div>
+        <div class="ap-off hidden" id="apOff"><span>Champion art is turned off, so cards show none.</span>
+          <button type="button" id="apTurnOn">Turn it on</button></div>
+        <div class="ap-bar" id="apBarChamps">
+          <input type="search" id="apSearch" placeholder="Search champions" aria-label="Search champions" autocomplete="off" spellcheck="false" data-autofocus>
+        </div>
+        <div class="ap-bar hidden" id="apBarSkins">
+          <button type="button" class="ap-back" id="apBack"></button>
+          <span class="ap-t" id="apChampName"></span><span class="ap-n" id="apCount"></span>
+        </div>
+      </div>
+      <div class="mdl-b"><div class="ap-grid" id="apGrid" role="group" aria-label="Choices"></div></div>
+      <div class="mdl-f">
+        <button type="button" id="apUse" class="b-gold">Use this art</button>
+        <button type="button" id="apCancel">Cancel</button>
+        <button type="button" id="apAuto" class="sp">Back to most-played</button>
+      </div>
+    </div></div>
+  </div>
+
   <div id="toast" role="status" aria-live="polite"></div>
 </div>
 
@@ -3353,6 +3455,7 @@ const ICON={
   external:'<path d="M14 3h7v7"/><line x1="21" y1="3" x2="11.5" y2="12.5"/><path d="M19 14.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4.5"/>',
   tag:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2.5 12.5V2.5h10l8.1 8.1a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.3"/>',
   check:'<polyline points="20 6 9 17 4 12"/>',
+  image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16.5l-5-5L5.5 20"/>',
   compare:'<rect x="3" y="5" width="7" height="14" rx="1.5"/><rect x="14" y="5" width="7" height="14" rx="1.5"/>',
   archive:'<rect x="3" y="4" width="18" height="4.5" rx="1"/><path d="M5 8.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><line x1="10" y1="13" x2="14" y2="13"/>',
   reset:'<path d="M3.5 12a8.5 8.5 0 1 0 2.9-6.4"/><polyline points="3 4 3 9.5 8.5 9.5"/>',
@@ -3384,6 +3487,7 @@ function sanitizeAccount(a){
   if(a.mastery!=null){a.mastery=normMastery(a.mastery);if(!a.mastery)delete a.mastery}
   if(a.masteryAt!=null&&!(Number(a.masteryAt)>0))delete a.masteryAt;
   if(a.recent!=null){a.recent=normRecent(a.recent);if(!a.recent)delete a.recent}
+  if(a.art!=null){a.art=normArt(a.art);if(!a.art)delete a.art}
   if(a.stats&&a.stats.seasons&&typeof a.stats.seasons==="object"){
     if(!Array.isArray(a.stats.seasons.solo))a.stats.seasons.solo=[];
     if(!Array.isArray(a.stats.seasons.flex))a.stats.seasons.flex=[];
@@ -6284,6 +6388,7 @@ function formHTML(a){
    and punctuation; the ones that do not are listed. An <img loading="lazy"> and
    not a CSS background, so a card far down the page fetches nothing until it is
    near the screen, and one that fails to load is simply removed. */
+const DD="https://ddragon.leagueoflegends.com", DD_ID=/^[A-Za-z][A-Za-z0-9]{1,29}$/;
 const CHAMP_ID_FIX={"wukong":"MonkeyKing","nunu & willump":"Nunu","renata glasc":"Renata","kai'sa":"Kaisa","cho'gath":"Chogath",
   "vel'koz":"Velkoz","kha'zix":"Khazix","bel'veth":"Belveth","leblanc":"Leblanc","fiddlesticks":"Fiddlesticks"};
 function champKey(name){
@@ -6291,16 +6396,274 @@ function champKey(name){
   if(!n||!/^[A-Za-z0-9 '.&-]+$/.test(n))return null; // what champion names are made of, and nothing else
   const fixed=CHAMP_ID_FIX[n.toLowerCase()];if(fixed)return fixed;
   const k=n.split(/[^A-Za-z0-9]+/).filter(Boolean).map(w=>w[0].toUpperCase()+w.slice(1)).join("");
-  return /^[A-Za-z][A-Za-z0-9]{1,29}$/.test(k)?k:null;
+  return DD_ID.test(k)?k:null;
 }
 let pendingChampArt=null;
 function champArtOn(){return pendingChampArt===null?cfg.champArt!==false:pendingChampArt}
 function mainChamp(a){const c=normChamps(a.stats&&a.stats.champs);return c&&c.length?c[0].name:null}
+/* A pick of your own outranks the most-played champion: {champ, skin, name}.
+   The champion is a Data Dragon id of exactly the shape champKey makes and the
+   skin a plain number, because both go straight into an image URL; the name is
+   only ever shown, through esc(). */
+function normArt(v){
+  if(!v||typeof v!=="object"||Array.isArray(v))return null;
+  const skin=Number(v.skin);
+  if(typeof v.champ!=="string"||!DD_ID.test(v.champ)||!Number.isInteger(skin)||skin<0||skin>9999)return null;
+  const out={champ:v.champ,skin};
+  const n=typeof v.name==="string"?v.name.replace(/\s+/g," ").trim().slice(0,80):"";
+  if(n)out.name=n;
+  return out;
+}
+function artOf(a){
+  const own=normArt(a&&a.art);if(own)return own;
+  const k=champKey(mainChamp(a));
+  return k?{champ:k,skin:0}:null;
+}
+const splashUrl=(c,n)=>DD+"/cdn/img/champion/splash/"+c+"_"+n+".jpg";
 function champArtHTML(a){
   if(!champArtOn())return"";
-  const k=champKey(mainChamp(a));if(!k)return"";
-  return`<img class="c-art" src="https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${k}_0.jpg" alt="" aria-hidden="true" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
+  const art=artOf(a);if(!art)return"";
+  return`<img class="c-art" src="${splashUrl(art.champ,art.skin)}" alt="" aria-hidden="true" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
 }
+/* ---- Data Dragon: the champion list and each champion's skins ----
+   Riot's public static data, the same place the splash art comes from. Fetched
+   only when the picker opens, kept for the session, and a failure is forgotten
+   rather than cached so Try again means it. Everything read out of it is checked
+   for shape before it reaches a URL or the page. */
+const dd={ver:null,champs:null,skins:new Map()};
+function ddJSON(url){
+  return fetch(url,{credentials:"omit",referrerPolicy:"no-referrer"})
+    .then(r=>{if(!r.ok)throw new Error("Data Dragon answered "+r.status);return r.json()});
+}
+function ddVersion(){
+  return dd.ver||(dd.ver=ddJSON(DD+"/api/versions.json").then(v=>{
+    const x=Array.isArray(v)?v.find(s=>typeof s==="string"&&/^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(s)):null;
+    if(!x)throw new Error("Data Dragon sent no version");
+    return x;
+  }).catch(e=>{dd.ver=null;throw e}));
+}
+function ddChampions(){
+  return dd.champs||(dd.champs=ddVersion().then(ver=>ddJSON(DD+"/cdn/"+ver+"/data/en_US/champion.json").then(j=>{
+    const list=Object.values(j&&typeof j.data==="object"&&j.data||{})
+      .filter(c=>c&&typeof c.id==="string"&&DD_ID.test(c.id)&&typeof c.name==="string"&&c.name.trim())
+      .map(c=>({id:c.id,name:c.name.trim().slice(0,40)}))
+      .sort((x,y)=>x.name.localeCompare(y.name));
+    if(!list.length)throw new Error("Data Dragon sent no champions");
+    return{ver,list};
+  })).catch(e=>{dd.champs=null;throw e}));
+}
+function ddSkins(id){
+  if(!DD_ID.test(String(id)))return Promise.reject(new Error("not a champion id"));
+  if(!dd.skins.has(id))dd.skins.set(id,ddVersion().then(ver=>ddJSON(DD+"/cdn/"+ver+"/data/en_US/champion/"+id+".json")).then(j=>{
+    const c=j&&j.data&&j.data[id], seen=new Set();
+    const out=(c&&Array.isArray(c.skins)?c.skins:[])
+      .filter(s=>s&&Number.isInteger(s.num)&&s.num>=0&&s.num<=9999&&!seen.has(s.num)&&seen.add(s.num))
+      .map(s=>({num:s.num,name:s.num===0?"":String(s.name||"").replace(/\s+/g," ").trim().slice(0,80)}));
+    if(!out.some(s=>s.num===0))out.unshift({num:0,name:""});
+    return out.sort((x,y)=>x.num-y.num);
+  }).catch(e=>{dd.skins.delete(id);throw e}));
+  return dd.skins.get(id);
+}
+/* ---- card art picker ----
+   Champion first, then skin, the way the client's own collection screen goes:
+   the splash large across the top so you can see what you are picking, which
+   is the one thing the faint art on a card can't show you. */
+const ap={id:null,champ:null,skin:0,name:"",view:"champs",q:"",champs:null,ver:null,skins:null,err:null,gen:0,focusTile:false};
+function apAcc(){return ap.id==null?null:accounts.find(a=>a.id===ap.id)||null}
+function apChampName(id){const c=ap.champs&&ap.champs.find(x=>x.id===id);return c?c.name:id}
+// What the selection is called: the skin's own name, or the champion's for the default
+function apLabel(){
+  if(ap.skin===0)return apChampName(ap.champ);
+  const s=ap.skins&&ap.skins.find(x=>x.num===ap.skin);
+  return s&&s.name||ap.name||apChampName(ap.champ);
+}
+function openArtPicker(id){
+  const acc=accounts.find(a=>a.id===id);if(!acc)return;
+  const own=normArt(acc.art), auto=champKey(mainChamp(acc));
+  const start=own||(auto?{champ:auto,skin:0}:null);
+  Object.assign(ap,{id,champ:start?start.champ:null,skin:start?start.skin:0,name:own&&own.name||"",
+    view:start?"skins":"champs",q:"",skins:null,err:null,gen:ap.gen+1,focusTile:!!start});
+  $("apSearch").value="";
+  $("apSub").innerHTML=nameOf(acc);
+  $("apHero").dataset.k="";
+  renderArtPicker();
+  $("artPicker").classList.remove("hidden");
+  apLoad();
+}
+function closeArtPicker(){
+  const m=$("artPicker");if(!m)return;
+  ap.gen++;ap.id=null; // anything still loading lands nowhere
+  m.classList.add("hidden");
+}
+function apLoad(){
+  const g=ap.gen;
+  if(!ap.champs)ddChampions().then(r=>{if(g!==ap.gen)return;ap.champs=r.list;ap.ver=r.ver;ap.err=null;renderArtPicker()},
+    e=>{if(g!==ap.gen)return;ap.err=e;renderArtPicker()});
+  if(ap.view==="skins"&&ap.champ)apLoadSkins();
+}
+function apLoadSkins(){
+  const g=ap.gen, c=ap.champ;
+  ap.skins=null;
+  ddSkins(c).then(list=>{if(g!==ap.gen||c!==ap.champ)return;ap.skins=list;ap.err=null;
+    // a pick saved from a skin since removed falls back to the default rather than to nothing
+    if(!list.some(s=>s.num===ap.skin)){ap.skin=0;ap.name=""}
+    renderArtPicker()},
+    e=>{if(g!==ap.gen||c!==ap.champ)return;ap.err=e;renderArtPicker()});
+}
+function apHero(){
+  const el=$("apHero"), acc=apAcc();
+  if(!ap.champ){
+    if(el.dataset.k!=="-"){el.dataset.k="-";el.innerHTML=`<div class="ap-empty"><div>${icon("image")}Pick a champion below</div></div>`}
+    return;
+  }
+  const k=ap.champ+"_"+ap.skin;
+  // The picture is only swapped when the pick changes, so the fade plays once
+  // per choice instead of flickering on every repaint around it.
+  if(el.dataset.k!==k){
+    el.dataset.k=k;
+    el.innerHTML=`<img alt="" decoding="async" referrerpolicy="no-referrer"><div class="ap-meta"></div>`;
+    const img=el.querySelector("img");
+    img.addEventListener("load",()=>img.classList.add("ld"));
+    img.addEventListener("error",()=>{img.remove();if(!el.querySelector(".ap-empty"))el.insertAdjacentHTML("afterbegin",`<div class="ap-empty"><div>${icon("image")}No splash art for this one yet</div></div>`)});
+    img.src=splashUrl(ap.champ,ap.skin);
+  }
+  const shown=acc&&artOf(acc), own=acc&&normArt(acc.art);
+  const onCard=!!shown&&shown.champ===ap.champ&&shown.skin===ap.skin;
+  el.querySelector(".ap-meta").innerHTML=
+    (onCard?`<span class="ap-badge">${icon("check")}${own?"On the card now":"On the card now · most-played"}</span>`:"")
+    +`<div class="ap-cap"><b>${esc(apLabel())}</b><span>${ap.skin===0?"Default skin":esc(apChampName(ap.champ))}</span></div>`;
+}
+function renderArtPicker(){
+  if(!$("artPicker"))return;
+  const acc=apAcc(), own=acc&&normArt(acc.art), skins=ap.view==="skins";
+  apHero();
+  $("apOff").classList.toggle("hidden",champArtOn());
+  $("apBarChamps").classList.toggle("hidden",skins);
+  $("apBarSkins").classList.toggle("hidden",!skins);
+  const grid=$("apGrid");
+  grid.className="ap-grid "+(skins?"sk":"ch");
+  grid.setAttribute("aria-label",skins?"Skins":"Champions");
+  const msg=(t,retry)=>`<div class="ap-msg">${t}${retry?`<br><button type="button" data-ap="retry">Try again</button>`:""}</div>`;
+  const failed=`Couldn't reach Riot's Data Dragon, where the champion and skin art comes from.`;
+  let h="";
+  if(skins){
+    $("apBack").innerHTML=icon("chevron")+"Champions";
+    $("apChampName").textContent=apChampName(ap.champ);
+    $("apCount").textContent=ap.skins?ap.skins.length+(ap.skins.length===1?" skin":" skins"):"";
+    const shown=acc&&artOf(acc);
+    if(ap.skins)h=ap.skins.map(s=>{
+      const on=s.num===ap.skin, cur=shown&&shown.champ===ap.champ&&shown.skin===s.num;
+      const nm=s.num===0?apChampName(ap.champ):s.name||apChampName(ap.champ);
+      return`<button type="button" class="ap-sk${on?" on":""}" data-skin="${s.num}" aria-pressed="${on}" tabindex="${on?0:-1}" title="${esc(nm)}">`
+        +`<img src="${DD}/cdn/img/champion/loading/${ap.champ}_${s.num}.jpg" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">`
+        +`<span class="nm">${esc(s.num===0?"Default":nm)}</span>${cur?`<span class="cur">On the card</span>`:""}</button>`;
+    }).join("");
+    else if(ap.err)h=msg(failed,true);
+    else h=`<div class="ap-sk skel"></div>`.repeat(6);
+  }else{
+    if(ap.champs){
+      const q=ap.q.toLowerCase().replace(/[^a-z0-9]/g,"");
+      // by name or by id, so "monkey" still finds Wukong
+      const list=q?ap.champs.filter(c=>[c.name,c.id].some(x=>x.toLowerCase().replace(/[^a-z0-9]/g,"").includes(q))):ap.champs;
+      const sel=list.some(c=>c.id===ap.champ)?ap.champ:list[0]&&list[0].id;
+      h=list.length?list.map(c=>`<button type="button" class="ap-ch${c.id===ap.champ?" on":""}" data-champ="${c.id}" aria-pressed="${c.id===ap.champ}" tabindex="${c.id===sel?0:-1}" title="${esc(c.name)}">`
+        +`<i><img src="${DD}/cdn/${esc(ap.ver)}/img/champion/${c.id}.png" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></i><span>${esc(c.name)}</span></button>`).join("")
+        :msg(`No champion called “${esc(ap.q.trim())}”.`);
+    }
+    else if(ap.err)h=msg(failed,true);
+    else h=`<div class="ap-ch skel"><i></i><span></span></div>`.repeat(24);
+  }
+  setHTML(grid,h);
+  // Where the keyboard starts when the window opens: the search on the champion
+  // list, the picked skin on the skin list (its way back until the skins arrive).
+  const tile=skins&&grid.querySelector(".ap-sk.on");
+  for(const el of [$("apSearch"),$("apBack")])el.removeAttribute("data-autofocus");
+  (skins?tile||$("apBack"):$("apSearch")).setAttribute("data-autofocus","");
+  if(tile&&ap.focusTile&&(document.activeElement===$("apBack")||!$("artPicker").contains(document.activeElement)||document.activeElement===document.body)){
+    ap.focusTile=false;
+    if(!$("artPicker").classList.contains("hidden"))tile.focus();
+  }
+  const use=$("apUse");
+  use.disabled=!ap.champ||!!own&&own.champ===ap.champ&&own.skin===ap.skin;
+  const auto=acc&&champKey(mainChamp(acc));
+  $("apAuto").classList.toggle("hidden",!own);
+  $("apAuto").textContent=auto?"Back to most-played":"Remove the art";
+}
+function apPickChamp(id){
+  const acc=apAcc(), own=acc&&normArt(acc.art);
+  ap.champ=id;ap.view="skins";ap.err=null;
+  // back on the champion that is already on the card: start on its skin, not the default
+  ap.skin=own&&own.champ===id?own.skin:0;ap.name=own&&own.champ===id&&own.name||"";
+  ap.focusTile=true;
+  apLoadSkins();
+  renderArtPicker();
+  $("apBack").focus(); // the tile that was clicked is gone; the skins take over when they land
+}
+function apPickSkin(num){
+  const s=ap.skins&&ap.skins.find(x=>x.num===num);if(!s)return;
+  ap.skin=num;ap.name=s.name;
+  renderArtPicker();
+}
+function apSave(){
+  const acc=apAcc();if(!acc||!ap.champ)return;
+  const art=normArt({champ:ap.champ,skin:ap.skin,name:apLabel()});if(!art)return;
+  acc.art=art;
+  closeArtPicker();
+  renderCard(acc.id);
+  saveThen(champArtOn()?"Card art: "+apLabel():"Saved — turn on Champion art in Settings to see it");
+}
+function apAuto(){
+  const acc=apAcc();if(!acc)return;
+  delete acc.art;
+  const auto=champKey(mainChamp(acc));
+  closeArtPicker();
+  renderCard(acc.id);
+  saveThen(auto?"Back to the most-played champion":"Card art removed");
+}
+$("apGrid").addEventListener("click",e=>{
+  if(e.target.closest('[data-ap="retry"]')){
+    ap.err=null;
+    if(!ap.champs)apLoad();else if(ap.view==="skins")apLoadSkins();
+    renderArtPicker();return;
+  }
+  const ch=e.target.closest("[data-champ]");if(ch){apPickChamp(ch.dataset.champ);return}
+  const sk=e.target.closest("[data-skin]");if(sk)apPickSkin(Number(sk.dataset.skin));
+});
+$("apGrid").addEventListener("dblclick",e=>{if(e.target.closest("[data-skin]")&&!$("apUse").disabled)apSave()});
+// A missing loading-screen portrait leaves the tile's name on a plain plate
+$("apGrid").addEventListener("error",e=>{const t=e.target.closest&&e.target.closest(".ap-sk");if(t)t.classList.add("dead")},true);
+/* Arrow keys walk the grid, so Tab is one stop for all of it instead of a
+   hundred and seventy. Columns are counted off the layout, which is whatever
+   the window's width made them. */
+$("apGrid").addEventListener("keydown",e=>{
+  const tiles=[...$("apGrid").querySelectorAll("[data-champ],[data-skin]")];
+  const i=tiles.indexOf(document.activeElement);if(i<0)return;
+  const top=tiles[0].offsetTop, cols=Math.max(1,tiles.filter(t=>t.offsetTop===top).length);
+  const to={ArrowRight:i+1,ArrowLeft:i-1,ArrowDown:i+cols,ArrowUp:i-cols,Home:0,End:tiles.length-1}[e.key];
+  if(to==null)return;
+  e.preventDefault();
+  if(e.key==="ArrowUp"&&to<0&&ap.view==="champs"){$("apSearch").focus();return}
+  const t=tiles[Math.max(0,Math.min(tiles.length-1,to))];
+  for(const x of tiles)x.tabIndex=x===t?0:-1;
+  t.focus();
+});
+$("apSearch").addEventListener("input",e=>{ap.q=e.target.value;renderArtPicker()});
+$("apSearch").addEventListener("keydown",e=>{
+  const first=$("apGrid").querySelector("[data-champ]");
+  if(e.key==="Enter"&&first){e.preventDefault();apPickChamp(first.dataset.champ)}
+  else if(e.key==="ArrowDown"&&first){e.preventDefault();($("apGrid").querySelector('[data-champ][tabindex="0"]')||first).focus()}
+});
+$("apBack").addEventListener("click",()=>{
+  ap.view="champs";ap.err=null;renderArtPicker();if(!ap.champs)apLoad();
+  // back at the champion you came from, not at Aatrox
+  const on=$("apGrid").querySelector(".ap-ch.on");
+  if(on&&on.scrollIntoView)on.scrollIntoView({block:"center"});
+  $("apSearch").focus();
+});
+$("apUse").addEventListener("click",apSave);
+$("apAuto").addEventListener("click",apAuto);
+$("apCancel").addEventListener("click",closeArtPicker);
+$("apTurnOn").addEventListener("click",()=>{cfg.champArt=null;saveCfg();renderGrid();renderArtPicker();toast("Champion art is on")});
 /* ---- streamer mode ----
    For streaming or sharing the screen: whatever would let a viewer find an
    account — its Riot ID, login, email, notes, or a name that is only its Riot
@@ -6895,6 +7258,7 @@ function cardMenuHTML(a){
     +grp("Edit")
     +it("rank","pencil","Rank…")
     +it("edit","user","Account…")
+    +it("art","image","Card art…")
     // Both profile links together. op.gg used to sit in the footer while dpm.lol
     // sat in here, which split one kind of thing across two places.
     +grp("Look up")
@@ -7232,6 +7596,7 @@ function closeAllPanels(){
   // shut every other panel on the page and left the palette standing.
   closePalette();
   closeCompare();
+  closeArtPicker();
 }
 function closeCompare(){
   const had=compareIds.length>0;
@@ -7974,7 +8339,7 @@ document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListene
 // Driven by an observer rather than by each of the eight places that add or
 // remove .hidden on these two. Wiring it into every call site works right up
 // until the ninth one is added and quietly doesn't lock the page.
-const MODALS=["settings","help","form","rankModal","palette","compareModal","bulkAdd"];
+const MODALS=["settings","help","form","rankModal","palette","compareModal","bulkAdd","artPicker"];
 let modalReturn=null;
 function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains("hidden"))}
 function syncModals(){
@@ -9033,6 +9398,7 @@ async function onCardClick(e){
     renderCard(id);
   }
   else if(act==="edit")openForm(acc);
+  else if(act==="art")openArtPicker(id);
   else if(act==="exstats"){acc.excludeStats=!acc.excludeStats;renderCard(id);renderDash();saveThen(acc.excludeStats?"Left out of the combined stats":"Counted in the combined stats again")}
   else if(act==="archive"){acc.archived=true;render();saveThen("Archived — toggle \"Archived\" in the toolbar to see it again")}
   else if(act==="unarchive"){acc.archived=false;render();saveThen("Restored to active accounts")}
