@@ -1268,7 +1268,7 @@ test("card art: any champion and any skin from the ⋯ menu, kept on the account
   const doc = win.document, $ = id => doc.getElementById(id);
   const art = () => doc.querySelector('.card[data-id="a"] .c-art').getAttribute("src");
   const skins = () => [...doc.querySelectorAll("#apGrid [data-skin]")];
-  const hero = () => $("apHero").querySelector("img").getAttribute("src");
+  const hero = () => [...$("apHero").querySelectorAll("img.ap-sp")].pop().getAttribute("src");
   cardMenu(win, "a").querySelector('[data-act="art"]').click();
   assert.equal($("artPicker").classList.contains("hidden"), false, "the picker opens");
   assert.match(hero(), /\/splash\/Kaisa_0\.jpg$/, "starting from what the card shows now: the most-played champion");
@@ -1330,6 +1330,46 @@ test("card art: any champion and any skin from the ⋯ menu, kept on the account
   await until(() => !("art" in JSON.parse(win.localStorage.getItem("smurf-tracker"))[0]), "the pick is gone from storage");
   assert.ok(calls.every(u => u.startsWith("https://ddragon.leagueoflegends.com/")), "only ever Data Dragon: " + calls.join(" "));
   assert.equal(calls.filter(u => u.endsWith("versions.json")).length, 1, "the version is asked once a session");
+});
+
+test("card art: a picked skin shows its portrait at once, the last splash stays until the new one lands, and the download starts on touch", async () => {
+  const calls = [], warmed = [];
+  const acc = { id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: Date.now(), champs: [{ name: "Kai'Sa", games: 30, wr: 50 }] } };
+  const win = bootApp([acc], w => {
+    dataDragon(w, calls);
+    // Image() hands back a plain <img>, so the setter is watched on each one
+    const Img = w.Image, d = Object.getOwnPropertyDescriptor(w.HTMLImageElement.prototype, "src");
+    w.Image = function () {
+      const i = new Img();
+      Object.defineProperty(i, "src", { get() { return d.get.call(i); }, set(v) { warmed.push(String(v)); d.set.call(i, v); } });
+      return i;
+    };
+  });
+  const doc = win.document, $ = id => doc.getElementById(id);
+  const layers = () => [...$("apHero").querySelectorAll("img")].map(i => i.className.replace(/\s*ld/, "") + ":" + i.getAttribute("src").replace(/^.*\/(splash|loading)\//, "$1/"));
+  cardMenu(win, "a").querySelector('[data-act="art"]').click();
+  const skins = () => [...doc.querySelectorAll("#apGrid [data-skin]")];
+  await until(() => skins().length >= 3, "skins");
+  const first = $("apHero").querySelector("img.ap-sp");
+  first.dispatchEvent(new win.Event("load"));
+  await new Promise(r => setTimeout(r, 500));
+  assert.deepEqual(layers(), ["ap-sp:splash/Kaisa_0.jpg"], "once a splash has landed it is all there is");
+
+  skins()[2].dispatchEvent(new win.Event("pointerdown", { bubbles: true }));
+  assert.ok(warmed.some(u => u.endsWith("/splash/Kaisa_14.jpg")), "touching a tile starts its splash downloading");
+  skins()[2].click();
+  assert.deepEqual(layers(), ["ap-sp:splash/Kaisa_0.jpg", "ap-ph:loading/Kaisa_14.jpg", "ap-sp:splash/Kaisa_14.jpg"],
+    "at once: the old splash under, the new skin's portrait as a stand-in, its splash on top still coming");
+  assert.match($("apHero").textContent, /K\/DA ALL OUT Kai'Sa/, "and the caption is already the new one");
+  $("apHero").querySelector('img.ap-sp[src$="Kaisa_14.jpg"]').dispatchEvent(new win.Event("load"));
+  await new Promise(r => setTimeout(r, 500));
+  assert.deepEqual(layers(), ["ap-sp:splash/Kaisa_14.jpg"], "the new splash in, the rest cleared away");
+
+  skins()[1].click();
+  $("apHero").querySelector('img.ap-sp[src$="Kaisa_1.jpg"]').dispatchEvent(new win.Event("error"));
+  await new Promise(r => setTimeout(r, 500));
+  assert.deepEqual(layers(), ["ap-ph:loading/Kaisa_1.jpg"], "a skin with no splash keeps its portrait as the banner");
 });
 
 test("card art: Escape closes the picker, a stored pick is checked like any other field, and works without champion data", async () => {
