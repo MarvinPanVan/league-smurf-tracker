@@ -6695,9 +6695,19 @@ function ddSkins(id){
   if(!DD_ID.test(String(id)))return Promise.reject(new Error("not a champion id"));
   if(!dd.skins.has(id))dd.skins.set(id,ddVersion().then(ver=>ddJSON(DD+"/cdn/"+ver+"/data/en_US/champion/"+id+".json")).then(j=>{
     const c=j&&j.data&&j.data[id], seen=new Set();
-    const out=(c&&Array.isArray(c.skins)?c.skins:[])
+    const all=(c&&Array.isArray(c.skins)?c.skins:[])
       .filter(s=>s&&Number.isInteger(s.num)&&s.num>=0&&s.num<=9999&&!seen.has(s.num)&&seen.add(s.num))
-      .map(s=>({num:s.num,name:s.num===0?"":String(s.name||"").replace(/\s+/g," ").trim().slice(0,80)}));
+      .map(s=>({num:s.num,parent:s.parentSkin,name:s.num===0?"":String(s.name||"").replace(/\s+/g," ").trim().slice(0,80)}));
+    /* The list also carries chromas and forms sold on their own — "Lunar Empress
+       Lux (Ruby)", "Elementalist Lux (Fire)" — which have no splash or portrait
+       of their own: blank tiles that would put a blank card behind the account.
+       Riot marks some with parentSkin; the rest are named "<a skin> (<variant>)".
+       A year in brackets is a re-release with art of its own ("Prestige K/DA
+       Akali (2022)"), and anything that still has no picture leaves the grid
+       when its portrait fails to load (see the error handler on #apGrid). */
+    const names=new Set(all.map(s=>s.name.toLowerCase()));
+    const variant=s=>{const m=/^(.+) \(([^()]+)\)$/.exec(s.name);return!!m&&names.has(m[1].toLowerCase())&&!/^\d{4}$/.test(m[2])};
+    const out=all.filter(s=>s.parent==null&&!variant(s)).map(s=>({num:s.num,name:s.name}));
     if(!out.some(s=>s.num===0))out.unshift({num:0,name:""});
     return out.sort((x,y)=>x.num-y.num);
   }).catch(e=>{dd.skins.delete(id);throw e}));
@@ -6871,8 +6881,18 @@ $("apGrid").addEventListener("click",e=>{
   const sk=e.target.closest("[data-skin]");if(sk)apPickSkin(Number(sk.dataset.skin));
 });
 $("apGrid").addEventListener("dblclick",e=>{if(e.target.closest("[data-skin]")&&!$("apUse").disabled)apSave()});
-// A missing loading-screen portrait leaves the tile's name on a plain plate
-$("apGrid").addEventListener("error",e=>{const t=e.target.closest&&e.target.closest(".ap-sk");if(t)t.classList.add("dead")},true);
+/* A skin with no loading-screen portrait has no art to put on a card either, so
+   it leaves the grid — unless it is the one picked, which stays as a named plate
+   so the pick is never silently swapped for another. */
+$("apGrid").addEventListener("error",e=>{
+  const t=e.target.closest&&e.target.closest(".ap-sk");if(!t)return;
+  if(t.classList.contains("on")){t.classList.add("dead");return}
+  const num=Number(t.dataset.skin);
+  if(ap.skins)ap.skins=ap.skins.filter(s=>s.num!==num);
+  t.remove();
+  const n=$("apGrid").querySelectorAll("[data-skin]").length;
+  $("apCount").textContent=n+(n===1?" skin":" skins");
+},true);
 /* Arrow keys walk the grid, so Tab is one stop for all of it instead of a
    hundred and seventy. Columns are counted off the layout, which is whatever
    the window's width made them. */

@@ -1236,7 +1236,9 @@ function dataDragon(w, calls) {
       Ahri: { id: "Ahri", name: "Ahri" }, Kaisa: { id: "Kaisa", name: "Kai'Sa" }, MonkeyKing: { id: "MonkeyKing", name: "Wukong" },
       Evil: { id: 'x"><img src=x>', name: "Evil" } } });
     if (url.endsWith("/champion/Kaisa.json")) return json({ data: { Kaisa: { skins: [
-      { num: 0, name: "default" }, { num: 1, name: "Bullet Angel Kai'Sa" }, { num: 14, name: "K/DA ALL OUT Kai'Sa" }] } } });
+      { num: 0, name: "default" }, { num: 1, name: "Bullet Angel Kai'Sa" }, { num: 14, name: "K/DA ALL OUT Kai'Sa" },
+      { num: 15, name: "K/DA ALL OUT Kai'Sa (Ruby)" }, { num: 16, name: "Something Riot marks", parentSkin: 14 },
+      { num: 20, name: "K/DA ALL OUT Kai'Sa (2022)" }, { num: 24, name: "Portraitless Kai'Sa" }] } } });
     if (url.endsWith("/champion/Ahri.json")) return json({ data: { Ahri: { skins: [
       { num: 0, name: "default" }, { num: 7, name: "Arcade <Ahri>" }, { num: "8", name: "not a number" }] } } });
     if (url.endsWith("/champion/MonkeyKing.json")) {
@@ -1260,7 +1262,15 @@ test("card art: any champion and any skin from the ⋯ menu, kept on the account
   cardMenu(win, "a").querySelector('[data-act="art"]').click();
   assert.equal($("artPicker").classList.contains("hidden"), false, "the picker opens");
   assert.match(hero(), /\/splash\/Kaisa_0\.jpg$/, "starting from what the card shows now: the most-played champion");
-  await until(() => skins().length === 3, "Kai'Sa's skins");
+  await until(() => skins().length === 5, "Kai'Sa's skins");
+  assert.deepEqual(skins().map(t => t.dataset.skin), ["0", "1", "14", "20", "24"],
+    "no chroma or form — named after a skin, or marked by Riot — but a year's re-release is a skin of its own");
+  // one with no portrait has no art for a card either: it leaves the grid, and the count says so
+  skins()[4].querySelector("img").dispatchEvent(new win.Event("error"));
+  assert.equal(skins().length, 4);
+  assert.equal($("apCount").textContent, "4 skins");
+  skins()[3].querySelector("img").dispatchEvent(new win.Event("error"));
+  assert.equal(skins().length, 3);
   assert.match($("apHero").textContent, /On the card now · most-played/);
   assert.match(skins()[0].querySelector("img").getAttribute("src"), /\/loading\/Kaisa_0\.jpg$/, "portraits from the loading screen art");
   assert.ok(skins()[0].querySelector(".cur"), "the skin the card shows is marked");
@@ -1269,6 +1279,8 @@ test("card art: any champion and any skin from the ⋯ menu, kept on the account
   assert.match(hero(), /\/splash\/Kaisa_14\.jpg$/, "the splash follows the pick");
   assert.match($("apHero").textContent, /K\/DA ALL OUT Kai'Sa/);
   assert.equal(skins()[2].getAttribute("aria-pressed"), "true");
+  skins()[2].querySelector("img").dispatchEvent(new win.Event("error"));
+  assert.ok(skins()[2].classList.contains("dead") && skins().length === 3, "the picked one stays, as a named plate");
 
   $("apBack").click();
   const champs = () => [...doc.querySelectorAll("#apGrid [data-champ]")];
