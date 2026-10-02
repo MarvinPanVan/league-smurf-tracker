@@ -1239,7 +1239,7 @@ test("champion art: the most-played champion's splash, by Data Dragon id, lazy, 
   assert.match(art("b").getAttribute("src"), /\/DrMundo_0\.jpg$/);
   assert.equal(art("c"), null, "no champion data, no picture");
   // 2.3.0 took it to 18% and on an iPad it all but vanished: back at 28%
-  const op = Number(html.match(/\.c-art\{[^}]*opacity:([\d.]+)/)[1]);
+  const op = Number(html.match(/\.c-art\{[^}]*opacity:var\(--art-op,([\d.]+)\)/)[1]);
   assert.ok(op >= 0.25 && op <= 0.35, "the art sits at " + op);
   art("b").dispatchEvent(new win.Event("error"));
   assert.equal(art("b"), null, "a picture that fails to load goes away");
@@ -1390,6 +1390,56 @@ test("card art: a picked skin shows its portrait at once, the last splash stays 
   $("apHero").querySelector('img.ap-sp[src$="Kaisa_1.jpg"]').dispatchEvent(new win.Event("error"));
   await new Promise(r => setTimeout(r, 500));
   assert.deepEqual(layers(), ["ap-ph:loading/Kaisa_1.jpg"], "a skin with no splash keeps its portrait as the banner");
+});
+
+test("card art strength: a slider with a preview, for this card or every card, without pinning the art", async () => {
+  const calls = [];
+  const acc = (id, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 5, wins: 1, losses: 1, updatedAt: Date.now(), champs: [{ name: "Kai'Sa", games: 30, wr: 50 }] } }, extra || {});
+  const win = bootApp([acc("a"), acc("b"), acc("c", { artOp: 50 }), acc("bad", { artOp: 99 })], w => dataDragon(w, calls));
+  const doc = win.document, $ = id => doc.getElementById(id);
+  const art = id => doc.querySelector(`.card[data-id="${id}"] .c-art`);
+  const own = id => art(id) && art(id).style.getPropertyValue("--art-op");
+  const stored = () => JSON.parse(win.localStorage.getItem("smurf-tracker"));
+  const slide = v => { $("apOp").value = String(v); $("apOp").dispatchEvent(new win.Event("input", { bubbles: true })); };
+  assert.equal(own("c"), "0.5", "a card's own strength rides on its picture");
+  assert.equal(own("a"), "", "the rest follow the one for every card");
+  assert.equal(own("bad"), "", "and a strength out of range is no strength");
+  const open = id => cardMenu(win, id).querySelector('[data-act="art"]').click();
+
+  open("a");
+  assert.equal($("apOp").value, "28"); assert.equal($("apOpAll").checked, true, "a card with none of its own follows all cards");
+  assert.match($("apOpHint").textContent, /including 1 set on its own/);
+  assert.equal($("apUse").disabled, true, "nothing changed yet");
+  slide(12);
+  assert.equal($("apOpV").textContent, "12%");
+  assert.equal($("apPrev").querySelector("img").style.opacity, "0.12", "the strip shows the art at that strength");
+  assert.match($("apPrev").textContent, /Gold I · 5 LP/, "behind this card's own name and rank");
+  $("apOpAll").checked = false; $("apOpAll").dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert.equal($("apOpHint").textContent, "Only this card");
+  $("apUse").click();
+  assert.equal(own("a"), "0.12", "this card only");
+  assert.equal(own("b"), "");
+  await until(() => stored().find(x => x.id === "a").artOp === 12, "saved");
+  assert.equal("art" in stored().find(x => x.id === "a"), false, "changing the strength didn't pin the most-played champion");
+
+  open("b");
+  slide(0);
+  assert.equal($("apOpV").textContent, "Hidden");
+  $("apOpAll").checked = false; $("apOpAll").dispatchEvent(new win.Event("change", { bubbles: true }));
+  $("apUse").click();
+  assert.equal(art("b"), null, "0 hides the art on that card, and fetches nothing for it");
+
+  open("c");
+  assert.equal($("apOp").value, "50"); assert.equal($("apOpAll").checked, false);
+  $("apOpAll").checked = true; $("apOpAll").dispatchEvent(new win.Event("change", { bubbles: true }));
+  slide(40);
+  $("apUse").click();
+  assert.equal(doc.documentElement.style.getPropertyValue("--art-op"), "0.4", "every card, through the one setting");
+  for (const id of ["a", "c"]) assert.equal(own(id), "", id + " gave up its own strength: all means all");
+  assert.ok(art("b"), "b too: its own 0 is gone");
+  await until(() => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).artOpacity === 40, "the setting saved");
+  assert.ok(stored().every(x => !("artOp" in x)));
 });
 
 test("card art: Escape closes the picker, a stored pick is checked like any other field, and works without champion data", async () => {
