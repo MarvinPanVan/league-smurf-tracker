@@ -1469,6 +1469,7 @@ test("snapshot viewer: draws the page from the link, and opening it never reads 
     { n: "Chall", r: "KR", k: [9, "I", 1200], w: 300, l: 250 },
     { n: "Odd", r: "MARS", k: [99, "V", -5], c: ['x"><img', 1], st: "nonsense" },
     { n: "Gone", st: "banned", k: [1, "I", 12] },
+    { n: "Resting", st: "resting", k: [0, "IV", 3] },
     "not an account",
   ] };
   const vault = JSON.stringify([snapAcc("mine")]), cfg = JSON.stringify({ seenHelp: true, accent: "#123456" });
@@ -1485,12 +1486,13 @@ test("snapshot viewer: draws the page from the link, and opening it never reads 
     assert.equal(doc.querySelectorAll("#snapView img:not([src^='https://ddragon'])").length, 0, "no image a link could smuggle in");
     assert.match(doc.title, /^Marvin's .* · Smurf Tracker$/);
     const cards = [...doc.querySelectorAll(".sn-card")];
-    assert.deepEqual(cards.map(c => c.querySelector(".sn-nm").textContent), ["Chall", "Main", "Gone", "Odd"], "best first; the one that wasn't an account is dropped");
+    assert.deepEqual(cards.map(c => c.querySelector(".sn-nm").textContent), ["Chall", "Main", "Gone", "Resting", "Odd"], "best first; the one that wasn't an account is dropped");
+    assert.equal(cards[3].querySelector(".sn-rank").textContent, "Iron IV3 LPResting", "a status rides beside the rank, it doesn't replace the LP");
     assert.equal(cards[1].querySelector(".sn-rank b").textContent, "Platinum II");
     assert.equal(cards[0].querySelector(".sn-rank b").textContent, "Challenger", "no division above Master, whatever the link says");
-    assert.equal(cards[3].querySelector(".sn-rank b").textContent, "Unranked", "a tier that does not exist is no rank");
-    assert.equal(cards[3].querySelector(".sn-art img"), null, "and art that is not an id is no art");
-    assert.equal(cards[3].querySelector(".regiontag"), null, "nor a region that is not one");
+    assert.equal(cards[4].querySelector(".sn-rank b").textContent, "Unranked", "a tier that does not exist is no rank");
+    assert.equal(cards[4].querySelector(".sn-art img"), null, "and art that is not an id is no art");
+    assert.equal(cards[4].querySelector(".regiontag"), null, "nor a region that is not one");
     assert.match(cards[1].querySelector(".sn-art img").getAttribute("src"), /\/splash\/Ahri_7\.jpg$/);
     assert.ok(cards[1].querySelector(".sn-spk svg"), "the climb as a line");
     assert.equal(cards[1].querySelector(".sn-notes").textContent.includes("<b>x</b>"), true, "skin names are text");

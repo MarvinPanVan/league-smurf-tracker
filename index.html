@@ -2952,7 +2952,7 @@
         <p class="sh-intro">A read-only page of your ranks, in one link. Nothing is uploaded — <b>the link is the page</b>, and it shows
           what it showed today. Logins, passwords, emails and notes are never in it.</p>
         <div class="fld"><label for="shName">Title</label><input id="shName" maxlength="60" placeholder="My League accounts" autocomplete="off" data-autofocus></div>
-        <div class="fld"><label id="shWhichL">Accounts</label><div class="seg sh-which" id="shWhich" role="radiogroup" aria-labelledby="shWhichL"></div></div>
+        <div class="fld"><label id="shWhichL">Accounts</label><div class="seg sh-which" id="shWhich" role="group" aria-labelledby="shWhichL"></div></div>
         <div class="sh-opts">
           <label class="sh-opt"><input type="checkbox" id="shIds"><span><b>Riot IDs</b><em>Off: your labels only, so nobody can look the accounts up.</em></span></label>
           <label class="sh-opt"><input type="checkbox" id="shArt" checked><span><b>Champion art</b><em>Each card's art, as a banner.</em></span></label>
@@ -6732,7 +6732,9 @@ function apHero(){
     el.innerHTML=`<img alt="" decoding="async" referrerpolicy="no-referrer"><div class="ap-meta"></div>`;
     const img=el.querySelector("img");
     img.addEventListener("load",()=>img.classList.add("ld"));
-    img.addEventListener("error",()=>{img.remove();if(!el.querySelector(".ap-empty"))el.insertAdjacentHTML("afterbegin",`<div class="ap-empty"><div>${icon("image")}No splash art for this one yet</div></div>`)});
+    // No splash (offline, or a skin Riot hasn't published art for): the plain
+    // banner with the caption over it still says what is picked
+    img.addEventListener("error",()=>img.remove());
     img.src=splashUrl(ap.champ,ap.skin);
   }
   const shown=acc&&artOf(acc), own=acc&&normArt(acc.art);
@@ -7020,7 +7022,7 @@ function snapCardHTML(a,i){
         ${a.rid?`<div class="sn-rid">${esc(a.rid)}</div>`:""}</div>
       ${a.region?`<span class="regiontag">${esc(a.region)}</span>`:""}
     </div>
-    <div class="sn-rank"><b>${esc(label)}</b>${r&&!st?`<span>${esc(r.lp)} LP</span>`:""}${st?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.short||st.label)}</span>`:""}</div>
+    <div class="sn-rank"><b>${esc(label)}</b>${r?`<span>${esc(r.lp)} LP</span>`:""}${st?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.short||st.label)}</span>`:""}</div>
     ${wr!=null?`<div class="sn-wl"><span>${esc(a.w)}W ${esc(a.l)}L</span><b class="${wr>=50?"wr-good":""}">${wr}% WR</b></div>
       <div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
     ${spk?`<div class="sn-spk" title="Last ${days} day${days===1?"":"s"}">${spk}</div>`:""}
@@ -7101,7 +7103,6 @@ function openShare(){
   closeAllPanels();
   const n=shareCounts();
   share.which=selected.size&&n.sel?"sel":n.ranked?"ranked":"all";
-  if(!$("shName").value)$("shName").value="";
   $("shArt").checked=champArtOn();
   renderShare();
   $("shareModal").classList.remove("hidden");
@@ -7114,7 +7115,7 @@ function shareOpts(){
 function renderShare(){
   const n=shareCounts();
   const seg=[["ranked","Ranked"],["fav","Favorites"],["sel","Selected"],["all","All"]];
-  setHTML($("shWhich"),seg.map(([k,t])=>`<button type="button" role="radio" data-which="${k}" aria-checked="${share.which===k}" class="${share.which===k?"on":""}"${n[k]?"":" disabled"}>${t} <b>${n[k]}</b></button>`).join(""));
+  setHTML($("shWhich"),seg.map(([k,t])=>`<button type="button" data-which="${k}" aria-pressed="${share.which===k}" class="${share.which===k?"on":""}"${n[k]?"":" disabled"}>${t} <b>${n[k]}</b></button>`).join(""));
   updateShareLink();
 }
 async function updateShareLink(){
