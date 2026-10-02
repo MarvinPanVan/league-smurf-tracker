@@ -620,6 +620,19 @@ test("on a touch screen a tap on a card is a click: no card, row or note reveals
   assert.match(css, /@media \(hover:none\)\{\.rw-check\{opacity:1\}\}/, "as is a list row's Check");
 });
 
+// Read on an iPad at arm's length the note fields were grey 11px words on a plate
+// barely lighter than the card. They keep a floor: 12px, words lit from the text
+// colour rather than the muted one, empty honor pips you can count.
+test("note fields stay legible: 12px, light words, visible empty pips", () => {
+  const rule = sel => (html.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\{([^}]*)\\}")) || [])[1] || "";
+  const chip = rule("  .ni-f");
+  assert.match(chip, /font-size:calc\(12px\*var\(--ts\)\)/);
+  assert.match(chip, /color:color-mix\(in srgb,var\(--text\) \d+%,var\(--muted\)\)/, "words a step under the figures, not the muted grey");
+  const pip = rule(".ni-pips i");
+  assert.ok(parseInt(pip.match(/background:#ffffff([0-9a-f]{2})/)[1], 16) >= 0x30, "an empty pip is still a pip");
+  assert.match(rule(".ni-skins span"), /color:var\(--star\)/, "skins in the bright gold");
+});
+
 test("every corner comes off the radius scale", () => {
   // The tokens (3/4/6/8px), round (50%), square, and hairline 1–3px for bars and
   // rails. Anything else is a radius somebody picked by eye — which is how the page

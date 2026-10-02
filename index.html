@@ -1170,24 +1170,29 @@
   .c-notes .ni+.nt{margin-top:8px;padding-top:8px;border-top:1px solid #ffffff0d}
   .c-notes.editing .ni{cursor:default;margin-bottom:9px}
   .ni-row{display:flex;flex-wrap:wrap;gap:5px}
-  .ni-f{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:var(--r-xs);
-    font-size:calc(11px*var(--ts));line-height:1.35;color:var(--muted);background:#ffffff0a;border:1px solid #ffffff12;
+  /* Read on a tablet across the room, these were grey words on a plate barely
+     lighter than the card: the numbers stood out and everything around them sank.
+     The words are a light parchment now, a step under the figures rather than
+     three, and the plate has an edge you can see. */
+  .ni-f{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:var(--r-xs);
+    font-size:calc(12px*var(--ts));line-height:1.35;color:color-mix(in srgb,var(--text) 74%,var(--muted));
+    background:#ffffff10;border:1px solid #ffffff21;box-shadow:inset 0 1px 0 #ffffff0a;
     font-variant-numeric:tabular-nums;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-  .ni-f b{color:var(--text);font-weight:600}
+  .ni-f b{color:#fff;font-weight:600}
   .ni-f .ico{width:12px;height:12px;flex-shrink:0}
-  .ni-f.ok{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 30%,transparent);background:color-mix(in srgb,var(--teal) 8%,transparent)}
-  .ni-f.warn{color:#f0c674;border-color:#f0c67440;background:#f0c67412}
-  .ni-pips{display:inline-flex;gap:2px}
-  .ni-pips i{width:6px;height:6px;transform:rotate(45deg);border-radius:1px;background:#ffffff1f}
-  .ni-pips i.on{background:var(--gold);box-shadow:0 0 6px -1px var(--gold)}
-  .ni-skins span{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 26%,transparent);
-    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 12%,transparent),color-mix(in srgb,var(--gold) 4%,transparent))}
-  .ni-skins span.more{color:var(--faint);background:none;border-style:dashed}
+  .ni-f.ok{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 42%,transparent);background:color-mix(in srgb,var(--teal) 11%,transparent)}
+  .ni-f.warn{color:#f7d690;border-color:#f0c67466;background:#f0c6741c}
+  .ni-pips{display:inline-flex;gap:3px}
+  .ni-pips i{width:7px;height:7px;transform:rotate(45deg);border-radius:1px;background:#ffffff38}
+  .ni-pips i.on{background:linear-gradient(135deg,var(--star),var(--gold));box-shadow:0 0 6px -1px var(--gold)}
+  .ni-skins span{color:var(--star);border-color:color-mix(in srgb,var(--gold) 42%,transparent);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 18%,transparent),color-mix(in srgb,var(--gold) 7%,transparent))}
+  .ni-skins span.more{color:var(--muted);background:none;border-style:dashed}
   .ni-pen{display:flex;align-items:flex-start;gap:7px;padding:6px 9px;border-radius:var(--r-xs);font-size:calc(12px*var(--ts));line-height:1.45;
     color:#ffc4c4;background:#ff6b6b12;border:1px solid #ff6b6b2e}
   .ni-pen .ico{width:13px;height:13px;flex-shrink:0;margin-top:2px;color:var(--danger)}
   .ni-kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 10px;font-size:calc(12px*var(--ts));line-height:1.45}
-  .ni-kv .k2{color:var(--faint)}
+  .ni-kv .k2{color:var(--muted)}
   .ni-kv .v2{color:var(--text);overflow-wrap:anywhere}
   /* the second way in from an empty note, for when what you want to write down
      is a field; shown on hover where there is hover, always where there isn't */
@@ -2034,7 +2039,7 @@
   .sn-meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:calc(12px*var(--ts));color:var(--text)}
   .sn-meta i{font-style:normal;font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-right:7px}
   .sn-notes{margin-top:2px}
-  .sn-notes .sk{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 26%,transparent);background:color-mix(in srgb,var(--gold) 8%,transparent)}
+  .sn-notes .sk{color:var(--star);border-color:color-mix(in srgb,var(--gold) 42%,transparent);background:color-mix(in srgb,var(--gold) 12%,transparent)}
   .sn-empty{text-align:center;color:var(--muted);margin-top:40px}
   .sn-foot{margin-top:clamp(44px,8vw,72px);text-align:center;font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.7}
   .sn-foot p{margin:0 auto 16px;max-width:52ch}
@@ -3099,6 +3104,7 @@ const APP_VERSION="2.3.1";
 const APP_CHANGELOG=[
   {v:"2.3.1",items:[
     "iPad and iPhone: one tap on a card's buttons is enough again",
+    "Note fields are brighter and a size larger, easier to read",
     "On touch screens the select box shows faintly instead of on hover",
   ]},
   {v:"2.3.0",items:[
