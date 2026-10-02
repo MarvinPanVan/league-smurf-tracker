@@ -1584,14 +1584,19 @@
      what either side of it is. Same lockup as the list view's tier bands. */
   .cm-g{display:flex;align-items:center;gap:8px;padding:7px 11px 3px;
     font-size:calc(10px*var(--ts));font-weight:700;line-height:1;letter-spacing:.14em;text-transform:uppercase;
-    color:var(--faint);user-select:none}
+    color:var(--muted);user-select:none}
   .cm-g::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
   .cm-g:first-child{padding-top:3px}
+  /* A menu is read, item by item, over a busy card — on an iPad it was grey
+     words on a near-black panel the card behind still showed through. The
+     panel is solid now, the items are in the text colour and their marks one
+     step down, and hover keeps its own tint and teal mark. */
+  .card-menu>.hx-in,#moreMenu>.hx-in{background:linear-gradient(180deg,#101923,#0a1118)}
   .card-menu button,.card-menu .cm-link{width:100%;justify-content:flex-start;gap:10px;
-    font-size:calc(13px*var(--ts));font-weight:450;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
-    background:none;border:1px solid transparent;box-shadow:none;color:var(--muted);
+    font-size:calc(13px*var(--ts));font-weight:500;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
+    background:none;border:1px solid transparent;box-shadow:none;color:var(--text);
     text-decoration:none;display:inline-flex;align-items:center;cursor:pointer;text-align:left}
-  .card-menu .ico{width:15px;height:15px;flex-shrink:0;color:var(--faint);
+  .card-menu .ico{width:15px;height:15px;flex-shrink:0;color:var(--muted);
     transition:color .14s ease}
   .card-menu button:hover,.card-menu .cm-link:hover{background:#ffffff0f;border-color:transparent;color:var(--text)}
   .card-menu button:hover .ico,.card-menu .cm-link:hover .ico{color:var(--teal-txt)}

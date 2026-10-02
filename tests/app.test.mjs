@@ -633,6 +633,16 @@ test("note fields stay legible: 12px, light words, visible empty pips", () => {
   assert.match(rule(".ni-skins span"), /color:var\(--star\)/, "skins in the bright gold");
 });
 
+// On an iPad the ⋯ menu was grey words on a panel the card behind showed through.
+test("the ⋯ menus are solid, and their items read in the text colour", () => {
+  const bg = html.match(/\.card-menu>\.hx-in,#moreMenu>\.hx-in\{background:linear-gradient\(180deg,(#[0-9a-f]+),(#[0-9a-f]+)\)\}/);
+  assert.ok(bg, "the panels have a background of their own");
+  for (const c of bg.slice(1)) assert.equal(c.length, 7, c + " is opaque: nothing behind shows through");
+  const item = html.match(/\.card-menu button,\.card-menu \.cm-link\{([^}]*)\}/)[1];
+  assert.match(item, /color:var\(--text\)/);
+  assert.doesNotMatch(html.match(/\.card-menu \.ico\{([^}]*)\}/)[1], /--faint/, "and their marks are not the faintest grey");
+});
+
 test("every corner comes off the radius scale", () => {
   // The tokens (3/4/6/8px), round (50%), square, and hairline 1–3px for bars and
   // rails. Anything else is a radius somebody picked by eye — which is how the page
