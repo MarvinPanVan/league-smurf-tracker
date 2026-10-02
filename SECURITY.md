@@ -41,9 +41,23 @@ in Safari after 7 days without a visit. The app asks the browser to keep the vau
 | **Device sync**, if you set it up      | The **encrypted** vault only (ciphertext)   | Your own Cloudflare worker's KV |
 | **Discord decay alerts**, if you turn them on | Your Diamond+ accounts' Riot IDs, labels and decay estimates, and your Discord webhook URL, in plain text | Your own Cloudflare worker's KV; the worker posts to your webhook |
 | Loading the page                       | Ordinary requests for fonts, rank icons and, unless you turn it off, champion art (the request names the champion) | Google Fonts, op.gg's image CDN, Riot's Data Dragon |
+| Opening **Card art…**                  | Requests for the champion list, one champion's skin list and their pictures. Nothing about you or the account | Riot's Data Dragon |
 
 Logins, passwords and emails are never sent anywhere, except inside the encrypted
 blob when you use device sync.
+
+**Shared snapshots.** *Share a snapshot* puts a read-only page of your ranks into a
+link. Nothing is uploaded: the data is in the part of the link after `#`, which
+browsers do not send to any server, not even the one hosting the page. It contains
+only what the share window lists: labels (Riot IDs only if you tick the box), ranks,
+win/loss, level, peak, and optionally LP history, card art, honor and skins. It never
+contains logins, passwords, emails, notes or your other note fields. Anyone who has
+the link can read it, and a link cannot be taken back, so share it the way you would
+share a screenshot.
+
+Opening a snapshot link shows only that page. It never reads or writes the vault or
+settings stored in that browser, and the page treats everything in the link as
+untrusted input: each value is checked before it is shown.
 
 **Exports.** *Export backup (JSON, plaintext)* writes every password into the file
 in plain text, and the app asks before it does. *Export encrypted backup* needs your
