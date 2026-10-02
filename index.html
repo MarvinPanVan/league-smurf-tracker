@@ -1584,14 +1584,19 @@
      what either side of it is. Same lockup as the list view's tier bands. */
   .cm-g{display:flex;align-items:center;gap:8px;padding:7px 11px 3px;
     font-size:calc(10px*var(--ts));font-weight:700;line-height:1;letter-spacing:.14em;text-transform:uppercase;
-    color:var(--faint);user-select:none}
+    color:var(--muted);user-select:none}
   .cm-g::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
   .cm-g:first-child{padding-top:3px}
+  /* A menu is read, item by item, over a busy card — on an iPad it was grey
+     words on a near-black panel the card behind still showed through. The
+     panel is solid now, the items are in the text colour and their marks one
+     step down, and hover keeps its own tint and teal mark. */
+  .card-menu>.hx-in,#moreMenu>.hx-in{background:linear-gradient(180deg,#101923,#0a1118)}
   .card-menu button,.card-menu .cm-link{width:100%;justify-content:flex-start;gap:10px;
-    font-size:calc(13px*var(--ts));font-weight:450;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
-    background:none;border:1px solid transparent;box-shadow:none;color:var(--muted);
+    font-size:calc(13px*var(--ts));font-weight:500;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
+    background:none;border:1px solid transparent;box-shadow:none;color:var(--text);
     text-decoration:none;display:inline-flex;align-items:center;cursor:pointer;text-align:left}
-  .card-menu .ico{width:15px;height:15px;flex-shrink:0;color:var(--faint);
+  .card-menu .ico{width:15px;height:15px;flex-shrink:0;color:var(--muted);
     transition:color .14s ease}
   .card-menu button:hover,.card-menu .cm-link:hover{background:#ffffff0f;border-color:transparent;color:var(--text)}
   .card-menu button:hover .ico,.card-menu .cm-link:hover .ico{color:var(--teal-txt)}
@@ -2088,6 +2093,11 @@
   .ap-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;
     opacity:0;transform:scale(1.025);transition:opacity .35s ease,transform .6s cubic-bezier(.22,1,.36,1)}
   .ap-hero img.ld{opacity:1;transform:none}
+  /* the stand-in while the splash downloads: the skin's own portrait, blurred to
+     a wash of its colours and scaled so the blur never shows an edge */
+  .ap-hero img.ap-ph{object-position:center 16%;filter:blur(16px) saturate(1.25) brightness(.8);
+    transform:scale(1.18);transition:opacity .15s ease}
+  .ap-hero img.ap-ph.ld{opacity:1;transform:scale(1.18)}
   .ap-hero::after{content:"";position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(180deg,transparent 38%,#010a13cc 82%,var(--bg)),linear-gradient(90deg,#010a1399,transparent 55%)}
   .ap-cap{position:absolute;left:22px;right:22px;bottom:15px;z-index:1;min-width:0}
@@ -3100,8 +3110,12 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.3.1";
+const APP_VERSION="2.3.2";
 const APP_CHANGELOG=[
+  {v:"2.3.2",items:[
+    "Card art: picking a skin shows it at once, the full splash fades in",
+    "The ⋯ menu is solid and its items are easier to read",
+  ]},
   {v:"2.3.1",items:[
     "iPad and iPhone: one tap on a card's buttons is enough again",
     "Card art is as visible as in 2.2 again; the skin picker skips chromas",
@@ -6660,6 +6674,7 @@ function artOf(a){
   return k?{champ:k,skin:0}:null;
 }
 const splashUrl=(c,n)=>DD+"/cdn/img/champion/splash/"+c+"_"+n+".jpg";
+const apPortraitUrl=(c,n)=>DD+"/cdn/img/champion/loading/"+c+"_"+n+".jpg";
 function champArtHTML(a){
   if(!champArtOn())return"";
   const art=artOf(a);if(!art)return"";
@@ -6767,17 +6782,34 @@ function apHero(){
     return;
   }
   const k=ap.champ+"_"+ap.skin;
-  // The picture is only swapped when the pick changes, so the fade plays once
-  // per choice instead of flickering on every repaint around it.
+  /* The picture is only swapped when the pick changes, so the fade plays once
+     per choice instead of flickering on every repaint around it.
+     A splash is a few hundred KB and took a couple of seconds on a tablet, with
+     the banner blank meanwhile. Now nothing waits on it: the skin's portrait —
+     already fetched for its tile — fills the banner at once, blurred, the last
+     splash stays under it, and the new splash fades in over both when it lands. */
   if(el.dataset.k!==k){
     el.dataset.k=k;
-    el.innerHTML=`<img alt="" decoding="async" referrerpolicy="no-referrer"><div class="ap-meta"></div>`;
-    const img=el.querySelector("img");
-    img.addEventListener("load",()=>img.classList.add("ld"));
-    // No splash (offline, or a skin Riot hasn't published art for): the plain
-    // banner with the caption over it still says what is picked
-    img.addEventListener("error",()=>img.remove());
-    img.src=splashUrl(ap.champ,ap.skin);
+    const empty=el.querySelector(".ap-empty");if(empty)empty.remove();
+    let meta=el.querySelector(".ap-meta");
+    if(!meta){meta=document.createElement("div");meta.className="ap-meta";el.appendChild(meta)}
+    const under=[...el.querySelectorAll("img")];
+    const layer=(cls,src)=>{
+      const i=document.createElement("img");
+      i.className=cls;i.alt="";i.decoding="async";i.referrerPolicy="no-referrer";
+      i.addEventListener("load",()=>i.classList.add("ld"));
+      el.insertBefore(i,meta);i.src=src;
+      return i;
+    };
+    const ph=layer("ap-ph",apPortraitUrl(ap.champ,ap.skin));
+    ph.addEventListener("error",()=>ph.remove());
+    const img=layer("ap-sp",splashUrl(ap.champ,ap.skin));
+    try{img.fetchPriority="high"}catch(e){} // ahead of the grid's portraits
+    const settle=keepPh=>setTimeout(()=>{for(const o of under)o.remove();if(!keepPh)ph.remove()},450);
+    img.addEventListener("load",()=>settle(false));
+    // No splash (offline, or a skin Riot hasn't published art for): the portrait
+    // stays as the banner, and the caption over it still says what is picked
+    img.addEventListener("error",()=>{img.remove();settle(true)});
   }
   const shown=acc&&artOf(acc), own=acc&&normArt(acc.art);
   const onCard=!!shown&&shown.champ===ap.champ&&shown.skin===ap.skin;
@@ -6807,7 +6839,7 @@ function renderArtPicker(){
       const on=s.num===ap.skin, cur=shown&&shown.champ===ap.champ&&shown.skin===s.num;
       const nm=s.num===0?apChampName(ap.champ):s.name||apChampName(ap.champ);
       return`<button type="button" class="ap-sk${on?" on":""}" data-skin="${s.num}" aria-pressed="${on}" tabindex="${on?0:-1}" title="${esc(nm)}">`
-        +`<img src="${DD}/cdn/img/champion/loading/${ap.champ}_${s.num}.jpg" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">`
+        +`<img src="${apPortraitUrl(ap.champ,s.num)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">`
         +`<span class="nm">${esc(s.num===0?"Default":nm)}</span>${cur?`<span class="cur">On the card</span>`:""}</button>`;
     }).join("");
     else if(ap.err)h=msg(failed,true);
@@ -6881,6 +6913,23 @@ $("apGrid").addEventListener("click",e=>{
   const ch=e.target.closest("[data-champ]");if(ch){apPickChamp(ch.dataset.champ);return}
   const sk=e.target.closest("[data-skin]");if(sk)apPickSkin(Number(sk.dataset.skin));
 });
+/* The splash download starts when a finger lands on a tile, not when it lifts,
+   and under a mouse once the pointer rests on one — so most of it is already
+   here by the time the tap is a click. */
+const apWarmed=new Set();
+function apWarm(num){
+  if(!ap.champ||!Number.isInteger(num))return;
+  const u=splashUrl(ap.champ,num);if(apWarmed.has(u))return;apWarmed.add(u);
+  const i=new Image();i.referrerPolicy="no-referrer";i.decoding="async";i.src=u;
+}
+let apHoverT=0;
+$("apGrid").addEventListener("pointerdown",e=>{const t=e.target.closest("[data-skin]");if(t)apWarm(Number(t.dataset.skin))});
+$("apGrid").addEventListener("pointerover",e=>{
+  clearTimeout(apHoverT);
+  const t=e.pointerType==="mouse"&&e.target.closest("[data-skin]");
+  if(t)apHoverT=setTimeout(()=>apWarm(Number(t.dataset.skin)),120);
+});
+$("apGrid").addEventListener("pointerleave",()=>clearTimeout(apHoverT));
 $("apGrid").addEventListener("dblclick",e=>{if(e.target.closest("[data-skin]")&&!$("apUse").disabled)apSave()});
 /* A skin with no loading-screen portrait has no art to put on a card either, so
    it leaves the grid — unless it is the one picked, which stays as a named plate
