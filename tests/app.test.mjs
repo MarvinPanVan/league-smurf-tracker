@@ -11,6 +11,7 @@ import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { webcrypto } from "node:crypto";
 import { JSDOM } from "jsdom";
+import { deflateRawSync } from "node:zlib";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const htmlPath = path.join(__dirname, "..", "index.html");
@@ -1169,6 +1170,9 @@ test("champion art: the most-played champion's splash, by Data Dragon id, lazy, 
   assert.equal(art("a").getAttribute("alt"), "", "decoration, not content");
   assert.match(art("b").getAttribute("src"), /\/DrMundo_0\.jpg$/);
   assert.equal(art("c"), null, "no champion data, no picture");
+  // a background glow, not a picture: real splash art at 28% read as a picture
+  const op = Number(html.match(/\.c-art\{[^}]*opacity:([\d.]+)/)[1]);
+  assert.ok(op <= 0.2, "the art sits at " + op);
   art("b").dispatchEvent(new win.Event("error"));
   assert.equal(art("b"), null, "a picture that fails to load goes away");
   doc.getElementById("bSettings").click();
@@ -1179,6 +1183,381 @@ test("champion art: the most-played champion's splash, by Data Dragon id, lazy, 
   doc.getElementById("sSave").click();
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).champArt, false);
   assert.equal(doc.querySelectorAll(".c-art").length, 0, "and stays off: nothing is requested");
+});
+
+/* Data Dragon stood in for: the version list, the champion list (with one id
+   that is not an id), and skin lists — one champion fails once, so Try again has
+   something to do. Every request is recorded so the test can say where they went. */
+function dataDragon(w, calls) {
+  let wukongFails = 1;
+  const json = data => ({ ok: true, status: 200, json: async () => data });
+  w.fetch = async url => {
+    url = String(url); calls.push(url);
+    if (url.endsWith("/api/versions.json")) return json(["lolpatch_7.20", "15.19.1", "15.18.1"]);
+    if (url.endsWith("/cdn/15.19.1/data/en_US/champion.json")) return json({ data: {
+      Ahri: { id: "Ahri", name: "Ahri" }, Kaisa: { id: "Kaisa", name: "Kai'Sa" }, MonkeyKing: { id: "MonkeyKing", name: "Wukong" },
+      Evil: { id: 'x"><img src=x>', name: "Evil" } } });
+    if (url.endsWith("/champion/Kaisa.json")) return json({ data: { Kaisa: { skins: [
+      { num: 0, name: "default" }, { num: 1, name: "Bullet Angel Kai'Sa" }, { num: 14, name: "K/DA ALL OUT Kai'Sa" }] } } });
+    if (url.endsWith("/champion/Ahri.json")) return json({ data: { Ahri: { skins: [
+      { num: 0, name: "default" }, { num: 7, name: "Arcade <Ahri>" }, { num: "8", name: "not a number" }] } } });
+    if (url.endsWith("/champion/MonkeyKing.json")) {
+      if (wukongFails-- > 0) return { ok: false, status: 503, json: async () => ({}) };
+      return json({ data: { MonkeyKing: { skins: [{ num: 0, name: "default" }, { num: 1, name: "Volcanic Wukong" }] } } });
+    }
+    throw new Error("unexpected fetch " + url);
+  };
+}
+
+test("card art: any champion and any skin from the ⋯ menu, kept on the account, and back to most-played", async () => {
+  const calls = [];
+  const acc = { id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: Date.now(),
+      champs: [{ name: "Kai'Sa", games: 30, wr: 50 }] } };
+  const win = bootApp([acc], w => dataDragon(w, calls));
+  const doc = win.document, $ = id => doc.getElementById(id);
+  const art = () => doc.querySelector('.card[data-id="a"] .c-art').getAttribute("src");
+  const skins = () => [...doc.querySelectorAll("#apGrid [data-skin]")];
+  const hero = () => $("apHero").querySelector("img").getAttribute("src");
+  cardMenu(win, "a").querySelector('[data-act="art"]').click();
+  assert.equal($("artPicker").classList.contains("hidden"), false, "the picker opens");
+  assert.match(hero(), /\/splash\/Kaisa_0\.jpg$/, "starting from what the card shows now: the most-played champion");
+  await until(() => skins().length === 3, "Kai'Sa's skins");
+  assert.match($("apHero").textContent, /On the card now · most-played/);
+  assert.match(skins()[0].querySelector("img").getAttribute("src"), /\/loading\/Kaisa_0\.jpg$/, "portraits from the loading screen art");
+  assert.ok(skins()[0].querySelector(".cur"), "the skin the card shows is marked");
+  assert.equal($("apAuto").classList.contains("hidden"), true, "nothing of your own to go back from yet");
+  skins()[2].click();
+  assert.match(hero(), /\/splash\/Kaisa_14\.jpg$/, "the splash follows the pick");
+  assert.match($("apHero").textContent, /K\/DA ALL OUT Kai'Sa/);
+  assert.equal(skins()[2].getAttribute("aria-pressed"), "true");
+
+  $("apBack").click();
+  const champs = () => [...doc.querySelectorAll("#apGrid [data-champ]")];
+  await until(() => champs().length === 3, "the champion list");
+  assert.deepEqual(champs().map(b => b.textContent), ["Ahri", "Kai'Sa", "Wukong"], "by name, and an id that is not an id is left out");
+  assert.match(champs()[0].querySelector("img").getAttribute("src"), /\/cdn\/15\.19\.1\/img\/champion\/Ahri\.png$/, "icons from the newest real version");
+  const search = $("apSearch");
+  search.value = "monkey"; search.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.deepEqual(champs().map(b => b.textContent), ["Wukong"], "found by id as well as by name");
+  search.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  await until(() => doc.querySelector('#apGrid [data-ap="retry"]'), "the failed skin list");
+  assert.match($("apGrid").textContent, /Couldn't reach Riot's Data Dragon/);
+  doc.querySelector('#apGrid [data-ap="retry"]').click();
+  await until(() => skins().length === 2, "Wukong's skins on the second try");
+
+  $("apBack").click();
+  search.value = "ahri"; search.dispatchEvent(new win.Event("input", { bubbles: true }));
+  champs()[0].click();
+  await until(() => skins().length === 2, "Ahri's skins, without the one whose number is a string");
+  assert.equal(skins()[1].querySelector(".nm").innerHTML, "Arcade &lt;Ahri&gt;", "names from Data Dragon are text");
+  skins()[1].click();
+  $("apUse").click();
+  assert.equal($("artPicker").classList.contains("hidden"), true, "Use this art closes the picker");
+  assert.match(art(), /\/splash\/Ahri_7\.jpg$/, "and the card shows it");
+  await until(() => JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].art, "saved");
+  assert.equal(JSON.stringify(JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].art),
+    JSON.stringify({ champ: "Ahri", skin: 7, name: "Arcade <Ahri>" }));
+
+  cardMenu(win, "a").querySelector('[data-act="art"]').click();
+  assert.match(hero(), /\/splash\/Ahri_7\.jpg$/, "reopened on your own pick");
+  await until(() => skins().length === 2, "skins again");
+  assert.equal(skins()[1].getAttribute("aria-pressed"), "true");
+  assert.equal($("apUse").disabled, true, "nothing to use: it is already on the card");
+  assert.equal($("apAuto").classList.contains("hidden"), false);
+  $("apAuto").click();
+  assert.match(art(), /\/splash\/Kaisa_0\.jpg$/, "back to the most-played champion");
+  await until(() => !("art" in JSON.parse(win.localStorage.getItem("smurf-tracker"))[0]), "the pick is gone from storage");
+  assert.ok(calls.every(u => u.startsWith("https://ddragon.leagueoflegends.com/")), "only ever Data Dragon: " + calls.join(" "));
+  assert.equal(calls.filter(u => u.endsWith("versions.json")).length, 1, "the version is asked once a session");
+});
+
+test("card art: Escape closes the picker, a stored pick is checked like any other field, and works without champion data", async () => {
+  const acc = (id, art) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [], art });
+  const win = bootApp([acc("ok", { champ: "Jinx", skin: 4, name: "<b>Mafia</b>" }), acc("bad1", { champ: 'x"><img src=x>', skin: 1 }),
+    acc("bad2", { champ: "Ahri", skin: -1 }), acc("bad3", { champ: "Ahri", skin: 2.5 }), acc("bad4", "Ahri")]);
+  const doc = win.document;
+  const art = id => doc.querySelector(`.card[data-id="${id}"] .c-art`);
+  assert.match(art("ok").getAttribute("src"), /\/splash\/Jinx_4\.jpg$/, "no games needed: your pick is the picture");
+  for (const id of ["bad1", "bad2", "bad3", "bad4"]) assert.equal(art(id), null, id + " shows nothing");
+  runScript(win, "saveDB()");
+  await until(() => !JSON.parse(win.localStorage.getItem("smurf-tracker")).some(a => a.id !== "ok" && "art" in a), "bad picks dropped on save");
+  const stored = JSON.parse(win.localStorage.getItem("smurf-tracker"));
+  assert.equal(JSON.stringify(stored.find(a => a.id === "ok").art), JSON.stringify({ champ: "Jinx", skin: 4, name: "<b>Mafia</b>" }), "a good one kept as it was");
+  cardMenu(win, "ok").querySelector('[data-act="art"]').click();
+  assert.equal(doc.getElementById("artPicker").classList.contains("hidden"), false);
+  assert.equal(doc.querySelector("#apHero b").innerHTML, "&lt;b&gt;Mafia&lt;/b&gt;", "the stored name is text");
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(doc.getElementById("artPicker").classList.contains("hidden"), true, "Escape closes it like every other window");
+});
+
+/* Notes with fields: what used to be typed as "honor 3, 140 champs, Elementalist
+   Lux" by hand, kept as fields that every card shows the same way. */
+const fieldsAcc = (id, info, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+  stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: Date.now() }, info }, extra || {});
+
+test("note fields: shown on the card as facts, skins and a penalty line, searchable, and checked like any other field", async () => {
+  const win = bootApp([fieldsAcc("a", { honor: 4, owned: 142, be: 34250, rp: 500, twofa: false, penalty: "14-day chat restriction",
+    skins: ["Elementalist Lux", "Spirit Blossom Yasuo", 7, "elementalist lux"], own: { "Bought from": "G2G", Price: 12.5, "Phone linked": true, __proto__x: 1 } }, { notes: "duo only" }),
+    fieldsAcc("b", { honor: 9, owned: -1, be: "lots", twofa: "yes", skins: "Lux", own: [1] }),
+    fieldsAcc("c", { skins: Array.from({ length: 9 }, (_, i) => "Skin " + i) })]);
+  const doc = win.document, card = id => doc.querySelector(`.card[data-id="${id}"]`);
+  const facts = id => [...card(id).querySelectorAll(".ni > .ni-row:not(.ni-skins) .ni-f")].map(f => f.textContent.trim());
+  assert.deepEqual(facts("a"), ["Honor 4", "142 champions", "34,250 BE", "No 2-step", "Price 12.5", "Phone linked", "__proto__x 1"],
+    "in the list's order; RP is off unless you switch it on; your own fields after the built-in ones");
+  assert.equal(card("a").querySelectorAll(".ni-pips i.on").length, 4, "honor as pips");
+  assert.deepEqual([...card("a").querySelectorAll(".ni-skins .ni-f")].map(f => f.textContent), ["Elementalist Lux", "Spirit Blossom Yasuo"],
+    "skins as their own row, without the number or the same skin twice");
+  assert.ok(card("a").querySelector(".ni-pen .sens"), "the penalty is a line of its own, hidden in streamer mode");
+  assert.match(card("a").querySelector(".ni-pen").textContent, /14-day chat restriction/);
+  assert.equal(card("a").querySelector(".ni-kv .k2").textContent, "Bought from");
+  assert.ok(card("a").querySelector(".ni-kv .v2 .sens"), "your own text is hidden in streamer mode too");
+  assert.match(card("a").querySelector(".nt").textContent, /duo only/, "and the free note is still there under them");
+  assert.equal(card("b").querySelector(".ni"), null, "nothing in b's fields was a real value");
+  assert.match(card("b").querySelector(".c-notes.blank").textContent, /Add a note/);
+  assert.deepEqual([...card("c").querySelectorAll(".ni-skins .ni-f")].map(f => f.textContent).slice(-2), ["Skin 5", "+3 more"], "nine skins: six and a count");
+  runScript(win, "window.__s = JSON.stringify(accounts.map(a => a.info || null))");
+  const mem = JSON.parse(win.__s);
+  assert.equal(mem[1], null, "b's fields are dropped in memory");
+  assert.equal(JSON.stringify(Object.keys(mem[0].own)), JSON.stringify(["Bought from", "Price", "Phone linked", "__proto__x"]));
+  // a field literally named __proto__ can only arrive as raw JSON, and is not kept
+  const raw = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker",
+    '[{"id":"r","region":"EUW","gameName":"R","tagLine":"1","status":"active","tags":[],"history":[],"info":{"own":{"__proto__":"x","ok":"y"}}}]'));
+  runScript(raw, "window.__o = JSON.stringify(accounts[0].info.own) + Object.getPrototypeOf(accounts[0].info.own === Object.prototype)");
+  assert.match(raw.__o, /^\{"ok":"y"\}/);
+  const search = doc.getElementById("tSearch");
+  for (const [q, n] of [["spirit blossom", 1], ["g2g", 1], ["chat restriction", 1], ["skin 8", 1], ["34250", 0]]) {
+    search.value = q; search.dispatchEvent(new win.Event("input", { bubbles: true }));
+    await until(() => doc.querySelectorAll("#grid .card").length === n, "search " + q + " to find " + n);
+  }
+});
+
+test("note fields: a click on them opens the account form at Notes, and saving keeps a switched-off field's value", async () => {
+  const win = bootApp([fieldsAcc("a", { honor: 4, rp: 500, skins: ["Elementalist Lux"], penalty: "old ban" }), fieldsAcc("z", null)]);
+  const doc = win.document, $ = id => doc.getElementById(id);
+  doc.querySelector('.card[data-id="a"] .ni').click();
+  assert.equal($("form").classList.contains("hidden"), false, "the account form opens");
+  assert.ok(doc.querySelector('#fInfo [data-nf="honor"] [aria-checked="true"][data-autofocus]'), "starting at the first field, not the name");
+  assert.equal($("fName").hasAttribute("data-autofocus"), false);
+  assert.equal(doc.querySelector('#fInfo [data-nf="honor"] [aria-checked="true"]').dataset.v, "4");
+  assert.equal(doc.querySelector('#fInfo [data-nf="rp"]'), null, "RP is off, so it has no control");
+  doc.querySelector('#fInfo [data-nf="honor"] [data-v="2"]').click();
+  doc.querySelector('#fInfo [data-nf="skins"]').value = "Elementalist Lux, Arcade Ahri,, ";
+  doc.querySelector('#fInfo [data-nf="owned"]').value = "4000";
+  doc.querySelector('#fInfo [data-nf="twofa"]').value = "1";
+  doc.querySelector('#fInfo [data-nf="penalty"]').value = "  ";
+  $("fSave").click();
+  await until(() => JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].info.honor === 2, "saved");
+  assert.equal(JSON.stringify(JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].info),
+    JSON.stringify({ honor: 2, owned: 999, rp: 500, twofa: true, skins: ["Elementalist Lux", "Arcade Ahri"] }),
+    "a number past the field's top is kept at the top; an emptied field is gone; RP, switched off, keeps its value");
+  // an empty card offers the fields as a second way in, and opening the form for a
+  // name edit still starts at the name
+  doc.querySelector('.card[data-id="z"] .c-notes.blank [data-act="notefields"]').click();
+  assert.equal($("form").classList.contains("hidden"), false);
+  assert.ok(doc.querySelector("#fInfo [data-autofocus]"));
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  cardMenu(win, "z").querySelector('[data-act="edit"]').click();
+  assert.equal($("fName").hasAttribute("data-autofocus"), true, "Account… starts at the name as before");
+  assert.equal(doc.querySelector("#fInfo [data-autofocus]"), null);
+});
+
+test("Fields…: built-ins switch off and on, your own are added, renamed and removed, and their values follow the name", async () => {
+  const win = bootApp([fieldsAcc("a", { be: 100, own: { "Bought from": "G2G" } }), fieldsAcc("b", { own: { "bought FROM": "Eldorado" } })]);
+  const doc = win.document, $ = id => doc.getElementById(id);
+  const stored = () => JSON.parse(win.localStorage.getItem("smurf-tracker"));
+  const cfgNF = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).noteFields;
+  const change = el => el.dispatchEvent(new win.Event("change", { bubbles: true }));
+  cardMenu(win, "a").querySelector('[data-act="edit"]').click();
+  $("fFieldsBtn").click();
+  assert.equal($("fFieldsBtn").getAttribute("aria-expanded"), "true");
+  const own = () => [...doc.querySelectorAll("#fFieldsCfg [data-own-label]")].map(i => i.value);
+  assert.deepEqual(own(), ["Bought from"], "a field no list has defined yet is found on the accounts, once, whatever its case");
+  // typed but not saved yet, and it must survive the list changing under it
+  doc.querySelector('#fInfo [data-nf="own"]').value = "Fiverr";
+  const be = doc.querySelector('#fFieldsCfg [data-nf-on="be"]');
+  be.checked = false; change(be);
+  assert.deepEqual(cfgNF().off.sort(), ["be", "rp"]);
+  assert.equal(doc.querySelector('#fInfo [data-nf="be"]'), null, "Blue Essence leaves the form");
+  assert.doesNotMatch(doc.querySelector('.card[data-id="a"] .c-notes').textContent, /BE/, "and the card");
+  assert.equal(doc.querySelector('#fInfo [data-nf="own"]').value, "Fiverr", "what was typed is still there");
+  $("nfNewLabel").value = "Server"; $("nfNewKind").value = "text";
+  $("nfAdd").click();
+  assert.deepEqual(own(), ["Bought from", "Server"]);
+  $("nfNewLabel").value = "server"; $("nfAdd").click();
+  assert.deepEqual(own(), ["Bought from", "Server"], "no second field of the same name");
+  const ren = doc.querySelector('#fFieldsCfg [data-own-label="0"]');
+  ren.value = "Source"; change(ren);
+  assert.equal(doc.querySelector('#fInfo [data-label="Source"]').value, "Fiverr", "renamed with the typed value in it");
+  await until(() => stored()[1].info && stored()[1].info.own.Source === "Eldorado", "b's value moved to the new name");
+  assert.deepEqual(cfgNF().custom, [{ label: "Source", kind: "text" }, { label: "Server", kind: "text" }]);
+  doc.querySelector('#fInfo [data-label="Server"]').value = "EUW-2";
+  $("fSave").click();
+  await until(() => stored()[0].info.own.Server === "EUW-2", "a's own fields saved");
+  assert.equal(JSON.stringify(stored()[0].info), JSON.stringify({ be: 100, own: { Source: "Fiverr", Server: "EUW-2" } }), "BE kept while it is off");
+  cardMenu(win, "a").querySelector('[data-act="edit"]').click();
+  $("fFieldsBtn").click();
+  let asked = "";
+  win.confirm = m => { asked = m; return true; };
+  doc.querySelector('#fFieldsCfg [data-own-del="0"]').click();
+  assert.match(asked, /Remove “Source”\? 2 accounts have values in it/);
+  assert.deepEqual(own(), ["Server"]);
+  await until(() => !stored()[1].info, "b had only that field, so b has no fields left");
+  assert.equal(JSON.stringify(stored()[0].info.own), JSON.stringify({ Server: "EUW-2" }));
+});
+
+test("note fields come back from this app's own CSV export, and a third-party CSV's extra columns stay out", () => {
+  const win = bootApp([fieldsAcc("a", { honor: 5, twofa: true, skins: ["A", "B"], own: { Price: 3 } })]);
+  runScript(win, `{
+    const header = ["gameName","tagLine","favorite","lastUpdated","Honor level","2-step verification","Skins","Price","Bought from","Phone"];
+    const row = {"Honor level":"5","2-step verification":"yes","Skins":"A|B","Price":"3","Bought from":"G2G","Phone":"no"};
+    window.__i = JSON.stringify(csvNoteInfo(header, n => row[n] || ""));
+  }`);
+  assert.equal(win.__i, JSON.stringify({ honor: 5, twofa: true, skins: ["A", "B"], own: { Price: 3, "Bought from": "G2G", Phone: false } }));
+});
+
+test("streamer mode blurs the note fields that could say who you are", () => {
+  assert.match(html, /body\.streamer :is\(#fName[^)]*\.nf-sens\)\{filter:blur/, "the free-text fields in the form");
+});
+
+/* A snapshot is a page carried in a link: "#s=0.<base64url JSON>" plain, or
+   "#s=1.<base64url deflate-raw>" where the browser can compress. */
+const b64u = buf => Buffer.from(buf).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const snapCode = (obj, packed) => packed ? "1." + b64u(deflateRawSync(Buffer.from(JSON.stringify(obj)))) : "0." + b64u(Buffer.from(JSON.stringify(obj)));
+const viewSnap = (code, tweak) => bootApp(undefined, w => {
+  w.history.replaceState(null, "", "#s=" + code);
+  if (tweak) tweak(w);
+});
+const snapAcc = (id, extra) => Object.assign({ id, region: "EUW", gameName: "Secret" + id, tagLine: "TAG" + id, status: "active", tags: ["mid"], history: [],
+  login: "login-" + id, password: "pw-" + id, email: id + "@mail.gg", notes: "private note " + id, birthdate: "2000-01-02",
+  stats: { found: true, tier: "GOLD", division: "II", lp: 40, wins: 30, losses: 20, level: 120, updatedAt: Date.now() } }, extra || {});
+
+test("snapshot: the link carries ranks and what you ticked, never a login, password, email or note", () => {
+  const D = 864e5, now = Date.now();
+  const win = bootApp([
+    snapAcc("a", { label: "Main", fav: true, art: { champ: "Ahri", skin: 7 }, info: { honor: 4, skins: ["Arcade Ahri"], penalty: "chat ban", own: { Bought: "G2G" } },
+      history: [1, 2, 3].map(k => ({ t: now - (4 - k) * D, tier: "GOLD", division: "III", lp: 20 * k, w: k, l: 0 })) }),
+    snapAcc("b", { status: "banned", stats: { found: true, tier: "UNRANKED", level: 40, updatedAt: now } }),
+    snapAcc("c", { archived: true }),
+  ]);
+  const build = o => { win.__o = o; runScript(win, "window.__s = JSON.stringify(buildSnapshot(window.__o))"); return win.__s; };
+  const base = { which: "all", title: "  My   <b>accounts</b> ", ids: false, art: true, hist: true, notes: true };
+  const json = build(base), snap = JSON.parse(json);
+  for (const secret of ["login-", "pw-", "@mail.gg", "private note", "2000-01-02", "Secret", "TAG", "chat ban", "G2G", "mid"])
+    assert.ok(!json.includes(secret), "no " + secret + " in " + json);
+  assert.equal(snap.t, "My <b>accounts</b>", "the title as typed, spaces tidied (it is escaped where it is shown)");
+  assert.deepEqual(snap.a.map(a => a.n), ["Main", "Account 1"], "labels, or a stand-in — and no archived account");
+  assert.deepEqual(snap.a[0].k, [3, "II", 40]);
+  assert.deepEqual(snap.a[0].c, ["Ahri", 7], "the card's own art");
+  assert.equal(snap.a[0].hn, 4); assert.deepEqual(snap.a[0].sk, ["Arcade Ahri"]);
+  assert.equal(snap.a[0].h.length, 3);
+  assert.equal(snap.a[1].k, undefined, "unranked has no rank");
+  assert.equal(snap.a[1].st, "banned");
+  const bare = JSON.parse(build({ ...base, which: "ranked", art: false, hist: false, notes: false }));
+  assert.deepEqual(bare.a.map(a => a.n), ["Main"], "Ranked leaves the unranked one out");
+  assert.ok(!("c" in bare.a[0]) && !("h" in bare.a[0]) && !("hn" in bare.a[0]) && !("sk" in bare.a[0]), "unticked means left out");
+  const ids = JSON.parse(build({ ...base, ids: true }));
+  assert.equal(ids.a[0].i, "Secreta#TAGa", "Riot IDs only when ticked");
+  assert.equal(ids.a[1].n, "Secretb#TAGb", "and an unlabelled account goes by its Riot ID");
+});
+
+test("snapshot viewer: draws the page from the link, and opening it never reads or writes this browser's own vault", async () => {
+  const D = 864e5;
+  const obj = { v: 1, t: "Marvin's <img src=x onerror=alert(1)>", at: Date.UTC(2026, 9, 2), c: ["#ff0000", "red;}"], a: [
+    { n: "Main", r: "EUW", k: [4, "II", 61], w: 38, l: 29, lv: 214, p: "Platinum I · 10 LP", f: 1, c: ["Ahri", 7], hn: 3, sk: ["Arcade Ahri", "<b>x</b>"],
+      h: [[3, 3, "I", 80], [2, 4, "IV", 10], [0, 4, "II", 61]] },
+    { n: "Chall", r: "KR", k: [9, "I", 1200], w: 300, l: 250 },
+    { n: "Odd", r: "MARS", k: [99, "V", -5], c: ['x"><img', 1], st: "nonsense" },
+    { n: "Gone", st: "banned", k: [1, "I", 12] },
+    { n: "Resting", st: "resting", k: [0, "IV", 3] },
+    "not an account",
+  ] };
+  const vault = JSON.stringify([snapAcc("mine")]), cfg = JSON.stringify({ seenHelp: true, accent: "#123456" });
+  for (const packed of [false, true]) {
+    const win = viewSnap(snapCode(obj, packed), w => {
+      w.localStorage.setItem("smurf-tracker", vault); w.localStorage.setItem("smurf-tracker-cfg", cfg);
+      if (packed) w.DecompressionStream = globalThis.DecompressionStream;
+    });
+    const doc = win.document;
+    await until(() => doc.querySelector(".sn-card"), "the snapshot to render (" + (packed ? "compressed" : "plain") + ")");
+    assert.equal(doc.getElementById("appRoot").classList.contains("hidden"), true, "the app never starts");
+    assert.equal(doc.getElementById("lock").classList.contains("hidden"), true, "nor asks to unlock anything");
+    assert.equal(doc.querySelector(".sn-title").textContent, "Marvin's <img src=x onerror=alert(1)>", "the title is text");
+    assert.equal(doc.querySelectorAll("#snapView img:not([src^='https://ddragon'])").length, 0, "no image a link could smuggle in");
+    assert.match(doc.title, /^Marvin's .* · Smurf Tracker$/);
+    const cards = [...doc.querySelectorAll(".sn-card")];
+    assert.deepEqual(cards.map(c => c.querySelector(".sn-nm").textContent), ["Chall", "Main", "Gone", "Resting", "Odd"], "best first; the one that wasn't an account is dropped");
+    assert.equal(cards[3].querySelector(".sn-rank").textContent, "Iron IV3 LPResting", "a status rides beside the rank, it doesn't replace the LP");
+    assert.equal(cards[1].querySelector(".sn-rank b").textContent, "Platinum II");
+    assert.equal(cards[0].querySelector(".sn-rank b").textContent, "Challenger", "no division above Master, whatever the link says");
+    assert.equal(cards[4].querySelector(".sn-rank b").textContent, "Unranked", "a tier that does not exist is no rank");
+    assert.equal(cards[4].querySelector(".sn-art img"), null, "and art that is not an id is no art");
+    assert.equal(cards[4].querySelector(".regiontag"), null, "nor a region that is not one");
+    assert.match(cards[1].querySelector(".sn-art img").getAttribute("src"), /\/splash\/Ahri_7\.jpg$/);
+    assert.ok(cards[1].querySelector(".sn-spk svg"), "the climb as a line");
+    assert.equal(cards[1].querySelector(".sn-notes").textContent.includes("<b>x</b>"), true, "skin names are text");
+    assert.ok(cards[2].classList.contains("dead"), "banned looks it");
+    assert.equal(doc.querySelector(".sn-best b").textContent, "Challenger");
+    assert.equal(doc.documentElement.style.getPropertyValue("--gold"), "#ff0000", "the sharer's colour");
+    assert.equal(doc.documentElement.style.getPropertyValue("--teal"), "", "and not one that isn't a colour");
+    // shortcuts, leaving the tab: none of it may reach storage
+    for (const key of ["n", "h", "f", "/"]) doc.dispatchEvent(new win.KeyboardEvent("keydown", { key, bubbles: true }));
+    doc.dispatchEvent(new win.Event("visibilitychange")); win.dispatchEvent(new win.Event("pagehide"));
+    assert.equal(doc.getElementById("form").classList.contains("hidden"), true, "n opens nothing");
+    await tick(50);
+    assert.equal(win.localStorage.getItem("smurf-tracker"), vault, "the vault is untouched");
+    assert.equal(win.localStorage.getItem("smurf-tracker-cfg"), cfg, "and so are the settings");
+  }
+});
+
+test("snapshot viewer: a cut-off or forged link is a broken-link page, and the sizes are capped", async () => {
+  for (const code of ["1.AAAA", "0.%%%", "0." + b64u(Buffer.from("{nope")), snapCode({ v: 2, a: [] }), "2." + b64u(Buffer.from("{}")), "0." + "A".repeat(20000)]) {
+    const win = viewSnap(code, w => { w.DecompressionStream = globalThis.DecompressionStream; });
+    await until(() => win.document.querySelector(".sn-err"), "the broken-link page for " + code.slice(0, 12));
+    assert.match(win.document.querySelector(".sn-err").textContent, /broken/);
+  }
+  // a small link that unpacks into something enormous stops at the cap
+  const bomb = "1." + b64u(deflateRawSync(Buffer.from('{"v":1,"a":[],"t":"' + "x".repeat(5e6) + '"}')));
+  assert.ok(bomb.length < 16000, "the bomb fits in a link");
+  const win = viewSnap(bomb, w => { w.DecompressionStream = globalThis.DecompressionStream; });
+  await until(() => win.document.querySelector(".sn-err"), "the cap to refuse it");
+  const many = viewSnap(snapCode({ v: 1, t: "x", a: Array.from({ length: 90 }, (_, i) => ({ n: "A" + i })) }));
+  await until(() => many.document.querySelector(".sn-card"), "the big one");
+  assert.equal(many.document.querySelectorAll(".sn-card").length, 60, "sixty accounts at most");
+});
+
+test("share window: from the ⋯ menu, counts per group, and Copy link puts this page's link with the snapshot on the clipboard", async () => {
+  let copied = null;
+  const win = bootApp([snapAcc("a", { label: "Main", fav: true }), snapAcc("b", { label: "Alt", stats: null })], w => {
+    Object.defineProperty(w.navigator, "clipboard", { value: { writeText: async t => { copied = t; } }, configurable: true });
+  });
+  const doc = win.document, $ = id => doc.getElementById(id);
+  $("bMore").click(); $("bShare").click();
+  assert.equal($("shareModal").classList.contains("hidden"), false);
+  const seg = () => [...doc.querySelectorAll("#shWhich [data-which]")].map(b => b.textContent.replace(/\s+/g, " ").trim() + (b.disabled ? " (off)" : "") + (b.classList.contains("on") ? " *" : ""));
+  assert.deepEqual(seg(), ["Ranked 1 *", "Favorites 1", "Selected 0 (off)", "All 2"]);
+  doc.querySelector('#shWhich [data-which="all"]').click();
+  $("shName").value = "Squad"; $("shName").dispatchEvent(new win.Event("input"));
+  await until(() => /2 accounts/.test($("shSize").textContent), "the size line");
+  $("shCopy").click();
+  await until(() => copied, "the clipboard");
+  assert.match(copied, /^https:\/\/example\.com\/index\.html#s=[01]\.[A-Za-z0-9_-]+$/);
+  const view = viewSnap(copied.split("#s=")[1], w => { w.DecompressionStream = globalThis.DecompressionStream; });
+  await until(() => view.document.querySelector(".sn-card"), "the link to open");
+  assert.equal(view.document.querySelector(".sn-title").textContent, "Squad");
+  assert.deepEqual([...view.document.querySelectorAll(".sn-nm")].map(n => n.textContent), ["Main", "Alt"]);
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal($("shareModal").classList.contains("hidden"), true, "Escape closes it");
+});
+
+test("share window: not for example data, and not for an empty vault", () => {
+  const win = bootApp();
+  win.document.getElementById("bShare").click();
+  assert.equal(win.document.getElementById("shareModal").classList.contains("hidden"), true);
+  win.document.getElementById("bDemo").click();
+  win.document.getElementById("bShare").click();
+  assert.equal(win.document.getElementById("shareModal").classList.contains("hidden"), true, "preview data is not yours to share");
+  assert.match(win.document.getElementById("toast").textContent, /Exit preview/);
 });
 
 test("On each card: any part can wait under Details, Compact is chart and stats, and 2.1's switch carries over", () => {
@@ -6631,7 +7010,7 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
     ["Edit", "Look up", "Mark", "Vault", "Remove"],
     "named groups — a hairline never says what either side of it is");
   const items = [...m.querySelectorAll("button,.cm-link")];
-  assert.equal(items.length, 11, "every action still reachable");
+  assert.equal(items.length, 12, "every action still reachable");
   for (const b of items) assert.ok(b.querySelector("svg.ico"), `"${b.textContent.trim()}" carries a mark`);
   // The account name used to sit at the top as the one row that was not an item,
   // which is exactly the row that got clipped once the list had to scroll.
@@ -6990,9 +7369,9 @@ test("the clickable dashboard tiles share a baseline with the plain ones", () =>
 /* The desktop rank window was fixed to always name the account it opened for. The
    phone hid that line with every other modal caption — which put it straight back
    into the state the bug had it in: a rank form with no name on it. */
-test("on a phone the rank window still says whose rank it is", () => {
+test("on a phone the rank window and the card art picker still say whose account it is", () => {
   const hide = html.indexOf(".mdl-h .s{display:none}");
-  const show = html.indexOf("#rankModal .mdl-h .s{display:block");
+  const show = html.indexOf(":is(#rankModal,#artPicker) .mdl-h .s{display:block");
   assert.ok(hide > -1, "modal captions are still hidden on narrow screens");
   assert.ok(show > hide, "and the rank window's own rule comes after it, so it wins");
 });

@@ -14,14 +14,20 @@ Every League account you own in one place: rank, LP history, logins, notes. It r
 - **Ranks without the busywork.** One click checks every account. Each card shows the tier, LP, win rate and level, plus an LP chart that draws the ladder as bands, so a promotion looks like one. Past seasons, flex rank and your champions sit under **Details**.
 - **Tells you what to play.** **Play next** picks the account that needs a game: one about to decay first, otherwise the one you have left longest. **Decay risk** estimates how many days a Diamond+ account has banked from the games seen between checks. **This week** sums up the last seven days, and **Needs refresh** counts the accounts whose rank is old. With your worker, **decay alerts reach your Discord** even while the app is closed.
 - **Logins kept safe.** Username, password and email per account, hidden until you ask. Set a master password and everything is encrypted (AES-256, 600 000 PBKDF2 rounds), with auto-lock. **Copy username, then password** fills a login screen in two pastes, and copied passwords clear after 30 seconds.
-- **Three layouts, your look.** Cards to browse, a list to work through a big vault, or a wall of rank crests to see the whole collection at once. Pick a theme (Hextech, Shadow Isles, Noxus, Piltover, Freljord, Ionia, Void, or one that follows your best rank), choose what each card shows, and set the effects and text size. Each card can carry its account's most-played champion as art.
+- **Three layouts, your look.** Cards to browse, a list to work through a big vault, or a wall of rank crests to see the whole collection at once. Pick a theme (Hextech, Shadow Isles, Noxus, Piltover, Freljord, Ionia, Void, or one that follows your best rank), choose what each card shows, and set the effects and text size. Each card can carry champion art: its most-played champion by default, or any champion and skin you pick with **Card art…**.
+- **Notes with fields.** Honor level, skins, champions owned, Blue Essence, 2-step verification and penalties, plus fields of your own (where an account came from, what it cost). Every card shows them the same way, and search finds them.
+- **Share a snapshot.** A read-only page of your ranks in one link, to send a friend: best rank, games, win rate, then each account with its art and LP line. You choose which accounts and whether Riot IDs are shown. Logins, emails and notes are never in it, and nothing is uploaded: the link itself is the page.
 - **Streamer mode.** Press <kbd>H</kbd> and Riot IDs, logins, emails and notes are blurred, so you can stream or share your screen.
-- **Finds things fast.** Search names, tags and ranks, or combine filters like `>diamond is:stale`, `region:euw`, `is:decay`, `champ:yasuo` or `role:mid`. Accounts still levelling show how far they are from 30, and `is:ready` lists the ones that can play ranked.
+- **Finds things fast.** Search names, tags, notes, skins and ranks, or combine filters like `>diamond is:stale`, `region:euw`, `is:decay`, `champ:yasuo` or `role:mid`. Accounts still levelling show how far they are from 30, and `is:ready` lists the ones that can play ranked.
 - **Backups and sync.** Export a plain or encrypted backup, add many accounts at once (a list of `Name#TAG`s, an op.gg multi-search link or the lobby chat), or sync phone and PC through your own worker. Only the encrypted vault is uploaded. A new split? **New season** moves every rank into Past seasons in one go.
 
 | List | Wall | Phone |
 |---|---|---|
 | ![List view](docs/screenshots/list.jpg) | ![Wall view](docs/screenshots/wall.jpg) | ![On a phone](docs/screenshots/phone.jpg) |
+
+**A shared snapshot**, as a friend sees it:
+
+![A read-only snapshot page: best rank, totals and each account's card](docs/screenshots/snapshot.jpg)
 
 ## Get started
 

@@ -1078,11 +1078,12 @@
      background while still staying under every child. */
   /* The champion the account plays most, faded into the top of the card under the
      tier tint. Low and masked off well before the rank and the buttons, so it is
-     felt rather than read; nothing on the card depends on it. */
+     felt rather than read; nothing on the card depends on it. 2.3 took it from
+     28% to 18%: at 28% the real splash art read as a picture, not a glow. */
   .c-art{position:absolute;left:0;right:0;top:0;width:100%;height:230px;z-index:-2;pointer-events:none;
-    object-fit:cover;object-position:center 18%;opacity:.28;
-    -webkit-mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%);mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%)}
-  .card.dead .c-art{filter:grayscale(1);opacity:.1}
+    object-fit:cover;object-position:center 18%;opacity:.18;
+    -webkit-mask-image:linear-gradient(180deg,#000,#0007 40%,transparent 85%);mask-image:linear-gradient(180deg,#000,#0007 40%,transparent 85%)}
+  .card.dead .c-art{filter:grayscale(1);opacity:.07}
   .c-tint{position:absolute;inset:0;z-index:-1;pointer-events:none;
     background:radial-gradient(125% 78% at 0% 0%,
       color-mix(in srgb,var(--tier) 15%,transparent),transparent 60%)}
@@ -1148,6 +1149,70 @@
     background:none;border:0;color:var(--faint);font-size:calc(11px*var(--ts));opacity:.72}
   .c-notes.blank:hover{background:#ffffff0d;border:0;color:var(--muted);opacity:1}
   .c-notes.blank .ico{width:11px;height:11px;opacity:.8}
+  /* ---- note fields on the card ----
+     Honor, skins, Blue Essence and the rest, each in the same place on every
+     card, so sixty accounts can be read down a column instead of one paragraph
+     at a time. Numbers are facts on plates; skins are the gold ones, being what
+     the account is worth to you; a penalty is the one red line. */
+  .c-notes .nt{white-space:pre-line}
+  .c-notes .ni{display:flex;flex-direction:column;gap:7px;margin:2px 0 1px;cursor:pointer}
+  .c-notes .ni+.nt{margin-top:8px;padding-top:8px;border-top:1px solid #ffffff0d}
+  .c-notes.editing .ni{cursor:default;margin-bottom:9px}
+  .ni-row{display:flex;flex-wrap:wrap;gap:5px}
+  .ni-f{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:var(--r-xs);
+    font-size:calc(11px*var(--ts));line-height:1.35;color:var(--muted);background:#ffffff0a;border:1px solid #ffffff12;
+    font-variant-numeric:tabular-nums;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .ni-f b{color:var(--text);font-weight:600}
+  .ni-f .ico{width:12px;height:12px;flex-shrink:0}
+  .ni-f.ok{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 30%,transparent);background:color-mix(in srgb,var(--teal) 8%,transparent)}
+  .ni-f.warn{color:#f0c674;border-color:#f0c67440;background:#f0c67412}
+  .ni-pips{display:inline-flex;gap:2px}
+  .ni-pips i{width:6px;height:6px;transform:rotate(45deg);border-radius:1px;background:#ffffff1f}
+  .ni-pips i.on{background:var(--gold);box-shadow:0 0 6px -1px var(--gold)}
+  .ni-skins span{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 26%,transparent);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 12%,transparent),color-mix(in srgb,var(--gold) 4%,transparent))}
+  .ni-skins span.more{color:var(--faint);background:none;border-style:dashed}
+  .ni-pen{display:flex;align-items:flex-start;gap:7px;padding:6px 9px;border-radius:var(--r-xs);font-size:calc(12px*var(--ts));line-height:1.45;
+    color:#ffc4c4;background:#ff6b6b12;border:1px solid #ff6b6b2e}
+  .ni-pen .ico{width:13px;height:13px;flex-shrink:0;margin-top:2px;color:var(--danger)}
+  .ni-kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 10px;font-size:calc(12px*var(--ts));line-height:1.45}
+  .ni-kv .k2{color:var(--faint)}
+  .ni-kv .v2{color:var(--text);overflow-wrap:anywhere}
+  /* the second way in from an empty note, for when what you want to write down
+     is a field; shown on hover where there is hover, always where there isn't */
+  .c-notes.blank{gap:4px}
+  .c-notes.blank button{all:unset;display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:2px 4px;border-radius:var(--r-xs)}
+  .c-notes.blank button:focus-visible{outline:2px solid var(--teal-txt);outline-offset:1px}
+  .c-notes.blank .nf-link{margin-left:auto;color:var(--faint)}
+  .c-notes.blank .nf-link:hover{color:var(--gold-txt)}
+  @media (hover:hover){
+    .c-notes.blank .nf-link{opacity:0;transition:opacity .16s ease}
+    :is(.card,.rw):hover .c-notes.blank .nf-link,.c-notes.blank .nf-link:focus-visible{opacity:1}
+  }
+  /* ---- note fields in the account form ---- */
+  /* .fld is a column further down the sheet; this one row of it is a header */
+  .fld.nf-head{flex-direction:row;align-items:center;gap:10px;padding-top:18px;border-top:1px solid var(--line)}
+  .nf-head .nf-t{font-size:calc(14px*var(--ts));font-weight:600;color:var(--text)}
+  .nf-head .hint{flex:1;min-width:0}
+  .nf-head button{padding:6px 11px;font-size:calc(12px*var(--ts))}
+  .nf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(150px,100%),1fr));gap:14px 16px}
+  /* grid items keep their content's width as a floor unless told otherwise, and
+     a row of input, kind and button is wider than a phone's single column */
+  .formgrid>*,.nf-grid>*{min-width:0}
+  .nf-grid .fld.wide{grid-column:1/-1}
+  .nf-honor{width:100%}
+  .nf-honor button{flex:1;width:auto;min-width:0;height:36px;font-size:calc(13px*var(--ts));font-weight:600;color:var(--muted)}
+  .nf-cfg{border:1px solid var(--line);border-radius:var(--r-md);background:#00000026;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+  .nf-cfg .grp-h{color:var(--faint)}
+  .nf-on{display:flex;flex-wrap:wrap;gap:8px 18px}
+  .nf-on label{display:inline-flex;align-items:center;gap:7px;font-size:calc(13px*var(--ts));color:var(--text);cursor:pointer}
+  .nf-own{display:flex;flex-direction:column;gap:8px}
+  .nf-own .row{display:flex;gap:8px;align-items:stretch}
+  .nf-own .row input{flex:1;min-width:0}
+  .nf-own .row select{width:128px;flex-shrink:0}
+  .nf-own .row button{flex-shrink:0;min-width:58px;padding:7px 10px}
+  .nf-own .none{font-size:calc(12px*var(--ts));color:var(--faint)}
+  @media (max-width:560px){.nf-cfg{padding:12px}.nf-own .row{gap:6px}.nf-own .row select{width:94px}.nf-own .row button{min-width:42px}}
   /* ---- the details drawer ----
      Details was one button among six in the action row — a poor home for the one
      control that changes the card's height, and easy to miss among five things
@@ -1654,7 +1719,7 @@
   .bk-acts{display:flex;flex-wrap:wrap;gap:8px}
   /* streamer mode: blurred where it stands, so the layout does not jump */
   body.streamer :is(.sens,.login .val,.c-notes textarea),
-  body.streamer :is(#fName,#fTag,#fLogin,#fPass,#fEmail,#fNotes,#fCreated,#fBirth,#baList){filter:blur(7px);user-select:none}
+  body.streamer :is(#fName,#fTag,#fLogin,#fPass,#fEmail,#fNotes,#fCreated,#fBirth,#baList,.nf-sens){filter:blur(7px);user-select:none}
   .streamer-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:var(--r-sm);font-size:calc(12px*var(--ts));font-weight:600;
     color:#ffb4b4;border:1px solid #ff6b6b66;background:#ff6b6b17;box-shadow:none}
   .streamer-pill:hover{color:#fff;border-color:#ff6b6baa;background:#ff6b6b26}
@@ -1787,8 +1852,8 @@
        account you are editing. Hiding it put the phone back in the state the
        desktop had before it was fixed — a rank form with no name on it. It goes
        under the title instead of beside it. */
-    #rankModal .mdl-h{flex-wrap:wrap}
-    #rankModal .mdl-h .s{display:block;width:100%;margin:3px 34px 0 0}
+    :is(#rankModal,#artPicker) .mdl-h{flex-wrap:wrap}
+    :is(#rankModal,#artPicker) .mdl-h .s{display:block;width:100%;margin:3px 34px 0 0}
     .grp,.mdl-h,.mdl-f{padding-left:16px;padding-right:16px}
   }
 
@@ -1888,6 +1953,188 @@
   .cmp-row>:first-child{text-align:right}
   .cmp-row .k{text-align:center;font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
   .cmp-row .win{color:var(--gold-txt);font-weight:600}
+  /* ---- a shared snapshot: the page a link opens ----
+     Somebody else's screen, so it is made to be looked at rather than worked in:
+     whose and when at the top, the best rank as the headline, then the accounts
+     as cards with their art properly visible — a banner, not the faint glow the
+     app keeps behind a card you read all day. */
+  body.snap-mode .wrap{display:none}
+  .snap{max-width:1180px;margin:0 auto;padding:22px clamp(16px,4vw,40px) 56px}
+  .sn-wait{padding:30vh 0;text-align:center;color:var(--faint);font-size:calc(13px*var(--ts))}
+  .sn-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:clamp(30px,7vw,64px)}
+  .sn-brand{display:flex;align-items:center;gap:13px;color:var(--text);text-decoration:none}
+  .sn-brand .brand-mark{width:30px;height:30px;margin:4px}
+  .sn-brand .brand-mark::before{width:12px;height:12px}
+  .sn-brand .hex-display{font-size:calc(15px*var(--ts));font-weight:600}
+  .sn-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:var(--r-xs);
+    font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.06em;color:var(--teal-txt);
+    background:color-mix(in srgb,var(--teal) 9%,transparent);border:1px solid color-mix(in srgb,var(--teal) 30%,transparent)}
+  .sn-pill .ico{width:13px;height:13px}
+  .sn-hero{text-align:center}
+  .sn-eyebrow{font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--gold-txt)}
+  .sn-title{margin:12px auto 10px;max-width:22ch;font-size:calc(clamp(30px,5.4vw,48px)*var(--ts));font-weight:600;letter-spacing:-.025em;
+    line-height:1.08;color:#fff;overflow-wrap:anywhere;text-shadow:0 2px 30px color-mix(in srgb,var(--gold) 30%,transparent)}
+  .sn-sub{font-size:calc(14px*var(--ts));color:var(--muted)}
+  .sn-sum{max-width:880px;margin:30px auto 0;text-align:left}
+  .sn-sum .hx-in{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr))}
+  .sn-sum .cell{padding:18px 20px;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:3px;border-left:1px solid #ffffff12}
+  .sn-sum .cell:first-child{border-left:0;flex-direction:row;align-items:center;justify-content:flex-start;gap:16px}
+  .sn-sum .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .sn-sum b{display:block;font-size:calc(22px*var(--ts));font-weight:600;letter-spacing:-.01em;color:var(--text);
+    font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sn-sum em{font-style:normal;font-size:calc(12px*var(--ts));color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sn-sum .cell:first-child>div{min-width:0;display:flex;flex-direction:column;gap:3px}
+  .sn-best-c{width:54px;height:54px;flex-shrink:0;filter:drop-shadow(0 4px 14px #0009)}
+  .sn-dist{display:flex;gap:2px;height:5px;max-width:880px;margin:16px auto 0;border-radius:2px;overflow:hidden}
+  .sn-dist i{display:block;min-width:4px}
+  .sn-legend{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:calc(11px*var(--ts));color:var(--muted)}
+  .sn-legend span{display:inline-flex;align-items:center;gap:6px}
+  .sn-legend span::before{content:"";width:7px;height:7px;border-radius:1px;transform:rotate(45deg);background:var(--c)}
+  .sn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:18px;margin-top:clamp(34px,6vw,52px)}
+  .sn-card{animation:cardIn .5s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--i) * 45ms)}
+  .sn-c{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:12px;padding:0 18px 18px}
+  .sn-art{position:relative;height:118px;margin:0 -18px;overflow:hidden;
+    background:radial-gradient(120% 140% at 50% 0%,color-mix(in srgb,var(--tier) 26%,transparent),transparent 70%)}
+  .sn-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;opacity:.62}
+  .sn-art::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(180deg,transparent 30%,color-mix(in srgb,#0b1016 88%,transparent) 88%,#0b1016),
+      linear-gradient(90deg,color-mix(in srgb,var(--tier) 16%,transparent),transparent 60%)}
+  .sn-card.dead .sn-art img{filter:grayscale(1);opacity:.25}
+  .sn-head{position:relative;z-index:1;display:flex;align-items:flex-end;gap:12px;margin-top:-44px}
+  .sn-crest{width:62px;height:62px;flex-shrink:0;display:grid;place-items:center;border-radius:50%;
+    background:radial-gradient(circle at 50% 35%,#18222e,#05080d);
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--tier) 55%,transparent),0 0 0 4px #0b1016,0 8px 24px -6px color-mix(in srgb,var(--tier) 70%,transparent)}
+  .sn-crest-i{width:40px;height:40px}
+  .sn-crest b{font-size:calc(22px*var(--ts));font-weight:600;color:var(--faint)}
+  .sn-id{flex:1;min-width:0;padding-bottom:4px}
+  .sn-nm{display:flex;align-items:center;gap:6px;font-size:calc(17px*var(--ts));font-weight:600;color:#fff;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sn-fav .ico{width:14px;height:14px;color:var(--gold);fill:var(--gold)}
+  .sn-rid{font-size:calc(12px*var(--ts));color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sn-head .regiontag{margin-bottom:6px}
+  .sn-rank{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
+  .sn-rank b{font-size:calc(22px*var(--ts));font-weight:600;letter-spacing:-.01em;color:var(--tier)}
+  .sn-rank span{font-size:calc(14px*var(--ts));font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums}
+  .sn-rank .stchip{font-size:calc(11px*var(--ts));padding:2px 8px;border-radius:var(--r-xs);font-weight:600}
+  .sn-wl{display:flex;justify-content:space-between;gap:10px;font-size:calc(12px*var(--ts));color:var(--muted);font-variant-numeric:tabular-nums}
+  .sn-wl b{font-weight:600;color:var(--text)}
+  .sn-wl b.wr-good,.sn-sum b.wr-good{color:var(--good)}
+  .sn-spk{height:44px;margin:2px 0}
+  .sn-meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:calc(12px*var(--ts));color:var(--text)}
+  .sn-meta i{font-style:normal;font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-right:7px}
+  .sn-notes{margin-top:2px}
+  .sn-notes .sk{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 26%,transparent);background:color-mix(in srgb,var(--gold) 8%,transparent)}
+  .sn-empty{text-align:center;color:var(--muted);margin-top:40px}
+  .sn-foot{margin-top:clamp(44px,8vw,72px);text-align:center;font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.7}
+  .sn-foot p{margin:0 auto 16px;max-width:52ch}
+  .sn-foot .btn,.sn-err .btn{text-decoration:none;padding:10px 18px;font-weight:600}
+  .sn-err{max-width:480px;margin:16vh auto 0;text-align:center}
+  .sn-err .hx-in{padding:34px 28px 30px}
+  .sn-err .brand-mark{margin:4px auto 22px}
+  .sn-err h1{font-size:calc(20px*var(--ts));font-weight:600;margin:0 0 8px}
+  .sn-err p{font-size:calc(13px*var(--ts));color:var(--muted);line-height:1.6;margin:0 0 20px}
+  @media (max-width:760px){
+    .sn-sum .hx-in{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .sn-sum .cell{padding:14px 12px}
+    .sn-sum .cell:first-child{grid-column:1/-1;justify-content:center;border-bottom:1px solid #ffffff12}
+    .sn-sum .cell:nth-child(2){border-left:0}
+    .sn-sum b{font-size:calc(18px*var(--ts))}
+  }
+  @media (prefers-reduced-motion:reduce){.sn-card{animation:none}}
+  /* ---- the share window ---- */
+  .sh-intro{font-size:calc(13px*var(--ts));color:var(--muted);line-height:1.6;margin:0 0 18px}
+  .sh-intro b{color:var(--text);font-weight:600}
+  .sh-body{display:flex;flex-direction:column;gap:18px}
+  .sh-which{display:flex;width:100%}
+  .sh-which button{flex:1;width:auto;height:38px;gap:6px;font-size:calc(13px*var(--ts));font-weight:600;color:var(--muted)}
+  .sh-which button b{font-weight:600;font-size:calc(11px*var(--ts));color:var(--faint);font-variant-numeric:tabular-nums}
+  .sh-which button.on b{color:inherit}
+  .sh-opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:10px}
+  .sh-opt{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:var(--r-sm);cursor:pointer;
+    border:1px solid var(--line);background:#ffffff05;transition:border-color .16s ease,background .16s ease}
+  .sh-opt:hover{border-color:var(--line2);background:#ffffff0a}
+  .sh-opt:has(input:checked){border-color:color-mix(in srgb,var(--teal) 40%,transparent);background:color-mix(in srgb,var(--teal) 6%,transparent)}
+  .sh-opt input{margin-top:2px;flex-shrink:0}
+  .sh-opt span{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .sh-opt b{font-size:calc(13px*var(--ts));font-weight:600;color:var(--text)}
+  .sh-opt em{font-style:normal;font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.45}
+  #shSize{font-variant-numeric:tabular-nums}
+  /* ---- card art picker ----
+     The League client's own skin selector is the shape people already know: the
+     splash large up top, the choices as tall portraits underneath. The champion
+     list before it is the client's square icons, searchable, since nobody scrolls
+     a hundred and seventy of anything. */
+  #artPicker .mdl{max-width:780px}
+  .ap-top{flex-shrink:0;border-bottom:1px solid var(--line)}
+  .ap-hero{position:relative;height:clamp(150px,30vw,236px);overflow:hidden;background:
+    radial-gradient(120% 90% at 70% 0%,color-mix(in srgb,var(--gold) 14%,transparent),transparent 60%),
+    linear-gradient(180deg,var(--panel2),var(--bg))}
+  .ap-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;
+    opacity:0;transform:scale(1.025);transition:opacity .35s ease,transform .6s cubic-bezier(.22,1,.36,1)}
+  .ap-hero img.ld{opacity:1;transform:none}
+  .ap-hero::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg,transparent 38%,#010a13cc 82%,var(--bg)),linear-gradient(90deg,#010a1399,transparent 55%)}
+  .ap-cap{position:absolute;left:22px;right:22px;bottom:15px;z-index:1;min-width:0}
+  .ap-cap b{display:block;font-size:calc(22px*var(--ts));font-weight:600;letter-spacing:-.01em;color:#fff;
+    text-shadow:0 2px 12px #000c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ap-cap span{display:block;margin-top:3px;font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--gold-txt)}
+  .ap-badge{position:absolute;top:13px;left:16px;z-index:1;display:inline-flex;align-items:center;gap:6px;
+    padding:4px 9px;border-radius:var(--r-xs);font-size:calc(11px*var(--ts));font-weight:600;color:var(--text);
+    background:#010a13b3;border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .ap-badge .ico{width:12px;height:12px;color:var(--gold-txt)}
+  .ap-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--faint);
+    font-size:calc(13px*var(--ts))}
+  .ap-empty .ico{display:block;width:30px;height:30px;margin:0 auto 8px;color:var(--gold-dim)}
+  .ap-off{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 22px;font-size:calc(12px*var(--ts));
+    color:var(--muted);background:color-mix(in srgb,var(--gold) 8%,transparent);border-top:1px solid var(--line)}
+  .ap-off button{padding:5px 10px;font-size:calc(12px*var(--ts))}
+  .ap-bar{display:flex;align-items:center;gap:10px;padding:12px 22px}
+  .ap-bar input{flex:1;min-width:0}
+  .ap-bar .ap-t{font-size:calc(14px*var(--ts));font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ap-bar .ap-n{margin-left:auto;font-size:calc(12px*var(--ts));color:var(--faint);white-space:nowrap}
+  .ap-back{padding:6px 11px 6px 8px}
+  .ap-back .ico{width:15px;height:15px;transform:rotate(90deg)}
+  .ap-grid{display:grid;gap:10px;padding:16px 22px 20px;align-content:start}
+  .ap-grid.ch{grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:12px 8px}
+  .ap-grid.sk{grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:12px}
+  .ap-ch,.ap-sk{all:unset;box-sizing:border-box;cursor:pointer;position:relative;min-width:0}
+  .ap-ch{display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 2px;border-radius:var(--r-sm)}
+  .ap-ch i{display:block;width:54px;height:54px;border-radius:var(--r-sm);overflow:hidden;
+    background:var(--panel3);box-shadow:0 0 0 1px var(--line2);transition:box-shadow .16s ease,transform .16s ease}
+  .ap-ch img{display:block;width:100%;height:100%;transform:scale(1.1)}
+  .ap-ch span{max-width:100%;font-size:calc(11px*var(--ts));color:var(--muted);text-align:center;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ap-ch:hover i{box-shadow:0 0 0 1px var(--gold-mid);transform:translateY(-2px)}
+  .ap-ch:hover span{color:var(--text)}
+  .ap-ch.on i{box-shadow:0 0 0 2px var(--gold),0 0 16px -4px var(--gold)}
+  .ap-ch.on span{color:var(--gold-txt);font-weight:600}
+  .ap-sk{display:block;aspect-ratio:3/4;border-radius:var(--r-md);overflow:hidden;background:var(--panel3);
+    box-shadow:0 0 0 1px var(--line2),var(--sh-2);transition:box-shadow .18s ease,transform .18s cubic-bezier(.22,1,.36,1)}
+  .ap-sk img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 12%}
+  .ap-sk::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,#010a13e6)}
+  .ap-sk .nm{position:absolute;left:9px;right:9px;bottom:8px;z-index:1;font-size:calc(12px*var(--ts));font-weight:600;
+    line-height:1.25;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .ap-sk .cur{position:absolute;top:7px;left:7px;z-index:1;padding:2px 6px;border-radius:var(--r-xs);
+    font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.04em;color:var(--teal-ink);background:var(--teal)}
+  .ap-sk:hover{transform:translateY(-3px);box-shadow:0 0 0 1px var(--gold-mid),var(--sh-3)}
+  .ap-sk.on{box-shadow:0 0 0 2px var(--gold),0 0 22px -6px var(--gold),var(--sh-3)}
+  .ap-sk.on::before{content:"";position:absolute;top:7px;right:7px;z-index:2;width:20px;height:20px;border-radius:50%;
+    background:var(--gold) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23010a13' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/12px no-repeat}
+  .ap-sk.dead img{display:none}
+  .ap-ch:focus-visible,.ap-sk:focus-visible{outline:2px solid var(--teal-txt);outline-offset:3px}
+  .ap-sk.skel,.ap-ch.skel i{cursor:default;background:linear-gradient(100deg,var(--panel2) 30%,var(--panel3) 50%,var(--panel2) 70%) 0 0/300% 100%;
+    animation:apShim 1.3s linear infinite}
+  .ap-ch.skel span{width:70%;height:9px;border-radius:2px;background:var(--panel2)}
+  @keyframes apShim{to{background-position:-150% 0}}
+  .ap-msg{grid-column:1/-1;padding:26px 6px;text-align:center;color:var(--muted);font-size:calc(13px*var(--ts));line-height:1.55}
+  .ap-msg button{margin-top:10px}
+  @media (max-width:620px){
+    .ap-cap,.ap-bar,.ap-off{padding-left:16px;padding-right:16px}.ap-cap{left:16px;right:16px}
+    .ap-grid{padding:14px 16px 18px}
+    .ap-grid.sk{grid-template-columns:repeat(auto-fill,minmax(102px,1fr));gap:10px}
+  }
   .toast-log{max-width:420px;font-size:calc(12px*var(--ts));line-height:1.45}
 
   .panel-close{transition:color .16s,background .16s,transform .2s cubic-bezier(.22,1,.36,1)}
@@ -2041,6 +2288,8 @@
 </style>
 </head>
 <body data-atmosphere="spotlight">
+<!-- A shared snapshot opens here instead of the app: see openSnapshot -->
+<main id="snapView" class="snap hidden"></main>
 <div class="wrap">
 
   <div id="lock" class="hx gold hidden" role="region" aria-labelledby="lockTitle"><div class="hx-in lock-in">
@@ -2080,6 +2329,7 @@
           <button id="bImport" style="justify-content:flex-start;width:100%">Import backup</button>
           <button id="bImportCsv" style="justify-content:flex-start;width:100%">Import CSV</button>
           <div style="border-top:1px solid var(--line);margin:2px 0"></div>
+          <button id="bShare" style="justify-content:flex-start;width:100%" title="A read-only page of your ranks, in a link — no logins, ever">Share a snapshot…</button>
           <button id="bBulkAdd" style="justify-content:flex-start;width:100%">Bulk add accounts…</button>
           <button id="bNewSeason" style="justify-content:flex-start;width:100%" title="Move every ranked account's current rank into its Past seasons">New season…</button>
           <button id="bStreamer" style="justify-content:flex-start;width:100%" title="Hide Riot IDs, logins, emails and notes while you stream or share your screen (H)">Streamer mode</button>
@@ -2127,9 +2377,9 @@
       <dt>Layouts</dt>
       <dd>Cards for browsing, the list for working through the vault a row at a time, and the wall for seeing all sixty at once — click any tile to land back on that account's card.</dd>
       <dt>Cards</dt>
-      <dd>The bar across a card's bottom edge opens <b>Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot.</dd>
+      <dd>The bar across a card's bottom edge opens <b>Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot, or its fields (honor, skins, Blue Essence…) to edit them — <b>Fields…</b> in the account form picks which ones, and adds your own · <b>Card art…</b> in the ⋯ menu sets the champion and skin behind a card.</dd>
       <dt>Search</dt>
-      <dd>Matches names, tags, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code> <code>champ:yasuo</code> (played this season, or in its top mastery) <code>role:mid</code> (from the last five ranked games), <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
+      <dd>Matches names, tags, notes and skins, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code> <code>champ:yasuo</code> (played this season, or in its top mastery) <code>role:mid</code> (from the last five ranked games), <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
       <dt>Quick find</dt>
       <dd><kbd>Ctrl</kbd><kbd>K</kbd> (or <kbd>⌘</kbd><kbd>K</kbd>) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.</dd>
       <dt>Keys</dt>
@@ -2139,7 +2389,7 @@
       <dt>Extra privacy</dt>
       <dd>Set a master password in <b>Settings</b> to encrypt everything at rest, plus an auto-lock timer — without the password, don't lose it, there's no recovery.</dd>
       <dt>More</dt>
-      <dd>The <b>⋯</b> menu has bulk add (paste Name#TAGs, an op.gg multi-search link or the lobby chat), CSV import, <b>New season</b> (every rank into Past seasons at once, with Undo) and streamer mode · archive an account to hide it without deleting (toggle <b>Archived</b> in the toolbar) · <b>Settings → Appearance</b> has themes, effects, text size and what each card shows.</dd>
+      <dd>The <b>⋯</b> menu has bulk add (paste Name#TAGs, an op.gg multi-search link or the lobby chat), CSV import, <b>New season</b> (every rank into Past seasons at once, with Undo), streamer mode and <b>Share a snapshot</b> — a read-only page of your ranks in one link, with no logins, emails or notes in it · archive an account to hide it without deleting (toggle <b>Archived</b> in the toolbar) · <b>Settings → Appearance</b> has themes, effects, text size and what each card shows.</dd>
       <dt>Using this app</dt>
       <dd class="terms">free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.</dd>
     </dl></div>
@@ -2518,7 +2768,15 @@
           <option value="banned">Banned</option>
         </select>
       </div>
-      <div class="fld fw"><label>Notes / skins</label><textarea id="fNotes" rows="2" placeholder="e.g. Elementalist Lux, Spirit Blossom Yasuo"></textarea></div>
+      <!-- Notes, with the things people kept typing into them by hand as fields
+           of their own. Which fields, and any of your own, is one list for the
+           whole vault: Fields… -->
+      <div class="fld fw nf-head" id="fNotesHead"><span class="nf-t">Notes</span>
+        <span class="hint">Shown on the card, and searchable.</span>
+        <button type="button" id="fFieldsBtn" aria-expanded="false" aria-controls="fFieldsCfg">Fields…</button></div>
+      <div class="fw nf-cfg hidden" id="fFieldsCfg"></div>
+      <div class="fw nf-grid" id="fInfo"></div>
+      <div class="fld fw"><label for="fNotes">Anything else</label><textarea id="fNotes" rows="2" placeholder="Free text — whatever doesn't fit a field"></textarea></div>
     </div>
     </div>
     <div class="mdl-f">
@@ -2659,6 +2917,58 @@
     </div></div>
   </div>
 
+  <div id="artPicker" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="apTitle">
+    <div class="mdl hx teal"><div class="hx-in mdl-in">
+      <div class="mdl-h"><span class="t" id="apTitle">Card art</span><span class="s" id="apSub"></span>
+        <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+      </div>
+      <div class="ap-top">
+        <div class="ap-hero" id="apHero"></div>
+        <div class="ap-off hidden" id="apOff"><span>Champion art is turned off, so cards show none.</span>
+          <button type="button" id="apTurnOn">Turn it on</button></div>
+        <div class="ap-bar" id="apBarChamps">
+          <input type="search" id="apSearch" placeholder="Search champions" aria-label="Search champions" autocomplete="off" spellcheck="false" data-autofocus>
+        </div>
+        <div class="ap-bar hidden" id="apBarSkins">
+          <button type="button" class="ap-back" id="apBack"></button>
+          <span class="ap-t" id="apChampName"></span><span class="ap-n" id="apCount"></span>
+        </div>
+      </div>
+      <div class="mdl-b"><div class="ap-grid" id="apGrid" role="group" aria-label="Choices"></div></div>
+      <div class="mdl-f">
+        <button type="button" id="apUse" class="b-gold">Use this art</button>
+        <button type="button" id="apCancel">Cancel</button>
+        <button type="button" id="apAuto" class="sp">Back to most-played</button>
+      </div>
+    </div></div>
+  </div>
+
+  <div id="shareModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+    <div class="mdl narrow hx teal"><div class="hx-in mdl-in">
+      <div class="mdl-h"><span class="t" id="shTitle">Share a snapshot</span>
+        <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+      </div>
+      <div class="mdl-b"><div class="grp sh-body">
+        <p class="sh-intro">A read-only page of your ranks, in one link. Nothing is uploaded — <b>the link is the page</b>, and it shows
+          what it showed today. Logins, passwords, emails and notes are never in it.</p>
+        <div class="fld"><label for="shName">Title</label><input id="shName" maxlength="60" placeholder="My League accounts" autocomplete="off" data-autofocus></div>
+        <div class="fld"><label id="shWhichL">Accounts</label><div class="seg sh-which" id="shWhich" role="group" aria-labelledby="shWhichL"></div></div>
+        <div class="sh-opts">
+          <label class="sh-opt"><input type="checkbox" id="shIds"><span><b>Riot IDs</b><em>Off: your labels only, so nobody can look the accounts up.</em></span></label>
+          <label class="sh-opt"><input type="checkbox" id="shArt" checked><span><b>Champion art</b><em>Each card's art, as a banner.</em></span></label>
+          <label class="sh-opt"><input type="checkbox" id="shHist" checked><span><b>LP history</b><em>The climb as a line on each card.</em></span></label>
+          <label class="sh-opt"><input type="checkbox" id="shNotes"><span><b>Honor &amp; skins</b><em>From the note fields — nothing else from notes.</em></span></label>
+        </div>
+      </div></div>
+      <div class="mdl-f">
+        <button type="button" id="shCopy" class="b-gold">Copy link</button>
+        <button type="button" id="shOpen">Preview</button>
+        <button type="button" id="shCancel">Cancel</button>
+        <span class="sp hint" id="shSize"></span>
+      </div>
+    </div></div>
+  </div>
+
   <div id="toast" role="status" aria-live="polite"></div>
 </div>
 
@@ -2770,8 +3080,14 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.2.1";
+const APP_VERSION="2.3.0";
 const APP_CHANGELOG=[
+  {v:"2.3.0",items:[
+    "Share a snapshot: a read-only page of your ranks in one link (⋯ menu)",
+    "Card art… picks any champion and skin for a card; the art is subtler",
+    "Notes get fields: honor, skins, Blue Essence, 2-step, penalties, your own",
+    "Snapshots never carry logins, emails or notes, and nothing is uploaded",
+  ]},
   {v:"2.2.1",items:[
     "Theme swatches and the header tray draw cleanly on every theme",
     "Leaving Settings by Escape or ✕ now undoes every unsaved preview",
@@ -3352,6 +3668,7 @@ const ICON={
   external:'<path d="M14 3h7v7"/><line x1="21" y1="3" x2="11.5" y2="12.5"/><path d="M19 14.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4.5"/>',
   tag:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2.5 12.5V2.5h10l8.1 8.1a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.3"/>',
   check:'<polyline points="20 6 9 17 4 12"/>',
+  image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16.5l-5-5L5.5 20"/>',
   compare:'<rect x="3" y="5" width="7" height="14" rx="1.5"/><rect x="14" y="5" width="7" height="14" rx="1.5"/>',
   archive:'<rect x="3" y="4" width="18" height="4.5" rx="1"/><path d="M5 8.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><line x1="10" y1="13" x2="14" y2="13"/>',
   reset:'<path d="M3.5 12a8.5 8.5 0 1 0 2.9-6.4"/><polyline points="3 4 3 9.5 8.5 9.5"/>',
@@ -3383,6 +3700,8 @@ function sanitizeAccount(a){
   if(a.mastery!=null){a.mastery=normMastery(a.mastery);if(!a.mastery)delete a.mastery}
   if(a.masteryAt!=null&&!(Number(a.masteryAt)>0))delete a.masteryAt;
   if(a.recent!=null){a.recent=normRecent(a.recent);if(!a.recent)delete a.recent}
+  if(a.art!=null){a.art=normArt(a.art);if(!a.art)delete a.art}
+  if("info" in a){a.info=normInfo(a.info);if(!a.info)delete a.info}
   if(a.stats&&a.stats.seasons&&typeof a.stats.seasons==="object"){
     if(!Array.isArray(a.stats.seasons.solo))a.stats.seasons.solo=[];
     if(!Array.isArray(a.stats.seasons.flex))a.stats.seasons.flex=[];
@@ -5596,7 +5915,7 @@ function passesBaseFilters(a,Q,{forceActive=false}={}){
     if(f==="leveling"&&!isLeveling(a))return false;
   }
   if(Q.terms.length){
-    const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,a.createdOn,a.birthdate,
+    const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,noteFieldsText(a),a.createdOn,a.birthdate,
       a.flagged?"flagged attention":"",(a.tags||[]).join(" "),a.stats?(a.stats.tier||"")+" "+(shortRank(a.stats)||""):"",(STATUS[a.status]||STATUS.active).label].join(" ").toLowerCase();
     if(!Q.terms.every(t=>hay.includes(t)))return false;
   }
@@ -6283,6 +6602,7 @@ function formHTML(a){
    and punctuation; the ones that do not are listed. An <img loading="lazy"> and
    not a CSS background, so a card far down the page fetches nothing until it is
    near the screen, and one that fails to load is simply removed. */
+const DD="https://ddragon.leagueoflegends.com", DD_ID=/^[A-Za-z][A-Za-z0-9]{1,29}$/;
 const CHAMP_ID_FIX={"wukong":"MonkeyKing","nunu & willump":"Nunu","renata glasc":"Renata","kai'sa":"Kaisa","cho'gath":"Chogath",
   "vel'koz":"Velkoz","kha'zix":"Khazix","bel'veth":"Belveth","leblanc":"Leblanc","fiddlesticks":"Fiddlesticks"};
 function champKey(name){
@@ -6290,16 +6610,538 @@ function champKey(name){
   if(!n||!/^[A-Za-z0-9 '.&-]+$/.test(n))return null; // what champion names are made of, and nothing else
   const fixed=CHAMP_ID_FIX[n.toLowerCase()];if(fixed)return fixed;
   const k=n.split(/[^A-Za-z0-9]+/).filter(Boolean).map(w=>w[0].toUpperCase()+w.slice(1)).join("");
-  return /^[A-Za-z][A-Za-z0-9]{1,29}$/.test(k)?k:null;
+  return DD_ID.test(k)?k:null;
 }
 let pendingChampArt=null;
 function champArtOn(){return pendingChampArt===null?cfg.champArt!==false:pendingChampArt}
 function mainChamp(a){const c=normChamps(a.stats&&a.stats.champs);return c&&c.length?c[0].name:null}
+/* A pick of your own outranks the most-played champion: {champ, skin, name}.
+   The champion is a Data Dragon id of exactly the shape champKey makes and the
+   skin a plain number, because both go straight into an image URL; the name is
+   only ever shown, through esc(). */
+function normArt(v){
+  if(!v||typeof v!=="object"||Array.isArray(v))return null;
+  const skin=Number(v.skin);
+  if(typeof v.champ!=="string"||!DD_ID.test(v.champ)||!Number.isInteger(skin)||skin<0||skin>9999)return null;
+  const out={champ:v.champ,skin};
+  const n=typeof v.name==="string"?v.name.replace(/\s+/g," ").trim().slice(0,80):"";
+  if(n)out.name=n;
+  return out;
+}
+function artOf(a){
+  const own=normArt(a&&a.art);if(own)return own;
+  const k=champKey(mainChamp(a));
+  return k?{champ:k,skin:0}:null;
+}
+const splashUrl=(c,n)=>DD+"/cdn/img/champion/splash/"+c+"_"+n+".jpg";
 function champArtHTML(a){
   if(!champArtOn())return"";
-  const k=champKey(mainChamp(a));if(!k)return"";
-  return`<img class="c-art" src="https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${k}_0.jpg" alt="" aria-hidden="true" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
+  const art=artOf(a);if(!art)return"";
+  return`<img class="c-art" src="${splashUrl(art.champ,art.skin)}" alt="" aria-hidden="true" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
 }
+/* ---- Data Dragon: the champion list and each champion's skins ----
+   Riot's public static data, the same place the splash art comes from. Fetched
+   only when the picker opens, kept for the session, and a failure is forgotten
+   rather than cached so Try again means it. Everything read out of it is checked
+   for shape before it reaches a URL or the page. */
+const dd={ver:null,champs:null,skins:new Map()};
+function ddJSON(url){
+  return fetch(url,{credentials:"omit",referrerPolicy:"no-referrer"})
+    .then(r=>{if(!r.ok)throw new Error("Data Dragon answered "+r.status);return r.json()});
+}
+function ddVersion(){
+  return dd.ver||(dd.ver=ddJSON(DD+"/api/versions.json").then(v=>{
+    const x=Array.isArray(v)?v.find(s=>typeof s==="string"&&/^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(s)):null;
+    if(!x)throw new Error("Data Dragon sent no version");
+    return x;
+  }).catch(e=>{dd.ver=null;throw e}));
+}
+function ddChampions(){
+  return dd.champs||(dd.champs=ddVersion().then(ver=>ddJSON(DD+"/cdn/"+ver+"/data/en_US/champion.json").then(j=>{
+    const list=Object.values(j&&typeof j.data==="object"&&j.data||{})
+      .filter(c=>c&&typeof c.id==="string"&&DD_ID.test(c.id)&&typeof c.name==="string"&&c.name.trim())
+      .map(c=>({id:c.id,name:c.name.trim().slice(0,40)}))
+      .sort((x,y)=>x.name.localeCompare(y.name));
+    if(!list.length)throw new Error("Data Dragon sent no champions");
+    return{ver,list};
+  })).catch(e=>{dd.champs=null;throw e}));
+}
+function ddSkins(id){
+  if(!DD_ID.test(String(id)))return Promise.reject(new Error("not a champion id"));
+  if(!dd.skins.has(id))dd.skins.set(id,ddVersion().then(ver=>ddJSON(DD+"/cdn/"+ver+"/data/en_US/champion/"+id+".json")).then(j=>{
+    const c=j&&j.data&&j.data[id], seen=new Set();
+    const out=(c&&Array.isArray(c.skins)?c.skins:[])
+      .filter(s=>s&&Number.isInteger(s.num)&&s.num>=0&&s.num<=9999&&!seen.has(s.num)&&seen.add(s.num))
+      .map(s=>({num:s.num,name:s.num===0?"":String(s.name||"").replace(/\s+/g," ").trim().slice(0,80)}));
+    if(!out.some(s=>s.num===0))out.unshift({num:0,name:""});
+    return out.sort((x,y)=>x.num-y.num);
+  }).catch(e=>{dd.skins.delete(id);throw e}));
+  return dd.skins.get(id);
+}
+/* ---- card art picker ----
+   Champion first, then skin, the way the client's own collection screen goes:
+   the splash large across the top so you can see what you are picking, which
+   is the one thing the faint art on a card can't show you. */
+const ap={id:null,champ:null,skin:0,name:"",view:"champs",q:"",champs:null,ver:null,skins:null,err:null,gen:0,focusTile:false};
+function apAcc(){return ap.id==null?null:accounts.find(a=>a.id===ap.id)||null}
+function apChampName(id){const c=ap.champs&&ap.champs.find(x=>x.id===id);return c?c.name:id}
+// What the selection is called: the skin's own name, or the champion's for the default
+function apLabel(){
+  if(ap.skin===0)return apChampName(ap.champ);
+  const s=ap.skins&&ap.skins.find(x=>x.num===ap.skin);
+  return s&&s.name||ap.name||apChampName(ap.champ);
+}
+function openArtPicker(id){
+  const acc=accounts.find(a=>a.id===id);if(!acc)return;
+  const own=normArt(acc.art), auto=champKey(mainChamp(acc));
+  const start=own||(auto?{champ:auto,skin:0}:null);
+  Object.assign(ap,{id,champ:start?start.champ:null,skin:start?start.skin:0,name:own&&own.name||"",
+    view:start?"skins":"champs",q:"",skins:null,err:null,gen:ap.gen+1,focusTile:!!start});
+  $("apSearch").value="";
+  $("apSub").innerHTML=nameOf(acc);
+  $("apHero").dataset.k="";
+  renderArtPicker();
+  $("artPicker").classList.remove("hidden");
+  apLoad();
+}
+function closeArtPicker(){
+  const m=$("artPicker");if(!m)return;
+  ap.gen++;ap.id=null; // anything still loading lands nowhere
+  m.classList.add("hidden");
+}
+function apLoad(){
+  const g=ap.gen;
+  if(!ap.champs)ddChampions().then(r=>{if(g!==ap.gen)return;ap.champs=r.list;ap.ver=r.ver;ap.err=null;renderArtPicker()},
+    e=>{if(g!==ap.gen)return;ap.err=e;renderArtPicker()});
+  if(ap.view==="skins"&&ap.champ)apLoadSkins();
+}
+function apLoadSkins(){
+  const g=ap.gen, c=ap.champ;
+  ap.skins=null;
+  ddSkins(c).then(list=>{if(g!==ap.gen||c!==ap.champ)return;ap.skins=list;ap.err=null;
+    // a pick saved from a skin since removed falls back to the default rather than to nothing
+    if(!list.some(s=>s.num===ap.skin)){ap.skin=0;ap.name=""}
+    renderArtPicker()},
+    e=>{if(g!==ap.gen||c!==ap.champ)return;ap.err=e;renderArtPicker()});
+}
+function apHero(){
+  const el=$("apHero"), acc=apAcc();
+  if(!ap.champ){
+    if(el.dataset.k!=="-"){el.dataset.k="-";el.innerHTML=`<div class="ap-empty"><div>${icon("image")}Pick a champion below</div></div>`}
+    return;
+  }
+  const k=ap.champ+"_"+ap.skin;
+  // The picture is only swapped when the pick changes, so the fade plays once
+  // per choice instead of flickering on every repaint around it.
+  if(el.dataset.k!==k){
+    el.dataset.k=k;
+    el.innerHTML=`<img alt="" decoding="async" referrerpolicy="no-referrer"><div class="ap-meta"></div>`;
+    const img=el.querySelector("img");
+    img.addEventListener("load",()=>img.classList.add("ld"));
+    // No splash (offline, or a skin Riot hasn't published art for): the plain
+    // banner with the caption over it still says what is picked
+    img.addEventListener("error",()=>img.remove());
+    img.src=splashUrl(ap.champ,ap.skin);
+  }
+  const shown=acc&&artOf(acc), own=acc&&normArt(acc.art);
+  const onCard=!!shown&&shown.champ===ap.champ&&shown.skin===ap.skin;
+  el.querySelector(".ap-meta").innerHTML=
+    (onCard?`<span class="ap-badge">${icon("check")}${own?"On the card now":"On the card now · most-played"}</span>`:"")
+    +`<div class="ap-cap"><b>${esc(apLabel())}</b><span>${ap.skin===0?"Default skin":esc(apChampName(ap.champ))}</span></div>`;
+}
+function renderArtPicker(){
+  if(!$("artPicker"))return;
+  const acc=apAcc(), own=acc&&normArt(acc.art), skins=ap.view==="skins";
+  apHero();
+  $("apOff").classList.toggle("hidden",champArtOn());
+  $("apBarChamps").classList.toggle("hidden",skins);
+  $("apBarSkins").classList.toggle("hidden",!skins);
+  const grid=$("apGrid");
+  grid.className="ap-grid "+(skins?"sk":"ch");
+  grid.setAttribute("aria-label",skins?"Skins":"Champions");
+  const msg=(t,retry)=>`<div class="ap-msg">${t}${retry?`<br><button type="button" data-ap="retry">Try again</button>`:""}</div>`;
+  const failed=`Couldn't reach Riot's Data Dragon, where the champion and skin art comes from.`;
+  let h="";
+  if(skins){
+    $("apBack").innerHTML=icon("chevron")+"Champions";
+    $("apChampName").textContent=apChampName(ap.champ);
+    $("apCount").textContent=ap.skins?ap.skins.length+(ap.skins.length===1?" skin":" skins"):"";
+    const shown=acc&&artOf(acc);
+    if(ap.skins)h=ap.skins.map(s=>{
+      const on=s.num===ap.skin, cur=shown&&shown.champ===ap.champ&&shown.skin===s.num;
+      const nm=s.num===0?apChampName(ap.champ):s.name||apChampName(ap.champ);
+      return`<button type="button" class="ap-sk${on?" on":""}" data-skin="${s.num}" aria-pressed="${on}" tabindex="${on?0:-1}" title="${esc(nm)}">`
+        +`<img src="${DD}/cdn/img/champion/loading/${ap.champ}_${s.num}.jpg" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">`
+        +`<span class="nm">${esc(s.num===0?"Default":nm)}</span>${cur?`<span class="cur">On the card</span>`:""}</button>`;
+    }).join("");
+    else if(ap.err)h=msg(failed,true);
+    else h=`<div class="ap-sk skel"></div>`.repeat(6);
+  }else{
+    if(ap.champs){
+      const q=ap.q.toLowerCase().replace(/[^a-z0-9]/g,"");
+      // by name or by id, so "monkey" still finds Wukong
+      const list=q?ap.champs.filter(c=>[c.name,c.id].some(x=>x.toLowerCase().replace(/[^a-z0-9]/g,"").includes(q))):ap.champs;
+      const sel=list.some(c=>c.id===ap.champ)?ap.champ:list[0]&&list[0].id;
+      h=list.length?list.map(c=>`<button type="button" class="ap-ch${c.id===ap.champ?" on":""}" data-champ="${c.id}" aria-pressed="${c.id===ap.champ}" tabindex="${c.id===sel?0:-1}" title="${esc(c.name)}">`
+        +`<i><img src="${DD}/cdn/${esc(ap.ver)}/img/champion/${c.id}.png" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></i><span>${esc(c.name)}</span></button>`).join("")
+        :msg(`No champion called “${esc(ap.q.trim())}”.`);
+    }
+    else if(ap.err)h=msg(failed,true);
+    else h=`<div class="ap-ch skel"><i></i><span></span></div>`.repeat(24);
+  }
+  setHTML(grid,h);
+  // Where the keyboard starts when the window opens: the search on the champion
+  // list, the picked skin on the skin list (its way back until the skins arrive).
+  const tile=skins&&grid.querySelector(".ap-sk.on");
+  for(const el of [$("apSearch"),$("apBack")])el.removeAttribute("data-autofocus");
+  (skins?tile||$("apBack"):$("apSearch")).setAttribute("data-autofocus","");
+  if(tile&&ap.focusTile&&(document.activeElement===$("apBack")||!$("artPicker").contains(document.activeElement)||document.activeElement===document.body)){
+    ap.focusTile=false;
+    if(!$("artPicker").classList.contains("hidden"))tile.focus();
+  }
+  const use=$("apUse");
+  use.disabled=!ap.champ||!!own&&own.champ===ap.champ&&own.skin===ap.skin;
+  const auto=acc&&champKey(mainChamp(acc));
+  $("apAuto").classList.toggle("hidden",!own);
+  $("apAuto").textContent=auto?"Back to most-played":"Remove the art";
+}
+function apPickChamp(id){
+  const acc=apAcc(), own=acc&&normArt(acc.art);
+  ap.champ=id;ap.view="skins";ap.err=null;
+  // back on the champion that is already on the card: start on its skin, not the default
+  ap.skin=own&&own.champ===id?own.skin:0;ap.name=own&&own.champ===id&&own.name||"";
+  ap.focusTile=true;
+  apLoadSkins();
+  renderArtPicker();
+  $("apBack").focus(); // the tile that was clicked is gone; the skins take over when they land
+}
+function apPickSkin(num){
+  const s=ap.skins&&ap.skins.find(x=>x.num===num);if(!s)return;
+  ap.skin=num;ap.name=s.name;
+  renderArtPicker();
+}
+function apSave(){
+  const acc=apAcc();if(!acc||!ap.champ)return;
+  const art=normArt({champ:ap.champ,skin:ap.skin,name:apLabel()});if(!art)return;
+  acc.art=art;
+  closeArtPicker();
+  renderCard(acc.id);
+  saveThen(champArtOn()?"Card art: "+apLabel():"Saved — turn on Champion art in Settings to see it");
+}
+function apAuto(){
+  const acc=apAcc();if(!acc)return;
+  delete acc.art;
+  const auto=champKey(mainChamp(acc));
+  closeArtPicker();
+  renderCard(acc.id);
+  saveThen(auto?"Back to the most-played champion":"Card art removed");
+}
+$("apGrid").addEventListener("click",e=>{
+  if(e.target.closest('[data-ap="retry"]')){
+    ap.err=null;
+    if(!ap.champs)apLoad();else if(ap.view==="skins")apLoadSkins();
+    renderArtPicker();return;
+  }
+  const ch=e.target.closest("[data-champ]");if(ch){apPickChamp(ch.dataset.champ);return}
+  const sk=e.target.closest("[data-skin]");if(sk)apPickSkin(Number(sk.dataset.skin));
+});
+$("apGrid").addEventListener("dblclick",e=>{if(e.target.closest("[data-skin]")&&!$("apUse").disabled)apSave()});
+// A missing loading-screen portrait leaves the tile's name on a plain plate
+$("apGrid").addEventListener("error",e=>{const t=e.target.closest&&e.target.closest(".ap-sk");if(t)t.classList.add("dead")},true);
+/* Arrow keys walk the grid, so Tab is one stop for all of it instead of a
+   hundred and seventy. Columns are counted off the layout, which is whatever
+   the window's width made them. */
+$("apGrid").addEventListener("keydown",e=>{
+  const tiles=[...$("apGrid").querySelectorAll("[data-champ],[data-skin]")];
+  const i=tiles.indexOf(document.activeElement);if(i<0)return;
+  const top=tiles[0].offsetTop, cols=Math.max(1,tiles.filter(t=>t.offsetTop===top).length);
+  const to={ArrowRight:i+1,ArrowLeft:i-1,ArrowDown:i+cols,ArrowUp:i-cols,Home:0,End:tiles.length-1}[e.key];
+  if(to==null)return;
+  e.preventDefault();
+  if(e.key==="ArrowUp"&&to<0&&ap.view==="champs"){$("apSearch").focus();return}
+  const t=tiles[Math.max(0,Math.min(tiles.length-1,to))];
+  for(const x of tiles)x.tabIndex=x===t?0:-1;
+  t.focus();
+});
+$("apSearch").addEventListener("input",e=>{ap.q=e.target.value;renderArtPicker()});
+$("apSearch").addEventListener("keydown",e=>{
+  const first=$("apGrid").querySelector("[data-champ]");
+  if(e.key==="Enter"&&first){e.preventDefault();apPickChamp(first.dataset.champ)}
+  else if(e.key==="ArrowDown"&&first){e.preventDefault();($("apGrid").querySelector('[data-champ][tabindex="0"]')||first).focus()}
+});
+$("apBack").addEventListener("click",()=>{
+  ap.view="champs";ap.err=null;renderArtPicker();if(!ap.champs)apLoad();
+  // back at the champion you came from, not at Aatrox
+  const on=$("apGrid").querySelector(".ap-ch.on");
+  if(on&&on.scrollIntoView)on.scrollIntoView({block:"center"});
+  $("apSearch").focus();
+});
+$("apUse").addEventListener("click",apSave);
+$("apAuto").addEventListener("click",apAuto);
+$("apCancel").addEventListener("click",closeArtPicker);
+$("apTurnOn").addEventListener("click",()=>{cfg.champArt=null;saveCfg();renderGrid();renderArtPicker();toast("Champion art is on")});
+/* ---- share a read-only snapshot ----
+   A page of your ranks for somebody else, carried entirely in the link. The data
+   is the part after "#", which a browser never sends to any server — so nothing
+   is uploaded, stored or kept anywhere, and the link is the whole page. It holds
+   only what the share window lists: never a login, password, email or note, and
+   no Riot ID unless you tick the box. Opening one never reads or writes the
+   opener's own vault or settings (see openSnapshot). */
+const SNAP_HOME="https://marvinpanvan.github.io/league-smurf-tracker/";
+const SNAP_MAX_HASH=16000, SNAP_MAX_JSON=200000, SNAP_MAX_ACC=60, SNAP_HIST=16;
+let snapMode=false;
+function b64url(bytes){return b64(bytes).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+function unb64url(s){s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";return unb64(s)}
+// Through a CompressionStream and back out, stopping at `cap` bytes so a small
+// link can't unpack into something enormous.
+async function pipeBytes(bytes,stream,cap){
+  const w=stream.writable.getWriter();
+  w.write(bytes).catch(()=>{});w.close().catch(()=>{});
+  const r=stream.readable.getReader(), chunks=[];let n=0;
+  for(;;){
+    const{done,value}=await r.read();if(done)break;
+    n+=value.length;
+    if(cap&&n>cap){try{r.cancel()}catch(e){}throw new Error("too large")}
+    chunks.push(value);
+  }
+  const out=new Uint8Array(n);let o=0;for(const c of chunks){out.set(c,o);o+=c.length}
+  return out;
+}
+// "1." compressed, "0." plain for a browser without CompressionStream
+async function snapEncode(obj){
+  const bytes=new TextEncoder().encode(JSON.stringify(obj));
+  if(typeof CompressionStream==="function"){
+    try{return"1."+b64url(await pipeBytes(bytes,new CompressionStream("deflate-raw")))}catch(e){}
+  }
+  return"0."+b64url(bytes);
+}
+async function snapDecode(str){
+  str=String(str||"");
+  const m=str.length<=SNAP_MAX_HASH&&/^([01])\.([A-Za-z0-9_-]+)$/.exec(str);
+  if(!m)throw new Error("not a snapshot");
+  let bytes=unb64url(m[2]);
+  if(m[1]==="1"){
+    if(typeof DecompressionStream!=="function")throw new Error("this browser can't unpack it");
+    bytes=await pipeBytes(bytes,new DecompressionStream("deflate-raw"),SNAP_MAX_JSON);
+  }else if(bytes.length>SNAP_MAX_JSON)throw new Error("too large");
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+// A rank as [tier index, division or 0, LP]: four short values instead of a word
+const snapRank=s=>{
+  const t=TIER_ORDER.indexOf(String(s&&s.tier||"").toUpperCase());
+  if(t<0)return null;
+  const lp=Number(s.lp);
+  return[t,normDivision(TIER_ORDER[t],s.division)||0,Number.isFinite(lp)?Math.max(0,Math.min(9999,Math.round(lp))):0];
+};
+function snapAccounts(which){
+  const live=accounts.filter(a=>!a.archived);
+  if(which==="fav")return live.filter(a=>a.fav);
+  if(which==="sel")return live.filter(a=>selected.has(a.id));
+  if(which==="ranked")return live.filter(isRanked);
+  return live;
+}
+function snapColours(){
+  const cs=getComputedStyle(document.documentElement), hex=v=>/^#[0-9a-f]{6}$/i.test(v)?v.toLowerCase():null;
+  return[hex(cs.getPropertyValue("--gold").trim())||DEFAULT_ACCENT,hex(cs.getPropertyValue("--teal").trim())||DEFAULT_ACCENT2];
+}
+function buildSnapshot(o){
+  const now=Date.now();let k=0;
+  const list=snapAccounts(o.which).slice(0,SNAP_MAX_ACC).map(a=>{
+    const s=a.stats&&a.stats.found!==false?a.stats:null, x={};
+    const rid=(a.gameName||"")+"#"+(a.tagLine||"");
+    x.n=(a.label||"").trim().slice(0,40)||(o.ids?rid.slice(0,40):"Account "+(++k));
+    if(o.ids&&a.label)x.i=rid.slice(0,40);
+    if(REGIONS[a.region])x.r=a.region;
+    const rk=isRanked(a)?snapRank(s):null;
+    if(rk){
+      x.k=rk;
+      const wl=winLoss(s);
+      if(wl.w!=null)x.w=Math.min(99999,wl.w);if(wl.l!=null)x.l=Math.min(99999,wl.l);
+      const pk=peakInfo(a);if(pk.peakV!=null&&pk.peak)x.p=pk.peak.slice(0,40);
+    }
+    if(s&&Number.isInteger(+s.level)&&+s.level>0)x.lv=Math.min(9999,+s.level);
+    if(o.hist&&rk){
+      const h=(a.history||[]).filter(e=>e&&ladderLP(e)!==null&&Number(e.t)>0).slice(-SNAP_HIST);
+      if(h.length>1)x.h=h.map(e=>[Math.max(0,Math.round((now-e.t)/864e5*10)/10),...snapRank(e)]);
+    }
+    if(o.art){const art=artOf(a);if(art)x.c=[art.champ,art.skin]}
+    if(o.notes){
+      const info=normInfo(a.info);
+      if(info&&info.honor!=null)x.hn=info.honor;
+      if(info&&info.skins)x.sk=info.skins.slice(0,8);
+    }
+    if(a.status&&a.status!=="active"&&STATUS[a.status])x.st=a.status;
+    if(a.fav)x.f=1;
+    return x;
+  });
+  return{v:1,t:String(o.title||"").replace(/\s+/g," ").trim().slice(0,60),at:Math.floor(now/60000)*60000,c:snapColours(),a:list};
+}
+// Everything in a link is somebody else's input: every value is checked for
+// shape and range here, and only what passes reaches the page, through esc().
+function normSnap(o){
+  if(!o||typeof o!=="object"||o.v!==1||!Array.isArray(o.a))return null;
+  const str=(v,n)=>typeof v==="string"?v.replace(/[\u0000-\u001f\u007f]/g," ").replace(/\s+/g," ").trim().slice(0,n):"";
+  const int=(v,lo,hi)=>Number.isInteger(v)&&v>=lo&&v<=hi?v:null;
+  const rank=k=>{
+    if(!Array.isArray(k))return null;
+    const t=int(k[0],0,TIER_ORDER.length-1);if(t==null)return null;
+    const tier=TIER_ORDER[t];
+    return{tier,division:hasDivisions(tier)&&["I","II","III","IV"].includes(k[1])?k[1]:null,lp:int(k[2],0,9999)??0};
+  };
+  const hex=v=>typeof v==="string"&&/^#[0-9a-f]{6}$/i.test(v)?v:null;
+  const accs=o.a.slice(0,SNAP_MAX_ACC).filter(x=>x&&typeof x==="object"&&!Array.isArray(x)).map(x=>({
+    name:str(x.n,40)||"Account", rid:str(x.i,40), region:REGIONS[x.r]?x.r:"",
+    rank:rank(x.k), w:int(x.w,0,99999), l:int(x.l,0,99999), level:int(x.lv,1,9999), peak:str(x.p,40),
+    hist:(Array.isArray(x.h)?x.h.slice(-SNAP_HIST):[]).map(e=>{
+      if(!Array.isArray(e)||typeof e[0]!=="number"||!(e[0]>=0&&e[0]<5000))return null;
+      const r=rank(e.slice(1));return r?{d:e[0],...r}:null;
+    }).filter(Boolean),
+    art:Array.isArray(x.c)?normArt({champ:x.c[0],skin:x.c[1]}):null,
+    honor:int(x.hn,0,5), skins:(Array.isArray(x.sk)?x.sk:[]).map(s=>str(s,60)).filter(Boolean).slice(0,8),
+    status:typeof x.st==="string"&&x.st!=="active"&&Object.prototype.hasOwnProperty.call(STATUS,x.st)?x.st:"",
+    fav:x.f===1,
+  }));
+  const at=Number(o.at);
+  return{title:str(o.t,60),at:Number.isFinite(at)&&at>0&&at<8.64e15?at:null,
+    colors:Array.isArray(o.c)?[hex(o.c[0]),hex(o.c[1])]:[null,null],accounts:accs};
+}
+// Where a link should point: the page itself when it is hosted somewhere, the
+// published app when it is a file on this computer nobody else can open.
+function snapBase(){return/^https?:$/.test(location.protocol)&&!/^(localhost|127\.|\[::1\])/.test(location.hostname)?location.origin+location.pathname:SNAP_HOME}
+const snapDay=ts=>{const d=new Date(ts);return d.getDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]+" "+d.getFullYear()};
+function snapCardHTML(a,i){
+  const r=a.rank, col=r?tierColor(r.tier):"#8a8f98";
+  const total=(a.w||0)+(a.l||0), wr=a.w!=null&&a.l!=null&&total?Math.round(a.w/total*100):null;
+  const label=r?tierLabel(r):"Unranked";
+  const st=a.status?STATUS[a.status]:null;
+  const spk=a.hist.length>1?sparkline(a.hist,col):"";
+  const days=a.hist.length>1?Math.max(1,Math.round(a.hist[0].d-a.hist[a.hist.length-1].d)):0;
+  const meta=[a.peak?`<span><i>Peak</i>${esc(a.peak)}</span>`:"",a.level?`<span><i>Level</i>${esc(a.level)}</span>`:"",
+    total?`<span><i>Games</i>${esc(total)}</span>`:""].filter(Boolean).join("");
+  const notes=(a.honor!=null?`<span class="ni-f"><span class="ni-pips" aria-hidden="true">${[1,2,3,4,5].map(n=>`<i${n<=a.honor?' class="on"':""}></i>`).join("")}</span>Honor <b>${a.honor}</b></span>`:"")
+    +a.skins.map(s=>`<span class="ni-f sk">${esc(s)}</span>`).join("");
+  return`<article class="hx${a.fav?" gold":""} sn-card${a.status==="banned"?" dead":""}" style="--tier:${col};--i:${i}"><div class="hx-in sn-c">
+    <div class="sn-art">${a.art?`<img src="${splashUrl(a.art.champ,a.art.skin)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">`:""}</div>
+    <div class="sn-head">
+      <span class="sn-crest">${r?crest(r.tier,"sn-crest-i"):`<b>${esc(a.name.charAt(0).toUpperCase())}</b>`}</span>
+      <div class="sn-id"><div class="sn-nm">${esc(a.name)}${a.fav?`<span class="sn-fav" title="Favorite">${icon("star")}</span>`:""}</div>
+        ${a.rid?`<div class="sn-rid">${esc(a.rid)}</div>`:""}</div>
+      ${a.region?`<span class="regiontag">${esc(a.region)}</span>`:""}
+    </div>
+    <div class="sn-rank"><b>${esc(label)}</b>${r?`<span>${esc(r.lp)} LP</span>`:""}${st?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.short||st.label)}</span>`:""}</div>
+    ${wr!=null?`<div class="sn-wl"><span>${esc(a.w)}W ${esc(a.l)}L</span><b class="${wr>=50?"wr-good":""}">${wr}% WR</b></div>
+      <div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
+    ${spk?`<div class="sn-spk" title="Last ${days} day${days===1?"":"s"}">${spk}</div>`:""}
+    ${meta?`<div class="sn-meta">${meta}</div>`:""}
+    ${notes?`<div class="ni-row sn-notes">${notes}</div>`:""}
+  </div></article>`;
+}
+function snapHTML(s){
+  const list=s.accounts.slice().sort((x,y)=>(y.rank?ladderLP(y.rank):-1)-(x.rank?ladderLP(x.rank):-1)||(y.level||0)-(x.level||0));
+  const ranked=list.filter(a=>a.rank), best=ranked[0];
+  const w=list.reduce((n,a)=>n+(a.w||0),0), l=list.reduce((n,a)=>n+(a.l||0),0);
+  const wr=w+l?Math.round(w/(w+l)*100):null;
+  const regions=[...new Set(list.map(a=>a.region).filter(Boolean))];
+  const tiers=TIER_ORDER.slice().reverse().map(t=>[t,ranked.filter(a=>a.rank.tier===t).length]).filter(x=>x[1]);
+  const nice=t=>t.charAt(0)+t.slice(1).toLowerCase();
+  const home=snapBase();
+  return`<header class="sn-top">
+      <a class="sn-brand" href="${esc(home)}"><span class="brand-mark" aria-hidden="true"></span><span class="hex-display">Smurf Tracker</span></a>
+      <span class="sn-pill">${icon("eye")}Read-only snapshot</span>
+    </header>
+    <section class="sn-hero">
+      ${s.at?`<div class="sn-eyebrow">Shared ${esc(snapDay(s.at))}</div>`:""}
+      <h1 class="sn-title">${esc(s.title||"League accounts")}</h1>
+      <div class="sn-sub">${list.length} account${list.length===1?"":"s"}${regions.length?" · "+regions.map(esc).join(", "):""}</div>
+      ${list.length?`<div class="hx gold sn-sum"><div class="hx-in">
+        <div class="cell sn-best">${best?crest(best.rank.tier,"sn-best-c"):""}<div><span class="k">Highest</span>
+          <b style="color:${best?tierColor(best.rank.tier):"var(--muted)"}">${best?esc(tierLabel(best.rank)):"Unranked"}</b>
+          <em>${best?esc(best.rank.lp+" LP · "+best.name):"No ranked account in this snapshot"}</em></div></div>
+        <div class="cell"><span class="k">Ranked</span><b>${ranked.length}</b><em>of ${list.length}</em></div>
+        <div class="cell"><span class="k">Games</span><b>${(w+l).toLocaleString("en-US")}</b><em>this season</em></div>
+        <div class="cell"><span class="k">Win rate</span><b class="${wr!=null&&wr>=50?"wr-good":""}">${wr!=null?wr+"%":"—"}</b><em>${w+l?w+"W "+l+"L":"no games"}</em></div>
+      </div></div>`:""}
+      ${tiers.length>1?`<div class="sn-dist" aria-hidden="true">${tiers.map(([t,n])=>`<i style="flex:${n};background:${tierColor(t)}"></i>`).join("")}</div>
+        <div class="sn-legend">${tiers.map(([t,n])=>`<span style="--c:${tierColor(t)}">${esc(nice(t))} ${n}</span>`).join("")}</div>`:""}
+    </section>
+    ${list.length?`<section class="sn-grid" aria-label="Accounts">${list.map(snapCardHTML).join("")}</section>`
+      :`<p class="sn-empty">This snapshot has no accounts in it.</p>`}
+    <footer class="sn-foot">
+      <p>A snapshot${s.at?" taken "+esc(snapDay(s.at)):""} — it doesn't update. Logins, emails and notes are never part of one.</p>
+      <a class="btn b-gold" href="${esc(home)}">Track your own accounts</a>
+    </footer>`;
+}
+function snapErrorHTML(){
+  return`<div class="sn-err hx gold"><div class="hx-in">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <h1>This snapshot link is broken</h1>
+    <p>Part of it may have been cut off when it was copied. Ask for the link again, and paste all of it.</p>
+    <a class="btn b-gold" href="${esc(snapBase())}">Open Smurf Tracker</a></div></div>`;
+}
+/* The viewer. It runs instead of the app, before anything has read this
+   browser's storage, and switches storage off for the rest of the page's life:
+   saveCfg and saveDB both check hasStorage, so nothing here can write over the
+   opener's own vault or settings — not a shortcut, not leaving the tab. */
+async function openSnapshot(code){
+  snapMode=true;hasStorage=false;
+  document.body.classList.add("snap-mode");
+  const root=$("snapView");root.classList.remove("hidden");
+  root.innerHTML=`<p class="sn-wait">Opening the snapshot…</p>`;
+  let s=null;
+  try{s=normSnap(await snapDecode(code))}catch(e){s=null}
+  if(!s){root.innerHTML=snapErrorHTML();document.title="Snapshot · Smurf Tracker";return}
+  if(s.colors[0])applyAccent(s.colors[0]);
+  if(s.colors[1])applyAccent2(s.colors[1]);
+  document.title=(s.title||"League accounts")+" · Smurf Tracker";
+  root.innerHTML=snapHTML(s);
+}
+window.addEventListener("error",e=>{const t=e.target;if(snapMode&&t&&t.closest&&t.closest(".sn-art"))t.remove()},true);
+// Pasting a snapshot link into a tab that already has the app open changes only
+// the part after #, which reloads nothing; going back out of one is the same.
+window.addEventListener("hashchange",()=>{if(snapMode||/^#s=/.test(location.hash))location.reload()});
+
+/* ---- the share window ---- */
+const share={which:"ranked",gen:0,url:""};
+function shareCounts(){return{ranked:snapAccounts("ranked").length,fav:snapAccounts("fav").length,sel:snapAccounts("sel").length,all:snapAccounts("all").length}}
+function openShare(){
+  if(previewMode){toast("Exit preview first — this is example data, not your accounts");return}
+  if(!accounts.some(a=>!a.archived)){toast("Add an account first — there is nothing to share yet");return}
+  closeAllPanels();
+  const n=shareCounts();
+  share.which=selected.size&&n.sel?"sel":n.ranked?"ranked":"all";
+  $("shArt").checked=champArtOn();
+  renderShare();
+  $("shareModal").classList.remove("hidden");
+}
+function closeShare(){share.gen++;const m=$("shareModal");if(m)m.classList.add("hidden")}
+function shareOpts(){
+  return{which:share.which,title:$("shName").value||"My League accounts",ids:$("shIds").checked,art:$("shArt").checked,
+    hist:$("shHist").checked,notes:$("shNotes").checked};
+}
+function renderShare(){
+  const n=shareCounts();
+  const seg=[["ranked","Ranked"],["fav","Favorites"],["sel","Selected"],["all","All"]];
+  setHTML($("shWhich"),seg.map(([k,t])=>`<button type="button" data-which="${k}" aria-pressed="${share.which===k}" class="${share.which===k?"on":""}"${n[k]?"":" disabled"}>${t} <b>${n[k]}</b></button>`).join(""));
+  updateShareLink();
+}
+async function updateShareLink(){
+  const g=++share.gen, o=shareOpts(), count=snapAccounts(o.which).length;
+  $("shCopy").disabled=$("shOpen").disabled=!count;
+  if(!count){$("shSize").textContent="No accounts to share in this group.";share.url="";return}
+  const code=await snapEncode(buildSnapshot(o));
+  if(g!==share.gen)return;
+  share.url=snapBase()+"#s="+code;
+  share.local=location.href.split("#")[0]+"#s="+code;
+  const kb=Math.max(.1,Math.round(share.url.length/102.4)/10);
+  $("shSize").textContent=Math.min(count,SNAP_MAX_ACC)+" account"+(count===1?"":"s")+" · "+kb+" KB link"+(count>SNAP_MAX_ACC?" (the first "+SNAP_MAX_ACC+")":"");
+}
+$("shWhich").addEventListener("click",e=>{const b=e.target.closest("[data-which]");if(!b||b.disabled)return;share.which=b.dataset.which;renderShare()});
+for(const id of["shIds","shArt","shHist","shNotes"])$(id).addEventListener("change",updateShareLink);
+$("shName").addEventListener("input",updateShareLink);
+$("shCopy").addEventListener("click",async()=>{await updateShareLink();if(share.url)copyText(share.url,"Snapshot link")});
+$("shOpen").addEventListener("click",async()=>{await updateShareLink();if(share.local)window.open(share.local,"_blank","noopener")});
+$("shCancel").addEventListener("click",closeShare);
+$("bShare").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");openShare()});
 /* ---- streamer mode ----
    For streaming or sharing the screen: whatever would let a viewer find an
    account — its Riot ID, login, email, notes, or a name that is only its Riot
@@ -6393,15 +7235,137 @@ function infoBlockHTML(a,rev){
   }
   return `<div class="login info${rev||""}">${out}</div>`;
 }
+/* ---- note fields ----
+   What people kept typing into Notes by hand — "honor 3, 140 champs, Elementalist
+   Lux, 2FA on" — as fields: the same place on every card, searchable, and not a
+   paragraph to read sixty times. The built-in ones can each be switched off;
+   your own are kept on the account by name ({own: {"Bought from": "G2G"}}), so
+   a backup or a synced device shows them even where the field list itself has
+   never been set up — it is inferred from what the accounts carry. */
+const NOTE_FIELDS=[
+  {k:"honor",label:"Honor level",kind:"honor"},
+  {k:"owned",label:"Champions owned",kind:"num",max:999},
+  {k:"be",label:"Blue Essence",kind:"num",max:99999999},
+  {k:"rp",label:"RP",kind:"num",max:9999999},
+  {k:"twofa",label:"2-step verification",kind:"bool"},
+  {k:"skins",label:"Skins",kind:"list"},
+  {k:"penalty",label:"Penalties / bans",kind:"text"},
+];
+const NOTE_OFF_DEFAULT=["rp"];
+const NF_KINDS={text:"Text",num:"Number",bool:"Yes / no"};
+const NF_MAX_OWN=12;
+function nfLabel(s){
+  const t=typeof s==="string"?s.replace(/\s+/g," ").trim().slice(0,32):"";
+  return t&&!/^(__proto__|constructor|prototype)$/i.test(t)?t:"";
+}
+function nfInt(x,max){const n=Number(x);return Number.isInteger(n)&&n>=0&&n<=max?n:null}
+function normInfo(v){
+  if(!v||typeof v!=="object"||Array.isArray(v))return null;
+  const o={};
+  {const n=nfInt(v.honor,5);if(v.honor!=null&&n!=null)o.honor=n}
+  for(const f of NOTE_FIELDS)if(f.kind==="num"&&v[f.k]!=null){const n=nfInt(v[f.k],f.max);if(n!=null)o[f.k]=n}
+  if(typeof v.twofa==="boolean")o.twofa=v.twofa;
+  if(Array.isArray(v.skins)){
+    const seen=new Set();
+    const s=v.skins.filter(x=>typeof x==="string").map(x=>x.replace(/\s+/g," ").trim().slice(0,60))
+      .filter(x=>x&&!seen.has(x.toLowerCase())&&seen.add(x.toLowerCase())).slice(0,40);
+    if(s.length)o.skins=s;
+  }
+  if(typeof v.penalty==="string"){const t=v.penalty.trim().slice(0,200);if(t)o.penalty=t}
+  if(v.own&&typeof v.own==="object"&&!Array.isArray(v.own)){
+    const own={};let n=0;
+    for(const[k0,x]of Object.entries(v.own)){
+      const k=nfLabel(k0);if(!k||Object.keys(own).some(y=>y.toLowerCase()===k.toLowerCase())||n>=24)continue;
+      if(typeof x==="boolean"||typeof x==="number"&&Number.isFinite(x)&&Math.abs(x)<1e12){own[k]=x;n++}
+      else if(typeof x==="string"){const t=x.trim().slice(0,200);if(t){own[k]=t;n++}}
+    }
+    if(n)o.own=own;
+  }
+  return Object.keys(o).length?o:null;
+}
+function normNoteFields(v){
+  const o=v&&typeof v==="object"&&!Array.isArray(v)?v:{};
+  const off=Array.isArray(o.off)?[...new Set(o.off.filter(k=>NOTE_FIELDS.some(f=>f.k===k)))]:NOTE_OFF_DEFAULT.slice();
+  const seen=new Set(), custom=[];
+  for(const c of Array.isArray(o.custom)?o.custom:[]){
+    const label=nfLabel(c&&c.label);
+    if(!label||seen.has(label.toLowerCase())||!NF_KINDS[c.kind]||custom.length>=NF_MAX_OWN)continue;
+    seen.add(label.toLowerCase());custom.push({label,kind:c.kind});
+  }
+  return{off,custom};
+}
+const nfKindOf=v=>typeof v==="boolean"?"bool":typeof v==="number"?"num":"text";
+// Your own fields: the list from Fields…, then any name an account carries that
+// the list doesn't have yet — so nothing an import brought in goes unseen.
+function ownFields(){
+  const list=normNoteFields(cfg.noteFields).custom.map(c=>({...c}));
+  const seen=new Set(list.map(c=>c.label.toLowerCase()));
+  for(const a of accounts){
+    const own=a.info&&a.info.own;if(!own||typeof own!=="object")continue;
+    for(const[k,v]of Object.entries(own)){
+      const label=nfLabel(k);
+      if(label&&!seen.has(label.toLowerCase())){seen.add(label.toLowerCase());list.push({label,kind:nfKindOf(v),inferred:true})}
+    }
+  }
+  return list;
+}
+function noteFields(){
+  const {off}=normNoteFields(cfg.noteFields);
+  return NOTE_FIELDS.filter(f=>!off.includes(f.k)).concat(ownFields().map(c=>({k:"own",label:c.label,kind:c.kind,own:true})));
+}
+function nfValue(info,f){
+  if(!info)return null;
+  if(!f.own)return info[f.k]==null?null:info[f.k];
+  const own=info.own||{}, k=Object.keys(own).find(x=>x.toLowerCase()===f.label.toLowerCase());
+  return k==null?null:own[k];
+}
+const fmtN=n=>Number(n).toLocaleString("en-US",{maximumFractionDigits:2});
+// Everything a search should find in the fields, as one string
+function noteFieldsText(a){
+  const info=normInfo(a.info);if(!info)return"";
+  return noteFields().map(f=>{const v=nfValue(info,f);
+    return v==null?"":Array.isArray(v)?v.join(" "):typeof v==="string"?v:""}).filter(Boolean).join(" ");
+}
+function noteFactsHTML(a,clickable){
+  const info=normInfo(a.info);if(!info)return"";
+  const facts=[], kv=[];let skins="", pen="";
+  for(const f of noteFields()){
+    const v=nfValue(info,f);if(v==null)continue;
+    if(f.k==="honor")facts.push(`<span class="ni-f" title="Honor level ${v} of 5"><span class="ni-pips" aria-hidden="true">${[1,2,3,4,5].map(i=>`<i${i<=v?' class="on"':""}></i>`).join("")}</span>Honor <b>${v}</b></span>`);
+    else if(f.k==="twofa")facts.push(v?`<span class="ni-f ok" title="2-step verification is on">${icon("check")}2-step on</span>`
+      :`<span class="ni-f warn" title="2-step verification is off">${icon("alert")}No 2-step</span>`);
+    else if(f.k==="owned")facts.push(`<span class="ni-f"><b>${fmtN(v)}</b> champion${v===1?"":"s"}</span>`);
+    else if(f.k==="be")facts.push(`<span class="ni-f" title="Blue Essence"><b>${fmtN(v)}</b> BE</span>`);
+    else if(f.k==="rp")facts.push(`<span class="ni-f"><b>${fmtN(v)}</b> RP</span>`);
+    else if(f.k==="skins"){
+      const shown=v.slice(0,6);
+      skins=`<div class="ni-row ni-skins" title="${esc(v.join(", "))}">${shown.map(s=>`<span class="ni-f">${esc(s)}</span>`).join("")}`
+        +(v.length>6?`<span class="ni-f more">+${v.length-6} more</span>`:"")+`</div>`;
+    }
+    else if(f.k==="penalty")pen=`<div class="ni-pen">${icon("alert")}<span>${sens(esc(v))}</span></div>`;
+    // your own fields are shown by what the value is, not by what the list says it
+    // should be — a kind changed after the fact still shows what was stored
+    else if(typeof v==="boolean")facts.push(`<span class="ni-f${v?" ok":""}">${v?icon("check"):""}${esc(f.label)}${v?"":": no"}</span>`);
+    else if(typeof v==="number")facts.push(`<span class="ni-f">${esc(f.label)} <b>${fmtN(v)}</b></span>`);
+    else kv.push(`<span class="k2">${esc(f.label)}</span><span class="v2">${sens(esc(v))}</span>`);
+  }
+  const body=(facts.length?`<div class="ni-row">${facts.join("")}</div>`:"")+skins+pen+(kv.length?`<div class="ni-kv">${kv.join("")}</div>`:"");
+  return body?`<div class="ni"${clickable?' data-act="notefields" title="Click to edit these fields"':""}>${body}</div>`:"";
+}
 // Split out of cardHTML so opening the editor can swap this one block instead of
 // rebuilding the card around it — see syncNoteBlock.
 function noteBlockHTML(a,rev){
-  if(editingNote===a.id)return`<div class="c-notes editing${rev||""}"><span class="k">Notes</span>`
+  // The fields stay in view above the text being written, but only the text
+  // edits here: they open the account form, which a click inside an open editor
+  // must not do — it would take the focus the editor saves on losing.
+  if(editingNote===a.id)return`<div class="c-notes editing${rev||""}"><span class="k">Notes</span>${noteFactsHTML(a,false)}`
     +`<textarea data-f="notetext" rows="3" placeholder="Anything worth remembering about this account…">${esc(noteDraft)}</textarea></div>`;
   // Always clickable, so there is no separate "add a note" action to find — an
   // empty one is just a quiet line rather than a filled box.
-  if(a.notes)return`<div class="c-notes" data-act="noteedit" title="Click to edit"><span class="k">Notes ${icon("pencil")}</span>${sens(esc(a.notes))}</div>`;
-  return`<div class="c-notes blank" data-act="noteedit" title="Click to write a note">${icon("pencil")} Add a note</div>`;
+  const facts=noteFactsHTML(a,true);
+  if(a.notes||facts)return`<div class="c-notes" data-act="noteedit" title="Click to edit the note"><span class="k">Notes ${icon("pencil")}</span>${facts}${a.notes?`<div class="nt">${sens(esc(a.notes))}</div>`:""}</div>`;
+  return`<div class="c-notes blank"><button type="button" data-act="noteedit" title="Click to write a note">${icon("pencil")} Add a note</button>`
+    +`<button type="button" class="nf-link" data-act="notefields" title="Honor, skins, Blue Essence and more">Honor, skins…</button></div>`;
 }
 // Replace only the note block, leaving the rest of the card's DOM alone. Going
 // through renderGrid meant every card on screen was thrown away and rebuilt just
@@ -6894,6 +7858,7 @@ function cardMenuHTML(a){
     +grp("Edit")
     +it("rank","pencil","Rank…")
     +it("edit","user","Account…")
+    +it("art","image","Card art…")
     // Both profile links together. op.gg used to sit in the footer while dpm.lol
     // sat in here, which split one kind of thing across two places.
     +grp("Look up")
@@ -7231,6 +8196,8 @@ function closeAllPanels(){
   // shut every other panel on the page and left the palette standing.
   closePalette();
   closeCompare();
+  closeArtPicker();
+  closeShare();
 }
 function closeCompare(){
   const had=compareIds.length>0;
@@ -7241,7 +8208,176 @@ function closeCompare(){
   // kept showing "Unselect compare" until something else refreshed the grid.
   if(had)render();
 }
-function openForm(acc){
+/* ---- note fields in the account form ----
+   One control per field in the list, filled from the account; saving writes
+   back only the fields shown, so a field switched off keeps what it held. */
+function renderInfoFields(info,focusFirst){
+  const box=$("fInfo");if(!box)return;
+  const fs=noteFields();
+  box.innerHTML=fs.map((f,i)=>{
+    const v=nfValue(info,f), id="nf"+i, at=f.own?` data-label="${esc(f.label)}"`:"";
+    if(f.kind==="honor"){
+      const cur=v==null?"":String(v);
+      return`<div class="fld"><label id="${id}">Honor level</label><div class="seg nf-honor" role="radiogroup" aria-labelledby="${id}" data-nf="honor">`
+        +["",0,1,2,3,4,5].map(n=>`<button type="button" role="radio" data-v="${n}" aria-checked="${String(n)===cur}" tabindex="${String(n)===cur?0:-1}"`
+          +` class="${String(n)===cur?"on":""}" title="${n===""?"Not set":"Honor level "+n}">${n===""?"—":n}</button>`).join("")+`</div></div>`;
+    }
+    if(f.kind==="bool"){
+      const val=v===true?"1":v===false?"0":"";
+      const [y,n]=f.k==="twofa"?["On","Off"]:["Yes","No"];
+      return`<div class="fld"><label for="${id}">${esc(f.label)}</label><select id="${id}" data-nf="${f.k}"${at}>`
+        +`<option value=""${val===""?" selected":""}>Not set</option><option value="1"${val==="1"?" selected":""}>${y}</option><option value="0"${val==="0"?" selected":""}>${n}</option></select></div>`;
+    }
+    if(f.kind==="num"){
+      const val=typeof v==="number"?String(v):"";
+      return`<div class="fld"><label for="${id}">${esc(f.label)}</label><input id="${id}" type="number" inputmode="${f.own?"decimal":"numeric"}" data-nf="${f.k}"${at}`
+        +(f.own?' step="any"':` min="0" max="${f.max}" step="1"`)+` value="${esc(val)}" placeholder="—"></div>`;
+    }
+    if(f.kind==="list")return`<div class="fld wide"><label for="${id}">${esc(f.label)}</label><input id="${id}" data-nf="skins" autocomplete="off"`
+      +` value="${esc((v||[]).join(", "))}" placeholder="Comma-separated — e.g. Elementalist Lux, Spirit Blossom Yasuo"></div>`;
+    const val=v==null?"":String(v);
+    return`<div class="fld wide"><label for="${id}">${esc(f.label)}</label><input id="${id}" class="nf-sens" data-nf="${f.k}"${at} autocomplete="off" value="${esc(val)}"`
+      +` placeholder="${f.k==="penalty"?"e.g. 14-day chat restriction, ends 12 Oct":"—"}"></div>`;
+  }).join("");
+  for(const el of box.querySelectorAll("[data-autofocus]"))el.removeAttribute("data-autofocus");
+  if(focusFirst){const first=box.querySelector('[aria-checked="true"],input,select');if(first)first.setAttribute("data-autofocus","")}
+}
+function readInfoFields(base){
+  const out=Object.assign({},normInfo(base)||{});
+  out.own=Object.assign({},out.own||{});
+  const fs=noteFields(), box=$("fInfo");
+  const ctl=[...box.querySelectorAll("[data-nf]")];
+  for(const f of fs){
+    const el=f.own?ctl.find(x=>x.dataset.nf==="own"&&x.dataset.label===f.label):ctl.find(x=>x.dataset.nf===f.k);
+    if(!el)continue;
+    let v=null;
+    if(f.kind==="honor"){const b=el.querySelector('[aria-checked="true"]');v=b&&b.dataset.v!==""?Number(b.dataset.v):null}
+    else if(f.kind==="list")v=el.value.split(/[,\n]/).map(x=>x.trim()).filter(Boolean);
+    else if(f.kind==="bool")v=el.value===""?null:el.value==="1";
+    else if(f.kind==="num"){
+      const t=el.value.trim(), n=Number(t);
+      // a number past what the field holds is kept at its top rather than lost
+      v=t===""||!Number.isFinite(n)?null:f.own?n:Math.min(f.max,Math.max(0,Math.round(n)));
+    }
+    else v=el.value.trim()||null;
+    if(f.own){
+      for(const k of Object.keys(out.own))if(k.toLowerCase()===f.label.toLowerCase())delete out.own[k];
+      if(v!=null)out.own[f.label]=v;
+    }else{
+      delete out[f.k];
+      if(v!=null&&!(Array.isArray(v)&&!v.length))out[f.k]=v;
+    }
+  }
+  return normInfo(out);
+}
+$("fInfo").addEventListener("click",e=>{
+  const b=e.target.closest('[data-nf="honor"] button');if(!b)return;
+  for(const x of b.parentNode.children){const on=x===b;x.classList.toggle("on",on);x.setAttribute("aria-checked",String(on));x.tabIndex=on?0:-1}
+});
+$("fInfo").addEventListener("keydown",e=>{
+  const b=e.target.closest('[data-nf="honor"] button');if(!b)return;
+  const d={ArrowRight:1,ArrowDown:1,ArrowLeft:-1,ArrowUp:-1}[e.key];if(!d)return;
+  e.preventDefault();
+  const all=[...b.parentNode.children], t=all[(all.indexOf(b)+d+all.length)%all.length];
+  t.click();t.focus();
+});
+/* Fields…: the list itself. Switching one off hides it everywhere and keeps
+   what it holds; removing one of your own takes its values with it, after
+   saying how many accounts that touches. */
+function renderFieldsCfg(){
+  const box=$("fFieldsCfg");if(!box||box.classList.contains("hidden"))return;
+  const {off}=normNoteFields(cfg.noteFields), own=ownFields();
+  const kinds=k=>Object.entries(NF_KINDS).map(([v,t])=>`<option value="${v}"${v===k?" selected":""}>${t}</option>`).join("");
+  box.innerHTML=`<div class="grp-h">On every account</div>`
+    +`<div class="nf-on">${NOTE_FIELDS.map(f=>`<label><input type="checkbox" data-nf-on="${f.k}"${off.includes(f.k)?"":" checked"}> ${esc(f.label)}</label>`).join("")}</div>`
+    +`<div class="grp-h">Your own</div><div class="nf-own">`
+    +(own.length?own.map((c,i)=>`<div class="row"><input data-own-label="${i}" value="${esc(c.label)}" maxlength="32" aria-label="Field name">`
+      +`<select data-own-kind="${i}" aria-label="Kind of field">${kinds(c.kind)}</select>`
+      +`<button type="button" data-own-del="${i}" title="Remove this field" aria-label="Remove ${esc(c.label)}">✕</button></div>`).join("")
+      :`<span class="none">Anything else you track on every account — where it came from, what it cost, the recovery question.</span>`)
+    +(own.length<NF_MAX_OWN?`<div class="row"><input id="nfNewLabel" maxlength="32" placeholder="New field, e.g. Bought from" aria-label="New field name">`
+      +`<select id="nfNewKind" aria-label="Kind of field">${kinds("text")}</select><button type="button" id="nfAdd">Add</button></div>`
+      :`<span class="none">That's ${NF_MAX_OWN}, the most a vault can have.</span>`)
+    +`</div>`;
+}
+// Every change to the list: store it, then redraw the fields with what was typed
+// into them kept, and the cards with the new list.
+function setNoteFields(off,custom,rename){
+  // read against the list as it was, before it changes under the form
+  const typed=readInfoFields(formInfoBase)||{};
+  if(rename&&typed.own){
+    const k=Object.keys(typed.own).find(x=>x.toLowerCase()===rename[0].toLowerCase());
+    if(k!=null){typed.own[rename[1]]=typed.own[k];delete typed.own[k]}
+  }
+  cfg.noteFields={off,custom:custom.map(c=>({label:c.label,kind:c.kind}))};saveCfg();
+  renderInfoFields(typed);
+  renderFieldsCfg();renderGrid();
+}
+let formInfoBase=null;
+$("fFieldsBtn").addEventListener("click",()=>{
+  const box=$("fFieldsCfg"), open=box.classList.contains("hidden");
+  box.classList.toggle("hidden",!open);$("fFieldsBtn").setAttribute("aria-expanded",String(open));
+  renderFieldsCfg();
+  if(open){const first=box.querySelector("input");if(first)first.focus()}
+});
+$("fFieldsCfg").addEventListener("change",e=>{
+  const t=e.target, {off}=normNoteFields(cfg.noteFields), own=ownFields();
+  if(t.dataset.nfOn){
+    const k=t.dataset.nfOn, next=t.checked?off.filter(x=>x!==k):off.concat(k);
+    setNoteFields(next,own);
+  }else if(t.dataset.ownKind!=null){
+    const c=own[+t.dataset.ownKind];if(!c||!NF_KINDS[t.value])return;
+    c.kind=t.value;setNoteFields(off,own);
+  }else if(t.dataset.ownLabel!=null){
+    const c=own[+t.dataset.ownLabel];if(!c)return;
+    const to=nfLabel(t.value);
+    if(!to||own.some(x=>x!==c&&x.label.toLowerCase()===to.toLowerCase())){
+      toast(to?"There is already a field called "+to:"A field needs a name");t.value=c.label;return;
+    }
+    if(to===c.label)return;
+    // the values are stored under the name, so they move with it
+    let moved=0;
+    for(const a of accounts){
+      const o=a.info&&a.info.own;if(!o)continue;
+      const k=Object.keys(o).find(x=>x.toLowerCase()===c.label.toLowerCase());
+      if(k!=null){const v=o[k];delete o[k];o[to]=v;moved++}
+    }
+    if(formInfoBase&&formInfoBase.own){const o=formInfoBase.own,k=Object.keys(o).find(x=>x.toLowerCase()===c.label.toLowerCase());if(k!=null){o[to]=o[k];delete o[k]}}
+    const from=c.label;c.label=to;
+    setNoteFields(off,own,[from,to]);
+    if(moved)saveDB();
+  }
+});
+$("fFieldsCfg").addEventListener("click",e=>{
+  const del=e.target.closest("[data-own-del]");
+  if(del){
+    const {off}=normNoteFields(cfg.noteFields), own=ownFields(), c=own[+del.dataset.ownDel];if(!c)return;
+    const holders=accounts.filter(a=>a.info&&a.info.own&&Object.keys(a.info.own).some(k=>k.toLowerCase()===c.label.toLowerCase()));
+    if(holders.length&&!confirm(`Remove “${c.label}”? ${holders.length} account${holders.length===1?" has a value":"s have values"} in it, and ${holders.length===1?"it goes":"they go"} too.`))return;
+    for(const a of holders){
+      for(const k of Object.keys(a.info.own))if(k.toLowerCase()===c.label.toLowerCase())delete a.info.own[k];
+      a.info=normInfo(a.info);if(!a.info)delete a.info;
+    }
+    if(formInfoBase&&formInfoBase.own)for(const k of Object.keys(formInfoBase.own))if(k.toLowerCase()===c.label.toLowerCase())delete formInfoBase.own[k];
+    const box=$("fInfo"), el=[...box.querySelectorAll('[data-nf="own"]')].find(x=>x.dataset.label===c.label);
+    if(el)el.closest(".fld").remove(); // what was typed into it goes with it
+    setNoteFields(off,own.filter(x=>x!==c));
+    if(holders.length)saveDB();
+    return;
+  }
+  if(e.target.closest("#nfAdd"))addOwnField();
+});
+$("fFieldsCfg").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="nfNewLabel"){e.preventDefault();addOwnField()}});
+function addOwnField(){
+  const {off}=normNoteFields(cfg.noteFields), own=ownFields();
+  const label=nfLabel($("nfNewLabel").value), kind=$("nfNewKind").value;
+  if(!label){toast("Name the field first");$("nfNewLabel").focus();return}
+  if(own.some(x=>x.label.toLowerCase()===label.toLowerCase())){toast("There is already a field called "+label);return}
+  if(own.length>=NF_MAX_OWN||!NF_KINDS[kind])return;
+  setNoteFields(off,own.concat({label,kind}));
+  const n=$("nfNewLabel");if(n)n.focus();
+}
+function openForm(acc,focus){
   if(!acc&&previewMode){previewMode=false;accounts=[];render()}
   closeAllPanels();
   editingId=acc?acc.id:null;
@@ -7260,6 +8396,12 @@ function openForm(acc){
   renderPwMeter();
   $("fTags").value=acc?(acc.tags||[]).join(", "):"";
   $("fNotes").value=acc?acc.notes||"":"";
+  formInfoBase=acc?normInfo(acc.info):null;
+  $("fFieldsCfg").classList.add("hidden");$("fFieldsBtn").setAttribute("aria-expanded","false");
+  // From a card's note fields, the window starts at them rather than at the name
+  const atNotes=focus==="notes";
+  $("fName").toggleAttribute("data-autofocus",!atNotes);
+  renderInfoFields(formInfoBase,atNotes);
   $("fSave").textContent=acc?"Save changes":"Add account";
   $("formTitle").textContent=acc?"Edit account":"Add account";
   // Which one, in the header: over the page the card being edited is behind the
@@ -7268,6 +8410,7 @@ function openForm(acc){
   // The modal observer focuses the name, which carries data-autofocus — the first
   // field is the optional label, and the one you came here to type is the name.
   $("form").classList.remove("hidden");
+  if(atNotes)requestAnimationFrame(()=>{const h=$("fNotesHead");if(h&&h.scrollIntoView)h.scrollIntoView({block:"start"})});
 }
 function closeForm(){$("form").classList.add("hidden");editingId=null}
 /* A Riot ID is copied as one string — "Hide on Bush#EUW" from op.gg, the client,
@@ -7304,11 +8447,12 @@ function submitForm(){
     // and survive a JSON round trip without a timezone deciding to shift them by a
     // day — which a Date object serialised to UTC absolutely will.
     createdOn:$("fCreated").value||"",birthdate:$("fBirth").value||"",
-    tags:parseTags($("fTags").value),notes:$("fNotes").value.trim()};
+    tags:parseTags($("fTags").value),notes:$("fNotes").value.trim(),info:readInfoFields(formInfoBase)};
   if(editingId){
-    const a=accounts.find(x=>x.id===editingId);if(a)Object.assign(a,data);
+    const a=accounts.find(x=>x.id===editingId);if(a){Object.assign(a,data);if(!a.info)delete a.info}
   }else{
-    accounts.push(Object.assign({id:uid(),fav:false,stats:null},data));
+    const a=Object.assign({id:uid(),fav:false,stats:null},data);if(!a.info)delete a.info;
+    accounts.push(a);
   }
   saveDB();closeForm();render();
 }
@@ -7639,14 +8783,19 @@ function csvCell(v){
 }
 function doExportCSV(){
   if(previewMode){toast("Exit preview before exporting — this is example data, not your vault");return}
-  const cols=["label","gameName","tagLine","region","status","tier","division","lp","wins","losses","level","login","password","email","createdOn","birthdate","tags","notes","favorite","lastUpdated"];
+  // The note fields go on the end, so every column a spreadsheet already reads by
+  // position stays where it was.
+  const nf=noteFields();
+  const cols=["label","gameName","tagLine","region","status","tier","division","lp","wins","losses","level","login","password","email","createdOn","birthdate","tags","notes","favorite","lastUpdated"]
+    .concat(nf.map(f=>f.label));
   const rows=accounts.map(a=>{
-    const s=a.stats||{};
+    const s=a.stats||{}, info=normInfo(a.info);
+    const extra=nf.map(f=>{const v=nfValue(info,f);return v==null?"":Array.isArray(v)?v.join("|"):typeof v==="boolean"?(v?"yes":"no"):String(v)});
     return [
       a.label||"",a.gameName,a.tagLine,a.region,a.status||"active",
       s.tier||"",s.division||"",s.lp??"",s.wins??"",s.losses??"",s.level??"",
       a.login||"",a.password||"",a.email||"",a.createdOn||"",a.birthdate||"",(a.tags||[]).join("|"),a.notes||"",
-      a.fav?"yes":"no",s.updatedAt?new Date(s.updatedAt).toISOString():""
+      a.fav?"yes":"no",s.updatedAt?new Date(s.updatedAt).toISOString():"",...extra
     ].map(csvCell).join(",");
   });
   const csv=[cols.join(","),...rows].join("\r\n");
@@ -7736,6 +8885,21 @@ function parseCSV(text){
   if(field.length||row.length){row.push(field);rows.push(row)}
   return rows.filter(r=>r.length>1||r[0]);
 }
+// The note-field columns this app's own export puts after lastUpdated, read back by
+// their names; your own fields come back as the kind the field list says they are.
+function csvNoteInfo(header,get){
+  const out={own:{}}, kinds=new Map(ownFields().map(c=>[c.label.toLowerCase(),c.kind]));
+  for(const name of header.slice(header.indexOf("lastUpdated")+1)){
+    const raw=String(get(name)||"").trim();if(!raw)continue;
+    const f=NOTE_FIELDS.find(x=>x.label===name);
+    const kind=f?f.kind:kinds.get(name.toLowerCase())||(raw==="yes"||raw==="no"?"bool":/^-?\d+(\.\d+)?$/.test(raw)?"num":"text");
+    const v=kind==="list"?raw.split("|"):kind==="bool"?(raw==="yes"?true:raw==="no"?false:null)
+      :kind==="num"||kind==="honor"?Number(raw):raw;
+    if(v==null||Number.isNaN(v))continue;
+    if(f)out[f.k]=v;else out.own[name]=v;
+  }
+  return normInfo(out);
+}
 function doImportCSV(file){
   if(vaultLocked()){toast("Unlock the vault before importing");return}
   if(previewMode){previewMode=false;accounts=[]}
@@ -7764,7 +8928,7 @@ function doImportCSV(file){
           label:get("label"),region:normRegion(get("region")),gameName,tagLine,status:normStatus(get("status")),
           login:get("login"),password:get("password"),email:get("email"),notes:get("notes"),
           createdOn:get("createdOn"),birthdate:get("birthdate"),
-          fav:get("favorite")==="yes",
+          fav:get("favorite")==="yes",info:ownExport?csvNoteInfo(header,get):null,
           stats:tier?{found:true,tier,division:normDivision(tier,get("division")||null),lp:get("lp")?+get("lp"):null,wins:get("wins")?+get("wins"):null,losses:get("losses")?+get("losses"):null,level:get("level")?+get("level"):null,mmr:null,avgRecent:null,asOf:"CSV import",note:null,updatedAt:get("lastUpdated")?new Date(get("lastUpdated")).getTime()||null:null}:null
         });
       }).filter(Boolean)
@@ -7797,14 +8961,16 @@ function loadDemo(){
   const now=Date.now(),D=86400000;
   const mk=o=>Object.assign({id:uid(),fav:false,status:"active",tags:[],history:[],login:"",password:"",email:"",notes:"",label:"",demo:true},o);
   accounts=[
-    mk({label:"Main smurf",gameName:"Hide on Bush",tagLine:"0001",region:"EUW",fav:true,tags:["mid","ranked-ready"],login:"demo_user1",password:"demo-pass-1",email:"smurf1@mail.gg",notes:"Elementalist Lux, honor 3",
+    mk({label:"Main smurf",gameName:"Hide on Bush",tagLine:"0001",region:"EUW",fav:true,tags:["mid","ranked-ready"],login:"demo_user1",password:"demo-pass-1",email:"smurf1@mail.gg",notes:"Climbing account — keep it out of decay",
+      info:{honor:3,owned:96,be:23400,twofa:true,skins:["Elementalist Lux","Star Guardian Ahri","Arcade Kai'Sa"]},
       stats:{found:true,tier:"PLATINUM",division:"II",lp:61,wins:38,losses:29,level:214,icon:"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",mmr:"~2140",avgRecent:"Platinum II",asOf:"updated today",updatedAt:now-2*3600000,
         champs:[{name:"Lux",games:24,wins:15,losses:9,wr:63,kda:"3.4"},{name:"Ahri",games:18,wins:10,losses:8,wr:56,kda:"2.9"},{name:"Syndra",games:9,wins:4,losses:5,wr:44,kda:"2.1"}]},
       history:[
         {t:now-24*D,tier:"GOLD",division:"II",lp:40},{t:now-20*D,tier:"GOLD",division:"I",lp:15},{t:now-16*D,tier:"GOLD",division:"I",lp:78},
         {t:now-12*D,tier:"PLATINUM",division:"IV",lp:12},{t:now-9*D,tier:"PLATINUM",division:"IV",lp:55},{t:now-6*D,tier:"PLATINUM",division:"III",lp:31},
         {t:now-3*D,tier:"PLATINUM",division:"III",lp:74},{t:now-2*3600000,tier:"PLATINUM",division:"II",lp:61}]}),
-    mk({label:"ADC acc",gameName:"Bot Diff",tagLine:"EUW",region:"EUW",tags:["adc"],login:"demo_user2",password:"demo-pass-2",email:"smurf2@mail.gg",notes:"Spirit Blossom Yasuo",
+    mk({label:"ADC acc",gameName:"Bot Diff",tagLine:"EUW",region:"EUW",tags:["adc"],login:"demo_user2",password:"demo-pass-2",email:"smurf2@mail.gg",notes:"",
+      info:{honor:2,owned:41,be:6150,twofa:false,skins:["Spirit Blossom Yasuo"]},
       stats:{found:true,tier:"GOLD",division:"III",lp:22,wins:21,losses:24,level:167,mmr:"~1650",avgRecent:"Gold III",asOf:"updated 4 days ago",updatedAt:now-4*D,
         champs:[{name:"Jinx",games:20,wins:10,losses:10,wr:50,kda:"2.6"},{name:"Kai'Sa",games:15,wins:7,losses:8,wr:47,kda:"2.4"}]},
       history:[{t:now-14*D,tier:"GOLD",division:"II",lp:35},{t:now-10*D,tier:"GOLD",division:"II",lp:8},{t:now-7*D,tier:"GOLD",division:"III",lp:71},{t:now-4*D,tier:"GOLD",division:"III",lp:22}]}),
@@ -7814,7 +8980,8 @@ function loadDemo(){
       history:[{t:now-8*D,tier:"SILVER",division:"II",lp:60},{t:now-5*D,tier:"SILVER",division:"II",lp:95},{t:now-1*D,tier:"SILVER",division:"I",lp:89}]}),
     mk({label:"Fresh leveling acc",gameName:"NewSmurf",tagLine:"2026",region:"EUW",status:"resting",tags:["leveling"],login:"demo_user4",password:"demo-pass-4",
       stats:{found:true,tier:"UNRANKED",division:null,lp:null,wins:null,losses:null,level:23,mmr:null,avgRecent:null,asOf:"updated 6 days ago",note:null,updatedAt:now-6*D}}),
-    mk({label:"RIP acc",gameName:"Chat Restricted",tagLine:"4444",region:"EUNE",status:"banned",tags:["dead"],notes:"perma for chat, had Prestige K/DA Akali",
+    mk({label:"RIP acc",gameName:"Chat Restricted",tagLine:"4444",region:"EUNE",status:"banned",tags:["dead"],notes:"",
+      info:{honor:0,skins:["Prestige K/DA Akali"],penalty:"Permanent ban for chat"},
       stats:{found:true,tier:"BRONZE",division:"I",lp:12,wins:40,losses:52,level:301,asOf:"before the ban",updatedAt:now-40*D},
       history:[{t:now-50*D,tier:"BRONZE",division:"II",lp:30},{t:now-40*D,tier:"BRONZE",division:"I",lp:12}]})
   ];
@@ -7863,6 +9030,7 @@ $("fTogglePass").addEventListener("click",()=>{
   setPassShown(hidden);
 });
 document.addEventListener("keydown",e=>{
+  if(snapMode)return; // a snapshot has no app behind it to drive
   /* The lock screen is a vault nobody can read. Focus on Unlock is a BUTTON, so
      `typing` is false, and f / n / / used to fire underneath: unlock, and the
      Favorites filter is on (accounts look "missing") or the add form is open.
@@ -7973,7 +9141,7 @@ document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListene
 // Driven by an observer rather than by each of the eight places that add or
 // remove .hidden on these two. Wiring it into every call site works right up
 // until the ninth one is added and quietly doesn't lock the page.
-const MODALS=["settings","help","form","rankModal","palette","compareModal","bulkAdd"];
+const MODALS=["settings","help","form","rankModal","palette","compareModal","bulkAdd","artPicker","shareModal"];
 let modalReturn=null;
 function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains("hidden"))}
 function syncModals(){
@@ -9032,6 +10200,8 @@ async function onCardClick(e){
     renderCard(id);
   }
   else if(act==="edit")openForm(acc);
+  else if(act==="art")openArtPicker(id);
+  else if(act==="notefields"){commitNote();openForm(acc,"notes")}
   else if(act==="exstats"){acc.excludeStats=!acc.excludeStats;renderCard(id);renderDash();saveThen(acc.excludeStats?"Left out of the combined stats":"Counted in the combined stats again")}
   else if(act==="archive"){acc.archived=true;render();saveThen("Archived — toggle \"Archived\" in the toolbar to see it again")}
   else if(act==="unarchive"){acc.archived=false;render();saveThen("Restored to active accounts")}
@@ -9313,7 +10483,7 @@ function relock(){
 // Another tab wrote the vault — lock (or reload plaintext) so this tab cannot
 // keep editing a stale in-memory copy and then overwrite the other tab's save.
 window.addEventListener("storage",e=>{
-  if(!e||e.key!==DB_KEY||e.storageArea!==localStorage)return;
+  if(snapMode||!e||e.key!==DB_KEY||e.storageArea!==localStorage)return;
   if(previewMode)return;
   if(vaultPassword&&!vaultLocked()){
     relock();
@@ -9335,7 +10505,7 @@ window.addEventListener("storage",e=>{
    (a sync token just generated, the backend URL) was written straight back out by
    the other the next time it saved anything at all. Adopted as it lands instead. */
 window.addEventListener("storage",e=>{
-  if(!e||e.key!==CFG_KEY||e.storageArea!==localStorage||!e.newValue)return;
+  if(snapMode||!e||e.key!==CFG_KEY||e.storageArea!==localStorage||!e.newValue)return;
   try{Object.assign(cfg,JSON.parse(e.newValue))}catch(err){return}
   syncLockTimer(); // the auto-lock minutes may be what changed
 });
@@ -9386,6 +10556,9 @@ function keepUnreadableVault(raw){
   $("banner").classList.add("show");
 }
 function boot(){
+  // A snapshot link is somebody else's page, opened before this browser's own
+  // vault or settings have been read — and they never are, in this tab.
+  {const m=/^#s=(.+)$/.exec(location.hash||"");if(m){openSnapshot(m[1]);return}}
   $("fRegion").innerHTML=Object.keys(REGIONS).map(r=>`<option value="${r}">${esc(r)} — ${esc(REGIONS[r].full)}</option>`).join("");
   $("sAutoEvery").innerHTML=AUTO_EVERY.map(o=>`<option value="${o.v}">${esc(o.label)}</option>`).join("");
   fillAutoLock($("sAutoLock"),0);
