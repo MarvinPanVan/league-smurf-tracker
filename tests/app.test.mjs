@@ -1169,6 +1169,9 @@ test("champion art: the most-played champion's splash, by Data Dragon id, lazy, 
   assert.equal(art("a").getAttribute("alt"), "", "decoration, not content");
   assert.match(art("b").getAttribute("src"), /\/DrMundo_0\.jpg$/);
   assert.equal(art("c"), null, "no champion data, no picture");
+  // a background glow, not a picture: real splash art at 28% read as a picture
+  const op = Number(html.match(/\.c-art\{[^}]*opacity:([\d.]+)/)[1]);
+  assert.ok(op <= 0.2, "the art sits at " + op);
   art("b").dispatchEvent(new win.Event("error"));
   assert.equal(art("b"), null, "a picture that fails to load goes away");
   doc.getElementById("bSettings").click();
