@@ -888,7 +888,10 @@
   .rw-check{font-size:calc(11px*var(--ts));padding:4px 9px;gap:5px;opacity:0;color:var(--teal-txt);
     transition:opacity .15s ease,background .15s ease,border-color .15s ease}
   .rw-check .ico{width:11px;height:11px}
-  .rw-main:hover .rw-check,.rw-check:focus-visible{opacity:1}
+  .rw-check:focus-visible{opacity:1}
+  /* same reason as the card's checkbox: a reveal on hover costs a touch screen its first tap */
+  @media (hover:hover){.rw-main:hover .rw-check{opacity:1}}
+  @media (hover:none){.rw-check{opacity:1}}
   .rw-rank{display:flex;flex-direction:column;gap:0;overflow:hidden;white-space:nowrap}
   .rw-rank b{font-size:calc(14px*var(--ts));font-weight:700;
     overflow:hidden;text-overflow:ellipsis}
@@ -1026,7 +1029,14 @@
   /* selection is chrome, not content — it stays out of the way until wanted */
   .bulkchk{width:15px;height:15px;flex-shrink:0;accent-color:var(--teal);cursor:pointer;margin:0;
     opacity:0;transition:opacity .15s ease}
-  .card:hover .bulkchk,.bulkchk:checked,.bulkchk:focus-visible{opacity:1}
+  .bulkchk:checked,.bulkchk:focus-visible{opacity:1}
+  /* Revealed by hovering the card, where there is a pointer to hover with. On a
+     touch screen the tap is the hover, and Safari on iPad and iPhone treats a tap
+     that makes something appear as "show me", not as a click: Login, Refresh,
+     anything on the card took a second tap, the first one only lifting the card.
+     There the box is simply shown, faintly, and a tap is a tap. */
+  @media (hover:hover){.card:hover .bulkchk{opacity:1}}
+  @media (hover:none){.bulkchk{opacity:.5}}
 
   /* bare icon buttons — must beat the generic button rules */
   .rid,.star,.eye-btn,.panel-close{background:none;border:1px solid transparent;box-shadow:none;padding:0}
@@ -1078,12 +1088,12 @@
      background while still staying under every child. */
   /* The champion the account plays most, faded into the top of the card under the
      tier tint. Low and masked off well before the rank and the buttons, so it is
-     felt rather than read; nothing on the card depends on it. 2.3 took it from
-     28% to 18%: at 28% the real splash art read as a picture, not a glow. */
+     felt rather than read; nothing on the card depends on it. 2.3.0 tried 18%,
+     and on a real iPad it nearly vanished, so it is back at 28%. */
   .c-art{position:absolute;left:0;right:0;top:0;width:100%;height:230px;z-index:-2;pointer-events:none;
-    object-fit:cover;object-position:center 18%;opacity:.18;
-    -webkit-mask-image:linear-gradient(180deg,#000,#0007 40%,transparent 85%);mask-image:linear-gradient(180deg,#000,#0007 40%,transparent 85%)}
-  .card.dead .c-art{filter:grayscale(1);opacity:.07}
+    object-fit:cover;object-position:center 18%;opacity:.28;
+    -webkit-mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%);mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%)}
+  .card.dead .c-art{filter:grayscale(1);opacity:.1}
   .c-tint{position:absolute;inset:0;z-index:-1;pointer-events:none;
     background:radial-gradient(125% 78% at 0% 0%,
       color-mix(in srgb,var(--tier) 15%,transparent),transparent 60%)}
@@ -1137,7 +1147,8 @@
   .c-notes .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
     display:flex;align-items:center;gap:5px;margin-bottom:4px}
   .c-notes .k .ico{width:11px;height:11px;opacity:0;transition:opacity .16s ease}
-  .c-notes[data-act]:hover .k .ico{opacity:.85}
+  @media (hover:hover){.c-notes[data-act]:hover .k .ico{opacity:.85}}
+  @media (hover:none){.c-notes[data-act] .k .ico{opacity:.6}}
   .c-notes .none{color:var(--faint)}
   .c-notes textarea{width:100%;font-size:calc(13px*var(--ts));line-height:1.6;min-height:62px;display:block}
   .c-notes.editing{border-color:color-mix(in srgb,var(--teal) 34%,transparent);background:#ffffff0d}
@@ -1159,24 +1170,29 @@
   .c-notes .ni+.nt{margin-top:8px;padding-top:8px;border-top:1px solid #ffffff0d}
   .c-notes.editing .ni{cursor:default;margin-bottom:9px}
   .ni-row{display:flex;flex-wrap:wrap;gap:5px}
-  .ni-f{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:var(--r-xs);
-    font-size:calc(11px*var(--ts));line-height:1.35;color:var(--muted);background:#ffffff0a;border:1px solid #ffffff12;
+  /* Read on a tablet across the room, these were grey words on a plate barely
+     lighter than the card: the numbers stood out and everything around them sank.
+     The words are a light parchment now, a step under the figures rather than
+     three, and the plate has an edge you can see. */
+  .ni-f{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:var(--r-xs);
+    font-size:calc(12px*var(--ts));line-height:1.35;color:color-mix(in srgb,var(--text) 74%,var(--muted));
+    background:#ffffff10;border:1px solid #ffffff21;box-shadow:inset 0 1px 0 #ffffff0a;
     font-variant-numeric:tabular-nums;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-  .ni-f b{color:var(--text);font-weight:600}
+  .ni-f b{color:#fff;font-weight:600}
   .ni-f .ico{width:12px;height:12px;flex-shrink:0}
-  .ni-f.ok{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 30%,transparent);background:color-mix(in srgb,var(--teal) 8%,transparent)}
-  .ni-f.warn{color:#f0c674;border-color:#f0c67440;background:#f0c67412}
-  .ni-pips{display:inline-flex;gap:2px}
-  .ni-pips i{width:6px;height:6px;transform:rotate(45deg);border-radius:1px;background:#ffffff1f}
-  .ni-pips i.on{background:var(--gold);box-shadow:0 0 6px -1px var(--gold)}
-  .ni-skins span{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 26%,transparent);
-    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 12%,transparent),color-mix(in srgb,var(--gold) 4%,transparent))}
-  .ni-skins span.more{color:var(--faint);background:none;border-style:dashed}
+  .ni-f.ok{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 42%,transparent);background:color-mix(in srgb,var(--teal) 11%,transparent)}
+  .ni-f.warn{color:#f7d690;border-color:#f0c67466;background:#f0c6741c}
+  .ni-pips{display:inline-flex;gap:3px}
+  .ni-pips i{width:7px;height:7px;transform:rotate(45deg);border-radius:1px;background:#ffffff38}
+  .ni-pips i.on{background:linear-gradient(135deg,var(--star),var(--gold));box-shadow:0 0 6px -1px var(--gold)}
+  .ni-skins span{color:var(--star);border-color:color-mix(in srgb,var(--gold) 42%,transparent);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 18%,transparent),color-mix(in srgb,var(--gold) 7%,transparent))}
+  .ni-skins span.more{color:var(--muted);background:none;border-style:dashed}
   .ni-pen{display:flex;align-items:flex-start;gap:7px;padding:6px 9px;border-radius:var(--r-xs);font-size:calc(12px*var(--ts));line-height:1.45;
     color:#ffc4c4;background:#ff6b6b12;border:1px solid #ff6b6b2e}
   .ni-pen .ico{width:13px;height:13px;flex-shrink:0;margin-top:2px;color:var(--danger)}
   .ni-kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 10px;font-size:calc(12px*var(--ts));line-height:1.45}
-  .ni-kv .k2{color:var(--faint)}
+  .ni-kv .k2{color:var(--muted)}
   .ni-kv .v2{color:var(--text);overflow-wrap:anywhere}
   /* the second way in from an empty note, for when what you want to write down
      is a field; shown on hover where there is hover, always where there isn't */
@@ -2023,7 +2039,7 @@
   .sn-meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:calc(12px*var(--ts));color:var(--text)}
   .sn-meta i{font-style:normal;font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-right:7px}
   .sn-notes{margin-top:2px}
-  .sn-notes .sk{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 26%,transparent);background:color-mix(in srgb,var(--gold) 8%,transparent)}
+  .sn-notes .sk{color:var(--star);border-color:color-mix(in srgb,var(--gold) 42%,transparent);background:color-mix(in srgb,var(--gold) 12%,transparent)}
   .sn-empty{text-align:center;color:var(--muted);margin-top:40px}
   .sn-foot{margin-top:clamp(44px,8vw,72px);text-align:center;font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.7}
   .sn-foot p{margin:0 auto 16px;max-width:52ch}
@@ -2163,9 +2179,14 @@
     pointer-events:none;opacity:0;transition:opacity .34s ease;
     background:linear-gradient(155deg,#ffffff3d,#ffffff12 38%,#ffffff06)}
   .grid>.hx.gold::after{background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 92%,transparent),color-mix(in srgb,var(--gold) 24%,transparent) 42%,#ffffff08)}
-  .grid>.hx:hover{transform:translateY(-3px);box-shadow:var(--sh-3);
-    transition-duration:.22s}
-  .grid>.hx:hover::after{opacity:1;transition-duration:.22s}
+  /* Lift and glow only under a real pointer: on a touch screen the glow fading in
+     is "something appeared", which Safari answers by swallowing the tap that
+     caused it — and a lifted card that stays lifted after a tap says nothing. */
+  @media (hover:hover){
+    .grid>.hx:hover{transform:translateY(-3px);box-shadow:var(--sh-3);transition-duration:.22s}
+    .grid>.hx:hover::after{opacity:1;transition-duration:.22s}
+    body[data-fx="subtle"] .grid>.hx:hover::after{opacity:.4}
+  }
   /* the inner pane has to paint over the glow layer, not under it */
   .hx-in{position:relative;z-index:1}
   @keyframes gemGlow{50%{filter:brightness(1.22)}}
@@ -2177,7 +2198,6 @@
   body:is([data-fx="subtle"],[data-fx="off"]) :is(.acts button,.a-login):hover .ico{transform:none}
   body:is([data-fx="subtle"],[data-fx="off"]) :is(.grid.boot>.hx,.brand-mark::before){animation:none}
   body:is([data-fx="subtle"],[data-fx="off"]) .confetti{display:none}
-  body[data-fx="subtle"] .grid>.hx:hover::after{opacity:.4}
   body[data-fx="subtle"] .a-login{box-shadow:0 2px 8px -5px color-mix(in srgb,var(--teal) 70%,transparent)}
   body[data-fx="subtle"] .a-login:hover{box-shadow:0 3px 10px -5px color-mix(in srgb,var(--teal) 80%,transparent)}
   body[data-fx="off"] *,body[data-fx="off"] *::before,body[data-fx="off"] *::after{animation:none!important;transition:none!important}
@@ -3080,8 +3100,14 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.3.0";
+const APP_VERSION="2.3.1";
 const APP_CHANGELOG=[
+  {v:"2.3.1",items:[
+    "iPad and iPhone: one tap on a card's buttons is enough again",
+    "Card art is as visible as in 2.2 again; the skin picker skips chromas",
+    "Note fields are brighter and a size larger, easier to read",
+    "On touch screens the select box shows faintly instead of on hover",
+  ]},
   {v:"2.3.0",items:[
     "Share a snapshot: a read-only page of your ranks in one link (⋯ menu)",
     "Card art… picks any champion and skin for a card; the art is subtler",
@@ -6670,9 +6696,19 @@ function ddSkins(id){
   if(!DD_ID.test(String(id)))return Promise.reject(new Error("not a champion id"));
   if(!dd.skins.has(id))dd.skins.set(id,ddVersion().then(ver=>ddJSON(DD+"/cdn/"+ver+"/data/en_US/champion/"+id+".json")).then(j=>{
     const c=j&&j.data&&j.data[id], seen=new Set();
-    const out=(c&&Array.isArray(c.skins)?c.skins:[])
+    const all=(c&&Array.isArray(c.skins)?c.skins:[])
       .filter(s=>s&&Number.isInteger(s.num)&&s.num>=0&&s.num<=9999&&!seen.has(s.num)&&seen.add(s.num))
-      .map(s=>({num:s.num,name:s.num===0?"":String(s.name||"").replace(/\s+/g," ").trim().slice(0,80)}));
+      .map(s=>({num:s.num,parent:s.parentSkin,name:s.num===0?"":String(s.name||"").replace(/\s+/g," ").trim().slice(0,80)}));
+    /* The list also carries chromas and forms sold on their own — "Lunar Empress
+       Lux (Ruby)", "Elementalist Lux (Fire)" — which have no splash or portrait
+       of their own: blank tiles that would put a blank card behind the account.
+       Riot marks some with parentSkin; the rest are named "<a skin> (<variant>)".
+       A year in brackets is a re-release with art of its own ("Prestige K/DA
+       Akali (2022)"), and anything that still has no picture leaves the grid
+       when its portrait fails to load (see the error handler on #apGrid). */
+    const names=new Set(all.map(s=>s.name.toLowerCase()));
+    const variant=s=>{const m=/^(.+) \(([^()]+)\)$/.exec(s.name);return!!m&&names.has(m[1].toLowerCase())&&!/^\d{4}$/.test(m[2])};
+    const out=all.filter(s=>s.parent==null&&!variant(s)).map(s=>({num:s.num,name:s.name}));
     if(!out.some(s=>s.num===0))out.unshift({num:0,name:""});
     return out.sort((x,y)=>x.num-y.num);
   }).catch(e=>{dd.skins.delete(id);throw e}));
@@ -6846,8 +6882,18 @@ $("apGrid").addEventListener("click",e=>{
   const sk=e.target.closest("[data-skin]");if(sk)apPickSkin(Number(sk.dataset.skin));
 });
 $("apGrid").addEventListener("dblclick",e=>{if(e.target.closest("[data-skin]")&&!$("apUse").disabled)apSave()});
-// A missing loading-screen portrait leaves the tile's name on a plain plate
-$("apGrid").addEventListener("error",e=>{const t=e.target.closest&&e.target.closest(".ap-sk");if(t)t.classList.add("dead")},true);
+/* A skin with no loading-screen portrait has no art to put on a card either, so
+   it leaves the grid — unless it is the one picked, which stays as a named plate
+   so the pick is never silently swapped for another. */
+$("apGrid").addEventListener("error",e=>{
+  const t=e.target.closest&&e.target.closest(".ap-sk");if(!t)return;
+  if(t.classList.contains("on")){t.classList.add("dead");return}
+  const num=Number(t.dataset.skin);
+  if(ap.skins)ap.skins=ap.skins.filter(s=>s.num!==num);
+  t.remove();
+  const n=$("apGrid").querySelectorAll("[data-skin]").length;
+  $("apCount").textContent=n+(n===1?" skin":" skins");
+},true);
 /* Arrow keys walk the grid, so Tab is one stop for all of it instead of a
    hundred and seventy. Columns are counted off the layout, which is whatever
    the window's width made them. */

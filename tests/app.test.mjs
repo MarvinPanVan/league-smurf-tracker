@@ -595,6 +595,44 @@ test("on a phone the console's readout rides with the layout switch and the filt
   assert.match(html, /\.tools input\[type=search\]\{grid-column:1\/-1/, "with search across both");
 });
 
+/* Safari on iPad and iPhone answers a tap whose hover makes something appear
+   (opacity 0 to visible, display, visibility) by showing the hover and dropping
+   the click. A card's hover faded in its select box and a glow, so Login took two
+   taps: the first only lifted the card. Hovering a card, a row or a note may not
+   reveal anything inside it except where there is a real pointer to hover with. */
+test("on a touch screen a tap on a card is a click: no card, row or note reveals anything on hover outside (hover:hover)", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  let rest = "", i = 0;
+  for (;;) {
+    const j = css.indexOf("@media (hover:hover){", i);
+    if (j < 0) { rest += css.slice(i); break; }
+    rest += css.slice(i, j);
+    let depth = 0, k = j;
+    for (; k < css.length; k++) { if (css[k] === "{") depth++; else if (css[k] === "}" && --depth === 0) break; }
+    i = k + 1;
+  }
+  const bad = [];
+  for (const m of rest.matchAll(/([^{}]+)\{([^{}]*)\}/g))
+    if (/(\.card|\.hx|\.rw-main|\.rw|\.c-notes[^\s,{>)]*):hover(::?(after|before)|\s|>)/.test(m[1]) && /(^|;)\s*(opacity|display|visibility):/.test(m[2]))
+      bad.push(m[1].trim().replace(/\s+/g, " "));
+  assert.deepEqual(bad, [], "hover reveals that would cost a touch screen its first tap");
+  assert.match(css, /@media \(hover:none\)\{\.bulkchk\{opacity:\.5\}\}/, "and the select box is there to tap without one");
+  assert.match(css, /@media \(hover:none\)\{\.rw-check\{opacity:1\}\}/, "as is a list row's Check");
+});
+
+// Read on an iPad at arm's length the note fields were grey 11px words on a plate
+// barely lighter than the card. They keep a floor: 12px, words lit from the text
+// colour rather than the muted one, empty honor pips you can count.
+test("note fields stay legible: 12px, light words, visible empty pips", () => {
+  const rule = sel => (html.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\{([^}]*)\\}")) || [])[1] || "";
+  const chip = rule("  .ni-f");
+  assert.match(chip, /font-size:calc\(12px\*var\(--ts\)\)/);
+  assert.match(chip, /color:color-mix\(in srgb,var\(--text\) \d+%,var\(--muted\)\)/, "words a step under the figures, not the muted grey");
+  const pip = rule(".ni-pips i");
+  assert.ok(parseInt(pip.match(/background:#ffffff([0-9a-f]{2})/)[1], 16) >= 0x30, "an empty pip is still a pip");
+  assert.match(rule(".ni-skins span"), /color:var\(--star\)/, "skins in the bright gold");
+});
+
 test("every corner comes off the radius scale", () => {
   // The tokens (3/4/6/8px), round (50%), square, and hairline 1–3px for bars and
   // rails. Anything else is a radius somebody picked by eye — which is how the page
@@ -1170,9 +1208,9 @@ test("champion art: the most-played champion's splash, by Data Dragon id, lazy, 
   assert.equal(art("a").getAttribute("alt"), "", "decoration, not content");
   assert.match(art("b").getAttribute("src"), /\/DrMundo_0\.jpg$/);
   assert.equal(art("c"), null, "no champion data, no picture");
-  // a background glow, not a picture: real splash art at 28% read as a picture
+  // 2.3.0 took it to 18% and on an iPad it all but vanished: back at 28%
   const op = Number(html.match(/\.c-art\{[^}]*opacity:([\d.]+)/)[1]);
-  assert.ok(op <= 0.2, "the art sits at " + op);
+  assert.ok(op >= 0.25 && op <= 0.35, "the art sits at " + op);
   art("b").dispatchEvent(new win.Event("error"));
   assert.equal(art("b"), null, "a picture that fails to load goes away");
   doc.getElementById("bSettings").click();
@@ -1198,7 +1236,9 @@ function dataDragon(w, calls) {
       Ahri: { id: "Ahri", name: "Ahri" }, Kaisa: { id: "Kaisa", name: "Kai'Sa" }, MonkeyKing: { id: "MonkeyKing", name: "Wukong" },
       Evil: { id: 'x"><img src=x>', name: "Evil" } } });
     if (url.endsWith("/champion/Kaisa.json")) return json({ data: { Kaisa: { skins: [
-      { num: 0, name: "default" }, { num: 1, name: "Bullet Angel Kai'Sa" }, { num: 14, name: "K/DA ALL OUT Kai'Sa" }] } } });
+      { num: 0, name: "default" }, { num: 1, name: "Bullet Angel Kai'Sa" }, { num: 14, name: "K/DA ALL OUT Kai'Sa" },
+      { num: 15, name: "K/DA ALL OUT Kai'Sa (Ruby)" }, { num: 16, name: "Something Riot marks", parentSkin: 14 },
+      { num: 20, name: "K/DA ALL OUT Kai'Sa (2022)" }, { num: 24, name: "Portraitless Kai'Sa" }] } } });
     if (url.endsWith("/champion/Ahri.json")) return json({ data: { Ahri: { skins: [
       { num: 0, name: "default" }, { num: 7, name: "Arcade <Ahri>" }, { num: "8", name: "not a number" }] } } });
     if (url.endsWith("/champion/MonkeyKing.json")) {
@@ -1222,7 +1262,15 @@ test("card art: any champion and any skin from the ⋯ menu, kept on the account
   cardMenu(win, "a").querySelector('[data-act="art"]').click();
   assert.equal($("artPicker").classList.contains("hidden"), false, "the picker opens");
   assert.match(hero(), /\/splash\/Kaisa_0\.jpg$/, "starting from what the card shows now: the most-played champion");
-  await until(() => skins().length === 3, "Kai'Sa's skins");
+  await until(() => skins().length === 5, "Kai'Sa's skins");
+  assert.deepEqual(skins().map(t => t.dataset.skin), ["0", "1", "14", "20", "24"],
+    "no chroma or form — named after a skin, or marked by Riot — but a year's re-release is a skin of its own");
+  // one with no portrait has no art for a card either: it leaves the grid, and the count says so
+  skins()[4].querySelector("img").dispatchEvent(new win.Event("error"));
+  assert.equal(skins().length, 4);
+  assert.equal($("apCount").textContent, "4 skins");
+  skins()[3].querySelector("img").dispatchEvent(new win.Event("error"));
+  assert.equal(skins().length, 3);
   assert.match($("apHero").textContent, /On the card now · most-played/);
   assert.match(skins()[0].querySelector("img").getAttribute("src"), /\/loading\/Kaisa_0\.jpg$/, "portraits from the loading screen art");
   assert.ok(skins()[0].querySelector(".cur"), "the skin the card shows is marked");
@@ -1231,6 +1279,8 @@ test("card art: any champion and any skin from the ⋯ menu, kept on the account
   assert.match(hero(), /\/splash\/Kaisa_14\.jpg$/, "the splash follows the pick");
   assert.match($("apHero").textContent, /K\/DA ALL OUT Kai'Sa/);
   assert.equal(skins()[2].getAttribute("aria-pressed"), "true");
+  skins()[2].querySelector("img").dispatchEvent(new win.Event("error"));
+  assert.ok(skins()[2].classList.contains("dead") && skins().length === 3, "the picked one stays, as a named plate");
 
   $("apBack").click();
   const champs = () => [...doc.querySelectorAll("#apGrid [data-champ]")];
