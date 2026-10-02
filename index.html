@@ -1088,12 +1088,12 @@
      background while still staying under every child. */
   /* The champion the account plays most, faded into the top of the card under the
      tier tint. Low and masked off well before the rank and the buttons, so it is
-     felt rather than read; nothing on the card depends on it. 2.3 took it from
-     28% to 18%: at 28% the real splash art read as a picture, not a glow. */
+     felt rather than read; nothing on the card depends on it. 2.3.0 tried 18%,
+     and on a real iPad it nearly vanished, so it is back at 28%. */
   .c-art{position:absolute;left:0;right:0;top:0;width:100%;height:230px;z-index:-2;pointer-events:none;
-    object-fit:cover;object-position:center 18%;opacity:.18;
-    -webkit-mask-image:linear-gradient(180deg,#000,#0007 40%,transparent 85%);mask-image:linear-gradient(180deg,#000,#0007 40%,transparent 85%)}
-  .card.dead .c-art{filter:grayscale(1);opacity:.07}
+    object-fit:cover;object-position:center 18%;opacity:.28;
+    -webkit-mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%);mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%)}
+  .card.dead .c-art{filter:grayscale(1);opacity:.1}
   .c-tint{position:absolute;inset:0;z-index:-1;pointer-events:none;
     background:radial-gradient(125% 78% at 0% 0%,
       color-mix(in srgb,var(--tier) 15%,transparent),transparent 60%)}
