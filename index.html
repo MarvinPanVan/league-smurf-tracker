@@ -888,7 +888,10 @@
   .rw-check{font-size:calc(11px*var(--ts));padding:4px 9px;gap:5px;opacity:0;color:var(--teal-txt);
     transition:opacity .15s ease,background .15s ease,border-color .15s ease}
   .rw-check .ico{width:11px;height:11px}
-  .rw-main:hover .rw-check,.rw-check:focus-visible{opacity:1}
+  .rw-check:focus-visible{opacity:1}
+  /* same reason as the card's checkbox: a reveal on hover costs a touch screen its first tap */
+  @media (hover:hover){.rw-main:hover .rw-check{opacity:1}}
+  @media (hover:none){.rw-check{opacity:1}}
   .rw-rank{display:flex;flex-direction:column;gap:0;overflow:hidden;white-space:nowrap}
   .rw-rank b{font-size:calc(14px*var(--ts));font-weight:700;
     overflow:hidden;text-overflow:ellipsis}
@@ -1026,7 +1029,14 @@
   /* selection is chrome, not content — it stays out of the way until wanted */
   .bulkchk{width:15px;height:15px;flex-shrink:0;accent-color:var(--teal);cursor:pointer;margin:0;
     opacity:0;transition:opacity .15s ease}
-  .card:hover .bulkchk,.bulkchk:checked,.bulkchk:focus-visible{opacity:1}
+  .bulkchk:checked,.bulkchk:focus-visible{opacity:1}
+  /* Revealed by hovering the card, where there is a pointer to hover with. On a
+     touch screen the tap is the hover, and Safari on iPad and iPhone treats a tap
+     that makes something appear as "show me", not as a click: Login, Refresh,
+     anything on the card took a second tap, the first one only lifting the card.
+     There the box is simply shown, faintly, and a tap is a tap. */
+  @media (hover:hover){.card:hover .bulkchk{opacity:1}}
+  @media (hover:none){.bulkchk{opacity:.5}}
 
   /* bare icon buttons — must beat the generic button rules */
   .rid,.star,.eye-btn,.panel-close{background:none;border:1px solid transparent;box-shadow:none;padding:0}
@@ -1137,7 +1147,8 @@
   .c-notes .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
     display:flex;align-items:center;gap:5px;margin-bottom:4px}
   .c-notes .k .ico{width:11px;height:11px;opacity:0;transition:opacity .16s ease}
-  .c-notes[data-act]:hover .k .ico{opacity:.85}
+  @media (hover:hover){.c-notes[data-act]:hover .k .ico{opacity:.85}}
+  @media (hover:none){.c-notes[data-act] .k .ico{opacity:.6}}
   .c-notes .none{color:var(--faint)}
   .c-notes textarea{width:100%;font-size:calc(13px*var(--ts));line-height:1.6;min-height:62px;display:block}
   .c-notes.editing{border-color:color-mix(in srgb,var(--teal) 34%,transparent);background:#ffffff0d}
@@ -2163,9 +2174,14 @@
     pointer-events:none;opacity:0;transition:opacity .34s ease;
     background:linear-gradient(155deg,#ffffff3d,#ffffff12 38%,#ffffff06)}
   .grid>.hx.gold::after{background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 92%,transparent),color-mix(in srgb,var(--gold) 24%,transparent) 42%,#ffffff08)}
-  .grid>.hx:hover{transform:translateY(-3px);box-shadow:var(--sh-3);
-    transition-duration:.22s}
-  .grid>.hx:hover::after{opacity:1;transition-duration:.22s}
+  /* Lift and glow only under a real pointer: on a touch screen the glow fading in
+     is "something appeared", which Safari answers by swallowing the tap that
+     caused it — and a lifted card that stays lifted after a tap says nothing. */
+  @media (hover:hover){
+    .grid>.hx:hover{transform:translateY(-3px);box-shadow:var(--sh-3);transition-duration:.22s}
+    .grid>.hx:hover::after{opacity:1;transition-duration:.22s}
+    body[data-fx="subtle"] .grid>.hx:hover::after{opacity:.4}
+  }
   /* the inner pane has to paint over the glow layer, not under it */
   .hx-in{position:relative;z-index:1}
   @keyframes gemGlow{50%{filter:brightness(1.22)}}
@@ -2177,7 +2193,6 @@
   body:is([data-fx="subtle"],[data-fx="off"]) :is(.acts button,.a-login):hover .ico{transform:none}
   body:is([data-fx="subtle"],[data-fx="off"]) :is(.grid.boot>.hx,.brand-mark::before){animation:none}
   body:is([data-fx="subtle"],[data-fx="off"]) .confetti{display:none}
-  body[data-fx="subtle"] .grid>.hx:hover::after{opacity:.4}
   body[data-fx="subtle"] .a-login{box-shadow:0 2px 8px -5px color-mix(in srgb,var(--teal) 70%,transparent)}
   body[data-fx="subtle"] .a-login:hover{box-shadow:0 3px 10px -5px color-mix(in srgb,var(--teal) 80%,transparent)}
   body[data-fx="off"] *,body[data-fx="off"] *::before,body[data-fx="off"] *::after{animation:none!important;transition:none!important}

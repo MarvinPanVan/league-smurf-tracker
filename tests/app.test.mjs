@@ -595,6 +595,31 @@ test("on a phone the console's readout rides with the layout switch and the filt
   assert.match(html, /\.tools input\[type=search\]\{grid-column:1\/-1/, "with search across both");
 });
 
+/* Safari on iPad and iPhone answers a tap whose hover makes something appear
+   (opacity 0 to visible, display, visibility) by showing the hover and dropping
+   the click. A card's hover faded in its select box and a glow, so Login took two
+   taps: the first only lifted the card. Hovering a card, a row or a note may not
+   reveal anything inside it except where there is a real pointer to hover with. */
+test("on a touch screen a tap on a card is a click: no card, row or note reveals anything on hover outside (hover:hover)", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  let rest = "", i = 0;
+  for (;;) {
+    const j = css.indexOf("@media (hover:hover){", i);
+    if (j < 0) { rest += css.slice(i); break; }
+    rest += css.slice(i, j);
+    let depth = 0, k = j;
+    for (; k < css.length; k++) { if (css[k] === "{") depth++; else if (css[k] === "}" && --depth === 0) break; }
+    i = k + 1;
+  }
+  const bad = [];
+  for (const m of rest.matchAll(/([^{}]+)\{([^{}]*)\}/g))
+    if (/(\.card|\.hx|\.rw-main|\.rw|\.c-notes[^\s,{>)]*):hover(::?(after|before)|\s|>)/.test(m[1]) && /(^|;)\s*(opacity|display|visibility):/.test(m[2]))
+      bad.push(m[1].trim().replace(/\s+/g, " "));
+  assert.deepEqual(bad, [], "hover reveals that would cost a touch screen its first tap");
+  assert.match(css, /@media \(hover:none\)\{\.bulkchk\{opacity:\.5\}\}/, "and the select box is there to tap without one");
+  assert.match(css, /@media \(hover:none\)\{\.rw-check\{opacity:1\}\}/, "as is a list row's Check");
+});
+
 test("every corner comes off the radius scale", () => {
   // The tokens (3/4/6/8px), round (50%), square, and hairline 1–3px for bars and
   // rails. Anything else is a radius somebody picked by eye — which is how the page
