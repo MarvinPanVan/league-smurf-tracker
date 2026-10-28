@@ -436,11 +436,6 @@
   .stat .v small{font-size:calc(12px*var(--ts));color:var(--muted);font-weight:400;letter-spacing:0;white-space:nowrap}
   .stat .v.nw{white-space:nowrap}
   .stat .v.nw small{margin-left:1px}
-  /* Except where the caption is a list — Accounts' "· 7 ★ · 5 banned · 5 archived"
-     is wider than its tile, which is overflow:hidden, so nowrap cut it off at
-     "archiv". It breaks between the pieces and never inside one. */
-  .stat .v small.parts{white-space:normal}
-  .stat .v small.parts>span{white-space:nowrap}
   .stat .v.spark-wrap{font-size:calc(12px*var(--ts));line-height:1.2;overflow:visible;max-width:100%;width:100%;position:relative}
   .pool-spark{display:block;width:100%;max-width:100%;height:28px;margin-top:4px;opacity:.85;overflow:visible;cursor:crosshair}
   .pool-spark circle.pool-dot{fill:var(--teal);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
@@ -489,6 +484,14 @@
   .stat-b.on{background:color-mix(in srgb,var(--gold) 11%,transparent);border:0;
     box-shadow:inset 2px 0 0 var(--gold)}
   .s-note{font-size:calc(11px*var(--ts));color:var(--faint);margin-top:4px;line-height:1.4}
+  /* A "·" list (dotList) breaks between its pieces, never inside one, and never
+     leaves a dot at either end of a line: each dot sits in the gap before its
+     piece, so a piece that starts a line has its dot out past the left edge,
+     where the clip hides it. The dots stay real text for copying and tests. */
+  .dots{display:inline-flex;max-width:100%;clip-path:inset(-.5em -.5em -.5em 0)}
+  .dots-in{display:flex;flex-wrap:wrap;min-width:0;margin-left:-.8em}
+  .dot-i{position:relative;margin-left:.8em;white-space:nowrap}
+  .dot-s{position:absolute;right:100%;width:.8em;text-align:center;font-style:normal;white-space:pre}
   .gem.cmb b{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .gem.cmb b.wr-good{color:var(--good)}
   .gem.cmb i.g{font-style:normal;font-size:calc(11px*var(--ts));font-weight:600;color:var(--muted);
@@ -1453,6 +1456,10 @@
     color:var(--faint);box-shadow:none}
   .lpc-range button:hover{background:#ffffff1c;border-color:transparent;color:var(--text)}
   .lpc-range button.on{background:color-mix(in srgb,var(--teal) 22%,transparent);color:var(--teal-txt)}
+  /* The line passes under the captions wherever it climbs through a band's
+     corner, and ran straight through them: "GOLD" read as a line with letters
+     on it. A halo in the plot's own dark lifts the letters off it. */
+  .lpc-plot .lpc-lab,.lpc-plot .lpc-sub,.lpc-plot .lpc-peak{text-shadow:0 0 1px #0b0e14,0 0 2px #0b0e14,0 0 3px #0b0e14,0 0 6px #0b0e14cc}
   .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:calc(9px*var(--ts));font-weight:600;letter-spacing:.09em;
     text-transform:uppercase;pointer-events:none;opacity:.82;line-height:1}
   /* the ceiling the line is climbing back towards; left lane, with the band
@@ -2127,7 +2134,10 @@
     padding:12px 22px;border-top:1px solid var(--line)}
   .ap-prev{position:relative;height:76px;border-radius:var(--r-sm);overflow:hidden;isolation:isolate;
     background:linear-gradient(180deg,#0e1620,#091017);box-shadow:0 0 0 1px var(--line)}
-  .ap-prev img{position:absolute;inset:0;width:100%;height:100%;z-index:-1;object-fit:cover;object-position:center 18%;
+  /* the card's own art box, 230px tall, with only its top showing: the fade is
+     drawn over that height on a card, so squeezing it into the strip's 76px made
+     every strength look weaker here than it is on the card */
+  .ap-prev img{position:absolute;left:0;right:0;top:0;width:100%;height:230px;z-index:-1;object-fit:cover;object-position:center 18%;
     -webkit-mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%);mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%)}
   .ap-prev-t{position:absolute;left:12px;right:12px;top:11px;display:flex;flex-direction:column;gap:3px;min-width:0}
   .ap-prev-t b{font-size:calc(14px*var(--ts));font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2139,7 +2149,14 @@
   .ap-opts{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap}
   .ap-all{display:inline-flex;align-items:center;gap:8px;font-size:calc(13px*var(--ts));color:var(--text);cursor:pointer}
   .ap-opts .hint{font-size:calc(12px*var(--ts))}
-  @media (max-width:620px){.ap-str{grid-template-columns:1fr;gap:10px;padding:12px 16px}.ap-prev{height:64px}}
+  /* phones: the strip beside the slider rather than over it, and a shorter
+     splash, so the skins still get a full row under everything fixed above them */
+  @media (max-width:620px){
+    .ap-str{grid-template-columns:minmax(0,118px) minmax(0,1fr);gap:12px;padding:10px 16px}
+    .ap-prev{height:60px}.ap-prev-t{left:9px;right:9px;top:8px;gap:2px}
+    .ap-prev-t b{font-size:calc(12px*var(--ts))}.ap-prev-t span{font-size:calc(11px*var(--ts))}
+    .ap-ctl{gap:4px}.ap-opts{gap:2px 10px}
+  }
   .ap-off{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 22px;font-size:calc(12px*var(--ts));
     color:var(--muted);background:color-mix(in srgb,var(--gold) 8%,transparent);border-top:1px solid var(--line)}
   .ap-off button{padding:5px 10px;font-size:calc(12px*var(--ts))}
@@ -2185,6 +2202,7 @@
   .ap-msg button{margin-top:10px}
   @media (max-width:620px){
     .ap-cap,.ap-bar,.ap-off{padding-left:16px;padding-right:16px}.ap-cap{left:16px;right:16px}
+    .ap-hero{height:clamp(118px,32vw,150px)}.ap-cap{bottom:12px}.ap-cap b{font-size:calc(19px*var(--ts))}
     .ap-grid{padding:14px 16px 18px}
     .ap-grid.sk{grid-template-columns:repeat(auto-fill,minmax(102px,1fr));gap:10px}
   }
@@ -3145,8 +3163,15 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.3.4";
+const APP_VERSION="2.3.5";
 const APP_CHANGELOG=[
+  {v:"2.3.5",items:[
+    "Card art… opens again for accounts with no champion yet",
+    "Card art: the strength preview matches the card, and phones get a full row of skins",
+    "Dashboard lists and chart labels read cleanly: no stray dots, no line through a label",
+    "A shared snapshot opens at its top, and leaves out art its card hides",
+    "A saved skin that no longer exists opens ready to save another",
+  ]},
   {v:"2.3.4",items:[
     "Card art… has a Strength slider: for this card, or for all cards",
     "A preview shows the art behind the card's name and rank as you slide",
@@ -3759,6 +3784,11 @@ const ICON={
 };
 function icon(name,cls){return `<svg class="ico${cls?" "+cls:""}" viewBox="0 0 24 24">${ICON[name]}</svg>`}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+// pieces of HTML (escaped by the caller) as "a · b · c" that wraps cleanly; see .dots
+function dotList(parts){
+  return`<span class="dots"><span class="dots-in">${parts.filter(Boolean).map((p,i)=>
+    `<span class="dot-i">${i?`<i class="dot-s"> · </i>`:""}${p}</span>`).join("")}</span></span>`;
+}
 // data-id and querySelector both need the id to be inert. esc() for attributes;
 // CSS.escape for selectors — a poisoned id in localStorage used to break out of
 // data-id="…" on first paint, and a quote in an id made querySelector throw.
@@ -6414,7 +6444,8 @@ function renderRibbon(){
       return `<button class="rib-seg${on?" on":""}${isTail(s)?" tail":""}" ${segAttr(s)} style="--c:${s.c}${isTail(s)?"":";flex:"+s.n}"
         aria-pressed="${on}" title="${esc(s.label)} — ${s.n} account${s.n===1?"":"s"} (click to show only these)"
         aria-label="${esc(s.label)}, ${s.n}"><i>${s.n}</i></button>`}).join("")}</div>
-    <div class="rib-cap"><span><b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}${unN?` · <b>${unN}</b> unranked`:""}${missN?` · <b>${missN}</b> not found`:""}${neverN?` · <b>${neverN}</b> never checked`:""}${bannedN?` · <b>${bannedN}</b> banned`:""}</span>`
+    <div class="rib-cap">${dotList([`<b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}`,
+      unN&&`<b>${unN}</b> unranked`,missN&&`<b>${missN}</b> not found`,neverN&&`<b>${neverN}</b> never checked`,bannedN&&`<b>${bannedN}</b> banned`])}`
     +(best?`<span>best <b style="color:${tierColor(best.stats.tier)}">${esc(shortRank(best.stats))}</b></span>`:"")
     +`</div>`);
 }
@@ -6448,10 +6479,9 @@ function renderDash(){
   const topChamps=mergeChampions(pool);
   // the rank breaks between its pieces ("Grandmaster" / "· 874 LP") rather than
   // running out of a narrow column as one unbreakable line
-  const bestTxt=best&&rankValue(best.stats)>=0?nameOf(best)+' <small class="parts">'
-    +String(shortRank(best.stats)||"").split(" · ").map((x,i)=>`<span>${i?"· ":""}${esc(x)}</span>`).join(" ")+"</small>":"—";
+  const bestTxt=best&&rankValue(best.stats)>=0?nameOf(best)+" <small>"+dotList(String(shortRank(best.stats)||"").split(" · ").map(esc))+"</small>":"—";
   const regCount={};allActive.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
-  const regTxt=Object.entries(regCount).map(([r,n])=>r+" "+n).join(" · ");
+  const regTxt=dotList(Object.entries(regCount).map(([r,n])=>esc(r+" "+n)));
   const regN=Object.keys(regCount).length;
   const dist={};ranked.forEach(a=>{const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1});
   const neverN=countPool.filter(neverChecked).length;
@@ -6490,12 +6520,13 @@ function renderDash(){
     </div>
   </div>
   <div class="dash">
-    <div class="stat"><div class="k">Accounts</div><div class="v">${allActive.length} <small class="parts"><span>· ${allActive.filter(a=>a.fav).length} ★</span>${bannedN?` <span>· ${bannedN} banned</span>`:""}${archivedN?` <span>· ${archivedN} archived</span>`:""}</small></div></div>
+    <div class="stat"><div class="k">Accounts</div><div class="v">${allActive.length}</div>
+      <div class="s-note">${dotList([allActive.filter(a=>a.fav).length+" ★",bannedN&&bannedN+" banned",archivedN&&archivedN+" archived"])}</div></div>
     <div class="stat"><div class="k">Best account</div><div class="v" style="font-size:calc(14px*var(--ts))">${bestTxt}</div></div>
     <div class="stat"><div class="k">Season W/L</div><div class="v nw">${W}<small>W</small> ${L}<small>L</small></div>
       <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>
     <div class="stat"><div class="k">Regions</div><div class="v">${regN||"—"}${regN?` <small>${regN===1?"region":"regions"}</small>`:""}</div>
-      ${regTxt?`<div class="s-note">${esc(regTxt)}</div>`:""}</div>
+      ${regN?`<div class="s-note">${regTxt}</div>`:""}</div>
     ${neverN?`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
       <div class="v" style="color:var(--gold-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`:""}
     ${attentionN?`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
@@ -6830,7 +6861,10 @@ function apLoadSkins(){
   ap.skins=null;
   ddSkins(c).then(list=>{if(g!==ap.gen||c!==ap.champ)return;ap.skins=list;ap.err=null;
     // a pick saved from a skin since removed falls back to the default rather than to nothing
-    if(!list.some(s=>s.num===ap.skin)){ap.skin=0;ap.name=""}
+    // a pick saved from a skin since removed (or a chroma, which 2.3.1 stopped
+    // offering) falls back to the default — and that counts as a change, so Save
+    // can put art back on a card that has been showing none
+    if(!list.some(s=>s.num===ap.skin)){ap.skin=0;ap.name="";const own=normArt(apAcc()&&apAcc().art);if(own&&own.champ===c)ap.picked=true}
     renderArtPicker()},
     e=>{if(g!==ap.gen||c!==ap.champ)return;ap.err=e;renderArtPicker()});
 }
@@ -6926,8 +6960,7 @@ function renderArtPicker(){
     ap.focusTile=false;
     if(!$("artPicker").classList.contains("hidden"))tile.focus();
   }
-  apStrength(acc);
-  $("apUse").disabled=!(apArtChanged(acc)||apOpChanged(acc));
+  apControls(acc);
   const auto=acc&&champKey(mainChamp(acc));
   $("apAuto").classList.toggle("hidden",!own);
   $("apAuto").textContent=auto?"Back to most-played":"Remove the art";
@@ -6944,16 +6977,23 @@ function apOpChanged(acc){
   if(ap.opAll)return ap.op!==g||accounts.some(a=>normArtOp(a.artOp)!=null);
   return (ap.op===g?null:ap.op)!==own;
 }
+// The strength row and Save, without the grid: dragging the slider fires this
+// sixty times a second, and redrawing forty skin tiles each time made it stutter.
+function apControls(acc){
+  apStrength(acc);
+  $("apUse").disabled=!(apArtChanged(acc)||apOpChanged(acc));
+}
 function apStrength(acc){
   $("apOpV").textContent=ap.op?ap.op+"%":"Hidden";
   const others=accounts.filter(a=>a!==acc&&normArtOp(a.artOp)!=null).length;
   $("apOpHint").textContent=ap.opAll?(others?"including "+others+" set on "+(others===1?"its":"their")+" own":"")
     :"Only this card";
   // the strip: this card's name and rank over the art, at the strength chosen
-  const el=$("apPrev"), k=ap.champ?ap.champ+"_"+ap.skin:"";
+  // "-" for no champion, as the hero does: opening clears the key to "" to force a redraw
+  const el=$("apPrev"), k=ap.champ?ap.champ+"_"+ap.skin:"-";
   if(el.dataset.k!==k){
     el.dataset.k=k;
-    el.innerHTML=(k?`<img alt="" decoding="async" referrerpolicy="no-referrer" src="${splashUrl(ap.champ,ap.skin)}">`:"")+`<div class="ap-prev-t"></div>`;
+    el.innerHTML=(ap.champ?`<img alt="" decoding="async" referrerpolicy="no-referrer" src="${splashUrl(ap.champ,ap.skin)}">`:"")+`<div class="ap-prev-t"></div>`;
   }
   const img=el.querySelector("img");if(img)img.style.opacity=String(ap.op/100);
   const s=acc&&acc.stats, ranked=acc&&isRanked(acc);
@@ -7072,8 +7112,8 @@ $("apBack").addEventListener("click",()=>{
   $("apSearch").focus();
 });
 $("apUse").addEventListener("click",apSave);
-$("apOp").addEventListener("input",e=>{ap.op=normArtOp(Number(e.target.value))??ap.op;ap.opTouched=true;renderArtPicker()});
-$("apOpAll").addEventListener("change",e=>{ap.opAll=e.target.checked;ap.opTouched=true;renderArtPicker()});
+$("apOp").addEventListener("input",e=>{ap.op=normArtOp(Number(e.target.value))??ap.op;ap.opTouched=true;apControls(apAcc())});
+$("apOpAll").addEventListener("change",e=>{ap.opAll=e.target.checked;ap.opTouched=true;apControls(apAcc())});
 $("apAuto").addEventListener("click",apAuto);
 $("apCancel").addEventListener("click",closeArtPicker);
 $("apTurnOn").addEventListener("click",()=>{cfg.champArt=null;saveCfg();renderGrid();renderArtPicker();toast("Champion art is on")});
@@ -7161,7 +7201,8 @@ function buildSnapshot(o){
       const h=(a.history||[]).filter(e=>e&&ladderLP(e)!==null&&Number(e.t)>0).slice(-SNAP_HIST);
       if(h.length>1)x.h=h.map(e=>[Math.max(0,Math.round((now-e.t)/864e5*10)/10),...snapRank(e)]);
     }
-    if(o.art){const art=artOf(a);if(art)x.c=[art.champ,art.skin]}
+    // not for a card that hides its art: the link would show what its card doesn't
+    if(o.art&&artOpOf(a)>0){const art=artOf(a);if(art)x.c=[art.champ,art.skin]}
     if(o.notes){
       const info=normInfo(a.info);
       if(info&&info.honor!=null)x.hn=info.honor;
@@ -7281,21 +7322,32 @@ function snapErrorHTML(){
    opener's own vault or settings — not a shortcut, not leaving the tab. */
 async function openSnapshot(code){
   snapMode=true;hasStorage=false;
+  // a snapshot starts at its top, wherever the page was before (see hashchange, below)
+  try{history.scrollRestoration="manual"}catch(e){}
   document.body.classList.add("snap-mode");
   const root=$("snapView");root.classList.remove("hidden");
   root.innerHTML=`<p class="sn-wait">Opening the snapshot…</p>`;
   let s=null;
   try{s=normSnap(await snapDecode(code))}catch(e){s=null}
-  if(!s){root.innerHTML=snapErrorHTML();document.title="Snapshot · Smurf Tracker";return}
+  if(!s){root.innerHTML=snapErrorHTML();document.title="Snapshot · Smurf Tracker";snapTop();return}
   if(s.colors[0])applyAccent(s.colors[0]);
   if(s.colors[1])applyAccent2(s.colors[1]);
   document.title=(s.title||"League accounts")+" · Smurf Tracker";
   root.innerHTML=snapHTML(s);
+  snapTop();
 }
+// at once, not with the page's smooth scrolling: this is a new page, not a move on this one
+function snapTop(){try{scrollTo({top:0,left:0,behavior:"instant"})}catch(e){scrollTo(0,0)}}
 window.addEventListener("error",e=>{const t=e.target;if(snapMode&&t&&t.closest&&t.closest(".sn-art"))t.remove()},true);
 // Pasting a snapshot link into a tab that already has the app open changes only
 // the part after #, which reloads nothing; going back out of one is the same.
-window.addEventListener("hashchange",()=>{if(snapMode||/^#s=/.test(location.hash))location.reload()});
+// The new entry takes the app's scroll position with it, and the reload would
+// put it back, so a snapshot coming in is told to start at its top.
+window.addEventListener("hashchange",()=>{
+  if(!snapMode&&!/^#s=/.test(location.hash))return;
+  if(!snapMode)try{history.scrollRestoration="manual"}catch(e){}
+  location.reload();
+});
 
 /* ---- the share window ---- */
 const share={which:"ranked",gen:0,url:""};

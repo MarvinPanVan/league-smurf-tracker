@@ -1392,6 +1392,41 @@ test("card art: a picked skin shows its portrait at once, the last splash stays 
   assert.deepEqual(layers(), ["ap-ph:loading/Kaisa_1.jpg"], "a skin with no splash keeps its portrait as the banner");
 });
 
+// The strip in Strength previews the art as a card draws it: the same box height,
+// so the same fade, and so the same strength reads the same in both places.
+test("card art picker on phones: the strength strip sits beside the slider, under a shorter splash", () => {
+  // what is fixed above the skins on a 360x640 phone: everything here is height the grid loses
+  const phone = [...html.matchAll(/@media \(max-width:620px\)\{([\s\S]*?)\n  \}/g)].map(m => m[1]).join("\n");
+  const str = phone.match(/\.ap-str\{[^}]*grid-template-columns:([^;}]*)/);
+  assert.ok(str, "the phone rule lays the strength row out");
+  assert.equal(str[1].trim().split(/\s+(?![^(]*\))/).length, 2, "two columns, not the strip stacked over the slider");
+  const hero = phone.match(/\.ap-hero\{[^}]*height:clamp\((\d+)px/);
+  const wide = html.match(/\n  \.ap-hero\{[^}]*height:clamp\((\d+)px/)[1];
+  assert.ok(hero && Number(hero[1]) < Number(wide), "the splash is shorter than its smallest wide size");
+});
+test("card art strength: the preview strip fades the art over the card's own height", () => {
+  const card = html.match(/\n  \.c-art\{[^}]*?height:(\d+)px/)[1];
+  const strip = html.match(/\n  \.ap-prev img\{[^}]*?height:(\d+)px/);
+  assert.ok(strip, "the strip's picture has a fixed height");
+  assert.equal(strip[1], card);
+  const mask = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{[^}]*?mask-image:(linear-gradient\\([^;]*\\))"))[1];
+  assert.equal(mask(".ap-prev img"), mask(".c-art"), "and the same fade");
+});
+
+test("card art: a saved skin that no longer exists opens on the default, ready to save", async () => {
+  const calls = [];
+  const acc = { id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [],
+    art: { champ: "Kaisa", skin: 15, name: "K/DA ALL OUT Kai'Sa (Ruby)" } };
+  const win = bootApp([acc], w => dataDragon(w, calls));
+  const doc = win.document, $ = id => doc.getElementById(id);
+  cardMenu(win, "a").querySelector('[data-act="art"]').click();
+  await until(() => doc.querySelectorAll("#apGrid [data-skin]").length >= 3, "skins");
+  assert.equal(doc.querySelector("#apGrid .ap-sk.on").dataset.skin, "0", "the chroma is gone from the list, so the default is picked");
+  assert.equal($("apUse").disabled, false, "and Save can put that on the card straight away");
+  $("apUse").click();
+  await until(() => JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].art.skin === 0, "saved");
+});
+
 test("card art strength: a slider with a preview, for this card or every card, without pinning the art", async () => {
   const calls = [];
   const acc = (id, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
@@ -1417,6 +1452,10 @@ test("card art strength: a slider with a preview, for this card or every card, w
   assert.match($("apPrev").textContent, /Gold I · 5 LP/, "behind this card's own name and rank");
   $("apOpAll").checked = false; $("apOpAll").dispatchEvent(new win.Event("change", { bubbles: true }));
   assert.equal($("apOpHint").textContent, "Only this card");
+  await until(() => doc.querySelector("#apGrid [data-skin]"), "the skins");
+  const tile = doc.querySelector("#apGrid [data-skin]"); tile.dataset.mark = "1";
+  slide(13); slide(12);
+  assert.equal(tile.dataset.mark, "1", "dragging the slider leaves the skin grid alone: no redraw per step");
   $("apUse").click();
   assert.equal(own("a"), "0.12", "this card only");
   assert.equal(own("b"), "");
@@ -1459,6 +1498,23 @@ test("card art: Escape closes the picker, a stored pick is checked like any othe
   assert.equal(doc.querySelector("#apHero b").innerHTML, "&lt;b&gt;Mafia&lt;/b&gt;", "the stored name is text");
   doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   assert.equal(doc.getElementById("artPicker").classList.contains("hidden"), true, "Escape closes it like every other window");
+});
+
+// 2.3.4 threw here: opening reset the strip's key to "", which is also the key for
+// no champion, so the strip was never drawn and the next line found nothing in it
+test("card art: opens for an account with no champion yet, every time", () => {
+  const acc = id => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() } });
+  const win = bootApp([acc("new"), acc("other")]);
+  const doc = win.document;
+  for (const id of ["new", "other", "new"]) {
+    cardMenu(win, id).querySelector('[data-act="art"]').click();
+    assert.equal(doc.getElementById("artPicker").classList.contains("hidden"), false, "the window opens for " + id);
+    assert.equal(doc.querySelector("#apPrev .ap-prev-t b").textContent, id, "with this card's name in the strip");
+    assert.equal(doc.querySelector("#apPrev img"), null, "and no picture until a champion is picked");
+    assert.match(doc.getElementById("apHero").textContent, /Pick a champion/);
+    doc.getElementById("apCancel").click();
+  }
 });
 
 /* Notes with fields: what used to be typed as "honor 3, 140 champs, Elementalist
@@ -1629,6 +1685,34 @@ test("snapshot: the link carries ranks and what you ticked, never a login, passw
   const ids = JSON.parse(build({ ...base, ids: true }));
   assert.equal(ids.a[0].i, "Secreta#TAGa", "Riot IDs only when ticked");
   assert.equal(ids.a[1].n, "Secretb#TAGb", "and an unlabelled account goes by its Riot ID");
+});
+
+test("snapshot: a card whose art is hidden on it shares no art either", () => {
+  const art = { champ: "Ahri", skin: 7 };
+  const build = (seed, cfg) => {
+    const win = bootApp(seed, cfg && (w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, ...cfg }))));
+    runScript(win, "window.__s = JSON.stringify(buildSnapshot({which:'all',title:'x',art:true}))");
+    return JSON.parse(win.__s).a.map(a => a.c || null);
+  };
+  assert.deepEqual(build([snapAcc("a", { art, artOp: 0 }), snapAcc("b", { art })]), [null, ["Ahri", 7]], "hidden on its own card");
+  assert.deepEqual(build([snapAcc("a", { art }), snapAcc("b", { art, artOp: 20 })], { artOpacity: 0 }), [null, ["Ahri", 7]],
+    "hidden on every card, except the one that has its own strength");
+});
+
+test("snapshot viewer: opens at the top, not where the app was scrolled to before the reload", async () => {
+  for (const code of [snapCode({ v: 1, t: "x", at: 0, c: [], a: [{ n: "Main", k: [3, "II", 40] }] }), "0.broken"]) {
+    const tops = [];
+    const win = viewSnap(code, w => { w.scrollTo = (x, y) => tops.push(typeof x === "object" ? [x.top, x.behavior] : [y]); });
+    await until(() => win.document.querySelector(".sn-card,.sn-err"), "the snapshot or its error");
+    await until(() => tops.length, "a scroll to the top (" + code.slice(0, 8) + ")");
+    assert.deepEqual(tops, [[0, "instant"]], "at once, not with the page's smooth scrolling");
+    assert.equal(win.history.scrollRestoration, "manual", "and the browser doesn't put the old position back after");
+  }
+  // pasted into a tab with the app open: the new entry is marked before the reload that opens it
+  const win = bootApp([snapAcc("a")]);
+  win.history.scrollRestoration = "auto";
+  win.location.hash = "#s=" + snapCode({ v: 1, a: [] });
+  await until(() => win.history.scrollRestoration === "manual", "the entry to be marked");
 });
 
 test("snapshot viewer: draws the page from the link, and opening it never reads or writes this browser's own vault", async () => {
@@ -1912,9 +1996,9 @@ test("the Best account tile's rank can break between its pieces in a narrow colu
   const win = bootApp([{ id: "g", label: "Smurf10", region: "EUW", gameName: "g", tagLine: "1", status: "active", tags: [], history: [],
     stats: { found: true, tier: "GRANDMASTER", division: null, lp: 874, wins: 1, losses: 1, updatedAt: Date.now() } }]);
   const tile = [...win.document.querySelectorAll("#dash .stat")].find(s => s.querySelector(".k").textContent === "Best account");
-  const small = tile.querySelector(".v small");
-  assert.ok(small.classList.contains("parts"), "the wrapping kind of small");
-  assert.deepEqual([...small.querySelectorAll("span")].map(s => s.textContent), ["Grandmaster", "· 874 LP"]);
+  const list = tile.querySelector(".v small .dots");
+  assert.ok(list, "a list that breaks between its pieces");
+  assert.deepEqual([...list.querySelectorAll(".dot-i")].map(s => s.textContent), ["Grandmaster", " · 874 LP"]);
 });
 
 test("on a phone the set-up steps wrap their labels instead of cutting them off", () => {
@@ -2432,6 +2516,17 @@ test("the LP chart draws a labelled band per tier crossed, and one point per che
   // the tooltip has to name the actual rank, not just the raw LP number
   assert.match(el.querySelector(".lpc-tip").textContent, /Emerald II . 40 LP/);
   assert.doesNotMatch(html, /undefined|NaN/);
+});
+
+test("the chart's captions keep a dark halo, so the line crossing one doesn't cut through its letters", () => {
+  // measured in Chromium: the line ran through "GOLD" and the "II" beside the latest point
+  const rule = html.match(/\n  ([^{\n]*\.lpc-lab[^{\n]*)\{text-shadow:([^}]*)\}/);
+  assert.ok(rule, "one text-shadow rule for the captions");
+  for (const sel of [".lpc-plot .lpc-lab", ".lpc-plot .lpc-sub", ".lpc-plot .lpc-peak"])
+    assert.ok(rule[1].split(",").map(x => x.trim()).includes(sel), sel + " has it");
+  const layers = rule[2].split(/,(?![^(]*\))/);
+  assert.ok(layers.length >= 3, "stacked, since one soft shadow is too faint to hide a 2px line");
+  assert.ok(layers.every(l => /^0 0 \d+px #0b0e14/.test(l.trim())), "centred, in the plot's own dark");
 });
 
 test("one check still gets a chart — it says where on the ladder the account sits", () => {
@@ -7805,21 +7900,51 @@ test("closing Add account or Bulk add hands focus back to what opened it", async
    tile's caption, and the Accounts tile's is a list — "· 7 ★ · 5 banned · 5
    archived" — far longer than a tile is wide, in a tile that is overflow:hidden.
    So it was cut at "· 5 archiv" at every width from 1440 down to a phone. Its
-   pieces still never break inside; the list breaks between them. */
+   pieces still never break inside; the list breaks between them. Breaking
+   between them then left "· 5 archived" starting a line of its own, so it is
+   now the tile's note, as a dotList (below). */
 test("the Accounts tile's caption wraps between its pieces instead of being cut off", () => {
   const acc = (id, extra) => Object.assign({ id, gameName: id, tagLine: "1", region: "EUW", status: "active",
     tags: [], history: [], stats: null }, extra);
   const win = bootApp([acc("a", { fav: true }), acc("b", { status: "banned" }), acc("c", { archived: true })]);
-  const small = [...win.document.querySelectorAll("#dash .stat")]
-    .find(s => /Accounts/i.test(s.querySelector(".k").textContent)).querySelector(".v small");
-  assert.ok(small.classList.contains("parts"), "the caption is marked as a list of pieces");
-  assert.deepEqual([...small.children].map(c => c.textContent.trim()), ["· 1 ★", "· 1 banned", "· 1 archived"],
-    "one element per piece, so a line can only break between them");
-  const rule = html.match(/\.stat \.v small\.parts\{[^}]*\}/);
-  const piece = html.match(/\.stat \.v small\.parts>span\{[^}]*\}/);
-  assert.ok(rule && piece, "both rules are there");
-  assert.match(rule[0], /white-space:normal/);
-  assert.match(piece[0], /white-space:nowrap/);
+  const tile = [...win.document.querySelectorAll("#dash .stat")].find(s => /Accounts/i.test(s.querySelector(".k").textContent));
+  assert.equal(tile.querySelector(".v").textContent, "2", "the figure on its own, like the other tiles");
+  const note = tile.querySelector(".s-note .dots");
+  assert.ok(note, "the breakdown is the note, as a list of pieces");
+  assert.equal(note.textContent, "1 ★ · 1 banned · 1 archived");
+  assert.equal(note.querySelectorAll(".dot-i").length, 3, "one element per piece, so a line can only break between them");
+});
+
+/* A "·" list that wraps put a dot at the end of one line or the start of the
+   next: Regions read "EUW 1 · NA 1 · KR 1 ·" / "EUNE 1 · BR 1" at 1440 and
+   "… · EUNE 1" / "· BR 1" at 820, Best account "Platinum II" / "· 61 LP". Each
+   dot now sits in the gap before its own piece, and the list's box clips what
+   is left of its edge, which is where the dot of a piece starting a line ends
+   up. Measured in Chromium at 1440/1180/1024/820/390: no line starts or ends
+   with a dot. */
+test("a dot list keeps its dots inside the line, and its text reads as it did", () => {
+  const acc = (id, region) => ({ id, gameName: id, tagLine: "1", region, status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 50, wins: 10, losses: 9, updatedAt: Date.now() } });
+  const win = bootApp(["EUW", "NA", "KR", "EUNE", "BR"].map((r, i) => acc("a" + i, r)));
+  const tile = name => [...win.document.querySelectorAll("#dash .stat")].find(s => s.querySelector(".k").textContent.trim() === name);
+  const lists = [tile("Regions").querySelector(".s-note .dots"), tile("Best account").querySelector(".v .dots"),
+    win.document.querySelector(".rib-cap > .dots")];
+  assert.ok(lists.every(Boolean), "Regions, Best account and the ribbon's caption are dot lists");
+  assert.equal(lists[0].textContent, "EUW 1 · NA 1 · KR 1 · EUNE 1 · BR 1");
+  assert.equal(lists[1].textContent, "Gold II · 50 LP");
+  for (const l of lists) {
+    const items = [...l.querySelectorAll(".dot-i")];
+    assert.ok(!items[0].querySelector(".dot-s"), "the first piece has no dot before it");
+    assert.ok(items.slice(1).every(i => i.firstElementChild && i.firstElementChild.matches(".dot-s")), "every other piece starts with its own");
+  }
+  const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
+  const em = (css, prop) => css.match(new RegExp("(?:^|;)" + prop + ":(-?[.\\d]+)em"))[1];
+  const gap = em(rule(".dot-i"), "margin-left");
+  assert.match(rule(".dot-i"), /white-space:nowrap/, "a piece never breaks inside");
+  assert.equal(em(rule(".dots-in"), "margin-left"), "-" + gap, "the list starts a gap early, so each line's first dot is past the edge");
+  assert.equal(em(rule(".dot-s"), "width"), gap, "the dot fills the gap before its piece");
+  assert.match(rule(".dot-s"), /position:absolute;right:100%/);
+  assert.match(rule(".dots"), /clip-path:inset\([^)]* 0\)/, "and the list clips at its left edge");
 });
 
 /* text-overflow only works on a block that holds the text itself. The wall tile's
