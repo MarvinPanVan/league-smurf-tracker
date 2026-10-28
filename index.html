@@ -436,11 +436,6 @@
   .stat .v small{font-size:calc(12px*var(--ts));color:var(--muted);font-weight:400;letter-spacing:0;white-space:nowrap}
   .stat .v.nw{white-space:nowrap}
   .stat .v.nw small{margin-left:1px}
-  /* Except where the caption is a list — Accounts' "· 7 ★ · 5 banned · 5 archived"
-     is wider than its tile, which is overflow:hidden, so nowrap cut it off at
-     "archiv". It breaks between the pieces and never inside one. */
-  .stat .v small.parts{white-space:normal}
-  .stat .v small.parts>span{white-space:nowrap}
   .stat .v.spark-wrap{font-size:calc(12px*var(--ts));line-height:1.2;overflow:visible;max-width:100%;width:100%;position:relative}
   .pool-spark{display:block;width:100%;max-width:100%;height:28px;margin-top:4px;opacity:.85;overflow:visible;cursor:crosshair}
   .pool-spark circle.pool-dot{fill:var(--teal);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
@@ -489,6 +484,14 @@
   .stat-b.on{background:color-mix(in srgb,var(--gold) 11%,transparent);border:0;
     box-shadow:inset 2px 0 0 var(--gold)}
   .s-note{font-size:calc(11px*var(--ts));color:var(--faint);margin-top:4px;line-height:1.4}
+  /* A "·" list (dotList) breaks between its pieces, never inside one, and never
+     leaves a dot at either end of a line: each dot sits in the gap before its
+     piece, so a piece that starts a line has its dot out past the left edge,
+     where the clip hides it. The dots stay real text for copying and tests. */
+  .dots{display:inline-flex;max-width:100%;clip-path:inset(-.5em -.5em -.5em 0)}
+  .dots-in{display:flex;flex-wrap:wrap;min-width:0;margin-left:-.8em}
+  .dot-i{position:relative;margin-left:.8em;white-space:nowrap}
+  .dot-s{position:absolute;right:100%;width:.8em;text-align:center;font-style:normal;white-space:pre}
   .gem.cmb b{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .gem.cmb b.wr-good{color:var(--good)}
   .gem.cmb i.g{font-style:normal;font-size:calc(11px*var(--ts));font-weight:600;color:var(--muted);
@@ -3770,6 +3773,11 @@ const ICON={
 };
 function icon(name,cls){return `<svg class="ico${cls?" "+cls:""}" viewBox="0 0 24 24">${ICON[name]}</svg>`}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+// pieces of HTML (escaped by the caller) as "a · b · c" that wraps cleanly; see .dots
+function dotList(parts){
+  return`<span class="dots"><span class="dots-in">${parts.filter(Boolean).map((p,i)=>
+    `<span class="dot-i">${i?`<i class="dot-s"> · </i>`:""}${p}</span>`).join("")}</span></span>`;
+}
 // data-id and querySelector both need the id to be inert. esc() for attributes;
 // CSS.escape for selectors — a poisoned id in localStorage used to break out of
 // data-id="…" on first paint, and a quote in an id made querySelector throw.
@@ -6425,7 +6433,8 @@ function renderRibbon(){
       return `<button class="rib-seg${on?" on":""}${isTail(s)?" tail":""}" ${segAttr(s)} style="--c:${s.c}${isTail(s)?"":";flex:"+s.n}"
         aria-pressed="${on}" title="${esc(s.label)} — ${s.n} account${s.n===1?"":"s"} (click to show only these)"
         aria-label="${esc(s.label)}, ${s.n}"><i>${s.n}</i></button>`}).join("")}</div>
-    <div class="rib-cap"><span><b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}${unN?` · <b>${unN}</b> unranked`:""}${missN?` · <b>${missN}</b> not found`:""}${neverN?` · <b>${neverN}</b> never checked`:""}${bannedN?` · <b>${bannedN}</b> banned`:""}</span>`
+    <div class="rib-cap">${dotList([`<b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}`,
+      unN&&`<b>${unN}</b> unranked`,missN&&`<b>${missN}</b> not found`,neverN&&`<b>${neverN}</b> never checked`,bannedN&&`<b>${bannedN}</b> banned`])}`
     +(best?`<span>best <b style="color:${tierColor(best.stats.tier)}">${esc(shortRank(best.stats))}</b></span>`:"")
     +`</div>`);
 }
@@ -6459,10 +6468,9 @@ function renderDash(){
   const topChamps=mergeChampions(pool);
   // the rank breaks between its pieces ("Grandmaster" / "· 874 LP") rather than
   // running out of a narrow column as one unbreakable line
-  const bestTxt=best&&rankValue(best.stats)>=0?nameOf(best)+' <small class="parts">'
-    +String(shortRank(best.stats)||"").split(" · ").map((x,i)=>`<span>${i?"· ":""}${esc(x)}</span>`).join(" ")+"</small>":"—";
+  const bestTxt=best&&rankValue(best.stats)>=0?nameOf(best)+" <small>"+dotList(String(shortRank(best.stats)||"").split(" · ").map(esc))+"</small>":"—";
   const regCount={};allActive.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
-  const regTxt=Object.entries(regCount).map(([r,n])=>r+" "+n).join(" · ");
+  const regTxt=dotList(Object.entries(regCount).map(([r,n])=>esc(r+" "+n)));
   const regN=Object.keys(regCount).length;
   const dist={};ranked.forEach(a=>{const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1});
   const neverN=countPool.filter(neverChecked).length;
@@ -6501,12 +6509,13 @@ function renderDash(){
     </div>
   </div>
   <div class="dash">
-    <div class="stat"><div class="k">Accounts</div><div class="v">${allActive.length} <small class="parts"><span>· ${allActive.filter(a=>a.fav).length} ★</span>${bannedN?` <span>· ${bannedN} banned</span>`:""}${archivedN?` <span>· ${archivedN} archived</span>`:""}</small></div></div>
+    <div class="stat"><div class="k">Accounts</div><div class="v">${allActive.length}</div>
+      <div class="s-note">${dotList([allActive.filter(a=>a.fav).length+" ★",bannedN&&bannedN+" banned",archivedN&&archivedN+" archived"])}</div></div>
     <div class="stat"><div class="k">Best account</div><div class="v" style="font-size:calc(14px*var(--ts))">${bestTxt}</div></div>
     <div class="stat"><div class="k">Season W/L</div><div class="v nw">${W}<small>W</small> ${L}<small>L</small></div>
       <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>
     <div class="stat"><div class="k">Regions</div><div class="v">${regN||"—"}${regN?` <small>${regN===1?"region":"regions"}</small>`:""}</div>
-      ${regTxt?`<div class="s-note">${esc(regTxt)}</div>`:""}</div>
+      ${regN?`<div class="s-note">${regTxt}</div>`:""}</div>
     ${neverN?`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
       <div class="v" style="color:var(--gold-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`:""}
     ${attentionN?`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
