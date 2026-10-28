@@ -11120,6 +11120,13 @@ window.addEventListener("storage",e=>{
    sync revision lives in it. Each tab held its own copy, so a setting saved in one
    (a sync token just generated, the backend URL) was written straight back out by
    the other the next time it saved anything at all. Adopted as it lands instead. */
+// passkey unlock turned on or off in another tab: a lock screen already up here
+// must not keep a button whose passkey record is gone, which then did nothing
+window.addEventListener("storage",e=>{
+  if(snapMode||!e||e.key!==PK_KEY||e.storageArea!==localStorage)return;
+  updateLockPk();
+  if(!$("settings").classList.contains("hidden"))updatePkStatus();
+});
 window.addEventListener("storage",e=>{
   if(snapMode||!e||e.key!==CFG_KEY||e.storageArea!==localStorage||!e.newValue)return;
   try{Object.assign(cfg,JSON.parse(e.newValue))}catch(err){return}

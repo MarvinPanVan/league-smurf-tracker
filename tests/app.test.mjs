@@ -1862,6 +1862,24 @@ test("passkey unlock: changing or removing the master password turns it off, and
   assert.equal(pkRec(win), null);
 });
 
+test("passkey unlock: turned on or off in another tab, the lock screen here follows", async () => {
+  const win = await lockedVault("master-pass-123");
+  fakePasskeys(win, { prfAtCreate: true });
+  runScript(win, 'openSettings("security")');
+  win.document.getElementById("sPkSet").click();
+  await until(() => pkRec(win), "set up");
+  const rec = win.localStorage.getItem("smurf-tracker-passkey");
+  win.relock();
+  const pk = win.document.getElementById("lockPk");
+  assert.equal(pk.classList.contains("hidden"), false);
+  const fire = v => { v == null ? win.localStorage.removeItem("smurf-tracker-passkey") : win.localStorage.setItem("smurf-tracker-passkey", v);
+    win.dispatchEvent(new win.StorageEvent("storage", { key: "smurf-tracker-passkey", newValue: v, storageArea: win.localStorage })); };
+  fire(null);
+  assert.equal(pk.classList.contains("hidden"), true, "off over there: no button left that does nothing");
+  fire(rec);
+  assert.equal(pk.classList.contains("hidden"), false, "and on again");
+});
+
 test("passkey unlock: says when it can't be used, and never makes a passkey the device can't use", async () => {
   // no master password yet
   const plain = bootApp();
