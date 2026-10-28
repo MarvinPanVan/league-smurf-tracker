@@ -1530,6 +1530,19 @@
   .lrow .lk{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.1em;text-transform:uppercase;
     color:var(--faint);margin-right:9px}
   .lrow .lage{font-style:normal;font-size:calc(11px*var(--ts));color:var(--faint);margin-left:9px}
+  /* what the password check-up found about this one, where you would change it */
+  .lwarn{display:flex;align-items:flex-start;gap:7px;font-size:calc(12px*var(--ts));line-height:1.4;color:var(--gold-txt)}
+  .lwarn .ico{width:14px;height:14px;flex-shrink:0;margin-top:1px}
+  .pwc-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .pwc-list:empty{display:none}
+  .pwc-row{display:flex;align-items:center;gap:12px;padding:8px 10px 8px 12px;
+    border:1px solid var(--line);border-radius:var(--r-sm);background:#00000026}
+  /* name and reason side by side, the reason under the name when there's no room;
+     Change stays beside them either way */
+  .pwc-row .t{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px}
+  .pwc-row .n{font-weight:600;color:var(--text);min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pwc-row .why{min-width:0;font-size:calc(12px*var(--ts));color:var(--gold-txt)}
+  .pwc-row button{flex-shrink:0;padding:5px 11px;font-size:calc(12px*var(--ts))}
   /* Beside the name in all three layouts, because the point of the flag is that
      you spot it without having opened anything. */
   /* Drawn only when there is a goal. An account with nothing to climb towards
@@ -2681,6 +2694,11 @@
         <div class="sub-fld" style="padding-left:0;margin-top:12px">
           <button type="button" id="sLockNow" class="b-danger" title="Lock the vault now — needs the master password to open again">Lock now</button>
           <div class="hint" style="margin-top:6px">Locks this tab immediately. Other open tabs keep their own unlock state until you reload them.</div>
+        </div>
+        <div class="fld fw" style="margin-top:22px">
+          <label>Password check-up</label>
+          <div id="sPwSum" class="hint" style="margin:0"></div>
+          <div id="sPwList" class="pwc-list"></div>
         </div>
       </div>
 
@@ -4676,6 +4694,41 @@ function passwordStrength(p){
   if(/[^A-Za-z0-9]/.test(p))score++;
   const labels=["Very weak","Weak","Fair","Good","Strong"];
   return{score,label:labels[Math.min(score,5)-1]||"Very weak"};
+}
+/* ---- password check-up ----
+   A password manager's security check, done in this browser: the same password
+   on more than one account, where one leak opens every one of them, and weak
+   ones, by the form meter's measure or with the username or Riot name in them. */
+function pwWeak(a){
+  const p=a&&a.password;if(!p)return null;
+  const low=p.toLowerCase();
+  for(const [v,what] of [[a.login,"the username"],[a.gameName,"the Riot name"]]){
+    const s=String(v||"").toLowerCase();
+    if(s.length>=4&&low.includes(s))return"Has "+what+" in it";
+  }
+  if(passwordStrength(p).score>2)return null;
+  return p.length<8?"Only "+p.length+" character"+(p.length===1?"":"s"):"Easy to guess";
+}
+function pwShared(a){return a&&a.password?accounts.filter(b=>b!==a&&b.password===a.password):[]}
+function pwFindings(){
+  const by=new Map();
+  for(const a of accounts)if(a.password)by.set(a.password,(by.get(a.password)||[]).concat(a));
+  const out=[];
+  // the accounts sharing a password next to each other, then the weak ones on their own
+  for(const g of by.values())if(g.length>1)for(const a of g)out.push({a,same:g.filter(b=>b!==a),weak:pwWeak(a)});
+  for(const g of by.values())if(g.length===1){const w=pwWeak(g[0]);if(w)out.push({a:g[0],same:[],weak:w})}
+  return out;
+}
+function pwSameText(same){
+  const names=same.slice(0,2).map(b=>esc(plainName(b)));
+  return"Same password as "+names.join(", ")+(same.length>2?" and "+(same.length-2)+" more":"");
+}
+// under the password in a card's login: what the check-up found, where you'd change it
+function pwWarnHTML(a){
+  if(!a.password)return"";
+  const same=pwShared(a), weak=pwWeak(a);
+  const bits=[same.length&&pwSameText(same),weak&&esc(weak)].filter(Boolean);
+  return bits.length?`<div class="lwarn">${icon("alert")}<span>${bits.join(" · ")}</span></div>`:"";
 }
 
 // ---------- rank data: parser + fetch cascade ----------
@@ -7851,6 +7904,7 @@ function rowHTML(a,i){
         ${a.login&&a.password?`<button class="lseq" data-act="copyseq">${loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`:""}
       <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
         <div class="lrow"><span class="val mono ${a.password?"":"none"}">${a.password?(shownPw.has(a.id)?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${shownPw.has(a.id)?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
+        ${pwWarnHTML(a)}
       </div>`:""}
     </div>`:""}
   </div></div>`;
@@ -8046,6 +8100,7 @@ function cardHTML(a,i){
       ${a.login&&a.password?`<button class="lseq" data-act="copyseq">${loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`:""}
       <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
       <div class="lrow"><span class="val mono ${a.password?"":"none"}" style="font-family:${a.password?"":"inherit"}">${a.password?(pw?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${pw?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
+      ${pwWarnHTML(a)}
       ${a.email?`<div class="lrow"><span class="val">${esc(a.email)}</span><span class="lbtns"><button data-act="copymail">Copy</button></span></div>`:""}
       <!-- The two facts Riot asks for when an account has to be recovered, which is
            exactly the moment you are looking at this panel. -->
@@ -8653,8 +8708,9 @@ function openForm(acc,focus){
   formInfoBase=acc?normInfo(acc.info):null;
   $("fFieldsCfg").classList.add("hidden");$("fFieldsBtn").setAttribute("aria-expanded","false");
   // From a card's note fields, the window starts at them rather than at the name
-  const atNotes=focus==="notes";
-  $("fName").toggleAttribute("data-autofocus",!atNotes);
+  const atNotes=focus==="notes", atPw=focus==="password";
+  $("fName").toggleAttribute("data-autofocus",!atNotes&&!atPw);
+  $("fPass").toggleAttribute("data-autofocus",atPw);   // from the password check-up
   renderInfoFields(formInfoBase,atNotes);
   $("fSave").textContent=acc?"Save changes":"Add account";
   $("formTitle").textContent=acc?"Edit account":"Add account";
@@ -8744,7 +8800,7 @@ function openSettings(tab){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden");centreSettingsTab()
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();renderPwCheck();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden");centreSettingsTab()
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -8753,6 +8809,22 @@ function renderPwMeter(){
   $("pwMeter").innerHTML=p?Array.from({length:5},(_,i)=>`<span style="flex:1;height:100%;border-radius:1px;transition:background .2s;background:${i<score?colors[score-1]:"var(--line)"}"></span>`).join(""):"";
   $("pwMeterLabel").textContent=p?label:"";
 }
+function renderPwCheck(){
+  const el=$("sPwList");if(!el)return;
+  const withPw=accounts.filter(a=>a.password).length, f=pwFindings();
+  const reused=f.filter(x=>x.same.length).length, weak=f.filter(x=>x.weak).length;
+  $("sPwSum").textContent=!withPw?"No passwords saved yet."
+    :!f.length?(withPw===1?"The one saved password is fine.":"All "+withPw+" saved passwords are different, and none is weak.")
+    :withPw===1?"The one saved password could be safer."
+    :f.length+" of "+withPw+" passwords could be safer: "+[reused&&reused+" used on more than one account",weak&&weak+" weak"].filter(Boolean).join(", ")+".";
+  setHTML(el,f.map(x=>`<div class="pwc-row"><div class="t"><span class="n">${nameOf(x.a)}</span>`
+    +`<span class="why">${[x.same.length&&pwSameText(x.same),x.weak&&esc(x.weak)].filter(Boolean).join(" · ")}</span></div>`
+    +`<button type="button" data-pwedit="${idAttr(x.a.id)}">Change</button></div>`).join(""));
+}
+$("sPwList").addEventListener("click",e=>{
+  const b=e.target.closest("[data-pwedit]");if(!b)return;
+  const acc=accounts.find(a=>a.id===b.dataset.pwedit);if(acc)openForm(acc,"password");
+});
 function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted.";renderSetup()}
 /* Four things make a vault safe to rely on, and a first visit does the first and
    usually stops: accounts in, ranks read, a master password, a backup. Until all
@@ -10046,6 +10118,7 @@ function palCommands(){
       cfg.density=ui.density;saveCfg();openInfo.clear();render();
     }},
     {k:"settings",n:"Settings",s:"Rank checks, alerts, security, appearance",i:"user",run:()=>openSettings()},
+    {k:"password check security reused weak",n:"Password check-up",s:"Passwords used twice, or weak",i:"alert",run:()=>openSettings("security")},
     {k:"newseason",n:"New season",s:"Move every ranked account's rank into Past seasons",i:"refresh",run:()=>newSeasonAll()},
     {k:"streamer",n:"Streamer mode",s:"Hide Riot IDs, logins, emails and notes on screen (H)",i:"eye",run:()=>setStreamer(!streamerOn())},
     {k:"export backup",n:"Export backup",s:"Download the vault as JSON",i:"clipboard",run:()=>doExport()},

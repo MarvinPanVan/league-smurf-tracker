@@ -1517,6 +1517,66 @@ test("card art: opens for an account with no champion yet, every time", () => {
   }
 });
 
+/* ---- password check-up ---- */
+const pwAcc = (id, password, extra) => Object.assign({ id, region: "EUW", gameName: "Name" + id, tagLine: "1", status: "active",
+  tags: [], history: [], login: "login" + id, password }, extra || {});
+
+test("password check-up: lists passwords used twice and weak ones, and never shows a password", async () => {
+  const win = bootApp([
+    pwAcc("a", "Shared#Pass99xx", { label: "Main" }), pwAcc("b", "Shared#Pass99xx", { label: "Duo" }),
+    pwAcc("c", "abc12"), pwAcc("d", "kaisa-otp-2024!", { gameName: "Kaisa" }), pwAcc("e", "nOt-the-login-9"),
+    pwAcc("f", "Zt7#q!Lm2pWx", { label: "Fine" }), pwAcc("g", undefined), pwAcc("h", "logInH-and-more", { label: "Lazy" }),
+  ]);
+  const doc = win.document;
+  runScript(win, 'openSettings("security")');
+  assert.equal(doc.getElementById("sPwSum").textContent, "5 of 7 passwords could be safer: 2 used on more than one account, 3 weak.");
+  const rows = [...doc.querySelectorAll("#sPwList .pwc-row")].map(r => [r.querySelector(".n").textContent, r.querySelector(".why").textContent]);
+  assert.deepEqual(rows, [
+    ["Main", "Same password as Duo"], ["Duo", "Same password as Main"],
+    ["Namec", "Only 5 characters"], ["Kaisa", "Has the Riot name in it"], ["Lazy", "Has the username in it"],
+  ], "the accounts sharing one next to each other, then the weak ones");
+  const text = doc.getElementById("settings").textContent;
+  for (const pw of ["Shared#Pass99xx", "abc12", "kaisa-otp-2024!", "logInH-and-more"]) assert.ok(!text.includes(pw), "no password on screen");
+  // Change goes to that account's password
+  doc.querySelector('#sPwList [data-pwedit="c"]').click();
+  assert.equal(doc.getElementById("settings").classList.contains("hidden"), true);
+  assert.equal(doc.getElementById("form").classList.contains("hidden"), false);
+  assert.equal(doc.getElementById("fPass").value, "abc12");
+  await until(() => doc.activeElement === doc.getElementById("fPass"), "the password field to take focus");
+});
+
+test("password check-up: says so when every password is fine, and the login panel only warns where it should", () => {
+  const ok = bootApp([pwAcc("a", "Zt7#q!Lm2pWx"), pwAcc("b", "Qr9$v@Kd4nYz")]);
+  runScript(ok, 'openSettings("security")');
+  assert.equal(ok.document.getElementById("sPwSum").textContent, "All 2 saved passwords are different, and none is weak.");
+  assert.equal(ok.document.querySelectorAll("#sPwList .pwc-row").length, 0);
+  ok.document.querySelector('.card[data-id="a"] [data-act="login"]').click();
+  assert.equal(ok.document.querySelector('.card[data-id="a"] .lwarn'), null, "nothing to say about a good one");
+
+  const win = bootApp([pwAcc("a", "Shared#Pass99xx", { label: "Main" }), pwAcc("b", "Shared#Pass99xx"), pwAcc("c", "Shared#Pass99xx"),
+    pwAcc("d", "Shared#Pass99xx"), pwAcc("e", "abc")]);
+  const warn = id => { win.document.querySelector(`.card[data-id="${id}"] [data-act="login"]`).click();
+    return win.document.querySelector(`.card[data-id="${id}"] .lwarn`).textContent; };
+  assert.equal(warn("a"), "Same password as Nameb, Namec and 1 more");
+  assert.equal(warn("e"), "Only 3 characters");
+  // streamer mode: the other accounts by label, never by Riot ID
+  runScript(win, "setStreamer(true)");
+  assert.doesNotMatch(warn("b"), /Name[a-e]/);
+});
+
+test("password check-up: in Quick find", () => {
+  const win = bootApp([pwAcc("a", "abc")]);
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }));
+  const input = win.document.getElementById("palInput");
+  input.value = "password"; input.dispatchEvent(new win.Event("input"));
+  const item = [...win.document.querySelectorAll(".pal-i")].find(i => /Password check-up/.test(i.textContent));
+  assert.ok(item, "found by name");
+  item.click();
+  assert.equal(win.document.getElementById("settings").dataset.tab, "security");
+  assert.equal(win.document.getElementById("sPwSum").textContent, "The one saved password could be safer.");
+  assert.match(win.document.querySelector("#sPwList .why").textContent, /Only 3 characters/);
+});
+
 /* Notes with fields: what used to be typed as "honor 3, 140 champs, Elementalist
    Lux" by hand, kept as fields that every card shows the same way. */
 const fieldsAcc = (id, info, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
