@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
-import { webcrypto } from "node:crypto";
+import { webcrypto, createHash } from "node:crypto";
 import { JSDOM } from "jsdom";
 import { deflateRawSync } from "node:zlib";
 
@@ -1575,6 +1575,73 @@ test("password check-up: in Quick find", () => {
   assert.equal(win.document.getElementById("settings").dataset.tab, "security");
   assert.equal(win.document.getElementById("sPwSum").textContent, "The one saved password could be safer.");
   assert.match(win.document.querySelector("#sPwList .why").textContent, /Only 3 characters/);
+});
+
+// a stand-in for api.pwnedpasswords.com/range: the leaked suffixes for a prefix, padded with dummies
+const sha1 = pw => createHash("sha1").update(pw).digest("hex").toUpperCase();
+function pwnedStub(win, leaked, opts = {}) {
+  const calls = [];
+  win.fetch = async (url, o) => {
+    calls.push({ url: String(url), headers: (o && o.headers) || {} });
+    if (opts.down) throw new TypeError("Failed to fetch");
+    if (opts.noHeader && o && o.headers && o.headers["Add-Padding"]) throw new TypeError("Failed to fetch");
+    const prefix = String(url).split("/range/")[1];
+    const rows = ["0018A45C4D1DEF81644B54AB7F969B88D65:1", "00D4F6E8FA6EECAD2A3AA415EEC418D38EC:0"];
+    for (const [pw, n] of leaked) if (sha1(pw).startsWith(prefix)) rows.push(sha1(pw).slice(5) + ":" + n);
+    return { ok: true, status: 200, text: async () => rows.join("\r\n") };
+  };
+  return calls;
+}
+
+test("leak check: nothing is sent until asked, then only five characters per password", async () => {
+  const win = bootApp([pwAcc("a", "Shared#Pass99xx", { label: "Main" }), pwAcc("b", "Shared#Pass99xx"), pwAcc("c", "Zt7#q!Lm2pWx"), pwAcc("d", "abc12")]);
+  const doc = win.document;
+  // the strong one's suffix comes back as a padding row (count 0): not a leak
+  const calls = pwnedStub(win, [["Shared#Pass99xx", 3421], ["Zt7#q!Lm2pWx", 0]]);
+  runScript(win, 'openSettings("security")');
+  assert.equal(calls.length, 0, "opening the check-up sends nothing");
+  assert.match(doc.getElementById("sPwLeakNote").textContent, /Only the first 5 characters/);
+  doc.getElementById("sPwLeaks").click();
+  await until(() => doc.getElementById("sPwLeaks").textContent === "Check again", "the check to finish");
+  assert.equal(calls.length, 3, "one request per distinct password, the shared one once");
+  for (const c of calls) {
+    assert.match(c.url, /^https:\/\/api\.pwnedpasswords\.com\/range\/[0-9A-F]{5}$/);
+    assert.equal(c.headers["Add-Padding"], "true", "padded, so the reply's size says nothing");
+    for (const pw of ["Shared#Pass99xx", "Zt7#q!Lm2pWx", "abc12"]) {
+      assert.ok(!c.url.includes(pw) && !c.url.includes(sha1(pw).slice(5)), "never the password or the rest of its hash");
+    }
+  }
+  assert.equal(doc.getElementById("sPwSum").textContent,
+    "3 of 4 passwords could be safer: 2 found in data leaks, 2 used on more than one account, 1 weak.");
+  const rows = [...doc.querySelectorAll("#sPwList .pwc-row .why")].map(w => w.textContent);
+  assert.deepEqual(rows, ["Found in data leaks 3,421 times · Same password as Nameb", "Found in data leaks 3,421 times · Same password as Main", "Only 5 characters"]);
+  assert.equal(doc.getElementById("sPwLeakNote").textContent, "Checked just now.");
+  doc.querySelector('.card[data-id="a"] [data-act="login"]').click();
+  const warn = doc.querySelector('.card[data-id="a"] .lwarn');
+  assert.ok(warn.classList.contains("bad"));
+  assert.match(warn.textContent, /^Found in data leaks 3,421 times · Same password as Nameb$/);
+  // a changed password is unchecked again; the other one keeps its result
+  runScript(win, "accounts.find(x => x.id === 'a').password = 'New#Pass77zzQ'; renderPwCheck()");
+  assert.deepEqual([...doc.querySelectorAll("#sPwList .pwc-row .n")].map(n => n.textContent), ["Nameb", "Named"]);
+  assert.equal(doc.querySelector("#sPwList .pwc-row .why").textContent, "Found in data leaks 3,421 times");
+});
+
+test("leak check: says when nothing leaked, retries without the padding header, and says when it can't reach the service", async () => {
+  const win = bootApp([pwAcc("a", "Zt7#q!Lm2pWx"), pwAcc("b", "Qr9$v@Kd4nYz")]);
+  const doc = win.document;
+  let calls = pwnedStub(win, [], { noHeader: true });
+  runScript(win, 'openSettings("security")');
+  doc.getElementById("sPwLeaks").click();
+  await until(() => doc.getElementById("sPwLeaks").textContent === "Check again", "the check to finish");
+  assert.equal(calls.filter(c => !c.headers["Add-Padding"]).length, 2, "asked again without the header");
+  assert.equal(doc.getElementById("sPwLeakNote").textContent, "Checked just now: none of your passwords is in a known leak.");
+  assert.equal(doc.getElementById("sPwSum").textContent, "All 2 saved passwords are different, and none is weak.");
+
+  calls = pwnedStub(win, [], { down: true });
+  doc.getElementById("sPwLeaks").click();
+  await until(() => /Couldn't reach/.test(doc.getElementById("sPwLeakNote").textContent), "the error to show");
+  assert.equal(doc.getElementById("sPwLeaks").textContent, "Check for leaks");
+  assert.equal(doc.getElementById("sPwLeaks").disabled, false, "and it can be tried again");
 });
 
 /* Notes with fields: what used to be typed as "honor 3, 140 champs, Elementalist

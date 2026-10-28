@@ -1533,6 +1533,9 @@
   /* what the password check-up found about this one, where you would change it */
   .lwarn{display:flex;align-items:flex-start;gap:7px;font-size:calc(12px*var(--ts));line-height:1.4;color:var(--gold-txt)}
   .lwarn .ico{width:14px;height:14px;flex-shrink:0;margin-top:1px}
+  .lwarn.bad,.pwc-row .why .bad{color:var(--danger)}
+  .pwc-leak{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;margin-top:12px}
+  .pwc-leak .hint{flex:1 1 260px;margin:0}
   .pwc-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
   .pwc-list:empty{display:none}
   .pwc-row{display:flex;align-items:center;gap:12px;padding:8px 10px 8px 12px;
@@ -2699,6 +2702,10 @@
           <label>Password check-up</label>
           <div id="sPwSum" class="hint" style="margin:0"></div>
           <div id="sPwList" class="pwc-list"></div>
+          <div class="pwc-leak">
+            <button type="button" id="sPwLeaks">Check for leaks</button>
+            <span id="sPwLeakNote" class="hint"></span>
+          </div>
         </div>
       </div>
 
@@ -4715,10 +4722,60 @@ function pwFindings(){
   for(const a of accounts)if(a.password)by.set(a.password,(by.get(a.password)||[]).concat(a));
   const out=[];
   // the accounts sharing a password next to each other, then the weak ones on their own
-  for(const g of by.values())if(g.length>1)for(const a of g)out.push({a,same:g.filter(b=>b!==a),weak:pwWeak(a)});
-  for(const g of by.values())if(g.length===1){const w=pwWeak(g[0]);if(w)out.push({a:g[0],same:[],weak:w})}
+  for(const g of by.values())if(g.length>1)for(const a of g)out.push({a,same:g.filter(b=>b!==a),weak:pwWeak(a),leak:pwLeakOf(a)});
+  for(const g of by.values())if(g.length===1){
+    const a=g[0], w=pwWeak(a), l=pwLeakOf(a);
+    if(w||l)out.push({a,same:[],weak:w,leak:l});
+  }
+  // a leaked one first: that password is in the lists people try first
+  return out.sort((x,y)=>(y.leak>0)-(x.leak>0));
+}
+/* Leaks: Have I Been Pwned's Pwned Passwords, searched by range. Only the first
+   five characters of the password's SHA-1 leave this browser. The reply is every
+   leaked hash that starts with them, padded with dummies so its size says nothing
+   either, and the match is made here. Only when asked, and kept for this session
+   only, for the password it was checked against: a changed password is unchecked
+   again. */
+const pwLeaks=new Map();   // account id -> {pw, n}
+let pwLeakState=null;      // null, "busy", {at, n, err}
+const PWNED_RANGE="https://api.pwnedpasswords.com/range/";
+function pwLeakOf(a){const r=a&&pwLeaks.get(a.id);return r&&r.pw===a.password?r.n:null}
+async function sha1Hex(str){
+  const b=await crypto.subtle.digest("SHA-1",new TextEncoder().encode(str));
+  return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("").toUpperCase();
+}
+async function pwnedRange(prefix){
+  const o={referrerPolicy:"no-referrer",cache:"no-store",credentials:"omit"};
+  let r;
+  // a browser or network that won't send the padding header cross-origin still gets
+  // the check: the five characters are all that is sent either way
+  try{r=await fetch(PWNED_RANGE+prefix,{...o,headers:{"Add-Padding":"true"}})}
+  catch(e){r=await fetch(PWNED_RANGE+prefix,o)}
+  if(!r.ok)throw new Error("HTTP "+r.status);
+  const out=new Map();
+  for(const line of (await r.text()).split(/\r?\n/)){
+    const i=line.indexOf(":");if(i<0)continue;
+    // the padding rows have a count of 0, which reads as not leaked
+    out.set(line.slice(0,i).trim().toUpperCase(),parseInt(line.slice(i+1),10)||0);
+  }
   return out;
 }
+async function checkPwLeaks(){
+  if(pwLeakState==="busy")return;
+  const list=accounts.filter(a=>a.password);
+  if(!list.length){toast("No passwords saved yet");return}
+  pwLeakState="busy";renderPwCheck();
+  try{
+    const hashes=new Map(), ranges=new Map();
+    for(const a of list)if(!hashes.has(a.password))hashes.set(a.password,await sha1Hex(a.password));
+    for(const h of hashes.values()){const p=h.slice(0,5);if(!ranges.has(p))ranges.set(p,await pwnedRange(p))}
+    for(const a of list){const h=hashes.get(a.password);pwLeaks.set(a.id,{pw:a.password,n:ranges.get(h.slice(0,5)).get(h.slice(5))||0})}
+    pwLeakState={at:Date.now(),n:list.length};
+  }catch(e){pwLeakState={at:Date.now(),err:true}}
+  renderPwCheck();
+  for(const a of list)if(openLogin.has(a.id))renderCard(a.id);
+}
+function pwLeakText(n){return"Found in data leaks "+(n===1?"once":fmtN(n)+" times")}
 function pwSameText(same){
   const names=same.slice(0,2).map(b=>esc(plainName(b)));
   return"Same password as "+names.join(", ")+(same.length>2?" and "+(same.length-2)+" more":"");
@@ -4726,9 +4783,9 @@ function pwSameText(same){
 // under the password in a card's login: what the check-up found, where you'd change it
 function pwWarnHTML(a){
   if(!a.password)return"";
-  const same=pwShared(a), weak=pwWeak(a);
-  const bits=[same.length&&pwSameText(same),weak&&esc(weak)].filter(Boolean);
-  return bits.length?`<div class="lwarn">${icon("alert")}<span>${bits.join(" · ")}</span></div>`:"";
+  const same=pwShared(a), weak=pwWeak(a), leak=pwLeakOf(a);
+  const bits=[leak&&pwLeakText(leak),same.length&&pwSameText(same),weak&&esc(weak)].filter(Boolean);
+  return bits.length?`<div class="lwarn${leak?" bad":""}">${icon("alert")}<span>${bits.join(" · ")}</span></div>`:"";
 }
 
 // ---------- rank data: parser + fetch cascade ----------
@@ -8812,15 +8869,24 @@ function renderPwMeter(){
 function renderPwCheck(){
   const el=$("sPwList");if(!el)return;
   const withPw=accounts.filter(a=>a.password).length, f=pwFindings();
-  const reused=f.filter(x=>x.same.length).length, weak=f.filter(x=>x.weak).length;
+  const reused=f.filter(x=>x.same.length).length, weak=f.filter(x=>x.weak).length, leaked=f.filter(x=>x.leak>0).length;
   $("sPwSum").textContent=!withPw?"No passwords saved yet."
     :!f.length?(withPw===1?"The one saved password is fine.":"All "+withPw+" saved passwords are different, and none is weak.")
     :withPw===1?"The one saved password could be safer."
-    :f.length+" of "+withPw+" passwords could be safer: "+[reused&&reused+" used on more than one account",weak&&weak+" weak"].filter(Boolean).join(", ")+".";
+    :f.length+" of "+withPw+" passwords could be safer: "+[leaked&&leaked+" found in data leaks",reused&&reused+" used on more than one account",weak&&weak+" weak"].filter(Boolean).join(", ")+".";
   setHTML(el,f.map(x=>`<div class="pwc-row"><div class="t"><span class="n">${nameOf(x.a)}</span>`
-    +`<span class="why">${[x.same.length&&pwSameText(x.same),x.weak&&esc(x.weak)].filter(Boolean).join(" · ")}</span></div>`
+    +`<span class="why">${[x.leak&&`<span class="bad">${pwLeakText(x.leak)}</span>`,x.same.length&&pwSameText(x.same),x.weak&&esc(x.weak)].filter(Boolean).join(" · ")}</span></div>`
     +`<button type="button" data-pwedit="${idAttr(x.a.id)}">Change</button></div>`).join(""));
+  const st=pwLeakState, btn=$("sPwLeaks");
+  btn.disabled=st==="busy"||!withPw;
+  btn.textContent=st==="busy"?"Checking…":st&&!st.err?"Check again":"Check for leaks";
+  // what was found is said once, in the list above; this line is about the check
+  $("sPwLeakNote").textContent=st==="busy"?"Asking Have I Been Pwned…"
+    :st&&st.err?"Couldn't reach Have I Been Pwned. Check the connection and try again."
+    :st?"Checked "+timeAgo(st.at)+(leaked?".":": none of your passwords is in a known leak.")
+    :"Looks each password up in Have I Been Pwned's list of leaked passwords. Only the first 5 characters of its SHA-1 fingerprint are sent, never the password.";
 }
+$("sPwLeaks").addEventListener("click",checkPwLeaks);
 $("sPwList").addEventListener("click",e=>{
   const b=e.target.closest("[data-pwedit]");if(!b)return;
   const acc=accounts.find(a=>a.id===b.dataset.pwedit);if(acc)openForm(acc,"password");
@@ -10118,7 +10184,7 @@ function palCommands(){
       cfg.density=ui.density;saveCfg();openInfo.clear();render();
     }},
     {k:"settings",n:"Settings",s:"Rank checks, alerts, security, appearance",i:"user",run:()=>openSettings()},
-    {k:"password check security reused weak",n:"Password check-up",s:"Passwords used twice, or weak",i:"alert",run:()=>openSettings("security")},
+    {k:"password check security reused weak leak pwned",n:"Password check-up",s:"Passwords used twice, weak, or in a data leak",i:"alert",run:()=>openSettings("security")},
     {k:"newseason",n:"New season",s:"Move every ranked account's rank into Past seasons",i:"refresh",run:()=>newSeasonAll()},
     {k:"streamer",n:"Streamer mode",s:"Hide Riot IDs, logins, emails and notes on screen (H)",i:"eye",run:()=>setStreamer(!streamerOn())},
     {k:"export backup",n:"Export backup",s:"Download the vault as JSON",i:"clipboard",run:()=>doExport()},
@@ -10771,7 +10837,7 @@ function relock(){
   if(!envelope)envelope=currentEnvelope;
   // The derived key goes with the password: leaving it behind would keep the one
   // thing that opens the vault sitting in memory across a lock.
-  vaultPassword=null;forgetVaultKey();accounts=[];formCache.clear();
+  vaultPassword=null;forgetVaultKey();accounts=[];formCache.clear();pwLeaks.clear();pwLeakState=null;
   dismissToast(); // drop Delete→Undo before it can rehydrate secrets into a locked vault
   // Clear a copied account password if we still know what it was — lock does not
   // mean "leave the last password on the clipboard for thirty seconds". Write
