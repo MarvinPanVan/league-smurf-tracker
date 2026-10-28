@@ -3295,6 +3295,24 @@ test("sorting by level and by LP change", () => {
   assert.deepEqual(names(), ["low", "high"], "biggest climb first");
 });
 
+test("sorting by last opened: the account you were just on first, never-opened ones last", () => {
+  const now = Date.now();
+  const mk = (id, lastLoginAt) => ({ id, gameName: id, tagLine: "EUW", region: "EUW", status: "active", lastLoginAt,
+    stats: { found: true, tier: "GOLD", division: "II", lp: 10, updatedAt: now }, history: [] });
+  const win = bootApp([mk("never"), mk("week", now - 7 * 864e5), mk("junk", "soon"), mk("now", now - 60000)]);
+  const names = () => [...win.document.querySelectorAll(".c-name span")].map(n => n.textContent);
+  const sort = win.document.getElementById("tSort");
+  assert.ok([...sort.options].some(o => o.value === "opened" && /Last opened/.test(o.textContent)));
+  sort.value = "opened"; sort.dispatchEvent(new win.Event("change"));
+  assert.deepEqual(names().slice(0, 2), ["now", "week"], "most recently opened first");
+  assert.deepEqual(names().slice(2).sort(), ["junk", "never"], "no stamp, or a broken one, sorts last");
+  // opening a login doesn't make the card jump while you're using it
+  win.document.querySelector('.card[data-id="never"] [data-act="login"]').click();
+  assert.deepEqual(names().slice(0, 2), ["now", "week"]);
+  sort.dispatchEvent(new win.Event("change"));
+  assert.equal(names()[0], "never", "it moves up on the next sort");
+});
+
 test("advice naming a control that no longer exists is rewritten on load", () => {
   // the note is written into the account and then kept forever, so cards were
   // still telling people to use Paste two versions after it was removed

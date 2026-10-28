@@ -2914,6 +2914,7 @@
       <option value="away">Sort: While away</option>
       <option value="climb">Sort: Climbing fastest</option>
       <option value="updated">Sort: Last updated</option>
+      <option value="opened">Sort: Last opened</option>
     </select>
     <select id="tStatus">
       <option value="">All statuses</option>
@@ -6087,6 +6088,9 @@ function filtered(){
     rank:(x,y)=>rankValue(y.stats)-rankValue(x.stats),
     name:(x,y)=>(x.label||x.gameName).localeCompare(y.label||y.gameName),
     updated:(x,y)=>((y.stats&&y.stats.updatedAt)||0)-((x.stats&&x.stats.updatedAt)||0),
+    // the stamp the Login button leaves ("Opened 3 days ago"): the account you were
+    // just on comes first, the ones you never open sink to the bottom
+    opened:(x,y)=>openedAt(y)-openedAt(x),
     // the only number that matters on an account that isn't ranked yet
     level:(x,y)=>((y.stats&&y.stats.level)||0)-((x.stats&&x.stats.level)||0),
     change:(x,y)=>lastDelta(y)-lastDelta(x),
@@ -6104,6 +6108,7 @@ function filtered(){
   return list;
 }
 let awayDelta=new Map();
+function openedAt(a){const t=Number(a.lastLoginAt);return Number.isFinite(t)&&t>0?t:0}
 
 // ---------- DOM patching ----------
 // Regenerating a card's markup is cheap; throwing its DOM away is not. Replacing
