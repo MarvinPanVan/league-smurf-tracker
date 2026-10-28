@@ -1392,6 +1392,20 @@ test("card art: a picked skin shows its portrait at once, the last splash stays 
   assert.deepEqual(layers(), ["ap-ph:loading/Kaisa_1.jpg"], "a skin with no splash keeps its portrait as the banner");
 });
 
+test("card art: a saved skin that no longer exists opens on the default, ready to save", async () => {
+  const calls = [];
+  const acc = { id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [],
+    art: { champ: "Kaisa", skin: 15, name: "K/DA ALL OUT Kai'Sa (Ruby)" } };
+  const win = bootApp([acc], w => dataDragon(w, calls));
+  const doc = win.document, $ = id => doc.getElementById(id);
+  cardMenu(win, "a").querySelector('[data-act="art"]').click();
+  await until(() => doc.querySelectorAll("#apGrid [data-skin]").length >= 3, "skins");
+  assert.equal(doc.querySelector("#apGrid .ap-sk.on").dataset.skin, "0", "the chroma is gone from the list, so the default is picked");
+  assert.equal($("apUse").disabled, false, "and Save can put that on the card straight away");
+  $("apUse").click();
+  await until(() => JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].art.skin === 0, "saved");
+});
+
 test("card art strength: a slider with a preview, for this card or every card, without pinning the art", async () => {
   const calls = [];
   const acc = (id, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],

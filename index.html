@@ -6830,7 +6830,10 @@ function apLoadSkins(){
   ap.skins=null;
   ddSkins(c).then(list=>{if(g!==ap.gen||c!==ap.champ)return;ap.skins=list;ap.err=null;
     // a pick saved from a skin since removed falls back to the default rather than to nothing
-    if(!list.some(s=>s.num===ap.skin)){ap.skin=0;ap.name=""}
+    // a pick saved from a skin since removed (or a chroma, which 2.3.1 stopped
+    // offering) falls back to the default — and that counts as a change, so Save
+    // can put art back on a card that has been showing none
+    if(!list.some(s=>s.num===ap.skin)){ap.skin=0;ap.name="";const own=normArt(apAcc()&&apAcc().art);if(own&&own.champ===c)ap.picked=true}
     renderArtPicker()},
     e=>{if(g!==ap.gen||c!==ap.champ)return;ap.err=e;renderArtPicker()});
 }
