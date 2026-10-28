@@ -514,6 +514,47 @@ test("shift-click extends selection across the range between two cards", () => {
   assert.equal(win.document.getElementById("bulkCount").textContent, "3 selected");
 });
 
+/* Two tabs, one locked. The locked one kept the envelope it had locked on, so
+   unlocking it opened the older vault, and its next save wrote that over what the
+   other tab had added. */
+test("a locked tab opens the vault another tab saved meanwhile, whether or not it heard about it", async () => {
+  const acc = (id, gameName) => ({ id, region: "EUW", gameName, tagLine: "1", status: "active", tags: [], history: [] });
+  for (const heard of [true, false]) {
+    const win = bootApp();
+    addRealAccount(win, "First", "1");
+    win.document.getElementById("sVaultPass").value = "lockme123";
+    win.document.getElementById("sVaultSet").click();
+    await until(() => encrypted(win), "encrypted");
+    win.relock();
+    // the other tab, same password, one more account
+    win.__accs = [acc("x1", "First"), acc("x2", "Second")];
+    runScript(win, 'window.__p = encryptData("lockme123", window.__accs)');
+    const raw = JSON.stringify(await win.__p);
+    win.localStorage.setItem("smurf-tracker", raw);
+    if (heard) win.dispatchEvent(new win.StorageEvent("storage", { key: "smurf-tracker", newValue: raw, storageArea: win.localStorage }));
+    win.document.getElementById("lockPass").value = "lockme123";
+    win.document.getElementById("lockBtn").click();
+    await until(() => win.document.getElementById("lock").classList.contains("hidden"), "unlocked");
+    assert.deepEqual([...win.document.querySelectorAll(".c-name span")].map(n => n.textContent).sort(), ["First", "Second"],
+      heard ? "the envelope that arrived while locked" : "and read again at unlock, for a tab that slept through the event");
+  }
+});
+
+test("a locked tab opens without a password when another tab removes it", async () => {
+  const win = bootApp();
+  addRealAccount(win, "First", "1");
+  win.document.getElementById("sVaultPass").value = "lockme123";
+  win.document.getElementById("sVaultSet").click();
+  await until(() => encrypted(win), "encrypted");
+  win.relock();
+  const raw = JSON.stringify([{ id: "x1", region: "EUW", gameName: "Plain", tagLine: "1", status: "active", tags: [], history: [] }]);
+  win.localStorage.setItem("smurf-tracker", raw);
+  win.dispatchEvent(new win.StorageEvent("storage", { key: "smurf-tracker", newValue: raw, storageArea: win.localStorage }));
+  assert.equal(win.document.getElementById("lock").classList.contains("hidden"), true, "nothing left to unlock");
+  assert.deepEqual([...win.document.querySelectorAll(".c-name span")].map(n => n.textContent), ["Plain"]);
+  assert.match(win.document.getElementById("toast").textContent, /master password was removed in another tab/);
+});
+
 test("relock re-shows the lock screen and clears in-memory accounts; the same password unlocks it again", async () => {
   const win = bootApp();
   addRealAccount(win, "Locked One", "1234");
@@ -1537,6 +1578,8 @@ test("password check-up: lists passwords used twice and weak ones, and never sho
   ], "the accounts sharing one next to each other, then the weak ones");
   const text = doc.getElementById("settings").textContent;
   for (const pw of ["Shared#Pass99xx", "abc12", "kaisa-otp-2024!", "logInH-and-more"]) assert.ok(!text.includes(pw), "no password on screen");
+  assert.deepEqual([...doc.querySelectorAll("#sPwList [data-pwedit]")].map(b => b.getAttribute("aria-label")).slice(0, 3),
+    ["Change the password of Main", "Change the password of Duo", "Change the password of Namec"], "each button says whose");
   // Change goes to that account's password
   doc.querySelector('#sPwList [data-pwedit="c"]').click();
   assert.equal(doc.getElementById("settings").classList.contains("hidden"), true);
@@ -1819,6 +1862,52 @@ test("passkey unlock: changing or removing the master password turns it off, and
   doc.getElementById("sVaultRemove").click();
   await until(() => !encrypted(win), "protection removed");
   assert.equal(pkRec(win), null);
+});
+
+test("dates are where you are: backup and export file names, and the passkey's date", () => {
+  const tz = process.env.TZ;
+  process.env.TZ = "Pacific/Auckland";
+  try {
+    const win = bootApp([pwAcc("a", "Zt7#q!Lm2pWx")]);
+    fakePasskeys(win);
+    // 12:00 UTC on 28 Oct is 01:00 on the 29th in Auckland
+    runScript(win, `(() => { const F = Date.UTC(2026, 9, 28, 12, 0), O = Date;
+      window.Date = class extends O { constructor(...a) { super(...(a.length ? a : [F])) } static now() { return F } };
+      window.__names = []; downloadBlob = (b, n) => __names.push(n);
+      URL.createObjectURL = () => "blob:x"; URL.revokeObjectURL = () => {};
+      HTMLAnchorElement.prototype.click = function () { if (this.download) __names.push(this.download) }; })()`);
+    runScript(win, "doExport()");
+    win.document.getElementById("bExportCsv").click();
+    assert.deepEqual([...win.__names], ["smurf-backup-plaintext-2026-10-29.json", "smurf-export-2026-10-29.csv"]);
+    win.localStorage.setItem("smurf-tracker-passkey", JSON.stringify({ v: 1, id: "AAAA", salt: "AAAA", iv: "AAAA", ct: "AAAA", at: Date.UTC(2026, 9, 28, 12, 0) }));
+    runScript(win, "updatePkStatus()");
+    assert.match(win.document.getElementById("sPkStatus").textContent, /^On in this browser since 29 Oct 2026\./);
+  } finally { process.env.TZ = tz; if (tz === undefined) delete process.env.TZ; }
+});
+
+test("Help names 2.4 and 2.5's features, and doesn't assume sixty accounts", () => {
+  const win = bootApp();
+  const help = win.document.getElementById("help").textContent;
+  for (const w of ["Password check-up", "Face ID", "Windows Hello", "Sort: Last opened", "Settings → Security"]) assert.ok(help.includes(w), w);
+  assert.doesNotMatch(help, /sixty/);
+});
+
+test("passkey unlock: turned on or off in another tab, the lock screen here follows", async () => {
+  const win = await lockedVault("master-pass-123");
+  fakePasskeys(win, { prfAtCreate: true });
+  runScript(win, 'openSettings("security")');
+  win.document.getElementById("sPkSet").click();
+  await until(() => pkRec(win), "set up");
+  const rec = win.localStorage.getItem("smurf-tracker-passkey");
+  win.relock();
+  const pk = win.document.getElementById("lockPk");
+  assert.equal(pk.classList.contains("hidden"), false);
+  const fire = v => { v == null ? win.localStorage.removeItem("smurf-tracker-passkey") : win.localStorage.setItem("smurf-tracker-passkey", v);
+    win.dispatchEvent(new win.StorageEvent("storage", { key: "smurf-tracker-passkey", newValue: v, storageArea: win.localStorage })); };
+  fire(null);
+  assert.equal(pk.classList.contains("hidden"), true, "off over there: no button left that does nothing");
+  fire(rec);
+  assert.equal(pk.classList.contains("hidden"), false, "and on again");
 });
 
 test("passkey unlock: says when it can't be used, and never makes a passkey the device can't use", async () => {
@@ -2873,6 +2962,21 @@ test("the LP chart draws a labelled band per tier crossed, and one point per che
   // the tooltip has to name the actual rank, not just the raw LP number
   assert.match(el.querySelector(".lpc-tip").textContent, /Emerald II . 40 LP/);
   assert.doesNotMatch(html, /undefined|NaN/);
+});
+
+test("a band caption moves to the top of its band when the line starts where it sits", () => {
+  const win = bootApp();
+  const lab = hist => {
+    const el = win.document.createElement("div");
+    el.innerHTML = win.rankChart(hist);
+    const l = [...el.querySelectorAll(".lpc-lab")].find(n => n.textContent === "Diamond");
+    return l && parseFloat(l.style.top);
+  };
+  // Diamond IV 5 LP -> Diamond I 90 LP: the line starts on the band's floor, where the caption sits
+  const up = lab([{ t: 1, tier: "DIAMOND", division: "IV", lp: 5 }, { t: 2, tier: "DIAMOND", division: "I", lp: 90 }]);
+  const down = lab([{ t: 1, tier: "DIAMOND", division: "I", lp: 90 }, { t: 2, tier: "DIAMOND", division: "IV", lp: 5 }]);
+  assert.ok(up < 30, "under the band's top boundary, clear of the line (" + up + ")");
+  assert.ok(down > 50, "where the line starts high, it stays on the floor it names (" + down + ")");
 });
 
 test("the chart's captions keep a dark halo, so the line crossing one doesn't cut through its letters", () => {
