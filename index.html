@@ -4746,6 +4746,7 @@ function pwFindings(){
    again. */
 const pwLeaks=new Map();   // account id -> {pw, n}
 let pwLeakState=null;      // null, "busy", {at, n, err}
+let pwLeakGen=0;           // a lock while a check is out bumps it, and the check drops what it found
 const PWNED_RANGE="https://api.pwnedpasswords.com/range/";
 function pwLeakOf(a){const r=a&&pwLeaks.get(a.id);return r&&r.pw===a.password?r.n:null}
 async function sha1Hex(str){
@@ -4772,14 +4773,20 @@ async function checkPwLeaks(){
   if(pwLeakState==="busy")return;
   const list=accounts.filter(a=>a.password);
   if(!list.length){toast("No passwords saved yet");return}
+  const gen=++pwLeakGen;
   pwLeakState="busy";renderPwCheck();
+  let found=null;
   try{
     const hashes=new Map(), ranges=new Map();
     for(const a of list)if(!hashes.has(a.password))hashes.set(a.password,await sha1Hex(a.password));
     for(const h of hashes.values()){const p=h.slice(0,5);if(!ranges.has(p))ranges.set(p,await pwnedRange(p))}
-    for(const a of list){const h=hashes.get(a.password);pwLeaks.set(a.id,{pw:a.password,n:ranges.get(h.slice(0,5)).get(h.slice(5))||0})}
-    pwLeakState={at:Date.now(),n:list.length};
-  }catch(e){pwLeakState={at:Date.now(),err:true}}
+    found=list.map(a=>{const h=hashes.get(a.password);return[a.id,{pw:a.password,n:ranges.get(h.slice(0,5)).get(h.slice(5))||0}]});
+  }catch(e){}
+  // locked while the requests were out: these accounts and their passwords are gone
+  // from memory, and the results must not bring them back
+  if(gen!==pwLeakGen)return;
+  if(found)for(const [id,r] of found)pwLeaks.set(id,r);
+  pwLeakState=found?{at:Date.now(),n:list.length}:{at:Date.now(),err:true};
   renderPwCheck();
   for(const a of list)if(openLogin.has(a.id))renderCard(a.id);
 }
@@ -10845,7 +10852,7 @@ function relock(){
   if(!envelope)envelope=currentEnvelope;
   // The derived key goes with the password: leaving it behind would keep the one
   // thing that opens the vault sitting in memory across a lock.
-  vaultPassword=null;forgetVaultKey();accounts=[];formCache.clear();pwLeaks.clear();pwLeakState=null;
+  vaultPassword=null;forgetVaultKey();accounts=[];formCache.clear();pwLeaks.clear();pwLeakState=null;pwLeakGen++;
   dismissToast(); // drop Delete→Undo before it can rehydrate secrets into a locked vault
   // Clear a copied account password if we still know what it was — lock does not
   // mean "leave the last password on the clipboard for thirty seconds". Write

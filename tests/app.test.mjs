@@ -1644,6 +1644,27 @@ test("leak check: says when nothing leaked, retries without the padding header, 
   assert.equal(doc.getElementById("sPwLeaks").disabled, false, "and it can be tried again");
 });
 
+test("leak check: locking the vault while it runs leaves no password or result behind", async () => {
+  const win = bootApp();
+  addRealAccount(win, "Locky", "1");
+  runScript(win, "accounts[0].password = 'Shared#Pass99xx'");
+  win.document.getElementById("sVaultPass").value = "lockme12345";
+  win.document.getElementById("sVaultSet").click();
+  await until(() => encrypted(win), "encrypted");
+  let release;
+  const gate = new Promise(r => { release = r; });
+  win.fetch = async () => { await gate; return { ok: true, status: 200, text: async () => sha1("Shared#Pass99xx").slice(5) + ":5" }; };
+  runScript(win, 'openSettings("security")');
+  win.document.getElementById("sPwLeaks").click();
+  await until(() => win.document.getElementById("sPwLeaks").textContent === "Checking…", "the check to start");
+  runScript(win, "relock()");
+  release();
+  await new Promise(r => setTimeout(r, 50));
+  runScript(win, "window.__n = pwLeaks.size; window.__st = JSON.stringify(pwLeakState)");
+  assert.equal(win.__n, 0, "no result, and so no password, kept after the lock");
+  assert.equal(win.__st, "null");
+});
+
 /* Notes with fields: what used to be typed as "honor 3, 140 champs, Elementalist
    Lux" by hand, kept as fields that every card shows the same way. */
 const fieldsAcc = (id, info, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
