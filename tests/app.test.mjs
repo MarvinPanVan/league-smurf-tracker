@@ -1885,6 +1885,13 @@ test("dates are where you are: backup and export file names, and the passkey's d
   } finally { process.env.TZ = tz; if (tz === undefined) delete process.env.TZ; }
 });
 
+test("Help names 2.4 and 2.5's features, and doesn't assume sixty accounts", () => {
+  const win = bootApp();
+  const help = win.document.getElementById("help").textContent;
+  for (const w of ["Password check-up", "Face ID", "Windows Hello", "Sort: Last opened", "Settings → Security"]) assert.ok(help.includes(w), w);
+  assert.doesNotMatch(help, /sixty/);
+});
+
 test("passkey unlock: turned on or off in another tab, the lock screen here follows", async () => {
   const win = await lockedVault("master-pass-123");
   fakePasskeys(win, { prfAtCreate: true });
