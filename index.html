@@ -3845,14 +3845,17 @@ async function pkSetup(password){
     authenticatorSelection:{userVerification:"required",residentKey:"preferred"},
     timeout:120000,extensions:{prf:{eval:{first:salt}}}}});
   const id=new Uint8Array(cred.rawId);
-  const ext=(cred.getClientExtensionResults&&cred.getClientExtensionResults().prf)||{};
-  if(ext.enabled===false){pkSignalGone(id);throw pkNoPrf()}
-  // some devices answer the PRF while the passkey is made, the rest only when it is used
-  let prf=ext.results&&ext.results.first?new Uint8Array(ext.results.first):null;
-  if(!prf){try{prf=await pkEval(id,salt)}catch(e){if(e.name==="NoPrf")pkSignalGone(id);throw e}}
-  const key=await pkWrapKey(prf), iv=crypto.getRandomValues(new Uint8Array(12));
-  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(password));
-  localStorage.setItem(PK_KEY,JSON.stringify({v:1,id:b64(id),salt:b64(salt),iv:b64(iv),ct:b64(new Uint8Array(ct)),at:Date.now()}));
+  // from here the passkey exists: if this goes no further it is of no use, and the
+  // browser is told so, so it can take it out of the password manager
+  try{
+    const ext=(cred.getClientExtensionResults&&cred.getClientExtensionResults().prf)||{};
+    if(ext.enabled===false)throw pkNoPrf();
+    // some devices answer the PRF while the passkey is made, the rest only when it is used
+    const prf=ext.results&&ext.results.first?new Uint8Array(ext.results.first):await pkEval(id,salt);
+    const key=await pkWrapKey(prf), iv=crypto.getRandomValues(new Uint8Array(12));
+    const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(password));
+    localStorage.setItem(PK_KEY,JSON.stringify({v:1,id:b64(id),salt:b64(salt),iv:b64(iv),ct:b64(new Uint8Array(ct)),at:Date.now()}));
+  }catch(e){pkSignalGone(id);e.pkMade=true;throw e}
 }
 async function pkOpen(r){
   const key=await pkWrapKey(await pkEval(unb64(r.id),unb64(r.salt)));
@@ -9009,7 +9012,7 @@ $("sPkSet").addEventListener("click",async()=>{
     toast("Face ID / fingerprint unlock is on for this browser");
   }catch(e){
     toast(e.name==="NoPrf"?"This browser or device can't unlock with a passkey yet. Recent Chrome, Edge and Safari can."
-      :e.name==="NotAllowedError"?"Cancelled — nothing was set up"
+      :e.name==="NotAllowedError"?(e.pkMade?"Cancelled. The passkey made a moment ago won't be used; if your password manager still lists it, you can delete it":"Cancelled — nothing was set up")
       :"Couldn't set it up: "+(e.message||e.name||"unknown error"));
   }finally{b.textContent="Set up";updatePkStatus()}
 });

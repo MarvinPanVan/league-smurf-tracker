@@ -1843,6 +1843,16 @@ test("passkey unlock: says when it can't be used, and never makes a passkey the 
   assert.equal(l.calls.create, 1);
   assert.equal(pkRec(late), null);
   assert.equal(late.document.getElementById("sPkSet").textContent, "Set up");
+  // cancelled at the second prompt, after the passkey was made: the browser is told it is unused
+  const half = await lockedVault("master-pass-123");
+  fakePasskeys(half, { cancelGet: true });
+  const gone = [];
+  half.PublicKeyCredential.signalUnknownCredential = async o => { gone.push(o); };
+  runScript(half, 'openSettings("security")');
+  half.document.getElementById("sPkSet").click();
+  await until(() => /^Cancelled\. The passkey made a moment ago won't be used/.test(half.document.getElementById("toast").textContent), "the toast");
+  assert.equal(pkRec(half), null);
+  assert.equal(JSON.stringify(gone), JSON.stringify([{ rpId: "example.com", credentialId: "BwcHBwE" }]), "its id, base64url, for this site");
 });
 
 /* Notes with fields: what used to be typed as "honor 3, 140 champs, Elementalist
