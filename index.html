@@ -6929,8 +6929,7 @@ function renderArtPicker(){
     ap.focusTile=false;
     if(!$("artPicker").classList.contains("hidden"))tile.focus();
   }
-  apStrength(acc);
-  $("apUse").disabled=!(apArtChanged(acc)||apOpChanged(acc));
+  apControls(acc);
   const auto=acc&&champKey(mainChamp(acc));
   $("apAuto").classList.toggle("hidden",!own);
   $("apAuto").textContent=auto?"Back to most-played":"Remove the art";
@@ -6946,6 +6945,12 @@ function apOpChanged(acc){
   const g=artOpGlobal(), own=normArtOp(acc.artOp);
   if(ap.opAll)return ap.op!==g||accounts.some(a=>normArtOp(a.artOp)!=null);
   return (ap.op===g?null:ap.op)!==own;
+}
+// The strength row and Save, without the grid: dragging the slider fires this
+// sixty times a second, and redrawing forty skin tiles each time made it stutter.
+function apControls(acc){
+  apStrength(acc);
+  $("apUse").disabled=!(apArtChanged(acc)||apOpChanged(acc));
 }
 function apStrength(acc){
   $("apOpV").textContent=ap.op?ap.op+"%":"Hidden";
@@ -7075,8 +7080,8 @@ $("apBack").addEventListener("click",()=>{
   $("apSearch").focus();
 });
 $("apUse").addEventListener("click",apSave);
-$("apOp").addEventListener("input",e=>{ap.op=normArtOp(Number(e.target.value))??ap.op;ap.opTouched=true;renderArtPicker()});
-$("apOpAll").addEventListener("change",e=>{ap.opAll=e.target.checked;ap.opTouched=true;renderArtPicker()});
+$("apOp").addEventListener("input",e=>{ap.op=normArtOp(Number(e.target.value))??ap.op;ap.opTouched=true;apControls(apAcc())});
+$("apOpAll").addEventListener("change",e=>{ap.opAll=e.target.checked;ap.opTouched=true;apControls(apAcc())});
 $("apAuto").addEventListener("click",apAuto);
 $("apCancel").addEventListener("click",closeArtPicker);
 $("apTurnOn").addEventListener("click",()=>{cfg.champArt=null;saveCfg();renderGrid();renderArtPicker();toast("Champion art is on")});

@@ -1431,6 +1431,10 @@ test("card art strength: a slider with a preview, for this card or every card, w
   assert.match($("apPrev").textContent, /Gold I · 5 LP/, "behind this card's own name and rank");
   $("apOpAll").checked = false; $("apOpAll").dispatchEvent(new win.Event("change", { bubbles: true }));
   assert.equal($("apOpHint").textContent, "Only this card");
+  await until(() => doc.querySelector("#apGrid [data-skin]"), "the skins");
+  const tile = doc.querySelector("#apGrid [data-skin]"); tile.dataset.mark = "1";
+  slide(13); slide(12);
+  assert.equal(tile.dataset.mark, "1", "dragging the slider leaves the skin grid alone: no redraw per step");
   $("apUse").click();
   assert.equal(own("a"), "0.12", "this card only");
   assert.equal(own("b"), "");
