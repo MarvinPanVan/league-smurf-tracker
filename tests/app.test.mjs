@@ -1665,6 +1665,215 @@ test("leak check: locking the vault while it runs leaves no password or result b
   assert.equal(win.__st, "null");
 });
 
+/* ---- unlock with a passkey ----
+   A stand-in authenticator: PRF is an HMAC of the input under a secret that never
+   leaves it, the shape real ones have (CTAP2 hmac-secret). The same secret across
+   two windows is the same passkey on the same device. */
+function fakePasskeys(win, opts = {}) {
+  const secret = opts.secret || webcrypto.getRandomValues(new Uint8Array(32));
+  const calls = { create: 0, get: 0, gets: [] };
+  const prf = async salt => {
+    const k = await webcrypto.subtle.importKey("raw", secret, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    return webcrypto.subtle.sign("HMAC", k, salt);
+  };
+  const refuse = () => Object.assign(new Error("The operation either timed out or was not allowed."), { name: "NotAllowedError" });
+  win.PublicKeyCredential = function PublicKeyCredential() {};
+  if (opts.caps) win.PublicKeyCredential.getClientCapabilities = async () => opts.caps;
+  win.isSecureContext = true;
+  Object.defineProperty(win.navigator, "credentials", { configurable: true, value: {
+    async create({ publicKey }) {
+      calls.create++; calls.createOpts = publicKey;
+      if (opts.cancel) throw refuse();
+      const first = publicKey.extensions.prf.eval.first;
+      const prfOut = opts.noPrf ? { enabled: false } : { enabled: true, ...(opts.prfAtCreate ? { results: { first: await prf(first) } } : {}) };
+      return { rawId: new Uint8Array([7, 7, 7, 7, 1]).buffer, getClientExtensionResults: () => ({ prf: prfOut }) };
+    },
+    async get({ publicKey }) {
+      calls.get++; calls.gets.push(publicKey);
+      if (opts.cancelGet) throw refuse();
+      if (opts.noPrfGet) return { getClientExtensionResults: () => ({ prf: {} }) };
+      const first = await prf(publicKey.extensions.prf.eval.first);
+      return { getClientExtensionResults: () => ({ prf: { results: { first } } }) };
+    },
+  } });
+  return { calls, secret };
+}
+const pkRec = w => JSON.parse(w.localStorage.getItem("smurf-tracker-passkey") || "null");
+async function lockedVault(pass, tweak) {
+  const win = bootApp(undefined, tweak);
+  addRealAccount(win, "Vaulted", "1");
+  runScript(win, "accounts[0].password = 'acct-secret-pw'; saveDB()");
+  win.document.getElementById("sVaultPass").value = pass;
+  win.document.getElementById("sVaultSet").click();
+  await until(() => encrypted(win), "the vault to be encrypted");
+  return win;
+}
+
+test("passkey unlock: set up in Security, then Face ID / fingerprint opens the vault, also after a reload", async () => {
+  const win = await lockedVault("master-pass-123");
+  const doc = win.document;
+  const { calls, secret } = fakePasskeys(win);
+  runScript(win, 'openSettings("security")');
+  assert.equal(doc.getElementById("sPkSet").disabled, false);
+  assert.match(doc.getElementById("sPkStatus").textContent, /Makes a passkey on this device. The master password still works/);
+  doc.getElementById("sPkSet").click();
+  // this device only answers the PRF when the passkey is used, and Safari only allows
+  // that from a tap of its own: the second step waits for one
+  await until(() => doc.getElementById("sPkSet").textContent === "Finish set-up", "the second step");
+  assert.equal(calls.create, 1);
+  assert.equal(calls.get, 0, "not used straight on from the first tap");
+  assert.equal(pkRec(win), null);
+  assert.match(doc.getElementById("sPkStatus").textContent, /^Passkey made\. Tap Finish set-up/);
+  doc.getElementById("sPkSet").click();
+  await until(() => pkRec(win), "the wrapped password to be stored");
+  assert.equal(calls.get, 1);
+  assert.equal(calls.createOpts.authenticatorSelection.userVerification, "required", "Face ID / fingerprint, not just a tap");
+  const rec = pkRec(win), raw = JSON.stringify(rec);
+  assert.ok(!raw.includes("master-pass-123") && !Buffer.from(rec.ct, "base64").toString("latin1").includes("master-pass"), "the password is stored only wrapped");
+  await until(() => !doc.getElementById("sPkOff").classList.contains("hidden"), "Turn off to show");
+  assert.match(doc.getElementById("sPkStatus").textContent, /^On in this browser since \d+ \w{3} \d{4}\. The master password still works\.$/);
+  assert.ok(doc.getElementById("sPkSet").classList.contains("hidden"));
+
+  // lock: the passkey button is there and has the focus, and opens the vault
+  win.relock();
+  const pk = doc.getElementById("lockPk");
+  assert.equal(pk.classList.contains("hidden"), false);
+  assert.equal(doc.getElementById("lockTxt").textContent, "Use Face ID / fingerprint, or enter your master password.");
+  await until(() => doc.activeElement === pk, "focus on the passkey button, not the password box");
+  pk.click();
+  await until(() => doc.getElementById("lock").classList.contains("hidden"), "the vault to open");
+  assert.equal(doc.querySelectorAll(".card").length, 1);
+  const g = calls.gets.at(-1);
+  assert.equal(g.userVerification, "required");
+  assert.deepEqual([...new Uint8Array(g.allowCredentials[0].id)], [7, 7, 7, 7, 1], "asks for this vault's passkey only");
+
+  // a reload: the same browser storage, the same passkey on the same device
+  const store = { ...win.localStorage };
+  const win2 = bootApp(undefined, w => { for (const [k, v] of Object.entries(store)) w.localStorage.setItem(k, v); fakePasskeys(w, { secret }); });
+  assert.equal(win2.document.getElementById("lock").classList.contains("hidden"), false);
+  win2.document.getElementById("lockPk").click();
+  await until(() => win2.document.getElementById("lock").classList.contains("hidden"), "the vault to open after a reload");
+  runScript(win2, "window.__pw = accounts[0].password");
+  assert.equal(win2.__pw, "acct-secret-pw");
+  // and a different passkey (another device's) can't
+  const win3 = bootApp(undefined, w => { for (const [k, v] of Object.entries(store)) w.localStorage.setItem(k, v); fakePasskeys(w); });
+  win3.document.getElementById("lockPk").click();
+  await until(() => win3.document.getElementById("lockErr").style.display === "block", "it to be refused");
+  assert.match(win3.document.getElementById("lockErr").textContent, /couldn't use the passkey. Type the master password/);
+  assert.equal(win3.document.getElementById("lock").classList.contains("hidden"), false);
+});
+
+test("passkey unlock: a cancel leaves the password box, and the typed password still works", async () => {
+  const win = await lockedVault("master-pass-123");
+  const doc = win.document;
+  fakePasskeys(win, { prfAtCreate: true });
+  runScript(win, 'openSettings("security")');
+  doc.getElementById("sPkSet").click();
+  await until(() => pkRec(win), "set up");
+  win.relock();
+  fakePasskeys(win, { cancelGet: true });
+  doc.getElementById("lockPk").click();
+  await until(() => doc.getElementById("lockErr").style.display === "block", "the cancel to be said");
+  assert.match(doc.getElementById("lockErr").textContent, /^Cancelled\./);
+  assert.equal(doc.getElementById("lock").classList.contains("hidden"), false);
+  assert.equal(doc.getElementById("lockPk").disabled, false, "and can be tried again");
+  doc.getElementById("lockPass").value = "master-pass-123";
+  doc.getElementById("lockBtn").click();
+  await until(() => doc.getElementById("lock").classList.contains("hidden"), "the typed password to open it");
+  // a wrong typed one still says so
+  win.relock();
+  doc.getElementById("lockPass").value = "nope";
+  doc.getElementById("lockBtn").click();
+  await until(() => doc.getElementById("lockErr").style.display === "block", "the wrong password");
+  assert.equal(doc.getElementById("lockErr").textContent, "Wrong password — try again.");
+});
+
+test("passkey unlock: changing or removing the master password turns it off, and an old one is dropped at the lock", async () => {
+  const win = await lockedVault("master-pass-123");
+  const doc = win.document;
+  fakePasskeys(win, { prfAtCreate: true });
+  runScript(win, 'openSettings("security")');
+  doc.getElementById("sPkSet").click();
+  await until(() => pkRec(win), "set up");
+  const old = win.localStorage.getItem("smurf-tracker-passkey");
+  doc.getElementById("sVaultPass").value = "a-new-master-pass";
+  doc.getElementById("sVaultSet").click();
+  await until(() => !pkRec(win), "the old wrap to go");
+  assert.match(doc.getElementById("toast").textContent, /Set Face ID \/ fingerprint up again in Security/);
+  // the same wrap brought back (another tab, a restored backup of the browser): it opens the old password
+  win.localStorage.setItem("smurf-tracker-passkey", old);
+  win.relock();
+  doc.getElementById("lockPk").click();
+  await until(() => doc.getElementById("lockErr").style.display === "block", "the old password to be refused");
+  assert.match(doc.getElementById("lockErr").textContent, /holds an old master password/);
+  assert.equal(pkRec(win), null, "and it is dropped");
+  assert.equal(doc.getElementById("lockPk").classList.contains("hidden"), true);
+  assert.equal(doc.getElementById("lockTxt").textContent, "Enter your master password to open it.");
+  doc.getElementById("lockPass").value = "a-new-master-pass";
+  doc.getElementById("lockBtn").click();
+  await until(() => doc.getElementById("lock").classList.contains("hidden"), "unlocked");
+  // removing protection takes it too
+  runScript(win, 'openSettings("security")');
+  doc.getElementById("sPkSet").click();
+  await until(() => pkRec(win), "set up again");
+  doc.getElementById("sVaultRemove").click();
+  await until(() => !encrypted(win), "protection removed");
+  assert.equal(pkRec(win), null);
+});
+
+test("passkey unlock: says when it can't be used, and never makes a passkey the device can't use", async () => {
+  // no master password yet
+  const plain = bootApp();
+  fakePasskeys(plain);
+  runScript(plain, 'openSettings("security")');
+  assert.equal(plain.document.getElementById("sPkSet").disabled, true);
+  assert.match(plain.document.getElementById("sPkStatus").textContent, /Set a master password first/);
+  // no passkeys in this browser
+  const none = await lockedVault("master-pass-123");
+  runScript(none, 'openSettings("security")');
+  assert.equal(none.document.getElementById("sPkSet").disabled, true);
+  assert.match(none.document.getElementById("sPkStatus").textContent, /Needs a browser with passkeys/);
+  none.relock();
+  assert.equal(none.document.getElementById("lockPk").classList.contains("hidden"), true);
+  // the browser says up front that it has no PRF: nothing is created
+  const early = await lockedVault("master-pass-123");
+  const e = fakePasskeys(early, { caps: { "extension:prf": false } });
+  runScript(early, 'openSettings("security")');
+  early.document.getElementById("sPkSet").click();
+  await until(() => /can't unlock with a passkey yet/.test(early.document.getElementById("toast").textContent), "the toast");
+  assert.equal(e.calls.create, 0);
+  // the passkey says so only once it exists
+  const late = await lockedVault("master-pass-123");
+  const l = fakePasskeys(late, { noPrf: true });
+  runScript(late, 'openSettings("security")');
+  late.document.getElementById("sPkSet").click();
+  await until(() => /can't unlock with a passkey yet/.test(late.document.getElementById("toast").textContent), "the toast");
+  assert.equal(l.calls.create, 1);
+  assert.equal(pkRec(late), null);
+  assert.equal(late.document.getElementById("sPkSet").textContent, "Set up");
+  // made, then the second step: a cancel can be tried again; a device that can't
+  // answer drops it, and the browser is told the passkey is unused
+  const half = await lockedVault("master-pass-123");
+  fakePasskeys(half, { cancelGet: true });
+  const gone = [];
+  half.PublicKeyCredential.signalUnknownCredential = async o => { gone.push(o); };
+  runScript(half, 'openSettings("security")');
+  const btn = half.document.getElementById("sPkSet");
+  btn.click();
+  await until(() => btn.textContent === "Finish set-up", "the second step");
+  btn.click();
+  await until(() => /^Cancelled\. Tap Finish set-up to try again/.test(half.document.getElementById("toast").textContent), "the cancel");
+  assert.equal(btn.textContent, "Finish set-up");
+  assert.equal(gone.length, 0);
+  fakePasskeys(half, { noPrfGet: true });
+  half.PublicKeyCredential.signalUnknownCredential = async o => { gone.push(o); };
+  btn.click();
+  await until(() => /can't unlock with a passkey yet/.test(half.document.getElementById("toast").textContent), "the toast");
+  assert.equal(pkRec(half), null);
+  assert.equal(btn.textContent, "Set up");
+  assert.equal(JSON.stringify(gone), JSON.stringify([{ rpId: "example.com", credentialId: "BwcHBwE" }]), "its id, base64url, for this site");
+});
+
 /* Notes with fields: what used to be typed as "honor 3, 140 champs, Elementalist
    Lux" by hand, kept as fields that every card shows the same way. */
 const fieldsAcc = (id, info, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],

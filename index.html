@@ -1942,6 +1942,7 @@
   #lockPass{width:100%}
   .lock-err{align-self:stretch;text-align:left;color:var(--danger);font-size:calc(12px*var(--ts));margin-top:8px}
   .lock-go{width:100%;margin-top:14px;padding:11px 16px}
+  .lock-pk{width:100%;margin-top:8px;padding:10px 16px;color:var(--teal-txt)}
   @media (max-width:440px){#lock{margin-top:8vh}.lock-in{padding:34px 22px 26px}.lock-wm{font-size:calc(26px*var(--ts))}}
 
   /* ---- entrances ----
@@ -2392,10 +2393,11 @@
     <div class="lock-sub">Summoner Vault</div>
     <div class="hx-rule" aria-hidden="true"></div>
     <div class="lock-k">Vault locked</div>
-    <p class="lock-txt">Enter your master password to open it.</p>
+    <p class="lock-txt" id="lockTxt">Enter your master password to open it.</p>
     <input type="password" id="lockPass" placeholder="Master password" aria-label="Master password" autocomplete="current-password">
     <div id="lockErr" class="lock-err" role="alert" style="display:none">Wrong password — try again.</div>
     <button id="lockBtn" class="b-gold lock-go">Unlock</button>
+    <button id="lockPk" type="button" class="lock-pk hidden" title="Or Windows Hello, a phone or a security key: whatever holds this vault's passkey">Unlock with Face ID / fingerprint</button>
   </div></div>
 
   <div id="appRoot" class="hidden">
@@ -2691,6 +2693,14 @@
             <button id="sVaultRemove" class="b-danger">Remove protection</button>
           </div>
           <div id="sVaultStatus" class="hint" style="margin-top:2px"></div>
+        </div>
+        <div class="fld fw" style="margin-top:14px">
+          <label>Unlock with Face ID, fingerprint or Windows Hello</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" id="sPkSet">Set up</button>
+            <button type="button" id="sPkOff" class="hidden">Turn off</button>
+          </div>
+          <div id="sPkStatus" class="hint" style="margin-top:2px"></div>
         </div>
         <div class="sub-fld inline" style="padding-left:0;margin-top:14px">
           <label for="sAutoLock">Auto-lock after</label>
@@ -3192,8 +3202,12 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.4.0";
+const APP_VERSION="2.5.0";
 const APP_CHANGELOG=[
+  {v:"2.5.0",items:[
+    "Unlock with Face ID, fingerprint or Windows Hello: Settings › Security",
+    "The master password still works, and is what you need if the passkey is lost",
+  ]},
   {v:"2.4.0",items:[
     "Password check-up (Settings › Security): passwords used twice, weak ones, and data leaks",
     "Sort: Last opened puts the account you were just on first",
@@ -3780,6 +3794,101 @@ async function decryptData(password,envelope){
   try{pt=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,data)}
   catch(e){forgetVaultKey();throw e}   // a key derived from a wrong guess must not linger
   return JSON.parse(new TextDecoder().decode(pt));
+}
+/* ---- unlock with a passkey ----
+   Face ID, a fingerprint or Windows Hello instead of typing the master password.
+   A passkey's PRF extension gives back the same 32 secret bytes each time it is
+   asked with the same input, and only once the person at the device has been
+   checked. Those bytes make a key that wraps the master password, and the wrapped
+   password is all this browser keeps: on unlock the passkey unwraps it and the
+   vault opens exactly as if the password had been typed. The vault, its format and
+   the password are unchanged, the password still opens it anywhere, and this is
+   per browser: nothing about it is synced or exported. */
+const PK_KEY="smurf-tracker-passkey";
+const PK_INFO="smurf-tracker passkey unlock v1";
+function pkRecord(){
+  if(!hasStorage)return null;
+  try{
+    const r=JSON.parse(localStorage.getItem(PK_KEY)||"null");
+    return r&&r.v===1&&["id","salt","iv","ct"].every(k=>typeof r[k]==="string"&&r[k])?r:null;
+  }catch(e){return null}
+}
+function pkForget(){try{if(hasStorage)localStorage.removeItem(PK_KEY)}catch(e){}}
+function pkAvailable(){
+  return !!(window.PublicKeyCredential&&navigator.credentials&&navigator.credentials.create
+    &&(window.isSecureContext??location.protocol==="https:"));
+}
+async function pkWrapKey(prf){
+  const base=await crypto.subtle.importKey("raw",prf,"HKDF",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"HKDF",hash:"SHA-256",salt:new Uint8Array(32),info:new TextEncoder().encode(PK_INFO)},
+    base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+}
+function pkNoPrf(){const e=new Error("This device's passkeys can't unlock a vault");e.name="NoPrf";return e}
+// one use of the passkey: the person is checked, and the PRF bytes for this salt come back
+async function pkEval(id,salt){
+  const cred=await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),
+    allowCredentials:[{type:"public-key",id}],userVerification:"required",timeout:120000,
+    extensions:{prf:{eval:{first:salt}}}}});
+  const r=cred&&cred.getClientExtensionResults&&cred.getClientExtensionResults().prf;
+  const out=r&&r.results&&r.results.first;
+  if(!out)throw pkNoPrf();
+  return new Uint8Array(out);
+}
+async function pkSetup(password){
+  // asked first where the browser can say, so a passkey that can't do this is never made
+  try{
+    const caps=PublicKeyCredential.getClientCapabilities&&await PublicKeyCredential.getClientCapabilities();
+    if(caps&&caps["extension:prf"]===false)throw pkNoPrf();
+  }catch(e){if(e.name==="NoPrf")throw e}
+  const salt=crypto.getRandomValues(new Uint8Array(32));
+  const cred=await navigator.credentials.create({publicKey:{
+    rp:{name:"Smurf Tracker"},
+    user:{id:crypto.getRandomValues(new Uint8Array(16)),name:"Smurf Tracker vault",displayName:"Smurf Tracker vault"},
+    challenge:crypto.getRandomValues(new Uint8Array(32)),
+    pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
+    authenticatorSelection:{userVerification:"required",residentKey:"preferred"},
+    timeout:120000,extensions:{prf:{eval:{first:salt}}}}});
+  const id=new Uint8Array(cred.rawId);
+  // from here the passkey exists: if this goes no further it is of no use, and the
+  // browser is told so, so it can take it out of the password manager
+  try{
+    const ext=(cred.getClientExtensionResults&&cred.getClientExtensionResults().prf)||{};
+    if(ext.enabled===false)throw pkNoPrf();
+    if(ext.results&&ext.results.first){await pkStore(id,salt,new Uint8Array(ext.results.first),password);return true}
+  }catch(e){pkSignalGone(id);throw e}
+  // The rest answer the PRF only when the passkey is used, and Safari allows that
+  // only from a tap of its own, not straight on from this one: the next tap on the
+  // button finishes it.
+  pkPending={id,salt};
+  return false;
+}
+let pkPending=null;   // {id, salt}: a passkey made, waiting for the tap that reads its PRF
+async function pkFinish(password){
+  const p=pkPending;if(!p)return;
+  try{await pkStore(p.id,p.salt,await pkEval(p.id,p.salt),password)}
+  catch(e){
+    if(e.name==="NotAllowedError")throw e;   // cancelled: still waiting, and the button can be tapped again
+    pkDropPending();throw e;
+  }
+  pkPending=null;
+}
+function pkDropPending(){if(pkPending){pkSignalGone(pkPending.id);pkPending=null}}
+async function pkStore(id,salt,prf,password){
+  const key=await pkWrapKey(prf), iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(password));
+  localStorage.setItem(PK_KEY,JSON.stringify({v:1,id:b64(id),salt:b64(salt),iv:b64(iv),ct:b64(new Uint8Array(ct)),at:Date.now()}));
+}
+async function pkOpen(r){
+  const key=await pkWrapKey(await pkEval(unb64(r.id),unb64(r.salt)));
+  return new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(r.iv)},key,unb64(r.ct)));
+}
+// a passkey that turned out useless, or was turned off: where the browser can, it is
+// told so, and may take it out of the password manager
+function pkSignalGone(id){
+  try{
+    if(PublicKeyCredential.signalUnknownCredential)PublicKeyCredential.signalUnknownCredential({rpId:location.hostname,
+      credentialId:b64(id).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}).catch(()=>{});
+  }catch(e){}
 }
 
 // ---------- helpers ----------
@@ -8906,7 +9015,36 @@ $("sPwList").addEventListener("click",e=>{
   const b=e.target.closest("[data-pwedit]");if(!b)return;
   const acc=accounts.find(a=>a.id===b.dataset.pwedit);if(acc)openForm(acc,"password");
 });
-function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted.";renderSetup()}
+function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted.";updatePkStatus();renderSetup()}
+function updatePkStatus(){
+  const r=pkRecord(), ok=pkAvailable();
+  $("sPkSet").classList.toggle("hidden",!!r);$("sPkOff").classList.toggle("hidden",!r);
+  $("sPkSet").disabled=!ok||!vaultPassword;
+  $("sPkSet").textContent=pkPending?"Finish set-up":"Set up";
+  $("sPkStatus").textContent=r?"On in this browser since "+fmtDate(new Date(r.at||Date.now()).toISOString().slice(0,10))+". The master password still works."
+    :!ok?"Needs a browser with passkeys, and the app opened from its https address."
+    :pkPending?"Passkey made. Tap Finish set-up and confirm it once more with Face ID / fingerprint."
+    :!vaultPassword?"Set a master password first. This opens the vault without typing it."
+    :"Makes a passkey on this device. The master password still works, and is what you need if the passkey is lost.";
+}
+$("sPkSet").addEventListener("click",async()=>{
+  if(!vaultPassword||!pkAvailable())return;
+  const b=$("sPkSet");b.disabled=true;b.textContent="Waiting for the passkey…";
+  try{
+    const done=pkPending?(await pkFinish(vaultPassword),true):await pkSetup(vaultPassword);
+    toast(done?"Face ID / fingerprint unlock is on for this browser":"Passkey made. Tap Finish set-up and confirm it once more");
+  }catch(e){
+    toast(e.name==="NoPrf"?"This browser or device can't unlock with a passkey yet. Recent Chrome, Edge and Safari can."
+      :e.name==="NotAllowedError"?(pkPending?"Cancelled. Tap Finish set-up to try again":"Cancelled — nothing was set up")
+      :"Couldn't set it up: "+(e.message||e.name||"unknown error"));
+  }finally{updatePkStatus()}
+});
+$("sPkOff").addEventListener("click",()=>{
+  const r=pkRecord();
+  pkForget();if(r)pkSignalGone(unb64(r.id));
+  updatePkStatus();
+  toast("Turned off. The passkey may still be listed in your password manager; you can delete it there");
+});
 /* Four things make a vault safe to rely on, and a first visit does the first and
    usually stops: accounts in, ranks read, a master password, a backup. Until all
    four are done (or the strip is hidden) they sit above the toolbar as one row of
@@ -9900,9 +10038,11 @@ $("sVaultSet").addEventListener("click",async()=>{
     return;
   }
   $("sVaultPass").value="";
+  // the passkey holds the old password, which no longer opens anything
+  const hadPk=changing&&!!pkRecord();if(hadPk)pkForget();
   updateVaultStatus();syncLockTimer();
   toast(changing
-    ?"Password changed — Push to cloud so other devices get the new ciphertext"
+    ?"Password changed — Push to cloud so other devices get the new ciphertext"+(hadPk?". Set Face ID / fingerprint up again in Security":"")
     :"Vault password set — remember it, there's no way to recover it if lost");
 });
 if($("sLockNow"))$("sLockNow").addEventListener("click",()=>{
@@ -9927,6 +10067,7 @@ $("sVaultRemove").addEventListener("click",async()=>{
     toast("Could not write the vault — the password is still in place");
     return;
   }
+  pkForget();pkDropPending();
   updateVaultStatus();syncLockTimer();
   toast("Password protection removed");
 });
@@ -10800,8 +10941,16 @@ async function tryUnlock(){
   if(!currentEnvelope||unlocking)return;
   const pass=$("lockPass").value;
   if(!pass)return;
+  if(!await unlockWith(pass))lockError("Wrong password — try again.");
+}
+function lockError(msg){
+  const el=$("lockErr");el.textContent=msg;el.style.display="block";
+  $("lockPass").value="";$("lockPass").focus();
+}
+async function unlockWith(pass){
+  if(!currentEnvelope||unlocking)return false;
   unlocking=true;
-  $("lockBtn").disabled=true;
+  $("lockBtn").disabled=true;$("lockPk").disabled=true;
   try{
     const data=await decryptData(pass,currentEnvelope);
     accounts=(Array.isArray(data)?data:[]).map(sanitizeAccount).filter(Boolean);
@@ -10815,23 +10964,49 @@ async function tryUnlock(){
     // current one now that the password is in hand. Same data, same revision —
     // sync must not see the upgrade as an edit.
     if(readSaltField(currentEnvelope.salt).iter<KDF_ITER)saveDB({keepRev:true});
+    return true;
   }catch(e){
-    $("lockErr").style.display="block";
-    $("lockPass").value="";$("lockPass").focus();
+    return false;
   }finally{
     unlocking=false;
-    $("lockBtn").disabled=false;
+    $("lockBtn").disabled=false;$("lockPk").disabled=false;
   }
+}
+async function pkUnlock(){
+  const r=pkRecord();
+  if(!r||!currentEnvelope||unlocking)return;
+  $("lockPk").disabled=true;
+  let pass;
+  try{pass=await pkOpen(r)}
+  catch(e){
+    $("lockPk").disabled=false;
+    lockError(e&&e.name==="NotAllowedError"?"Cancelled. Try Face ID / fingerprint again, or type the master password."
+      :"This browser couldn't use the passkey. Type the master password instead.");
+    return;
+  }
+  if(!await unlockWith(pass)){
+    // it unwrapped, so it is this vault's passkey, holding a password since changed
+    pkForget();updateLockPk();
+    lockError("The passkey holds an old master password. Type the current one, then set Face ID / fingerprint up again in Settings › Security.");
+  }
+}
+function updateLockPk(){
+  const on=!!(pkRecord()&&pkAvailable());
+  $("lockPk").classList.toggle("hidden",!on);
+  $("lockTxt").textContent=on?"Use Face ID / fingerprint, or enter your master password.":"Enter your master password to open it.";
 }
 let unlocking=false;
 $("lockBtn").addEventListener("click",tryUnlock);
+$("lockPk").addEventListener("click",pkUnlock);
 $("lockPass").addEventListener("keydown",e=>{if(e.key==="Enter")tryUnlock()});
 function showLockScreen(envelope){
   currentEnvelope=envelope;
   $("lockErr").style.display="none";
   $("lockPass").value="";
+  updateLockPk();
   $("lock").classList.remove("hidden");
-  setTimeout(()=>$("lockPass").focus(),50);
+  // with a passkey set up, start on its button: focusing the box opens a phone's keyboard over it
+  setTimeout(()=>($("lockPk").classList.contains("hidden")?$("lockPass"):$("lockPk")).focus(),50);
 }
 /* The grid is emptied on a lock, but render() never rewrites the windows over it.
    An auto-lock that landed while an account was open for editing left its login,
@@ -10852,7 +11027,7 @@ function relock(){
   if(!envelope)envelope=currentEnvelope;
   // The derived key goes with the password: leaving it behind would keep the one
   // thing that opens the vault sitting in memory across a lock.
-  vaultPassword=null;forgetVaultKey();accounts=[];formCache.clear();pwLeaks.clear();pwLeakState=null;pwLeakGen++;
+  vaultPassword=null;forgetVaultKey();accounts=[];formCache.clear();pwLeaks.clear();pwLeakState=null;pwLeakGen++;pkDropPending();
   dismissToast(); // drop Delete→Undo before it can rehydrate secrets into a locked vault
   // Clear a copied account password if we still know what it was — lock does not
   // mean "leave the last password on the clipboard for thirty seconds". Write
