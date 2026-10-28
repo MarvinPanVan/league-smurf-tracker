@@ -26,6 +26,24 @@ With a master password set:
 **Copied passwords** are cleared from the clipboard after 30 seconds, and when the
 vault locks.
 
+**Unlock with Face ID, fingerprint or Windows Hello** (Settings → Security, optional)
+uses a passkey on your device instead of typing the master password:
+
+- **What is stored:** the master password, encrypted with AES-256-GCM under a key
+  that only the passkey can produce. The key comes from the passkey's PRF extension,
+  through HKDF. Next to it are the passkey's id and the PRF input. That is all, in
+  this browser only (`smurf-tracker-passkey`); it is never synced or exported.
+- **What it takes to open:** the passkey asks for your face, fingerprint or device PIN
+  every time (user verification is required), and nothing here can unwrap the
+  password without it. Anyone who can pass that check on your device can open the
+  vault, so leave it off on a shared computer.
+- **The master password still works**, on this device and every other, and is what
+  you need if the passkey is lost. Changing or removing the master password turns
+  this off; set it up again afterwards.
+- **Turning it off** deletes the wrapped password. The passkey may stay listed in your
+  password manager; you can delete it there.
+- Nothing is sent anywhere: the passkey is used by your device, not by a server.
+
 **Storage persistence.** Browsers may delete `localStorage`: when space runs low, or
 in Safari after 7 days without a visit. The app asks the browser to keep the vault
 (Settings → Security → Storage shows whether it agreed). Keep a backup either way.
