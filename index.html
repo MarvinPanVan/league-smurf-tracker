@@ -1456,6 +1456,10 @@
     color:var(--faint);box-shadow:none}
   .lpc-range button:hover{background:#ffffff1c;border-color:transparent;color:var(--text)}
   .lpc-range button.on{background:color-mix(in srgb,var(--teal) 22%,transparent);color:var(--teal-txt)}
+  /* The line passes under the captions wherever it climbs through a band's
+     corner, and ran straight through them: "GOLD" read as a line with letters
+     on it. A halo in the plot's own dark lifts the letters off it. */
+  .lpc-plot .lpc-lab,.lpc-plot .lpc-sub,.lpc-plot .lpc-peak{text-shadow:0 0 1px #0b0e14,0 0 2px #0b0e14,0 0 3px #0b0e14,0 0 6px #0b0e14cc}
   .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:calc(9px*var(--ts));font-weight:600;letter-spacing:.09em;
     text-transform:uppercase;pointer-events:none;opacity:.82;line-height:1}
   /* the ceiling the line is climbing back towards; left lane, with the band

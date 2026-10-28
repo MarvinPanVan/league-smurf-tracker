@@ -2501,6 +2501,17 @@ test("the LP chart draws a labelled band per tier crossed, and one point per che
   assert.doesNotMatch(html, /undefined|NaN/);
 });
 
+test("the chart's captions keep a dark halo, so the line crossing one doesn't cut through its letters", () => {
+  // measured in Chromium: the line ran through "GOLD" and the "II" beside the latest point
+  const rule = html.match(/\n  ([^{\n]*\.lpc-lab[^{\n]*)\{text-shadow:([^}]*)\}/);
+  assert.ok(rule, "one text-shadow rule for the captions");
+  for (const sel of [".lpc-plot .lpc-lab", ".lpc-plot .lpc-sub", ".lpc-plot .lpc-peak"])
+    assert.ok(rule[1].split(",").map(x => x.trim()).includes(sel), sel + " has it");
+  const layers = rule[2].split(/,(?![^(]*\))/);
+  assert.ok(layers.length >= 3, "stacked, since one soft shadow is too faint to hide a 2px line");
+  assert.ok(layers.every(l => /^0 0 \d+px #0b0e14/.test(l.trim())), "centred, in the plot's own dark");
+});
+
 test("one check still gets a chart — it says where on the ladder the account sits", () => {
   const win = bootApp();
   const el = chartDom(win, [{ t: Date.now(), tier: "GOLD", division: "I", lp: 10 }]);
