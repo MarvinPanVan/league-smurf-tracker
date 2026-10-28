@@ -1578,6 +1578,8 @@ test("password check-up: lists passwords used twice and weak ones, and never sho
   ], "the accounts sharing one next to each other, then the weak ones");
   const text = doc.getElementById("settings").textContent;
   for (const pw of ["Shared#Pass99xx", "abc12", "kaisa-otp-2024!", "logInH-and-more"]) assert.ok(!text.includes(pw), "no password on screen");
+  assert.deepEqual([...doc.querySelectorAll("#sPwList [data-pwedit]")].map(b => b.getAttribute("aria-label")).slice(0, 3),
+    ["Change the password of Main", "Change the password of Duo", "Change the password of Namec"], "each button says whose");
   // Change goes to that account's password
   doc.querySelector('#sPwList [data-pwedit="c"]').click();
   assert.equal(doc.getElementById("settings").classList.contains("hidden"), true);

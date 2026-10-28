@@ -9014,7 +9014,8 @@ function renderPwCheck(){
     :f.length+" of "+withPw+" passwords could be safer: "+[leaked&&leaked+" found in data leaks",reused&&reused+" used on more than one account",weak&&weak+" weak"].filter(Boolean).join(", ")+".";
   setHTML(el,f.map(x=>`<div class="pwc-row"><div class="t"><span class="n">${nameOf(x.a)}</span>`
     +`<span class="why">${[x.leak&&`<span class="bad">${pwLeakText(x.leak)}</span>`,x.same.length&&pwSameText(x.same),x.weak&&esc(x.weak)].filter(Boolean).join(" · ")}</span></div>`
-    +`<button type="button" data-pwedit="${idAttr(x.a.id)}">Change</button></div>`).join(""));
+    // "Change" alone, row after row, says nothing to a screen reader
+    +`<button type="button" data-pwedit="${idAttr(x.a.id)}" aria-label="Change the password of ${esc(plainName(x.a))}">Change</button></div>`).join(""));
   const st=pwLeakState, btn=$("sPwLeaks");
   btn.disabled=st==="busy"||!withPw;
   btn.textContent=st==="busy"?"Checking…":st&&!st.err?"Check again":"Check for leaks";
