@@ -42,9 +42,11 @@ in Safari after 7 days without a visit. The app asks the browser to keep the vau
 | **Discord decay alerts**, if you turn them on | Your Diamond+ accounts' Riot IDs, labels and decay estimates, and your Discord webhook URL, in plain text | Your own Cloudflare worker's KV; the worker posts to your webhook |
 | Loading the page                       | Ordinary requests for fonts, rank icons and, unless you turn it off, champion art (the request names the champion) | Google Fonts, op.gg's image CDN, Riot's Data Dragon |
 | Opening **Card art…**                  | Requests for the champion list, one champion's skin list and their pictures. Nothing about you or the account | Riot's Data Dragon |
+| **Check for leaks** in the password check-up, only when you press it | The first 5 characters of each saved password's SHA-1 hash, once per distinct password. Never the password or the rest of the hash: the reply lists every leaked hash starting with those 5 characters, padded with dummies, and the match is made in your browser | Have I Been Pwned (api.pwnedpasswords.com) |
 
 Logins, passwords and emails are never sent anywhere, except inside the encrypted
-blob when you use device sync.
+blob when you use device sync, and the 5-character hash prefixes of the leak check
+above, which cannot be turned back into a password.
 
 **Shared snapshots.** *Share a snapshot* puts a read-only page of your ranks into a
 link. Nothing is uploaded: the data is in the part of the link after `#`, which

@@ -3192,8 +3192,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.3.5";
+const APP_VERSION="2.4.0";
 const APP_CHANGELOG=[
+  {v:"2.4.0",items:[
+    "Password check-up (Settings › Security): passwords used twice, weak ones, and data leaks",
+    "Sort: Last opened puts the account you were just on first",
+    "The leak check sends only 5 characters of a scrambled copy, never a password",
+  ]},
   {v:"2.3.5",items:[
     "Card art… opens again for accounts with no champion yet",
     "Card art: the strength preview matches the card, and phones get a full row of skins",
