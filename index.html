@@ -1530,6 +1530,22 @@
   .lrow .lk{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.1em;text-transform:uppercase;
     color:var(--faint);margin-right:9px}
   .lrow .lage{font-style:normal;font-size:calc(11px*var(--ts));color:var(--faint);margin-left:9px}
+  /* what the password check-up found about this one, where you would change it */
+  .lwarn{display:flex;align-items:flex-start;gap:7px;font-size:calc(12px*var(--ts));line-height:1.4;color:var(--gold-txt)}
+  .lwarn .ico{width:14px;height:14px;flex-shrink:0;margin-top:1px}
+  .lwarn.bad,.pwc-row .why .bad{color:var(--danger)}
+  .pwc-leak{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;margin-top:12px}
+  .pwc-leak .hint{flex:1 1 260px;margin:0}
+  .pwc-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .pwc-list:empty{display:none}
+  .pwc-row{display:flex;align-items:center;gap:12px;padding:8px 10px 8px 12px;
+    border:1px solid var(--line);border-radius:var(--r-sm);background:#00000026}
+  /* name and reason side by side, the reason under the name when there's no room;
+     Change stays beside them either way */
+  .pwc-row .t{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px}
+  .pwc-row .n{font-weight:600;color:var(--text);min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pwc-row .why{min-width:0;font-size:calc(12px*var(--ts));color:var(--gold-txt)}
+  .pwc-row button{flex-shrink:0;padding:5px 11px;font-size:calc(12px*var(--ts))}
   /* Beside the name in all three layouts, because the point of the flag is that
      you spot it without having opened anything. */
   /* Drawn only when there is a goal. An account with nothing to climb towards
@@ -1789,6 +1805,9 @@
   .sub-fld.inline{align-items:center;gap:10px}
   .sub-fld.inline>label,.sub-fld.inline>span{flex:none;color:var(--muted);font-size:calc(13px*var(--ts))}
   .sub-fld.inline select,.sub-fld.inline input[type=number]{width:auto;min-width:0;padding:6px 10px;font-size:calc(13px*var(--ts))}
+  /* the arrow is drawn 10px in from the right and is 13px wide: the shorthand
+     above took the room select{} leaves for it, and "Off — never" ran under it */
+  .sub-fld.inline select{padding-right:30px}
   .sub-fld input[type=checkbox]{margin-top:3px}
   .chk{display:flex;align-items:center;gap:9px}
   .chk label{font-size:calc(13px*var(--ts));color:var(--text);line-height:1.45}
@@ -2682,6 +2701,15 @@
           <button type="button" id="sLockNow" class="b-danger" title="Lock the vault now — needs the master password to open again">Lock now</button>
           <div class="hint" style="margin-top:6px">Locks this tab immediately. Other open tabs keep their own unlock state until you reload them.</div>
         </div>
+        <div class="fld fw" style="margin-top:22px">
+          <label>Password check-up</label>
+          <div id="sPwSum" class="hint" style="margin:0"></div>
+          <div id="sPwList" class="pwc-list"></div>
+          <div class="pwc-leak">
+            <button type="button" id="sPwLeaks">Check for leaks</button>
+            <span id="sPwLeakNote" class="hint"></span>
+          </div>
+        </div>
       </div>
 
       <div class="grp" data-tab="sync">
@@ -2914,6 +2942,7 @@
       <option value="away">Sort: While away</option>
       <option value="climb">Sort: Climbing fastest</option>
       <option value="updated">Sort: Last updated</option>
+      <option value="opened">Sort: Last opened</option>
     </select>
     <select id="tStatus">
       <option value="">All statuses</option>
@@ -3163,8 +3192,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.3.5";
+const APP_VERSION="2.4.0";
 const APP_CHANGELOG=[
+  {v:"2.4.0",items:[
+    "Password check-up (Settings › Security): passwords used twice, weak ones, and data leaks",
+    "Sort: Last opened puts the account you were just on first",
+    "The leak check sends only 5 characters of a scrambled copy, never a password",
+  ]},
   {v:"2.3.5",items:[
     "Card art… opens again for accounts with no champion yet",
     "Card art: the strength preview matches the card, and phones get a full row of skins",
@@ -4676,6 +4710,98 @@ function passwordStrength(p){
   const labels=["Very weak","Weak","Fair","Good","Strong"];
   return{score,label:labels[Math.min(score,5)-1]||"Very weak"};
 }
+/* ---- password check-up ----
+   A password manager's security check, done in this browser: the same password
+   on more than one account, where one leak opens every one of them, and weak
+   ones, by the form meter's measure or with the username or Riot name in them. */
+function pwWeak(a){
+  const p=a&&a.password;if(!p)return null;
+  const low=p.toLowerCase();
+  for(const [v,what] of [[a.login,"the username"],[a.gameName,"the Riot name"]]){
+    const s=String(v||"").toLowerCase();
+    if(s.length>=4&&low.includes(s))return"Has "+what+" in it";
+  }
+  if(passwordStrength(p).score>2)return null;
+  return p.length<8?"Only "+p.length+" character"+(p.length===1?"":"s"):"Easy to guess";
+}
+function pwShared(a){return a&&a.password?accounts.filter(b=>b!==a&&b.password===a.password):[]}
+function pwFindings(){
+  const by=new Map();
+  for(const a of accounts)if(a.password)by.set(a.password,(by.get(a.password)||[]).concat(a));
+  const out=[];
+  // the accounts sharing a password next to each other, then the weak ones on their own
+  for(const g of by.values())if(g.length>1)for(const a of g)out.push({a,same:g.filter(b=>b!==a),weak:pwWeak(a),leak:pwLeakOf(a)});
+  for(const g of by.values())if(g.length===1){
+    const a=g[0], w=pwWeak(a), l=pwLeakOf(a);
+    if(w||l)out.push({a,same:[],weak:w,leak:l});
+  }
+  // a leaked one first: that password is in the lists people try first
+  return out.sort((x,y)=>(y.leak>0)-(x.leak>0));
+}
+/* Leaks: Have I Been Pwned's Pwned Passwords, searched by range. Only the first
+   five characters of the password's SHA-1 leave this browser. The reply is every
+   leaked hash that starts with them, padded with dummies so its size says nothing
+   either, and the match is made here. Only when asked, and kept for this session
+   only, for the password it was checked against: a changed password is unchecked
+   again. */
+const pwLeaks=new Map();   // account id -> {pw, n}
+let pwLeakState=null;      // null, "busy", {at, n, err}
+let pwLeakGen=0;           // a lock while a check is out bumps it, and the check drops what it found
+const PWNED_RANGE="https://api.pwnedpasswords.com/range/";
+function pwLeakOf(a){const r=a&&pwLeaks.get(a.id);return r&&r.pw===a.password?r.n:null}
+async function sha1Hex(str){
+  const b=await crypto.subtle.digest("SHA-1",new TextEncoder().encode(str));
+  return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("").toUpperCase();
+}
+async function pwnedRange(prefix){
+  const o={referrerPolicy:"no-referrer",cache:"no-store",credentials:"omit"};
+  let r;
+  // a browser or network that won't send the padding header cross-origin still gets
+  // the check: the five characters are all that is sent either way
+  try{r=await fetch(PWNED_RANGE+prefix,{...o,headers:{"Add-Padding":"true"}})}
+  catch(e){r=await fetch(PWNED_RANGE+prefix,o)}
+  if(!r.ok)throw new Error("HTTP "+r.status);
+  const out=new Map();
+  for(const line of (await r.text()).split(/\r?\n/)){
+    const i=line.indexOf(":");if(i<0)continue;
+    // the padding rows have a count of 0, which reads as not leaked
+    out.set(line.slice(0,i).trim().toUpperCase(),parseInt(line.slice(i+1),10)||0);
+  }
+  return out;
+}
+async function checkPwLeaks(){
+  if(pwLeakState==="busy")return;
+  const list=accounts.filter(a=>a.password);
+  if(!list.length){toast("No passwords saved yet");return}
+  const gen=++pwLeakGen;
+  pwLeakState="busy";renderPwCheck();
+  let found=null;
+  try{
+    const hashes=new Map(), ranges=new Map();
+    for(const a of list)if(!hashes.has(a.password))hashes.set(a.password,await sha1Hex(a.password));
+    for(const h of hashes.values()){const p=h.slice(0,5);if(!ranges.has(p))ranges.set(p,await pwnedRange(p))}
+    found=list.map(a=>{const h=hashes.get(a.password);return[a.id,{pw:a.password,n:ranges.get(h.slice(0,5)).get(h.slice(5))||0}]});
+  }catch(e){}
+  // locked while the requests were out: these accounts and their passwords are gone
+  // from memory, and the results must not bring them back
+  if(gen!==pwLeakGen)return;
+  if(found)for(const [id,r] of found)pwLeaks.set(id,r);
+  pwLeakState=found?{at:Date.now(),n:list.length}:{at:Date.now(),err:true};
+  renderPwCheck();
+  for(const a of list)if(openLogin.has(a.id))renderCard(a.id);
+}
+function pwLeakText(n){return"Found in data leaks "+(n===1?"once":fmtN(n)+" times")}
+function pwSameText(same){
+  const names=same.slice(0,2).map(b=>esc(plainName(b)));
+  return"Same password as "+names.join(", ")+(same.length>2?" and "+(same.length-2)+" more":"");
+}
+// under the password in a card's login: what the check-up found, where you'd change it
+function pwWarnHTML(a){
+  if(!a.password)return"";
+  const same=pwShared(a), weak=pwWeak(a), leak=pwLeakOf(a);
+  const bits=[leak&&pwLeakText(leak),same.length&&pwSameText(same),weak&&esc(weak)].filter(Boolean);
+  return bits.length?`<div class="lwarn${leak?" bad":""}">${icon("alert")}<span>${bits.join(" · ")}</span></div>`:"";
+}
 
 // ---------- rank data: parser + fetch cascade ----------
 // Body text uses thousands separators ("4,011 LP"); meta keeps bare digits ("4011LP").
@@ -6087,6 +6213,9 @@ function filtered(){
     rank:(x,y)=>rankValue(y.stats)-rankValue(x.stats),
     name:(x,y)=>(x.label||x.gameName).localeCompare(y.label||y.gameName),
     updated:(x,y)=>((y.stats&&y.stats.updatedAt)||0)-((x.stats&&x.stats.updatedAt)||0),
+    // the stamp the Login button leaves ("Opened 3 days ago"): the account you were
+    // just on comes first, the ones you never open sink to the bottom
+    opened:(x,y)=>openedAt(y)-openedAt(x),
     // the only number that matters on an account that isn't ranked yet
     level:(x,y)=>((y.stats&&y.stats.level)||0)-((x.stats&&x.stats.level)||0),
     change:(x,y)=>lastDelta(y)-lastDelta(x),
@@ -6104,6 +6233,7 @@ function filtered(){
   return list;
 }
 let awayDelta=new Map();
+function openedAt(a){const t=Number(a.lastLoginAt);return Number.isFinite(t)&&t>0?t:0}
 
 // ---------- DOM patching ----------
 // Regenerating a card's markup is cheap; throwing its DOM away is not. Replacing
@@ -7846,6 +7976,7 @@ function rowHTML(a,i){
         ${a.login&&a.password?`<button class="lseq" data-act="copyseq">${loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`:""}
       <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
         <div class="lrow"><span class="val mono ${a.password?"":"none"}">${a.password?(shownPw.has(a.id)?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${shownPw.has(a.id)?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
+        ${pwWarnHTML(a)}
       </div>`:""}
     </div>`:""}
   </div></div>`;
@@ -8041,6 +8172,7 @@ function cardHTML(a,i){
       ${a.login&&a.password?`<button class="lseq" data-act="copyseq">${loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`:""}
       <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
       <div class="lrow"><span class="val mono ${a.password?"":"none"}" style="font-family:${a.password?"":"inherit"}">${a.password?(pw?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${pw?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
+      ${pwWarnHTML(a)}
       ${a.email?`<div class="lrow"><span class="val">${esc(a.email)}</span><span class="lbtns"><button data-act="copymail">Copy</button></span></div>`:""}
       <!-- The two facts Riot asks for when an account has to be recovered, which is
            exactly the moment you are looking at this panel. -->
@@ -8648,8 +8780,9 @@ function openForm(acc,focus){
   formInfoBase=acc?normInfo(acc.info):null;
   $("fFieldsCfg").classList.add("hidden");$("fFieldsBtn").setAttribute("aria-expanded","false");
   // From a card's note fields, the window starts at them rather than at the name
-  const atNotes=focus==="notes";
-  $("fName").toggleAttribute("data-autofocus",!atNotes);
+  const atNotes=focus==="notes", atPw=focus==="password";
+  $("fName").toggleAttribute("data-autofocus",!atNotes&&!atPw);
+  $("fPass").toggleAttribute("data-autofocus",atPw);   // from the password check-up
   renderInfoFields(formInfoBase,atNotes);
   $("fSave").textContent=acc?"Save changes":"Add account";
   $("formTitle").textContent=acc?"Edit account":"Add account";
@@ -8739,7 +8872,7 @@ function openSettings(tab){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden");centreSettingsTab()
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();renderPwCheck();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden");centreSettingsTab()
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -8748,6 +8881,31 @@ function renderPwMeter(){
   $("pwMeter").innerHTML=p?Array.from({length:5},(_,i)=>`<span style="flex:1;height:100%;border-radius:1px;transition:background .2s;background:${i<score?colors[score-1]:"var(--line)"}"></span>`).join(""):"";
   $("pwMeterLabel").textContent=p?label:"";
 }
+function renderPwCheck(){
+  const el=$("sPwList");if(!el)return;
+  const withPw=accounts.filter(a=>a.password).length, f=pwFindings();
+  const reused=f.filter(x=>x.same.length).length, weak=f.filter(x=>x.weak).length, leaked=f.filter(x=>x.leak>0).length;
+  $("sPwSum").textContent=!withPw?"No passwords saved yet."
+    :!f.length?(withPw===1?"The one saved password is fine.":"All "+withPw+" saved passwords are different, and none is weak.")
+    :withPw===1?"The one saved password could be safer."
+    :f.length+" of "+withPw+" passwords could be safer: "+[leaked&&leaked+" found in data leaks",reused&&reused+" used on more than one account",weak&&weak+" weak"].filter(Boolean).join(", ")+".";
+  setHTML(el,f.map(x=>`<div class="pwc-row"><div class="t"><span class="n">${nameOf(x.a)}</span>`
+    +`<span class="why">${[x.leak&&`<span class="bad">${pwLeakText(x.leak)}</span>`,x.same.length&&pwSameText(x.same),x.weak&&esc(x.weak)].filter(Boolean).join(" · ")}</span></div>`
+    +`<button type="button" data-pwedit="${idAttr(x.a.id)}">Change</button></div>`).join(""));
+  const st=pwLeakState, btn=$("sPwLeaks");
+  btn.disabled=st==="busy"||!withPw;
+  btn.textContent=st==="busy"?"Checking…":st&&!st.err?"Check again":"Check for leaks";
+  // what was found is said once, in the list above; this line is about the check
+  $("sPwLeakNote").textContent=st==="busy"?"Asking Have I Been Pwned…"
+    :st&&st.err?"Couldn't reach Have I Been Pwned. Check the connection and try again."
+    :st?"Checked "+timeAgo(st.at)+(leaked?".":": none of your passwords is in a known leak.")
+    :"Looks each password up in Have I Been Pwned's list of leaked passwords. Only the first 5 characters of its SHA-1 fingerprint are sent, never the password.";
+}
+$("sPwLeaks").addEventListener("click",checkPwLeaks);
+$("sPwList").addEventListener("click",e=>{
+  const b=e.target.closest("[data-pwedit]");if(!b)return;
+  const acc=accounts.find(a=>a.id===b.dataset.pwedit);if(acc)openForm(acc,"password");
+});
 function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted.";renderSetup()}
 /* Four things make a vault safe to rely on, and a first visit does the first and
    usually stops: accounts in, ranks read, a master password, a backup. Until all
@@ -10041,6 +10199,7 @@ function palCommands(){
       cfg.density=ui.density;saveCfg();openInfo.clear();render();
     }},
     {k:"settings",n:"Settings",s:"Rank checks, alerts, security, appearance",i:"user",run:()=>openSettings()},
+    {k:"password check security reused weak leak pwned",n:"Password check-up",s:"Passwords used twice, weak, or in a data leak",i:"alert",run:()=>openSettings("security")},
     {k:"newseason",n:"New season",s:"Move every ranked account's rank into Past seasons",i:"refresh",run:()=>newSeasonAll()},
     {k:"streamer",n:"Streamer mode",s:"Hide Riot IDs, logins, emails and notes on screen (H)",i:"eye",run:()=>setStreamer(!streamerOn())},
     {k:"export backup",n:"Export backup",s:"Download the vault as JSON",i:"clipboard",run:()=>doExport()},
@@ -10693,7 +10852,7 @@ function relock(){
   if(!envelope)envelope=currentEnvelope;
   // The derived key goes with the password: leaving it behind would keep the one
   // thing that opens the vault sitting in memory across a lock.
-  vaultPassword=null;forgetVaultKey();accounts=[];formCache.clear();
+  vaultPassword=null;forgetVaultKey();accounts=[];formCache.clear();pwLeaks.clear();pwLeakState=null;pwLeakGen++;
   dismissToast(); // drop Delete→Undo before it can rehydrate secrets into a locked vault
   // Clear a copied account password if we still know what it was — lock does not
   // mean "leave the last password on the clipboard for thirty seconds". Write

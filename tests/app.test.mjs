@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
-import { webcrypto } from "node:crypto";
+import { webcrypto, createHash } from "node:crypto";
 import { JSDOM } from "jsdom";
 import { deflateRawSync } from "node:zlib";
 
@@ -1515,6 +1515,154 @@ test("card art: opens for an account with no champion yet, every time", () => {
     assert.match(doc.getElementById("apHero").textContent, /Pick a champion/);
     doc.getElementById("apCancel").click();
   }
+});
+
+/* ---- password check-up ---- */
+const pwAcc = (id, password, extra) => Object.assign({ id, region: "EUW", gameName: "Name" + id, tagLine: "1", status: "active",
+  tags: [], history: [], login: "login" + id, password }, extra || {});
+
+test("password check-up: lists passwords used twice and weak ones, and never shows a password", async () => {
+  const win = bootApp([
+    pwAcc("a", "Shared#Pass99xx", { label: "Main" }), pwAcc("b", "Shared#Pass99xx", { label: "Duo" }),
+    pwAcc("c", "abc12"), pwAcc("d", "kaisa-otp-2024!", { gameName: "Kaisa" }), pwAcc("e", "nOt-the-login-9"),
+    pwAcc("f", "Zt7#q!Lm2pWx", { label: "Fine" }), pwAcc("g", undefined), pwAcc("h", "logInH-and-more", { label: "Lazy" }),
+  ]);
+  const doc = win.document;
+  runScript(win, 'openSettings("security")');
+  assert.equal(doc.getElementById("sPwSum").textContent, "5 of 7 passwords could be safer: 2 used on more than one account, 3 weak.");
+  const rows = [...doc.querySelectorAll("#sPwList .pwc-row")].map(r => [r.querySelector(".n").textContent, r.querySelector(".why").textContent]);
+  assert.deepEqual(rows, [
+    ["Main", "Same password as Duo"], ["Duo", "Same password as Main"],
+    ["Namec", "Only 5 characters"], ["Kaisa", "Has the Riot name in it"], ["Lazy", "Has the username in it"],
+  ], "the accounts sharing one next to each other, then the weak ones");
+  const text = doc.getElementById("settings").textContent;
+  for (const pw of ["Shared#Pass99xx", "abc12", "kaisa-otp-2024!", "logInH-and-more"]) assert.ok(!text.includes(pw), "no password on screen");
+  // Change goes to that account's password
+  doc.querySelector('#sPwList [data-pwedit="c"]').click();
+  assert.equal(doc.getElementById("settings").classList.contains("hidden"), true);
+  assert.equal(doc.getElementById("form").classList.contains("hidden"), false);
+  assert.equal(doc.getElementById("fPass").value, "abc12");
+  await until(() => doc.activeElement === doc.getElementById("fPass"), "the password field to take focus");
+});
+
+test("password check-up: says so when every password is fine, and the login panel only warns where it should", () => {
+  const ok = bootApp([pwAcc("a", "Zt7#q!Lm2pWx"), pwAcc("b", "Qr9$v@Kd4nYz")]);
+  runScript(ok, 'openSettings("security")');
+  assert.equal(ok.document.getElementById("sPwSum").textContent, "All 2 saved passwords are different, and none is weak.");
+  assert.equal(ok.document.querySelectorAll("#sPwList .pwc-row").length, 0);
+  ok.document.querySelector('.card[data-id="a"] [data-act="login"]').click();
+  assert.equal(ok.document.querySelector('.card[data-id="a"] .lwarn'), null, "nothing to say about a good one");
+
+  const win = bootApp([pwAcc("a", "Shared#Pass99xx", { label: "Main" }), pwAcc("b", "Shared#Pass99xx"), pwAcc("c", "Shared#Pass99xx"),
+    pwAcc("d", "Shared#Pass99xx"), pwAcc("e", "abc")]);
+  const warn = id => { win.document.querySelector(`.card[data-id="${id}"] [data-act="login"]`).click();
+    return win.document.querySelector(`.card[data-id="${id}"] .lwarn`).textContent; };
+  assert.equal(warn("a"), "Same password as Nameb, Namec and 1 more");
+  assert.equal(warn("e"), "Only 3 characters");
+  // streamer mode: the other accounts by label, never by Riot ID
+  runScript(win, "setStreamer(true)");
+  assert.doesNotMatch(warn("b"), /Name[a-e]/);
+});
+
+test("password check-up: in Quick find", () => {
+  const win = bootApp([pwAcc("a", "abc")]);
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }));
+  const input = win.document.getElementById("palInput");
+  input.value = "password"; input.dispatchEvent(new win.Event("input"));
+  const item = [...win.document.querySelectorAll(".pal-i")].find(i => /Password check-up/.test(i.textContent));
+  assert.ok(item, "found by name");
+  item.click();
+  assert.equal(win.document.getElementById("settings").dataset.tab, "security");
+  assert.equal(win.document.getElementById("sPwSum").textContent, "The one saved password could be safer.");
+  assert.match(win.document.querySelector("#sPwList .why").textContent, /Only 3 characters/);
+});
+
+// a stand-in for api.pwnedpasswords.com/range: the leaked suffixes for a prefix, padded with dummies
+const sha1 = pw => createHash("sha1").update(pw).digest("hex").toUpperCase();
+function pwnedStub(win, leaked, opts = {}) {
+  const calls = [];
+  win.fetch = async (url, o) => {
+    calls.push({ url: String(url), headers: (o && o.headers) || {} });
+    if (opts.down) throw new TypeError("Failed to fetch");
+    if (opts.noHeader && o && o.headers && o.headers["Add-Padding"]) throw new TypeError("Failed to fetch");
+    const prefix = String(url).split("/range/")[1];
+    const rows = ["0018A45C4D1DEF81644B54AB7F969B88D65:1", "00D4F6E8FA6EECAD2A3AA415EEC418D38EC:0"];
+    for (const [pw, n] of leaked) if (sha1(pw).startsWith(prefix)) rows.push(sha1(pw).slice(5) + ":" + n);
+    return { ok: true, status: 200, text: async () => rows.join("\r\n") };
+  };
+  return calls;
+}
+
+test("leak check: nothing is sent until asked, then only five characters per password", async () => {
+  const win = bootApp([pwAcc("a", "Shared#Pass99xx", { label: "Main" }), pwAcc("b", "Shared#Pass99xx"), pwAcc("c", "Zt7#q!Lm2pWx"), pwAcc("d", "abc12")]);
+  const doc = win.document;
+  // the strong one's suffix comes back as a padding row (count 0): not a leak
+  const calls = pwnedStub(win, [["Shared#Pass99xx", 3421], ["Zt7#q!Lm2pWx", 0]]);
+  runScript(win, 'openSettings("security")');
+  assert.equal(calls.length, 0, "opening the check-up sends nothing");
+  assert.match(doc.getElementById("sPwLeakNote").textContent, /Only the first 5 characters/);
+  doc.getElementById("sPwLeaks").click();
+  await until(() => doc.getElementById("sPwLeaks").textContent === "Check again", "the check to finish");
+  assert.equal(calls.length, 3, "one request per distinct password, the shared one once");
+  for (const c of calls) {
+    assert.match(c.url, /^https:\/\/api\.pwnedpasswords\.com\/range\/[0-9A-F]{5}$/);
+    assert.equal(c.headers["Add-Padding"], "true", "padded, so the reply's size says nothing");
+    for (const pw of ["Shared#Pass99xx", "Zt7#q!Lm2pWx", "abc12"]) {
+      assert.ok(!c.url.includes(pw) && !c.url.includes(sha1(pw).slice(5)), "never the password or the rest of its hash");
+    }
+  }
+  assert.equal(doc.getElementById("sPwSum").textContent,
+    "3 of 4 passwords could be safer: 2 found in data leaks, 2 used on more than one account, 1 weak.");
+  const rows = [...doc.querySelectorAll("#sPwList .pwc-row .why")].map(w => w.textContent);
+  assert.deepEqual(rows, ["Found in data leaks 3,421 times · Same password as Nameb", "Found in data leaks 3,421 times · Same password as Main", "Only 5 characters"]);
+  assert.equal(doc.getElementById("sPwLeakNote").textContent, "Checked just now.");
+  doc.querySelector('.card[data-id="a"] [data-act="login"]').click();
+  const warn = doc.querySelector('.card[data-id="a"] .lwarn');
+  assert.ok(warn.classList.contains("bad"));
+  assert.match(warn.textContent, /^Found in data leaks 3,421 times · Same password as Nameb$/);
+  // a changed password is unchecked again; the other one keeps its result
+  runScript(win, "accounts.find(x => x.id === 'a').password = 'New#Pass77zzQ'; renderPwCheck()");
+  assert.deepEqual([...doc.querySelectorAll("#sPwList .pwc-row .n")].map(n => n.textContent), ["Nameb", "Named"]);
+  assert.equal(doc.querySelector("#sPwList .pwc-row .why").textContent, "Found in data leaks 3,421 times");
+});
+
+test("leak check: says when nothing leaked, retries without the padding header, and says when it can't reach the service", async () => {
+  const win = bootApp([pwAcc("a", "Zt7#q!Lm2pWx"), pwAcc("b", "Qr9$v@Kd4nYz")]);
+  const doc = win.document;
+  let calls = pwnedStub(win, [], { noHeader: true });
+  runScript(win, 'openSettings("security")');
+  doc.getElementById("sPwLeaks").click();
+  await until(() => doc.getElementById("sPwLeaks").textContent === "Check again", "the check to finish");
+  assert.equal(calls.filter(c => !c.headers["Add-Padding"]).length, 2, "asked again without the header");
+  assert.equal(doc.getElementById("sPwLeakNote").textContent, "Checked just now: none of your passwords is in a known leak.");
+  assert.equal(doc.getElementById("sPwSum").textContent, "All 2 saved passwords are different, and none is weak.");
+
+  calls = pwnedStub(win, [], { down: true });
+  doc.getElementById("sPwLeaks").click();
+  await until(() => /Couldn't reach/.test(doc.getElementById("sPwLeakNote").textContent), "the error to show");
+  assert.equal(doc.getElementById("sPwLeaks").textContent, "Check for leaks");
+  assert.equal(doc.getElementById("sPwLeaks").disabled, false, "and it can be tried again");
+});
+
+test("leak check: locking the vault while it runs leaves no password or result behind", async () => {
+  const win = bootApp();
+  addRealAccount(win, "Locky", "1");
+  runScript(win, "accounts[0].password = 'Shared#Pass99xx'");
+  win.document.getElementById("sVaultPass").value = "lockme12345";
+  win.document.getElementById("sVaultSet").click();
+  await until(() => encrypted(win), "encrypted");
+  let release;
+  const gate = new Promise(r => { release = r; });
+  win.fetch = async () => { await gate; return { ok: true, status: 200, text: async () => sha1("Shared#Pass99xx").slice(5) + ":5" }; };
+  runScript(win, 'openSettings("security")');
+  win.document.getElementById("sPwLeaks").click();
+  await until(() => win.document.getElementById("sPwLeaks").textContent === "Checking…", "the check to start");
+  runScript(win, "relock()");
+  release();
+  await new Promise(r => setTimeout(r, 50));
+  runScript(win, "window.__n = pwLeaks.size; window.__st = JSON.stringify(pwLeakState)");
+  assert.equal(win.__n, 0, "no result, and so no password, kept after the lock");
+  assert.equal(win.__st, "null");
 });
 
 /* Notes with fields: what used to be typed as "honor 3, 140 champs, Elementalist
@@ -3293,6 +3441,34 @@ test("sorting by level and by LP change", () => {
   assert.deepEqual(names(), ["high", "low"], "highest level first");
   sort.value = "change"; sort.dispatchEvent(new win.Event("change"));
   assert.deepEqual(names(), ["low", "high"], "biggest climb first");
+});
+
+test("a compact select keeps room for its arrow", () => {
+  // the arrow: background-position right 10px, background-size 13px
+  const base = html.match(/\n  select\{[^}]*\}/)[0];
+  const right = +base.match(/background-position:right (\d+)px/)[1], size = +base.match(/background-size:(\d+)px/)[1];
+  const rule = html.match(/\n  \.sub-fld\.inline select\{padding-right:(\d+)px\}/);
+  assert.ok(rule, "the inline rule gives it back");
+  assert.ok(+rule[1] >= right + size + 4, "past the arrow, with a gap");
+  assert.ok(html.indexOf(rule[0]) > html.indexOf(".sub-fld.inline select,.sub-fld.inline input[type=number]{"), "after the shorthand that took it");
+});
+
+test("sorting by last opened: the account you were just on first, never-opened ones last", () => {
+  const now = Date.now();
+  const mk = (id, lastLoginAt) => ({ id, gameName: id, tagLine: "EUW", region: "EUW", status: "active", lastLoginAt,
+    stats: { found: true, tier: "GOLD", division: "II", lp: 10, updatedAt: now }, history: [] });
+  const win = bootApp([mk("never"), mk("week", now - 7 * 864e5), mk("junk", "soon"), mk("now", now - 60000)]);
+  const names = () => [...win.document.querySelectorAll(".c-name span")].map(n => n.textContent);
+  const sort = win.document.getElementById("tSort");
+  assert.ok([...sort.options].some(o => o.value === "opened" && /Last opened/.test(o.textContent)));
+  sort.value = "opened"; sort.dispatchEvent(new win.Event("change"));
+  assert.deepEqual(names().slice(0, 2), ["now", "week"], "most recently opened first");
+  assert.deepEqual(names().slice(2).sort(), ["junk", "never"], "no stamp, or a broken one, sorts last");
+  // opening a login doesn't make the card jump while you're using it
+  win.document.querySelector('.card[data-id="never"] [data-act="login"]').click();
+  assert.deepEqual(names().slice(0, 2), ["now", "week"]);
+  sort.dispatchEvent(new win.Event("change"));
+  assert.equal(names()[0], "never", "it moves up on the next sort");
 });
 
 test("advice naming a control that no longer exists is rewritten on load", () => {
