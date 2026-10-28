@@ -1392,6 +1392,17 @@ test("card art: a picked skin shows its portrait at once, the last splash stays 
   assert.deepEqual(layers(), ["ap-ph:loading/Kaisa_1.jpg"], "a skin with no splash keeps its portrait as the banner");
 });
 
+// The strip in Strength previews the art as a card draws it: the same box height,
+// so the same fade, and so the same strength reads the same in both places.
+test("card art strength: the preview strip fades the art over the card's own height", () => {
+  const card = html.match(/\n  \.c-art\{[^}]*?height:(\d+)px/)[1];
+  const strip = html.match(/\n  \.ap-prev img\{[^}]*?height:(\d+)px/);
+  assert.ok(strip, "the strip's picture has a fixed height");
+  assert.equal(strip[1], card);
+  const mask = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{[^}]*?mask-image:(linear-gradient\\([^;]*\\))"))[1];
+  assert.equal(mask(".ap-prev img"), mask(".c-art"), "and the same fade");
+});
+
 test("card art: a saved skin that no longer exists opens on the default, ready to save", async () => {
   const calls = [];
   const acc = { id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [],

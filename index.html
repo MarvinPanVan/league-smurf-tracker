@@ -2127,7 +2127,10 @@
     padding:12px 22px;border-top:1px solid var(--line)}
   .ap-prev{position:relative;height:76px;border-radius:var(--r-sm);overflow:hidden;isolation:isolate;
     background:linear-gradient(180deg,#0e1620,#091017);box-shadow:0 0 0 1px var(--line)}
-  .ap-prev img{position:absolute;inset:0;width:100%;height:100%;z-index:-1;object-fit:cover;object-position:center 18%;
+  /* the card's own art box, 230px tall, with only its top showing: the fade is
+     drawn over that height on a card, so squeezing it into the strip's 76px made
+     every strength look weaker here than it is on the card */
+  .ap-prev img{position:absolute;left:0;right:0;top:0;width:100%;height:230px;z-index:-1;object-fit:cover;object-position:center 18%;
     -webkit-mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%);mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%)}
   .ap-prev-t{position:absolute;left:12px;right:12px;top:11px;display:flex;flex-direction:column;gap:3px;min-width:0}
   .ap-prev-t b{font-size:calc(14px*var(--ts));font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
