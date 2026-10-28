@@ -7500,6 +7500,9 @@ function normSnap(o){
 // published app when it is a file on this computer nobody else can open.
 function snapBase(){return/^https?:$/.test(location.protocol)&&!/^(localhost|127\.|\[::1\])/.test(location.hostname)?location.origin+location.pathname:SNAP_HOME}
 const snapDay=ts=>{const d=new Date(ts);return d.getDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]+" "+d.getFullYear()};
+// today as YYYY-MM-DD where you are: toISOString() is the date in London, so a backup
+// made just after midnight anywhere east of it was named for the day before
+const localDay=(d=new Date())=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 function snapCardHTML(a,i){
   const r=a.rank, col=r?tierColor(r.tier):"#8a8f98";
   const total=(a.w||0)+(a.l||0), wr=a.w!=null&&a.l!=null&&total?Math.round(a.w/total*100):null;
@@ -9036,7 +9039,7 @@ function updatePkStatus(){
   $("sPkSet").classList.toggle("hidden",!!r);$("sPkOff").classList.toggle("hidden",!r);
   $("sPkSet").disabled=!ok||!vaultPassword;
   $("sPkSet").textContent=pkPending?"Finish set-up":"Set up";
-  $("sPkStatus").textContent=r?"On in this browser since "+fmtDate(new Date(r.at||Date.now()).toISOString().slice(0,10))+". The master password still works."
+  $("sPkStatus").textContent=r?"On in this browser since "+snapDay(r.at||Date.now())+". The master password still works."
     :!ok?"Needs a browser with passkeys, and the app opened from its https address."
     :pkPending?"Passkey made. Tap Finish set-up and confirm it once more with Face ID / fingerprint."
     :!vaultPassword?"Set a master password first. This opens the vault without typing it."
@@ -9314,7 +9317,7 @@ function doExport(){
   if(hasSecrets&&!confirm("This downloads a PLAINTEXT JSON backup.\nLogin passwords and emails are readable in the file.\n\nContinue?"))return;
   const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),plaintext:true,accounts};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
-  downloadBlob(blob,"smurf-backup-plaintext-"+new Date().toISOString().slice(0,10)+".json");
+  downloadBlob(blob,"smurf-backup-plaintext-"+localDay()+".json");
   cfg.lastExport=Date.now();saveCfg();renderDash();renderSetup();
   toast("Plaintext backup exported — keep it private");
 }
@@ -9327,7 +9330,7 @@ async function doExportEnc(){
     if(vaultLocked())return;
     const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),encrypted:true,envelope};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
-    downloadBlob(blob,"smurf-backup-encrypted-"+new Date().toISOString().slice(0,10)+".json");
+    downloadBlob(blob,"smurf-backup-encrypted-"+localDay()+".json");
     cfg.lastExport=Date.now();saveCfg();renderDash();renderSetup();
     toast("Encrypted backup exported — same master password opens it");
   }catch(e){toast("Encrypted export failed: "+(e.message||"error"))}
@@ -9362,7 +9365,7 @@ function doExportCSV(){
   const blob=new Blob([csv],{type:"text/csv"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download="smurf-export-"+new Date().toISOString().slice(0,10)+".csv";
+  a.download="smurf-export-"+localDay()+".csv";
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),3000);
   toast("CSV exported");

@@ -1864,6 +1864,27 @@ test("passkey unlock: changing or removing the master password turns it off, and
   assert.equal(pkRec(win), null);
 });
 
+test("dates are where you are: backup and export file names, and the passkey's date", () => {
+  const tz = process.env.TZ;
+  process.env.TZ = "Pacific/Auckland";
+  try {
+    const win = bootApp([pwAcc("a", "Zt7#q!Lm2pWx")]);
+    fakePasskeys(win);
+    // 12:00 UTC on 28 Oct is 01:00 on the 29th in Auckland
+    runScript(win, `(() => { const F = Date.UTC(2026, 9, 28, 12, 0), O = Date;
+      window.Date = class extends O { constructor(...a) { super(...(a.length ? a : [F])) } static now() { return F } };
+      window.__names = []; downloadBlob = (b, n) => __names.push(n);
+      URL.createObjectURL = () => "blob:x"; URL.revokeObjectURL = () => {};
+      HTMLAnchorElement.prototype.click = function () { if (this.download) __names.push(this.download) }; })()`);
+    runScript(win, "doExport()");
+    win.document.getElementById("bExportCsv").click();
+    assert.deepEqual([...win.__names], ["smurf-backup-plaintext-2026-10-29.json", "smurf-export-2026-10-29.csv"]);
+    win.localStorage.setItem("smurf-tracker-passkey", JSON.stringify({ v: 1, id: "AAAA", salt: "AAAA", iv: "AAAA", ct: "AAAA", at: Date.UTC(2026, 9, 28, 12, 0) }));
+    runScript(win, "updatePkStatus()");
+    assert.match(win.document.getElementById("sPkStatus").textContent, /^On in this browser since 29 Oct 2026\./);
+  } finally { process.env.TZ = tz; if (tz === undefined) delete process.env.TZ; }
+});
+
 test("passkey unlock: turned on or off in another tab, the lock screen here follows", async () => {
   const win = await lockedVault("master-pass-123");
   fakePasskeys(win, { prfAtCreate: true });
