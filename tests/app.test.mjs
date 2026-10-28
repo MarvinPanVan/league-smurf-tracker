@@ -514,6 +514,47 @@ test("shift-click extends selection across the range between two cards", () => {
   assert.equal(win.document.getElementById("bulkCount").textContent, "3 selected");
 });
 
+/* Two tabs, one locked. The locked one kept the envelope it had locked on, so
+   unlocking it opened the older vault, and its next save wrote that over what the
+   other tab had added. */
+test("a locked tab opens the vault another tab saved meanwhile, whether or not it heard about it", async () => {
+  const acc = (id, gameName) => ({ id, region: "EUW", gameName, tagLine: "1", status: "active", tags: [], history: [] });
+  for (const heard of [true, false]) {
+    const win = bootApp();
+    addRealAccount(win, "First", "1");
+    win.document.getElementById("sVaultPass").value = "lockme123";
+    win.document.getElementById("sVaultSet").click();
+    await until(() => encrypted(win), "encrypted");
+    win.relock();
+    // the other tab, same password, one more account
+    win.__accs = [acc("x1", "First"), acc("x2", "Second")];
+    runScript(win, 'window.__p = encryptData("lockme123", window.__accs)');
+    const raw = JSON.stringify(await win.__p);
+    win.localStorage.setItem("smurf-tracker", raw);
+    if (heard) win.dispatchEvent(new win.StorageEvent("storage", { key: "smurf-tracker", newValue: raw, storageArea: win.localStorage }));
+    win.document.getElementById("lockPass").value = "lockme123";
+    win.document.getElementById("lockBtn").click();
+    await until(() => win.document.getElementById("lock").classList.contains("hidden"), "unlocked");
+    assert.deepEqual([...win.document.querySelectorAll(".c-name span")].map(n => n.textContent).sort(), ["First", "Second"],
+      heard ? "the envelope that arrived while locked" : "and read again at unlock, for a tab that slept through the event");
+  }
+});
+
+test("a locked tab opens without a password when another tab removes it", async () => {
+  const win = bootApp();
+  addRealAccount(win, "First", "1");
+  win.document.getElementById("sVaultPass").value = "lockme123";
+  win.document.getElementById("sVaultSet").click();
+  await until(() => encrypted(win), "encrypted");
+  win.relock();
+  const raw = JSON.stringify([{ id: "x1", region: "EUW", gameName: "Plain", tagLine: "1", status: "active", tags: [], history: [] }]);
+  win.localStorage.setItem("smurf-tracker", raw);
+  win.dispatchEvent(new win.StorageEvent("storage", { key: "smurf-tracker", newValue: raw, storageArea: win.localStorage }));
+  assert.equal(win.document.getElementById("lock").classList.contains("hidden"), true, "nothing left to unlock");
+  assert.deepEqual([...win.document.querySelectorAll(".c-name span")].map(n => n.textContent), ["Plain"]);
+  assert.match(win.document.getElementById("toast").textContent, /master password was removed in another tab/);
+});
+
 test("relock re-shows the lock screen and clears in-memory accounts; the same password unlocks it again", async () => {
   const win = bootApp();
   addRealAccount(win, "Locked One", "1234");

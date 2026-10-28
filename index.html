@@ -10965,6 +10965,10 @@ async function unlockWith(pass){
   if(!currentEnvelope||unlocking)return false;
   unlocking=true;
   $("lockBtn").disabled=true;$("lockPk").disabled=true;
+  // Open what is on disk now. Another tab may have saved since this one locked,
+  // and a frozen tab (a phone's background tab) can miss the event saying so.
+  // Only a disk envelope replaces the one in hand, as in relock().
+  try{const st=readStoredVault(hasStorage?localStorage.getItem(DB_KEY):null);if(st&&st.envelope)currentEnvelope=st.envelope}catch(e){}
   try{
     const data=await decryptData(pass,currentEnvelope);
     accounts=(Array.isArray(data)?data:[]).map(sanitizeAccount).filter(Boolean);
@@ -11095,6 +11099,21 @@ window.addEventListener("storage",e=>{
     accounts=stored.accounts;
     render();
     toast("Vault updated from another tab");
+    return;
+  }
+  /* Locked here while another tab saved. This tab still held the envelope it had
+     locked on, so unlocking opened the older vault, and its next save wrote that
+     over what the other tab had added. */
+  if(vaultLocked()){
+    const stored=readStoredVault(e.newValue);
+    if(!stored)return;
+    if(stored.envelope){currentEnvelope=stored.envelope;return}
+    // protection was removed over there: there is nothing left to unlock
+    accounts=stored.accounts;vaultPassword=null;
+    $("lock").classList.add("hidden");
+    lastActivity=Date.now();
+    startApp();
+    toast("Vault opened — its master password was removed in another tab");
   }
 });
 /* cfg is one object written whole, and every vault save writes it as well — the
