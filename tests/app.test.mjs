@@ -2875,6 +2875,21 @@ test("the LP chart draws a labelled band per tier crossed, and one point per che
   assert.doesNotMatch(html, /undefined|NaN/);
 });
 
+test("a band caption moves to the top of its band when the line starts where it sits", () => {
+  const win = bootApp();
+  const lab = hist => {
+    const el = win.document.createElement("div");
+    el.innerHTML = win.rankChart(hist);
+    const l = [...el.querySelectorAll(".lpc-lab")].find(n => n.textContent === "Diamond");
+    return l && parseFloat(l.style.top);
+  };
+  // Diamond IV 5 LP -> Diamond I 90 LP: the line starts on the band's floor, where the caption sits
+  const up = lab([{ t: 1, tier: "DIAMOND", division: "IV", lp: 5 }, { t: 2, tier: "DIAMOND", division: "I", lp: 90 }]);
+  const down = lab([{ t: 1, tier: "DIAMOND", division: "I", lp: 90 }, { t: 2, tier: "DIAMOND", division: "IV", lp: 5 }]);
+  assert.ok(up < 30, "under the band's top boundary, clear of the line (" + up + ")");
+  assert.ok(down > 50, "where the line starts high, it stays on the floor it names (" + down + ")");
+});
+
 test("the chart's captions keep a dark halo, so the line crossing one doesn't cut through its letters", () => {
   // measured in Chromium: the line ran through "GOLD" and the "II" beside the latest point
   const rule = html.match(/\n  ([^{\n]*\.lpc-lab[^{\n]*)\{text-shadow:([^}]*)\}/);

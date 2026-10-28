@@ -4181,6 +4181,31 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
   const span=(hi-lo)||1;
   const py=v=>LPC_H-((v-lo)/span)*LPC_H;
   const mIdx=TIER_ORDER.indexOf("MASTER");
+  // X is real time, not check number. Spacing checks evenly implies they were
+  // evenly spaced, which they never are — a week-long break looked identical to
+  // two games back to back. Now a gap in the line is a gap in the record, and the
+  // dates underneath mean something. Falls back to even spacing only when the
+  // history carries no usable timestamps at all.
+  const last=pts.length-1;
+  const ts=pts.map(p=>+p.h.t||0);
+  const t0=ts[0], t1=ts[last];
+  const timed=t1>t0&&ts.every(t=>t>0);
+  // one point has no span to spread across, so it sits in the middle
+  const fx=i=>last===0?.5:(timed?(ts[i]-t0)/(t1-t0):i/last); // 0..1
+
+  /* The band captions sit at the left edge, which is also where the line starts,
+     and a caption the line or its first point ran through read "DIAM●ND". Where
+     the line is across a caption's width is known here: the caption takes the top
+     of its band when the bottom is taken, and stays put when both are. */
+  const LAB_W=.22;   // a caption's share of the plot's width: "Grandmaster" on the narrowest card
+  const leftYs=[];
+  for(let i=0;i<=last;i++){
+    const a=fx(i);if(a<=LAB_W)leftYs.push(py(pts[i].v));
+    if(i<last){const b=fx(i+1);
+      // the line between two points, sampled where it passes under the caption
+      for(let k=1;k<6;k++){const f=a+(b-a)*k/6;if(f<=LAB_W)leftYs.push(py(pts[i].v+(pts[i+1].v-pts[i].v)*k/6))}}
+  }
+  const labFree=y=>!leftYs.some(v=>v>=y-5&&v<=y+14);   // 9px of caption, and a point's own radius around it
 
   let bands="",lines="",labels="";
   for(let t=0;t<=mIdx;t++){
@@ -4200,7 +4225,8 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
        Four unrelated things reading as one crowded row. With no boundary left to
        mark it is a caption for the whole view, so it goes to the top instead. */
     const fillsView=bot<=lo&&top>=hi;
-    const labY=fillsView?2:yBot-11;
+    const spots=fillsView?[2]:yBot-yTop>=26?[yBot-11,yTop+3]:[yBot-11];
+    const labY=spots.find(labFree)??spots[0];
     if(yBot-yTop>=14)labels+=`<span class="lpc-lab" style="top:${labY.toFixed(1)}px;color:${c}">${t===mIdx?"Master+":name.charAt(0)+name.slice(1).toLowerCase()}</span>`;
   }
   // Steps inside the bands. Below Master a step of 100 LP is exactly one division,
@@ -4298,18 +4324,6 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
       rule(v);mark(v,(v-M_BASE)+" LP");
     }
   }
-
-  // X is real time, not check number. Spacing checks evenly implies they were
-  // evenly spaced, which they never are — a week-long break looked identical to
-  // two games back to back. Now a gap in the line is a gap in the record, and the
-  // dates underneath mean something. Falls back to even spacing only when the
-  // history carries no usable timestamps at all.
-  const last=pts.length-1;
-  const ts=pts.map(p=>+p.h.t||0);
-  const t0=ts[0], t1=ts[last];
-  const timed=t1>t0&&ts.every(t=>t>0);
-  // one point has no span to spread across, so it sits in the middle
-  const fx=i=>last===0?.5:(timed?(ts[i]-t0)/(t1-t0):i/last); // 0..1
 
   const coords=pts.map((p,i)=>(fx(i)*LPC_W).toFixed(1)+","+py(p.v).toFixed(1)).join(" ");
   // Unique per chart, and — importantly — *stable* across renders. These used to
