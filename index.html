@@ -7180,7 +7180,8 @@ function buildSnapshot(o){
       const h=(a.history||[]).filter(e=>e&&ladderLP(e)!==null&&Number(e.t)>0).slice(-SNAP_HIST);
       if(h.length>1)x.h=h.map(e=>[Math.max(0,Math.round((now-e.t)/864e5*10)/10),...snapRank(e)]);
     }
-    if(o.art){const art=artOf(a);if(art)x.c=[art.champ,art.skin]}
+    // not for a card that hides its art: the link would show what its card doesn't
+    if(o.art&&artOpOf(a)>0){const art=artOf(a);if(art)x.c=[art.champ,art.skin]}
     if(o.notes){
       const info=normInfo(a.info);
       if(info&&info.honor!=null)x.hn=info.honor;

@@ -1670,6 +1670,18 @@ test("snapshot: the link carries ranks and what you ticked, never a login, passw
   assert.equal(ids.a[1].n, "Secretb#TAGb", "and an unlabelled account goes by its Riot ID");
 });
 
+test("snapshot: a card whose art is hidden on it shares no art either", () => {
+  const art = { champ: "Ahri", skin: 7 };
+  const build = (seed, cfg) => {
+    const win = bootApp(seed, cfg && (w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, ...cfg }))));
+    runScript(win, "window.__s = JSON.stringify(buildSnapshot({which:'all',title:'x',art:true}))");
+    return JSON.parse(win.__s).a.map(a => a.c || null);
+  };
+  assert.deepEqual(build([snapAcc("a", { art, artOp: 0 }), snapAcc("b", { art })]), [null, ["Ahri", 7]], "hidden on its own card");
+  assert.deepEqual(build([snapAcc("a", { art }), snapAcc("b", { art, artOp: 20 })], { artOpacity: 0 }), [null, ["Ahri", 7]],
+    "hidden on every card, except the one that has its own strength");
+});
+
 test("snapshot viewer: draws the page from the link, and opening it never reads or writes this browser's own vault", async () => {
   const D = 864e5;
   const obj = { v: 1, t: "Marvin's <img src=x onerror=alert(1)>", at: Date.UTC(2026, 9, 2), c: ["#ff0000", "red;}"], a: [
