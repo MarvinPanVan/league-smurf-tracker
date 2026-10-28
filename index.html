@@ -6988,10 +6988,11 @@ function apStrength(acc){
   $("apOpHint").textContent=ap.opAll?(others?"including "+others+" set on "+(others===1?"its":"their")+" own":"")
     :"Only this card";
   // the strip: this card's name and rank over the art, at the strength chosen
-  const el=$("apPrev"), k=ap.champ?ap.champ+"_"+ap.skin:"";
+  // "-" for no champion, as the hero does: opening clears the key to "" to force a redraw
+  const el=$("apPrev"), k=ap.champ?ap.champ+"_"+ap.skin:"-";
   if(el.dataset.k!==k){
     el.dataset.k=k;
-    el.innerHTML=(k?`<img alt="" decoding="async" referrerpolicy="no-referrer" src="${splashUrl(ap.champ,ap.skin)}">`:"")+`<div class="ap-prev-t"></div>`;
+    el.innerHTML=(ap.champ?`<img alt="" decoding="async" referrerpolicy="no-referrer" src="${splashUrl(ap.champ,ap.skin)}">`:"")+`<div class="ap-prev-t"></div>`;
   }
   const img=el.querySelector("img");if(img)img.style.opacity=String(ap.op/100);
   const s=acc&&acc.stats, ranked=acc&&isRanked(acc);

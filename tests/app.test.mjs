@@ -1500,6 +1500,23 @@ test("card art: Escape closes the picker, a stored pick is checked like any othe
   assert.equal(doc.getElementById("artPicker").classList.contains("hidden"), true, "Escape closes it like every other window");
 });
 
+// 2.3.4 threw here: opening reset the strip's key to "", which is also the key for
+// no champion, so the strip was never drawn and the next line found nothing in it
+test("card art: opens for an account with no champion yet, every time", () => {
+  const acc = id => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() } });
+  const win = bootApp([acc("new"), acc("other")]);
+  const doc = win.document;
+  for (const id of ["new", "other", "new"]) {
+    cardMenu(win, id).querySelector('[data-act="art"]').click();
+    assert.equal(doc.getElementById("artPicker").classList.contains("hidden"), false, "the window opens for " + id);
+    assert.equal(doc.querySelector("#apPrev .ap-prev-t b").textContent, id, "with this card's name in the strip");
+    assert.equal(doc.querySelector("#apPrev img"), null, "and no picture until a champion is picked");
+    assert.match(doc.getElementById("apHero").textContent, /Pick a champion/);
+    doc.getElementById("apCancel").click();
+  }
+});
+
 /* Notes with fields: what used to be typed as "honor 3, 140 champs, Elementalist
    Lux" by hand, kept as fields that every card shows the same way. */
 const fieldsAcc = (id, info, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
