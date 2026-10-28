@@ -3854,12 +3854,29 @@ async function pkSetup(password){
   try{
     const ext=(cred.getClientExtensionResults&&cred.getClientExtensionResults().prf)||{};
     if(ext.enabled===false)throw pkNoPrf();
-    // some devices answer the PRF while the passkey is made, the rest only when it is used
-    const prf=ext.results&&ext.results.first?new Uint8Array(ext.results.first):await pkEval(id,salt);
-    const key=await pkWrapKey(prf), iv=crypto.getRandomValues(new Uint8Array(12));
-    const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(password));
-    localStorage.setItem(PK_KEY,JSON.stringify({v:1,id:b64(id),salt:b64(salt),iv:b64(iv),ct:b64(new Uint8Array(ct)),at:Date.now()}));
-  }catch(e){pkSignalGone(id);e.pkMade=true;throw e}
+    if(ext.results&&ext.results.first){await pkStore(id,salt,new Uint8Array(ext.results.first),password);return true}
+  }catch(e){pkSignalGone(id);throw e}
+  // The rest answer the PRF only when the passkey is used, and Safari allows that
+  // only from a tap of its own, not straight on from this one: the next tap on the
+  // button finishes it.
+  pkPending={id,salt};
+  return false;
+}
+let pkPending=null;   // {id, salt}: a passkey made, waiting for the tap that reads its PRF
+async function pkFinish(password){
+  const p=pkPending;if(!p)return;
+  try{await pkStore(p.id,p.salt,await pkEval(p.id,p.salt),password)}
+  catch(e){
+    if(e.name==="NotAllowedError")throw e;   // cancelled: still waiting, and the button can be tapped again
+    pkDropPending();throw e;
+  }
+  pkPending=null;
+}
+function pkDropPending(){if(pkPending){pkSignalGone(pkPending.id);pkPending=null}}
+async function pkStore(id,salt,prf,password){
+  const key=await pkWrapKey(prf), iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(password));
+  localStorage.setItem(PK_KEY,JSON.stringify({v:1,id:b64(id),salt:b64(salt),iv:b64(iv),ct:b64(new Uint8Array(ct)),at:Date.now()}));
 }
 async function pkOpen(r){
   const key=await pkWrapKey(await pkEval(unb64(r.id),unb64(r.salt)));
@@ -9003,8 +9020,10 @@ function updatePkStatus(){
   const r=pkRecord(), ok=pkAvailable();
   $("sPkSet").classList.toggle("hidden",!!r);$("sPkOff").classList.toggle("hidden",!r);
   $("sPkSet").disabled=!ok||!vaultPassword;
+  $("sPkSet").textContent=pkPending?"Finish set-up":"Set up";
   $("sPkStatus").textContent=r?"On in this browser since "+fmtDate(new Date(r.at||Date.now()).toISOString().slice(0,10))+". The master password still works."
     :!ok?"Needs a browser with passkeys, and the app opened from its https address."
+    :pkPending?"Passkey made. Tap Finish set-up and confirm it once more with Face ID / fingerprint."
     :!vaultPassword?"Set a master password first. This opens the vault without typing it."
     :"Makes a passkey on this device. The master password still works, and is what you need if the passkey is lost.";
 }
@@ -9012,13 +9031,13 @@ $("sPkSet").addEventListener("click",async()=>{
   if(!vaultPassword||!pkAvailable())return;
   const b=$("sPkSet");b.disabled=true;b.textContent="Waiting for the passkey…";
   try{
-    await pkSetup(vaultPassword);
-    toast("Face ID / fingerprint unlock is on for this browser");
+    const done=pkPending?(await pkFinish(vaultPassword),true):await pkSetup(vaultPassword);
+    toast(done?"Face ID / fingerprint unlock is on for this browser":"Passkey made. Tap Finish set-up and confirm it once more");
   }catch(e){
     toast(e.name==="NoPrf"?"This browser or device can't unlock with a passkey yet. Recent Chrome, Edge and Safari can."
-      :e.name==="NotAllowedError"?(e.pkMade?"Cancelled. The passkey made a moment ago won't be used; if your password manager still lists it, you can delete it":"Cancelled — nothing was set up")
+      :e.name==="NotAllowedError"?(pkPending?"Cancelled. Tap Finish set-up to try again":"Cancelled — nothing was set up")
       :"Couldn't set it up: "+(e.message||e.name||"unknown error"));
-  }finally{b.textContent="Set up";updatePkStatus()}
+  }finally{updatePkStatus()}
 });
 $("sPkOff").addEventListener("click",()=>{
   const r=pkRecord();
@@ -10048,7 +10067,7 @@ $("sVaultRemove").addEventListener("click",async()=>{
     toast("Could not write the vault — the password is still in place");
     return;
   }
-  pkForget();
+  pkForget();pkDropPending();
   updateVaultStatus();syncLockTimer();
   toast("Password protection removed");
 });
@@ -11008,7 +11027,7 @@ function relock(){
   if(!envelope)envelope=currentEnvelope;
   // The derived key goes with the password: leaving it behind would keep the one
   // thing that opens the vault sitting in memory across a lock.
-  vaultPassword=null;forgetVaultKey();accounts=[];formCache.clear();pwLeaks.clear();pwLeakState=null;pwLeakGen++;
+  vaultPassword=null;forgetVaultKey();accounts=[];formCache.clear();pwLeaks.clear();pwLeakState=null;pwLeakGen++;pkDropPending();
   dismissToast(); // drop Delete→Undo before it can rehydrate secrets into a locked vault
   // Clear a copied account password if we still know what it was — lock does not
   // mean "leave the last password on the clipboard for thirty seconds". Write

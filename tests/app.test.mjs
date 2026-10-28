@@ -1691,6 +1691,7 @@ function fakePasskeys(win, opts = {}) {
     async get({ publicKey }) {
       calls.get++; calls.gets.push(publicKey);
       if (opts.cancelGet) throw refuse();
+      if (opts.noPrfGet) return { getClientExtensionResults: () => ({ prf: {} }) };
       const first = await prf(publicKey.extensions.prf.eval.first);
       return { getClientExtensionResults: () => ({ prf: { results: { first } } }) };
     },
@@ -1716,9 +1717,16 @@ test("passkey unlock: set up in Security, then Face ID / fingerprint opens the v
   assert.equal(doc.getElementById("sPkSet").disabled, false);
   assert.match(doc.getElementById("sPkStatus").textContent, /Makes a passkey on this device. The master password still works/);
   doc.getElementById("sPkSet").click();
-  await until(() => pkRec(win), "the wrapped password to be stored");
+  // this device only answers the PRF when the passkey is used, and Safari only allows
+  // that from a tap of its own: the second step waits for one
+  await until(() => doc.getElementById("sPkSet").textContent === "Finish set-up", "the second step");
   assert.equal(calls.create, 1);
-  assert.equal(calls.get, 1, "this device only answers the PRF when the passkey is used, so it is used once right away");
+  assert.equal(calls.get, 0, "not used straight on from the first tap");
+  assert.equal(pkRec(win), null);
+  assert.match(doc.getElementById("sPkStatus").textContent, /^Passkey made\. Tap Finish set-up/);
+  doc.getElementById("sPkSet").click();
+  await until(() => pkRec(win), "the wrapped password to be stored");
+  assert.equal(calls.get, 1);
   assert.equal(calls.createOpts.authenticatorSelection.userVerification, "required", "Face ID / fingerprint, not just a tap");
   const rec = pkRec(win), raw = JSON.stringify(rec);
   assert.ok(!raw.includes("master-pass-123") && !Buffer.from(rec.ct, "base64").toString("latin1").includes("master-pass"), "the password is stored only wrapped");
@@ -1843,15 +1851,26 @@ test("passkey unlock: says when it can't be used, and never makes a passkey the 
   assert.equal(l.calls.create, 1);
   assert.equal(pkRec(late), null);
   assert.equal(late.document.getElementById("sPkSet").textContent, "Set up");
-  // cancelled at the second prompt, after the passkey was made: the browser is told it is unused
+  // made, then the second step: a cancel can be tried again; a device that can't
+  // answer drops it, and the browser is told the passkey is unused
   const half = await lockedVault("master-pass-123");
   fakePasskeys(half, { cancelGet: true });
   const gone = [];
   half.PublicKeyCredential.signalUnknownCredential = async o => { gone.push(o); };
   runScript(half, 'openSettings("security")');
-  half.document.getElementById("sPkSet").click();
-  await until(() => /^Cancelled\. The passkey made a moment ago won't be used/.test(half.document.getElementById("toast").textContent), "the toast");
+  const btn = half.document.getElementById("sPkSet");
+  btn.click();
+  await until(() => btn.textContent === "Finish set-up", "the second step");
+  btn.click();
+  await until(() => /^Cancelled\. Tap Finish set-up to try again/.test(half.document.getElementById("toast").textContent), "the cancel");
+  assert.equal(btn.textContent, "Finish set-up");
+  assert.equal(gone.length, 0);
+  fakePasskeys(half, { noPrfGet: true });
+  half.PublicKeyCredential.signalUnknownCredential = async o => { gone.push(o); };
+  btn.click();
+  await until(() => /can't unlock with a passkey yet/.test(half.document.getElementById("toast").textContent), "the toast");
   assert.equal(pkRec(half), null);
+  assert.equal(btn.textContent, "Set up");
   assert.equal(JSON.stringify(gone), JSON.stringify([{ rpId: "example.com", credentialId: "BwcHBwE" }]), "its id, base64url, for this site");
 });
 
