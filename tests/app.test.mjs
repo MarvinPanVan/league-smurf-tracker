@@ -1394,6 +1394,16 @@ test("card art: a picked skin shows its portrait at once, the last splash stays 
 
 // The strip in Strength previews the art as a card draws it: the same box height,
 // so the same fade, and so the same strength reads the same in both places.
+test("card art picker on phones: the strength strip sits beside the slider, under a shorter splash", () => {
+  // what is fixed above the skins on a 360x640 phone: everything here is height the grid loses
+  const phone = [...html.matchAll(/@media \(max-width:620px\)\{([\s\S]*?)\n  \}/g)].map(m => m[1]).join("\n");
+  const str = phone.match(/\.ap-str\{[^}]*grid-template-columns:([^;}]*)/);
+  assert.ok(str, "the phone rule lays the strength row out");
+  assert.equal(str[1].trim().split(/\s+(?![^(]*\))/).length, 2, "two columns, not the strip stacked over the slider");
+  const hero = phone.match(/\.ap-hero\{[^}]*height:clamp\((\d+)px/);
+  const wide = html.match(/\n  \.ap-hero\{[^}]*height:clamp\((\d+)px/)[1];
+  assert.ok(hero && Number(hero[1]) < Number(wide), "the splash is shorter than its smallest wide size");
+});
 test("card art strength: the preview strip fades the art over the card's own height", () => {
   const card = html.match(/\n  \.c-art\{[^}]*?height:(\d+)px/)[1];
   const strip = html.match(/\n  \.ap-prev img\{[^}]*?height:(\d+)px/);

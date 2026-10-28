@@ -2142,7 +2142,14 @@
   .ap-opts{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap}
   .ap-all{display:inline-flex;align-items:center;gap:8px;font-size:calc(13px*var(--ts));color:var(--text);cursor:pointer}
   .ap-opts .hint{font-size:calc(12px*var(--ts))}
-  @media (max-width:620px){.ap-str{grid-template-columns:1fr;gap:10px;padding:12px 16px}.ap-prev{height:64px}}
+  /* phones: the strip beside the slider rather than over it, and a shorter
+     splash, so the skins still get a full row under everything fixed above them */
+  @media (max-width:620px){
+    .ap-str{grid-template-columns:minmax(0,118px) minmax(0,1fr);gap:12px;padding:10px 16px}
+    .ap-prev{height:60px}.ap-prev-t{left:9px;right:9px;top:8px;gap:2px}
+    .ap-prev-t b{font-size:calc(12px*var(--ts))}.ap-prev-t span{font-size:calc(11px*var(--ts))}
+    .ap-ctl{gap:4px}.ap-opts{gap:2px 10px}
+  }
   .ap-off{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 22px;font-size:calc(12px*var(--ts));
     color:var(--muted);background:color-mix(in srgb,var(--gold) 8%,transparent);border-top:1px solid var(--line)}
   .ap-off button{padding:5px 10px;font-size:calc(12px*var(--ts))}
@@ -2188,6 +2195,7 @@
   .ap-msg button{margin-top:10px}
   @media (max-width:620px){
     .ap-cap,.ap-bar,.ap-off{padding-left:16px;padding-right:16px}.ap-cap{left:16px;right:16px}
+    .ap-hero{height:clamp(118px,32vw,150px)}.ap-cap{bottom:12px}.ap-cap b{font-size:calc(19px*var(--ts))}
     .ap-grid{padding:14px 16px 18px}
     .ap-grid.sk{grid-template-columns:repeat(auto-fill,minmax(102px,1fr));gap:10px}
   }
