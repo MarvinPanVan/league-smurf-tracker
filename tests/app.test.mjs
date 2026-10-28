@@ -3422,6 +3422,16 @@ test("sorting by level and by LP change", () => {
   assert.deepEqual(names(), ["low", "high"], "biggest climb first");
 });
 
+test("a compact select keeps room for its arrow", () => {
+  // the arrow: background-position right 10px, background-size 13px
+  const base = html.match(/\n  select\{[^}]*\}/)[0];
+  const right = +base.match(/background-position:right (\d+)px/)[1], size = +base.match(/background-size:(\d+)px/)[1];
+  const rule = html.match(/\n  \.sub-fld\.inline select\{padding-right:(\d+)px\}/);
+  assert.ok(rule, "the inline rule gives it back");
+  assert.ok(+rule[1] >= right + size + 4, "past the arrow, with a gap");
+  assert.ok(html.indexOf(rule[0]) > html.indexOf(".sub-fld.inline select,.sub-fld.inline input[type=number]{"), "after the shorthand that took it");
+});
+
 test("sorting by last opened: the account you were just on first, never-opened ones last", () => {
   const now = Date.now();
   const mk = (id, lastLoginAt) => ({ id, gameName: id, tagLine: "EUW", region: "EUW", status: "active", lastLoginAt,

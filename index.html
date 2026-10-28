@@ -1805,6 +1805,9 @@
   .sub-fld.inline{align-items:center;gap:10px}
   .sub-fld.inline>label,.sub-fld.inline>span{flex:none;color:var(--muted);font-size:calc(13px*var(--ts))}
   .sub-fld.inline select,.sub-fld.inline input[type=number]{width:auto;min-width:0;padding:6px 10px;font-size:calc(13px*var(--ts))}
+  /* the arrow is drawn 10px in from the right and is 13px wide: the shorthand
+     above took the room select{} leaves for it, and "Off — never" ran under it */
+  .sub-fld.inline select{padding-right:30px}
   .sub-fld input[type=checkbox]{margin-top:3px}
   .chk{display:flex;align-items:center;gap:9px}
   .chk label{font-size:calc(13px*var(--ts));color:var(--text);line-height:1.45}
