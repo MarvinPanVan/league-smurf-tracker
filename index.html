@@ -3202,8 +3202,14 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.5.0";
+const APP_VERSION="2.5.1";
 const APP_CHANGELOG=[
+  {v:"2.5.1",items:[
+    "A locked tab opens what another tab saved, instead of an older copy",
+    "Chart labels move off the line where there's room",
+    "Backup file names and dates use your own day, not UTC",
+    "Help covers the password check-up and Face ID / fingerprint unlock",
+  ]},
   {v:"2.5.0",items:[
     "Unlock with Face ID, fingerprint or Windows Hello: Settings › Security",
     "The master password still works, and is what you need if the passkey is lost",
