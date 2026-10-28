@@ -7301,21 +7301,32 @@ function snapErrorHTML(){
    opener's own vault or settings — not a shortcut, not leaving the tab. */
 async function openSnapshot(code){
   snapMode=true;hasStorage=false;
+  // a snapshot starts at its top, wherever the page was before (see hashchange, below)
+  try{history.scrollRestoration="manual"}catch(e){}
   document.body.classList.add("snap-mode");
   const root=$("snapView");root.classList.remove("hidden");
   root.innerHTML=`<p class="sn-wait">Opening the snapshot…</p>`;
   let s=null;
   try{s=normSnap(await snapDecode(code))}catch(e){s=null}
-  if(!s){root.innerHTML=snapErrorHTML();document.title="Snapshot · Smurf Tracker";return}
+  if(!s){root.innerHTML=snapErrorHTML();document.title="Snapshot · Smurf Tracker";snapTop();return}
   if(s.colors[0])applyAccent(s.colors[0]);
   if(s.colors[1])applyAccent2(s.colors[1]);
   document.title=(s.title||"League accounts")+" · Smurf Tracker";
   root.innerHTML=snapHTML(s);
+  snapTop();
 }
+// at once, not with the page's smooth scrolling: this is a new page, not a move on this one
+function snapTop(){try{scrollTo({top:0,left:0,behavior:"instant"})}catch(e){scrollTo(0,0)}}
 window.addEventListener("error",e=>{const t=e.target;if(snapMode&&t&&t.closest&&t.closest(".sn-art"))t.remove()},true);
 // Pasting a snapshot link into a tab that already has the app open changes only
 // the part after #, which reloads nothing; going back out of one is the same.
-window.addEventListener("hashchange",()=>{if(snapMode||/^#s=/.test(location.hash))location.reload()});
+// The new entry takes the app's scroll position with it, and the reload would
+// put it back, so a snapshot coming in is told to start at its top.
+window.addEventListener("hashchange",()=>{
+  if(!snapMode&&!/^#s=/.test(location.hash))return;
+  if(!snapMode)try{history.scrollRestoration="manual"}catch(e){}
+  location.reload();
+});
 
 /* ---- the share window ---- */
 const share={which:"ranked",gen:0,url:""};

@@ -1682,6 +1682,22 @@ test("snapshot: a card whose art is hidden on it shares no art either", () => {
     "hidden on every card, except the one that has its own strength");
 });
 
+test("snapshot viewer: opens at the top, not where the app was scrolled to before the reload", async () => {
+  for (const code of [snapCode({ v: 1, t: "x", at: 0, c: [], a: [{ n: "Main", k: [3, "II", 40] }] }), "0.broken"]) {
+    const tops = [];
+    const win = viewSnap(code, w => { w.scrollTo = (x, y) => tops.push(typeof x === "object" ? [x.top, x.behavior] : [y]); });
+    await until(() => win.document.querySelector(".sn-card,.sn-err"), "the snapshot or its error");
+    await until(() => tops.length, "a scroll to the top (" + code.slice(0, 8) + ")");
+    assert.deepEqual(tops, [[0, "instant"]], "at once, not with the page's smooth scrolling");
+    assert.equal(win.history.scrollRestoration, "manual", "and the browser doesn't put the old position back after");
+  }
+  // pasted into a tab with the app open: the new entry is marked before the reload that opens it
+  const win = bootApp([snapAcc("a")]);
+  win.history.scrollRestoration = "auto";
+  win.location.hash = "#s=" + snapCode({ v: 1, a: [] });
+  await until(() => win.history.scrollRestoration === "manual", "the entry to be marked");
+});
+
 test("snapshot viewer: draws the page from the link, and opening it never reads or writes this browser's own vault", async () => {
   const D = 864e5;
   const obj = { v: 1, t: "Marvin's <img src=x onerror=alert(1)>", at: Date.UTC(2026, 9, 2), c: ["#ff0000", "red;}"], a: [
