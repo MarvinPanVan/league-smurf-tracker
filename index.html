@@ -116,11 +116,15 @@
      Spotlight + Aurora = fixed viewport light (stays while you scroll).
      Lattice + Stardust = page texture that scrolls with the document and fades
      out near the end. Noir = fixed vignette + grain, no accent colour. */
+  /* One light, from above. This was two washes: the primary accent from the top
+     left and the secondary from the top right, and where they met they mixed. A
+     blue and a gold made an olive-teal haze over the whole header. One neutral
+     light gives the page a top, and a little of the primary tints it, in one hue
+     only; the secondary is left to the controls. */
   body[data-atmosphere="spotlight"]{
     background:
-      radial-gradient(125vw 80vh at 12% -25%,color-mix(in srgb,var(--gold) 28%,transparent) 0%,transparent 62%),
-      radial-gradient(105vw 70vh at 92% -18%,color-mix(in srgb,var(--teal) 20%,transparent) 0%,transparent 60%),
-      radial-gradient(90vw 55vh at 50% -30%,#ffffff0e 0%,transparent 58%),
+      radial-gradient(64vw 52vh at 50% -16%,color-mix(in srgb,var(--gold) 9%,transparent) 0%,transparent 70%),
+      radial-gradient(110vw 72vh at 50% -28%,#ffffff0b 0%,transparent 62%),
       var(--bg);
     background-attachment:fixed}
   body[data-atmosphere="spotlight"]::before{content:none}
@@ -129,9 +133,8 @@
      right mirrored — so it does not read as one teal blob and one gold blob. */
   body[data-atmosphere="aurora"]{
     background:
-      radial-gradient(90vw 70vh at 0% 0%,color-mix(in srgb,var(--gold) 34%,transparent) 0%,transparent 68%),
-      radial-gradient(90vw 70vh at 100% 0%,color-mix(in srgb,var(--teal) 34%,transparent) 0%,transparent 68%),
-      radial-gradient(70vw 50vh at 50% -10%,color-mix(in srgb,var(--gold) 10%,var(--teal) 10%) 0%,transparent 65%),
+      radial-gradient(80vw 64vh at 0% 0%,color-mix(in srgb,var(--gold) 20%,transparent) 0%,transparent 66%),
+      radial-gradient(80vw 64vh at 100% 0%,color-mix(in srgb,var(--teal) 18%,transparent) 0%,transparent 66%),
       var(--bg);
     background-attachment:fixed}
   body[data-atmosphere="aurora"]::before{content:none}
@@ -629,12 +632,12 @@
   .atm-mini::after{content:"";position:absolute;inset:0;opacity:.04;pointer-events:none;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
   .atm-mini[data-atm="spotlight"]{background:
-    radial-gradient(80% 90% at 18% -10%,color-mix(in srgb,var(--gold) 42%,transparent),transparent 60%),
-    radial-gradient(70% 80% at 92% 0%,color-mix(in srgb,var(--teal) 28%,transparent),transparent 58%),
+    radial-gradient(60% 90% at 50% -12%,color-mix(in srgb,var(--gold) 20%,transparent),transparent 72%),
+    radial-gradient(90% 100% at 50% -20%,#ffffff12,transparent 64%),
     var(--bg)}
   .atm-mini[data-atm="aurora"]{background:
-    radial-gradient(ellipse 70% 90% at 5% 0%,color-mix(in srgb,var(--gold) 55%,transparent),transparent 70%),
-    radial-gradient(ellipse 65% 85% at 100% 10%,color-mix(in srgb,var(--teal) 48%,transparent),transparent 68%),
+    radial-gradient(ellipse 70% 90% at 5% 0%,color-mix(in srgb,var(--gold) 38%,transparent),transparent 70%),
+    radial-gradient(ellipse 65% 85% at 100% 10%,color-mix(in srgb,var(--teal) 34%,transparent),transparent 68%),
     var(--bg)}
   .atm-mini[data-atm="noir"]{background:radial-gradient(ellipse 70% 60% at 50% 45%,#12141a 0%,#050608 100%)}
   .atm-mini[data-atm="noir"]::after{opacity:.12}
@@ -2535,12 +2538,12 @@
             <button type="button" role="radio" data-atmosphere="spotlight" class="atm-tile on" aria-checked="true">
               <span class="atm-mini" data-atm="spotlight" aria-hidden="true"></span>
               <span class="atm-name">Spotlight</span>
-              <span class="atm-tip">Quiet glow behind the title from your accents.</span>
+              <span class="atm-tip">One soft light from above, tinted by your accent.</span>
             </button>
             <button type="button" role="radio" data-atmosphere="aurora" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="aurora" aria-hidden="true"></span>
               <span class="atm-name">Aurora</span>
-              <span class="atm-tip">Stronger mirrored colour washes — stays with the window like Spotlight.</span>
+              <span class="atm-tip">Both accents as washes from the two top corners.</span>
             </button>
             <button type="button" role="radio" data-atmosphere="noir" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="noir" aria-hidden="true"></span>

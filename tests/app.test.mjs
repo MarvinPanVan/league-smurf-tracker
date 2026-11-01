@@ -782,6 +782,20 @@ test("the header tray keeps to the right edge, so the ⋯ menu opens on screen",
 /* At a display scale of 125% or 150% the tray's 1px frame fell between screen
    pixels, and each edge mixed with the blurred, saturated wash behind it by a
    different amount: blue on one side, faint on another, gone on a third. */
+// Spotlight was two washes, the primary from the top left and the secondary from
+// the top right, and with a blue and a gold they met as olive-teal haze over the
+// header. It is one light now, in one hue.
+test("the default background is one light from above, in the primary accent only", () => {
+  const rule = html.match(/\n  body\[data-atmosphere="spotlight"\]\{([^}]*)\}/)[1];
+  assert.doesNotMatch(rule, /--teal/, "the secondary accent is not in it");
+  const tints = [...rule.matchAll(/var\(--gold\) (\d+)%/g)].map(m => +m[1]);
+  assert.equal(tints.length, 1, "one tinted light");
+  assert.ok(tints[0] <= 12, "a tint, not a wash (" + tints[0] + "%)");
+  assert.ok([...rule.matchAll(/ at (\d+)% -/g)].every(m => m[1] === "50"), "centred: one source, not two corners");
+  const mini = html.match(/\.atm-mini\[data-atm="spotlight"\]\{([^}]*)\}/)[1];
+  assert.doesNotMatch(mini, /--teal/, "and its preview tile shows the same");
+});
+
 test("the header tray is a solid plate: nothing behind it can tint its edge", () => {
   const rule = html.match(/\n  \.top \.bar\{[^}]*\}/)[0];
   assert.doesNotMatch(rule, /backdrop-filter/, "no blurred backdrop to mix with");
