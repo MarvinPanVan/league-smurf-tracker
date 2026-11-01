@@ -922,6 +922,8 @@ test("the accent buttons are flat plates: no gradient rim, no glow; the wordmark
   // and the small things that still glittered: honor pips, the lit Tags handle, the skin chips, the empty-state gem
   for (const sel of [".ni-pips i.on", ".tag-handle.lit", ".ni-skins span", ".empty-gem"])
     assert.doesNotMatch(rule(sel), /gradient|box-shadow:[^;]*0 0 \d+px/, sel + " is flat");
+  // and the shared snapshot's title is plain white type, not haloed in the accent
+  assert.doesNotMatch(html.match(/\n  \.sn-title\{([^}]*)\}/)[1], /text-shadow/, "the snapshot title has no glow");
 });
 
 test("a stale card warns with a drawn mark, which a fresh card does not carry", () => {
