@@ -919,6 +919,9 @@ test("the accent buttons are flat plates: no gradient rim, no glow; the wordmark
   assert.match(h1, /color:var\(--gold-txt\)/);
   assert.doesNotMatch(rule(".brand-mark::before"), /gradient|animation|box-shadow/, "the gem is a solid stone, still");
   assert.doesNotMatch(html, /@keyframes gemGlow/);
+  // and the small things that still glittered: honor pips, the lit Tags handle, the skin chips, the empty-state gem
+  for (const sel of [".ni-pips i.on", ".tag-handle.lit", ".ni-skins span", ".empty-gem"])
+    assert.doesNotMatch(rule(sel), /gradient|box-shadow:[^;]*0 0 \d+px/, sel + " is flat");
 });
 
 test("a stale card warns with a drawn mark, which a fresh card does not carry", () => {
