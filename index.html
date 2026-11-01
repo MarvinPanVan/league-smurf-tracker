@@ -1089,9 +1089,12 @@
   /* --art-op: Card art… → Strength. Set on the root for every card, or on one
      card's own picture; a banned card keeps its art at about a third of that. */
   .card.dead .c-art{filter:grayscale(1);opacity:calc(var(--art-op,.28) * .36)}
+  /* A hint of the tier in the corner the rank sits in. At 15% over the art it
+     tinted the whole top of the card, so a row of cards came out yellow, teal and
+     red under their splashes; the rank's own colour and crest already say it. */
   .c-tint{position:absolute;inset:0;z-index:-1;pointer-events:none;
-    background:radial-gradient(125% 78% at 0% 0%,
-      color-mix(in srgb,var(--tier) 15%,transparent),transparent 60%)}
+    background:radial-gradient(110% 64% at 0% 0%,
+      color-mix(in srgb,var(--tier) 7%,transparent),transparent 58%)}
   .c-deltas{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
   /* Rank is the headline; LP is a labelled companion under it — not a smaller
      word jammed onto the same baseline with a leftover margin. */

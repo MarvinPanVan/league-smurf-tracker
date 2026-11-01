@@ -883,6 +883,12 @@ test("the backup reminder carries the way to act on it", () => {
    card: the only filled one. A glossy gradient and a glow under it used to do that
    too, and beside the flat Refresh next to it they read as chrome next to matte,
    so it is the same plate as every other button, filled. */
+test("a card's tier tint is a hint in its corner, not a wash over the art", () => {
+  const rule = html.match(/\n  \.c-tint\{([^}]*)\}/)[1];
+  const pct = +rule.match(/var\(--tier\) (\d+)%/)[1];
+  assert.ok(pct <= 8, "at most 8% of the tier colour (" + pct + "%)");
+});
+
 test("Login stays the one filled control on a card, in the same material as every other button", () => {
   const rule = html.match(/\n  \.a-login\{[^}]*\}/)[0];
   assert.match(rule, /background:var\(--teal\)/, "filled with the accent");
