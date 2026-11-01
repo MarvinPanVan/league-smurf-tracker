@@ -899,17 +899,21 @@ test("a card's tier tint is a hint in its corner, not a wash over the art", () =
 
 test("Login stays the one filled control on a card, in the same material as every other button", () => {
   const rule = html.match(/\n  \.a-login\{[^}]*\}/)[0];
-  assert.match(rule, /background:var\(--teal\)/, "filled with the accent");
+  assert.match(rule, /background-color:var\(--teal\)/, "filled with the accent");
   assert.match(rule, /color:var\(--teal-ink\)/, "lettered in the ink that reads on it");
-  assert.doesNotMatch(rule, /gradient/, "no gloss");
-  assert.doesNotMatch(rule, /box-shadow:0 /, "no glow");
+  // the buttons' own satin, turned up for a bright fill; no gloss or glow of its own
+  assert.match(rule, /background-image:var\(--sheen-fill\)/);
+  assert.match(rule, /box-shadow:var\(--sh-fill\)/);
+  assert.doesNotMatch(rule, /gradient|box-shadow:0 /, "no finish of its own");
+  const fill = html.match(/--sh-fill:([^;]*);/)[1];
+  assert.doesNotMatch(fill, /(^|,)\s*0 0 \d+px/, "the fill's shadow is a lift, not a glow");
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [] }]);
   const filled = [...win.document.querySelectorAll('.card[data-id="a"] .acts > *')]
     .filter(b => /var\(--teal\)/.test((html.match(new RegExp("\\n  \\." + b.className.split(" ")[0] + "\\{([^}]*)\\}")) || [])[1] || ""));
   assert.deepEqual(filled.map(b => b.dataset.act), ["login"], "and the only filled one");
 });
 // and every accent button is the same plate, edged and lettered in the accent, never metal
-test("the accent buttons are flat plates: no gradient rim, no glow; the wordmark and gem are solid", () => {
+test("the accent buttons add no gradient rim or glow of their own; the wordmark and gem are solid", () => {
   const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
   for (const sel of [".b-gold", ".b-gold:hover", ".b-teal", ".b-teal:hover"]) {
     assert.doesNotMatch(rule(sel), /gradient|box-shadow/, sel);
@@ -924,6 +928,38 @@ test("the accent buttons are flat plates: no gradient rim, no glow; the wordmark
     assert.doesNotMatch(rule(sel), /gradient|box-shadow:[^;]*0 0 \d+px/, sel + " is flat");
   // and the shared snapshot's title is plain white type, not haloed in the accent
   assert.doesNotMatch(html.match(/\n  \.sn-title\{([^}]*)\}/)[1], /text-shadow/, "the snapshot title has no glow");
+});
+// Every raised control wears one finish, satin: lit from above, shaded at its foot.
+// The variants only recolour the plate, and what is not a plate stays bare.
+test("every button, dropdown and switch wears the same satin; icons, links and menu rows do not", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const rule = sel => { const m = css.match(new RegExp("\\n  " + sel.replace(/[.#()*+?[\]^$|]/g, "\\$&") + "\\{([^}]*)\\}")); assert.ok(m, sel); return m[1]; };
+  // the finish: a broad, low light with no stop bright enough to read as chrome, and a lift, not a glow
+  const sheen = css.match(/--sheen:([^;]*);/)[1];
+  for (const [, a] of sheen.matchAll(/#ffffff([0-9a-f]{2})/g)) assert.ok(parseInt(a, 16) <= 0x26, "a soft light: " + sheen);
+  assert.doesNotMatch(css.match(/--sh-btn:([^;]*);/)[1], /(^|,)\s*0 0 \d+px/, "a lift, not a glow");
+  // the plate wears it...
+  const base = rule("button,.btn");
+  assert.match(base, /background-image:var\(--sheen\)/);
+  assert.match(base, /box-shadow:var\(--sh-btn\)/);
+  // ...and a variant recolours the plate without wiping it: the background shorthand would reset the image
+  for (const sel of ["button:hover,.btn:hover", ".b-gold", ".b-gold:hover", ".b-teal", ".b-teal:hover", ".b-danger:hover",
+      ".a-login:hover", ".a-dpm", ".a-dpm:hover", ".c-more.on", ".ghost-toggle", ".ghost-toggle:hover"])
+    assert.doesNotMatch(rule(sel), /(^|[;{\s])background:/, sel + " sets background-color, keeping the sheen");
+  // a dropdown is a button that opens a list: the chevron sits on the same satin, hovered or not
+  assert.match(rule("select"), /background-image:url\([^)]*\),var\(--sheen\)/);
+  assert.match(rule("select"), /box-shadow:var\(--sh-btn\)/);
+  assert.match(rule("select:hover,select:focus"), /,var\(--sheen\)/);
+  // a switch is one plate split into options
+  for (const sel of [".opt-seg"]) assert.match(rule(sel), /background:var\(--sheen\),var\(--panel2\)/, sel);
+  assert.match(css, /\n  \.seg\{[^}]*background:var\(--sheen\),var\(--panel2\);box-shadow:var\(--sh-btn\)/);
+  // what is not a plate clears both, so it does not pick up a lit edge and a shadow around nothing
+  for (const sel of [".rid,.star,.eye-btn,.panel-close", "#bMore,#bHelp", "#moreMenu button", ".gem-b", ".fb-x", ".fchip-all",
+      ".bk-note button", ".setup-x"]) {
+    assert.match(rule(sel), /box-shadow:none/, sel);
+    assert.match(rule(sel), /background:none/, sel);
+  }
+  for (const sel of [".stat-b", ".c-drawer", ".sec-h"]) assert.match(rule(sel), /background:none[^}]*box-shadow:none|box-shadow:none[^}]*background:none/, sel);
 });
 
 test("a stale card warns with a drawn mark, which a fresh card does not carry", () => {
