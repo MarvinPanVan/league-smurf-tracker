@@ -675,10 +675,24 @@ test("note fields stay legible: 12px, light words, visible empty pips", () => {
 });
 
 // On an iPad the ⋯ menu was grey words on a panel the card behind showed through.
+// Every frame was the accent as metal; with a blue accent that was a blue outline
+// round every panel and card. The frame is neutral; the accent edge marks a state.
+test("frames are a neutral hairline; the accent edge is kept for a favourite and an open panel", () => {
+  const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
+  assert.doesNotMatch(rule(".hx"), /--gold|--teal/, "a plain frame carries no accent");
+  assert.match(rule(".hx"), /var\(--line2\),var\(--line\)/, "a step lighter along the top");
+  assert.match(rule(".hx.gold"), /var\(--gold\)/, "a favourite's edge is the accent");
+  assert.doesNotMatch(rule(".hx.gold"), /box-shadow/, "with no halo round it");
+  assert.doesNotMatch(html, /\.hx\.gold \.hx-in\{/, "and no tint inside it");
+  for (const sel of [".hx-in>.dist::before", ".hx-rule"]) assert.doesNotMatch(rule(sel), /--gold/, sel + " is a neutral line");
+  assert.doesNotMatch(rule(".console"), /--gold/, "nor the toolbar's frame");
+});
+
 test("the ⋯ menus are solid, and their items read in the text colour", () => {
-  const bg = html.match(/\.card-menu>\.hx-in,#moreMenu>\.hx-in\{background:linear-gradient\(180deg,(#[0-9a-f]+),(#[0-9a-f]+)\)\}/);
+  const bg = html.match(/\.card-menu>\.hx-in,#moreMenu>\.hx-in\{background:var\(--(panel\d?)\)\}/);
   assert.ok(bg, "the panels have a background of their own");
-  for (const c of bg.slice(1)) assert.equal(c.length, 7, c + " is opaque: nothing behind shows through");
+  const tok = html.match(new RegExp("--" + bg[1] + ":(#[0-9a-f]+)"))[1];
+  assert.equal(tok.length, 7, tok + " is opaque: nothing behind shows through");
   const item = html.match(/\.card-menu button,\.card-menu \.cm-link\{([^}]*)\}/)[1];
   assert.match(item, /color:var\(--text\)/);
   assert.doesNotMatch(html.match(/\.card-menu \.ico\{([^}]*)\}/)[1], /--faint/, "and their marks are not the faintest grey");
@@ -692,7 +706,8 @@ test("dividers, control edges and faint text stay visible on a card", () => {
   const tok = n => html.match(new RegExp("--" + n + ":(#[0-9a-f]{6})"))[1];
   const lum = h => { const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(v => v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4)); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
   const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
-  const card = "#0e1620";
+  const card = html.match(/--panel:(#[0-9a-f]{6})/)[1];   // a card is the panel colour
+  assert.match(html, /\n  \.hx-in\{[^}]*background:var\(--panel\)/, "and a card's surface is that colour");
   assert.ok(ratio(tok("line"), card) >= 1.5, "dividers at " + ratio(tok("line"), card).toFixed(2));
   assert.ok(ratio(tok("edge"), card) >= 1.9, "control edges at " + ratio(tok("edge"), card).toFixed(2));
   assert.ok(ratio(tok("line2"), card) > ratio(tok("edge"), card), "hover is a step above rest");
@@ -778,6 +793,31 @@ test("the header tray keeps to the right edge, so the ⋯ menu opens on screen",
   assert.ok(menu.closest(".top .bar"), "from inside the tray");
 });
 
+/* At a display scale of 125% or 150% the tray's 1px frame fell between screen
+   pixels, and each edge mixed with the blurred, saturated wash behind it by a
+   different amount: blue on one side, faint on another, gone on a third. */
+// Spotlight was two washes, the primary from the top left and the secondary from
+// the top right, and with a blue and a gold they met as olive-teal haze over the
+// header. It is one light now, in one hue.
+test("the default background is one light from above, in the primary accent only", () => {
+  const rule = html.match(/\n  body\[data-atmosphere="spotlight"\]\{([^}]*)\}/)[1];
+  assert.doesNotMatch(rule, /--teal/, "the secondary accent is not in it");
+  const tints = [...rule.matchAll(/var\(--gold\) (\d+)%/g)].map(m => +m[1]);
+  assert.equal(tints.length, 1, "one tinted light");
+  assert.ok(tints[0] <= 12, "a tint, not a wash (" + tints[0] + "%)");
+  assert.ok([...rule.matchAll(/ at (\d+)% -/g)].every(m => m[1] === "50"), "centred: one source, not two corners");
+  const mini = html.match(/\.atm-mini\[data-atm="spotlight"\]\{([^}]*)\}/)[1];
+  assert.doesNotMatch(mini, /--teal/, "and its preview tile shows the same");
+});
+
+test("the header tray is a solid plate: nothing behind it can tint its edge", () => {
+  const rule = html.match(/\n  \.top \.bar\{[^}]*\}/)[0];
+  assert.doesNotMatch(rule, /backdrop-filter/, "no blurred backdrop to mix with");
+  assert.match(rule, /background:var\(--panel\)/, "an opaque fill");
+  assert.doesNotMatch(rule, /border:1px/, "its edge is drawn inside the fill, not as a border over the page");
+  assert.doesNotMatch(html, /\.top \.bar:hover\{/, "and it does not change colour on hover");
+});
+
 test("the page speaks in line icons, not emoji", () => {
   const h = n => ({ t: Date.now() - n * 86400000, tier: "GOLD", division: "II", lp: 10 + (3 - n) * 20 });
   const win = bootApp([{ id: "up", region: "EUW", gameName: "Up", tagLine: "1", status: "active",
@@ -839,11 +879,51 @@ test("the backup reminder carries the way to act on it", () => {
   assert.equal(win.document.getElementById("bkNow"), null, "so the reminder goes, straight away");
 });
 
-test("Login stays the most lit control on a card: filled, glossed and glowing", () => {
-  // It is what the app is used for. A calm-down pass once flattened it; this keeps it lit.
+/* Login is what the app is used for, so it stays the control that stands out on a
+   card: the only filled one. A glossy gradient and a glow under it used to do that
+   too, and beside the flat Refresh next to it they read as chrome next to matte,
+   so it is the same plate as every other button, filled. */
+// Mixed 62% into the page's near-black, every tier came out as its muddy version:
+// Gold as olive, Silver as slate. The bar is the tiers' own colours.
+test("the header's rank bar is drawn in the tiers' own colours, not darkened versions", () => {
+  const rule = html.match(/\n  \.rib-seg\{([^}]*)\}/)[1];
+  assert.match(rule, /background:var\(--c\)/);
+  assert.doesNotMatch(rule.replace(/\/\*[\s\S]*?\*\//g, ""), /color-mix/);
+});
+
+test("a card's tier tint is a hint in its corner, not a wash over the art", () => {
+  const rule = html.match(/\n  \.c-tint\{([^}]*)\}/)[1];
+  const pct = +rule.match(/var\(--tier\) (\d+)%/)[1];
+  assert.ok(pct <= 8, "at most 8% of the tier colour (" + pct + "%)");
+});
+
+test("Login stays the one filled control on a card, in the same material as every other button", () => {
   const rule = html.match(/\n  \.a-login\{[^}]*\}/)[0];
-  assert.match(rule, /background:linear-gradient/, "a gloss on the fill");
-  assert.match(rule, /box-shadow:0 /, "and a glow under it");
+  assert.match(rule, /background:var\(--teal\)/, "filled with the accent");
+  assert.match(rule, /color:var\(--teal-ink\)/, "lettered in the ink that reads on it");
+  assert.doesNotMatch(rule, /gradient/, "no gloss");
+  assert.doesNotMatch(rule, /box-shadow:0 /, "no glow");
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [] }]);
+  const filled = [...win.document.querySelectorAll('.card[data-id="a"] .acts > *')]
+    .filter(b => /var\(--teal\)/.test((html.match(new RegExp("\\n  \\." + b.className.split(" ")[0] + "\\{([^}]*)\\}")) || [])[1] || ""));
+  assert.deepEqual(filled.map(b => b.dataset.act), ["login"], "and the only filled one");
+});
+// and every accent button is the same plate, edged and lettered in the accent, never metal
+test("the accent buttons are flat plates: no gradient rim, no glow; the wordmark and gem are solid", () => {
+  const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
+  for (const sel of [".b-gold", ".b-gold:hover", ".b-teal", ".b-teal:hover"]) {
+    assert.doesNotMatch(rule(sel), /gradient|box-shadow/, sel);
+  }
+  const h1 = html.match(/\n  h1,\.lock-wm\{([^}]*)\}/)[1];
+  assert.doesNotMatch(h1, /background-clip|gradient|filter/, "the wordmark is lettered, not chromed");
+  assert.match(h1, /color:var\(--gold-txt\)/);
+  assert.doesNotMatch(rule(".brand-mark::before"), /gradient|animation|box-shadow/, "the gem is a solid stone, still");
+  assert.doesNotMatch(html, /@keyframes gemGlow/);
+  // and the small things that still glittered: honor pips, the lit Tags handle, the skin chips, the empty-state gem
+  for (const sel of [".ni-pips i.on", ".tag-handle.lit", ".ni-skins span", ".empty-gem"])
+    assert.doesNotMatch(rule(sel), /gradient|box-shadow:[^;]*0 0 \d+px/, sel + " is flat");
+  // and the shared snapshot's title is plain white type, not haloed in the accent
+  assert.doesNotMatch(html.match(/\n  \.sn-title\{([^}]*)\}/)[1], /text-shadow/, "the snapshot title has no glow");
 });
 
 test("a stale card warns with a drawn mark, which a fresh card does not carry", () => {
@@ -2987,7 +3067,7 @@ test("the chart's captions keep a dark halo, so the line crossing one doesn't cu
     assert.ok(rule[1].split(",").map(x => x.trim()).includes(sel), sel + " has it");
   const layers = rule[2].split(/,(?![^(]*\))/);
   assert.ok(layers.length >= 3, "stacked, since one soft shadow is too faint to hide a 2px line");
-  assert.ok(layers.every(l => /^0 0 \d+px #0b0e14/.test(l.trim())), "centred, in the plot's own dark");
+  assert.ok(layers.every(l => /^0 0 \d+px var\(--bg\)/.test(l.trim())), "centred, in the page's own dark");
 });
 
 test("one check still gets a chart — it says where on the ladder the account sits", () => {
@@ -4355,6 +4435,8 @@ test("cards do not carry a backdrop filter", () => {
   assert.doesNotMatch(html.match(/\.hx-in\{[^}]*\}/)[0], /backdrop-filter/,
     "the card surface is opaque; glass belongs to the console, tray, toast and tooltip");
   assert.match(html, /\.console\{[^}]*backdrop-filter/, "the sticky console is genuinely translucent");
+  // and no glass saturates what is behind it: that made a smear of the brightest colour scrolling under
+  assert.doesNotMatch(html, /backdrop-filter:[^;}]*saturate/);
 });
 
 // The toolbar toggles used to be styled by hand from three separate places.
@@ -4711,10 +4793,11 @@ test("swatches draw cleanly: no border for a gradient to repeat under, a smoothe
   win.document.getElementById("bSettings").click();
   const sw = win.document.querySelector('#sThemes [data-theme="noxus"] .thm-sw').getAttribute("style");
   assert.match(sw, /calc\(50% - \.6px\).*calc\(50% \+ \.6px\)/, "the diagonal blends over a pixel instead of stepping");
-  // the tray's frame is solid: a see-through one took on the colour of whatever wash was behind it
+  // the tray's edge cannot take on the colour of whatever wash is behind it: it is
+  // drawn inside an opaque fill (see "the header tray is a solid plate")
   const tray = css.match(/\.top \.bar\{[^}]*\}/)[0];
-  assert.match(tray, /border:1px solid color-mix\(in srgb,var\(--gold-dim\) \d+%,var\(--line2\)\)/);
-  assert.doesNotMatch(css.match(/\.top \.bar:hover\{[^}]*\}/)[0], /transparent\)/);
+  assert.match(tray, /background:var\(--panel\)/);
+  assert.match(tray, /box-shadow:inset 0 0 0 1px/);
 });
 
 test("themes: My best rank follows the highest tier, and moves when you climb", () => {

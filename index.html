@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#010a13">
+<meta name="theme-color" content="#090c10">
 <!-- What a shared link shows: Discord, Reddit, iMessage and friends render these as
      a card. Sharing the link is how the licence asks for this to be passed on, and
      without them it arrived as a bare URL. Absolute URLs, because a scraper does
@@ -41,8 +41,13 @@
        the screen. Dividers now sit at about 1.55:1, the edges of things you can
        press or type into (--edge) at 2:1, hover at 2.5:1, and faint text at
        5.5:1 instead of 4.8. Still hairlines, still quiet; now visible. */
-    --bg:#010a13; --panel:#0a1119; --panel2:#111a24; --panel3:#18222e;
-    --line:#2c3a47; --edge:#3a4a59; --line2:#4a5a69;
+    /* Graphite, not navy. Every layer used to share the client's blue-black, and
+       every frame, chip and wash was tinted on top of it, so the page read as one
+       colour: the accent had nothing neutral to stand out from, and a blue accent
+       made the whole thing blue. The base is a near-neutral cool grey now, and
+       colour is kept for what means something: the accents, the tiers, a state. */
+    --bg:#090c10; --panel:#12161c; --panel2:#171c23; --panel3:#1e242c;
+    --line:#323a44; --edge:#404a56; --line2:#53606d;
     /* accent — live-overridden by the accent picker in Settings. The defaults are
        the client's own gold and blue; the derived ones are what applyAccent()
        computes from them, so a reset lands exactly here. */
@@ -90,7 +95,7 @@
   ::-webkit-scrollbar-corner{background:transparent}
   /* the popup list is drawn by the OS, which only takes plain colours — no
      color-mix, no custom properties it can't resolve at paint time */
-  option{background-color:#141821;color:#e9edf5}
+  option{background-color:#171c23;color:#e9edf5}
   /* The account password and the API key are masked with CSS rather than being
      type="password" inputs. A real password field next to a text field the
      browser reads as a username is all Chrome's heuristics need: filling both
@@ -111,11 +116,15 @@
      Spotlight + Aurora = fixed viewport light (stays while you scroll).
      Lattice + Stardust = page texture that scrolls with the document and fades
      out near the end. Noir = fixed vignette + grain, no accent colour. */
+  /* One light, from above. This was two washes: the primary accent from the top
+     left and the secondary from the top right, and where they met they mixed. A
+     blue and a gold made an olive-teal haze over the whole header. One neutral
+     light gives the page a top, and a little of the primary tints it, in one hue
+     only; the secondary is left to the controls. */
   body[data-atmosphere="spotlight"]{
     background:
-      radial-gradient(125vw 80vh at 12% -25%,color-mix(in srgb,var(--gold) 28%,transparent) 0%,transparent 62%),
-      radial-gradient(105vw 70vh at 92% -18%,color-mix(in srgb,var(--teal) 20%,transparent) 0%,transparent 60%),
-      radial-gradient(90vw 55vh at 50% -30%,#ffffff0e 0%,transparent 58%),
+      radial-gradient(64vw 52vh at 50% -16%,color-mix(in srgb,var(--gold) 9%,transparent) 0%,transparent 70%),
+      radial-gradient(110vw 72vh at 50% -28%,#ffffff0b 0%,transparent 62%),
       var(--bg);
     background-attachment:fixed}
   body[data-atmosphere="spotlight"]::before{content:none}
@@ -124,9 +133,8 @@
      right mirrored — so it does not read as one teal blob and one gold blob. */
   body[data-atmosphere="aurora"]{
     background:
-      radial-gradient(90vw 70vh at 0% 0%,color-mix(in srgb,var(--gold) 34%,transparent) 0%,transparent 68%),
-      radial-gradient(90vw 70vh at 100% 0%,color-mix(in srgb,var(--teal) 34%,transparent) 0%,transparent 68%),
-      radial-gradient(70vw 50vh at 50% -10%,color-mix(in srgb,var(--gold) 10%,var(--teal) 10%) 0%,transparent 65%),
+      radial-gradient(80vw 64vh at 0% 0%,color-mix(in srgb,var(--gold) 20%,transparent) 0%,transparent 66%),
+      radial-gradient(80vw 64vh at 100% 0%,color-mix(in srgb,var(--teal) 18%,transparent) 0%,transparent 66%),
       var(--bg);
     background-attachment:fixed}
   body[data-atmosphere="aurora"]::before{content:none}
@@ -135,7 +143,7 @@
      point is "night", not another wash. */
   body[data-atmosphere="noir"]{
     background:
-      radial-gradient(ellipse 70% 55% at 50% 40%,#0a131d 0%,var(--bg) 72%),
+      radial-gradient(ellipse 70% 55% at 50% 40%,#11151b 0%,var(--bg) 72%),
       var(--bg);
     background-attachment:fixed}
   body[data-atmosphere="noir"]::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
@@ -192,11 +200,14 @@
   .cmd>button,.acts>button:not(.c-more),.acts>.btn,.mdl-f>button,#lockBtn,#bExitPreview,#bDemo,#bClearFilters,
   #sSyncGen,#sSyncPush,#sSyncPull,#sVaultSet,#sVaultRemove,#sLockNow,#fGen,#cmpClear{font-weight:600}
 
-  /* ---- surfaces: rounded, gradient hairline, soft glass ---- */
-  /* The client frames everything in metal: a gold edge lit from above that dims as
-     it goes down. White glass edges were the other half of the generic look. */
+  /* ---- surfaces: a hairline frame, lit from above ---- */
+  /* Every panel and card was framed in the accent, as metal lit from the top. With
+     a gold accent that was the client; with any other it was a coloured outline
+     round everything, which is half of why the page read as one colour. The frame
+     is a neutral line now, a step lighter along the top, and the accent edge is
+     kept for what it marks: a favourite, an open panel. */
   .hx{border-radius:var(--r-lg);padding:1px;box-shadow:var(--sh-2);
-    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 46%,transparent),color-mix(in srgb,var(--gold) 16%,transparent) 32%,color-mix(in srgb,var(--gold-dim) 30%,#0a1119) 100%)}
+    background:linear-gradient(180deg,var(--line2),var(--line) 30%)}
   /* No backdrop-filter here, deliberately. This surface is 96–98% opaque, so at
      most 4% of whatever is behind it comes through — and what is behind it is a
      smooth background gradient, which blurring leaves essentially unchanged.
@@ -208,16 +219,13 @@
      hardware, not speed. Glass is kept where the surface is genuinely translucent
      and there is one of it: the sticky console, the header tray, the toast and the
      chart tooltip. */
-  .hx-in{border-radius:calc(var(--r-lg) - 1px);height:100%;
-    background:linear-gradient(180deg,#0e1620f7,#091017fb)}
-  /* A favourite has to be spottable at a glance across a full grid, so it gets a
-     lit border plus a warm halo — the old faint gold edge was invisible in a row
-     of cards. */
-  .hx.gold{background:var(--gold-dim);
-    background:linear-gradient(180deg,var(--star),var(--gold) 26%,var(--gold-dim) 72%,color-mix(in srgb,var(--gold-dim) 50%,#0a1119));
-    box-shadow:var(--sh-2),0 0 30px -10px color-mix(in srgb,var(--gold) 60%,transparent)}
-  .hx.gold .hx-in{background:linear-gradient(180deg,#15150ff7,#0b1016fb)}
-  .hx.teal{background:var(--teal);background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 55%,transparent),color-mix(in srgb,var(--teal) 16%,transparent) 36%,#0a2a32)}
+  .hx-in{border-radius:calc(var(--r-lg) - 1px);height:100%;background:var(--panel)}
+  /* A favourite has to be spottable at a glance across a full grid. The old faint
+     gold edge was invisible in a row of cards, so it is a solid accent edge, a
+     step brighter along the top. It used to add a warm halo and a yellowish fill
+     as well, and against any accent but gold that read as a stain. */
+  .hx.gold{background:linear-gradient(180deg,var(--gold),color-mix(in srgb,var(--gold) 72%,var(--line)) 30%)}
+  .hx.teal{background:linear-gradient(180deg,var(--teal),color-mix(in srgb,var(--teal) 62%,var(--line)) 30%)}
 
   /* ---- header ---- */
   .top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:22px;margin-bottom:16px}
@@ -232,20 +240,16 @@
      It keeps to the right edge when the header wraps. Left-aligned on a row of its
      own it read as a stray, and the ⋯ menu, which hangs leftward from its button,
      opened off the left of a phone screen with "Export backup" cut to "ackup". */
-  /* An opaque line, tinted by the accent. It was the accent at 55% over
-     whatever was behind, and the tray blurs and saturates what is behind it,
-     so on a theme's coloured wash the frame came out two-toned: the wash's
-     colour along one edge, the accent along the other. */
-  .top .bar{margin-left:auto;gap:3px;padding:5px;border:1px solid color-mix(in srgb,var(--gold-dim) 45%,var(--line2));border-radius:var(--r-md);
-    background:linear-gradient(180deg,#ffffff0b,#ffffff05);
-    backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
-    box-shadow:var(--sh-1),inset 0 1px 0 #ffffff0d;
-    transition:border-color .2s ease,box-shadow .2s ease;
-    /* backdrop-filter makes this a stacking context, which traps the overflow
-       menu's z-index inside it — without lifting the tray itself the menu paints
-       under everything that follows in the document. */
+  /* A solid plate, its edge an inner line over its own fill. The tray used to
+     blur and saturate whatever was behind it inside a 1px border, and at a
+     display scale of 125% or 150% a 1px line falls between screen pixels: each
+     edge mixed with the boosted wash behind it by a different amount, so the
+     frame came out blue along one side, faint along another and gone on a
+     third. Over an opaque fill an edge can only mix with that fill. */
+  .top .bar{margin-left:auto;gap:3px;padding:5px;border-radius:var(--r-md);
+    background:var(--panel);box-shadow:inset 0 0 0 1px #ffffff12,var(--sh-1);
+    /* lifted above what follows, so the ⋯ menu inside it paints over the page */
     position:relative;z-index:30}
-  .top .bar:hover{border-color:color-mix(in srgb,var(--gold) 45%,var(--line2));box-shadow:var(--sh-2),inset 0 1px 0 #ffffff14}
   .tray-sep{width:1px;align-self:stretch;margin:2px 3px;flex-shrink:0;
     background:linear-gradient(180deg,transparent,var(--line2),transparent)}
   /* The old header stacked a pill, then the title, then a rule — three full-width
@@ -258,9 +262,12 @@
      opened. Best on the left, the same order the list is sorted in. */
   .ribbon{flex:1 1 260px;min-width:0;max-width:640px;display:flex;flex-direction:column;gap:6px}
   .ribbon:empty{display:none}
-  .rib-bar{display:flex;gap:2px;height:19px}
+  .rib-bar{display:flex;gap:2px;height:16px}
   .rib-seg{flex-grow:1;flex-basis:0;min-width:20px;padding:0;border:0;border-radius:2px;
-    background:color-mix(in srgb,var(--c) 62%,#0b0e14);box-shadow:none;
+    /* the tier's own colour. Mixed 62% into the near-black page it came out as the
+       muddy version of every tier: Gold as olive, Silver as slate, Platinum as
+       a dull teal, which is what made the top of the page read as murky */
+    background:var(--c);box-shadow:none;
     display:flex;align-items:center;justify-content:center;overflow:hidden;
     transform:none;transition:background .16s ease,box-shadow .16s ease,filter .16s ease}
   /* The states that are not rungs on the ladder: sized to their own number so
@@ -272,45 +279,39 @@
   .rib-seg:last-child{border-radius:2px var(--r-xs) var(--r-xs) 2px}
   .rib-seg:only-child{border-radius:var(--r-xs)}
   .rib-seg i{font-style:normal;font-size:calc(10px*var(--ts));font-weight:700;letter-spacing:.02em;
-    color:#0b0e14;opacity:.72;font-variant-numeric:tabular-nums}
+    color:var(--bg);opacity:.72;font-variant-numeric:tabular-nums}
   .rib-seg:hover{background:var(--c);transform:none;border:0;filter:brightness(1.06)}
   .rib-seg:active{transform:none}
   .rib-seg:hover i{opacity:.95}
   /* the selected tier reads as the only lit one, so the bar doubles as a readout
      of which filter is on */
-  .rib-bar:has(.rib-seg.on) .rib-seg:not(.on){background:color-mix(in srgb,var(--c) 22%,#0b0e14)}
+  .rib-bar:has(.rib-seg.on) .rib-seg:not(.on){background:color-mix(in srgb,var(--c) 22%,var(--bg))}
   .rib-bar:has(.rib-seg.on) .rib-seg:not(.on) i{opacity:.4}
-  .rib-seg.on{background:var(--c);box-shadow:0 0 0 1px #0b0e14,0 0 14px -2px var(--c)}
+  .rib-seg.on{background:var(--c);box-shadow:0 0 0 1px var(--bg),0 0 14px -2px var(--c)}
   .rib-cap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
     font-size:calc(11px*var(--ts));letter-spacing:.02em;color:var(--faint)}
   .rib-cap b{font-weight:600;color:var(--muted)}
   .brand{display:flex;align-items:center;gap:16px;min-width:0}
   /* A gem set in a turned gold frame, rather than a rounded app-icon tile. */
+  /* Flat and still, like everything round it: a solid stone in a two-line frame.
+     It was a glossy gem that glowed and pulsed, which is the one sparkle the eye
+     went to first and the reason the rest of the header looked dull beside it. */
   .brand-mark{position:relative;width:44px;height:44px;margin:5px;flex-shrink:0;border-radius:var(--r-xs);
     display:flex;align-items:center;justify-content:center;transform:rotate(45deg);
-    background:linear-gradient(135deg,#1e2328,#0a1119);
-    box-shadow:inset 0 0 0 1px var(--gold),0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold-dim) 90%,transparent),
-      0 10px 30px -10px color-mix(in srgb,var(--gold) 70%,transparent)}
-  .brand-mark::before{content:"";width:18px;height:18px;border-radius:1px;
-    background:linear-gradient(145deg,var(--star),var(--gold) 55%,var(--gold-mid));
-    box-shadow:0 0 20px color-mix(in srgb,var(--gold) 78%,transparent),inset 0 0 0 1px #ffffff45;
-    animation:gemGlow 3.6s ease-in-out infinite}
+    background:var(--panel2);
+    box-shadow:inset 0 0 0 1px var(--gold),0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold) 45%,var(--line))}
+  .brand-mark::before{content:"";width:18px;height:18px;border-radius:1px;background:var(--gold)}
   .brand-sub{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;
     font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
   .brand-sub b{font-weight:600;letter-spacing:.14em;color:var(--gold-txt);padding:3px 9px;border-radius:var(--r-xs);
     background:color-mix(in srgb,var(--gold) 11%,transparent);
     border:1px solid color-mix(in srgb,var(--gold) 24%,transparent)}
-  /* Metal needs a value swing, but --gold-dim is derived as lightness-25, which on
-     a saturated accent lands almost black — dropping it into the ramp put dark
-     patches mid-word that read as broken letters rather than shine. The ramp now
-     spans only mid -> base -> light -> specular, a band that stays legible at
-     any hue, with one narrow highlight doing the metallic work. */
+  /* Solid, in the accent's text colour. It was chrome: a sweep of light across
+     the letters, which next to the flat type and the flat rank bar beside it read
+     as a different material, and in a blue accent as blue foil. The display face
+     is what carries the brand. */
   h1,.lock-wm{margin:0;font-weight:700;font-size:calc(clamp(29px,4.2vw,41px)*var(--ts));line-height:1.04;
-    background:linear-gradient(102deg,
-      var(--gold-mid) 0%,var(--gold) 20%,var(--star) 36%,
-      #fffaf0 44%,var(--star) 53%,var(--gold) 72%,var(--gold-mid) 100%);
-    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
-    filter:drop-shadow(0 1px 1px #00000066)}
+    color:var(--gold-txt)}
   h1.hex-display,.lock-wm{letter-spacing:.02em}
   /* Replaces the full-width rule that used to sit here. That line started hard and
      faded into nothing, belonging to neither the header above nor the text below —
@@ -321,8 +322,11 @@
     border-image:linear-gradient(180deg,color-mix(in srgb,var(--gold) 55%,transparent),transparent 88%) 1}
 
   /* ---- buttons ---- */
+  /* One material for every button: a flat plate, its top edge a shade lighter.
+     The accent ones are the same plate in the accent's colour, and Login is the
+     same again filled; none is glossed or glows. */
   button,.btn{font:inherit;font-size:calc(13px*var(--ts));font-weight:500;cursor:pointer;line-height:1.2;white-space:nowrap;
-    border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--panel2);color:var(--text);
+    border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--panel2);color:var(--text);box-shadow:inset 0 1px 0 #ffffff0a;
     padding:8px 13px;display:inline-flex;align-items:center;justify-content:center;gap:7px;
     transition:background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease,transform .09s ease}
   button:hover,.btn:hover{background:var(--panel3);border-color:var(--line2)}
@@ -332,37 +336,17 @@
   /* text fields and selects draw their own indicator further down; checkboxes
      and the colour swatch keep this outline so keyboard focus stays visible */
   input:not([type=checkbox]):not([type=color]):focus,select:focus,textarea:focus{outline:none}
-  /* The filled metallic version was skeuomorphic in a UI that is otherwise
-     translucent surfaces and hairlines — which is exactly why it read as bolted
-     on. This speaks the same language as every other surface, just louder: an
-     accent-tinted pane, a bright accent rim, a lit top edge and a glow that
-     grows on hover.
-     Light accent text rather than dark-on-fill, because the accent is
-     user-configurable — dark text silently becomes unreadable the moment
-     somebody picks a deep colour.
-     background is redeclared on :hover on purpose: the generic button:hover rule
-     is more specific than .b-gold, so omitting it here lets the plain dark hover
-     background win and the button turns black. */
-  /* Metal, the way the client draws its buttons: a dark plate inside a rim that is
-     lit at the top and falls to the dim gold below — drawn as a second background
-     clipped to the border box, so the corners stay round where a border-image
-     would square them off. Built from the accent tokens, so a picked colour is
-     still the colour of the rim. */
-  .b-gold{color:var(--text);border:1px solid transparent;
-    background:linear-gradient(180deg,#1e2328,#12171d) padding-box,
-      linear-gradient(180deg,var(--star),var(--gold) 34%,var(--gold-dim)) border-box;
-    box-shadow:0 0 0 1px #010a13,0 6px 18px -10px color-mix(in srgb,var(--gold) 70%,transparent)}
-  .b-gold:hover{color:#fff;border-color:transparent;
-    background:linear-gradient(180deg,#2a2b27,#171b1f) padding-box,
-      linear-gradient(180deg,#fff,var(--star) 30%,var(--gold)) border-box;
-    box-shadow:0 0 0 1px #010a13,0 0 18px -3px color-mix(in srgb,var(--gold) 70%,transparent),inset 0 0 14px color-mix(in srgb,var(--gold) 18%,transparent)}
-  .b-teal{color:var(--teal-txt);border:1px solid transparent;
-    background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 16%,#0a1119),#0a1820) padding-box,
-      linear-gradient(180deg,var(--teal),color-mix(in srgb,var(--teal) 40%,#0a1119)) border-box}
-  .b-teal:hover{color:#fff;border-color:transparent;
-    background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 26%,#0a1119),#0b1e27) padding-box,
-      linear-gradient(180deg,#fff,var(--teal) 40%) border-box;
-    box-shadow:0 0 16px -4px color-mix(in srgb,var(--teal) 80%,transparent)}
+  /* The accent's own buttons: the same plate as every other, edged and lettered
+     in the accent and tinted with it. They used to be metal: a gradient rim lit at
+     the top, a glow underneath that grew on hover, which beside the flat buttons
+     next to them read as chrome next to matte. Light text on a tinted plate
+     rather than dark on a fill, because the accent is the user's to pick. */
+  .b-gold{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 60%,var(--edge));
+    background:color-mix(in srgb,var(--gold) 9%,var(--panel2))}
+  .b-gold:hover{color:var(--text);border-color:var(--gold);background:color-mix(in srgb,var(--gold) 17%,var(--panel2))}
+  .b-teal{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 60%,var(--edge));
+    background:color-mix(in srgb,var(--teal) 9%,var(--panel2))}
+  .b-teal:hover{color:var(--text);border-color:var(--teal);background:color-mix(in srgb,var(--teal) 17%,var(--panel2))}
   .b-danger{color:var(--danger)}
   .b-danger:hover{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);
     background:color-mix(in srgb,var(--danger) 13%,var(--panel2))}
@@ -498,18 +482,20 @@
     font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:var(--r-xs);background:#ffffff12}
   .gem.cmb i.g em{font-style:normal;opacity:.5;padding:0 1px}
   .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px;position:relative}
-  /* The client divides with a gold hairline that is brightest in the middle and a
-     small diamond set on it, not with a flat grey rule. */
+  /* The client divides with a hairline that is brightest in the middle and a
+     small diamond set on it, not with a flat grey rule. In the accent it was one
+     more coloured line among the frames; the shape is the ornament, so the line
+     is neutral. */
   .hx-in>.dist{border-top:0!important}
   .hx-in>.dist::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;pointer-events:none;
-    background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent)}
+    background:linear-gradient(90deg,transparent,var(--line) 18%,var(--line2) 50%,var(--line) 82%,transparent)}
   .hx-in>.dist::after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;pointer-events:none;
-    transform:translateX(-50%) rotate(45deg);background:var(--bg);border:1px solid var(--gold)}
+    transform:translateX(-50%) rotate(45deg);background:var(--panel);border:1px solid var(--line2)}
   .dist .k{font-size:calc(11px*var(--ts));font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-right:2px}
   .hx-rule{position:relative;height:1px;width:100%;flex-shrink:0;
-    background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent)}
+    background:linear-gradient(90deg,transparent,var(--line) 18%,var(--line2) 50%,var(--line) 82%,transparent)}
   .hx-rule::after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;
-    transform:translateX(-50%) rotate(45deg);background:var(--bg);border:1px solid var(--gold)}
+    transform:translateX(-50%) rotate(45deg);background:var(--panel);border:1px solid var(--line2)}
   .gem{display:inline-flex;align-items:center;gap:7px;font-size:calc(12px*var(--ts));color:var(--text)}
   /* the tier lozenge — scoped to a class rather than the bare tag, because every
      <i> inside a .gem was inheriting a 9px box and a 45° rotation, which is what
@@ -523,11 +509,13 @@
      are — the row you work the collection from — and being sticky as one unit
      means the primary action stays reachable instead of scrolling off the top. */
   .console{position:sticky;top:0;z-index:10;margin:0 0 18px;
-    border:1px solid color-mix(in srgb,var(--gold-dim) 62%,transparent);border-radius:var(--r-md);overflow:hidden;
-    background:#050c14e0;backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
+    border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;
+    /* glass, because it rides over the cards: blurred, but not saturated, which
+       turned whatever scrolled under it into a smear of its brightest colour */
+    background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
     box-shadow:var(--sh-1)}
   .cmd{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:11px 12px;
-    border-bottom:1px solid color-mix(in srgb,var(--gold-dim) 40%,transparent);background:linear-gradient(180deg,#ffffff0a,transparent)}
+    border-bottom:1px solid var(--line);background:linear-gradient(180deg,#ffffff08,transparent)}
   /* the count was a lone grey line under the grid, where it answered a question
      nobody was asking by then; beside the buttons it's a status readout */
   .cmd-r{margin-left:auto;display:flex;align-items:center;gap:9px;min-width:0}
@@ -629,12 +617,12 @@
   .atm-mini::after{content:"";position:absolute;inset:0;opacity:.04;pointer-events:none;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
   .atm-mini[data-atm="spotlight"]{background:
-    radial-gradient(80% 90% at 18% -10%,color-mix(in srgb,var(--gold) 42%,transparent),transparent 60%),
-    radial-gradient(70% 80% at 92% 0%,color-mix(in srgb,var(--teal) 28%,transparent),transparent 58%),
+    radial-gradient(60% 90% at 50% -12%,color-mix(in srgb,var(--gold) 20%,transparent),transparent 72%),
+    radial-gradient(90% 100% at 50% -20%,#ffffff12,transparent 64%),
     var(--bg)}
   .atm-mini[data-atm="aurora"]{background:
-    radial-gradient(ellipse 70% 90% at 5% 0%,color-mix(in srgb,var(--gold) 55%,transparent),transparent 70%),
-    radial-gradient(ellipse 65% 85% at 100% 10%,color-mix(in srgb,var(--teal) 48%,transparent),transparent 68%),
+    radial-gradient(ellipse 70% 90% at 5% 0%,color-mix(in srgb,var(--gold) 38%,transparent),transparent 70%),
+    radial-gradient(ellipse 65% 85% at 100% 10%,color-mix(in srgb,var(--teal) 34%,transparent),transparent 68%),
     var(--bg)}
   .atm-mini[data-atm="noir"]{background:radial-gradient(ellipse 70% 60% at 50% 45%,#12141a 0%,#050608 100%)}
   .atm-mini[data-atm="noir"]::after{opacity:.12}
@@ -758,8 +746,7 @@
   /* lit while a tag is filtering — the chip that says which one lives in the
      console's filter row, this only says "one is on" */
   .tag-handle.lit{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 50%,transparent);
-    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 22%,var(--panel2)),color-mix(in srgb,var(--gold) 9%,var(--panel2)));
-    box-shadow:0 3px 8px -4px #0009,0 0 14px -6px color-mix(in srgb,var(--gold) 85%,transparent)}
+    background:color-mix(in srgb,var(--gold) 15%,var(--panel2))}
   .tag-handle.lit b,.tag-handle.lit:hover b{color:var(--gold-txt);background:color-mix(in srgb,var(--gold) 34%,transparent)}
   .tag-handle .ico{width:11px;height:11px}
   .tag-chev{transition:transform .22s cubic-bezier(.22,1,.36,1);opacity:.75}
@@ -818,7 +805,7 @@
   .t-lv{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);
     font-style:normal;font-size:calc(10px*var(--ts));font-weight:700;line-height:calc(14px*var(--ts));padding:0 5px;
     min-width:20px;text-align:center;border-radius:var(--r-xs);font-variant-numeric:tabular-nums;
-    color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
+    color:var(--text);background:var(--panel);box-shadow:0 0 0 1px var(--line2)}
   .t-nm{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:-.01em;color:var(--text);max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:4px}
   .t-nm .rw-star .ico{width:10px;height:10px}
@@ -880,7 +867,7 @@
   .rw-lvb{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
     font-style:normal;font-size:calc(10px*var(--ts));font-weight:700;line-height:calc(13px*var(--ts));padding:0 4px;
     min-width:18px;text-align:center;border-radius:var(--r-xs);font-variant-numeric:tabular-nums;
-    color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
+    color:var(--text);background:var(--panel);box-shadow:0 0 0 1px var(--line2)}
   .rw-id{min-width:0;display:flex;flex-direction:column;gap:1px}
   .rw-nm{font-size:calc(14px*var(--ts));font-weight:600;letter-spacing:-.012em;color:var(--text);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
@@ -1003,10 +990,10 @@
      avatar. */
   .c-initial{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:50%;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));
-    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold-dim) 80%,transparent),0 0 0 2px #010a13,0 0 0 3px color-mix(in srgb,var(--gold-dim) 55%,transparent);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold-dim) 80%,transparent),0 0 0 2px var(--bg),0 0 0 3px color-mix(in srgb,var(--gold-dim) 55%,transparent);
     font-size:calc(20px*var(--ts));font-weight:600;color:var(--faint);letter-spacing:-.02em}
   .c-avatar{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;
-    box-shadow:0 0 0 1px var(--gold-dim),0 0 0 2px #010a13,0 0 0 3px color-mix(in srgb,var(--gold) 55%,transparent),0 4px 12px #00000073}
+    box-shadow:0 0 0 1px var(--gold-dim),0 0 0 2px var(--bg),0 0 0 3px color-mix(in srgb,var(--gold) 55%,transparent),0 4px 12px #00000073}
   /* The rank crest rides the portrait; it moved to the top corner to make room
      for the level, which now sits centred on the bottom edge the way op.gg puts
      it. Level was in the stats row next to Peak and MMR, which read as another
@@ -1019,7 +1006,7 @@
     min-width:24px;padding:1px 6px;border-radius:var(--r-xs);text-align:center;
     font-size:calc(11px*var(--ts));font-weight:700;line-height:calc(16px*var(--ts));letter-spacing:.01em;
     font-variant-numeric:tabular-nums;color:var(--text);
-    background:#0d1017;box-shadow:0 0 0 1px var(--line2),0 2px 8px #00000080}
+    background:var(--panel);box-shadow:0 0 0 1px var(--line2),0 2px 8px #00000080}
   .c-id{min-width:0;flex:1}
   .c-name{font-weight:600;font-size:calc(18px*var(--ts));letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
   /* text-overflow only works on a box that holds the text itself. The wall tile and
@@ -1104,9 +1091,12 @@
   /* --art-op: Card art… → Strength. Set on the root for every card, or on one
      card's own picture; a banned card keeps its art at about a third of that. */
   .card.dead .c-art{filter:grayscale(1);opacity:calc(var(--art-op,.28) * .36)}
+  /* A hint of the tier in the corner the rank sits in. At 15% over the art it
+     tinted the whole top of the card, so a row of cards came out yellow, teal and
+     red under their splashes; the rank's own colour and crest already say it. */
   .c-tint{position:absolute;inset:0;z-index:-1;pointer-events:none;
-    background:radial-gradient(125% 78% at 0% 0%,
-      color-mix(in srgb,var(--tier) 15%,transparent),transparent 60%)}
+    background:radial-gradient(110% 64% at 0% 0%,
+      color-mix(in srgb,var(--tier) 7%,transparent),transparent 58%)}
   .c-deltas{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
   /* Rank is the headline; LP is a labelled companion under it — not a smaller
      word jammed onto the same baseline with a leftover margin. */
@@ -1194,9 +1184,9 @@
   .ni-f.warn{color:#f7d690;border-color:#f0c67466;background:#f0c6741c}
   .ni-pips{display:inline-flex;gap:3px}
   .ni-pips i{width:7px;height:7px;transform:rotate(45deg);border-radius:1px;background:#ffffff38}
-  .ni-pips i.on{background:linear-gradient(135deg,var(--star),var(--gold));box-shadow:0 0 6px -1px var(--gold)}
+  .ni-pips i.on{background:var(--gold-txt)}
   .ni-skins span{color:var(--star);border-color:color-mix(in srgb,var(--gold) 42%,transparent);
-    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 18%,transparent),color-mix(in srgb,var(--gold) 7%,transparent))}
+    background:color-mix(in srgb,var(--gold) 11%,transparent)}
   .ni-skins span.more{color:var(--muted);background:none;border-style:dashed}
   .ni-pen{display:flex;align-items:flex-start;gap:7px;padding:6px 9px;border-radius:var(--r-xs);font-size:calc(12px*var(--ts));line-height:1.45;
     color:#ffc4c4;background:#ff6b6b12;border:1px solid #ff6b6b2e}
@@ -1415,7 +1405,7 @@
     padding:9px 10px 4px}
   .pal-empty{padding:26px 14px;text-align:center;color:var(--faint);font-size:calc(13px*var(--ts))}
   .pal-f{display:flex;gap:16px;padding:9px 16px;border-top:1px solid var(--line);flex-shrink:0;
-    font-size:calc(11px*var(--ts));color:var(--faint);background:#0b0e14b8}
+    font-size:calc(11px*var(--ts));color:var(--faint);background:color-mix(in srgb,var(--bg) 72%,transparent)}
   .pal-f kbd{font-family:inherit;font-size:calc(10px*var(--ts));padding:1px 5px;border-radius:var(--r-xs);margin-right:3px;
     background:#ffffff12;box-shadow:inset 0 0 0 1px var(--line2)}
   .help{display:grid;grid-template-columns:118px minmax(0,1fr);gap:0 22px;margin:0;padding:8px 24px 12px;
@@ -1434,7 +1424,7 @@
     .help dt{padding:14px 0 2px}.help dd{border-top:0;padding-top:0}}
   .to-top{position:fixed;right:clamp(14px,3vw,28px);bottom:clamp(14px,3vw,28px);z-index:55;
     width:40px;height:40px;padding:0;border-radius:50%;
-    background:#0b0e14e0;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
     border:1px solid var(--line2);box-shadow:var(--sh-2);color:var(--muted);
     transition:opacity .2s ease,transform .2s cubic-bezier(.22,1,.36,1),color .16s ease,border-color .16s ease}
   .to-top .ico{width:17px;height:17px;stroke-width:2.4}
@@ -1459,7 +1449,7 @@
   /* The line passes under the captions wherever it climbs through a band's
      corner, and ran straight through them: "GOLD" read as a line with letters
      on it. A halo in the plot's own dark lifts the letters off it. */
-  .lpc-plot .lpc-lab,.lpc-plot .lpc-sub,.lpc-plot .lpc-peak{text-shadow:0 0 1px #0b0e14,0 0 2px #0b0e14,0 0 3px #0b0e14,0 0 6px #0b0e14cc}
+  .lpc-plot .lpc-lab,.lpc-plot .lpc-sub,.lpc-plot .lpc-peak{text-shadow:0 0 1px var(--bg),0 0 2px var(--bg),0 0 3px var(--bg),0 0 6px var(--bg)}
   .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:calc(9px*var(--ts));font-weight:600;letter-spacing:.09em;
     text-transform:uppercase;pointer-events:none;opacity:.82;line-height:1}
   /* the ceiling the line is climbing back towards; left lane, with the band
@@ -1490,7 +1480,7 @@
   .lpc-pt:hover::before{opacity:1}
   .lpc-pt>b{position:absolute;left:var(--x);width:0;height:0}
   .lpc-pt i{position:absolute;left:0;top:0;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;
-    box-shadow:0 0 0 2px #0d1017;transition:transform .15s cubic-bezier(.34,1.56,.64,1)}
+    box-shadow:0 0 0 2px var(--panel);transition:transform .15s cubic-bezier(.34,1.56,.64,1)}
   .lpc-pt:hover i{transform:scale(1.55)}
   .lpc.dense .lpc-pt:not(.now):not(:hover) i{transform:scale(0)}
   /* Opaque, not glass. This is the one surface that is always read against a busy
@@ -1499,7 +1489,7 @@
   .lpc-tip{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;
     opacity:0;pointer-events:none;transition:opacity .13s ease;
     white-space:nowrap;font-size:calc(11px*var(--ts));font-weight:500;line-height:1.35;color:var(--text);
-    padding:6px 9px;border-radius:var(--r-sm);background:#0c151f;border:1px solid color-mix(in srgb,var(--gold-dim) 70%,transparent);
+    padding:6px 9px;border-radius:var(--r-sm);background:var(--panel2);border:1px solid var(--line2);
     box-shadow:var(--sh-3)}
   .lpc-tip em{display:block;font-style:normal;font-size:calc(10px*var(--ts));color:var(--faint);margin-top:1px}
   .lpc-tip.l{left:-6px;transform:none}
@@ -1621,7 +1611,7 @@
      words on a near-black panel the card behind still showed through. The
      panel is solid now, the items are in the text colour and their marks one
      step down, and hover keeps its own tint and teal mark. */
-  .card-menu>.hx-in,#moreMenu>.hx-in{background:linear-gradient(180deg,#101923,#0a1118)}
+  .card-menu>.hx-in,#moreMenu>.hx-in{background:var(--panel2)}
   .card-menu button,.card-menu .cm-link{width:100%;justify-content:flex-start;gap:10px;
     font-size:calc(13px*var(--ts));font-weight:500;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
     background:none;border:1px solid transparent;box-shadow:none;color:var(--text);
@@ -1674,11 +1664,11 @@
      look the same. The gold tint implied a hierarchy that isn't there. */
   .a-dpm{border:1px solid var(--edge);color:var(--text);font-weight:500;background:var(--panel2)}
   .a-dpm:hover{color:var(--text);border-color:var(--line2);background:var(--panel3)}
-  .a-login{background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 82%,#fff),var(--teal) 45%,color-mix(in srgb,var(--teal) 78%,#000));
-    border-color:var(--teal);color:var(--teal-ink);font-weight:700;
-    box-shadow:0 4px 14px -6px color-mix(in srgb,var(--teal) 85%,transparent)}
-  .a-login:hover{background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 70%,#fff),var(--teal) 50%);border-color:var(--teal);color:var(--teal-ink);filter:brightness(1.06);
-    box-shadow:0 7px 22px -6px color-mix(in srgb,var(--teal) 95%,transparent)}
+  /* The main action, and the one filled plate on a card: that is what makes it
+     stand out, not a gloss or a glow. Its top edge is lit the way every button's is. */
+  .a-login{background:var(--teal);border-color:var(--teal);color:var(--teal-ink);font-weight:700;
+    box-shadow:inset 0 1px 0 #ffffff47}
+  .a-login:hover{background:color-mix(in srgb,var(--teal) 86%,#fff);border-color:color-mix(in srgb,var(--teal) 86%,#fff);color:var(--teal-ink)}
 
   /* One eyebrow. The small uppercase label over a figure is the most repeated
      element on the page — ACCOUNTS, PEAK, GOAL, CURRENT, RANK SPREAD — and it was
@@ -1706,8 +1696,7 @@
   .empty .d{height:84px;margin-bottom:20px;display:flex;align-items:center;justify-content:center}
   .empty-gem{width:52px;height:52px;display:inline-block;border-radius:var(--r-xs);transform:rotate(45deg);
     border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);
-    background:linear-gradient(145deg,color-mix(in srgb,var(--gold) 22%,transparent),#0f1218);
-    box-shadow:0 0 40px color-mix(in srgb,var(--gold) 22%,transparent),inset 0 0 0 1px #ffffff0f}
+    background:color-mix(in srgb,var(--gold) 12%,var(--panel2))}
   .count{margin-top:30px;text-align:center;font-size:calc(12px*var(--ts));color:var(--faint)}
   .count a{color:var(--gold-txt);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
   .count a:hover{border-bottom-color:currentColor}
@@ -1730,7 +1719,7 @@
     display:flex;align-items:flex-start;justify-content:center;
     padding:clamp(14px,5vh,60px) clamp(12px,4vw,32px)}
   .modal::before{content:"";position:fixed;inset:0;background:#05070bd1;
-    backdrop-filter:blur(7px) saturate(120%);-webkit-backdrop-filter:blur(7px) saturate(120%);
+    backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
     animation:backIn .22s ease both}
   /* margin:auto centres it while short, and lets it grow past the viewport and
      scroll the overlay when the content is genuinely tall */
@@ -1748,7 +1737,7 @@
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .mdl-b{flex:1;min-height:0;overflow:auto;overflow-x:hidden}
   .mdl-f{display:flex;gap:9px;align-items:center;flex-wrap:wrap;flex-shrink:0;
-    padding:14px 22px;border-top:1px solid var(--line);background:#0b0e14b8}
+    padding:14px 22px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 72%,transparent)}
   .mdl-f .sp{margin-left:auto}
   /* a labelled group per concern, instead of eight unrelated fields in one grid */
   .grp{padding:20px 22px}
@@ -1845,17 +1834,16 @@
      for: the turned gem, display-face actions, the rank as the card sets it. */
   .acc-prev-mark{width:20px;height:20px;margin:4px;border-radius:2px;flex-shrink:0;transform:rotate(45deg);
     display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(135deg,#1e2328,#0a1119);
-    box-shadow:inset 0 0 0 1px var(--gold),0 0 0 2px var(--bg),0 0 0 3px color-mix(in srgb,var(--gold-dim) 90%,transparent)}
-  .acc-prev-mark i{display:block;width:8px;height:8px;border-radius:1px;
-    background:linear-gradient(145deg,var(--star),var(--gold) 55%,var(--gold-mid))}
+    background:var(--panel2);
+    box-shadow:inset 0 0 0 1px var(--gold),0 0 0 2px var(--bg),0 0 0 3px color-mix(in srgb,var(--gold) 45%,var(--line))}
+  .acc-prev-mark i{display:block;width:8px;height:8px;border-radius:1px;background:var(--gold)}
   .acc-prev-brand{min-width:0}
   .acc-prev-t{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em;text-transform:uppercase;
     font-size:calc(12px*var(--ts));color:var(--gold-txt);line-height:1.2}
   .acc-prev-sub{font-size:calc(10px*var(--ts));color:var(--faint);margin-top:2px}
   .acc-prev-sub b{color:var(--gold-txt);font-weight:600}
   .acc-prev-rib{display:flex;gap:2px;height:14px;padding:8px 14px 0}
-  .acc-prev-rib i{flex:1;border-radius:1px;background:color-mix(in srgb,var(--c) 62%,#0b0e14)}
+  .acc-prev-rib i{flex:1;border-radius:1px;background:color-mix(in srgb,var(--c) 62%,var(--bg))}
   .acc-prev-cmd{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;
     border-bottom:1px solid var(--line)}
   .acc-prev-cmd button,.acc-prev-card .bar button{padding:5px 9px;font:600 calc(11px*var(--ts))/1.2 'Inter',system-ui,sans-serif}
@@ -1920,8 +1908,8 @@
      measure a desktop always got by accident. */
   #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:80;display:none;
     width:max-content;max-width:min(720px,calc(100vw - 32px));
-    background:#161a23f2;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
-    border:1px solid color-mix(in srgb,var(--gold-dim) 70%,transparent);border-radius:var(--r-md);color:var(--text);
+    background:color-mix(in srgb,var(--panel2) 95%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    border:1px solid var(--line2);border-radius:var(--r-md);color:var(--text);
     padding:11px 20px;font-size:calc(13px*var(--ts));font-weight:500;box-shadow:var(--sh-3)}
 
   .spin{display:inline-block;animation:sp 1s linear infinite}
@@ -1998,8 +1986,8 @@
   .cmp-crest{width:22px;height:22px}
   .cmp-lp{font-size:calc(12px*var(--ts));font-weight:600;color:var(--muted)}
   .cmp-vs{width:38px;height:38px;margin-top:30px;display:grid;place-items:center;transform:rotate(45deg);
-    background:linear-gradient(135deg,#1e2328,#0a1119);border:1px solid var(--gold-dim);
-    box-shadow:0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold-dim) 60%,transparent)}
+    background:var(--panel2);border:1px solid color-mix(in srgb,var(--gold) 55%,var(--line));
+    box-shadow:0 0 0 3px var(--bg),0 0 0 4px var(--line)}
   .cmp-vs span{transform:rotate(-45deg);font-weight:700;font-size:calc(11px*var(--ts));letter-spacing:.06em;color:var(--gold-txt)}
   .cmp-rows{border-top:1px solid var(--line)}
   .cmp-row{display:grid;grid-template-columns:minmax(0,1fr) 92px minmax(0,1fr);gap:10px;align-items:center;
@@ -2028,7 +2016,7 @@
   .sn-hero{text-align:center}
   .sn-eyebrow{font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--gold-txt)}
   .sn-title{margin:12px auto 10px;max-width:22ch;font-size:calc(clamp(30px,5.4vw,48px)*var(--ts));font-weight:600;letter-spacing:-.025em;
-    line-height:1.08;color:#fff;overflow-wrap:anywhere;text-shadow:0 2px 30px color-mix(in srgb,var(--gold) 30%,transparent)}
+    line-height:1.08;color:#fff;overflow-wrap:anywhere}
   .sn-sub{font-size:calc(14px*var(--ts));color:var(--muted)}
   .sn-sum{max-width:880px;margin:30px auto 0;text-align:left}
   .sn-sum .hx-in{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr))}
@@ -2052,13 +2040,13 @@
     background:radial-gradient(120% 140% at 50% 0%,color-mix(in srgb,var(--tier) 26%,transparent),transparent 70%)}
   .sn-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;opacity:.62}
   .sn-art::after{content:"";position:absolute;inset:0;
-    background:linear-gradient(180deg,transparent 30%,color-mix(in srgb,#0b1016 88%,transparent) 88%,#0b1016),
+    background:linear-gradient(180deg,transparent 30%,color-mix(in srgb,var(--panel) 88%,transparent) 88%,var(--panel)),
       linear-gradient(90deg,color-mix(in srgb,var(--tier) 16%,transparent),transparent 60%)}
   .sn-card.dead .sn-art img{filter:grayscale(1);opacity:.25}
   .sn-head{position:relative;z-index:1;display:flex;align-items:flex-end;gap:12px;margin-top:-44px}
   .sn-crest{width:62px;height:62px;flex-shrink:0;display:grid;place-items:center;border-radius:50%;
     background:radial-gradient(circle at 50% 35%,#18222e,#05080d);
-    box-shadow:0 0 0 1px color-mix(in srgb,var(--tier) 55%,transparent),0 0 0 4px #0b1016,0 8px 24px -6px color-mix(in srgb,var(--tier) 70%,transparent)}
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--tier) 55%,transparent),0 0 0 4px var(--panel),0 8px 24px -6px color-mix(in srgb,var(--tier) 70%,transparent)}
   .sn-crest-i{width:40px;height:40px}
   .sn-crest b{font-size:calc(22px*var(--ts));font-weight:600;color:var(--faint)}
   .sn-id{flex:1;min-width:0;padding-bottom:4px}
@@ -2133,7 +2121,7 @@
     transform:scale(1.18);transition:opacity .15s ease}
   .ap-hero img.ap-ph.ld{opacity:1;transform:scale(1.18)}
   .ap-hero::after{content:"";position:absolute;inset:0;pointer-events:none;
-    background:linear-gradient(180deg,transparent 38%,#010a13cc 82%,var(--bg)),linear-gradient(90deg,#010a1399,transparent 55%)}
+    background:linear-gradient(180deg,transparent 38%,color-mix(in srgb,var(--bg) 80%,transparent) 82%,var(--bg)),linear-gradient(90deg,color-mix(in srgb,var(--bg) 60%,transparent),transparent 55%)}
   .ap-cap{position:absolute;left:22px;right:22px;bottom:15px;z-index:1;min-width:0}
   .ap-cap b{display:block;font-size:calc(22px*var(--ts));font-weight:600;letter-spacing:-.01em;color:#fff;
     text-shadow:0 2px 12px #000c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2141,7 +2129,7 @@
     text-transform:uppercase;color:var(--gold-txt)}
   .ap-badge{position:absolute;top:13px;left:16px;z-index:1;display:inline-flex;align-items:center;gap:6px;
     padding:4px 9px;border-radius:var(--r-xs);font-size:calc(11px*var(--ts));font-weight:600;color:var(--text);
-    background:#010a13b3;border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);
+    background:color-mix(in srgb,var(--bg) 70%,transparent);border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);
     backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
   .ap-badge .ico{width:12px;height:12px;color:var(--gold-txt)}
   .ap-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--faint);
@@ -2153,7 +2141,7 @@
   .ap-str{display:grid;grid-template-columns:minmax(0,230px) minmax(0,1fr);gap:18px;align-items:center;
     padding:12px 22px;border-top:1px solid var(--line)}
   .ap-prev{position:relative;height:76px;border-radius:var(--r-sm);overflow:hidden;isolation:isolate;
-    background:linear-gradient(180deg,#0e1620,#091017);box-shadow:0 0 0 1px var(--line)}
+    background:var(--panel);box-shadow:0 0 0 1px var(--line)}
   /* the card's own art box, 230px tall, with only its top showing: the fade is
      drawn over that height on a card, so squeezing it into the strip's 76px made
      every strength look weaker here than it is on the card */
@@ -2203,7 +2191,7 @@
   .ap-sk{display:block;aspect-ratio:3/4;border-radius:var(--r-md);overflow:hidden;background:var(--panel3);
     box-shadow:0 0 0 1px var(--line2),var(--sh-2);transition:box-shadow .18s ease,transform .18s cubic-bezier(.22,1,.36,1)}
   .ap-sk img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 12%}
-  .ap-sk::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,#010a13e6)}
+  .ap-sk::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,color-mix(in srgb,var(--bg) 90%,transparent))}
   .ap-sk .nm{position:absolute;left:9px;right:9px;bottom:8px;z-index:1;font-size:calc(12px*var(--ts));font-weight:600;
     line-height:1.25;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .ap-sk .cur{position:absolute;top:7px;left:7px;z-index:1;padding:2px 6px;border-radius:var(--r-xs);
@@ -2264,22 +2252,16 @@
   }
   /* the inner pane has to paint over the glow layer, not under it */
   .hx-in{position:relative;z-index:1}
-  @keyframes gemGlow{50%{filter:brightness(1.22)}}
   /* ---- Effects (Settings → Appearance) ----
      Subtle: nothing moves under the pointer, nothing loops, the glows are quieter.
      Off: nothing animates or glows at all. Reduce-motion is handled on its own
      below, whichever is picked. */
   body:is([data-fx="subtle"],[data-fx="off"]) :is(.grid>.hx,.grid.wall>.hx,.to-top,.star,.panel-close):hover,
   body:is([data-fx="subtle"],[data-fx="off"]) :is(.acts button,.a-login):hover .ico{transform:none}
-  body:is([data-fx="subtle"],[data-fx="off"]) :is(.grid.boot>.hx,.brand-mark::before){animation:none}
+  body:is([data-fx="subtle"],[data-fx="off"]) :is(.grid.boot>.hx){animation:none}
   body:is([data-fx="subtle"],[data-fx="off"]) .confetti{display:none}
-  body[data-fx="subtle"] .a-login{box-shadow:0 2px 8px -5px color-mix(in srgb,var(--teal) 70%,transparent)}
-  body[data-fx="subtle"] .a-login:hover{box-shadow:0 3px 10px -5px color-mix(in srgb,var(--teal) 80%,transparent)}
   body[data-fx="off"] *,body[data-fx="off"] *::before,body[data-fx="off"] *::after{animation:none!important;transition:none!important}
   body[data-fx="off"] .grid>.hx::after{display:none}
-  body[data-fx="off"] :is(.a-login,.a-login:hover){box-shadow:none}
-  body[data-fx="off"] :is(.b-gold,.b-gold:hover){box-shadow:0 0 0 1px #010a13}
-  body[data-fx="off"] .brand-mark::before{box-shadow:inset 0 0 0 1px #ffffff45}
   /* Nothing here loops on its own except the header mark, the spinner and the
      sweep over a card being checked. A hidden tab stops being painted, but the
      animations are still live objects the compositor keeps ticking, and this app
@@ -2535,12 +2517,12 @@
             <button type="button" role="radio" data-atmosphere="spotlight" class="atm-tile on" aria-checked="true">
               <span class="atm-mini" data-atm="spotlight" aria-hidden="true"></span>
               <span class="atm-name">Spotlight</span>
-              <span class="atm-tip">Quiet glow behind the title from your accents.</span>
+              <span class="atm-tip">One soft light from above, tinted by your accent.</span>
             </button>
             <button type="button" role="radio" data-atmosphere="aurora" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="aurora" aria-hidden="true"></span>
               <span class="atm-name">Aurora</span>
-              <span class="atm-tip">Stronger mirrored colour washes — stays with the window like Spotlight.</span>
+              <span class="atm-tip">Both accents as washes from the two top corners.</span>
             </button>
             <button type="button" role="radio" data-atmosphere="noir" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="noir" aria-hidden="true"></span>
@@ -3202,8 +3184,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.5.1";
+const APP_VERSION="2.6.0";
 const APP_CHANGELOG=[
+  {v:"2.6.0",items:[
+    "A cleaner look: graphite background, one soft light from above, colour only where it means something",
+    "One material: flat buttons, a solid wordmark, no chrome next to matte",
+    "The header buttons' frame is the same on every side at any display scale",
+  ]},
   {v:"2.5.1",items:[
     "A locked tab opens what another tab saved, instead of an older copy",
     "Chart labels move off the line where there's room",
