@@ -290,31 +290,25 @@
   .rib-cap b{font-weight:600;color:var(--muted)}
   .brand{display:flex;align-items:center;gap:16px;min-width:0}
   /* A gem set in a turned gold frame, rather than a rounded app-icon tile. */
+  /* Flat and still, like everything round it: a solid stone in a two-line frame.
+     It was a glossy gem that glowed and pulsed, which is the one sparkle the eye
+     went to first and the reason the rest of the header looked dull beside it. */
   .brand-mark{position:relative;width:44px;height:44px;margin:5px;flex-shrink:0;border-radius:var(--r-xs);
     display:flex;align-items:center;justify-content:center;transform:rotate(45deg);
-    background:linear-gradient(135deg,#1e2328,#0a1119);
-    box-shadow:inset 0 0 0 1px var(--gold),0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold-dim) 90%,transparent),
-      0 10px 30px -10px color-mix(in srgb,var(--gold) 70%,transparent)}
-  .brand-mark::before{content:"";width:18px;height:18px;border-radius:1px;
-    background:linear-gradient(145deg,var(--star),var(--gold) 55%,var(--gold-mid));
-    box-shadow:0 0 20px color-mix(in srgb,var(--gold) 78%,transparent),inset 0 0 0 1px #ffffff45;
-    animation:gemGlow 3.6s ease-in-out infinite}
+    background:var(--panel2);
+    box-shadow:inset 0 0 0 1px var(--gold),0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold) 45%,var(--line))}
+  .brand-mark::before{content:"";width:18px;height:18px;border-radius:1px;background:var(--gold)}
   .brand-sub{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;
     font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
   .brand-sub b{font-weight:600;letter-spacing:.14em;color:var(--gold-txt);padding:3px 9px;border-radius:var(--r-xs);
     background:color-mix(in srgb,var(--gold) 11%,transparent);
     border:1px solid color-mix(in srgb,var(--gold) 24%,transparent)}
-  /* Metal needs a value swing, but --gold-dim is derived as lightness-25, which on
-     a saturated accent lands almost black — dropping it into the ramp put dark
-     patches mid-word that read as broken letters rather than shine. The ramp now
-     spans only mid -> base -> light -> specular, a band that stays legible at
-     any hue, with one narrow highlight doing the metallic work. */
+  /* Solid, in the accent's text colour. It was chrome: a sweep of light across
+     the letters, which next to the flat type and the flat rank bar beside it read
+     as a different material, and in a blue accent as blue foil. The display face
+     is what carries the brand. */
   h1,.lock-wm{margin:0;font-weight:700;font-size:calc(clamp(29px,4.2vw,41px)*var(--ts));line-height:1.04;
-    background:linear-gradient(102deg,
-      var(--gold-mid) 0%,var(--gold) 20%,var(--star) 36%,
-      #fffaf0 44%,var(--star) 53%,var(--gold) 72%,var(--gold-mid) 100%);
-    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
-    filter:drop-shadow(0 1px 1px #00000066)}
+    color:var(--gold-txt)}
   h1.hex-display,.lock-wm{letter-spacing:.02em}
   /* Replaces the full-width rule that used to sit here. That line started hard and
      faded into nothing, belonging to neither the header above nor the text below —
@@ -325,8 +319,11 @@
     border-image:linear-gradient(180deg,color-mix(in srgb,var(--gold) 55%,transparent),transparent 88%) 1}
 
   /* ---- buttons ---- */
+  /* One material for every button: a flat plate, its top edge a shade lighter.
+     The accent ones are the same plate in the accent's colour, and Login is the
+     same again filled; none is glossed or glows. */
   button,.btn{font:inherit;font-size:calc(13px*var(--ts));font-weight:500;cursor:pointer;line-height:1.2;white-space:nowrap;
-    border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--panel2);color:var(--text);
+    border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--panel2);color:var(--text);box-shadow:inset 0 1px 0 #ffffff0a;
     padding:8px 13px;display:inline-flex;align-items:center;justify-content:center;gap:7px;
     transition:background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease,transform .09s ease}
   button:hover,.btn:hover{background:var(--panel3);border-color:var(--line2)}
@@ -336,37 +333,17 @@
   /* text fields and selects draw their own indicator further down; checkboxes
      and the colour swatch keep this outline so keyboard focus stays visible */
   input:not([type=checkbox]):not([type=color]):focus,select:focus,textarea:focus{outline:none}
-  /* The filled metallic version was skeuomorphic in a UI that is otherwise
-     translucent surfaces and hairlines — which is exactly why it read as bolted
-     on. This speaks the same language as every other surface, just louder: an
-     accent-tinted pane, a bright accent rim, a lit top edge and a glow that
-     grows on hover.
-     Light accent text rather than dark-on-fill, because the accent is
-     user-configurable — dark text silently becomes unreadable the moment
-     somebody picks a deep colour.
-     background is redeclared on :hover on purpose: the generic button:hover rule
-     is more specific than .b-gold, so omitting it here lets the plain dark hover
-     background win and the button turns black. */
-  /* Metal, the way the client draws its buttons: a dark plate inside a rim that is
-     lit at the top and falls to the dim gold below — drawn as a second background
-     clipped to the border box, so the corners stay round where a border-image
-     would square them off. Built from the accent tokens, so a picked colour is
-     still the colour of the rim. */
-  .b-gold{color:var(--text);border:1px solid transparent;
-    background:linear-gradient(180deg,#1e2328,#12171d) padding-box,
-      linear-gradient(180deg,var(--star),var(--gold) 34%,var(--gold-dim)) border-box;
-    box-shadow:0 0 0 1px #010a13,0 6px 18px -10px color-mix(in srgb,var(--gold) 70%,transparent)}
-  .b-gold:hover{color:#fff;border-color:transparent;
-    background:linear-gradient(180deg,#2a2b27,#171b1f) padding-box,
-      linear-gradient(180deg,#fff,var(--star) 30%,var(--gold)) border-box;
-    box-shadow:0 0 0 1px #010a13,0 0 18px -3px color-mix(in srgb,var(--gold) 70%,transparent),inset 0 0 14px color-mix(in srgb,var(--gold) 18%,transparent)}
-  .b-teal{color:var(--teal-txt);border:1px solid transparent;
-    background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 16%,#0a1119),#0a1820) padding-box,
-      linear-gradient(180deg,var(--teal),color-mix(in srgb,var(--teal) 40%,#0a1119)) border-box}
-  .b-teal:hover{color:#fff;border-color:transparent;
-    background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 26%,#0a1119),#0b1e27) padding-box,
-      linear-gradient(180deg,#fff,var(--teal) 40%) border-box;
-    box-shadow:0 0 16px -4px color-mix(in srgb,var(--teal) 80%,transparent)}
+  /* The accent's own buttons: the same plate as every other, edged and lettered
+     in the accent and tinted with it. They used to be metal: a gradient rim lit at
+     the top, a glow underneath that grew on hover, which beside the flat buttons
+     next to them read as chrome next to matte. Light text on a tinted plate
+     rather than dark on a fill, because the accent is the user's to pick. */
+  .b-gold{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 60%,var(--edge));
+    background:color-mix(in srgb,var(--gold) 9%,var(--panel2))}
+  .b-gold:hover{color:var(--text);border-color:var(--gold);background:color-mix(in srgb,var(--gold) 17%,var(--panel2))}
+  .b-teal{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 60%,var(--edge));
+    background:color-mix(in srgb,var(--teal) 9%,var(--panel2))}
+  .b-teal:hover{color:var(--text);border-color:var(--teal);background:color-mix(in srgb,var(--teal) 17%,var(--panel2))}
   .b-danger{color:var(--danger)}
   .b-danger:hover{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);
     background:color-mix(in srgb,var(--danger) 13%,var(--panel2))}
@@ -1680,11 +1657,11 @@
      look the same. The gold tint implied a hierarchy that isn't there. */
   .a-dpm{border:1px solid var(--edge);color:var(--text);font-weight:500;background:var(--panel2)}
   .a-dpm:hover{color:var(--text);border-color:var(--line2);background:var(--panel3)}
-  .a-login{background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 82%,#fff),var(--teal) 45%,color-mix(in srgb,var(--teal) 78%,#000));
-    border-color:var(--teal);color:var(--teal-ink);font-weight:700;
-    box-shadow:0 4px 14px -6px color-mix(in srgb,var(--teal) 85%,transparent)}
-  .a-login:hover{background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 70%,#fff),var(--teal) 50%);border-color:var(--teal);color:var(--teal-ink);filter:brightness(1.06);
-    box-shadow:0 7px 22px -6px color-mix(in srgb,var(--teal) 95%,transparent)}
+  /* The main action, and the one filled plate on a card: that is what makes it
+     stand out, not a gloss or a glow. Its top edge is lit the way every button's is. */
+  .a-login{background:var(--teal);border-color:var(--teal);color:var(--teal-ink);font-weight:700;
+    box-shadow:inset 0 1px 0 #ffffff47}
+  .a-login:hover{background:color-mix(in srgb,var(--teal) 86%,#fff);border-color:color-mix(in srgb,var(--teal) 86%,#fff);color:var(--teal-ink)}
 
   /* One eyebrow. The small uppercase label over a figure is the most repeated
      element on the page — ACCOUNTS, PEAK, GOAL, CURRENT, RANK SPREAD — and it was
@@ -1851,10 +1828,9 @@
      for: the turned gem, display-face actions, the rank as the card sets it. */
   .acc-prev-mark{width:20px;height:20px;margin:4px;border-radius:2px;flex-shrink:0;transform:rotate(45deg);
     display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(135deg,#1e2328,#0a1119);
-    box-shadow:inset 0 0 0 1px var(--gold),0 0 0 2px var(--bg),0 0 0 3px color-mix(in srgb,var(--gold-dim) 90%,transparent)}
-  .acc-prev-mark i{display:block;width:8px;height:8px;border-radius:1px;
-    background:linear-gradient(145deg,var(--star),var(--gold) 55%,var(--gold-mid))}
+    background:var(--panel2);
+    box-shadow:inset 0 0 0 1px var(--gold),0 0 0 2px var(--bg),0 0 0 3px color-mix(in srgb,var(--gold) 45%,var(--line))}
+  .acc-prev-mark i{display:block;width:8px;height:8px;border-radius:1px;background:var(--gold)}
   .acc-prev-brand{min-width:0}
   .acc-prev-t{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em;text-transform:uppercase;
     font-size:calc(12px*var(--ts));color:var(--gold-txt);line-height:1.2}
@@ -2004,8 +1980,8 @@
   .cmp-crest{width:22px;height:22px}
   .cmp-lp{font-size:calc(12px*var(--ts));font-weight:600;color:var(--muted)}
   .cmp-vs{width:38px;height:38px;margin-top:30px;display:grid;place-items:center;transform:rotate(45deg);
-    background:linear-gradient(135deg,#1e2328,#0a1119);border:1px solid var(--gold-dim);
-    box-shadow:0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold-dim) 60%,transparent)}
+    background:var(--panel2);border:1px solid color-mix(in srgb,var(--gold) 55%,var(--line));
+    box-shadow:0 0 0 3px var(--bg),0 0 0 4px var(--line)}
   .cmp-vs span{transform:rotate(-45deg);font-weight:700;font-size:calc(11px*var(--ts));letter-spacing:.06em;color:var(--gold-txt)}
   .cmp-rows{border-top:1px solid var(--line)}
   .cmp-row{display:grid;grid-template-columns:minmax(0,1fr) 92px minmax(0,1fr);gap:10px;align-items:center;
@@ -2270,22 +2246,16 @@
   }
   /* the inner pane has to paint over the glow layer, not under it */
   .hx-in{position:relative;z-index:1}
-  @keyframes gemGlow{50%{filter:brightness(1.22)}}
   /* ---- Effects (Settings → Appearance) ----
      Subtle: nothing moves under the pointer, nothing loops, the glows are quieter.
      Off: nothing animates or glows at all. Reduce-motion is handled on its own
      below, whichever is picked. */
   body:is([data-fx="subtle"],[data-fx="off"]) :is(.grid>.hx,.grid.wall>.hx,.to-top,.star,.panel-close):hover,
   body:is([data-fx="subtle"],[data-fx="off"]) :is(.acts button,.a-login):hover .ico{transform:none}
-  body:is([data-fx="subtle"],[data-fx="off"]) :is(.grid.boot>.hx,.brand-mark::before){animation:none}
+  body:is([data-fx="subtle"],[data-fx="off"]) :is(.grid.boot>.hx){animation:none}
   body:is([data-fx="subtle"],[data-fx="off"]) .confetti{display:none}
-  body[data-fx="subtle"] .a-login{box-shadow:0 2px 8px -5px color-mix(in srgb,var(--teal) 70%,transparent)}
-  body[data-fx="subtle"] .a-login:hover{box-shadow:0 3px 10px -5px color-mix(in srgb,var(--teal) 80%,transparent)}
   body[data-fx="off"] *,body[data-fx="off"] *::before,body[data-fx="off"] *::after{animation:none!important;transition:none!important}
   body[data-fx="off"] .grid>.hx::after{display:none}
-  body[data-fx="off"] :is(.a-login,.a-login:hover){box-shadow:none}
-  body[data-fx="off"] :is(.b-gold,.b-gold:hover){box-shadow:0 0 0 1px #010a13}
-  body[data-fx="off"] .brand-mark::before{box-shadow:inset 0 0 0 1px #ffffff45}
   /* Nothing here loops on its own except the header mark, the spinner and the
      sweep over a card being checked. A hidden tab stops being painted, but the
      animations are still live objects the compositor keeps ticking, and this app

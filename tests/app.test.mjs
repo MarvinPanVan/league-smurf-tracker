@@ -879,11 +879,32 @@ test("the backup reminder carries the way to act on it", () => {
   assert.equal(win.document.getElementById("bkNow"), null, "so the reminder goes, straight away");
 });
 
-test("Login stays the most lit control on a card: filled, glossed and glowing", () => {
-  // It is what the app is used for. A calm-down pass once flattened it; this keeps it lit.
+/* Login is what the app is used for, so it stays the control that stands out on a
+   card: the only filled one. A glossy gradient and a glow under it used to do that
+   too, and beside the flat Refresh next to it they read as chrome next to matte,
+   so it is the same plate as every other button, filled. */
+test("Login stays the one filled control on a card, in the same material as every other button", () => {
   const rule = html.match(/\n  \.a-login\{[^}]*\}/)[0];
-  assert.match(rule, /background:linear-gradient/, "a gloss on the fill");
-  assert.match(rule, /box-shadow:0 /, "and a glow under it");
+  assert.match(rule, /background:var\(--teal\)/, "filled with the accent");
+  assert.match(rule, /color:var\(--teal-ink\)/, "lettered in the ink that reads on it");
+  assert.doesNotMatch(rule, /gradient/, "no gloss");
+  assert.doesNotMatch(rule, /box-shadow:0 /, "no glow");
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [] }]);
+  const filled = [...win.document.querySelectorAll('.card[data-id="a"] .acts > *')]
+    .filter(b => /var\(--teal\)/.test((html.match(new RegExp("\\n  \\." + b.className.split(" ")[0] + "\\{([^}]*)\\}")) || [])[1] || ""));
+  assert.deepEqual(filled.map(b => b.dataset.act), ["login"], "and the only filled one");
+});
+// and every accent button is the same plate, edged and lettered in the accent, never metal
+test("the accent buttons are flat plates: no gradient rim, no glow; the wordmark and gem are solid", () => {
+  const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
+  for (const sel of [".b-gold", ".b-gold:hover", ".b-teal", ".b-teal:hover"]) {
+    assert.doesNotMatch(rule(sel), /gradient|box-shadow/, sel);
+  }
+  const h1 = html.match(/\n  h1,\.lock-wm\{([^}]*)\}/)[1];
+  assert.doesNotMatch(h1, /background-clip|gradient|filter/, "the wordmark is lettered, not chromed");
+  assert.match(h1, /color:var\(--gold-txt\)/);
+  assert.doesNotMatch(rule(".brand-mark::before"), /gradient|animation|box-shadow/, "the gem is a solid stone, still");
+  assert.doesNotMatch(html, /@keyframes gemGlow/);
 });
 
 test("a stale card warns with a drawn mark, which a fresh card does not carry", () => {
