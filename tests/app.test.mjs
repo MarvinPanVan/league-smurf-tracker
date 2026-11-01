@@ -4416,6 +4416,8 @@ test("cards do not carry a backdrop filter", () => {
   assert.doesNotMatch(html.match(/\.hx-in\{[^}]*\}/)[0], /backdrop-filter/,
     "the card surface is opaque; glass belongs to the console, tray, toast and tooltip");
   assert.match(html, /\.console\{[^}]*backdrop-filter/, "the sticky console is genuinely translucent");
+  // and no glass saturates what is behind it: that made a smear of the brightest colour scrolling under
+  assert.doesNotMatch(html, /backdrop-filter:[^;}]*saturate/);
 });
 
 // The toolbar toggles used to be styled by hand from three separate places.

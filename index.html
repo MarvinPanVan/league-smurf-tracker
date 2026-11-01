@@ -507,7 +507,9 @@
      means the primary action stays reachable instead of scrolling off the top. */
   .console{position:sticky;top:0;z-index:10;margin:0 0 18px;
     border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;
-    background:#050c14e0;backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
+    /* glass, because it rides over the cards: blurred, but not saturated, which
+       turned whatever scrolled under it into a smear of its brightest colour */
+    background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
     box-shadow:var(--sh-1)}
   .cmd{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:11px 12px;
     border-bottom:1px solid var(--line);background:linear-gradient(180deg,#ffffff08,transparent)}
@@ -1713,7 +1715,7 @@
     display:flex;align-items:flex-start;justify-content:center;
     padding:clamp(14px,5vh,60px) clamp(12px,4vw,32px)}
   .modal::before{content:"";position:fixed;inset:0;background:#05070bd1;
-    backdrop-filter:blur(7px) saturate(120%);-webkit-backdrop-filter:blur(7px) saturate(120%);
+    backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
     animation:backIn .22s ease both}
   /* margin:auto centres it while short, and lets it grow past the viewport and
      scroll the overlay when the content is genuinely tall */
