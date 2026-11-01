@@ -692,7 +692,8 @@ test("dividers, control edges and faint text stay visible on a card", () => {
   const tok = n => html.match(new RegExp("--" + n + ":(#[0-9a-f]{6})"))[1];
   const lum = h => { const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(v => v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4)); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
   const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
-  const card = "#0e1620";
+  const card = html.match(/--panel:(#[0-9a-f]{6})/)[1];   // a card is the panel colour
+  assert.match(html, /\n  \.hx-in\{[^}]*background:var\(--panel\)/, "and a card's surface is that colour");
   assert.ok(ratio(tok("line"), card) >= 1.5, "dividers at " + ratio(tok("line"), card).toFixed(2));
   assert.ok(ratio(tok("edge"), card) >= 1.9, "control edges at " + ratio(tok("edge"), card).toFixed(2));
   assert.ok(ratio(tok("line2"), card) > ratio(tok("edge"), card), "hover is a step above rest");
@@ -2998,7 +2999,7 @@ test("the chart's captions keep a dark halo, so the line crossing one doesn't cu
     assert.ok(rule[1].split(",").map(x => x.trim()).includes(sel), sel + " has it");
   const layers = rule[2].split(/,(?![^(]*\))/);
   assert.ok(layers.length >= 3, "stacked, since one soft shadow is too faint to hide a 2px line");
-  assert.ok(layers.every(l => /^0 0 \d+px #0b0e14/.test(l.trim())), "centred, in the plot's own dark");
+  assert.ok(layers.every(l => /^0 0 \d+px var\(--bg\)/.test(l.trim())), "centred, in the page's own dark");
 });
 
 test("one check still gets a chart — it says where on the ladder the account sits", () => {

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#010a13">
+<meta name="theme-color" content="#090c10">
 <!-- What a shared link shows: Discord, Reddit, iMessage and friends render these as
      a card. Sharing the link is how the licence asks for this to be passed on, and
      without them it arrived as a bare URL. Absolute URLs, because a scraper does
@@ -41,8 +41,13 @@
        the screen. Dividers now sit at about 1.55:1, the edges of things you can
        press or type into (--edge) at 2:1, hover at 2.5:1, and faint text at
        5.5:1 instead of 4.8. Still hairlines, still quiet; now visible. */
-    --bg:#010a13; --panel:#0a1119; --panel2:#111a24; --panel3:#18222e;
-    --line:#2c3a47; --edge:#3a4a59; --line2:#4a5a69;
+    /* Graphite, not navy. Every layer used to share the client's blue-black, and
+       every frame, chip and wash was tinted on top of it, so the page read as one
+       colour: the accent had nothing neutral to stand out from, and a blue accent
+       made the whole thing blue. The base is a near-neutral cool grey now, and
+       colour is kept for what means something: the accents, the tiers, a state. */
+    --bg:#090c10; --panel:#12161c; --panel2:#171c23; --panel3:#1e242c;
+    --line:#323a44; --edge:#404a56; --line2:#53606d;
     /* accent — live-overridden by the accent picker in Settings. The defaults are
        the client's own gold and blue; the derived ones are what applyAccent()
        computes from them, so a reset lands exactly here. */
@@ -90,7 +95,7 @@
   ::-webkit-scrollbar-corner{background:transparent}
   /* the popup list is drawn by the OS, which only takes plain colours — no
      color-mix, no custom properties it can't resolve at paint time */
-  option{background-color:#141821;color:#e9edf5}
+  option{background-color:#171c23;color:#e9edf5}
   /* The account password and the API key are masked with CSS rather than being
      type="password" inputs. A real password field next to a text field the
      browser reads as a username is all Chrome's heuristics need: filling both
@@ -135,7 +140,7 @@
      point is "night", not another wash. */
   body[data-atmosphere="noir"]{
     background:
-      radial-gradient(ellipse 70% 55% at 50% 40%,#0a131d 0%,var(--bg) 72%),
+      radial-gradient(ellipse 70% 55% at 50% 40%,#11151b 0%,var(--bg) 72%),
       var(--bg);
     background-attachment:fixed}
   body[data-atmosphere="noir"]::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
@@ -196,7 +201,7 @@
   /* The client frames everything in metal: a gold edge lit from above that dims as
      it goes down. White glass edges were the other half of the generic look. */
   .hx{border-radius:var(--r-lg);padding:1px;box-shadow:var(--sh-2);
-    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 46%,transparent),color-mix(in srgb,var(--gold) 16%,transparent) 32%,color-mix(in srgb,var(--gold-dim) 30%,#0a1119) 100%)}
+    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 46%,transparent),color-mix(in srgb,var(--gold) 16%,transparent) 32%,color-mix(in srgb,var(--gold-dim) 30%,var(--panel)) 100%)}
   /* No backdrop-filter here, deliberately. This surface is 96–98% opaque, so at
      most 4% of whatever is behind it comes through — and what is behind it is a
      smooth background gradient, which blurring leaves essentially unchanged.
@@ -208,13 +213,12 @@
      hardware, not speed. Glass is kept where the surface is genuinely translucent
      and there is one of it: the sticky console, the header tray, the toast and the
      chart tooltip. */
-  .hx-in{border-radius:calc(var(--r-lg) - 1px);height:100%;
-    background:linear-gradient(180deg,#0e1620f7,#091017fb)}
+  .hx-in{border-radius:calc(var(--r-lg) - 1px);height:100%;background:var(--panel)}
   /* A favourite has to be spottable at a glance across a full grid, so it gets a
      lit border plus a warm halo — the old faint gold edge was invisible in a row
      of cards. */
   .hx.gold{background:var(--gold-dim);
-    background:linear-gradient(180deg,var(--star),var(--gold) 26%,var(--gold-dim) 72%,color-mix(in srgb,var(--gold-dim) 50%,#0a1119));
+    background:linear-gradient(180deg,var(--star),var(--gold) 26%,var(--gold-dim) 72%,color-mix(in srgb,var(--gold-dim) 50%,var(--panel)));
     box-shadow:var(--sh-2),0 0 30px -10px color-mix(in srgb,var(--gold) 60%,transparent)}
   .hx.gold .hx-in{background:linear-gradient(180deg,#15150ff7,#0b1016fb)}
   .hx.teal{background:var(--teal);background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 55%,transparent),color-mix(in srgb,var(--teal) 16%,transparent) 36%,#0a2a32)}
@@ -256,7 +260,7 @@
   .ribbon:empty{display:none}
   .rib-bar{display:flex;gap:2px;height:19px}
   .rib-seg{flex-grow:1;flex-basis:0;min-width:20px;padding:0;border:0;border-radius:2px;
-    background:color-mix(in srgb,var(--c) 62%,#0b0e14);box-shadow:none;
+    background:color-mix(in srgb,var(--c) 62%,var(--bg));box-shadow:none;
     display:flex;align-items:center;justify-content:center;overflow:hidden;
     transform:none;transition:background .16s ease,box-shadow .16s ease,filter .16s ease}
   /* The states that are not rungs on the ladder: sized to their own number so
@@ -268,15 +272,15 @@
   .rib-seg:last-child{border-radius:2px var(--r-xs) var(--r-xs) 2px}
   .rib-seg:only-child{border-radius:var(--r-xs)}
   .rib-seg i{font-style:normal;font-size:calc(10px*var(--ts));font-weight:700;letter-spacing:.02em;
-    color:#0b0e14;opacity:.72;font-variant-numeric:tabular-nums}
+    color:var(--bg);opacity:.72;font-variant-numeric:tabular-nums}
   .rib-seg:hover{background:var(--c);transform:none;border:0;filter:brightness(1.06)}
   .rib-seg:active{transform:none}
   .rib-seg:hover i{opacity:.95}
   /* the selected tier reads as the only lit one, so the bar doubles as a readout
      of which filter is on */
-  .rib-bar:has(.rib-seg.on) .rib-seg:not(.on){background:color-mix(in srgb,var(--c) 22%,#0b0e14)}
+  .rib-bar:has(.rib-seg.on) .rib-seg:not(.on){background:color-mix(in srgb,var(--c) 22%,var(--bg))}
   .rib-bar:has(.rib-seg.on) .rib-seg:not(.on) i{opacity:.4}
-  .rib-seg.on{background:var(--c);box-shadow:0 0 0 1px #0b0e14,0 0 14px -2px var(--c)}
+  .rib-seg.on{background:var(--c);box-shadow:0 0 0 1px var(--bg),0 0 14px -2px var(--c)}
   .rib-cap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
     font-size:calc(11px*var(--ts));letter-spacing:.02em;color:var(--faint)}
   .rib-cap b{font-weight:600;color:var(--muted)}
@@ -814,7 +818,7 @@
   .t-lv{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);
     font-style:normal;font-size:calc(10px*var(--ts));font-weight:700;line-height:calc(14px*var(--ts));padding:0 5px;
     min-width:20px;text-align:center;border-radius:var(--r-xs);font-variant-numeric:tabular-nums;
-    color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
+    color:var(--text);background:var(--panel);box-shadow:0 0 0 1px var(--line2)}
   .t-nm{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:-.01em;color:var(--text);max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:4px}
   .t-nm .rw-star .ico{width:10px;height:10px}
@@ -876,7 +880,7 @@
   .rw-lvb{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
     font-style:normal;font-size:calc(10px*var(--ts));font-weight:700;line-height:calc(13px*var(--ts));padding:0 4px;
     min-width:18px;text-align:center;border-radius:var(--r-xs);font-variant-numeric:tabular-nums;
-    color:var(--text);background:#0d1017;box-shadow:0 0 0 1px var(--line2)}
+    color:var(--text);background:var(--panel);box-shadow:0 0 0 1px var(--line2)}
   .rw-id{min-width:0;display:flex;flex-direction:column;gap:1px}
   .rw-nm{font-size:calc(14px*var(--ts));font-weight:600;letter-spacing:-.012em;color:var(--text);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
@@ -999,10 +1003,10 @@
      avatar. */
   .c-initial{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:50%;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));
-    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold-dim) 80%,transparent),0 0 0 2px #010a13,0 0 0 3px color-mix(in srgb,var(--gold-dim) 55%,transparent);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold-dim) 80%,transparent),0 0 0 2px var(--bg),0 0 0 3px color-mix(in srgb,var(--gold-dim) 55%,transparent);
     font-size:calc(20px*var(--ts));font-weight:600;color:var(--faint);letter-spacing:-.02em}
   .c-avatar{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;
-    box-shadow:0 0 0 1px var(--gold-dim),0 0 0 2px #010a13,0 0 0 3px color-mix(in srgb,var(--gold) 55%,transparent),0 4px 12px #00000073}
+    box-shadow:0 0 0 1px var(--gold-dim),0 0 0 2px var(--bg),0 0 0 3px color-mix(in srgb,var(--gold) 55%,transparent),0 4px 12px #00000073}
   /* The rank crest rides the portrait; it moved to the top corner to make room
      for the level, which now sits centred on the bottom edge the way op.gg puts
      it. Level was in the stats row next to Peak and MMR, which read as another
@@ -1015,7 +1019,7 @@
     min-width:24px;padding:1px 6px;border-radius:var(--r-xs);text-align:center;
     font-size:calc(11px*var(--ts));font-weight:700;line-height:calc(16px*var(--ts));letter-spacing:.01em;
     font-variant-numeric:tabular-nums;color:var(--text);
-    background:#0d1017;box-shadow:0 0 0 1px var(--line2),0 2px 8px #00000080}
+    background:var(--panel);box-shadow:0 0 0 1px var(--line2),0 2px 8px #00000080}
   .c-id{min-width:0;flex:1}
   .c-name{font-weight:600;font-size:calc(18px*var(--ts));letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
   /* text-overflow only works on a box that holds the text itself. The wall tile and
@@ -1411,7 +1415,7 @@
     padding:9px 10px 4px}
   .pal-empty{padding:26px 14px;text-align:center;color:var(--faint);font-size:calc(13px*var(--ts))}
   .pal-f{display:flex;gap:16px;padding:9px 16px;border-top:1px solid var(--line);flex-shrink:0;
-    font-size:calc(11px*var(--ts));color:var(--faint);background:#0b0e14b8}
+    font-size:calc(11px*var(--ts));color:var(--faint);background:color-mix(in srgb,var(--bg) 72%,transparent)}
   .pal-f kbd{font-family:inherit;font-size:calc(10px*var(--ts));padding:1px 5px;border-radius:var(--r-xs);margin-right:3px;
     background:#ffffff12;box-shadow:inset 0 0 0 1px var(--line2)}
   .help{display:grid;grid-template-columns:118px minmax(0,1fr);gap:0 22px;margin:0;padding:8px 24px 12px;
@@ -1430,7 +1434,7 @@
     .help dt{padding:14px 0 2px}.help dd{border-top:0;padding-top:0}}
   .to-top{position:fixed;right:clamp(14px,3vw,28px);bottom:clamp(14px,3vw,28px);z-index:55;
     width:40px;height:40px;padding:0;border-radius:50%;
-    background:#0b0e14e0;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
     border:1px solid var(--line2);box-shadow:var(--sh-2);color:var(--muted);
     transition:opacity .2s ease,transform .2s cubic-bezier(.22,1,.36,1),color .16s ease,border-color .16s ease}
   .to-top .ico{width:17px;height:17px;stroke-width:2.4}
@@ -1455,7 +1459,7 @@
   /* The line passes under the captions wherever it climbs through a band's
      corner, and ran straight through them: "GOLD" read as a line with letters
      on it. A halo in the plot's own dark lifts the letters off it. */
-  .lpc-plot .lpc-lab,.lpc-plot .lpc-sub,.lpc-plot .lpc-peak{text-shadow:0 0 1px #0b0e14,0 0 2px #0b0e14,0 0 3px #0b0e14,0 0 6px #0b0e14cc}
+  .lpc-plot .lpc-lab,.lpc-plot .lpc-sub,.lpc-plot .lpc-peak{text-shadow:0 0 1px var(--bg),0 0 2px var(--bg),0 0 3px var(--bg),0 0 6px var(--bg)}
   .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:calc(9px*var(--ts));font-weight:600;letter-spacing:.09em;
     text-transform:uppercase;pointer-events:none;opacity:.82;line-height:1}
   /* the ceiling the line is climbing back towards; left lane, with the band
@@ -1486,7 +1490,7 @@
   .lpc-pt:hover::before{opacity:1}
   .lpc-pt>b{position:absolute;left:var(--x);width:0;height:0}
   .lpc-pt i{position:absolute;left:0;top:0;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;
-    box-shadow:0 0 0 2px #0d1017;transition:transform .15s cubic-bezier(.34,1.56,.64,1)}
+    box-shadow:0 0 0 2px var(--panel);transition:transform .15s cubic-bezier(.34,1.56,.64,1)}
   .lpc-pt:hover i{transform:scale(1.55)}
   .lpc.dense .lpc-pt:not(.now):not(:hover) i{transform:scale(0)}
   /* Opaque, not glass. This is the one surface that is always read against a busy
@@ -1744,7 +1748,7 @@
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .mdl-b{flex:1;min-height:0;overflow:auto;overflow-x:hidden}
   .mdl-f{display:flex;gap:9px;align-items:center;flex-wrap:wrap;flex-shrink:0;
-    padding:14px 22px;border-top:1px solid var(--line);background:#0b0e14b8}
+    padding:14px 22px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 72%,transparent)}
   .mdl-f .sp{margin-left:auto}
   /* a labelled group per concern, instead of eight unrelated fields in one grid */
   .grp{padding:20px 22px}
@@ -1851,7 +1855,7 @@
   .acc-prev-sub{font-size:calc(10px*var(--ts));color:var(--faint);margin-top:2px}
   .acc-prev-sub b{color:var(--gold-txt);font-weight:600}
   .acc-prev-rib{display:flex;gap:2px;height:14px;padding:8px 14px 0}
-  .acc-prev-rib i{flex:1;border-radius:1px;background:color-mix(in srgb,var(--c) 62%,#0b0e14)}
+  .acc-prev-rib i{flex:1;border-radius:1px;background:color-mix(in srgb,var(--c) 62%,var(--bg))}
   .acc-prev-cmd{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;
     border-bottom:1px solid var(--line)}
   .acc-prev-cmd button,.acc-prev-card .bar button{padding:5px 9px;font:600 calc(11px*var(--ts))/1.2 'Inter',system-ui,sans-serif}
@@ -1916,7 +1920,7 @@
      measure a desktop always got by accident. */
   #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:80;display:none;
     width:max-content;max-width:min(720px,calc(100vw - 32px));
-    background:#161a23f2;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    background:color-mix(in srgb,var(--panel2) 95%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
     border:1px solid color-mix(in srgb,var(--gold-dim) 70%,transparent);border-radius:var(--r-md);color:var(--text);
     padding:11px 20px;font-size:calc(13px*var(--ts));font-weight:500;box-shadow:var(--sh-3)}
 
@@ -2048,13 +2052,13 @@
     background:radial-gradient(120% 140% at 50% 0%,color-mix(in srgb,var(--tier) 26%,transparent),transparent 70%)}
   .sn-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;opacity:.62}
   .sn-art::after{content:"";position:absolute;inset:0;
-    background:linear-gradient(180deg,transparent 30%,color-mix(in srgb,#0b1016 88%,transparent) 88%,#0b1016),
+    background:linear-gradient(180deg,transparent 30%,color-mix(in srgb,var(--panel) 88%,transparent) 88%,var(--panel)),
       linear-gradient(90deg,color-mix(in srgb,var(--tier) 16%,transparent),transparent 60%)}
   .sn-card.dead .sn-art img{filter:grayscale(1);opacity:.25}
   .sn-head{position:relative;z-index:1;display:flex;align-items:flex-end;gap:12px;margin-top:-44px}
   .sn-crest{width:62px;height:62px;flex-shrink:0;display:grid;place-items:center;border-radius:50%;
     background:radial-gradient(circle at 50% 35%,#18222e,#05080d);
-    box-shadow:0 0 0 1px color-mix(in srgb,var(--tier) 55%,transparent),0 0 0 4px #0b1016,0 8px 24px -6px color-mix(in srgb,var(--tier) 70%,transparent)}
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--tier) 55%,transparent),0 0 0 4px var(--panel),0 8px 24px -6px color-mix(in srgb,var(--tier) 70%,transparent)}
   .sn-crest-i{width:40px;height:40px}
   .sn-crest b{font-size:calc(22px*var(--ts));font-weight:600;color:var(--faint)}
   .sn-id{flex:1;min-width:0;padding-bottom:4px}
@@ -2129,7 +2133,7 @@
     transform:scale(1.18);transition:opacity .15s ease}
   .ap-hero img.ap-ph.ld{opacity:1;transform:scale(1.18)}
   .ap-hero::after{content:"";position:absolute;inset:0;pointer-events:none;
-    background:linear-gradient(180deg,transparent 38%,#010a13cc 82%,var(--bg)),linear-gradient(90deg,#010a1399,transparent 55%)}
+    background:linear-gradient(180deg,transparent 38%,color-mix(in srgb,var(--bg) 80%,transparent) 82%,var(--bg)),linear-gradient(90deg,color-mix(in srgb,var(--bg) 60%,transparent),transparent 55%)}
   .ap-cap{position:absolute;left:22px;right:22px;bottom:15px;z-index:1;min-width:0}
   .ap-cap b{display:block;font-size:calc(22px*var(--ts));font-weight:600;letter-spacing:-.01em;color:#fff;
     text-shadow:0 2px 12px #000c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2137,7 +2141,7 @@
     text-transform:uppercase;color:var(--gold-txt)}
   .ap-badge{position:absolute;top:13px;left:16px;z-index:1;display:inline-flex;align-items:center;gap:6px;
     padding:4px 9px;border-radius:var(--r-xs);font-size:calc(11px*var(--ts));font-weight:600;color:var(--text);
-    background:#010a13b3;border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);
+    background:color-mix(in srgb,var(--bg) 70%,transparent);border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);
     backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
   .ap-badge .ico{width:12px;height:12px;color:var(--gold-txt)}
   .ap-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--faint);
@@ -2149,7 +2153,7 @@
   .ap-str{display:grid;grid-template-columns:minmax(0,230px) minmax(0,1fr);gap:18px;align-items:center;
     padding:12px 22px;border-top:1px solid var(--line)}
   .ap-prev{position:relative;height:76px;border-radius:var(--r-sm);overflow:hidden;isolation:isolate;
-    background:linear-gradient(180deg,#0e1620,#091017);box-shadow:0 0 0 1px var(--line)}
+    background:var(--panel);box-shadow:0 0 0 1px var(--line)}
   /* the card's own art box, 230px tall, with only its top showing: the fade is
      drawn over that height on a card, so squeezing it into the strip's 76px made
      every strength look weaker here than it is on the card */
@@ -2199,7 +2203,7 @@
   .ap-sk{display:block;aspect-ratio:3/4;border-radius:var(--r-md);overflow:hidden;background:var(--panel3);
     box-shadow:0 0 0 1px var(--line2),var(--sh-2);transition:box-shadow .18s ease,transform .18s cubic-bezier(.22,1,.36,1)}
   .ap-sk img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 12%}
-  .ap-sk::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,#010a13e6)}
+  .ap-sk::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,color-mix(in srgb,var(--bg) 90%,transparent))}
   .ap-sk .nm{position:absolute;left:9px;right:9px;bottom:8px;z-index:1;font-size:calc(12px*var(--ts));font-weight:600;
     line-height:1.25;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .ap-sk .cur{position:absolute;top:7px;left:7px;z-index:1;padding:2px 6px;border-radius:var(--r-xs);
