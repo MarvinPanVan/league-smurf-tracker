@@ -778,6 +778,17 @@ test("the header tray keeps to the right edge, so the ⋯ menu opens on screen",
   assert.ok(menu.closest(".top .bar"), "from inside the tray");
 });
 
+/* At a display scale of 125% or 150% the tray's 1px frame fell between screen
+   pixels, and each edge mixed with the blurred, saturated wash behind it by a
+   different amount: blue on one side, faint on another, gone on a third. */
+test("the header tray is a solid plate: nothing behind it can tint its edge", () => {
+  const rule = html.match(/\n  \.top \.bar\{[^}]*\}/)[0];
+  assert.doesNotMatch(rule, /backdrop-filter/, "no blurred backdrop to mix with");
+  assert.match(rule, /background:var\(--panel\)/, "an opaque fill");
+  assert.doesNotMatch(rule, /border:1px/, "its edge is drawn inside the fill, not as a border over the page");
+  assert.doesNotMatch(html, /\.top \.bar:hover\{/, "and it does not change colour on hover");
+});
+
 test("the page speaks in line icons, not emoji", () => {
   const h = n => ({ t: Date.now() - n * 86400000, tier: "GOLD", division: "II", lp: 10 + (3 - n) * 20 });
   const win = bootApp([{ id: "up", region: "EUW", gameName: "Up", tagLine: "1", status: "active",
@@ -4711,10 +4722,11 @@ test("swatches draw cleanly: no border for a gradient to repeat under, a smoothe
   win.document.getElementById("bSettings").click();
   const sw = win.document.querySelector('#sThemes [data-theme="noxus"] .thm-sw').getAttribute("style");
   assert.match(sw, /calc\(50% - \.6px\).*calc\(50% \+ \.6px\)/, "the diagonal blends over a pixel instead of stepping");
-  // the tray's frame is solid: a see-through one took on the colour of whatever wash was behind it
+  // the tray's edge cannot take on the colour of whatever wash is behind it: it is
+  // drawn inside an opaque fill (see "the header tray is a solid plate")
   const tray = css.match(/\.top \.bar\{[^}]*\}/)[0];
-  assert.match(tray, /border:1px solid color-mix\(in srgb,var\(--gold-dim\) \d+%,var\(--line2\)\)/);
-  assert.doesNotMatch(css.match(/\.top \.bar:hover\{[^}]*\}/)[0], /transparent\)/);
+  assert.match(tray, /background:var\(--panel\)/);
+  assert.match(tray, /box-shadow:inset 0 0 0 1px/);
 });
 
 test("themes: My best rank follows the highest tier, and moves when you climb", () => {
