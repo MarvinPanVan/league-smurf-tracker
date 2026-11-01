@@ -883,6 +883,14 @@ test("the backup reminder carries the way to act on it", () => {
    card: the only filled one. A glossy gradient and a glow under it used to do that
    too, and beside the flat Refresh next to it they read as chrome next to matte,
    so it is the same plate as every other button, filled. */
+// Mixed 62% into the page's near-black, every tier came out as its muddy version:
+// Gold as olive, Silver as slate. The bar is the tiers' own colours.
+test("the header's rank bar is drawn in the tiers' own colours, not darkened versions", () => {
+  const rule = html.match(/\n  \.rib-seg\{([^}]*)\}/)[1];
+  assert.match(rule, /background:var\(--c\)/);
+  assert.doesNotMatch(rule.replace(/\/\*[\s\S]*?\*\//g, ""), /color-mix/);
+});
+
 test("a card's tier tint is a hint in its corner, not a wash over the art", () => {
   const rule = html.match(/\n  \.c-tint\{([^}]*)\}/)[1];
   const pct = +rule.match(/var\(--tier\) (\d+)%/)[1];

@@ -262,9 +262,12 @@
      opened. Best on the left, the same order the list is sorted in. */
   .ribbon{flex:1 1 260px;min-width:0;max-width:640px;display:flex;flex-direction:column;gap:6px}
   .ribbon:empty{display:none}
-  .rib-bar{display:flex;gap:2px;height:19px}
+  .rib-bar{display:flex;gap:2px;height:16px}
   .rib-seg{flex-grow:1;flex-basis:0;min-width:20px;padding:0;border:0;border-radius:2px;
-    background:color-mix(in srgb,var(--c) 62%,var(--bg));box-shadow:none;
+    /* the tier's own colour. Mixed 62% into the near-black page it came out as the
+       muddy version of every tier: Gold as olive, Silver as slate, Platinum as
+       a dull teal, which is what made the top of the page read as murky */
+    background:var(--c);box-shadow:none;
     display:flex;align-items:center;justify-content:center;overflow:hidden;
     transform:none;transition:background .16s ease,box-shadow .16s ease,filter .16s ease}
   /* The states that are not rungs on the ladder: sized to their own number so
