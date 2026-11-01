@@ -200,11 +200,14 @@
   .cmd>button,.acts>button:not(.c-more),.acts>.btn,.mdl-f>button,#lockBtn,#bExitPreview,#bDemo,#bClearFilters,
   #sSyncGen,#sSyncPush,#sSyncPull,#sVaultSet,#sVaultRemove,#sLockNow,#fGen,#cmpClear{font-weight:600}
 
-  /* ---- surfaces: rounded, gradient hairline, soft glass ---- */
-  /* The client frames everything in metal: a gold edge lit from above that dims as
-     it goes down. White glass edges were the other half of the generic look. */
+  /* ---- surfaces: a hairline frame, lit from above ---- */
+  /* Every panel and card was framed in the accent, as metal lit from the top. With
+     a gold accent that was the client; with any other it was a coloured outline
+     round everything, which is half of why the page read as one colour. The frame
+     is a neutral line now, a step lighter along the top, and the accent edge is
+     kept for what it marks: a favourite, an open panel. */
   .hx{border-radius:var(--r-lg);padding:1px;box-shadow:var(--sh-2);
-    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 46%,transparent),color-mix(in srgb,var(--gold) 16%,transparent) 32%,color-mix(in srgb,var(--gold-dim) 30%,var(--panel)) 100%)}
+    background:linear-gradient(180deg,var(--line2),var(--line) 30%)}
   /* No backdrop-filter here, deliberately. This surface is 96–98% opaque, so at
      most 4% of whatever is behind it comes through — and what is behind it is a
      smooth background gradient, which blurring leaves essentially unchanged.
@@ -217,14 +220,12 @@
      and there is one of it: the sticky console, the header tray, the toast and the
      chart tooltip. */
   .hx-in{border-radius:calc(var(--r-lg) - 1px);height:100%;background:var(--panel)}
-  /* A favourite has to be spottable at a glance across a full grid, so it gets a
-     lit border plus a warm halo — the old faint gold edge was invisible in a row
-     of cards. */
-  .hx.gold{background:var(--gold-dim);
-    background:linear-gradient(180deg,var(--star),var(--gold) 26%,var(--gold-dim) 72%,color-mix(in srgb,var(--gold-dim) 50%,var(--panel)));
-    box-shadow:var(--sh-2),0 0 30px -10px color-mix(in srgb,var(--gold) 60%,transparent)}
-  .hx.gold .hx-in{background:linear-gradient(180deg,#15150ff7,#0b1016fb)}
-  .hx.teal{background:var(--teal);background:linear-gradient(180deg,color-mix(in srgb,var(--teal) 55%,transparent),color-mix(in srgb,var(--teal) 16%,transparent) 36%,#0a2a32)}
+  /* A favourite has to be spottable at a glance across a full grid. The old faint
+     gold edge was invisible in a row of cards, so it is a solid accent edge, a
+     step brighter along the top. It used to add a warm halo and a yellowish fill
+     as well, and against any accent but gold that read as a stain. */
+  .hx.gold{background:linear-gradient(180deg,var(--gold),color-mix(in srgb,var(--gold) 72%,var(--line)) 30%)}
+  .hx.teal{background:linear-gradient(180deg,var(--teal),color-mix(in srgb,var(--teal) 62%,var(--line)) 30%)}
 
   /* ---- header ---- */
   .top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:22px;margin-bottom:16px}
@@ -501,18 +502,20 @@
     font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:var(--r-xs);background:#ffffff12}
   .gem.cmb i.g em{font-style:normal;opacity:.5;padding:0 1px}
   .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px;position:relative}
-  /* The client divides with a gold hairline that is brightest in the middle and a
-     small diamond set on it, not with a flat grey rule. */
+  /* The client divides with a hairline that is brightest in the middle and a
+     small diamond set on it, not with a flat grey rule. In the accent it was one
+     more coloured line among the frames; the shape is the ornament, so the line
+     is neutral. */
   .hx-in>.dist{border-top:0!important}
   .hx-in>.dist::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;pointer-events:none;
-    background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent)}
+    background:linear-gradient(90deg,transparent,var(--line) 18%,var(--line2) 50%,var(--line) 82%,transparent)}
   .hx-in>.dist::after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;pointer-events:none;
-    transform:translateX(-50%) rotate(45deg);background:var(--bg);border:1px solid var(--gold)}
+    transform:translateX(-50%) rotate(45deg);background:var(--panel);border:1px solid var(--line2)}
   .dist .k{font-size:calc(11px*var(--ts));font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-right:2px}
   .hx-rule{position:relative;height:1px;width:100%;flex-shrink:0;
-    background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent)}
+    background:linear-gradient(90deg,transparent,var(--line) 18%,var(--line2) 50%,var(--line) 82%,transparent)}
   .hx-rule::after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;
-    transform:translateX(-50%) rotate(45deg);background:var(--bg);border:1px solid var(--gold)}
+    transform:translateX(-50%) rotate(45deg);background:var(--panel);border:1px solid var(--line2)}
   .gem{display:inline-flex;align-items:center;gap:7px;font-size:calc(12px*var(--ts));color:var(--text)}
   /* the tier lozenge — scoped to a class rather than the bare tag, because every
      <i> inside a .gem was inheriting a 9px box and a 45° rotation, which is what
@@ -526,11 +529,11 @@
      are — the row you work the collection from — and being sticky as one unit
      means the primary action stays reachable instead of scrolling off the top. */
   .console{position:sticky;top:0;z-index:10;margin:0 0 18px;
-    border:1px solid color-mix(in srgb,var(--gold-dim) 62%,transparent);border-radius:var(--r-md);overflow:hidden;
+    border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;
     background:#050c14e0;backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
     box-shadow:var(--sh-1)}
   .cmd{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:11px 12px;
-    border-bottom:1px solid color-mix(in srgb,var(--gold-dim) 40%,transparent);background:linear-gradient(180deg,#ffffff0a,transparent)}
+    border-bottom:1px solid var(--line);background:linear-gradient(180deg,#ffffff08,transparent)}
   /* the count was a lone grey line under the grid, where it answered a question
      nobody was asking by then; beside the buttons it's a status readout */
   .cmd-r{margin-left:auto;display:flex;align-items:center;gap:9px;min-width:0}
@@ -1502,7 +1505,7 @@
   .lpc-tip{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;
     opacity:0;pointer-events:none;transition:opacity .13s ease;
     white-space:nowrap;font-size:calc(11px*var(--ts));font-weight:500;line-height:1.35;color:var(--text);
-    padding:6px 9px;border-radius:var(--r-sm);background:#0c151f;border:1px solid color-mix(in srgb,var(--gold-dim) 70%,transparent);
+    padding:6px 9px;border-radius:var(--r-sm);background:var(--panel2);border:1px solid var(--line2);
     box-shadow:var(--sh-3)}
   .lpc-tip em{display:block;font-style:normal;font-size:calc(10px*var(--ts));color:var(--faint);margin-top:1px}
   .lpc-tip.l{left:-6px;transform:none}
@@ -1624,7 +1627,7 @@
      words on a near-black panel the card behind still showed through. The
      panel is solid now, the items are in the text colour and their marks one
      step down, and hover keeps its own tint and teal mark. */
-  .card-menu>.hx-in,#moreMenu>.hx-in{background:linear-gradient(180deg,#101923,#0a1118)}
+  .card-menu>.hx-in,#moreMenu>.hx-in{background:var(--panel2)}
   .card-menu button,.card-menu .cm-link{width:100%;justify-content:flex-start;gap:10px;
     font-size:calc(13px*var(--ts));font-weight:500;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
     background:none;border:1px solid transparent;box-shadow:none;color:var(--text);
@@ -1924,7 +1927,7 @@
   #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:80;display:none;
     width:max-content;max-width:min(720px,calc(100vw - 32px));
     background:color-mix(in srgb,var(--panel2) 95%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
-    border:1px solid color-mix(in srgb,var(--gold-dim) 70%,transparent);border-radius:var(--r-md);color:var(--text);
+    border:1px solid var(--line2);border-radius:var(--r-md);color:var(--text);
     padding:11px 20px;font-size:calc(13px*var(--ts));font-weight:500;box-shadow:var(--sh-3)}
 
   .spin{display:inline-block;animation:sp 1s linear infinite}

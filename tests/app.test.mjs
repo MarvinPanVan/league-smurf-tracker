@@ -675,10 +675,24 @@ test("note fields stay legible: 12px, light words, visible empty pips", () => {
 });
 
 // On an iPad the ⋯ menu was grey words on a panel the card behind showed through.
+// Every frame was the accent as metal; with a blue accent that was a blue outline
+// round every panel and card. The frame is neutral; the accent edge marks a state.
+test("frames are a neutral hairline; the accent edge is kept for a favourite and an open panel", () => {
+  const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
+  assert.doesNotMatch(rule(".hx"), /--gold|--teal/, "a plain frame carries no accent");
+  assert.match(rule(".hx"), /var\(--line2\),var\(--line\)/, "a step lighter along the top");
+  assert.match(rule(".hx.gold"), /var\(--gold\)/, "a favourite's edge is the accent");
+  assert.doesNotMatch(rule(".hx.gold"), /box-shadow/, "with no halo round it");
+  assert.doesNotMatch(html, /\.hx\.gold \.hx-in\{/, "and no tint inside it");
+  for (const sel of [".hx-in>.dist::before", ".hx-rule"]) assert.doesNotMatch(rule(sel), /--gold/, sel + " is a neutral line");
+  assert.doesNotMatch(rule(".console"), /--gold/, "nor the toolbar's frame");
+});
+
 test("the ⋯ menus are solid, and their items read in the text colour", () => {
-  const bg = html.match(/\.card-menu>\.hx-in,#moreMenu>\.hx-in\{background:linear-gradient\(180deg,(#[0-9a-f]+),(#[0-9a-f]+)\)\}/);
+  const bg = html.match(/\.card-menu>\.hx-in,#moreMenu>\.hx-in\{background:var\(--(panel\d?)\)\}/);
   assert.ok(bg, "the panels have a background of their own");
-  for (const c of bg.slice(1)) assert.equal(c.length, 7, c + " is opaque: nothing behind shows through");
+  const tok = html.match(new RegExp("--" + bg[1] + ":(#[0-9a-f]+)"))[1];
+  assert.equal(tok.length, 7, tok + " is opaque: nothing behind shows through");
   const item = html.match(/\.card-menu button,\.card-menu \.cm-link\{([^}]*)\}/)[1];
   assert.match(item, /color:var\(--text\)/);
   assert.doesNotMatch(html.match(/\.card-menu \.ico\{([^}]*)\}/)[1], /--faint/, "and their marks are not the faintest grey");
