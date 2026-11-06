@@ -1584,6 +1584,8 @@
   .t-nm .flagmark .ico,.rw-nm .flagmark .ico{width:11px;height:11px}
   .lbtns{display:flex;gap:5px;flex-shrink:0}
   .lbtns button{font-size:calc(11px*var(--ts));padding:4px 9px}
+  .lbtns button.copied,button.copied{color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,transparent);gap:4px}
+  button.copied .ico{width:11px;height:11px;stroke-width:2.6}
   .login .lseq{width:100%;font-size:calc(12px*var(--ts));font-weight:600;padding:8px 10px;color:var(--teal-txt);
     border-color:color-mix(in srgb,var(--teal) 45%,transparent);background:color-mix(in srgb,var(--teal) 10%,transparent)}
   .login .lseq:hover{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 18%,transparent);color:var(--teal-txt)}
@@ -4775,6 +4777,7 @@ async function copyText(v,label,sensitive){
     }catch(e2){}
   }
   toast(ok?label+" copied"+(sensitive?" — clears from clipboard in 30s":""):"Copy failed — copy manually");
+  if(!ok)return false;
   if(ok&&sensitive){
     lastCopiedSecret=v;
     setTimeout(async()=>{
@@ -4787,6 +4790,17 @@ async function copyText(v,label,sensitive){
       }catch(e){}
     },30000);
   }
+  return true;
+}
+/* The toast says "copied" at the bottom of the screen; this says it where you
+   clicked, the way a password manager's copy button does: "Copy" turns into a
+   green "Copied" with a check for a moment, then comes back. A card re-rendered
+   meanwhile has a fresh button, and the old one is simply gone. */
+function flashCopied(btn){
+  if(!btn||!btn.isConnected)return;
+  if(btn._copied)clearTimeout(btn._copied);else btn._copyHTML=btn.innerHTML;
+  btn.innerHTML=icon("check")+"Copied";btn.classList.add("copied");
+  btn._copied=setTimeout(()=>{btn._copied=null;if(!btn.isConnected)return;btn.innerHTML=btn._copyHTML;btn.classList.remove("copied")},1400);
 }
 let lastCopiedSecret=null;
 const loginSeq=new Set();   // cards whose username is copied and whose password is next
@@ -10819,10 +10833,10 @@ async function onCardClick(e){
     else{copyText(acc.password,"Password",true);loginSeq.delete(id)}
     renderCard(id);
   }
-  else if(act==="copylogin")copyText(acc.login,"Username");
-  else if(act==="copypw")copyText(acc.password,"Password",true);
-  else if(act==="copymail")copyText(acc.email,"Email");
-  else if(act==="copybirth")copyText(acc.birthdate,"Date of birth");
+  else if(act==="copylogin")copyText(acc.login,"Username").then(ok=>{if(ok)flashCopied(btn)});
+  else if(act==="copypw")copyText(acc.password,"Password",true).then(ok=>{if(ok)flashCopied(btn)});
+  else if(act==="copymail")copyText(acc.email,"Email").then(ok=>{if(ok)flashCopied(btn)});
+  else if(act==="copybirth")copyText(acc.birthdate,"Date of birth").then(ok=>{if(ok)flashCopied(btn)});
   else if(act==="played"){markPlayed(id)}
   else if(act==="compare"){openMore.delete(id);openCompare(id)}
   else if(act==="seasonreset"){

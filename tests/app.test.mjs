@@ -1193,6 +1193,32 @@ test("one button copies the username, then the password", async () => {
   await until(() => appGet(win, "lastCopiedSecret") === "hunter22!", "the password to be the secret that gets cleared later");
 });
 
+// the toast says "copied" at the bottom of the screen; the button says it where you clicked
+test("a Copy button turns into a green Copied for a moment, and only when the copy worked", async () => {
+  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [],
+    login: "riotuser", password: "hunter22!", stats: null }]);
+  let fail = false;
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true,
+    value: { writeText: async () => { if (fail) throw new Error("denied"); } } });
+  win.document.execCommand = () => false;
+  const card = () => win.document.querySelector('.card[data-id="L"]');
+  card().querySelector('[data-act="login"]').click();
+  const pw = () => card().querySelector('[data-act="copypw"]');
+  pw().click();
+  await until(() => pw().classList.contains("copied"), "the button to say it copied");
+  assert.match(pw().textContent, /^Copied$/);
+  assert.ok(pw().querySelector("svg"), "with a check");
+  await until(() => !pw().classList.contains("copied"), "the button to come back", 3000);
+  assert.equal(pw().textContent, "Copy");
+  // a copy that failed says so in the toast and leaves the button alone
+  fail = true;
+  const user = card().querySelector('[data-act="copylogin"]');
+  user.click();
+  await until(() => /Copy failed/.test(win.document.getElementById("toast").textContent), "the failure toast");
+  assert.equal(user.classList.contains("copied"), false);
+  assert.match(html, /\n  \.lbtns button\.copied,button\.copied\{color:var\(--good\)/, "in the colour that means done");
+});
+
 test("Play next names the account to play: about to decay first, then the longest left", () => {
   const D = 86400000, now = Date.now();
   const acc = (id, tier, playedAgo, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [],
