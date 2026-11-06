@@ -1027,6 +1027,7 @@ test("the vault asks the browser to keep it, once, and Settings says whether it 
   win.document.getElementById("bSettings").click();
   const status = win.document.getElementById("sStorageStatus"), btn = win.document.getElementById("sStorageProtect");
   await until(() => /Not protected/.test(status.textContent), "the status to say the vault can be cleared");
+  assert.match(status.getAttribute("style") || "", /--warn-txt/, "in the warning's amber: nothing is lost yet");
   assert.equal(btn.classList.contains("hidden"), false, "with a way to ask again");
   granted = true;
   btn.click();
@@ -8158,6 +8159,26 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false,
     stats: { found: true, tier: "GOLD", division: "II", lp: 10 } }), false);
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
+});
+
+// A state's colour is its meaning, whatever the theme: in a gold theme "2-step on"
+// borrowed the gold accent and matched the amber "No 2-step" beside it
+test("on is green and a warning amber in every theme; red is kept for what cannot be undone", () => {
+  const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
+  assert.match(html, /--warn:#[0-9a-f]{6}; --warn-txt:#[0-9a-f]{6};/);
+  assert.match(rule(".ni-f.ok"), /var\(--good\)/);
+  assert.doesNotMatch(rule(".ni-f.ok"), /--teal|--gold/, "not the user's accent");
+  assert.match(rule(".ni-f.warn"), /var\(--warn/);
+  assert.doesNotMatch(rule(".ni-f.warn"), /#[0-9a-f]{6}/, "the warning is the token, not a stray hex");
+  // in a gold theme the two chips now differ
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [],
+    info: { twofa: true } }, { id: "b", region: "EUW", gameName: "B", tagLine: "2", status: "active", tags: [], history: [],
+    info: { twofa: false } }], w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, accent2: "#c8aa6e" })));
+  const on = win.document.querySelector('.card[data-id="a"] .ni-f.ok'), off = win.document.querySelector('.card[data-id="b"] .ni-f.warn');
+  assert.ok(on && /2-step on/.test(on.textContent), "the on chip");
+  assert.ok(off && /No 2-step/.test(off.textContent), "the off chip");
+  // locking is safe and comes undone with the password: it is not a red button
+  assert.equal(win.document.getElementById("sLockNow").classList.contains("b-danger"), false);
 });
 
 // Four micro-stats wrapped three and one, leaving "Recent avg" alone on a row

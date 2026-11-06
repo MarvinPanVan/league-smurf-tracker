@@ -64,6 +64,12 @@
        near-black and white by luminance, because a fixed dark ink goes unreadable
        the moment somebody picks a deep secondary. */
     --teal:#0ac8b9; --teal-ink:#002e2a; --danger:#ff6b6b; --good:#4ade80;
+    /* What a state means is not the user's to recolour. Green is on, done, fine;
+       amber is "worth a look"; red is lost, banned, or cannot be undone. The two
+       accents are for the user's own colours and for actions — "2-step on" used to
+       borrow --teal, which in a gold theme made it the same gold as "No 2-step"
+       beside it, the good state and the warning one indistinguishable. */
+    --warn:#f0c674; --warn-txt:#f7d690;
     --ts:1; /* Settings → Text size: every font size in the app is multiplied by it */
     /* elevation */
     --sh-1:0 1px 2px #00000059;
@@ -1203,8 +1209,8 @@
     font-variant-numeric:tabular-nums;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
   .ni-f b{color:#fff;font-weight:600}
   .ni-f .ico{width:12px;height:12px;flex-shrink:0}
-  .ni-f.ok{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 42%,transparent);background:color-mix(in srgb,var(--teal) 11%,transparent)}
-  .ni-f.warn{color:#f7d690;border-color:#f0c67466;background:#f0c6741c}
+  .ni-f.ok{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent);background:color-mix(in srgb,var(--good) 10%,transparent)}
+  .ni-f.warn{color:var(--warn-txt);border-color:color-mix(in srgb,var(--warn) 40%,transparent);background:color-mix(in srgb,var(--warn) 11%,transparent)}
   .ni-pips{display:inline-flex;gap:3px}
   .ni-pips i{width:7px;height:7px;transform:rotate(45deg);border-radius:1px;background:#ffffff38}
   .ni-pips i.on{background:var(--gold-txt)}
@@ -2714,7 +2720,7 @@
         </div>
         <div id="sAutoLockHint" class="hint" style="margin-top:6px">Only applies while a master password is set. Off means the vault stays unlocked until you lock it.</div>
         <div class="sub-fld" style="padding-left:0;margin-top:12px">
-          <button type="button" id="sLockNow" class="b-danger" title="Lock the vault now — needs the master password to open again">Lock now</button>
+          <button type="button" id="sLockNow" title="Lock the vault now — needs the master password to open again">Lock now</button>
           <div class="hint" style="margin-top:6px">Locks this tab immediately. Other open tabs keep their own unlock state until you reload them.</div>
         </div>
         <div class="fld fw" style="margin-top:22px">
@@ -3689,7 +3695,8 @@ async function updateStorageStatus(){
   el.textContent=st==="protected"?"Protected — this browser will not clear the vault on its own."
     :st==="open"?"Not protected — the browser may clear it when space runs low, and Safari does after 7 days without a visit. Protect it, install the app, and keep a backup."
     :"This browser does not say whether it keeps the vault — keep a backup.";
-  el.style.color=st==="open"?"var(--danger)":"";
+  // a warning, not an error: nothing has been lost, and one click fixes it
+  el.style.color=st==="open"?"var(--warn-txt)":"";
   btn.classList.toggle("hidden",st!=="open");
 }
 function saveDB(opts){invalidateDupCache();
