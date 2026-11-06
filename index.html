@@ -1022,18 +1022,21 @@
     font-variant-numeric:tabular-nums;color:var(--text);
     background:var(--panel);box-shadow:0 0 0 1px var(--line2),0 2px 8px #00000080}
   .c-id{min-width:0;flex:1}
-  .c-name{font-weight:600;font-size:calc(18px*var(--ts));letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
+  .c-name{font-weight:600;font-size:calc(18px*var(--ts));letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;flex-wrap:wrap;gap:3px 8px;min-width:0}
   /* text-overflow only works on a box that holds the text itself. The wall tile and
      the list row had the name as a bare text node in a flex row, so it was sheared
      off mid-letter, no ellipsis, with the flag after it pushed out of sight — the
      card never did, because its name was already a span of its own. */
-  .c-name>span,.t-nm>.nm-t,.rw-nm>.nm-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .c-name>span:first-child,.t-nm>.nm-t,.rw-nm>.nm-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
   /* The chip may not take the room the account name needs: "Resting / unused"
      was holding 114 px of a 234 px row and leaving the name 58 — four letters
      and an ellipsis. Short wording here, the full phrase in the title and
-     everywhere else, and a cap so no future status can do it again. */
+     everywhere else. It used to give way by shrinking too, and on a four-across
+     grid both halves lost: "Fresh leveli…" beside "RES…", a name cut short and a
+     status nobody could read. Now the row wraps instead: the name keeps the first
+     line, and a chip that does not fit beside it drops under it, whole. */
   .stchip{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:var(--r-xs);
-    flex:0 1 auto;min-width:0;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    flex:0 0 auto;white-space:nowrap}
   .c-chrome{display:flex;align-items:center;gap:9px;flex-shrink:0;align-self:flex-start}
   /* selection is chrome, not content — it stays out of the way until wanted */
   .bulkchk{width:15px;height:15px;flex-shrink:0;accent-color:var(--teal);cursor:pointer;margin:0;

@@ -8174,11 +8174,17 @@ test("a status chip says its piece without crowding out the account name", () =>
   // and the long form is still what every list of statuses says
   assert.ok([...win.document.querySelectorAll("#tStatus option")]
     .some(o => o.textContent === "Chat/ranked restricted"), "the status filter names it in full");
-  // nothing lays out in jsdom, so the half of the fix that is geometry is read here
-  const rule = html.match(/\.stchip\{[^}]*\}/);
+  // nothing lays out in jsdom, so the half of the fix that is geometry is read here:
+  // the row wraps, so a chip that does not fit beside the name drops under it whole,
+  // rather than both being cut to "Fresh leveli…" and "RES…"
+  const rule = html.match(/\n  \.stchip\{([^}]*)\}/);
   assert.ok(rule, "the .stchip rule is still there");
-  assert.doesNotMatch(rule[0], /flex-shrink:0/, "a chip that cannot shrink takes the name's room");
-  assert.match(rule[0], /max-width:/, "and a cap, so no future status can do it again");
+  assert.doesNotMatch(rule[1], /text-overflow|max-width/, "the status is never cut short");
+  assert.match(html.match(/\n  \.c-name\{([^}]*)\}/)[1], /flex-wrap:wrap/, "it wraps under the name instead");
+  // and only the name ellipsises: the shared rule no longer reaches every span in the row
+  const nameRule = html.match(/\n  ([^{\n]*\.c-name>span[^{]*)\{[^}]*text-overflow:ellipsis/);
+  assert.ok(nameRule && /\.c-name>span:first-child/.test(nameRule[1]), "the ellipsis is the name's alone");
+  assert.ok(chip.previousElementSibling === null || chip.parentElement.firstElementChild !== chip, "the name comes first");
 });
 
 /* The preview is the first thing a visitor sees, and its sub-30 account printed
