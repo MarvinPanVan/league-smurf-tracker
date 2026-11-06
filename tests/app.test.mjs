@@ -8187,6 +8187,18 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// A first visit opened on an eleven-section reference manual over an empty page
+test("a first visit opens on the welcome, not on How this works; the help is still one click away", () => {
+  const win = bootApp(); // nothing stored: a first visit
+  assert.ok(win.document.getElementById("help").classList.contains("hidden"), "no manual over the empty page");
+  assert.ok(win.document.querySelector(".welcome"), "the welcome is the first thing");
+  assert.equal(win.document.getElementById("intro"), null, "the intro paragraph it repeated is gone");
+  assert.match(win.document.querySelector(".wl-note").textContent, /stays in this browser/, "its point lives in the welcome");
+  assert.match(win.document.querySelector(".wl-note").textContent, /backup/);
+  win.document.getElementById("bHelp").click();
+  assert.equal(win.document.getElementById("help").classList.contains("hidden"), false, "the ? still opens it");
+});
+
 // The first screen anyone sees: what the app does, and both ways in as buttons
 test("an empty vault says what the app does in three steps, with Add account and the preview as buttons", () => {
   const win = bootApp();

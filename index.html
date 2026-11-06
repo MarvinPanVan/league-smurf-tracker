@@ -1742,6 +1742,9 @@
   .wl-steps b{font-size:calc(13px*var(--ts));font-weight:600;color:var(--text)}
   .wl-steps li>span:last-child{align-self:start;font-size:calc(12.5px*var(--ts));color:var(--faint);line-height:1.5}
   .wl-acts{margin-top:26px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .wl-note{margin:22px auto 0;max-width:60ch;display:flex;gap:8px;align-items:flex-start;justify-content:center;
+    font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.55;text-align:left}
+  .wl-note .ico{width:13px;height:13px;margin-top:2px;flex-shrink:0}
   @media (max-width:640px){.wl-steps{grid-template-columns:1fr}}
   .count{margin-top:30px;text-align:center;font-size:calc(12px*var(--ts));color:var(--faint)}
   .count a{color:var(--gold-txt);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
@@ -2490,10 +2493,6 @@
       <button id="bHelp" title="How this works">?</button>
     </div>
   </div>
-  <!-- Onboarding, not chrome: true the first time, a wall you scroll past every
-       time after that. It also says the same thing as the help panel. Hidden once
-       there are accounts in the vault, which is exactly when it stops being news. -->
-  <p class="sub measure" id="intro">Everything is stored locally in this browser on this PC (localStorage). Export a backup now and then — clearing browser data wipes the vault. Rank checks are free and automatic (pulled from op.gg) — no account, no key needed.</p>
 
   <div id="banner" class="banner">Persistent storage is not available in this environment — data will be lost when you close the page. Download the file and open it locally on your PC.</div>
 
@@ -3997,6 +3996,8 @@ const ICON={
   compare:'<rect x="3" y="5" width="7" height="14" rx="1.5"/><rect x="14" y="5" width="7" height="14" rx="1.5"/>',
   archive:'<rect x="3" y="4" width="18" height="4.5" rx="1"/><path d="M5 8.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><line x1="10" y1="13" x2="14" y2="13"/>',
   reset:'<path d="M3.5 12a8.5 8.5 0 1 0 2.9-6.4"/><polyline points="3 4 3 9.5 8.5 9.5"/>',
+  // the welcome's privacy line: a padlock, for "stays here"
+  lock:'<rect x="4.5" y="11" width="15" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>',
   trash:'<line x1="3.5" y1="6" x2="20.5" y2="6"/><path d="M18.5 6l-.9 13.1A2 2 0 0 1 15.6 21H8.4a2 2 0 0 1-2-1.9L5.5 6"/><line x1="10" y1="10.5" x2="10" y2="17"/><line x1="14" y1="10.5" x2="14" y2="17"/><path d="M9 6V4.2A1.2 1.2 0 0 1 10.2 3h3.6A1.2 1.2 0 0 1 15 4.2V6"/>'
 };
 function icon(name,cls){return `<svg class="ico${cls?" "+cls:""}" viewBox="0 0 24 24">${ICON[name]}</svg>`}
@@ -6645,7 +6646,6 @@ function pruneCardState(){
 }
 function render(){
   pruneCardState();
-  $("intro").classList.toggle("hidden",accounts.length>0);
   $("previewBanner").classList.toggle("hidden",!previewMode);
   $("bDeleteAll").disabled=accounts.length===0;
   // No renderBulkBar() after renderGrid(): it ends with one, against the list it
@@ -8671,7 +8671,8 @@ function renderGrid(){
       +`<ol class="wl-steps"><li><span class="wl-n">1</span><b>Add an account</b><span>Its Riot ID and region. The login is optional.</span></li>`
       +`<li><span class="wl-n">2</span><b>Check its rank</b><span>Free and automatic, read from op.gg. No key needed.</span></li>`
       +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Login shows the username and password, each one click to copy.</span></li></ol>`
-      +`<div class="wl-acts"><button id="bEmptyAdd" class="b-teal">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div></div></div>`);
+      +`<div class="wl-acts"><button id="bEmptyAdd" class="b-teal">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div>`
+      +`<p class="wl-note">${icon("lock")}<span>Everything stays in this browser; nothing is uploaded. Clearing the browser's data clears the vault too, so keep a backup.</span></p></div></div>`);
   }else if(list.length===0){
     /* The zero-accounts state offers Add account and the demo; this one used to
        be a sentence and nothing else — on a page where the filters are spread
@@ -11028,7 +11029,10 @@ function startApp(){
   render();
   renderAwayBand();
   setTimeout(()=>$("grid").classList.remove("boot"),1200);
-  if(!cfg.seenHelp&&accounts.length===0)$("help").classList.remove("hidden");
+  /* A first visit used to open on "How this works": eleven sections of search
+     operators, keyboard keys and privacy notes, over a page with nothing on it
+     yet. That is a reference, and it stays one click away on the ?. The empty
+     vault itself is the welcome now: what the app does, and the first step. */
   showChangelogIfNeeded();
   if(startAction)setTimeout(runStartAction,0); // after boot's own first paint
   if(cfg.watch)setTimeout(()=>syncWatch(false),1500); // at most every ten minutes
