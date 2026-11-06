@@ -8161,6 +8161,33 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// Windows, menus and the toast rise in; they used to cut to nothing on the way out
+test("a window, a menu and the toast fade out the way they came in, and not for reduced motion", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const block = css.match(/@supports \(transition-behavior:allow-discrete\)\{([\s\S]*?)\n  \}/);
+  assert.ok(block, "held back only where the browser can hold display back");
+  const b = block[1];
+  assert.match(b, /\.modal,\.card-menu,#moreMenu\{transition:display [.\d]+s allow-discrete\}/, "display waits for the fade");
+  assert.match(b, /\.modal\.hidden\{animation:fadeOut [^}]*pointer-events:none\}/, "a closing window fades and takes no clicks");
+  assert.match(b, /\.modal\.hidden \.mdl\{animation:modalOut /);
+  assert.match(b, /\.card-menu\.hidden,#moreMenu\.hidden\{animation:menuOut [^}]*pointer-events:none\}/);
+  assert.match(b, /#toast\{transition:opacity [^}]*display [^}]*allow-discrete\}/);
+  for (const k of ["fadeOut", "modalOut", "menuOut"]) assert.match(css, new RegExp("@keyframes " + k + "\\{to\\{opacity:0"), k);
+  // faster out than in: closing is the user moving on
+  const secs = re => +css.match(re)[1];
+  assert.ok(secs(/\.modal\.hidden \.mdl\{animation:modalOut ([.\d]+)s/) < secs(/\.modal:not\(\.hidden\) \.mdl\{animation:modalIn ([.\d]+)s/));
+  // reduced motion closes at once
+  const rm = css.match(/@media \(prefers-reduced-motion:reduce\)\{\n    \.spin,[\s\S]*?\n  \}/)[0];
+  assert.match(rm, /\.modal,\.modal \.mdl,\.card-menu,#moreMenu,#toast\{transition:none!important\}/);
+  assert.match(rm, /\.modal\.hidden,\.modal\.hidden \.mdl,\.card-menu\.hidden,#moreMenu\.hidden\{animation:none!important\}/);
+  // the toast fades on opacity, so it is set before display and cleared when it shows again
+  const win = bootApp();
+  const t = win.document.getElementById("toast");
+  win.toast("hello"); assert.equal(t.style.display, "block"); assert.equal(t.style.opacity, "");
+  win.dismissToast(); assert.equal(t.style.display, "none"); assert.equal(t.style.opacity, "0");
+  win.toast("again"); assert.equal(t.style.opacity, "", "a toast shown again is not left see-through");
+});
+
 // A state's colour is its meaning, whatever the theme: in a gold theme "2-step on"
 // borrowed the gold accent and matched the amber "No 2-step" beside it
 test("on is green and a warning amber in every theme; red is kept for what cannot be undone", () => {

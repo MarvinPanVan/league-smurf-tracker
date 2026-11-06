@@ -1980,6 +1980,28 @@
   .modal:not(.hidden) .mdl{animation:modalIn .32s cubic-bezier(.22,1,.36,1) both}
   @keyframes menuIn{from{opacity:0;transform:translateY(-6px) scale(.94)}to{opacity:1;transform:none}}
   #moreMenu:not(.hidden){transform-origin:top right;animation:menuIn .17s cubic-bezier(.22,1,.36,1) both}
+  /* Leaving the way they came. A window, a menu and the toast each rise in, and
+     each used to cut to nothing on the way out: a hard edge at the end of every
+     action. They fade now, quicker than they arrive, since closing is the user
+     moving on. allow-discrete holds display:none back until the fade is done; the
+     .hidden class still lands at once, so nothing can be clicked while it fades
+     and every check for an open window answers straight away. Where a browser
+     cannot hold display back, closing stays the cut it always was.
+     Keyframes, not a transition, for the windows and menus: their way in is an
+     animation, and a transition will not start on a property an animation held a
+     moment before, so a faded menu just vanished and then sat there unseen for
+     the length of the fade. A hidden one at page load is display:none and never
+     runs its exit; it only plays on the way from open to closed. */
+  @keyframes fadeOut{to{opacity:0}}
+  @keyframes modalOut{to{opacity:0;transform:translateY(6px) scale(.985)}}
+  @keyframes menuOut{to{opacity:0;transform:translateY(3px) scale(.985)}}
+  @supports (transition-behavior:allow-discrete){
+    .modal,.card-menu,#moreMenu{transition:display .15s allow-discrete}
+    .modal.hidden{animation:fadeOut .15s ease both;pointer-events:none}
+    .modal.hidden .mdl{animation:modalOut .15s ease both}
+    .card-menu.hidden,#moreMenu.hidden{animation:menuOut .13s ease both;pointer-events:none}
+    #toast{transition:opacity .18s ease,display .18s allow-discrete}
+  }
   @keyframes dashIn{from{opacity:0;transform:translateY(-12px) scaleY(.94)}to{opacity:1;transform:none}}
   .hx.dash-in{transform-origin:top center;animation:dashIn .32s cubic-bezier(.22,1,.36,1) both}
   @keyframes barIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
@@ -2337,6 +2359,8 @@
     .modal::before,.modal:not(.hidden) .mdl,.acc-prev.show{animation:none!important}
     .hx-in.scanning::after{animation:none!important;content:none}
     .grid>.hx{transition:none}
+    .modal,.modal .mdl,.card-menu,#moreMenu,#toast{transition:none!important}
+    .modal.hidden,.modal.hidden .mdl,.card-menu.hidden,#moreMenu.hidden{animation:none!important}
     .panel-close:hover,.chip:active,.card:hover .c-portrait,.a-login:hover .ico,.acts button:hover .ico,
     .c-drawer:hover .ico{transform:none}
     /* the flipped chevrons stay — they say open vs closed, they aren't decoration */
@@ -3995,10 +4019,11 @@ function sanitizeAccount(a){
 }
 // Asked in three places now, and jsdom has no matchMedia unless a test supplies one
 function prefersReducedMotion(){return !!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)}
-function toast(msg,action,fn){const t=$("toast");t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");if(action)document.getElementById("toastBtn").onclick=()=>{dismissToast();fn()};t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>dismissToast(),action?6000:2200)}
+function toast(msg,action,fn){const t=$("toast");t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");if(action)document.getElementById("toastBtn").onclick=()=>{dismissToast();fn()};t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.opacity="";t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>dismissToast(),action?6000:2200)}
 function dismissToast(){
   const t=$("toast");if(!t)return;
-  t.style.display="none";clearTimeout(t._h);
+  // opacity first, so a browser that can hold display back fades it out (see #toast)
+  t.style.opacity="0";t.style.display="none";clearTimeout(t._h);
   const b=document.getElementById("toastBtn");if(b)b.onclick=null;
 }
 /* Both dates are stored as the plain "YYYY-MM-DD" the date input hands over, and
