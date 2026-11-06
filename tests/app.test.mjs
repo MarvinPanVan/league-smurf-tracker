@@ -1027,6 +1027,7 @@ test("the vault asks the browser to keep it, once, and Settings says whether it 
   win.document.getElementById("bSettings").click();
   const status = win.document.getElementById("sStorageStatus"), btn = win.document.getElementById("sStorageProtect");
   await until(() => /Not protected/.test(status.textContent), "the status to say the vault can be cleared");
+  assert.match(status.getAttribute("style") || "", /--warn-txt/, "in the warning's amber: nothing is lost yet");
   assert.equal(btn.classList.contains("hidden"), false, "with a way to ask again");
   granted = true;
   btn.click();
@@ -1190,6 +1191,32 @@ test("one button copies the username, then the password", async () => {
   assert.equal(copied[1], "hunter22!");
   assert.match(seq().textContent, /Copy username, then password/, "and starts over");
   await until(() => appGet(win, "lastCopiedSecret") === "hunter22!", "the password to be the secret that gets cleared later");
+});
+
+// the toast says "copied" at the bottom of the screen; the button says it where you clicked
+test("a Copy button turns into a green Copied for a moment, and only when the copy worked", async () => {
+  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [],
+    login: "riotuser", password: "hunter22!", stats: null }]);
+  let fail = false;
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true,
+    value: { writeText: async () => { if (fail) throw new Error("denied"); } } });
+  win.document.execCommand = () => false;
+  const card = () => win.document.querySelector('.card[data-id="L"]');
+  card().querySelector('[data-act="login"]').click();
+  const pw = () => card().querySelector('[data-act="copypw"]');
+  pw().click();
+  await until(() => pw().classList.contains("copied"), "the button to say it copied");
+  assert.match(pw().textContent, /^Copied$/);
+  assert.ok(pw().querySelector("svg"), "with a check");
+  await until(() => !pw().classList.contains("copied"), "the button to come back", 3000);
+  assert.equal(pw().textContent, "Copy");
+  // a copy that failed says so in the toast and leaves the button alone
+  fail = true;
+  const user = card().querySelector('[data-act="copylogin"]');
+  user.click();
+  await until(() => /Copy failed/.test(win.document.getElementById("toast").textContent), "the failure toast");
+  assert.equal(user.classList.contains("copied"), false);
+  assert.match(html, /\n  \.lbtns button\.copied,button\.copied\{color:var\(--good\)/, "in the colour that means done");
 });
 
 test("Play next names the account to play: about to decay first, then the longest left", () => {
@@ -8160,6 +8187,86 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// The first screen anyone sees: what the app does, and both ways in as buttons
+test("an empty vault says what the app does in three steps, with Add account and the preview as buttons", () => {
+  const win = bootApp();
+  const grid = win.document.getElementById("grid");
+  assert.match(grid.textContent, /No accounts yet/);
+  const steps = [...grid.querySelectorAll(".wl-steps li b")].map(b => b.textContent);
+  assert.deepEqual(steps, ["Add an account", "Check its rank", "Log in fast"]);
+  const add = win.document.getElementById("bEmptyAdd");
+  assert.ok(add && add.classList.contains("b-teal"), "Add account is a button here, dressed as the toolbar's");
+  add.click();
+  assert.equal(win.document.getElementById("form").classList.contains("hidden"), false, "and it opens the form");
+  win.document.getElementById("fCancel").click();
+  // a click on the preview button's eye icon lands on the svg, not the button
+  win.document.querySelector("#bDemo svg").dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
+  assert.ok(win.document.querySelectorAll(".card").length > 0, "the icon starts the preview too");
+});
+
+// Windows, menus and the toast rise in; they used to cut to nothing on the way out
+test("a window, a menu and the toast fade out the way they came in, and not for reduced motion", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const block = css.match(/@supports \(transition-behavior:allow-discrete\)\{([\s\S]*?)\n  \}/);
+  assert.ok(block, "held back only where the browser can hold display back");
+  const b = block[1];
+  assert.match(b, /\.modal,\.card-menu,#moreMenu\{transition:display [.\d]+s allow-discrete\}/, "display waits for the fade");
+  assert.match(b, /\.modal\.hidden\{animation:fadeOut [^}]*pointer-events:none\}/, "a closing window fades and takes no clicks");
+  assert.match(b, /\.modal\.hidden \.mdl\{animation:modalOut /);
+  assert.match(b, /\.card-menu\.hidden,#moreMenu\.hidden\{animation:menuOut [^}]*pointer-events:none\}/);
+  assert.match(b, /#toast\{transition:opacity [^}]*display [^}]*allow-discrete\}/);
+  for (const k of ["fadeOut", "modalOut", "menuOut"]) assert.match(css, new RegExp("@keyframes " + k + "\\{to\\{opacity:0"), k);
+  // faster out than in: closing is the user moving on
+  const secs = re => +css.match(re)[1];
+  assert.ok(secs(/\.modal\.hidden \.mdl\{animation:modalOut ([.\d]+)s/) < secs(/\.modal:not\(\.hidden\) \.mdl\{animation:modalIn ([.\d]+)s/));
+  // reduced motion closes at once
+  const rm = css.match(/@media \(prefers-reduced-motion:reduce\)\{\n    \.spin,[\s\S]*?\n  \}/)[0];
+  assert.match(rm, /\.modal,\.modal \.mdl,\.card-menu,#moreMenu,#toast\{transition:none!important\}/);
+  assert.match(rm, /\.modal\.hidden,\.modal\.hidden \.mdl,\.card-menu\.hidden,#moreMenu\.hidden\{animation:none!important\}/);
+  // the toast fades on opacity, so it is set before display and cleared when it shows again
+  const win = bootApp();
+  const t = win.document.getElementById("toast");
+  win.toast("hello"); assert.equal(t.style.display, "block"); assert.equal(t.style.opacity, "");
+  win.dismissToast(); assert.equal(t.style.display, "none"); assert.equal(t.style.opacity, "0");
+  win.toast("again"); assert.equal(t.style.opacity, "", "a toast shown again is not left see-through");
+});
+
+// A state's colour is its meaning, whatever the theme: in a gold theme "2-step on"
+// borrowed the gold accent and matched the amber "No 2-step" beside it
+test("on is green and a warning amber in every theme; red is kept for what cannot be undone", () => {
+  const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
+  assert.match(html, /--warn:#[0-9a-f]{6}; --warn-txt:#[0-9a-f]{6};/);
+  assert.match(rule(".ni-f.ok"), /var\(--good\)/);
+  assert.doesNotMatch(rule(".ni-f.ok"), /--teal|--gold/, "not the user's accent");
+  assert.match(rule(".ni-f.warn"), /var\(--warn/);
+  assert.doesNotMatch(rule(".ni-f.warn"), /#[0-9a-f]{6}/, "the warning is the token, not a stray hex");
+  // in a gold theme the two chips now differ
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [],
+    info: { twofa: true } }, { id: "b", region: "EUW", gameName: "B", tagLine: "2", status: "active", tags: [], history: [],
+    info: { twofa: false } }], w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, accent2: "#c8aa6e" })));
+  const on = win.document.querySelector('.card[data-id="a"] .ni-f.ok'), off = win.document.querySelector('.card[data-id="b"] .ni-f.warn');
+  assert.ok(on && /2-step on/.test(on.textContent), "the on chip");
+  assert.ok(off && /No 2-step/.test(off.textContent), "the off chip");
+  // locking is safe and comes undone with the password: it is not a red button
+  assert.equal(win.document.getElementById("sLockNow").classList.contains("b-danger"), false);
+});
+
+// Four micro-stats wrapped three and one, leaving "Recent avg" alone on a row
+test("a card's micro-stats pair up two by two when there are four of them", () => {
+  const win = bootApp();
+  win.document.getElementById("bDemo").click();
+  const sets = [...win.document.querySelectorAll(".card .c-stats")];
+  const four = sets.find(s => s.children.length === 4);
+  assert.ok(four, "the example data has a card with four");
+  assert.ok(four.classList.contains("n4"), "the block knows how many it holds");
+  for (const s of sets) assert.ok(s.classList.contains("n" + s.children.length), "every block carries its count");
+  const rule = html.match(/\n  ([^{\n]*\.c-stats\.n4[^{]*)\{([^}]*)\}/);
+  assert.ok(rule, "an even count has a rule of its own");
+  assert.match(rule[2], /display:grid/);
+  assert.match(rule[2], /grid-template-columns:repeat\(2,/, "two aligned columns");
+  assert.doesNotMatch(rule[1], /\.n3|\.n5/, "an odd count keeps flowing at its own widths");
+});
+
 /* .stchip was flex-shrink:0 beside a name that ellipsises, so the chip always won:
    "Resting / unused" held 114 px of a 234 px row and left "Fresh leveling acc" 58 —
    four letters and a dot dot dot. The card carries the short wording now, with the
@@ -8174,11 +8281,17 @@ test("a status chip says its piece without crowding out the account name", () =>
   // and the long form is still what every list of statuses says
   assert.ok([...win.document.querySelectorAll("#tStatus option")]
     .some(o => o.textContent === "Chat/ranked restricted"), "the status filter names it in full");
-  // nothing lays out in jsdom, so the half of the fix that is geometry is read here
-  const rule = html.match(/\.stchip\{[^}]*\}/);
+  // nothing lays out in jsdom, so the half of the fix that is geometry is read here:
+  // the row wraps, so a chip that does not fit beside the name drops under it whole,
+  // rather than both being cut to "Fresh leveli…" and "RES…"
+  const rule = html.match(/\n  \.stchip\{([^}]*)\}/);
   assert.ok(rule, "the .stchip rule is still there");
-  assert.doesNotMatch(rule[0], /flex-shrink:0/, "a chip that cannot shrink takes the name's room");
-  assert.match(rule[0], /max-width:/, "and a cap, so no future status can do it again");
+  assert.doesNotMatch(rule[1], /text-overflow|max-width/, "the status is never cut short");
+  assert.match(html.match(/\n  \.c-name\{([^}]*)\}/)[1], /flex-wrap:wrap/, "it wraps under the name instead");
+  // and only the name ellipsises: the shared rule no longer reaches every span in the row
+  const nameRule = html.match(/\n  ([^{\n]*\.c-name>span[^{]*)\{[^}]*text-overflow:ellipsis/);
+  assert.ok(nameRule && /\.c-name>span:first-child/.test(nameRule[1]), "the ellipsis is the name's alone");
+  assert.ok(chip.previousElementSibling === null || chip.parentElement.firstElementChild !== chip, "the name comes first");
 });
 
 /* The preview is the first thing a visitor sees, and its sub-30 account printed
@@ -8573,7 +8686,8 @@ test("a long name ellipsises in the wall and the list, and keeps its flag in vie
     assert.equal(text.textContent, long);
     assert.ok(box.querySelector(".flagmark"), `${layout}: the flag is still there beside it`);
   }
-  const rule = html.match(/\.c-name>span,\.t-nm>\.nm-t,\.rw-nm>\.nm-t\{[^}]*\}/);
+  // the name, not every span in the row: the card's status chip beside it wraps whole instead
+  const rule = html.match(/\.c-name>span:first-child,\.t-nm>\.nm-t,\.rw-nm>\.nm-t\{[^}]*\}/);
   assert.ok(rule, "one rule ellipsises the name in all three layouts");
   assert.match(rule[0], /text-overflow:ellipsis/);
   assert.match(rule[0], /overflow:hidden/, "which also lets the flex item get narrower than its text");

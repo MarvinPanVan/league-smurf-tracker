@@ -64,6 +64,12 @@
        near-black and white by luminance, because a fixed dark ink goes unreadable
        the moment somebody picks a deep secondary. */
     --teal:#0ac8b9; --teal-ink:#002e2a; --danger:#ff6b6b; --good:#4ade80;
+    /* What a state means is not the user's to recolour. Green is on, done, fine;
+       amber is "worth a look"; red is lost, banned, or cannot be undone. The two
+       accents are for the user's own colours and for actions — "2-step on" used to
+       borrow --teal, which in a gold theme made it the same gold as "No 2-step"
+       beside it, the good state and the warning one indistinguishable. */
+    --warn:#f0c674; --warn-txt:#f7d690;
     --ts:1; /* Settings → Text size: every font size in the app is multiplied by it */
     /* elevation */
     --sh-1:0 1px 2px #00000059;
@@ -1022,18 +1028,21 @@
     font-variant-numeric:tabular-nums;color:var(--text);
     background:var(--panel);box-shadow:0 0 0 1px var(--line2),0 2px 8px #00000080}
   .c-id{min-width:0;flex:1}
-  .c-name{font-weight:600;font-size:calc(18px*var(--ts));letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;gap:8px;min-width:0}
+  .c-name{font-weight:600;font-size:calc(18px*var(--ts));letter-spacing:-.022em;line-height:1.25;display:flex;align-items:center;flex-wrap:wrap;gap:3px 8px;min-width:0}
   /* text-overflow only works on a box that holds the text itself. The wall tile and
      the list row had the name as a bare text node in a flex row, so it was sheared
      off mid-letter, no ellipsis, with the flag after it pushed out of sight — the
      card never did, because its name was already a span of its own. */
-  .c-name>span,.t-nm>.nm-t,.rw-nm>.nm-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .c-name>span:first-child,.t-nm>.nm-t,.rw-nm>.nm-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
   /* The chip may not take the room the account name needs: "Resting / unused"
      was holding 114 px of a 234 px row and leaving the name 58 — four letters
      and an ellipsis. Short wording here, the full phrase in the title and
-     everywhere else, and a cap so no future status can do it again. */
+     everywhere else. It used to give way by shrinking too, and on a four-across
+     grid both halves lost: "Fresh leveli…" beside "RES…", a name cut short and a
+     status nobody could read. Now the row wraps instead: the name keeps the first
+     line, and a chip that does not fit beside it drops under it, whole. */
   .stchip{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:var(--r-xs);
-    flex:0 1 auto;min-width:0;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    flex:0 0 auto;white-space:nowrap}
   .c-chrome{display:flex;align-items:center;gap:9px;flex-shrink:0;align-self:flex-start}
   /* selection is chrome, not content — it stays out of the way until wanted */
   .bulkchk{width:15px;height:15px;flex-shrink:0;accent-color:var(--teal);cursor:pointer;margin:0;
@@ -1142,6 +1151,12 @@
 
   /* labelled micro-stats instead of one muted run-on sentence */
   .c-stats{display:flex;flex-wrap:wrap;gap:7px 20px}
+  /* Four is the usual count — Peak, Climb, MMR, Recent avg — and on a card four
+     across does not fit, so it wrapped three and one: a lone "Recent avg" on a row
+     of its own, under nothing. An even count reads as pairs instead, two by two in
+     two aligned columns. An odd one keeps flowing at its own widths, where a long
+     peak ("Platinum II · 61 LP") has the room it needs beside two short ones. */
+  .c-stats.n2,.c-stats.n4,.c-stats.n6{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 20px}
   /* Settings → On each card: a part left under Details is hidden on a closed card */
   body.hide-chart .card:not(.info-open) .lpc,body.hide-stats .card:not(.info-open) .c-stats,
   body.hide-wl .card:not(.info-open) .wrbar,body.hide-goal .card:not(.info-open) .goal,
@@ -1194,8 +1209,8 @@
     font-variant-numeric:tabular-nums;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
   .ni-f b{color:#fff;font-weight:600}
   .ni-f .ico{width:12px;height:12px;flex-shrink:0}
-  .ni-f.ok{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 42%,transparent);background:color-mix(in srgb,var(--teal) 11%,transparent)}
-  .ni-f.warn{color:#f7d690;border-color:#f0c67466;background:#f0c6741c}
+  .ni-f.ok{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent);background:color-mix(in srgb,var(--good) 10%,transparent)}
+  .ni-f.warn{color:var(--warn-txt);border-color:color-mix(in srgb,var(--warn) 40%,transparent);background:color-mix(in srgb,var(--warn) 11%,transparent)}
   .ni-pips{display:inline-flex;gap:3px}
   .ni-pips i{width:7px;height:7px;transform:rotate(45deg);border-radius:1px;background:#ffffff38}
   .ni-pips i.on{background:var(--gold-txt)}
@@ -1569,6 +1584,8 @@
   .t-nm .flagmark .ico,.rw-nm .flagmark .ico{width:11px;height:11px}
   .lbtns{display:flex;gap:5px;flex-shrink:0}
   .lbtns button{font-size:calc(11px*var(--ts));padding:4px 9px}
+  .lbtns button.copied,button.copied{color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,transparent);gap:4px}
+  button.copied .ico{width:11px;height:11px;stroke-width:2.6}
   .login .lseq{width:100%;font-size:calc(12px*var(--ts));font-weight:600;padding:8px 10px;color:var(--teal-txt);
     border-color:color-mix(in srgb,var(--teal) 45%,transparent);background:color-mix(in srgb,var(--teal) 10%,transparent)}
   .login .lseq:hover{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 18%,transparent);color:var(--teal-txt)}
@@ -1712,6 +1729,20 @@
   .empty-gem{width:52px;height:52px;display:inline-block;border-radius:var(--r-xs);transform:rotate(45deg);
     border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);
     background:color-mix(in srgb,var(--gold) 12%,var(--panel2))}
+  .welcome{padding:56px 24px 52px}
+  .wl-t{margin:0 0 8px;font-size:calc(20px*var(--ts));font-weight:600;letter-spacing:-.015em;color:var(--text);line-height:1.3}
+  .wl-s{margin:0 auto;max-width:46ch;font-size:calc(14px*var(--ts));color:var(--muted);line-height:1.6}
+  .wl-steps{list-style:none;margin:28px auto 0;padding:0;max-width:760px;display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;text-align:left}
+  .wl-steps li{display:grid;grid-template-columns:auto 1fr;grid-template-rows:24px auto;column-gap:12px;row-gap:2px;align-items:center;
+    padding:14px 16px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2)}
+  .wl-n{grid-row:span 2;align-self:start;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:50%;border:1px solid var(--line2);font-size:calc(12px*var(--ts));font-weight:600;color:var(--muted);
+    font-variant-numeric:tabular-nums}
+  .wl-steps b{font-size:calc(13px*var(--ts));font-weight:600;color:var(--text)}
+  .wl-steps li>span:last-child{align-self:start;font-size:calc(12.5px*var(--ts));color:var(--faint);line-height:1.5}
+  .wl-acts{margin-top:26px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  @media (max-width:640px){.wl-steps{grid-template-columns:1fr}}
   .count{margin-top:30px;text-align:center;font-size:calc(12px*var(--ts));color:var(--faint)}
   .count a{color:var(--gold-txt);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
   .count a:hover{border-bottom-color:currentColor}
@@ -1965,6 +1996,28 @@
   .modal:not(.hidden) .mdl{animation:modalIn .32s cubic-bezier(.22,1,.36,1) both}
   @keyframes menuIn{from{opacity:0;transform:translateY(-6px) scale(.94)}to{opacity:1;transform:none}}
   #moreMenu:not(.hidden){transform-origin:top right;animation:menuIn .17s cubic-bezier(.22,1,.36,1) both}
+  /* Leaving the way they came. A window, a menu and the toast each rise in, and
+     each used to cut to nothing on the way out: a hard edge at the end of every
+     action. They fade now, quicker than they arrive, since closing is the user
+     moving on. allow-discrete holds display:none back until the fade is done; the
+     .hidden class still lands at once, so nothing can be clicked while it fades
+     and every check for an open window answers straight away. Where a browser
+     cannot hold display back, closing stays the cut it always was.
+     Keyframes, not a transition, for the windows and menus: their way in is an
+     animation, and a transition will not start on a property an animation held a
+     moment before, so a faded menu just vanished and then sat there unseen for
+     the length of the fade. A hidden one at page load is display:none and never
+     runs its exit; it only plays on the way from open to closed. */
+  @keyframes fadeOut{to{opacity:0}}
+  @keyframes modalOut{to{opacity:0;transform:translateY(6px) scale(.985)}}
+  @keyframes menuOut{to{opacity:0;transform:translateY(3px) scale(.985)}}
+  @supports (transition-behavior:allow-discrete){
+    .modal,.card-menu,#moreMenu{transition:display .15s allow-discrete}
+    .modal.hidden{animation:fadeOut .15s ease both;pointer-events:none}
+    .modal.hidden .mdl{animation:modalOut .15s ease both}
+    .card-menu.hidden,#moreMenu.hidden{animation:menuOut .13s ease both;pointer-events:none}
+    #toast{transition:opacity .18s ease,display .18s allow-discrete}
+  }
   @keyframes dashIn{from{opacity:0;transform:translateY(-12px) scaleY(.94)}to{opacity:1;transform:none}}
   .hx.dash-in{transform-origin:top center;animation:dashIn .32s cubic-bezier(.22,1,.36,1) both}
   @keyframes barIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
@@ -2322,6 +2375,8 @@
     .modal::before,.modal:not(.hidden) .mdl,.acc-prev.show{animation:none!important}
     .hx-in.scanning::after{animation:none!important;content:none}
     .grid>.hx{transition:none}
+    .modal,.modal .mdl,.card-menu,#moreMenu,#toast{transition:none!important}
+    .modal.hidden,.modal.hidden .mdl,.card-menu.hidden,#moreMenu.hidden{animation:none!important}
     .panel-close:hover,.chip:active,.card:hover .c-portrait,.a-login:hover .ico,.acts button:hover .ico,
     .c-drawer:hover .ico{transform:none}
     /* the flipped chevrons stay — they say open vs closed, they aren't decoration */
@@ -2705,7 +2760,7 @@
         </div>
         <div id="sAutoLockHint" class="hint" style="margin-top:6px">Only applies while a master password is set. Off means the vault stays unlocked until you lock it.</div>
         <div class="sub-fld" style="padding-left:0;margin-top:12px">
-          <button type="button" id="sLockNow" class="b-danger" title="Lock the vault now — needs the master password to open again">Lock now</button>
+          <button type="button" id="sLockNow" title="Lock the vault now — needs the master password to open again">Lock now</button>
           <div class="hint" style="margin-top:6px">Locks this tab immediately. Other open tabs keep their own unlock state until you reload them.</div>
         </div>
         <div class="fld fw" style="margin-top:22px">
@@ -3199,8 +3254,14 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.6.1";
+const APP_VERSION="2.7.0";
 const APP_CHANGELOG=[
+  {v:"2.7.0",items:[
+    "Copy buttons say Copied right where you clicked, and windows and menus fade out instead of vanishing",
+    "On is green and a warning amber in every theme — 2-step on and No 2-step no longer look the same",
+    "A card's status (Resting, Restricted) sits whole under the name instead of being cut short",
+    "Four card stats sit two by two, and an empty vault shows how the app works in three steps",
+  ]},
   {v:"2.6.1",items:[
     "Buttons have a soft satin finish, so anything you can press looks pressable",
     "Tags, chips and panels stay flat, so a button never looks like a label",
@@ -3680,7 +3741,8 @@ async function updateStorageStatus(){
   el.textContent=st==="protected"?"Protected — this browser will not clear the vault on its own."
     :st==="open"?"Not protected — the browser may clear it when space runs low, and Safari does after 7 days without a visit. Protect it, install the app, and keep a backup."
     :"This browser does not say whether it keeps the vault — keep a backup.";
-  el.style.color=st==="open"?"var(--danger)":"";
+  // a warning, not an error: nothing has been lost, and one click fixes it
+  el.style.color=st==="open"?"var(--warn-txt)":"";
   btn.classList.toggle("hidden",st!=="open");
 }
 function saveDB(opts){invalidateDupCache();
@@ -3979,10 +4041,11 @@ function sanitizeAccount(a){
 }
 // Asked in three places now, and jsdom has no matchMedia unless a test supplies one
 function prefersReducedMotion(){return !!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)}
-function toast(msg,action,fn){const t=$("toast");t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");if(action)document.getElementById("toastBtn").onclick=()=>{dismissToast();fn()};t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>dismissToast(),action?6000:2200)}
+function toast(msg,action,fn){const t=$("toast");t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");if(action)document.getElementById("toastBtn").onclick=()=>{dismissToast();fn()};t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.opacity="";t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>dismissToast(),action?6000:2200)}
 function dismissToast(){
   const t=$("toast");if(!t)return;
-  t.style.display="none";clearTimeout(t._h);
+  // opacity first, so a browser that can hold display back fades it out (see #toast)
+  t.style.opacity="0";t.style.display="none";clearTimeout(t._h);
   const b=document.getElementById("toastBtn");if(b)b.onclick=null;
 }
 /* Both dates are stored as the plain "YYYY-MM-DD" the date input hands over, and
@@ -4720,6 +4783,7 @@ async function copyText(v,label,sensitive){
     }catch(e2){}
   }
   toast(ok?label+" copied"+(sensitive?" — clears from clipboard in 30s":""):"Copy failed — copy manually");
+  if(!ok)return false;
   if(ok&&sensitive){
     lastCopiedSecret=v;
     setTimeout(async()=>{
@@ -4732,6 +4796,17 @@ async function copyText(v,label,sensitive){
       }catch(e){}
     },30000);
   }
+  return true;
+}
+/* The toast says "copied" at the bottom of the screen; this says it where you
+   clicked, the way a password manager's copy button does: "Copy" turns into a
+   green "Copied" with a check for a moment, then comes back. A card re-rendered
+   meanwhile has a fresh button, and the old one is simply gone. */
+function flashCopied(btn){
+  if(!btn||!btn.isConnected)return;
+  if(btn._copied)clearTimeout(btn._copied);else btn._copyHTML=btn.innerHTML;
+  btn.innerHTML=icon("check")+"Copied";btn.classList.add("copied");
+  btn._copied=setTimeout(()=>{btn._copied=null;if(!btn.isConnected)return;btn.innerHTML=btn._copyHTML;btn.classList.remove("copied")},1400);
 }
 let lastCopiedSecret=null;
 const loginSeq=new Set();   // cards whose username is copied and whose password is next
@@ -8302,7 +8377,7 @@ function cardHTML(a,i){
       </div>`;
     })()}
     ${rankChart(hist,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(hist),a.id,peakV,peak)}
-    ${microStats.length?`<div class="c-stats">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
+    ${microStats.length?`<div class="c-stats n${microStats.length}">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(()=>{const role=mainRole(a),tags=a.tags||[];
       return role||tags.length?`<div class="ctags">${role?`<span class="role-tag" title="Played in 3 or more of the last 5 ranked games">${esc(role)}</span>`:""}${tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""})()}
@@ -8587,7 +8662,16 @@ function renderGrid(){
   }
   const grid=$("grid");
   if(accounts.length===0){
-    setHTML(grid,`<div class="hx" data-k="empty" style="grid-column:1/-1"><div class="hx-in empty"><div class="d"><span class="empty-gem"></span></div>No accounts yet. Hit <span style="color:var(--teal-txt)">+ Add account</span> to store your first smurf.<div style="margin-top:12px"><button id="bDemo">${icon("eye")} Preview with example data</button></div></div></div>`);
+    /* The first screen anyone sees. It was one grey sentence pointing at a button
+       somewhere else on the page, with the demo as the only thing to press here.
+       Now it says what the app is for in three steps, and both ways in are buttons
+       of their own: start for real, or look around first. */
+    setHTML(grid,`<div class="hx" data-k="empty" style="grid-column:1/-1"><div class="hx-in empty welcome"><div class="d"><span class="empty-gem"></span></div>`
+      +`<h2 class="wl-t">No accounts yet</h2><p class="wl-s">Store your first smurf: its rank checked for you, its login a click away, every account on one page.</p>`
+      +`<ol class="wl-steps"><li><span class="wl-n">1</span><b>Add an account</b><span>Its Riot ID and region. The login is optional.</span></li>`
+      +`<li><span class="wl-n">2</span><b>Check its rank</b><span>Free and automatic, read from op.gg. No key needed.</span></li>`
+      +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Login shows the username and password, each one click to copy.</span></li></ol>`
+      +`<div class="wl-acts"><button id="bEmptyAdd" class="b-teal">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div></div></div>`);
   }else if(list.length===0){
     /* The zero-accounts state offers Add account and the demo; this one used to
        be a sentence and nothing else — on a page where the filters are spread
@@ -10688,7 +10772,9 @@ function clearFilters(){
   render();
 }
 async function onCardClick(e){
-  if(e.target.id==="bDemo"){loadDemo();return}
+  // closest(), not target.id: a click on the button's icon lands on the svg
+  if(e.target.closest("#bDemo")){loadDemo();return}
+  if(e.target.closest("#bEmptyAdd")){$("bAdd").click();return}
   if(e.target.closest("#bClearFilters")){clearFilters();return}
   const btn=e.target.closest("[data-act]");if(!btn)return;
   const card=e.target.closest("[data-id]");if(!card)return;
@@ -10753,10 +10839,10 @@ async function onCardClick(e){
     else{copyText(acc.password,"Password",true);loginSeq.delete(id)}
     renderCard(id);
   }
-  else if(act==="copylogin")copyText(acc.login,"Username");
-  else if(act==="copypw")copyText(acc.password,"Password",true);
-  else if(act==="copymail")copyText(acc.email,"Email");
-  else if(act==="copybirth")copyText(acc.birthdate,"Date of birth");
+  else if(act==="copylogin")copyText(acc.login,"Username").then(ok=>{if(ok)flashCopied(btn)});
+  else if(act==="copypw")copyText(acc.password,"Password",true).then(ok=>{if(ok)flashCopied(btn)});
+  else if(act==="copymail")copyText(acc.email,"Email").then(ok=>{if(ok)flashCopied(btn)});
+  else if(act==="copybirth")copyText(acc.birthdate,"Date of birth").then(ok=>{if(ok)flashCopied(btn)});
   else if(act==="played"){markPlayed(id)}
   else if(act==="compare"){openMore.delete(id);openCompare(id)}
   else if(act==="seasonreset"){
