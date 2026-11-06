@@ -8160,6 +8160,22 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// Four micro-stats wrapped three and one, leaving "Recent avg" alone on a row
+test("a card's micro-stats pair up two by two when there are four of them", () => {
+  const win = bootApp();
+  win.document.getElementById("bDemo").click();
+  const sets = [...win.document.querySelectorAll(".card .c-stats")];
+  const four = sets.find(s => s.children.length === 4);
+  assert.ok(four, "the example data has a card with four");
+  assert.ok(four.classList.contains("n4"), "the block knows how many it holds");
+  for (const s of sets) assert.ok(s.classList.contains("n" + s.children.length), "every block carries its count");
+  const rule = html.match(/\n  ([^{\n]*\.c-stats\.n4[^{]*)\{([^}]*)\}/);
+  assert.ok(rule, "an even count has a rule of its own");
+  assert.match(rule[2], /display:grid/);
+  assert.match(rule[2], /grid-template-columns:repeat\(2,/, "two aligned columns");
+  assert.doesNotMatch(rule[1], /\.n3|\.n5/, "an odd count keeps flowing at its own widths");
+});
+
 /* .stchip was flex-shrink:0 beside a name that ellipsises, so the chip always won:
    "Resting / unused" held 114 px of a 234 px row and left "Fresh leveling acc" 58 —
    four letters and a dot dot dot. The card carries the short wording now, with the

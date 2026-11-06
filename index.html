@@ -1145,6 +1145,12 @@
 
   /* labelled micro-stats instead of one muted run-on sentence */
   .c-stats{display:flex;flex-wrap:wrap;gap:7px 20px}
+  /* Four is the usual count — Peak, Climb, MMR, Recent avg — and on a card four
+     across does not fit, so it wrapped three and one: a lone "Recent avg" on a row
+     of its own, under nothing. An even count reads as pairs instead, two by two in
+     two aligned columns. An odd one keeps flowing at its own widths, where a long
+     peak ("Platinum II · 61 LP") has the room it needs beside two short ones. */
+  .c-stats.n2,.c-stats.n4,.c-stats.n6{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 20px}
   /* Settings → On each card: a part left under Details is hidden on a closed card */
   body.hide-chart .card:not(.info-open) .lpc,body.hide-stats .card:not(.info-open) .c-stats,
   body.hide-wl .card:not(.info-open) .wrbar,body.hide-goal .card:not(.info-open) .goal,
@@ -8305,7 +8311,7 @@ function cardHTML(a,i){
       </div>`;
     })()}
     ${rankChart(hist,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(hist),a.id,peakV,peak)}
-    ${microStats.length?`<div class="c-stats">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
+    ${microStats.length?`<div class="c-stats n${microStats.length}">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(()=>{const role=mainRole(a),tags=a.tags||[];
       return role||tags.length?`<div class="ctags">${role?`<span class="role-tag" title="Played in 3 or more of the last 5 ranked games">${esc(role)}</span>`:""}${tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""})()}
