@@ -8686,7 +8686,8 @@ test("a long name ellipsises in the wall and the list, and keeps its flag in vie
     assert.equal(text.textContent, long);
     assert.ok(box.querySelector(".flagmark"), `${layout}: the flag is still there beside it`);
   }
-  const rule = html.match(/\.c-name>span,\.t-nm>\.nm-t,\.rw-nm>\.nm-t\{[^}]*\}/);
+  // the name, not every span in the row: the card's status chip beside it wraps whole instead
+  const rule = html.match(/\.c-name>span:first-child,\.t-nm>\.nm-t,\.rw-nm>\.nm-t\{[^}]*\}/);
   assert.ok(rule, "one rule ellipsises the name in all three layouts");
   assert.match(rule[0], /text-overflow:ellipsis/);
   assert.match(rule[0], /overflow:hidden/, "which also lets the flex item get narrower than its text");
