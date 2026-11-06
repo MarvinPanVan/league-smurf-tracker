@@ -8161,6 +8161,23 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// The first screen anyone sees: what the app does, and both ways in as buttons
+test("an empty vault says what the app does in three steps, with Add account and the preview as buttons", () => {
+  const win = bootApp();
+  const grid = win.document.getElementById("grid");
+  assert.match(grid.textContent, /No accounts yet/);
+  const steps = [...grid.querySelectorAll(".wl-steps li b")].map(b => b.textContent);
+  assert.deepEqual(steps, ["Add an account", "Check its rank", "Log in fast"]);
+  const add = win.document.getElementById("bEmptyAdd");
+  assert.ok(add && add.classList.contains("b-teal"), "Add account is a button here, dressed as the toolbar's");
+  add.click();
+  assert.equal(win.document.getElementById("form").classList.contains("hidden"), false, "and it opens the form");
+  win.document.getElementById("fCancel").click();
+  // a click on the preview button's eye icon lands on the svg, not the button
+  win.document.querySelector("#bDemo svg").dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
+  assert.ok(win.document.querySelectorAll(".card").length > 0, "the icon starts the preview too");
+});
+
 // Windows, menus and the toast rise in; they used to cut to nothing on the way out
 test("a window, a menu and the toast fade out the way they came in, and not for reduced motion", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));

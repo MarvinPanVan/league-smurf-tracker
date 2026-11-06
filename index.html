@@ -1727,6 +1727,20 @@
   .empty-gem{width:52px;height:52px;display:inline-block;border-radius:var(--r-xs);transform:rotate(45deg);
     border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);
     background:color-mix(in srgb,var(--gold) 12%,var(--panel2))}
+  .welcome{padding:56px 24px 52px}
+  .wl-t{margin:0 0 8px;font-size:calc(20px*var(--ts));font-weight:600;letter-spacing:-.015em;color:var(--text);line-height:1.3}
+  .wl-s{margin:0 auto;max-width:46ch;font-size:calc(14px*var(--ts));color:var(--muted);line-height:1.6}
+  .wl-steps{list-style:none;margin:28px auto 0;padding:0;max-width:760px;display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;text-align:left}
+  .wl-steps li{display:grid;grid-template-columns:auto 1fr;grid-template-rows:24px auto;column-gap:12px;row-gap:2px;align-items:center;
+    padding:14px 16px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2)}
+  .wl-n{grid-row:span 2;align-self:start;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:50%;border:1px solid var(--line2);font-size:calc(12px*var(--ts));font-weight:600;color:var(--muted);
+    font-variant-numeric:tabular-nums}
+  .wl-steps b{font-size:calc(13px*var(--ts));font-weight:600;color:var(--text)}
+  .wl-steps li>span:last-child{align-self:start;font-size:calc(12.5px*var(--ts));color:var(--faint);line-height:1.5}
+  .wl-acts{margin-top:26px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  @media (max-width:640px){.wl-steps{grid-template-columns:1fr}}
   .count{margin-top:30px;text-align:center;font-size:calc(12px*var(--ts));color:var(--faint)}
   .count a{color:var(--gold-txt);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
   .count a:hover{border-bottom-color:currentColor}
@@ -8628,7 +8642,16 @@ function renderGrid(){
   }
   const grid=$("grid");
   if(accounts.length===0){
-    setHTML(grid,`<div class="hx" data-k="empty" style="grid-column:1/-1"><div class="hx-in empty"><div class="d"><span class="empty-gem"></span></div>No accounts yet. Hit <span style="color:var(--teal-txt)">+ Add account</span> to store your first smurf.<div style="margin-top:12px"><button id="bDemo">${icon("eye")} Preview with example data</button></div></div></div>`);
+    /* The first screen anyone sees. It was one grey sentence pointing at a button
+       somewhere else on the page, with the demo as the only thing to press here.
+       Now it says what the app is for in three steps, and both ways in are buttons
+       of their own: start for real, or look around first. */
+    setHTML(grid,`<div class="hx" data-k="empty" style="grid-column:1/-1"><div class="hx-in empty welcome"><div class="d"><span class="empty-gem"></span></div>`
+      +`<h2 class="wl-t">No accounts yet</h2><p class="wl-s">Store your first smurf: its rank checked for you, its login a click away, every account on one page.</p>`
+      +`<ol class="wl-steps"><li><span class="wl-n">1</span><b>Add an account</b><span>Its Riot ID and region. The login is optional.</span></li>`
+      +`<li><span class="wl-n">2</span><b>Check its rank</b><span>Free and automatic, read from op.gg. No key needed.</span></li>`
+      +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Login shows the username and password, each one click to copy.</span></li></ol>`
+      +`<div class="wl-acts"><button id="bEmptyAdd" class="b-teal">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div></div></div>`);
   }else if(list.length===0){
     /* The zero-accounts state offers Add account and the demo; this one used to
        be a sentence and nothing else — on a page where the filters are spread
@@ -10729,7 +10752,9 @@ function clearFilters(){
   render();
 }
 async function onCardClick(e){
-  if(e.target.id==="bDemo"){loadDemo();return}
+  // closest(), not target.id: a click on the button's icon lands on the svg
+  if(e.target.closest("#bDemo")){loadDemo();return}
+  if(e.target.closest("#bEmptyAdd")){$("bAdd").click();return}
   if(e.target.closest("#bClearFilters")){clearFilters();return}
   const btn=e.target.closest("[data-act]");if(!btn)return;
   const card=e.target.closest("[data-id]");if(!card)return;
