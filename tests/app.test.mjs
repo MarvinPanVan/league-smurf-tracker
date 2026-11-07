@@ -51,9 +51,9 @@ function runScript(window, code) {
 // `tweak` runs against the window just before the app's script does, which is the
 // only place to stand in front of something the app calls during boot — setInterval,
 // for one, where the assertion is about the call never happening.
-function bootApp(seed, tweak) {
+function bootApp(seed, tweak, url = "https://example.com/index.html") {
   const dom = new JSDOM(htmlNoScript, {
-    url: "https://example.com/index.html",
+    url,
     pretendToBeVisual: true,
     runScripts: "dangerously",
   });
@@ -1101,7 +1101,10 @@ test("a shared link unfurls into a card: title, description and an image that ex
   assert.equal(meta("name", "twitter:card"), "summary_large_image");
   const img = meta("property", "og:image");
   assert.match(img, /^https:\/\//, "absolute — link scrapers do not resolve relative URLs");
-  const local = path.join(__dirname, "..", img.replace(/^https:\/\/[^/]+\/[^/]+\//, ""));
+  // relative to where the page says it lives (og:url), which is the repo root
+  const base = new URL(meta("property", "og:url")).pathname, at = new URL(img).pathname;
+  assert.ok(at.startsWith(base), "the image is on the page's own site");
+  const local = path.join(__dirname, "..", at.slice(base.length));
   assert.ok(fs.existsSync(local), "and the image is in the repo at that path: " + local);
 });
 
@@ -8938,6 +8941,131 @@ test("the page's security policy runs only its own script, and nothing in the ap
   assert.equal(win.document.querySelector(".c-avatar"), null, "a dead icon is taken out");
   win.renderGrid();
   assert.equal(win.document.querySelector(".c-avatar"), null, "and not asked for again");
+});
+
+// Cloudflare Pages reads _headers: the same policy as the page's own, plus what only a
+// header can say
+test("the new address sends the page's own security policy, and forbids framing", () => {
+  const raw = fs.readFileSync(path.join(ROOT, "_headers"), "utf8");
+  const lines = raw.split("\n").filter(l => l.trim() && !l.trim().startsWith("#"));
+  assert.equal(lines[0], "/*", "for every page and file");
+  const hdr = Object.fromEntries(lines.slice(1).map(l => { const i = l.indexOf(":"); return [l.slice(0, i).trim().toLowerCase(), l.slice(i + 1).trim()]; }));
+  const meta = pageHtml.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/)[1];
+  assert.equal(hdr["content-security-policy"], meta + "; frame-ancestors 'none'", "the meta policy, word for word, plus frame-ancestors");
+  assert.equal(hdr["x-frame-options"], "DENY");
+  assert.equal(hdr["x-content-type-options"], "nosniff");
+  assert.equal(hdr["referrer-policy"], "no-referrer");
+  assert.equal(hdr["cross-origin-opener-policy"], undefined, "it would cut the old address's window.opener, which the vault move uses");
+  for (const l of lines) assert.ok(l.length <= 2000, "Cloudflare's limit on a line");
+});
+
+// The app moved from marvinpanvan.github.io, an origin every GitHub Pages site of that
+// account shares, to an origin of its own
+const OLD_HOME = "https://marvinpanvan.github.io/league-smurf-tracker/", NEW_HOME = "https://smurf-tracker.pages.dev/";
+test("links, previews and snapshot links name the new address", () => {
+  assert.equal(pageHtml.match(/<meta property="og:url" content="([^"]+)">/)[1], NEW_HOME);
+  assert.ok(pageHtml.match(/<meta property="og:image" content="([^"]+)">/)[1].startsWith(NEW_HOME));
+  for (const f of ["README.md", "SECURITY.md", ".github/scripts/release-notes.mjs"]) {
+    const txt = fs.readFileSync(path.join(ROOT, f), "utf8");
+    assert.ok(txt.includes(NEW_HOME), f + " links the new address");
+    assert.ok(!txt.includes("](" + OLD_HOME + ")") && !txt.includes("(" + OLD_HOME + ")**"), f + " no longer sends anyone to the old one");
+  }
+  const seed = [{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() } }];
+  const old = bootApp(seed, null, OLD_HOME + "index.html");
+  runScript(old, "window.__b = snapBase()");
+  assert.equal(old.__b, NEW_HOME, "a snapshot shared from the old address opens at the new one");
+  const other = bootApp(seed, null, "https://my-own-copy.example/tracker/index.html");
+  runScript(other, "window.__b = snapBase()");
+  assert.equal(other.__b, "https://my-own-copy.example/tracker/index.html", "a copy hosted anywhere else still links to itself");
+});
+
+// A vault is kept per address, so one saved at the old address stays there until it is
+// handed over. jsdom cannot navigate across origins, so these read where the app means
+// to go (oldHomeExit) and drive each side of the handover with the messages it would get.
+const NEW_ORIGIN = "https://smurf-tracker.pages.dev", OLD_ORIGIN_T = "https://marvinpanvan.github.io";
+const quietBoot = (seed, tweak, url) => { const w = bootApp(seed, tweak, url); return w; };
+const oneAcc = () => [{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+  stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() } }];
+test("the old address sends on a visit with nothing saved there, and keeps one with a vault", () => {
+  const empty = quietBoot(null, null, OLD_HOME + "index.html");
+  runScript(empty, "window.__x = oldHomeExit()");
+  assert.equal(empty.__x, NEW_HOME, "nothing saved: straight on to the new address");
+  assert.equal(empty.document.getElementById("appRoot").classList.contains("hidden"), true, "and the old page never starts");
+  const shortcut = quietBoot(null, null, OLD_HOME + "index.html?action=add");
+  runScript(shortcut, "window.__x = oldHomeExit()");
+  assert.equal(shortcut.__x, NEW_HOME + "?action=add", "an installed app's shortcut still does what it says");
+  const snap = quietBoot(oneAcc(), null, OLD_HOME + "index.html#s=1.abc");
+  runScript(snap, "window.__x = oldHomeExit()");
+  assert.equal(snap.__x, NEW_HOME + "#s=1.abc", "a snapshot link opens at the new address, vault or not");
+  const kept = quietBoot(oneAcc(), null, OLD_HOME + "index.html");
+  runScript(kept, "window.__x = oldHomeExit()");
+  assert.equal(kept.__x, null, "a vault here: stay, and offer to move it");
+  const band = kept.document.getElementById("moveBand");
+  assert.equal(band.classList.contains("hidden"), false);
+  assert.match(band.textContent, /Smurf Tracker has moved to smurf-tracker\.pages\.dev/);
+  assert.ok(band.querySelector("#mvGo"), "Move my vault there");
+  // moved by hand already, with Export and Import: the copy here can still be removed, after a sterner question
+  let asked = "";
+  kept.confirm = q => { asked = q; return false; };
+  band.querySelector("#mvRemove").click();
+  assert.match(asked, /Only do this if your accounts are already at smurf-tracker\.pages\.dev/);
+  assert.ok(kept.localStorage.getItem("smurf-tracker"), "and nothing goes when the answer is no");
+  assert.equal(kept.document.querySelectorAll(".card").length, 1, "and the vault still opens here meanwhile");
+  const elsewhere = bootApp(oneAcc());
+  assert.equal(elsewhere.document.getElementById("moveBand").classList.contains("hidden"), true, "no band anywhere but the old address");
+  const locked = quietBoot(null, w => w.localStorage.setItem("smurf-tracker", JSON.stringify({ __enc: true, salt: "a", iv: "b", data: "c" })), OLD_HOME + "index.html");
+  runScript(locked, "window.__x = oldHomeExit()");
+  assert.equal(locked.__x, null, "a locked vault counts: it moves as it is");
+});
+test("the old address hands its vault only to the tab it opened, at the new address", () => {
+  const win = quietBoot(oneAcc(), null, OLD_HOME + "index.html");
+  const sent = [], tab = { postMessage: (m, o) => sent.push([m, o]) };
+  win.__tab = tab;
+  runScript(win, "moveTab = window.__tab");
+  const msg = (origin, source, data) => runScript(win, "") || win.moveOutMessage({ origin, source, data });
+  msg("https://evil.example", tab, { type: "st-move-ready" });
+  msg(NEW_ORIGIN, { postMessage() {} }, { type: "st-move-ready" });
+  assert.equal(sent.length, 0, "not to another site, nor to a window it did not open");
+  msg(NEW_ORIGIN, tab, { type: "st-move-ready" });
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0][1], NEW_ORIGIN, "addressed to the new address only");
+  assert.equal(sent[0][0].type, "st-move");
+  assert.deepEqual(JSON.parse(sent[0][0].db).map(a => a.id), ["a"], "the vault exactly as stored");
+  msg(NEW_ORIGIN, tab, { type: "st-move-done", n: 1 });
+  const band = win.document.getElementById("moveBand");
+  assert.match(band.textContent, /Your vault is at smurf-tracker\.pages\.dev now/);
+  assert.ok(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).movedAt > 0, "and it remembers");
+  // removing the old copy takes the vault, settings and passkey from this address
+  win.localStorage.setItem("smurf-tracker-passkey", "{}");
+  band.querySelector("#mvRemove").click();
+  for (const k of ["smurf-tracker", "smurf-tracker-cfg", "smurf-tracker-passkey"]) assert.equal(win.localStorage.getItem(k), null, k + " removed");
+});
+test("the new address takes a moved vault only when it has none, and only from the old address", () => {
+  const opener = { got: [], postMessage(m, o) { this.got.push([m, o]); } };
+  const withOpener = w => Object.defineProperty(w, "opener", { value: opener, configurable: true });
+  const win = quietBoot(null, withOpener, NEW_HOME + "index.html?action=move-in");
+  const J = x => JSON.stringify(x);   // the messages are made in the page's realm
+  assert.equal(J(opener.got[0]), J([{ type: "st-move-ready" }, OLD_ORIGIN_T]), "it asks the old address, and only it");
+  const vault = JSON.stringify(oneAcc().concat(oneAcc().map(a => ({ ...a, id: "b" }))));
+  const cfg = JSON.stringify({ accent: "#123456", syncToken: "tok", notify: true, persistAsked: true, movedAt: 5 });
+  win.moveInMessage({ origin: "https://evil.example", source: opener, data: { type: "st-move", v: 1, db: vault, cfg } });
+  assert.equal(win.localStorage.getItem("smurf-tracker"), null, "another site cannot push a vault in");
+  win.moveInMessage({ origin: OLD_ORIGIN_T, source: opener, data: { type: "st-move", v: 1, db: vault, cfg } });
+  assert.equal(win.localStorage.getItem("smurf-tracker"), vault, "the vault, as it was");
+  const c = JSON.parse(win.localStorage.getItem("smurf-tracker-cfg"));
+  assert.equal(c.accent, "#123456"); assert.equal(c.syncToken, "tok", "settings come along");
+  for (const k of ["notify", "persistAsked", "movedAt"]) assert.equal(k in c, false, k + " belonged to the old address");
+  assert.equal(J(opener.got[1]), J([{ type: "st-move-done", n: 2 }, OLD_ORIGIN_T]));
+  // an address that already has a vault keeps it
+  const full = quietBoot(oneAcc(), withOpener, NEW_HOME + "index.html?action=move-in");
+  const before = full.localStorage.getItem("smurf-tracker");
+  opener.got.length = 0;
+  full.moveInMessage({ origin: OLD_ORIGIN_T, source: opener, data: { type: "st-move", v: 1, db: vault, cfg } });
+  assert.equal(full.localStorage.getItem("smurf-tracker"), before, "never written over");
+  assert.equal(J(opener.got[0]), J([{ type: "st-move-refused", why: "not-empty" }, OLD_ORIGIN_T]));
+  runScript(full, "window.__r = JSON.stringify(acceptMovedVault('not json', null))");
+  assert.match(full.__r, /refused/);
 });
 
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row

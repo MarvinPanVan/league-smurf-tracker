@@ -89,10 +89,14 @@ master password to open. Treat a plaintext export like the passwords themselves.
   read what you type and what the page shows.
 - **Someone at your unlocked computer.** Use auto-lock.
 - **No master password.** As above: plain text on disk.
-- **The hosted page changing.** The [live version](https://marvinpanvan.github.io/league-smurf-tracker/)
-  is served from this repository's `main` branch. If you would rather trust a copy
-  you control, run your own (download the repository and open `index.html`, or host a private
-  copy for yourself, as the [licence](LICENSE) allows).
+- **The hosted page changing.** The [live version](https://smurf-tracker.pages.dev/)
+  is served by Cloudflare Pages from this repository's `main` branch. It moved there from
+  `marvinpanvan.github.io/league-smurf-tracker/` in 2.14: every GitHub Pages site under one
+  account shares that origin and its storage, so another project published there could
+  have read the vault. The old address still serves the app, to hand vaults over.
+  If you would rather trust a copy you control, run your own (download the repository
+  and open `index.html`, or host a private copy for yourself, as the [licence](LICENSE)
+  allows).
 - **Public CORS proxies.** Without your own worker, rank checks go through third-party
   proxies, which see which Riot IDs you look up. Deploy the worker to avoid that.
 
