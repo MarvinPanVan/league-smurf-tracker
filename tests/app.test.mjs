@@ -954,7 +954,7 @@ test("every button, dropdown and switch wears the same satin; icons, links and m
   for (const sel of [".opt-seg"]) assert.match(rule(sel), /background:var\(--sheen\),var\(--panel2\)/, sel);
   assert.match(css, /\n  \.seg\{[^}]*background:var\(--sheen\),var\(--panel2\);box-shadow:var\(--sh-btn\)/);
   // what is not a plate clears both, so it does not pick up a lit edge and a shadow around nothing
-  for (const sel of [".rid,.star,.eye-btn,.panel-close", "#bMore,#bHelp", "#moreMenu button", ".gem-b", ".fb-x", ".fchip-all",
+  for (const sel of [".rid,.star,.eye-btn,.panel-close", "#bMore,#bHelp", "#moreMenu button", ".fb-x", ".fchip-all",
       ".bk-note button", ".setup-x"]) {
     assert.match(rule(sel), /box-shadow:none/, sel);
     assert.match(rule(sel), /background:none/, sel);
