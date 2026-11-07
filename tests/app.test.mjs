@@ -1267,6 +1267,12 @@ test("Play next names the account to play: about to decay first, then the longes
   assert.equal(appGet(both, "ui.search"), "");
   const fresh = bootApp([acc("a", "GOLD", 0), acc("b", "GOLD", 1)]);
   assert.equal(tile(fresh), null, "nothing has sat long enough to suggest");
+  // "4 days since played" was printed when all the app knew was the last check
+  const checkedOnly = acc("c", "GOLD", 0, { lastPlayedAt: undefined });
+  checkedOnly.stats.updatedAt = now - 9 * D;
+  const known = bootApp([checkedOnly, acc("d", "GOLD", 1)]);
+  assert.match(tile(known).textContent, /9 days since its last check/, "it says what it counted from");
+  assert.doesNotMatch(tile(known).textContent, /played/);
 });
 
 test("a new vault gets four set-up steps, each a button, until they are done or hidden", async () => {

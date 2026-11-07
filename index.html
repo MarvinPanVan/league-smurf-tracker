@@ -3734,7 +3734,11 @@ function playNext(pool){
   if(urgent.length){const a=urgent[0],d=decayDays(a);return{a,why:d<0?"decaying — play a ranked game":"decay in "+decayIn(d)}}
   let best=null,days=-1;
   for(const a of live){const d=rotationDays(a);if(d!=null&&d>days){best=a;days=d}}
-  return best&&days>=3?{a:best,why:days+" days since played"}:null;
+  // Say what the days are counted from. rotationDays falls back from "played" to
+  // "opened here" to "last checked", and all three used to be printed as "played".
+  if(!best||days<3)return null;
+  const since=best.lastPlayedAt?"played":best.lastLoginAt?"you opened its login":"its last check";
+  return{a:best,why:days+" days since "+since};
 }
 function needsRotation(a){
   if(a.status==="banned"||a.archived)return false;
