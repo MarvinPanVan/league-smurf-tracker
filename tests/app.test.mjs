@@ -10749,3 +10749,20 @@ test("a Login copy that fails stays on the step it failed, and records nothing",
   assert.match(main().textContent, /^\s*Copy username$/, "still on the username");
   assert.equal(appGet(win, 'accounts[0].lastLoginAt'), undefined, "and no Last login stamped");
 });
+
+// A spreadsheet's "gold" and "2" were stored as typed: the chart read division "2" as IV
+// and the card printed "Gold 2"
+test("CSV import reads a tier and division however a spreadsheet wrote them", async () => {
+  const win = bootApp();
+  const csv = "gameName,tagLine,region,tier,division,lp\n"
+    + "Digit,1,EUW,gold,2,40\n" + "Lower,2,EUW,Platinum,iii,10\n" + "Roman,3,EUW,SILVER,I,5\n" + "Junk,4,EUW,GOLD,7,5\n";
+  win.doImportCSV(new win.File([csv], "t.csv", { type: "text/csv" }));
+  await until(() => win.document.querySelectorAll(".card").length === 4, "the import");
+  const st = name => appGet(win, `JSON.stringify((({tier,division})=>({tier,division}))(accounts.find(a => a.gameName === ${JSON.stringify(name)}).stats))`);
+  assert.equal(st("Digit"), JSON.stringify({ tier: "GOLD", division: "II" }));
+  assert.equal(st("Lower"), JSON.stringify({ tier: "PLATINUM", division: "III" }));
+  assert.equal(st("Roman"), JSON.stringify({ tier: "SILVER", division: "I" }));
+  assert.equal(JSON.parse(st("Junk")).division, null, "a division that does not exist is none, not a guess");
+  assert.match(win.document.getElementById("grid").textContent, /Gold II/);
+  assert.doesNotMatch(win.document.getElementById("grid").textContent, /Gold 2/);
+});

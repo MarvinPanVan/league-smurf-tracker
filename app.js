@@ -6853,14 +6853,17 @@ function doImportCSV(file){
         };
         const gameName=get("gameName"),tagLine=get("tagLine");
         if(!gameName||!tagLine)return null;
-        const tier=get("tier");
+        /* As typed in a spreadsheet: "gold", "Gold 2", "ii". A division of "2" was
+           stored as written, read by the chart as IV and shown as "Gold 2". */
+        const tier=get("tier").trim().toUpperCase();
+        const dv=get("division").trim().toUpperCase(), div={"1":"I","2":"II","3":"III","4":"IV"}[dv]||(dv in DIV_ORDER?dv:null);
         return sanitizeAccount({
           id:uid(),tags:get("tags")?get("tags").split("|").filter(Boolean):[],history:[],
           label:get("label"),region:normRegion(get("region")),gameName,tagLine,status:normStatus(get("status")),
           login:get("login"),password:get("password"),email:get("email"),notes:get("notes"),
           createdOn:get("createdOn"),birthdate:get("birthdate"),
           fav:get("favorite")==="yes",info:ownExport?csvNoteInfo(header,get):null,
-          stats:tier?{found:true,tier,division:normDivision(tier,get("division")||null),lp:get("lp")?+get("lp"):null,wins:get("wins")?+get("wins"):null,losses:get("losses")?+get("losses"):null,level:get("level")?+get("level"):null,mmr:null,avgRecent:null,asOf:"CSV import",note:null,updatedAt:get("lastUpdated")?new Date(get("lastUpdated")).getTime()||null:null}:null
+          stats:tier?{found:true,tier,division:normDivision(tier,div),lp:get("lp")?+get("lp"):null,wins:get("wins")?+get("wins"):null,losses:get("losses")?+get("losses"):null,level:get("level")?+get("level"):null,mmr:null,avgRecent:null,asOf:"CSV import",note:null,updatedAt:get("lastUpdated")?new Date(get("lastUpdated")).getTime()||null:null}:null
         });
       }).filter(Boolean)
         .filter(a=>{const k=key(a);if(fileSeen.has(k))return false;fileSeen.add(k);return true});
