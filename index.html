@@ -1409,7 +1409,9 @@
   .delta{font-size:calc(11px*var(--ts));padding:2px 8px;border-radius:var(--r-xs);font-weight:600;display:inline-block;white-space:nowrap}
   .d-up{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
   .d-down{color:var(--danger);background:color-mix(in srgb,var(--danger) 15%,transparent)}
-  .d-warn{color:#f0b45a;background:color-mix(in srgb,#f0b45a 15%,transparent)}
+  /* the warning colour, not an amber of its own: a hard-coded hex sat a shade off --warn,
+     so "Decay in ~7d" and "No 2-step" were two different yellows on one card */
+  .d-warn{color:var(--warn-txt);background:color-mix(in srgb,var(--warn) 15%,transparent)}
   .wl .ready{color:var(--teal-txt);font-weight:600}
   .goal.lvl .goal-t{color:var(--teal-txt)}
   .delta .ico{width:1em;height:1em;vertical-align:-.15em}

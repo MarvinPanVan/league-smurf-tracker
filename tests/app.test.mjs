@@ -8308,6 +8308,9 @@ test("out of date is amber like any warning; red stays for lost, banned and irre
   assert.match(win.document.querySelector('#dash [data-flag="unchecked"] .v').getAttribute("style"), /--warn-txt/,
     "never checked is a chore, not the user's accent");
   assert.match(rule(".b-danger"), /--danger/, "a destructive button is still red");
+  // the decay chip had an amber of its own, a shade off --warn: two yellows on one card
+  assert.match(rule(".d-warn"), /color:var\(--warn-txt\)/, "the decay chip is the warning colour");
+  assert.doesNotMatch(html, /#f0b45a/i, "and no second amber is left");
 });
 
 // Picking a theme and pressing Esc undid it without a word
