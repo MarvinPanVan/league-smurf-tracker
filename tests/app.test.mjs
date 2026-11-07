@@ -10602,3 +10602,12 @@ test("the list and the wall say Level 23 in grey for a levelling account, as the
   assert.equal(t.textContent, "Level 23");
   assert.equal(t.style.color, "var(--muted)");
 });
+
+// "Updated 2 h ago" was plain text, and "Last login just now" beside it had a frame
+// like a button's
+test("the card's two times are set alike: plain text, no frame", () => {
+  const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
+  const src = rule(".src");
+  assert.doesNotMatch(src, /border:|background|padding/, "no frame, fill or padding: " + src);
+  assert.match(src, /font-size:calc\(12px\*var\(--ts\)\);color:var\(--faint\)/);
+});

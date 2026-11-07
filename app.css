@@ -1694,8 +1694,9 @@
   /* asOf is sometimes a source ("backend", a proxy name) and sometimes a date
      phrase op.gg printed ("updated today") — so no uppercasing, which would
      shout at a sentence fragment */
-  .src{font-size:calc(12px*var(--ts));font-weight:500;letter-spacing:.01em;color:var(--faint);
-    padding:2px 8px;border-radius:var(--r-xs);background:#ffffff0d;border:1px solid #ffffff1c;white-space:nowrap}
+  /* "Last login" is a time, like "Updated" beside it: plain text, not a framed pill
+     that looked like a button */
+  .src{font-size:calc(12px*var(--ts));color:var(--faint);white-space:nowrap}
   /* 11.5px type in 6px of padding is a 26px target, and there were five of them
      in a row. Mobile already got 40px; the desktop was left with whatever the
      text happened to measure. */
