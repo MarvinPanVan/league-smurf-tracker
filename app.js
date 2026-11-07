@@ -3832,7 +3832,17 @@ function renderDash(){
   if(dashCollapsed()){hideSparkTip();el.innerHTML="";return}
   const ranked=countPool.filter(a=>isLive(a)&&a.stats&&a.stats.found!==false&&a.stats.tier&&a.stats.tier.toUpperCase()!=="UNRANKED");
   const pool=ranked.filter(inCombined);
-  const excludedN=ranked.length-pool.length;
+  /* "Counting: all ranked accounts ▾ / 3 of 3 ranked" headed the panel, a control
+     nobody could make sense of, on every vault, including the many where it could
+     not change a thing. It is a footnote now that reads as one ("Figures from all
+     5 ranked accounts"), each choice says how many accounts it keeps, and it only
+     shows when there is a choice to make, or one already made to undo. */
+  const handOutN=ranked.filter(a=>a.excludeStats).length;
+  const tierAt=a=>TIER_ORDER.indexOf((a.stats.tier||"").toUpperCase());
+  const floorN=f=>ranked.filter(a=>!a.excludeStats&&(!f||tierAt(a)>=TIER_ORDER.indexOf(f))).length;
+  const curFloor=cfg.statsMinTier||"", allN=floorN("");
+  const floors=COMBINED_FLOORS.filter(f=>!f.v||f.v===curFloor||(floorN(f.v)>0&&floorN(f.v)<allN));
+  const scopeShown=floors.length>1||!!curFloor||handOutN>0;
   let W=0,L=0;
   pool.forEach(a=>{W+=Number(a.stats.wins)||0;L+=Number(a.stats.losses)||0});
   const wr=(W+L)>0?Math.round(W/(W+L)*100)+"%":"—";
@@ -3898,13 +3908,6 @@ function renderDash(){
   if(!cells.length&&!topChamps.length){hideSparkTip();setHTML(el,bkNote);dashJustOpened=false;wireBkNow(el);return}
   setHTML(el,`
   <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
-  ${ranked.length?`<div class="dash-head">
-    <div class="dash-filter">
-      <span class="k">Counting</span>
-      <select id="dashMin">${COMBINED_FLOORS.map(f=>`<option value="${f.v}"${(cfg.statsMinTier||"")===f.v?" selected":""}>${esc(f.label)}</option>`).join("")}</select>
-      <span class="dash-ex">${pool.length} of ${ranked.length} ranked${excludedN?" · "+excludedN+" left out":""}${filterHint?" · "+esc(filterHint):""}</span>
-    </div>
-  </div>`:""}
   ${cells.length?`<div class="dash">${cells.join("")}</div>`:""}
   ${topChamps.length?`<div class="dist"${cells.length||ranked.length?' style="border-top:1px solid var(--line)"':""}><span class="k">Most played</span>${
     // Sorted by games, so "Best" was the wrong word: a 44% champion sat in it.
@@ -3913,6 +3916,11 @@ function renderDash(){
       +`<span class="n">${esc(c.name)}</span>`
       +`<b class="${c.wr>=50&&c.games>=10?"wr-good":""}">${esc(c.wr)}%</b>`
       +`<i class="g">${esc(c.wins)}<em>-</em>${esc(c.losses)}</i></span>`).join("")}</div>`:""}
+  ${scopeShown?`<div class="dash-scope"><label for="dashMin">Figures from</label>
+    <select id="dashMin">${floors.map(f=>{const n=floorN(f.v);
+      return`<option value="${f.v}"${curFloor===f.v?" selected":""}>${f.v?esc(f.label)+" ("+n+")":"all "+n+" ranked account"+(n===1?"":"s")}</option>`}).join("")}</select>
+    ${handOutN||filterHint?`<span class="dash-ex">${[handOutN?handOutN+" left out from their cards":"",filterHint?esc(filterHint):""].filter(Boolean).join(" · ")}</span>`:""}
+  </div>`:""}
   </div></div>
   ${bkNote}`);
   dashJustOpened=false; // consumed by the render above

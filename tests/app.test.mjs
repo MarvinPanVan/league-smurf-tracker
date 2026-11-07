@@ -4337,12 +4337,8 @@ test("Not found is not Unranked", () => {
 test("the combined stats pool respects the rank floor and per-account exclusions", () => {
   const win = bootApp();
   const a = (tier, extra) => Object.assign({ stats: { found: true, tier } }, extra);
-  const setFloor = v => {
-    win.loadDemo();
-    const sel = win.document.getElementById("dashMin");
-    sel.value = v;
-    sel.dispatchEvent(new win.Event("change", { bubbles: true }));
-  };
+  // set directly: the picker only offers floors that change something in the vault
+  const setFloor = v => runScript(win, `cfg.statsMinTier = ${JSON.stringify(v)}`);
 
   setFloor("");
   assert.equal(win.inCombined(a("SILVER")), true);
@@ -4355,16 +4351,38 @@ test("the combined stats pool respects the rank floor and per-account exclusions
   assert.equal(win.inCombined(a("DIAMOND", { excludeStats: true })), false);
 });
 
-test("the floor narrows what the dashboard counts, and says how many it left out", () => {
+// "Counting: all ranked accounts ▾ / 3 of 3 ranked" headed the panel, a control
+// nobody could make sense of, shown even where it could not change a thing
+test("the stats say which accounts they are from, as a footnote whose choices give their counts", () => {
   const win = bootApp();
-  win.loadDemo(); // Platinum, Gold, Silver, Bronze + one unranked
+  win.loadDemo(); // Platinum, Gold, Silver live; Bronze banned; one unranked; one levelling
+  const scope = () => win.document.querySelector("#dash .dash-scope");
   const sel = () => win.document.getElementById("dashMin");
-  const summary = () => win.document.querySelector(".dash-ex").textContent.replace(/s+/g, " ").trim();
-
-  assert.match(summary(), /^3 of 3 ranked$/, "demo's banned ranked account is left out of combined counts");
+  const opts = () => [...sel().options].map(o => o.textContent);
+  assert.equal(win.document.querySelector("#dash .dash-head"), null, "nothing heads the panel");
+  assert.equal(scope().previousElementSibling.className, "dist", "it closes the panel, under Most played");
+  assert.match(scope().textContent, /^Figures from/);
+  assert.equal(sel().selectedOptions[0].textContent, "all 3 ranked accounts", "the banned one is not counted");
+  assert.deepEqual(opts(), ["all 3 ranked accounts", "Gold and above (2)", "Platinum and above (1)"],
+    "only floors that change something, each with how many it keeps");
   sel().value = "PLATINUM";
   sel().dispatchEvent(new win.Event("change", { bubbles: true }));
-  assert.match(summary(), /^1 of 3 ranked · 2 left out$/);
+  assert.equal(sel().selectedOptions[0].textContent, "Platinum and above (1)");
+  assert.match(win.document.querySelector("#dash .stat .s-note").textContent, /1 counted account/);
+  // one account left out from its own card is said too
+  sel().value = "";
+  sel().dispatchEvent(new win.Event("change", { bubbles: true }));
+  runScript(win, "accounts.find(a => a.stats && a.stats.tier === 'GOLD').excludeStats = true; renderDash()");
+  assert.match(scope().querySelector(".dash-ex").textContent, /^1 left out from their cards$/);
+  assert.equal(sel().selectedOptions[0].textContent, "all 2 ranked accounts");
+});
+
+test("with nothing to choose between, the stats name no scope at all", () => {
+  const acc = (id, tier) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier, division: "II", lp: 10, wins: 10, losses: 8, updatedAt: Date.now() } });
+  const win = bootApp([acc("a", "GOLD"), acc("b", "GOLD")]);
+  assert.ok(win.document.querySelector("#dash .stat"), "the panel is there");
+  assert.equal(win.document.getElementById("dashMin"), null, "two Gold accounts: every floor keeps both or neither, so no picker");
 });
 
 test("combined champion stats are weighted by games, not by winrate", () => {
@@ -9239,7 +9257,7 @@ test("one type scale: nothing under 11px, 11px only inside charts and badges, sm
   }
   assert.deepEqual(small, [], "small text, or small capitals, outside the few places that keep them");
   assert.deepEqual([...sizes].filter(s => s < 24).sort((a, b) => a - b), [11, 12, 13, 14, 16, 18, 20, 22], "the scale below display sizes");
-  assert.match(css, /\.stat \.k,\.dist \.k,\.dash-filter \.k,[^{]*\{font-size:calc\(12px\*var\(--ts\)\);font-weight:500;letter-spacing:0;text-transform:none\}/,
+  assert.match(css, /\.stat \.k,\.dist \.k,\.dash-scope label,[^{]*\{font-size:calc\(12px\*var\(--ts\)\);font-weight:500;letter-spacing:0;text-transform:none\}/,
     "the shared label: a calm 12px in sentence case");
 });
 
@@ -9368,7 +9386,7 @@ test("the stats panel shows a figure only once there is something behind it", ()
   // one account, never checked: the one thing worth saying is that
   const fresh = bootApp([{ id: "n", gameName: "New", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], stats: null }]);
   assert.deepEqual(tiles(fresh), ["Never checked"]);
-  assert.equal(fresh.document.querySelector("#dash .dash-head"), null, "no Counting picker with nothing ranked to count");
+  assert.equal(fresh.document.querySelector("#dash .dash-scope"), null, "no scope picker with nothing ranked to count");
   // a checked, unranked account with no games: nothing at all, and no Hide stats for an empty panel
   const quiet = bootApp([{ id: "u", gameName: "Lvl", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
     stats: { found: true, tier: "UNRANKED", division: null, lp: null, level: 12, updatedAt: Date.now() } }]);
