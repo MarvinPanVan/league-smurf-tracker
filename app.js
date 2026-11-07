@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.14.0";
+const APP_VERSION="2.15.0";
 const APP_CHANGELOG=[
+  {v:"2.15.0",items:[
+    "Flat buttons in three kinds, and every control in a toolbar row is the same height",
+    "The header shows your ranks as small emblems with counts; accounts not found are one warning with Show",
+    "A one-line footer, a plain bar to level 30 on levelling cards, and a count that leaves archived accounts out",
+  ]},
   {v:"2.14.0",items:[
     "Smurf Tracker now lives at smurf-tracker.pages.dev, an address of its own",
     "The old address moves your vault over in one click: Move my vault there",
