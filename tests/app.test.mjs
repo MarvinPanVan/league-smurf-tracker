@@ -8196,6 +8196,16 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// The ⋯ menu led with the plaintext export, put Delete all mid-list and Settings last
+test("the ⋯ menu opens on Settings, offers the encrypted backup first, and ends on Delete all", () => {
+  const win = bootApp();
+  const ids = [...win.document.querySelectorAll("#moreMenu button")].map(b => b.id);
+  assert.equal(ids[0], "bSettings", "Settings first");
+  assert.equal(ids[ids.length - 1], "bDeleteAll", "the one that deletes everything last");
+  assert.ok(ids.indexOf("bExportEnc") < ids.indexOf("bExport"), "the safe export before the plaintext one");
+  assert.deepEqual([...win.document.querySelectorAll("#moreMenu .cm-g")].map(g => g.textContent), ["Accounts", "Backup"]);
+});
+
 // The list had no headings, two empty bands, and no way to copy a login from it
 test("the list is a table: headings over aligned columns, and a row copies its login in one click", async () => {
   const win = bootApp([{ id: "a", label: "Main", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
