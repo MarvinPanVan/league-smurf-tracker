@@ -444,7 +444,8 @@
   .stat .v.nw{white-space:nowrap}
   .stat .v.nw small{margin-left:1px}
   .stat .v.spark-wrap{font-size:calc(12px*var(--ts));line-height:1.2;overflow:visible;max-width:100%;width:100%;position:relative}
-  .pool-spark{display:block;width:100%;max-width:100%;height:28px;margin-top:4px;opacity:.85;overflow:visible;cursor:crosshair}
+  /* capped: stretched 28px tall across a 400px cell, +246 LP drew as a flat line */
+  .pool-spark{display:block;width:100%;max-width:220px;height:28px;margin-top:4px;opacity:.85;overflow:visible;cursor:crosshair}
   .pool-spark circle.pool-dot{fill:var(--teal);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
   .pool-spark .pool-hit{fill:transparent;stroke:none;cursor:pointer}
   .spark-tip{
@@ -4574,7 +4575,12 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
   // the I being Gold I, which looked like a numbering mistake. "P II, P III, G I".
   const mixed=new Set(divs.filter(d=>d.n).map(d=>d.t)).size>1;
   const dupe=mixed||divs.some((d,i)=>divs.findIndex(o=>o.n===d.n)!==i);
-  for(const d of divs){if(!d.n)continue;rule(d.v);mark(d.v,dupe?d.t.charAt(0)+" "+d.n:d.n)}
+  // The numerals sit at the right edge, which is where the newest point is; one the
+  // point lands on ("P II" under the dot) keeps its hairline and loses its label.
+  // a numeral's box runs from 9.5px above its line to the line; the dot's colour is
+  // 4.5px each way (its dark ring overlapping a letter's edge is not a collision)
+  const lastY=pts.length>1?py(pts[pts.length-1].v):-99, underDot=v=>lastY>py(v)-14&&lastY<py(v)+4.5;
+  for(const d of divs){if(!d.n)continue;rule(d.v);if(!underDot(d.v))mark(d.v,dupe?d.t.charAt(0)+" "+d.n:d.n)}
 
   // The Grandmaster and Challenger floors, where the view reaches them. These are
   // the current floors, so they are drawn as a reference against today's ladder —
@@ -4617,8 +4623,15 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     // rather than the left, where the band captions live. A peak just above the
     // current rank is the common case, and there the caption is right at the top
     // and swallowed the label every time, leaving a dashed line explaining nothing.
+    // ...and where the line is not: dead centre, the line ran straight through it
+    // on any chart that was still near its peak halfway along.
+    const xs=pts.map((p,i)=>fxi(i)), ys=pts.map(p=>py(p.v));
+    const lineAt=f=>{if(xs.length<2)return ys[0];let i=1;while(i<xs.length-1&&xs[i]<f)i++;
+      const a=xs[i-1],b=xs[i],t=b>a?Math.min(1,Math.max(0,(f-a)/(b-a))):0;return ys[i-1]+(ys[i]-ys[i-1])*t};
+    const lanes=[.5,.3,.7,.18,.82], clear=f=>Math.min(...[-.04,0,.04].map(o=>Math.abs(lineAt(f+o)-(y-5))));
+    const lane=lanes.find(f=>clear(f)>=11)??lanes.reduce((b,f)=>clear(f)>clear(b)?f:b,lanes[0]);
     if(!cutYs.some(cy=>Math.abs(y-cy)<11))
-      labels+=`<span class="lpc-peak" style="top:${(y-9.5).toFixed(1)}px" title="${esc(peakLabel||"Season peak")}">Peak</span>`;
+      labels+=`<span class="lpc-peak" style="top:${(y-9.5).toFixed(1)}px;left:${(lane*100).toFixed(1)}%" title="${esc(peakLabel||"Season peak")}">Peak</span>`;
     cutYs.push(y);   // and an LP numeral must not land on it either
   }
 
@@ -4633,7 +4646,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
       // draws a second hairline a few pixels from a dashed one and prints a number
       // beside a label. The floor is the more useful of the two, so it wins.
       if(cutYs.some(cy=>Math.abs(py(v)-cy)<11))continue;
-      rule(v);mark(v,(v-M_BASE)+" LP");
+      rule(v);if(!underDot(v))mark(v,(v-M_BASE)+" LP");
     }
   }
 

@@ -3514,6 +3514,28 @@ function chartDom(win, h, mode) {
   return el;
 }
 
+// "P II" sat under the newest dot, and the line ran through "PEAK" at the chart's middle
+test("chart labels keep off the line: no numeral under the newest point, PEAK where the line is not", () => {
+  const win = bootApp();
+  const marks = h => [...chartDom(win, h).querySelectorAll(".lpc-sub")].map(n => n.textContent);
+  // the newest point sits just above Platinum II's line: that numeral steps aside, the others stay
+  const m = marks(hist(["GOLD", "I", 0], ["PLATINUM", "III", 74], ["PLATINUM", "II", 61]));
+  assert.ok(!m.includes("P II"), "no label under the dot: " + m.join(", "));
+  assert.ok(m.includes("P III") && m.includes("G I"), "the rest are still there: " + m.join(", "));
+  assert.ok(marks(hist(["PLATINUM", "IV", 5], ["PLATINUM", "II", 90])).includes("II"), "a numeral well clear of the dot stays");
+  // a peak level with the middle of a falling line: the label moves along to a clear stretch
+  const h = hist(["GOLD", "II", 35], ["GOLD", "II", 35], ["GOLD", "II", 30], ["GOLD", "III", 70], ["GOLD", "III", 22]);
+  const el = win.document.createElement("div");
+  el.innerHTML = win.rankChart(h, null, undefined, "pk", win.ladderLP({ tier: "GOLD", division: "II", lp: 35 }), "Gold II · 35 LP");
+  const peak = el.querySelector(".lpc-peak");
+  assert.ok(peak, "the peak is labelled");
+  assert.ok(peak.style.left, "placed along the line, not fixed in the centre");
+  // and the stats panel's Average climb line is short enough to show its slope (stretched
+  // 28px tall over a 400px cell, +246 LP drew flat)
+  assert.ok(+html.match(/\.pool-spark\{[^}]*max-width:(\d+)px/)[1] <= 240);
+  assert.notEqual(peak.style.left, "50%", "not in the middle, where the line passes: " + peak.style.left);
+});
+
 test("a point's hit area is a window around it, never a slab of the whole chart", () => {
   const win = bootApp();
   // Horizontal extent only — the vertical band is the test below. Two failure
@@ -3588,11 +3610,15 @@ test("the two halves of the ladder get their own scale", () => {
 
   // above it a fixed 100 is far too fine — a Master account decaying 1600 -> 800
   // would be dozens of lines, so that step grows with the range
-  assert.deepEqual(marks(hist(["MASTER", null, 1600], ["MASTER", null, 800])), ["800 LP", "1200 LP"]);
-  assert.deepEqual(marks(hist(["MASTER", null, 2400], ["MASTER", null, 300])), ["400 LP", "1200 LP", "2000 LP"]);
+  // (the newest point sits exactly on the 800 LP line, so that label steps out from under it)
+  assert.deepEqual(marks(hist(["MASTER", null, 1600], ["MASTER", null, 800])), ["1200 LP"]);
+  assert.deepEqual(marks(hist(["MASTER", null, 800], ["MASTER", null, 1600])), ["800 LP", "1200 LP"], "with the dot elsewhere, both");
+  // (300 LP sits 3px under the 400 LP line on this scale, so that label steps aside too)
+  assert.deepEqual(marks(hist(["MASTER", null, 2400], ["MASTER", null, 300])), ["1200 LP", "2000 LP"]);
 
   // both at once, each on its own scale
-  assert.deepEqual(marks(hist(["MASTER", null, 393], ["MASTER", null, 196], ["DIAMOND", "I", 52])),
+  // (ending between the two marks, so the newest point covers neither)
+  assert.deepEqual(marks(hist(["MASTER", null, 393], ["DIAMOND", "I", 52], ["MASTER", null, 110])),
     ["I", "200 LP"]);
 
   // too much ladder in view for a 100 LP line to be readable: the bands carry it
