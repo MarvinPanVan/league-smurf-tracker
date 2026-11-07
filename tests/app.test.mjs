@@ -8196,6 +8196,14 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// Every card carried a second chip in Login's colour beside the star
+test("a card's region is a neutral label, so Login is the one thing in the action colour", () => {
+  const rule = html.match(/\n  \.regiontag\{([^}]*)\}/)[1];
+  assert.doesNotMatch(rule, /--teal|--gold/, "not the accent");
+  assert.match(rule, /color:var\(--muted\)/);
+  assert.doesNotMatch(html.match(/\n  \.card:hover \.regiontag\{([^}]*)\}/)[1], /--teal|--gold/, "nor on hover");
+});
+
 // A vault left alone for a weekend lit the page red: "out of date" took the colour of a ban
 test("out of date is amber like any warning; red stays for lost, banned and irreversible", () => {
   const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];

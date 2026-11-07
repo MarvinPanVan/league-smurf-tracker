@@ -1104,9 +1104,11 @@
     color:var(--muted);z-index:2;font-size:calc(13px*var(--ts))}
   .panel-close:hover{color:var(--danger);background:color-mix(in srgb,var(--danger) 13%,transparent);border-color:transparent}
 
+  /* A label, not an action, so it is not in the action colour: tinted with the
+     secondary accent, every card carried a second chip of Login's colour right
+     beside the star, and the one button meant to stand out had company. */
   .regiontag{font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:var(--r-xs);flex-shrink:0;
-    background:color-mix(in srgb,var(--teal) 12%,transparent);color:var(--teal-txt);
-    border:1px solid color-mix(in srgb,var(--teal) 24%,transparent)}
+    background:#ffffff0a;color:var(--muted);border:1px solid var(--line)}
   /* the rank is why the card exists, so it gets the card's largest type */
   /* The tier as an emblem rather than only as a coloured word. It sits in the
      rank line itself rather than watermarked behind it: faint behind the type it
@@ -2320,7 +2322,7 @@
   .c-portrait{transition:transform .24s cubic-bezier(.22,1,.36,1)}
   .card:hover .c-portrait{transform:scale(1.05)}
   .regiontag{transition:background .2s,border-color .2s}
-  .card:hover .regiontag{background:color-mix(in srgb,var(--teal) 19%,transparent);border-color:color-mix(in srgb,var(--teal) 40%,transparent)}
+  .card:hover .regiontag{color:var(--text);border-color:var(--line2)}
 
   /* ---- motion ---- */
   /* The lit border used to be a `background` transition between two gradients,
