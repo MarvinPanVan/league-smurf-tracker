@@ -8677,6 +8677,17 @@ test("the LP chip says it is since the last check, with the pace beside it, and 
   assert.doesNotMatch(card.querySelector(".c-stats")?.textContent || "", /Climb/, "no row of its own");
 });
 
+// A phone's toolbar stacked Check all ranks over Refresh N stale: two buttons for one job
+test("on a phone the toolbar has one ranks button: Refresh stale when there is any, else Check all", () => {
+  const block = html.slice(html.indexOf("@media (max-width:560px){\n    .tools{display:flex;flex-wrap:wrap}"));
+  assert.match(block.slice(0, 3000), /\.cmd:has\(#bCheckStale:not\(\.hidden\)\) #bCheckAll\{display:none\}/);
+  const D = 864e5;
+  const acc = (id, ago) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() - ago } });
+  const win = bootApp([acc("old", 6 * D), acc("new", 3600000)]); // one stale, one fresh
+  assert.equal(win.document.getElementById("bCheckStale").classList.contains("hidden"), false, "the stale button is what shows");
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],

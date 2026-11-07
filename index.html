@@ -2557,6 +2557,9 @@
     .tools>:not(input[type=search]):not(.t-filters){flex:1 1 calc(50% - 4px)}
     /* !important: Select all is a label with an inline display of its own */
     .tools:not(.open)>:not(input[type=search]):not(.t-filters){display:none!important}
+    /* One ranks button, not two stacked: with accounts out of date, Refresh N stale
+       is the one a phone needs (the rest were read recently); with none, Check all. */
+    .cmd:has(#bCheckStale:not(.hidden)) #bCheckAll{display:none}
     .tools.open>.t-filters{background-color:var(--panel3);border-color:var(--line2)}
     /* The figures wrapped two to a row, a third alone beneath them, and the champion
        chips wrapped into a block of their own: together most of a screen. Each is
