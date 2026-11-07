@@ -850,7 +850,6 @@
   .lgrp:first-child{padding-top:3px}
   .lgrp-crest{width:16px;height:16px;flex-shrink:0}
   .lgrp-dot{width:8px;height:8px;border-radius:2px;transform:rotate(45deg);flex-shrink:0;opacity:.8}
-  .lgrp-star{width:13px;height:13px;fill:var(--star);stroke:var(--star);flex-shrink:0}
   .lgrp-n{font-size:calc(11px*var(--ts));font-weight:700;letter-spacing:.14em;text-transform:uppercase}
   .lgrp-ln{flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
   .lgrp-k{font-size:calc(11px*var(--ts));font-weight:600;color:var(--faint);letter-spacing:.05em;
@@ -4463,15 +4462,14 @@ function listGroup(a){
   return"UNCHECKED";
 }
 function groupLabel(k){
-  if(k==="FAV")return "Favorites";
   if(k==="UNCHECKED")return "Never checked";
   if(k==="UNRANKED")return "Unranked";
   if(k==="MISSING")return "Not found";
   return k.charAt(0)+k.slice(1).toLowerCase();
 }
 function groupColor(k){
-  if(k==="FAV")return "var(--gold-txt)";
   if(k==="MISSING")return"var(--danger)";
+  if(k==="UNRANKED")return"var(--muted)"; // grey: in the unranked tier's blue it read as a link
   return k==="UNCHECKED"?"#5d6577":tierColor(k);
 }
 // The old sparkline plotted LP with no scale at all: it showed the number moving
@@ -8909,27 +8907,26 @@ function closeCardPanels(){
 
 /* The rank-sorted list as a flat sequence with a heading before each new tier.
    Sixty rows of identical grey is a wall you scroll past; the headings are what
-   turn the same sixty rows into a ladder you can read down. The count is filled
-   in as the list is walked, which is safe because nothing renders until the whole
-   sequence has been built. */
+   turn the same sixty rows into a ladder you can read down.
+   Favourites used to have a band of their own at the top, which pulled a favourite
+   Platinum account out of Platinum: with one Platinum account there was then no
+   Platinum heading at all, and the grouping stopped saying what it said. They sit
+   at the top of their own tier now, with the star on the row.
+   And a heading is only worth its line when tiers hold more than one account: five
+   accounts in five tiers came out as five headings for five rows. Headings are kept
+   while the list averages two rows a tier, for every tier, so a lone row never
+   looks like it belongs to the heading above it. */
+function groupRank(k){const i=TIER_ORDER.indexOf(k);return i>=0?100+i:({UNRANKED:3,MISSING:2,UNCHECKED:1})[k]||0}
 function withGroups(list){
-  const out=[];let cur=null,head=null;const seen=new Map();
-  for(const a of list){
-    // Favourites are pinned above everything by filtered(), so they need a band of
-    // their own: grouped by tier alone, a favourite Gold account opened a GOLD
-    // heading at the top of the list and the real Gold accounts opened a second
-    // one further down — two headings claiming the same data-id, which is the one
-    // thing syncGrid cannot survive.
-    const k=a.fav?"FAV":listGroup(a);
-    if(k!==cur){
-      cur=k;
-      // And belt-and-braces for any future sort that interleaves groups again.
-      const n=(seen.get(k)||0)+1;seen.set(k,n);
-      head={id:"grp:"+k+(n>1?":"+n:""),group:k,n:0};
-      out.push(head);
-    }
-    head.n++;
-    out.push(a);
+  const buckets=new Map();
+  for(const a of list){const k=listGroup(a);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(a)}
+  const keys=[...buckets.keys()].sort((x,y)=>groupRank(y)-groupRank(x));
+  const headed=list.length>=2*keys.length;
+  const out=[];
+  for(const k of keys){
+    const rows=buckets.get(k).sort((x,y)=>(y.fav?1:0)-(x.fav?1:0)); // stable: favourites first, then rank order
+    if(headed)out.push({id:"grp:"+k,group:k,n:rows.length});
+    out.push(...rows);
   }
   return out;
 }
@@ -8940,8 +8937,7 @@ function listHeadHTML(){
 }
 function groupHTML(g){
   const c=groupColor(g.group);
-  const mark=g.group==="FAV"?icon("star","lgrp-star")
-    :CRESTS[g.group]?crest(g.group,"lgrp-crest")
+  const mark=CRESTS[g.group]?crest(g.group,"lgrp-crest")
     :`<span class="lgrp-dot" style="background:${c}"></span>`;
   return `<div class="lgrp" data-id="${idAttr(g.id)}" role="presentation">${mark}`
     +`<span class="lgrp-n" style="color:${c}">${esc(groupLabel(g.group))}</span>`

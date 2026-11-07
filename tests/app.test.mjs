@@ -5407,35 +5407,40 @@ test("list rows draw a sparkline only when there is a shape to draw", () => {
   assert.equal(row("t9").classList.contains("rw-quiet"), false);
 });
 
-// Favourites are pinned above everything by filtered(). Grouping purely by tier
-// therefore opened a heading for the favourite's tier at the top and a second one
-// for the same tier further down — two headings sharing a data-id, which is the
-// one thing syncGrid cannot survive.
-test("the rank-sorted list groups by tier, with favorites in a band of their own", () => {
-  const win = bootApp(ladderSeed());
-  win.document.querySelector('[data-density="list"]').click();
+// Two accounts a tier, so every heading has rows to head
+const ladderSeed2 = () => [...ladderSeed(), ...ladderSeed().map(a => ({ ...a, id: a.id + "b", gameName: a.gameName + "Two", fav: false }))];
 
+// Favourites had a band of their own at the top, which pulled a favourite out of its
+// tier (no Gold heading at all with one Gold account); and five accounts in five
+// tiers came out as five headings for five rows
+test("the rank-sorted list groups by tier, favourites first inside their own tier, headings only when worth it", () => {
+  const win = bootApp(ladderSeed2());
+  win.document.querySelector('[data-density="list"]').click();
   const heads = [...win.document.querySelectorAll(".lgrp")];
   const labels = heads.map(h => h.querySelector(".lgrp-n").textContent);
-  assert.equal(labels[0], "Favorites", "the pinned favourite gets its own band first");
-  assert.equal(labels[1], "Challenger", "then the ladder, top down");
+  assert.ok(!labels.includes("Favorites"), "no band of their own");
+  assert.equal(labels[0], "Challenger", "the ladder, top down");
   assert.equal(labels[labels.length - 1], "Never checked");
-  assert.ok(labels.includes("Unranked"));
-  // The favourite here is the only Gold account, so it is pulled into the
-  // Favorites band and no Gold heading is opened at all. What has to hold either
-  // way is that no heading is ever opened twice.
+  assert.ok(labels.includes("Gold"), "the favourite's tier keeps its heading");
   assert.equal(new Set(labels).size, labels.length, "no band is named twice");
-
   const ids = heads.map(h => h.dataset.id);
   assert.equal(new Set(ids).size, ids.length, "no two headings share a data-id");
-
-  // the counts have to add up to the accounts actually on screen
   const counted = heads.reduce((n, h) => n + Number(h.querySelector(".lgrp-k").textContent), 0);
-  assert.equal(counted, win.document.querySelectorAll(".rw").length);
+  assert.equal(counted, win.document.querySelectorAll(".rw").length, "the counts add up");
+  // inside Gold, the favourite comes first
+  const kids = [...win.document.getElementById("grid").children];
+  const gold = kids.findIndex(e => e.classList.contains("lgrp") && /Gold/.test(e.textContent));
+  assert.equal(kids[gold + 1].dataset.id, "t3", "the favourite Gold account leads its tier");
+  assert.match(html.match(/function groupColor\(k\)\{[^}]*\}/)[0], /UNRANKED"\)return"var\(--muted\)"/, "Unranked is grey, not link blue");
+  // one account a tier: no headings, the rows say their rank themselves
+  const thin = bootApp(ladderSeed());
+  thin.document.querySelector('[data-density="list"]').click();
+  assert.equal(thin.document.querySelectorAll(".lgrp").length, 0, "twelve tiers of one: no headings");
+  assert.equal(thin.document.querySelectorAll(".rw").length, 12);
 });
 
 test("grouping is dropped when the list is not in rank order", () => {
-  const win = bootApp(ladderSeed());
+  const win = bootApp(ladderSeed2());
   win.document.querySelector('[data-density="list"]').click();
   assert.ok(win.document.querySelectorAll(".lgrp").length > 0);
 
@@ -5444,7 +5449,7 @@ test("grouping is dropped when the list is not in rank order", () => {
   sort.dispatchEvent(new win.Event("change"));
   assert.equal(win.document.querySelectorAll(".lgrp").length, 0,
     "headings scattered through a name-sorted list would mean nothing");
-  assert.equal(win.document.querySelectorAll(".rw").length, 12, "every row is still there");
+  assert.equal(win.document.querySelectorAll(".rw").length, 24, "every row is still there");
 });
 
 // Same guarantee the cards already had: unchanged rows must produce byte-identical
