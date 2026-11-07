@@ -8810,6 +8810,82 @@ test("the fonts come with the app: no Google Fonts, every file the styles name i
   assert.match(html, /<link rel="preload" href="fonts\/inter-latin\.woff2" as="font" type="font\/woff2" crossorigin>/);
 });
 
+/* Every string an account holds can come from somewhere hostile: a backup or CSV someone
+   hands you, a public proxy answering a rank check in op.gg's place, a link. Each field
+   here carries markup that would become an <x-pwn> element if any view put it on the
+   page raw, and every view the account shows up in is opened. */
+const PWN = k => `"'><x-pwn>${k}</x-pwn><img src=x data-pwn="${k}">`;
+function pwnAccount(id, extra) {
+  const now = Date.now(), D = 864e5;
+  return Object.assign({ id, gameName: PWN("gameName"), tagLine: PWN("tagLine"), region: "EUW", label: PWN("label"),
+    status: "active", fav: true, flagged: true, tags: [PWN("tag")], notes: PWN("notes"), email: PWN("email"),
+    login: PWN("login"), password: PWN("password"), createdOn: PWN("createdOn"), birthdate: PWN("birthdate"),
+    lastLoginAt: now - 3600e3,
+    info: { honor: 3, owned: 96, be: 100, twofa: false, skins: [PWN("skin")], penalty: PWN("penalty"), own: { [PWN("ownKey")]: PWN("ownVal") } },
+    stats: { found: true, tier: "GOLD", division: "II", lp: 50, wins: 10, losses: 9, level: 100, asOf: PWN("asOf"), source: PWN("source"),
+      note: PWN("note"), updatedAt: now - 5 * D, icon: PWN("icon"), mmr: PWN("mmr"), avgRecent: PWN("avgRecent"),
+      champs: [{ name: PWN("champ"), games: 5, wins: 3, losses: 2, wr: 60, kda: PWN("kda") }],
+      seasons: { solo: [{ season: PWN("season"), tier: "SILVER", division: "I", lp: 10 }], flex: [{ season: PWN("fseason"), tier: "BRONZE", division: "II", lp: 4 }] },
+      flex: { tier: "GOLD", division: "I", lp: 3, wins: 1, losses: 1 }, peak: { tier: "GOLD", division: "I", lp: 90 } },
+    history: [{ t: now - 9 * D, tier: "SILVER", division: "I", lp: 40 }, { t: now - 5 * D, tier: "GOLD", division: "II", lp: 50 }],
+    goal: { tier: "PLATINUM", division: "IV", lp: 0 }, peakManual: { tier: "GOLD", division: "I", lp: 99 } }, extra || {});
+}
+function pwned(win, where) {
+  const doc = win.document, hits = [];
+  for (const el of doc.querySelectorAll("x-pwn,[data-pwn]")) hits.push(el.tagName.toLowerCase() + ":" + (el.textContent || el.getAttribute("data-pwn")));
+  for (const el of doc.querySelectorAll("[href],[src]"))
+    for (const k of ["href", "src"]) if (/^\s*javascript:/i.test(el.getAttribute(k) || "")) hits.push(k + "=javascript:");
+  assert.deepEqual(hits, [], "raw markup reached the page in " + where);
+}
+test("hostile text in every field of an account stays text in every view", async () => {
+  // and a second account whose rank fields themselves are junk, as a hand-edited backup could have
+  const junk = pwnAccount("j", { label: "", stats: { found: true, tier: PWN("tier"), division: PWN("division"), lp: PWN("lp"),
+    wins: PWN("wins"), losses: PWN("losses"), level: PWN("level"), updatedAt: Date.now(), champs: [] },
+    history: [{ t: Date.now(), tier: PWN("htier"), division: PWN("hdiv"), lp: PWN("hlp") }],
+    goal: { tier: PWN("gtier"), division: PWN("gdiv") }, peakManual: { tier: PWN("ptier") } });
+  const lv = pwnAccount("l", { stats: { found: true, tier: "UNRANKED", level: 24, updatedAt: Date.now() }, history: [] });
+  const win = bootApp([pwnAccount("a"), junk, lv]);
+  const doc = win.document, $ = id => doc.getElementById(id);
+  assert.equal(doc.querySelectorAll(".card").length, 3, "the accounts render");
+  pwned(win, "the cards");
+  runScript(win, "accounts.forEach(a => openInfo.add(a.id)); render()");
+  pwned(win, "Details");
+  for (const id of ["a", "j", "l"]) {
+    doc.querySelector(`.card[data-id="${id}"] [data-act="login"]`).click(); pwned(win, "the login window of " + id);
+    doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    rankWindow(win, id); pwned(win, "the rank window of " + id);
+    doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    runScript(win, `openForm(accounts.find(a => a.id === "${id}"))`); pwned(win, "the account form of " + id);
+    runScript(win, "closeForm()");
+    runScript(win, `openArtPicker("${id}")`); pwned(win, "card art for " + id);
+    doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  }
+  runScript(win, 'openCompare("a"); openCompare("j")'); pwned(win, "the comparison");
+  runScript(win, "openPalette()");
+  for (const q of ["x-pwn", "gold", "a"]) { $("palInput").value = q; $("palInput").dispatchEvent(new win.Event("input", { bubbles: true })); pwned(win, "quick find: " + q); }
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  for (const d of ["list", "wall", "cards"]) {
+    doc.querySelector(`#density [data-density="${d}"]`).click();
+    await until(() => doc.getElementById("grid").dataset.layout === d || d === "cards", d + " view");
+    pwned(win, "the " + d + " view");
+  }
+  const search = $("tSearch"); search.value = "x-pwn"; search.dispatchEvent(new win.Event("input", { bubbles: true }));
+  pwned(win, "a search");
+  runScript(win, "openShare()"); pwned(win, "the share window");
+});
+test("a snapshot link built by someone else shows their text as text", async () => {
+  const win = bootApp();
+  const P = PWN("snap");
+  const raw = { v: 1, t: P, at: Date.now(), c: ['#fff" onload="x', "#000000"], a: [
+    { n: P, i: P, r: P, k: [5, P, P], w: P, l: 3, lv: P, p: P, h: [[1, 5, "II", 9], [P, 5, "II", 9]], c: [P, P], hn: P, sk: [P, P], st: P, f: 1 },
+    { n: "ok", r: "EUW", k: [5, "II", 40], w: 10, l: 8, lv: 99, p: P, c: ["Lux", 0], hn: 3, sk: [P], st: "banned" } ] };
+  runScript(win, `snapEncode(${JSON.stringify(raw)}).then(c => openSnapshot(c)).then(() => window.__snapDone = 1)`);
+  await until(() => win.__snapDone === 1, "the snapshot to open");
+  assert.ok(win.document.querySelector(".sn-card"), "it opened");
+  pwned(win, "a snapshot");
+  assert.equal(win.document.documentElement.style.getPropertyValue("--gold"), "", "a colour that is not #rrggbb is not applied");
+});
+
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row
 // ended hundreds of pixels apart
 test("a card's notes keep to one row of two chips and +N more; Details shows them all", () => {
