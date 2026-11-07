@@ -1781,7 +1781,11 @@ function celebrate(id,acc){
   document.body.appendChild(c);
   setTimeout(()=>c.remove(),1400);
 }
-async function copyText(v,label,sensitive){
+/* A copy made from a button says so on that button (flashCopied, or the card's
+   Login turning into "Username copied"), so it does not also put a toast at the
+   bottom of the screen, where it sat over the next card's buttons or a chart. A
+   screen reader still hears it, and a failed copy is still a toast. */
+async function copyText(v,label,sensitive,quiet){
   let ok=false;
   try{await navigator.clipboard.writeText(v);ok=true}
   catch(e){
@@ -1792,7 +1796,9 @@ async function copyText(v,label,sensitive){
       document.body.removeChild(ta);
     }catch(e2){}
   }
-  toast(ok?label+" copied"+(sensitive?". Clears from the clipboard in 30s":""):"Copy failed. Copy it by hand");
+  const said=ok?label+" copied"+(sensitive?". Clears from the clipboard in 30s":""):"Copy failed. Copy it by hand";
+  if(ok&&quiet){const sr=$("srSay");if(sr){sr.textContent="";requestAnimationFrame(()=>{sr.textContent=said})}}
+  else toast(said);
   if(!ok)return false;
   if(ok&&sensitive){
     lastCopiedSecret=v;
@@ -1820,6 +1826,11 @@ function flashCopied(btn){
 }
 let lastCopiedSecret=null;
 const loginSeq=new Set();   // cards whose username is copied and whose password is next
+const loginFlash=new Map(); // card id -> what its Login button just copied, for a moment
+function flashLogin(id,pw){
+  const token={pw};loginFlash.set(id,token);renderCard(id);
+  setTimeout(()=>{if(loginFlash.get(id)===token){loginFlash.delete(id);renderCard(id)}},1400);
+}
 /* A card's main button logs you in: it copies the username, then turns into
    "Copy password" and copies that (cleared from the clipboard after 30s), then
    starts over. It used to open a panel showing the login, whose own button then
@@ -1827,10 +1838,10 @@ const loginSeq=new Set();   // cards whose username is copied and whose password
    password, the email, the date of birth) is the eye beside it. With one of the
    two saved it copies that one; with neither it offers to add them. */
 function loginButtonsHTML(a,open){
-  const both=a.login&&a.password, next=both&&loginSeq.has(a.id);
+  const both=a.login&&a.password, next=both&&loginSeq.has(a.id), fl=loginFlash.get(a.id);
   const label=next||(!a.login&&a.password)?"Copy password":a.login?"Copy username":"Add login";
   const main=a.login||a.password
-    ?`<button data-act="copyseq" class="a-login" title="${both?"Copies the username, then the password":"Copies it to paste into the Riot client"}">${icon("key")} ${label}</button>`
+    ?`<button data-act="copyseq" class="a-login${fl?" copied":""}" title="${both?"Copies the username, then the password":"Copies it to paste into the Riot client"}">${fl?icon("check")+(fl.pw?" Copied, clears in 30s":" Username copied"):icon("key")+" "+label}</button>`
     :`<button data-act="addlogin" class="a-login" title="Save the username and password for this account">${icon("key")} ${label}</button>`;
   const eye=a.login||a.password||a.email||a.birthdate
     ?`<button data-act="login" class="c-lgn${open?" on":""}" aria-pressed="${open}" title="${open?"Hide":"Show"} the saved login" aria-label="${open?"Hide":"Show"} the saved login">${icon(open?"eyeOff":"eye")}</button>`:"";
@@ -8173,17 +8184,18 @@ async function onCardClick(e){
      clipboard after 30s, like any copied password) and starts over. */
   else if(act==="copyseq"){
     const both=acc.login&&acc.password;
-    if(acc.login&&(!both||!loginSeq.has(id))){copyText(acc.login,"Username");if(both)loginSeq.add(id)}
-    else if(acc.password){copyText(acc.password,"Password",true);loginSeq.delete(id)}
+    const pw=!(acc.login&&(!both||!loginSeq.has(id)));
+    if(!pw){if(both)loginSeq.add(id)}else loginSeq.delete(id);
+    copyText(pw?acc.password:acc.login,pw?"Password":"Username",pw,true).then(ok=>{if(ok)flashLogin(id,pw)});
     // copying the login is the closest thing to playing on it this app can see
     acc.lastLoginAt=Date.now();saveDB();
     renderCard(id);
   }
   else if(act==="addlogin")openForm(acc,"login");
-  else if(act==="copylogin")copyText(acc.login,"Username").then(ok=>{if(ok)flashCopied(btn)});
-  else if(act==="copypw")copyText(acc.password,"Password",true).then(ok=>{if(ok)flashCopied(btn)});
-  else if(act==="copymail")copyText(acc.email,"Email").then(ok=>{if(ok)flashCopied(btn)});
-  else if(act==="copybirth")copyText(acc.birthdate,"Date of birth").then(ok=>{if(ok)flashCopied(btn)});
+  else if(act==="copylogin")copyText(acc.login,"Username",false,true).then(ok=>{if(ok)flashCopied(btn)});
+  else if(act==="copypw")copyText(acc.password,"Password",true,true).then(ok=>{if(ok)flashCopied(btn)});
+  else if(act==="copymail")copyText(acc.email,"Email",false,true).then(ok=>{if(ok)flashCopied(btn)});
+  else if(act==="copybirth")copyText(acc.birthdate,"Date of birth",false,true).then(ok=>{if(ok)flashCopied(btn)});
   else if(act==="played"){markPlayed(id)}
   else if(act==="compare"){openMore.delete(id);openCompare(id)}
   else if(act==="seasonreset"){

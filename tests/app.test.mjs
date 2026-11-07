@@ -1239,11 +1239,16 @@ test("a card's Login copies the username, then the password, without opening any
   await until(() => copied.length === 1, "the username to be copied");
   assert.equal(copied[0], "riotuser");
   assert.equal(card("L").querySelector(".login"), null, "nothing unfolded to get there");
-  assert.match(main("L").textContent, /^\s*Copy password$/, "the button moves on to the password");
+  // the button says it, in place of a toast over the rest of the page
+  await until(() => /Username copied/.test(main("L").textContent), "the button to say it copied");
+  assert.ok(main("L").classList.contains("copied"));
+  assert.doesNotMatch(win.document.getElementById("toast").textContent, /copied/i, "no toast");
+  await until(() => /^\s*Copy password$/.test(main("L").textContent), "the button to move on to the password", 3000);
   main("L").click();
   await until(() => copied.length === 2, "the password to be copied");
   assert.equal(copied[1], "hunter22!");
-  assert.match(main("L").textContent, /^\s*Copy username$/, "and starts over");
+  await until(() => /Copied, clears in 30s/.test(main("L").textContent), "the button to say when it clears");
+  await until(() => /^\s*Copy username$/.test(main("L").textContent), "and start over", 3000);
   await until(() => appGet(win, "lastCopiedSecret") === "hunter22!", "the password to be the secret that gets cleared later");
   // the eye beside it shows the saved login, and a fresh look starts at the username again
   const eye = card("L").querySelector('.acts [data-act="login"]');
@@ -10551,4 +10556,28 @@ test("a filter's chip sits beside the count it explains, so turning one on moves
   // "need a refresh" is pressed in the same row already, so it gets no chip of its own
   runScript(win, "ui.tier=''; ui.favOnly=false; ui.flag='stale'; render()");
   assert.deepEqual(chips(), []);
+});
+
+// "Username copied" was a toast at the bottom centre of the screen, over the next
+// card's buttons on a desktop and over a chart on a phone
+test("a copy made from a button says so on the button, and to a screen reader, not in a toast", async () => {
+  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [],
+    login: "riotuser", password: "hunter22!", email: "a@b.c", stats: null }]);
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async () => {} } });
+  const doc = win.document, card = () => doc.querySelector('.card[data-id="L"]');
+  card().querySelector('.c-lgn[data-act="login"]').click();
+  for (const act of ["copylogin", "copypw", "copymail"]) {
+    card().querySelector(`[data-act="${act}"]`).click();
+    await until(() => card().querySelector(`[data-act="${act}"]`).classList.contains("copied"), act + " to flash");
+    assert.doesNotMatch(doc.getElementById("toast").textContent, /copied/i, act + ": no toast");
+  }
+  await until(() => /Email copied/.test(doc.getElementById("srSay").textContent), "a screen reader to hear it");
+  assert.equal(doc.getElementById("srSay").getAttribute("aria-live"), "polite");
+  // the card's Login turns green when it copies, hovered or not, since the pointer is on it
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const hov = css.indexOf("\n  .a-login:hover{"), cop = css.indexOf("\n  .a-login.copied,.a-login.copied:hover{");
+  assert.ok(cop > hov && hov > 0, "after the hover rule, so it wins over it");
+  // a copy with nothing on screen to say it (the Riot ID line) keeps its toast
+  card().querySelector('[data-act="copyid"]').click();
+  await until(() => /Riot ID copied/.test(doc.getElementById("toast").textContent), "the toast for the Riot ID");
 });
