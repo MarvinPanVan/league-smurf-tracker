@@ -8422,7 +8422,125 @@ function keepUnreadableVault(raw){
     :"The saved vault could not be read, and there was no room to keep a copy. Nothing will be saved this session, so the original stays as it was.";
   $("banner").classList.add("show");
 }
+/* ---------- the move to smurf-tracker.pages.dev ----------
+   A browser keeps a vault per address, so one saved at the old address
+   (marvinpanvan.github.io, see APP_HOME) does not appear at the new one by
+   itself. The old address says so in a band at the top, and hands the vault over
+   in one click: it opens the new address, which asks for the vault through
+   window.opener, and the two tabs pass it to each other on this computer.
+   Nothing goes through a server, an encrypted vault moves as the same
+   ciphertext, and the new address takes it only when it holds no vault of its
+   own. Face ID / fingerprint unlock, notification permission and storage
+   protection belong to an address, so they are set up again there.
+   Anyone at the old address with no vault saved there (and anyone opening a
+   snapshot link there) is simply sent on to the new one. */
+// the old address keeps something worth a band, not a redirect: a vault, even a locked one
+function holdsVault(raw){
+  if(!raw)return false;
+  const st=readStoredVault(raw);
+  return !st||!!st.envelope||st.accounts.length>0;   // unreadable counts: never write over it
+}
+// where to send a visit to the old address, or null to stay
+function oldHomeExit(){
+  if(!onOldHome())return null;
+  const snap=/^#s=/.test(location.hash||"");
+  let kept=false;
+  try{kept=holdsVault(localStorage.getItem(DB_KEY))}catch(e){}
+  if(kept&&!snap)return null;
+  return APP_HOME+(startAction&&!snap?"?action="+encodeURIComponent(startAction):"")+(location.hash||"");
+}
+let moveTab=null, moveTimer=0;
+function renderMoveBand(waiting){
+  const el=$("moveBand");if(!el)return;
+  const host=new URL(APP_HOME).host, moved=Number(cfg.movedAt)>0;
+  setHTML(el,moved
+    ?`<span class="mv-t">${icon("check")}<span><b>Your vault is at ${esc(host)} now.</b> A copy is still saved at this old address.</span></span>`
+      +`<span class="mv-acts"><a class="btn b-teal" href="${esc(APP_HOME)}">Open ${esc(host)}</a><button type="button" id="mvRemove">Remove the copy here</button></span>`
+    :waiting
+    ?`<span class="mv-t">${icon("external")}<span><b>Opening ${esc(host)}…</b> If no new tab appears, allow pop-ups for this page and try again.</span></span>`
+      +`<span class="mv-acts"><button type="button" id="mvGo">Try again</button></span>`
+    :`<span class="mv-t">${icon("external")}<span><b>Smurf Tracker has moved to ${esc(host)}.</b> Your vault is saved per address, so it stays here until you move it.</span></span>`
+      +`<span class="mv-acts"><button type="button" id="mvGo" class="b-teal">Move my vault there</button><a class="btn" href="${esc(APP_HOME)}">Open ${esc(host)}</a></span>`);
+  el.classList.remove("hidden");
+}
+function moveVaultOut(){
+  // not "noopener": the new tab asks for the vault through window.opener
+  moveTab=window.open(APP_HOME+"?action=move-in","_blank");
+  if(!moveTab){toast("The browser blocked the new tab. Allow pop-ups for this page, or use Export here and Import there");return}
+  renderMoveBand(true);
+  clearTimeout(moveTimer);
+  moveTimer=setTimeout(()=>{if(!moveTab)return;moveTab=null;renderMoveBand();
+    toast("The new address didn't answer. Try again, or use Export here and Import there")},30000);
+}
+// the old address's side: answer only the tab it opened, at the new address
+function moveOutMessage(e){
+  if(e.origin!==APP_ORIGIN||!moveTab||e.source!==moveTab)return;
+  const d=e.data||{};
+  if(d.type==="st-move-ready"){
+    let db=null,c=null;try{db=localStorage.getItem(DB_KEY);c=localStorage.getItem(CFG_KEY)}catch(x){}
+    moveTab.postMessage({type:"st-move",v:1,db,cfg:c},APP_ORIGIN);
+  }else if(d.type==="st-move-done"||d.type==="st-move-refused"){
+    clearTimeout(moveTimer);moveTab=null;
+    if(d.type==="st-move-done"){cfg.movedAt=Date.now();saveCfg()}
+    renderMoveBand();
+    toast(d.type==="st-move-done"?"Moved. Your vault is open at the new address"
+      :d.why==="not-empty"?"The new address already has a vault, so nothing was moved. Use Export here and Import there to add these accounts to it"
+      :"The new address could not keep the vault. Use Export here and Import there");
+  }
+}
+function removeOldCopy(){
+  if(!confirm("Remove the vault and settings saved at this old address?\nThe copy at "+new URL(APP_HOME).host+" stays as it is."))return;
+  hasStorage=false;   // nothing on this page may save them back on its way out
+  try{for(const k of [DB_KEY,CFG_KEY,PK_KEY])localStorage.removeItem(k)}catch(e){}
+  location.replace(APP_HOME);
+}
+// the new address's side, opened by the old one with ?action=move-in
+function listenForMoveIn(){
+  if(!window.opener){toast("To bring a vault over, use Move my vault at the old address");return}
+  window.addEventListener("message",moveInMessage);
+  toast("Bringing your vault over from the old address…");
+  try{window.opener.postMessage({type:"st-move-ready"},OLD_ORIGIN)}catch(e){}
+}
+function moveInMessage(e){
+  if(e.origin!==OLD_ORIGIN||!e.source||e.source!==window.opener)return;
+  const d=e.data;if(!d||d.type!=="st-move"||d.v!==1)return;
+  window.removeEventListener("message",moveInMessage);
+  const res=acceptMovedVault(d.db,d.cfg);
+  try{e.source.postMessage(res,OLD_ORIGIN)}catch(x){}
+  if(res.type==="st-move-done"){
+    hasStorage=false;   // this tab's own empty vault and settings must not be saved over what just arrived
+    location.reload();
+  }else toast(res.why==="not-empty"?"This address already has a vault, so nothing was moved. Use Export at the old address and Import here"
+    :"The vault from the old address could not be kept. Use Export there and Import here");
+}
+function acceptMovedVault(db,cfgRaw){
+  if(!hasStorage)return{type:"st-move-refused",why:"storage"};
+  let here=null;try{here=localStorage.getItem(DB_KEY)}catch(e){}
+  if(holdsVault(here))return{type:"st-move-refused",why:"not-empty"};
+  if(typeof db!=="string"||db.length>20e6)return{type:"st-move-refused",why:"unreadable"};
+  const st=readStoredVault(db);
+  if(!st)return{type:"st-move-refused",why:"unreadable"};
+  let c=null;
+  if(typeof cfgRaw==="string"&&cfgRaw.length<1e6)try{c=JSON.parse(cfgRaw)}catch(e){c=null}
+  try{
+    localStorage.setItem(DB_KEY,db);
+    if(c&&typeof c==="object"&&!Array.isArray(c)){
+      for(const k of ["persistAsked","notify","movedAt"])delete c[k];   // those were the old address's
+      localStorage.setItem(CFG_KEY,JSON.stringify(c));
+    }
+  }catch(e){return{type:"st-move-refused",why:"storage"}}
+  return{type:"st-move-done",n:st.accounts?st.accounts.length:null};
+}
+if(onOldHome()){
+  window.addEventListener("message",moveOutMessage);
+  $("moveBand").addEventListener("click",e=>{
+    const b=e.target.closest("button");if(!b)return;
+    if(b.id==="mvGo")moveVaultOut();else if(b.id==="mvRemove")removeOldCopy();
+  });
+}
 function boot(){
+  // the old address: on to the new one, unless it holds a vault to hand over
+  {const exit=oldHomeExit();if(exit){location.replace(exit);return}}
   // A snapshot link is somebody else's page, opened before this browser's own
   // vault or settings have been read — and they never are, in this tab.
   {const m=/^#s=(.+)$/.exec(location.hash||"");if(m){openSnapshot(m[1]);return}}
@@ -8444,6 +8562,8 @@ function boot(){
     else if(hasStorage&&!localStorage.getItem(DB_KEY)){cfg.lastChangelog=APP_VERSION;saveCfg()}
   }catch(e){}
   if(MODEL_ALIASES[cfg.model]){cfg.model=MODEL_ALIASES[cfg.model];saveCfg()}
+  if(onOldHome())renderMoveBand();
+  if(startAction==="move-in")listenForMoveIn();   // startAction stays set: startApp shows no lock prompt over it
   {
     let cfgDirty=false;
     // 2.1's Compact cards was one switch for the chart and the stats; it is now
