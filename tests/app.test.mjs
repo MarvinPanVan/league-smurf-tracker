@@ -10298,3 +10298,20 @@ test("on a phone, back to top steps aside while you scroll down and returns on t
   assert.match(html, /\n  \.to-top\.away\{opacity:0;pointer-events:none/);
 });
 
+// On a phone the six tabs scrolled sideways with nothing saying so, and Settings
+// opened focused on the colour picker, which scrolled the themes away
+test("on a phone Settings shows all six tabs, the theme names whole, and opens on its tab", async () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const at = css.indexOf("#settings .stabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))");
+  assert.ok(at > 0, "two rows of three");
+  assert.match(css.slice(css.lastIndexOf("@media", at), at), /^@media \(max-width:560px\)\{/);
+  assert.match(css.slice(at, at + 400), /\.thm-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/, "themes two to a row");
+  const win = bootApp(seededAccount());
+  win.document.getElementById("bSettings").click();
+  await until(() => win.document.activeElement && win.document.activeElement.id === "stab-look", "focus on the Appearance tab");
+  win.closeAllPanels();
+  await until(() => !win.document.body.classList.contains("modal-open"), "the window to close");
+  win.document.activeElement.blur();   // a browser drops focus from a hidden element; jsdom leaves it
+  runScript(win, "openSettings('security')");
+  await until(() => win.document.activeElement && win.document.activeElement.id === "stab-security", "or on whichever tab it opened at");
+});

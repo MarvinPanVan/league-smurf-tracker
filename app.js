@@ -6202,6 +6202,9 @@ function settingsTab(tab,focus){
   for(const b of m.querySelectorAll("[data-stab]")){
     const on=b.dataset.stab===tab;
     b.setAttribute("aria-selected",String(on));b.tabIndex=on?0:-1;
+    // Settings starts on its tab, not on the first field of the page: that was the
+    // colour picker, which on a phone sits below the themes and scrolled them away
+    b.toggleAttribute("data-autofocus",on);
     if(on&&focus)b.focus();
   }
   const body=m.querySelector(".mdl-b");if(body)body.scrollTop=0;
