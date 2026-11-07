@@ -9152,6 +9152,19 @@ test("typing in search leaves the stats panel above it as it was", async () => {
   assert.equal(dash(), before, "same counts, same champions, same height");
 });
 
+// <body data-atmosphere> made every click in Settings look like a change
+test("switching Settings tabs is not a change: the footer says Not saved yet only after one", () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document, foot = () => doc.getElementById("sFootHint").textContent;
+  doc.getElementById("bSettings").click();
+  for (const tab of ["checks", "alerts", "security", "sync", "backup", "look"]) {
+    doc.querySelector(`[data-stab="${tab}"]`).click();
+    assert.doesNotMatch(foot(), /Not saved yet/, "after opening " + tab);
+  }
+  doc.querySelector("#settings [data-atmosphere]").click();
+  assert.match(foot(), /Not saved yet/, "a background picked is a change");
+});
+
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row
 // ended hundreds of pixels apart
 test("a card's notes keep to one row of two chips and +N more; Details shows them all", () => {

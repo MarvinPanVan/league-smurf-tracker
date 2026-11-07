@@ -6967,7 +6967,11 @@ const S_SELF=new Set(["sVaultPass"]);
 $("settings").addEventListener("input",e=>{if(e.target.closest(".mdl-b")&&!S_SELF.has(e.target.id))settingsDirty(true)});
 $("settings").addEventListener("change",e=>{if(e.target.closest(".mdl-b")&&!S_SELF.has(e.target.id))settingsDirty(true)});
 $("settings").addEventListener("click",e=>{
-  if(e.target.closest("[data-theme],[data-atmosphere],#sEffects [data-v],#sTextSize [data-v],#sCompact,.acc-reset"))settingsDirty(true);
+  // inside this window only: <body> carries data-atmosphere for the page's own
+  // background, so closest() matched it on every click, a tab included, and the
+  // footer said "Not saved yet" when nothing had changed
+  const hit=e.target.closest("[data-theme],[data-atmosphere],#sEffects [data-v],#sTextSize [data-v],#sCompact,.acc-reset");
+  if(hit&&e.currentTarget.contains(hit))settingsDirty(true);
 });
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
 $("bNewSeason").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");newSeasonAll()});
