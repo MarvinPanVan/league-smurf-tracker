@@ -32,7 +32,7 @@ Every League account you own in one place: rank, LP history, logins, notes. It r
 ## Get started
 
 1. **[Open the app](https://marvinpanvan.github.io/league-smurf-tracker/)**. Want to look around first? **Preview with example data** shows it full, and saves nothing.
-2. **+ Add account**, then paste a Riot ID like `Faker#KR1` into the name field: it splits itself.
+2. **+ Add account**, then paste a Riot ID like `Name#KR1` into the name field: it splits itself.
 3. Follow **Get set up**: check ranks, set a master password, back up.
 4. **Install it** (your browser's *Install app*, or *Add to Home Screen* on iPhone). It opens like an app and works offline. On iPhone this also stops Safari deleting your data after 7 days away.
 

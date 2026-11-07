@@ -8420,6 +8420,22 @@ test("a wide screen gets a wide page, and the list spreads its columns rather th
   assert.match(wide[2], /\.rw-d\{align-items:flex-start\}/, "the change pill keeps its size in a wider column");
 });
 
+// The preview's first card was a famous pro's real account, showed MMR and "Recent avg"
+// figures only the paid AI check can produce, and kept a Platinum account "out of decay"
+test("the preview uses invented names and shows only what a free vault would", () => {
+  const win = bootApp();
+  win.document.getElementById("bDemo").click();
+  const names = JSON.parse(appGet(win, "JSON.stringify(accounts.map(a => a.gameName + '#' + a.tagLine))"));
+  for (const n of names) assert.doesNotMatch(n, /hide on bush|faker/i, n);
+  assert.equal(appGet(win, "accounts.some(a => a.stats && (a.stats.mmr || a.stats.avgRecent))"), false, "no AI-only figures");
+  assert.doesNotMatch(win.document.getElementById("grid").textContent, /MMR est|Recent avg/);
+  const decayTalk = JSON.parse(appGet(win, "JSON.stringify(accounts.filter(a => /decay/i.test(a.notes || '')).map(a => a.stats && a.stats.tier))"));
+  for (const t of decayTalk) assert.ok(["DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER"].includes(t), "a note about decay on a " + t + " account");
+  // and no real player's name in what the app shows a new user
+  const shown = html.replace(/<script>[\s\S]*?<\/script>/, "") + JSON.stringify(appGet(win, "APP_CHANGELOG"));
+  assert.doesNotMatch(shown, /Hide on Bush|Faker/i);
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
@@ -8613,11 +8629,18 @@ test("on is green and a warning amber in every theme; red is kept for what canno
 
 // Four micro-stats wrapped three and one, leaving "Recent avg" alone on a row
 test("a card's micro-stats pair up two by two when there are four of them", () => {
-  const win = bootApp();
-  win.document.getElementById("bDemo").click();
+  // four: a peak above today, a climb, and the two figures only the AI check brings
+  // (the preview no longer carries those, so the account is built here)
+  const D = 86400000, now = Date.now();
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [],
+    history: [{ t: now - 10 * D, tier: "GOLD", division: "III", lp: 40 }, { t: now - 3600000, tier: "GOLD", division: "II", lp: 40 }],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 40, wins: 20, losses: 18, updatedAt: now - 3600000,
+      peak: { tier: "PLATINUM", division: "IV", lp: 12 }, mmr: "~1700", avgRecent: "Gold I" } },
+    { id: "b", gameName: "B", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+      stats: { found: true, tier: "GOLD", division: "II", lp: 40, wins: 20, losses: 18, updatedAt: now - 3600000, mmr: "~1700" } }]);
   const sets = [...win.document.querySelectorAll(".card .c-stats")];
   const four = sets.find(s => s.children.length === 4);
-  assert.ok(four, "the example data has a card with four");
+  assert.ok(four, "a card with four: " + sets.map(s => s.textContent).join(" | "));
   assert.ok(four.classList.contains("n4"), "the block knows how many it holds");
   for (const s of sets) assert.ok(s.classList.contains("n" + s.children.length), "every block carries its count");
   const rule = html.match(/\n  ([^{\n]*\.c-stats\.n4[^{]*)\{([^}]*)\}/);

@@ -2970,7 +2970,7 @@
     <div class="acc-prev-side">
       <div class="acc-prev-card">
         <div class="acc-prev-card-h">
-          <span class="acc-prev-nm">Hide on Bush</span>
+          <span class="acc-prev-nm">Moonlit Mid</span>
           <span class="acc-prev-star">★</span>
           <span class="acc-prev-rk">Diamond I<small>52 LP</small></span>
         </div>
@@ -2999,7 +2999,7 @@
     <div class="formgrid">
       <div class="fw hint">Paste <code>Name#TAG</code>s (one a line, or comma-separated), an <b>op.gg multi-search link</b>, or lines from the <b>lobby chat</b> ("Name #TAG joined the lobby"). A link brings its own region; the rest get the region below. Add logins and notes to each afterwards.</div>
       <div class="fld"><label>Region for all</label><select id="baRegion"></select></div>
-      <div class="fld fw"><label>Accounts</label><textarea id="baList" data-autofocus rows="6" placeholder="Hide on Bush#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
+      <div class="fld fw"><label>Accounts</label><textarea id="baList" data-autofocus rows="6" placeholder="Moonlit Mid#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
     </div>
     </div>
     <div class="mdl-f">
@@ -3391,7 +3391,7 @@ const APP_CHANGELOG=[
   {v:"2.8.0",items:[
     "A new account's rank is checked right away, and a list row or Quick find (Ctrl+K) copies a login in one click",
     "Cleaner screens: the stats say each thing once, the list reads as a table, and a phone shows accounts on the first screen",
-    "A first visit opens on a short welcome; the region follows the tag (Faker#KR1 → Korea); out of date is amber, not red",
+    "A first visit opens on a short welcome; the region follows the tag (Name#KR1 → Korea); out of date is amber, not red",
     "Settings says when closing would drop a change; the ⋯ menu starts with Settings; bigger touch targets and a skip link",
   ]},
   {v:"2.7.0",items:[
@@ -9800,9 +9800,13 @@ function loadDemo(){
   const now=Date.now(),D=86400000;
   const mk=o=>Object.assign({id:uid(),fav:false,status:"active",tags:[],history:[],login:"",password:"",email:"",notes:"",label:"",demo:true},o);
   accounts=[
-    mk({label:"Main smurf",gameName:"Hide on Bush",tagLine:"0001",region:"EUW",fav:true,tags:["mid","ranked-ready"],login:"demo_user1",password:"demo-pass-1",email:"smurf1@mail.gg",notes:"Climbing account — keep it out of decay",
+    /* Invented names only: the first one used to be a famous pro's real account.
+       No MMR or "recent average" either: those come only from the paid AI check,
+       so a free vault never shows them, and the preview shouldn't promise them.
+       And a note that fits the account: decay starts at Diamond, not Platinum. */
+    mk({label:"Main smurf",gameName:"Moonlit Mid",tagLine:"0001",region:"EUW",fav:true,tags:["mid","ranked-ready"],login:"demo_user1",password:"demo-pass-1",email:"smurf1@mail.gg",notes:"Push for Diamond before the split ends",
       info:{honor:3,owned:96,be:23400,twofa:true,skins:["Elementalist Lux","Star Guardian Ahri","Arcade Kai'Sa"]},
-      stats:{found:true,tier:"PLATINUM",division:"II",lp:61,wins:38,losses:29,level:214,icon:"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",mmr:"~2140",avgRecent:"Platinum II",asOf:"updated today",updatedAt:now-2*3600000,
+      stats:{found:true,tier:"PLATINUM",division:"II",lp:61,wins:38,losses:29,level:214,icon:"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",asOf:"updated today",updatedAt:now-2*3600000,
         champs:[{name:"Lux",games:24,wins:15,losses:9,wr:63,kda:"3.4"},{name:"Ahri",games:18,wins:10,losses:8,wr:56,kda:"2.9"},{name:"Syndra",games:9,wins:4,losses:5,wr:44,kda:"2.1"}]},
       history:[
         {t:now-24*D,tier:"GOLD",division:"II",lp:40},{t:now-20*D,tier:"GOLD",division:"I",lp:15},{t:now-16*D,tier:"GOLD",division:"I",lp:78},
@@ -9810,11 +9814,11 @@ function loadDemo(){
         {t:now-3*D,tier:"PLATINUM",division:"III",lp:74},{t:now-2*3600000,tier:"PLATINUM",division:"II",lp:61}]}),
     mk({label:"ADC acc",gameName:"Bot Diff",tagLine:"EUW",region:"EUW",tags:["adc"],login:"demo_user2",password:"demo-pass-2",email:"smurf2@mail.gg",notes:"",
       info:{honor:2,owned:41,be:6150,twofa:false,skins:["Spirit Blossom Yasuo"]},
-      stats:{found:true,tier:"GOLD",division:"III",lp:22,wins:21,losses:24,level:167,mmr:"~1650",avgRecent:"Gold III",asOf:"updated 4 days ago",updatedAt:now-4*D,
+      stats:{found:true,tier:"GOLD",division:"III",lp:22,wins:21,losses:24,level:167,asOf:"updated 4 days ago",updatedAt:now-4*D,
         champs:[{name:"Jinx",games:20,wins:10,losses:10,wr:50,kda:"2.6"},{name:"Kai'Sa",games:15,wins:7,losses:8,wr:47,kda:"2.4"}]},
       history:[{t:now-14*D,tier:"GOLD",division:"II",lp:35},{t:now-10*D,tier:"GOLD",division:"II",lp:8},{t:now-7*D,tier:"GOLD",division:"III",lp:71},{t:now-4*D,tier:"GOLD",division:"III",lp:22}]}),
     mk({label:"EUNE fill acc",gameName:"Coinflip Queue",tagLine:"EUNE",region:"EUNE",tags:["fill"],login:"demo_user3",password:"demo-pass-3",
-      stats:{found:true,tier:"SILVER",division:"I",lp:89,wins:15,losses:11,level:98,mmr:"~1420",avgRecent:"Silver I",asOf:"updated yesterday",updatedAt:now-1*D,
+      stats:{found:true,tier:"SILVER",division:"I",lp:89,wins:15,losses:11,level:98,asOf:"updated yesterday",updatedAt:now-1*D,
         champs:[{name:"Thresh",games:14,wins:9,losses:5,wr:64,kda:"3.1"},{name:"Lee Sin",games:8,wins:4,losses:4,wr:50,kda:"2.2"}]},
       history:[{t:now-8*D,tier:"SILVER",division:"II",lp:60},{t:now-5*D,tier:"SILVER",division:"II",lp:95},{t:now-1*D,tier:"SILVER",division:"I",lp:89}]}),
     mk({label:"Fresh leveling acc",gameName:"NewSmurf",tagLine:"2026",region:"EUW",status:"resting",tags:["leveling"],login:"demo_user4",password:"demo-pass-4",
