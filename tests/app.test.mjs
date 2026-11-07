@@ -6748,13 +6748,14 @@ test("the card stacks LP under the tier name", () => {
   const win = bootApp([{
     id: "rk1", gameName: "RankLook", tagLine: "EUW", region: "EUW", status: "active",
     stats: { found: true, tier: "DIAMOND", division: "II", lp: 23, updatedAt: 1 },
-    history: [{ t: 1, tier: "DIAMOND", division: "II", lp: 23 }],
+    // a peak above today, since a peak equal to it is no longer printed twice
+    history: [{ t: 0, tier: "DIAMOND", division: "I", lp: 10 }, { t: 1, tier: "DIAMOND", division: "II", lp: 23 }],
   }]);
   const card = win.document.querySelector('.card[data-id="rk1"]');
   assert.ok(card.querySelector(".rk-main .rk-t"), "tier in the main stack");
   assert.match(card.querySelector(".rk-main .rk-lp").textContent, /23 LP/);
   assert.match(card.querySelector(".c-stats").textContent, /Peak/);
-  assert.match(card.querySelector(".c-stats").textContent, /Diamond II/);
+  assert.match(card.querySelector(".c-stats").textContent, /Diamond I\b/);
 });
 
 test("duplicate Riot IDs are detected per region", () => {
@@ -8434,6 +8435,17 @@ test("the preview uses invented names and shows only what a free vault would", (
   // and no real player's name in what the app shows a new user
   const shown = html.replace(/<script>[\s\S]*?<\/script>/, "") + JSON.stringify(appGet(win, "APP_CHANGELOG"));
   assert.doesNotMatch(shown, /Hide on Bush|Faker/i);
+});
+
+// At the top of its climb a card said its rank twice: in the headline and as "Peak"
+test("a card shows Peak only when the peak is above today's rank", () => {
+  const now = Date.now();
+  const acc = (id, peak) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "PLATINUM", division: "II", lp: 61, wins: 38, losses: 29, updatedAt: now, peak } });
+  const win = bootApp([acc("top", { tier: "PLATINUM", division: "II", lp: 61 }), acc("fell", { tier: "DIAMOND", division: "IV", lp: 20 })]);
+  const stats = id => [...win.document.querySelectorAll(`.card[data-id="${id}"] .c-stats > *`)].map(e => e.textContent.replace(/\s+/g, " ").trim());
+  assert.ok(!stats("top").some(t => /^Peak/i.test(t)), "today is the peak: " + stats("top").join(" | "));
+  assert.ok(stats("fell").some(t => /^Peak\s*Diamond IV/i.test(t)), "a higher peak is shown: " + stats("fell").join(" | "));
 });
 
 // On a phone the filters and the stats were the whole first screen

@@ -8440,7 +8440,9 @@ function cardHTML(a,i){
   // together in one muted sentence.
   const microStats=[];
   if(s&&s.found!==false){
-    if(peak)microStats.push(["Peak",peak]);
+    // Only a peak above today's rank is news. At the top of its climb the card
+    // said "Platinum II · 61 LP" twice, a few lines apart.
+    if(peak&&peakV!=null)microStats.push(["Peak",peak]);
     // Level is no longer one of these — it belongs to the identity, not to the
     // performance figures, and it now rides on the portrait the way op.gg does it.
     // How far the climb still is, against today's floor. Only for Master+, where
