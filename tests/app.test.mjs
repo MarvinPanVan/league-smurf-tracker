@@ -2626,8 +2626,7 @@ test("Mastery: asked for every three days, kept on the account, shown under Deta
   const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
   card("due").querySelector('[data-act="info"]').click();
   assert.match(card("due").querySelector('[data-k="sec-mastery"]').textContent, /Mastery\s*2\s*Yasuo · M7/);
-  card("due").querySelector('[data-act="sec"][data-s="mastery"]').click();
-  assert.match(card("due").querySelector('[data-k="sec-mastery"]').textContent, /Yasuo\s*M7\s*1\.2M pts/);
+  assert.match(card("due").querySelector('[data-k="sec-mastery"]').textContent, /Yasuo\s*M7\s*1\.2M pts/, "open, no second click");
   // and champ: finds it, by mastery or by this season's champions
   const shown = q => { runScript(win, `ui.search = ${JSON.stringify(q)}; renderGrid()`); return [...win.document.querySelectorAll("#grid .card")].map(c => c.dataset.id).sort(); };
   assert.deepEqual(shown("champ:yas"), ["due"]);
@@ -2661,7 +2660,6 @@ test("Recent form: a Riot-read account's Details fetch its last five ranked game
   assert.equal(u.searchParams.get("region"), "kr", "match-v5 needs the region to pick its cluster");
   assert.equal(card("r").querySelectorAll(".fm-pip").length, 3);
   assert.equal(card("r").querySelectorAll(".fm-pip.w").length, 2);
-  card("r").querySelector('[data-act="sec"][data-s="form"]').click();
   const rows = [...card("r").querySelectorAll('[data-k="sec-form"] .chp')].map(r => [...r.children].map(c => c.textContent).join("|"));
   assert.equal(rows.length, 3);
   assert.equal(rows[0], "WAhri|8/2/5|31 min|1 h ago");
@@ -3806,15 +3804,15 @@ test("the info panel only exists once a check has brought something back for it"
     champs: [{ name: "Ashe", kda: 2.25, wr: 60, games: 25 }],
   } });
   const el = win.document.createElement("div"); el.innerHTML = html;
-  // Folded: every group announces itself, with a count and the headline answer,
-  // and none of the rows behind it are in the DOM yet.
+  // Every group announces itself, with a count and the headline answer, and its
+  // rows are shown straight away (they used to wait behind a second click)
   assert.match(el.textContent, /Flex rank/);
   assert.match(el.textContent, /Past seasons · Solo/);
   assert.match(el.textContent, /Champions this season/);
   assert.match(el.textContent, /Master · 135 LP/, "the peak of those seasons is the headline");
   assert.match(el.textContent, /Ashe/, "and the champion actually played");
-  assert.equal(el.querySelectorAll(".sea").length, 0, "season rows stay behind the click");
-  assert.equal(el.querySelectorAll(".chp").length, 0, "so do champion rows");
+  assert.equal(el.querySelectorAll(".sea").length, 1, "the season row is there");
+  assert.equal(el.querySelectorAll(".chp").length, 2, "and the champion's, under its column header");
   assert.doesNotMatch(html, /undefined|NaN/);
 });
 
@@ -3926,21 +3924,24 @@ test("the details drawer sits on the card's bottom edge", () => {
   assert.equal(win.document.querySelector(".card").lastElementChild.className.includes("c-drawer"), true,
     "the handle stays pinned to the bottom edge with the panel above it");
   assert.equal(panel.querySelectorAll(".sec").length, 3, "flex, past solo seasons, champions");
-  assert.equal(panel.querySelectorAll(".sea").length, 0, "still folded");
+  // Details opened onto more folded rows, each wanting a click of its own: its
+  // contents are shown straight away now
+  assert.equal(panel.querySelectorAll(".sea").length, 2, "both seasons are listed");
+  assert.match(panel.textContent, /S2025/);
+  assert.equal(panel.querySelectorAll(".chp").length, 3, "two champions plus the column header");
 
-  // each group opens on its own, and leaves the others alone
+  // each group still folds on its own, and leaves the others alone
   const solo = [...panel.querySelectorAll(".sec-h")].find(b => b.textContent.includes("Past seasons"));
   solo.click();
   const after = win.document.querySelector(".login.info");
-  assert.equal(after.querySelectorAll(".sea").length, 2, "both seasons are now listed");
-  assert.match(after.textContent, /S2025/);
-  assert.equal(after.querySelectorAll(".chp").length, 0, "opening one does not open the rest");
-
-  const champs = [...after.querySelectorAll(".sec-h")].find(b => b.textContent.includes("Champions"));
-  champs.click();
-  const both = win.document.querySelector(".login.info");
-  assert.equal(both.querySelectorAll(".sea").length, 2, "and the first one stays open");
-  assert.equal(both.querySelectorAll(".chp").length, 3, "two champions plus the column header");
+  assert.equal(after.querySelectorAll(".sea").length, 0, "the seasons fold away");
+  assert.equal(after.querySelectorAll(".chp").length, 3, "folding one leaves the rest open");
+  assert.equal(after.querySelector('[data-k="sec-solo"] .sec-h').getAttribute("aria-expanded"), "false");
+  // and stays folded the next time Details is opened
+  win.document.querySelector(".c-drawer").click();
+  win.document.querySelector(".c-drawer").click();
+  assert.equal(win.document.querySelectorAll(".login.info .sea").length, 0, "remembered");
+  assert.equal(win.document.querySelectorAll(".login.info .chp").length, 3);
 });
 
 // ---- working through sixty accounts ----

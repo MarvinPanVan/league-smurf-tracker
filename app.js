@@ -559,7 +559,7 @@ function needsAttention(a){return !!a.flagged&&a.status!=="banned"&&!a.archived}
 /* Active vault accounts — chore counts (never checked, failed, …) ignore banned
    and archived, which are already dealt with and only clutter those tiles. */
 function isLive(a){return !a.archived&&a.status!=="banned"}
-let checking=new Set(), checkGen=new Map(), openInfo=new Set(), openSec=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
+let checking=new Set(), checkGen=new Map(), openInfo=new Set(), openSec=new Set(), shutSec=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
 // Which card has its note open, plus the live text. The draft is kept out here
 // on purpose: the grid re-renders wholesale, so a textarea rendered from a.notes
 // would throw away whatever was typed the moment an unrelated card updated.
@@ -3648,7 +3648,7 @@ function pruneCardState(){
   for(const id of openMore)if(!live.has(id)){closeCardMenu();break}
   for(const s of [selected,openInfo,openLogin,shownPw,openRank,openMore,checking])
     for(const id of [...s])if(!live.has(id))s.delete(id);
-  for(const k of [...openSec])if(!live.has(k.slice(0,k.lastIndexOf("|"))))openSec.delete(k);
+  for(const set of [openSec,shutSec])for(const k of [...set])if(!live.has(k.slice(0,k.lastIndexOf("|"))))set.delete(k);
   for(const id of [...chartRange.keys()])if(!live.has(id))chartRange.delete(id);
   for(const id of [...checkGen.keys()])if(!live.has(id))checkGen.delete(id);
   if(compareIds.some(id=>!live.has(id))){
@@ -4795,8 +4795,14 @@ function highestOf(list){let best=null,v=-1;for(const e of list){const x=ladderL
 // buried the one number you came for under thirty others. Each group is a
 // headline that already answers most of the question — the ranked peak, the
 // champion you actually play — and the rows behind it are one click away.
+/* Details opened onto more folded rows, "Champions this season 3" among them, each
+   wanting a click of its own to show anything: two clicks to see what Details was
+   opened for. Its sections start open and remember being closed (shutSec); the
+   Rank panel's start folded and remember being opened (openSec). */
+const DRAWER_SECS=new Set(["form","solo","flexhist","champs","mastery"]);
+function secOn(id,key){const k=id+"|"+key;return DRAWER_SECS.has(key)?!shutSec.has(k):openSec.has(k)}
 function secHTML(a,key,label,n,peek,body){
-  const on=openSec.has(a.id+"|"+key);
+  const on=secOn(a.id,key);
   return `<div class="sec${on?" on":""}" data-k="sec-${key}">`
     +`<button class="sec-h" data-act="sec" data-s="${key}" aria-expanded="${on}">`
       +`<span class="sec-n">${esc(label)}${n===""||n==null?"":`<i>${n}</i>`}</span>`
@@ -8159,7 +8165,7 @@ async function onCardClick(e){
   else if(act==="info"){const on=!openInfo.has(id);on?openInfo.add(id):openInfo.delete(id);reveal=on?id+":info":null;
     if(on)loadForm(id);renderCard(id)}
   else if(act==="formretry"){formCache.delete(id);loadForm(id);renderCard(id)}
-  else if(act==="sec"){const k=id+"|"+btn.dataset.s;openSec.has(k)?openSec.delete(k):openSec.add(k);
+  else if(act==="sec"){const k=id+"|"+btn.dataset.s, set=DRAWER_SECS.has(btn.dataset.s)?shutSec:openSec;set.has(k)?set.delete(k):set.add(k);
     e.target.closest("#rankModal")?renderRankBody(id):renderCard(id)}
   else if(act==="rank")openRankModal(id);
   else if(act==="rankapply"){
@@ -8447,7 +8453,7 @@ function relock(){
   if(run)run.stop=true;
   // Drop every per-card UI state too — otherwise a password that was revealed
   // before the auto-lock would still be on screen after the next unlock.
-  [checking,openInfo,openLogin,shownPw,openRank,selected,openMore,openSec].forEach(s=>s.clear());
+  [checking,openInfo,openLogin,shownPw,openRank,selected,openMore,openSec,shutSec].forEach(s=>s.clear());
   checkGen.clear();
   chartRange.clear();
   armedDelete=null;editingId=null;lastSelectedId=null;flashId=null;
