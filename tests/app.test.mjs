@@ -8196,6 +8196,18 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// The optional Label led the form; the required Riot name and tag were its second row
+test("the account form starts with what it needs, and every label names its field", () => {
+  const win = bootApp();
+  win.document.getElementById("bAdd").click();
+  const fields = [...win.document.querySelectorAll("#form .formgrid > .fld")].map(f => f.querySelector("input,select,textarea")).filter(Boolean).map(c => c.id);
+  assert.deepEqual(fields.slice(0, 4), ["fName", "fTag", "fRegion", "fLabel"]);
+  for (const l of win.document.querySelectorAll("#form .formgrid > .fld > label")) {
+    const f = l.getAttribute("for");
+    assert.ok(f && win.document.getElementById(f), "a label for: " + l.textContent.trim());
+  }
+});
+
 // The ⋯ menu led with the plaintext export, put Delete all mid-list and Settings last
 test("the ⋯ menu opens on Settings, offers the encrypted backup first, and ends on Delete all", () => {
   const win = bootApp();

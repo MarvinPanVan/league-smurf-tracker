@@ -2948,14 +2948,18 @@
     </div>
     <div class="mdl-b">
     <div class="formgrid">
-      <div class="fld"><label>Label (optional)</label><input id="fLabel" placeholder="e.g. ADC smurf"></div>
-      <div class="fld"><label>Region</label>
+      <!-- The two fields the account cannot be added without come first, then where
+           it lives, then the login; the label, which is optional, used to lead the
+           form and pushed the required pair to its second row. Every label names its
+           field (for=), so clicking one lands in it and a screen reader reads it. -->
+      <div class="fld"><label for="fName">Riot name *</label><input id="fName" placeholder="Game name, or paste Name#TAG" data-autofocus></div>
+      <div class="fld"><label for="fTag">Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234 (no #)"></div>
+      <div class="fld"><label for="fRegion">Region</label>
         <select id="fRegion"></select>
       </div>
-      <div class="fld"><label>Riot name *</label><input id="fName" placeholder="Game name, or paste Name#TAG" data-autofocus></div>
-      <div class="fld"><label>Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234 (no #)"></div>
-      <div class="fld"><label>Login username</label><input id="fLogin" placeholder="Riot client login" autocomplete="off"></div>
-      <div class="fld pw-fld"><label>Password <span id="pwMeterLabel"></span></label><div style="display:flex;gap:6px">
+      <div class="fld"><label for="fLabel">Label (optional)</label><input id="fLabel" placeholder="e.g. ADC smurf"></div>
+      <div class="fld"><label for="fLogin">Login username</label><input id="fLogin" placeholder="Riot client login" autocomplete="off"></div>
+      <div class="fld pw-fld"><label for="fPass">Password <span id="pwMeterLabel"></span></label><div style="display:flex;gap:6px">
         <div style="position:relative;flex:1;display:flex">
           <!-- Deliberately not type="password": see the .mask rule in the CSS. -->
           <input type="text" id="fPass" class="mask" placeholder="Stored unencrypted, locally" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" style="width:100%;padding-right:34px">
@@ -2965,15 +2969,15 @@
       </div>
       <div id="pwMeter"></div>
       </div>
-      <div class="fld"><label>Email on the account</label><input id="fEmail" placeholder="mail the account is registered to" autocomplete="off"></div>
+      <div class="fld"><label for="fEmail">Email on the account</label><input id="fEmail" placeholder="mail the account is registered to" autocomplete="off"></div>
       <!-- These two were being kept in the Notes box by hand — "birthdate 8/1/1987,
            created 4/2/2022" — which means they could not be searched, sorted or
            shown anywhere in particular. They are facts about the account, so they
            get fields. -->
-      <div class="fld"><label>Account created</label><input type="date" id="fCreated" title="When the account itself was made"></div>
-      <div class="fld"><label>Date of birth on file</label><input type="date" id="fBirth" title="The date of birth the account was registered with — Riot asks for it on recovery"></div>
-      <div class="fld"><label>Tags (comma-separated)</label><input id="fTags" placeholder="e.g. ranked-ready, jungle, honor3"></div>
-      <div class="fld"><label>Status</label>
+      <div class="fld"><label for="fCreated">Account created</label><input type="date" id="fCreated" title="When the account itself was made"></div>
+      <div class="fld"><label for="fBirth">Date of birth on file</label><input type="date" id="fBirth" title="The date of birth the account was registered with — Riot asks for it on recovery"></div>
+      <div class="fld"><label for="fTags">Tags (comma-separated)</label><input id="fTags" placeholder="e.g. ranked-ready, jungle, honor3"></div>
+      <div class="fld"><label for="fStatus">Status</label>
         <select id="fStatus">
           <option value="active">Active</option>
           <option value="resting">Resting / unused</option>
