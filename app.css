@@ -428,7 +428,7 @@
      pill per champion, with the games as a W-L pair rather than a count needing a
      unit letter glued to it. */
   .gem.cmb{gap:7px;padding:3px 4px 3px 10px;border-radius:var(--r-xs);
-    background:#ffffff08;border:1px solid #ffffff1c}
+    background:#ffffff0c;border:1px solid transparent}
   .gem.cmb .n{font-weight:500}
   /* flex, not block. A <button> centres its content box vertically, so the two
      tiles that are buttons sat 24 and 31 px lower than the five that are not —
@@ -1189,13 +1189,17 @@
   .c-stats .v{font-size:calc(13px*var(--ts));font-weight:500;color:var(--text);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
   /* This is the one thing on the card the user wrote themselves, so it reads as
      content on its own small surface rather than another grey caption line. */
+  /* No frame of its own: the card is the box, and a framed notes box with framed
+     chips in it was four borders deep (panel, card, box, chip). It still edits where
+     it lives, so it shows a tint under the pointer; it bleeds into the card's
+     padding so its text lines up with everything above it. */
   .c-notes{font-size:calc(13px*var(--ts));line-height:1.6;color:var(--text);
-    padding:9px 12px;border-radius:var(--r-sm);background:#ffffff0a;border:1px solid #ffffff1a;
+    padding:7px 9px;margin:0 -9px;border-radius:var(--r-sm);background:none;border:1px solid transparent;
     transition:background .16s ease,border-color .16s ease}
   /* the note is the one field you actually keep rewriting, so it edits where it
      lives — no round trip through the Edit form */
   .c-notes[data-act]{cursor:text}
-  .c-notes[data-act]:hover{background:#ffffff0f;border-color:#ffffff21}
+  .c-notes[data-act]:hover{background:#ffffff09;border-color:transparent}
   .c-notes .k{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--faint);
     display:flex;align-items:center;gap:5px;margin-bottom:4px}
   .c-notes .k .ico{width:11px;height:11px;opacity:0;transition:opacity .16s ease}
@@ -1228,12 +1232,12 @@
      three, and the plate has an edge you can see. */
   .ni-f{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:var(--r-xs);
     font-size:calc(12px*var(--ts));line-height:1.35;color:color-mix(in srgb,var(--text) 74%,var(--muted));
-    background:#ffffff10;border:1px solid #ffffff21;box-shadow:inset 0 1px 0 #ffffff0a;
+    background:#ffffff12;border:1px solid transparent;
     font-variant-numeric:tabular-nums;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
   .ni-f b{color:#fff;font-weight:600}
   .ni-f .ico{width:12px;height:12px;flex-shrink:0}
-  .ni-f.ok{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent);background:color-mix(in srgb,var(--good) 10%,transparent)}
-  .ni-f.warn{color:var(--warn-txt);border-color:color-mix(in srgb,var(--warn) 40%,transparent);background:color-mix(in srgb,var(--warn) 11%,transparent)}
+  .ni-f.ok{color:var(--good);background:color-mix(in srgb,var(--good) 13%,transparent)}
+  .ni-f.warn{color:var(--warn-txt);background:color-mix(in srgb,var(--warn) 14%,transparent)}
   .ni-pips{display:inline-flex;gap:3px}
   .ni-pips i{width:7px;height:7px;transform:rotate(45deg);border-radius:1px;background:#ffffff38}
   .ni-pips i.on{background:var(--gold-txt)}
@@ -1573,9 +1577,9 @@
   .meta b{color:var(--text);font-weight:500}
   .meta .g{color:var(--gold-txt)}
   .ctags{display:flex;gap:6px;flex-wrap:wrap}
-  .ctags span{font-size:calc(12px*var(--ts));padding:3px 9px;border-radius:var(--r-xs);background:#ffffff0d;border:1px solid #ffffff1f;color:var(--muted)}
+  .ctags span{font-size:calc(12px*var(--ts));padding:3px 9px;border-radius:var(--r-xs);background:#ffffff12;border:1px solid transparent;color:var(--muted)}
   /* the role is read from recent games, not typed by you, so it is set apart from your tags */
-  .ctags .role-tag{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 35%,transparent);background:color-mix(in srgb,var(--teal) 8%,transparent)}
+  .ctags .role-tag{color:var(--teal-txt);background:color-mix(in srgb,var(--teal) 12%,transparent)}
   .login{background:#00000038;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:calc(13px*var(--ts));display:flex;flex-direction:column;gap:9px}
   .login .k{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--faint);display:block;margin-bottom:7px}
   .lrow{display:flex;justify-content:space-between;align-items:center;gap:10px}

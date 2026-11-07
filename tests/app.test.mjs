@@ -9105,6 +9105,20 @@ test("the header has one name, the wordmark, and no slogan badge", () => {
     assert.doesNotMatch(win.document.querySelector(sel).textContent, /Private by default|Summoner Vault/, sel + ", the Settings preview of the header included");
 });
 
+// Panel, card, notes box, chip: four borders deep. The card is the box now; chips are fills
+test("chips are fills, not outlines, and the notes have no frame of their own", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const rule = sel => css.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
+  for (const sel of [".ni-f", ".ctags span", ".gem.cmb"]) {
+    assert.match(rule(sel), /border:1px solid transparent/, sel + " has no outline");
+    assert.match(rule(sel), /background:#ffffff[0-9a-f]{2}/, sel + " is a fill");
+  }
+  for (const sel of [".ni-f.ok", ".ni-f.warn", ".ctags .role-tag"]) assert.doesNotMatch(rule(sel), /border-color/, sel + ": tinted, not outlined");
+  const notes = rule(".c-notes");
+  assert.match(notes, /background:none;border:1px solid transparent/, "the notes sit on the card itself");
+  assert.match(notes, /margin:0 -9px/, "their text lined up with the card's");
+});
+
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row
 // ended hundreds of pixels apart
 test("a card's notes keep to one row of two chips and +N more; Details shows them all", () => {
