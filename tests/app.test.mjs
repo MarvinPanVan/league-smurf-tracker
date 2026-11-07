@@ -14,8 +14,16 @@ import { JSDOM } from "jsdom";
 import { deflateRawSync } from "node:zlib";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const htmlPath = path.join(__dirname, "..", "index.html");
-const html = fs.readFileSync(htmlPath, "utf8");
+// The app is index.html (the markup), app.css and app.js. `html` is the page as a
+// browser assembles it: the stylesheet and the script in the places index.html loads
+// them, so a test that reads the page, its styles or its code reads the shipped files.
+const ROOT = path.join(__dirname, "..");
+const pageHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+const appCss = fs.readFileSync(path.join(ROOT, "app.css"), "utf8");
+const appJs = fs.readFileSync(path.join(ROOT, "app.js"), "utf8");
+const CSS_TAG = /<link rel="stylesheet" href="app\.css\?v=[^"]+">/, JS_TAG = /<script src="app\.js\?v=[^"]+"><\/script>/;
+if (!CSS_TAG.test(pageHtml) || !JS_TAG.test(pageHtml)) throw new Error("index.html no longer loads app.css and app.js the way these tests expect");
+const html = pageHtml.replace(CSS_TAG, () => `<style>\n${appCss}</style>`).replace(JS_TAG, () => `<script>\n${appJs}</script>`);
 
 const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/);
 if (!scriptMatch) throw new Error("Could not find the app's <script> block — did the file structure change?");
@@ -1009,7 +1017,8 @@ test("actions and window titles are set in the text face; Cinzel is the wordmark
   assert.doesNotMatch(rule, /Cinzel|uppercase|letter-spacing/);
   // Cinzel is the wordmark's now, and the wordmark's only
   const users = [...css.matchAll(/([^{}]+)\{[^}]*Cinzel[^}]*\}/g)].map(m => m[1].trim());
-  assert.ok(users.every(sel => /hex-display|lock-wm|acc-prev-t/.test(sel)), users.join(" | "));
+  // (the @font-face rules that bring the font in are not users of it)
+  assert.ok(users.every(sel => /hex-display|lock-wm|acc-prev-t|^@font-face$/.test(sel)), users.join(" | "));
 });
 
 test("Refresh stale refreshes found accounts that have gone old, not ones with no profile yet", () => {
@@ -8664,7 +8673,8 @@ test("what the app says leaves the browser is true: the Riot ID goes out for a r
   assert.doesNotMatch(note, /nothing is uploaded/i);
   assert.match(note, /Riot ID to op\.gg, through a public proxy/);
   const help = win.document.getElementById("help").textContent;
-  for (const host of ["corsproxy.io", "allorigins.win", "r.jina.ai", "Google Fonts"]) assert.ok(help.includes(host), "Help names " + host);
+  for (const host of ["corsproxy.io", "allorigins.win", "r.jina.ai"]) assert.ok(help.includes(host), "Help names " + host);
+  assert.doesNotMatch(help, /Google Fonts/, "the fonts come with the app now");
   for (const proxy of ["corsproxy.io", "allorigins.win", "r.jina.ai"]) assert.ok(html.includes(proxy + "/") || html.includes("//" + proxy), proxy + " is really used");
   assert.doesNotMatch(html, /Everything here stays in this browser/, "the add forms say the Riot ID is looked up");
 });
@@ -8788,6 +8798,146 @@ test("no sentence in the app's text, tooltips or messages leans on an em dash", 
   const said = [...appScript.matchAll(/(?:toast|confirm|notify|saveThen|lockError)\(\s*"([^"\n]*)"/g)].map(m => m[1])
     .concat([...appScript.matchAll(/textContent=[^;\n]*?"([^"\n]*\u2014[^"\n]*)"/g)].map(m => m[1]));
   assert.deepEqual(said.filter(x => x.includes("\u2014")), [], "and what it says when something happens");
+});
+
+// The page loaded Inter and Cinzel from Google Fonts, so every visit told Google about it
+test("the fonts come with the app: no Google Fonts, every file the styles name is here, with its licence", () => {
+  assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/);
+  const faces = [...html.matchAll(/@font-face\{font-family:'(\w+)'[^}]*src:url\((fonts\/[\w.-]+\.woff2)\)/g)];
+  assert.deepEqual([...new Set(faces.map(f => f[1]))].sort(), ["Cinzel", "Inter"]);
+  assert.ok(faces.length >= 9, "every alphabet Google served, so names in Cyrillic or Greek still get Inter");
+  const root = path.join(__dirname, "..");
+  for (const [, , file] of faces) {
+    const buf = fs.readFileSync(path.join(root, file));
+    assert.equal(buf.subarray(0, 4).toString("latin1"), "wOF2", file + " is a WOFF2 file");
+  }
+  for (const fam of ["Inter", "Cinzel"])
+    assert.match(fs.readFileSync(path.join(root, "fonts", `OFL-${fam}.txt`), "utf8"), /SIL Open Font License, Version 1\.1/);
+  const sw = fs.readFileSync(path.join(root, "sw.js"), "utf8");
+  for (const f of ["fonts/inter-latin.woff2", "fonts/cinzel-latin.woff2"]) assert.ok(sw.includes("./" + f), "offline too: " + f);
+  assert.match(html, /<link rel="preload" href="fonts\/inter-latin\.woff2" as="font" type="font\/woff2" crossorigin>/);
+});
+
+/* Every string an account holds can come from somewhere hostile: a backup or CSV someone
+   hands you, a public proxy answering a rank check in op.gg's place, a link. Each field
+   here carries markup that would become an <x-pwn> element if any view put it on the
+   page raw, and every view the account shows up in is opened. */
+const PWN = k => `"'><x-pwn>${k}</x-pwn><img src=x data-pwn="${k}">`;
+function pwnAccount(id, extra) {
+  const now = Date.now(), D = 864e5;
+  return Object.assign({ id, gameName: PWN("gameName"), tagLine: PWN("tagLine"), region: "EUW", label: PWN("label"),
+    status: "active", fav: true, flagged: true, tags: [PWN("tag")], notes: PWN("notes"), email: PWN("email"),
+    login: PWN("login"), password: PWN("password"), createdOn: PWN("createdOn"), birthdate: PWN("birthdate"),
+    lastLoginAt: now - 3600e3,
+    info: { honor: 3, owned: 96, be: 100, twofa: false, skins: [PWN("skin")], penalty: PWN("penalty"), own: { [PWN("ownKey")]: PWN("ownVal") } },
+    stats: { found: true, tier: "GOLD", division: "II", lp: 50, wins: 10, losses: 9, level: 100, asOf: PWN("asOf"), source: PWN("source"),
+      note: PWN("note"), updatedAt: now - 5 * D, icon: PWN("icon"), mmr: PWN("mmr"), avgRecent: PWN("avgRecent"),
+      champs: [{ name: PWN("champ"), games: 5, wins: 3, losses: 2, wr: 60, kda: PWN("kda") }],
+      seasons: { solo: [{ season: PWN("season"), tier: "SILVER", division: "I", lp: 10 }], flex: [{ season: PWN("fseason"), tier: "BRONZE", division: "II", lp: 4 }] },
+      flex: { tier: "GOLD", division: "I", lp: 3, wins: 1, losses: 1 }, peak: { tier: "GOLD", division: "I", lp: 90 } },
+    history: [{ t: now - 9 * D, tier: "SILVER", division: "I", lp: 40 }, { t: now - 5 * D, tier: "GOLD", division: "II", lp: 50 }],
+    goal: { tier: "PLATINUM", division: "IV", lp: 0 }, peakManual: { tier: "GOLD", division: "I", lp: 99 } }, extra || {});
+}
+function pwned(win, where) {
+  const doc = win.document, hits = [];
+  for (const el of doc.querySelectorAll("x-pwn,[data-pwn]")) hits.push(el.tagName.toLowerCase() + ":" + (el.textContent || el.getAttribute("data-pwn")));
+  for (const el of doc.querySelectorAll("[href],[src]"))
+    for (const k of ["href", "src"]) if (/^\s*javascript:/i.test(el.getAttribute(k) || "")) hits.push(k + "=javascript:");
+  assert.deepEqual(hits, [], "raw markup reached the page in " + where);
+}
+test("hostile text in every field of an account stays text in every view", async () => {
+  // and a second account whose rank fields themselves are junk, as a hand-edited backup could have
+  const junk = pwnAccount("j", { label: "", stats: { found: true, tier: PWN("tier"), division: PWN("division"), lp: PWN("lp"),
+    wins: PWN("wins"), losses: PWN("losses"), level: PWN("level"), updatedAt: Date.now(), champs: [] },
+    history: [{ t: Date.now(), tier: PWN("htier"), division: PWN("hdiv"), lp: PWN("hlp") }],
+    goal: { tier: PWN("gtier"), division: PWN("gdiv") }, peakManual: { tier: PWN("ptier") } });
+  const lv = pwnAccount("l", { stats: { found: true, tier: "UNRANKED", level: 24, updatedAt: Date.now() }, history: [] });
+  const win = bootApp([pwnAccount("a"), junk, lv]);
+  const doc = win.document, $ = id => doc.getElementById(id);
+  assert.equal(doc.querySelectorAll(".card").length, 3, "the accounts render");
+  pwned(win, "the cards");
+  runScript(win, "accounts.forEach(a => openInfo.add(a.id)); render()");
+  pwned(win, "Details");
+  for (const id of ["a", "j", "l"]) {
+    doc.querySelector(`.card[data-id="${id}"] [data-act="login"]`).click(); pwned(win, "the login window of " + id);
+    doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    rankWindow(win, id); pwned(win, "the rank window of " + id);
+    doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    runScript(win, `openForm(accounts.find(a => a.id === "${id}"))`); pwned(win, "the account form of " + id);
+    runScript(win, "closeForm()");
+    runScript(win, `openArtPicker("${id}")`); pwned(win, "card art for " + id);
+    doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  }
+  runScript(win, 'openCompare("a"); openCompare("j")'); pwned(win, "the comparison");
+  runScript(win, "openPalette()");
+  for (const q of ["x-pwn", "gold", "a"]) { $("palInput").value = q; $("palInput").dispatchEvent(new win.Event("input", { bubbles: true })); pwned(win, "quick find: " + q); }
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  for (const d of ["list", "wall", "cards"]) {
+    doc.querySelector(`#density [data-density="${d}"]`).click();
+    await until(() => doc.getElementById("grid").dataset.layout === d || d === "cards", d + " view");
+    pwned(win, "the " + d + " view");
+  }
+  const search = $("tSearch"); search.value = "x-pwn"; search.dispatchEvent(new win.Event("input", { bubbles: true }));
+  pwned(win, "a search");
+  runScript(win, "openShare()"); pwned(win, "the share window");
+});
+test("a snapshot link built by someone else shows their text as text", async () => {
+  const win = bootApp();
+  const P = PWN("snap");
+  const raw = { v: 1, t: P, at: Date.now(), c: ['#fff" onload="x', "#000000"], a: [
+    { n: P, i: P, r: P, k: [5, P, P], w: P, l: 3, lv: P, p: P, h: [[1, 5, "II", 9], [P, 5, "II", 9]], c: [P, P], hn: P, sk: [P, P], st: P, f: 1 },
+    { n: "ok", r: "EUW", k: [5, "II", 40], w: 10, l: 8, lv: 99, p: P, c: ["Lux", 0], hn: 3, sk: [P], st: "banned" } ] };
+  runScript(win, `snapEncode(${JSON.stringify(raw)}).then(c => openSnapshot(c)).then(() => window.__snapDone = 1)`);
+  await until(() => win.__snapDone === 1, "the snapshot to open");
+  assert.ok(win.document.querySelector(".sn-card"), "it opened");
+  pwned(win, "a snapshot");
+  assert.equal(win.document.documentElement.style.getPropertyValue("--gold"), "", "a colour that is not #rrggbb is not applied");
+});
+
+// One 600 KB file of markup, styles and script was hard to review and could not carry a
+// security policy that forbids inline script. Now: the page, app.css and app.js.
+test("index.html is markup only, and loads this version's app.css and app.js", () => {
+  assert.doesNotMatch(pageHtml, /<style[\s>]/, "no style block left in the page");
+  const scripts = [...pageHtml.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)];
+  assert.deepEqual(scripts.map(m => m[2].trim()), [""], "one script element, and it has no code in it");
+  const win = bootApp();
+  runScript(win, "window.__v = APP_VERSION");
+  for (const f of ["app.css", "app.js"])
+    assert.ok(pageHtml.includes(`${f}?v=${win.__v}`), `${f} is asked for as this version, so no browser pairs a new page with an old ${f}`);
+  const sw = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  for (const f of ["./index.html", "./app.css", "./app.js"]) assert.ok(sw.includes(`"${f}"`), "kept for offline: " + f);
+  assert.match(sw, /cache: "reload"/, "fetched fresh when a new version installs");
+  assert.match(sw, /ignoreSearch: true/, "and found offline whatever ?v= the page asks for");
+  assert.ok(appJs.startsWith('"use strict";'), "the script is still strict from its first line");
+});
+
+// With the script in app.js, the page can forbid inline script: markup that ever slipped
+// past escaping could not run, nor pull a script in from somewhere else
+test("the page's security policy runs only its own script, and nothing in the app needs more", () => {
+  const meta = pageHtml.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/);
+  assert.ok(meta, "a policy in the page");
+  assert.ok(pageHtml.indexOf(meta[0]) < pageHtml.search(/<link|<script/), "before anything it governs is loaded");
+  const pol = Object.fromEntries(meta[1].split(";").map(d => d.trim().split(/\s+/)).map(([k, ...v]) => [k, v]));
+  assert.deepEqual(pol["script-src"], ["'self'"], "no inline script, no eval, no other host");
+  for (const [k, v] of [["object-src", "'none'"], ["base-uri", "'none'"], ["form-action", "'none'"], ["frame-src", "'none'"], ["font-src", "'self'"]])
+    assert.deepEqual(pol[k], [v], k);
+  assert.ok(pol["connect-src"].includes("https:"), "the backend, webhook and proxies are the user's to choose");
+  assert.ok(!pol["connect-src"].includes("http:"), "but plain http only to this computer");
+  // what the policy would block, the app must not use
+  const handler = /\son(?:error|load|click|dblclick|mouse\w+|key\w+|focus|blur|input|change|submit|pointer\w+)\s*=\s*["']/;
+  assert.doesNotMatch(pageHtml, handler, "no inline handlers in the page");
+  assert.doesNotMatch(appJs, handler, "nor in the markup the script builds");
+  assert.doesNotMatch(appJs, /\beval\(|new Function\(|set(?:Timeout|Interval)\(\s*["'`]|javascript:/, "no code from strings");
+  // the icons' failed-load handling moved from onerror="" to a listener: it still works
+  const seed = seededAccount();
+  seed[0].stats.icon = "https://example.com/gone.jpg";
+  const win = bootApp(seed);
+  const img = win.document.querySelector(".c-avatar");
+  assert.ok(img && img.hasAttribute("data-ico"));
+  img.dispatchEvent(new win.Event("error"));
+  assert.equal(win.document.querySelector(".c-avatar"), null, "a dead icon is taken out");
+  win.renderGrid();
+  assert.equal(win.document.querySelector(".c-avatar"), null, "and not asked for again");
 });
 
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row

@@ -58,7 +58,7 @@ in Safari after 7 days without a visit. The app asks the browser to keep the vau
 | Tier-up alerts, if you set a Discord webhook | The account label and the tiers        | Your Discord webhook |
 | **Device sync**, if you set it up      | The **encrypted** vault only (ciphertext)   | Your own Cloudflare worker's KV |
 | **Discord decay alerts**, if you turn them on | Your Diamond+ accounts' Riot IDs, labels and decay estimates, and your Discord webhook URL, in plain text | Your own Cloudflare worker's KV; the worker posts to your webhook |
-| Loading the page                       | Ordinary requests for fonts, rank icons and, unless you turn it off, champion art (the request names the champion) | Google Fonts, op.gg's image CDN, Riot's Data Dragon |
+| Loading the page                       | Ordinary requests for rank icons and, unless you turn it off, champion art (the request names the champion). The fonts come with the app | op.gg's image CDN, Riot's Data Dragon |
 | Opening **Card art…**                  | Requests for the champion list, one champion's skin list and their pictures. Nothing about you or the account | Riot's Data Dragon |
 | **Check for leaks** in the password check-up, only when you press it | The first 5 characters of each saved password's SHA-1 hash, once per distinct password. Never the password or the rest of the hash: the reply lists every leaked hash starting with those 5 characters, padded with dummies, and the match is made in your browser | Have I Been Pwned (api.pwnedpasswords.com) |
 
@@ -91,7 +91,7 @@ master password to open. Treat a plaintext export like the passwords themselves.
 - **No master password.** As above: plain text on disk.
 - **The hosted page changing.** The [live version](https://marvinpanvan.github.io/league-smurf-tracker/)
   is served from this repository's `main` branch. If you would rather trust a copy
-  you control, run your own (open `index.html` from a download, or host a private
+  you control, run your own (download the repository and open `index.html`, or host a private
   copy for yourself, as the [licence](LICENSE) allows).
 - **Public CORS proxies.** Without your own worker, rank checks go through third-party
   proxies, which see which Riot IDs you look up. Deploy the worker to avoid that.

@@ -1,6 +1,6 @@
 # Publishes a GitHub Release whenever main carries an APP_VERSION that has none yet.
 # Runs after the test workflow succeeds on main, so a red build is never released.
-# The notes are the version's entry in index.html's APP_CHANGELOG: the same list the
+# The notes are the version's entry in app.js's APP_CHANGELOG: the same list the
 # app's own update toast shows, so the two cannot disagree.
 name: release
 

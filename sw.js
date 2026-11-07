@@ -2,14 +2,22 @@
 // (e.g. GitHub Pages) — service workers cannot register on file:// pages, so
 // opening the HTML file directly just skips all of this, which is fine.
 // Bump SW cache so each release reaches hosted installs.
-const CACHE = "smurf-tracker-cache-v101";
+const CACHE = "smurf-tracker-cache-v102";
 // index.html is the shell; "./" was a redundant second cache of the same document.
+// The page loads app.css and app.js as "?v=<version>", so a browser never pairs a
+// new page with last release's script out of its HTTP cache; offline, the copies
+// fetched here answer for any version (ignoreSearch, below).
 const ASSETS = [
   "./index.html",
+  "./app.css",
+  "./app.js",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png",
+  // the Latin files every page uses; the other alphabets are cached when first needed
+  "./fonts/inter-latin.woff2",
+  "./fonts/cinzel-latin.woff2",
 ];
 
 self.addEventListener("install", e => {
@@ -17,7 +25,8 @@ self.addEventListener("install", e => {
   // missing icon never leaves the shell uncached.
   e.waitUntil(
     caches.open(CACHE).then(c =>
-      Promise.all(ASSETS.map(u => c.add(u).catch(() => undefined)))
+      // "reload": straight from the server, not an HTTP-cached copy of the last release
+      Promise.all(ASSETS.map(u => c.add(new Request(u, { cache: "reload" })).catch(() => undefined)))
     )
   );
   self.skipWaiting();
@@ -34,7 +43,7 @@ self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
 
   // Only ever touch our own files. Everything cross-origin — the op.gg rank
-  // proxies, the profile-icon CDN, the backend worker, Google Fonts — must go
+  // proxies, the profile-icon CDN, the backend worker — must go
   // straight to the network: caching a rank check would pin the account to
   // whatever rank it had the first time it was ever fetched.
   if (new URL(e.request.url).origin !== self.location.origin) return;
@@ -50,7 +59,7 @@ self.addEventListener("fetch", e => {
         }
         return res;
       })
-      .catch(() => caches.match(e.request).then(cached =>
+      .catch(() => caches.match(e.request).then(cached => cached || caches.match(e.request, { ignoreSearch: true })).then(cached =>
         cached || caches.match("./index.html").then(shell => shell || Promise.reject(new Error("offline and not cached")))))
   );
 });
