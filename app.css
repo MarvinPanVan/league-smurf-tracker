@@ -1493,6 +1493,9 @@
   .help dt:first-of-type,.help dd:first-of-type{border-top:0}
   .help dt{font-size:calc(13px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--gold-txt);line-height:2.2}
   .help dd{margin:0}
+  .help-ul{margin:0;padding:0 0 0 18px;display:grid;gap:5px}
+  .help-ul li::marker{color:var(--faint)}
+  .help-ul.keys{list-style:none;padding:0}
   .help dd.terms::first-letter{text-transform:uppercase}
   .help b{color:var(--text);font-weight:600}
   .help code{font-size:calc(12px*var(--ts));padding:1px 6px;white-space:nowrap}

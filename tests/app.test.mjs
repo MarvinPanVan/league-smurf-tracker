@@ -10170,3 +10170,19 @@ test("scrolled down, only the search row stays pinned, and nothing shifts on the
   await until(() => con.classList.contains("running"), "the console to pin whole while checking");
   assert.ok(!win.document.getElementById("bCancelCheck").classList.contains("hidden"), "with Stop in it");
 });
+
+// The Cards entry was one sentence chained with "·" over eight lines, and Keys and
+// More the same; and it still described Login as a panel to open
+test("Help lists what a card does, one thing a line, and says Login copies", () => {
+  const win = bootApp();
+  const dd = label => [...win.document.querySelectorAll("#help dl.help dt")].find(d => d.textContent === label).nextElementSibling;
+  for (const label of ["Cards", "Keys", "More"]) {
+    const items = dd(label).querySelectorAll(":scope > ul.help-ul > li");
+    assert.ok(items.length >= 3, label + " is a list");
+    assert.doesNotMatch(dd(label).textContent, / · /, label + " has no chained dots left");
+  }
+  assert.match(dd("Cards").querySelector("li").textContent, /^Login copies the username, then the password/);
+  assert.match(html, /\n  \.help-ul\{margin:0;padding:0 0 0 18px/);
+  // and the empty page's third step says the same
+  assert.match(win.document.getElementById("grid").textContent, /Login copies the username, then the password, one click each/);
+});
