@@ -4408,6 +4408,10 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
   const timed=t1>t0&&ts.every(t=>t>0);
   // one point has no span to spread across, so it sits in the middle
   const fx=i=>last===0?.5:(timed?(ts[i]-t0)/(t1-t0):i/last); // 0..1
+  /* Where a point is drawn: the same, held a little in from both edges. At 0 and 1
+     the first and last dots sat on the frame, half of each outside it. The line's
+     colour stops still use fx, since a gradient runs across the line's own box. */
+  const X_IN=.016, fxi=i=>X_IN+(1-2*X_IN)*fx(i);
 
   /* The band captions sit at the left edge, which is also where the line starts,
      and a caption the line or its first point ran through read "DIAM●ND". Where
@@ -4544,7 +4548,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     }
   }
 
-  const coords=pts.map((p,i)=>(fx(i)*LPC_W).toFixed(1)+","+py(p.v).toFixed(1)).join(" ");
+  const coords=pts.map((p,i)=>(fxi(i)*LPC_W).toFixed(1)+","+py(p.v).toFixed(1)).join(" ");
   // Unique per chart, and — importantly — *stable* across renders. These used to
   // be Math.random(), which made every card's markup different on every single
   // render: the gradient ids and the url(#…) references pointing at them had to be
@@ -4558,7 +4562,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
   // passing through, so a promotion reads as a colour change, not just a step up
   const stops=(last?pts:[pts[0],pts[0]]).map((p,i)=>`<stop offset="${(last?fx(i)*100:i*100).toFixed(2)}%" stop-color="${tierColor(p.h.tier)}"/>`).join("");
   const overlay=pts.map((p,i)=>{
-    const xp=fx(i)*100;
+    const xp=fxi(i)*100;
     // A point claims at most the ground nearer to it than to its neighbours — but
     // no more than a target's width either way. Letting the columns tile the full
     // chart meant a handful of points split it into slabs, so pointing anywhere at
@@ -4566,7 +4570,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     // of the plot. The 40 px cap wins when points are sparse, the tiling wins when
     // they are dense, and neither ever overhangs onto the next card: the outermost
     // columns hang off their own dot instead of straddling it.
-    const cl=i===0?0:(fx(i-1)+fx(i))/2*100, cr=i===last?100:(fx(i)+fx(i+1))/2*100;
+    const cl=i===0?0:(fxi(i-1)+fxi(i))/2*100, cr=i===last?100:(fxi(i)+fxi(i+1))/2*100;
     // tooltips at the edges would hang off the card, so they anchor inwards there
     const side=xp<26?" l":xp>74?" r":"";
     // A two-line tip is about 42px plus its 10px gap. A dot higher than that has
@@ -4604,7 +4608,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
       if(txt===prev)continue;
       prev=txt;
       const align=k===0?" l":k===n-1?" r":"";
-      axis+=`<span class="lpc-tick${align}" style="left:${(f*100).toFixed(2)}%">${esc(txt)}</span>`;
+      axis+=`<span class="lpc-tick${align}" style="left:${((X_IN+(1-2*X_IN)*f)*100).toFixed(2)}%">${esc(txt)}</span>`;
     }
   }
 
@@ -4613,7 +4617,8 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     +`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="0">${stops}</linearGradient>`
     +`<linearGradient id="${aid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${cur}" stop-opacity=".3"/><stop offset="1" stop-color="${cur}" stop-opacity="0"/></linearGradient></defs>`
     +bands+lines
-    +(last?`<polygon points="0,${LPC_H} ${coords} ${LPC_W},${LPC_H}" fill="url(#${aid})"/>`
+    // the fill runs on flat to both edges, so the inset leaves no bare strip
+    +(last?`<polygon points="0,${LPC_H} 0,${py(pts[0].v).toFixed(1)} ${coords} ${LPC_W},${py(pts[last].v).toFixed(1)} ${LPC_W},${LPC_H}" fill="url(#${aid})"/>`
         +`<polyline class="lpc-line" points="${coords}" fill="none" stroke="url(#${gid})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`:"")
     +`</svg>${labels}${overlay}`
     +`<div class="lpc-range">${RANGES.map(([v,label])=>`<button data-act="range" data-r="${v}" class="${mode===v?"on":""}" title="${label}">${v.toUpperCase()}</button>`).join("")}</div>`

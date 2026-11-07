@@ -3516,8 +3516,10 @@ test("a point's hit area is a window around it, never a slab of the whole chart"
       assert.equal(p.style.transform, `translateX(-${anchor}%)`, `${n}[${i}]: anchor`);
       assert.ok(left >= -0.01 && left <= 100.01, `${n}[${i}]: stays inside the chart`);
     });
-    assert.equal(parseFloat(cols[0].style.left), 0, `${n}: first sits on the left edge`);
-    assert.ok(Math.abs(parseFloat(cols[n - 1].style.left) - 100) < 0.02, `${n}: last sits on the right edge`);
+    // held a dot's width in from the frame, so neither end dot hangs half outside it
+    const l0 = parseFloat(cols[0].style.left), l1 = parseFloat(cols[n - 1].style.left);
+    assert.ok(l0 > 0 && l0 <= 3, `${n}: first sits just inside the left edge (${l0})`);
+    assert.ok(l1 < 100 && l1 >= 97, `${n}: last sits just inside the right edge (${l1})`);
   }
 });
 
@@ -3540,8 +3542,16 @@ test("the line spans the full chart, with no pathLength for a dash pattern to di
   // gap before the newest point — the reveal is a clip wipe now, so neither exists
   assert.equal(line.getAttribute("pathLength"), null);
   const coords = line.getAttribute("points").split(" ");
-  assert.ok(coords[0].startsWith("0.0,"), "starts at the left edge: " + coords[0]);
-  assert.ok(coords[coords.length - 1].startsWith("200.0,"), "reaches the right edge: " + coords[coords.length - 1]);
+  // It spans the chart, held a dot's width in from each edge: at 0 and 200 the
+  // first and last dots sat on the frame with half of each outside it.
+  const x0 = parseFloat(coords[0]), x1 = parseFloat(coords[coords.length - 1]);
+  assert.ok(x0 > 0 && x0 <= 6, "starts just inside the left edge: " + coords[0]);
+  assert.ok(x1 < 200 && x1 >= 194, "ends just inside the right edge: " + coords[coords.length - 1]);
+  const dots = [...el.querySelectorAll(".lpc-pt")].map(p => parseFloat(p.style.left));
+  assert.ok(dots[0] > 0 && dots[dots.length - 1] < 100, "the dots sit inside the frame: " + dots.join(", "));
+  // and the fill still reaches both edges, so the inset leaves no bare strip
+  const fill = el.querySelector("polygon").getAttribute("points").split(" ");
+  assert.ok(fill[0].startsWith("0,") && fill[fill.length - 1].startsWith("200,"), fill.join(" "));
 });
 
 test("the two halves of the ladder get their own scale", () => {
@@ -3575,8 +3585,8 @@ test("the chart's x axis is real time, so a gap in the record shows as a gap", (
   ];
   const xs = chartDom(win, h).querySelector(".lpc-line").getAttribute("points")
     .split(" ").map(c => parseFloat(c.split(",")[0]));
-  assert.equal(xs[0], 0);
-  assert.equal(xs[2], 200);
+  assert.equal(xs[0], 3.2, "a dot's width in from the left edge");
+  assert.equal(xs[2], 196.8, "and from the right");
   // evenly spaced would put the middle point at 100; by time it belongs near the left
   assert.ok(xs[1] < 20, "the long silence must take up most of the width, got x=" + xs[1]);
 
@@ -3591,7 +3601,7 @@ test("a history with no usable timestamps still plots, evenly spaced", () => {
              { tier: "GOLD", division: "I", lp: 20 }];
   const el = chartDom(win, h);
   const xs = el.querySelector(".lpc-line").getAttribute("points").split(" ").map(c => parseFloat(c.split(",")[0]));
-  assert.deepEqual(xs, [0, 100, 200]);
+  assert.deepEqual(xs, [3.2, 100, 196.8]);
   assert.equal(el.querySelectorAll(".lpc-tick").length, 0, "no timestamps, no date axis");
 });
 
