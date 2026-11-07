@@ -10695,3 +10695,21 @@ test("an empty vault opens on the app's own gem, over a sentence that breaks eve
   assert.match(html, /\n  \.empty \.brand-mark\{width:56px;height:56px/);
   assert.match(html.match(/\n  \.wl-s\{([^}]*)\}/)[1], /text-wrap:balance/);
 });
+
+// Copies stopped putting up a toast because the button says so; the list row's own
+// "Copy username, then password" button had no such flash, so it said nothing at all
+test("in the list, the login panel's one-button copy says it copied, as the card's does", async () => {
+  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [],
+    login: "riotuser", password: "hunter22!", stats: null }]);
+  const copied = [];
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async v => { copied.push(v); } } });
+  const doc = win.document;
+  doc.querySelector('[data-density="list"]').click();
+  doc.querySelector('.rw[data-id="L"] .rw-main').click();   // the row opens
+  doc.querySelector('.rw[data-id="L"] .rw-open [data-act="login"]').click();
+  const seq = () => doc.querySelector('.rw[data-id="L"] .lseq');
+  seq().click();
+  await until(() => copied[0] === "riotuser" && /Username copied/.test(seq().textContent), "the row to say it copied");
+  assert.ok(seq().classList.contains("copied"));
+  await until(() => /Copy password/.test(seq().textContent), "and move on", 3000);
+});

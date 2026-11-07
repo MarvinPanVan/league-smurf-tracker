@@ -5297,7 +5297,8 @@ function rowHTML(a,i){
         <button data-act="del" class="b-danger">${armedDelete===a.id?"Sure?":"Delete"}</button>
       </div>
       ${openLogin.has(a.id)?`<div class="login">
-        ${a.login&&a.password?`<button class="lseq" data-act="copyseq">${loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`:""}
+        ${a.login&&a.password?(()=>{const fl=loginFlash.get(a.id);   // copies say so on the button, here as on the card
+          return`<button class="lseq${fl?" copied":""}" data-act="copyseq">${fl?icon("check")+(fl.pw?" Copied, clears in 30s":" Username copied"):loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`})():""}
       <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
         <div class="lrow"><span class="val mono ${a.password?"":"none"}">${a.password?(shownPw.has(a.id)?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${shownPw.has(a.id)?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
         ${pwWarnHTML(a)}
