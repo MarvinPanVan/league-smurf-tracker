@@ -1406,6 +1406,10 @@
   .d-warn{color:var(--warn-txt);background:color-mix(in srgb,var(--warn) 15%,transparent)}
   .wl .ready{color:var(--teal-txt);font-weight:600}
   /* a Riot ID op.gg doesn't know: amber like the header's warning, and the fix one click away */
+  /* a check that could not reach op.gg: said on the card it happened to, beside the
+     refresh that retries it; the run's banner is the one place that counts them */
+  .c-failed{display:inline-flex;align-items:center;gap:5px;color:var(--warn-txt);font-size:calc(12px*var(--ts));white-space:nowrap}
+  .c-failed .ico{width:13px;height:13px}
   .c-miss{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;color:var(--warn-txt)}
   .c-miss .ico{width:14px;height:14px;flex-shrink:0}
   .c-fix{padding:4px 10px;min-height:28px;font-size:calc(12px*var(--ts));font-weight:600;color:var(--warn-txt);

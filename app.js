@@ -2892,7 +2892,7 @@ function renderFailbar(){
   el.classList.remove("hidden");
   setHTML(el,`<span class="fb-n">${fails.length} account${fails.length===1?"":"s"} failed to refresh</span>`
     +`<span class="fb-l">${fails.slice(0,6).map(f=>esc(f.name)).join(", ")}${fails.length>6?" +"+(fails.length-6)+" more":""}</span>`
-    +`<button id="bRetryFails">Try again</button><button id="bDismissFails" class="fb-x" aria-label="Dismiss">✕</button>`);
+    +`<button id="bShowFails">Show</button><button id="bRetryFails">Try again</button><button id="bDismissFails" class="fb-x" aria-label="Dismiss">✕</button>`);
 }
 let lastFails=null;
 async function checkAll(ids){
@@ -2970,17 +2970,19 @@ async function checkAll(ids){
   if(dirty)saveDB();
   render(); // the sort order was deliberately left alone during the run
   renderRun();renderFailbar();
-  let msg;
+  let msg, notifyMsg="";
   if(stop)msg="Stopped after "+nDone+" of "+list.length;
   else{
     const parts=[];
     if(ok)parts.push(ok+" refreshed");
     if(missing)parts.push(missing+" not found");
-    if(failed.length)parts.push(failed.length+" failed");
-    msg=parts.length?parts.join(", "):"Nothing changed";
+    // On the page the failures are the banner's to say (see renderFailbar), and each
+    // card's; a desktop notice reaches someone away from the page, so it says them.
+    msg=parts.length?parts.join(", "):failed.length?"":"Nothing changed";
+    if(failed.length)notifyMsg=parts.concat(failed.length+" failed").join(", ");
   }
-  toast(msg);
-  if(!stop)notify("Check all ranks finished",msg);
+  if(msg)toast(msg);
+  if(!stop)notify("Check all ranks finished",notifyMsg||msg);
 }
 
 // LP moved since the check before last — what "who is climbing right now" means.
@@ -3793,7 +3795,6 @@ function renderDash(){
   const topChamps=mergeChampions(pool);
   const neverN=countPool.filter(neverChecked).length;
   const attentionN=countPool.filter(needsAttention).length;
-  const failedN=countPool.filter(a=>isLive(a)&&isFailed(a)).length;
   let bk="";
   if(hasStorage){
     const remindDays=clampExportDays(cfg.exportRemindDays);
@@ -3820,8 +3821,6 @@ function renderDash(){
       <div class="v" style="color:var(--warn-txt)">${neverN}</div><div class="s-note">no rank pulled yet · click to see them</div></button>`,
     attentionN&&`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
       <div class="v" style="color:var(--danger)">${attentionN}</div><div class="s-note">flagged by you, or the profile no longer exists</div></button>`,
-    failedN&&`<button class="stat stat-b${ui.flag==="failed"?" on":""}" data-flag="failed" aria-pressed="${ui.flag==="failed"}"><div class="k">Last check failed</div>
-      <div class="v" style="color:var(--danger)">${failedN}</div><div class="s-note">auto-fetch failed · enter the rank by hand or retry</div></button>`,
     dupN&&`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`,
     next&&`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
@@ -5415,7 +5414,7 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}${a.status==="banned"?"":`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`}</span>
+      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${isLive(a)&&isFailed(a)?`<span class="c-failed" title="${esc(s.note)}">${icon("alert")}Last check failed</span>`:""}${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}${a.status==="banned"?"":`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`}</span>
       <!-- Three buttons, not five, and the ⋯ no longer unfolds a second toolbar
            into the card: it opens one shared floating menu (see cardMenuHTML).
            DPM moved in there with the rest — it is an outbound link you follow
@@ -7737,6 +7736,7 @@ $("bCheckStale").addEventListener("click",()=>
 $("bCancelCheck").addEventListener("click",()=>{if(run){run.stop=true;toast("Stopping after this account…")}});
 $("failbar").addEventListener("click",e=>{
   if(e.target.closest("#bDismissFails")){lastFails=null;renderFailbar();return}
+  if(e.target.closest("#bShowFails")){setChoreFlag("failed");return}
   if(e.target.closest("#bRetryFails")&&lastFails)checkAll(lastFails.map(f=>f.id));
 });
 $("dash").addEventListener("change",e=>{

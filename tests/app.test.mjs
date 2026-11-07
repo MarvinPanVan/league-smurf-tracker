@@ -7523,16 +7523,24 @@ test("check returns null when the account was deleted mid-flight", async () => {
   assert.equal(await win.check("gone"), null);
 });
 
-test("Failed dash tile filters only transport failures", () => {
+// One failed check was said four times (a stats tile, which also pushed the panel to
+// five columns, a banner, a toast and the run's counter) and not at all on the card
+test("a failed check shows on its card and in one banner, whose Show takes only transport failures", () => {
   const win = bootApp([
     { id: "miss", region: "EUW", gameName: "M", tagLine: "A", status: "active", tags: [],
       stats: { found: false, updatedAt: Date.now() }, history: [] },
     { id: "fail", region: "EUW", gameName: "F", tagLine: "B", status: "active", tags: [],
       stats: { found: true, tier: "GOLD", division: "I", lp: 1, note: "Auto-fetch failed (x)", updatedAt: Date.now() }, history: [] },
   ]);
-  const tile = win.document.querySelector('[data-flag="failed"]');
-  assert.ok(tile, "Last check failed tile is shown when failures exist");
-  tile.click();
+  const doc = win.document;
+  const on = doc.querySelector('.card[data-id="fail"] .c-failed');
+  assert.ok(on, "the card that failed says so");
+  assert.match(on.textContent, /Last check failed/);
+  assert.match(on.title, /Auto-fetch failed \(x\)/, "with what went wrong");
+  assert.equal(doc.querySelector('.card[data-id="miss"] .c-failed'), null, "not found is not a failed check");
+  assert.equal(doc.querySelector('#dash [data-flag="failed"]'), null, "no stats tile");
+  runScript(win, 'lastFails = [{ id: "fail", name: "F" }]; renderFailbar()');
+  doc.getElementById("bShowFails").click();
   assert.equal(win.filtered().map(a => String(a.id)).join(","), "fail");
 });
 
