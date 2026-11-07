@@ -3550,6 +3550,10 @@ test("the line spans the full chart, with no pathLength for a dash pattern to di
   assert.ok(x1 < 200 && x1 >= 194, "ends just inside the right edge: " + coords[coords.length - 1]);
   const dots = [...el.querySelectorAll(".lpc-pt")].map(p => parseFloat(p.style.left));
   assert.ok(dots[0] > 0 && dots[dots.length - 1] < 100, "the dots sit inside the frame: " + dots.join(", "));
+  // the band captions start past the first dot, which used to sit on their first letter
+  const inset = +html.match(/const X_IN=([\d.]+)/)[1] * 100;
+  const capLeft = html.match(/\.lpc-plot \.lpc-lab\{position:absolute;left:calc\(([\d.]+)% \+ (\d+)px\)/);
+  assert.ok(capLeft && +capLeft[1] === inset && +capLeft[2] >= 8, "caption clears the first dot");
   // and the fill still reaches both edges, so the inset leaves no bare strip
   const fill = el.querySelector("polygon").getAttribute("points").split(" ");
   assert.ok(fill[0].startsWith("0,") && fill[fill.length - 1].startsWith("200,"), fill.join(" "));

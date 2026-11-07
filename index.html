@@ -1525,7 +1525,9 @@
      corner, and ran straight through them: "GOLD" read as a line with letters
      on it. A halo in the plot's own dark lifts the letters off it. */
   .lpc-plot .lpc-lab,.lpc-plot .lpc-sub,.lpc-plot .lpc-peak{text-shadow:0 0 1px var(--bg),0 0 2px var(--bg),0 0 3px var(--bg),0 0 6px var(--bg)}
-  .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:calc(9px*var(--ts));font-weight:600;letter-spacing:.09em;
+  /* Clear of the first point, which sits 1.6% in (X_IN in rankChart) with a 5px
+     radius: at 6px flat the dot landed on the caption's first letter. */
+  .lpc-plot .lpc-lab{position:absolute;left:calc(1.6% + 9px);font-size:calc(9px*var(--ts));font-weight:600;letter-spacing:.09em;
     text-transform:uppercase;pointer-events:none;opacity:.82;line-height:1}
   /* the ceiling the line is climbing back towards; left lane, with the band
      captions, and dropped rather than stacked when one is already there */
