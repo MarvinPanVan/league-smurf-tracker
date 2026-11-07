@@ -8196,6 +8196,22 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// Measured on a 390px touch screen: selection boxes 13-15px, D/W/M 17px, the Riot ID line 16px
+test("on a touch screen the small controls reach WCAG's 24px, and nothing changes for a mouse", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const at = css.indexOf("@media (pointer:coarse){");
+  const coarse = css.slice(at, css.indexOf("\n  }", at));
+  const px = (sel, prop) => { const m = coarse.match(new RegExp(sel.replace(/[.#()[\]>*+]/g, "\\$&") + "[^{]*\\{[^}]*" + prop + ":(\\d+)px")); return m && +m[1]; };
+  assert.ok(px(".bulkchk,#tSelectAll", "width") >= 24, "selection boxes");
+  assert.ok(px(".rib-bar", "height") >= 24, "the header bar's segments");
+  assert.ok(px(".c-notes.blank>button,.c-notes.blank .nf-link", "min-height") >= 24, "Add a note");
+  assert.match(coarse, /\.lpc-range button\{padding:[6-9]px/, "the chart's range buttons");
+  assert.match(coarse, /\.rid\{padding-block:[4-9]px/, "the Riot ID's copy line");
+  // a mouse keeps the sizes it had
+  assert.match(css, /\n  \.bulkchk\{width:15px;height:15px/);
+  assert.match(css, /\n  \.rib-bar\{display:flex;gap:2px;height:16px\}/);
+});
+
 // The optional Label led the form; the required Riot name and tag were its second row
 test("the account form starts with what it needs, and every label names its field", () => {
   const win = bootApp();

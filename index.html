@@ -2412,6 +2412,16 @@
        smaller fields with rules of their own (the note editor, the compact
        selects) are held to it too. */
     :is(input:not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea){font-size:max(16px,calc(16px*var(--ts)))!important}
+    /* A thumb against controls sized for a mouse: the selection boxes were 13 and
+       15px, the chart's D/W/M 17px tall, the Riot ID's copy line 16px, the header
+       bar's segments 16px. Each is at least WCAG's 24px now — on touch screens
+       only; with a mouse nothing changes size. */
+    .bulkchk,#tSelectAll{width:24px;height:24px}
+    .lpc-range button{padding:7px 9px}
+    .rid{padding-block:5px;margin-block:-3px}
+    .rib-bar{height:24px}
+    .cmd-count .warn{padding:6px 10px}
+    .c-notes.blank>button,.c-notes.blank .nf-link{min-height:30px} /* matches the all:unset rule it has to beat */
   }
   @media (max-width:760px){
     .top{align-items:flex-start;gap:16px}
