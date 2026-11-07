@@ -7045,17 +7045,21 @@ function renderDash(){
     rotN&&`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
       <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`,
     week&&(()=>{
-      const note=(week.games?week.games+" game"+(week.games===1?"":"s")+" · ":"")
-        +(week.best?"best "+nameOf(week.best.a)+" +"+week.best.d:week.moved+" account"+(week.moved===1?"":"s")+" checked");
+      /* Two LP figures sat side by side here, +286 this week and +246 for the group,
+         and read as a contradiction: this one is a total across the accounts, the
+         group's is an average per account over a longer stretch. Each says which. */
+      const note="total of "+week.moved+" account"+(week.moved===1?"":"s")
+        +(week.games?" · "+week.games+" game"+(week.games===1?"":"s"):"")
+        +(week.best?" · best "+nameOf(week.best.a)+" +"+week.best.d:"");
       const inner=`<div class="k">This week</div><div class="v">${week.lp>0?"+":week.lp<0?"−":""}${Math.abs(week.lp)} <small>LP</small></div><div class="s-note">${note}</div>`;
       return week.best?`<button class="stat stat-b" id="weekStat" data-next="${idAttr(week.best.a.id)}" title="The last seven days across the counted accounts — click to see the best climber">${inner}</button>`
         :`<div class="stat" id="weekStat" title="The last seven days across the counted accounts">${inner}</div>`;
     })(),
     poolTrend&&`<div class="stat" id="ladderTrendStat" title="${esc(poolTrend.note)}">
-      <div class="k">Group climb</div>
+      <div class="k">Average climb</div>
       <div class="v">${esc(poolTrend.headline)} <small>LP</small></div>
       <div class="v spark-wrap">${poolTrend.svg}</div>
-      <div class="s-note">${esc(poolTrend.span)}</div></div>`,
+      <div class="s-note">per account · ${esc(poolTrend.span)}</div></div>`,
   ].filter(Boolean);
   const bkNote=bk&&accounts.length&&!previewMode&&!(setupVisible()&&!cfg.lastExport)?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:"";
   // nothing to show: no panel, and no Hide stats button for an empty one

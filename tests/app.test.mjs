@@ -1330,7 +1330,8 @@ test("This week: LP and games over the last seven days, the best climber one cli
   assert.equal(w.moved, 3, "an account not checked this week is not counted as flat");
   assert.equal(w.best.a.id, "climber");
   const tile = win.document.getElementById("weekStat");
-  assert.match(tile.textContent, /This week\s*\+120\s*LP\s*10 games · best Climber \+60/);
+  // a total, and it says so: beside the group's per-account average it read as a contradiction
+  assert.match(tile.textContent, /This week\s*\+120\s*LP\s*total of 3 accounts · 10 games · best Climber \+60/);
   tile.click();
   assert.equal(appGet(win, "flashId"), "climber", "the tile takes you to the best climber");
 });
@@ -7535,7 +7536,9 @@ test("dash shows Group climb with a working spark tip target", () => {
       history: hist },
   ]);
   const dash = win.document.getElementById("dash").textContent;
-  assert.match(dash, /Group climb/);
+  // an average per account, named as one (next to This week's total it read as a contradiction)
+  assert.match(dash, /Average climb/);
+  assert.match(win.document.getElementById("ladderTrendStat").querySelector(".s-note").textContent, /^per account · /);
   assert.doesNotMatch(dash, /Pool LP|Ladder trend|hover points/);
   const trend = win.poolLpTrend([{ id: "a", history: hist }]);
   assert.ok(trend && trend.svg && trend.headline);
