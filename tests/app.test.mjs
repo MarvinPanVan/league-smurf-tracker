@@ -10510,3 +10510,22 @@ test("a card's corner keeps the LP change and the one signal that matters most; 
   runScript(win, "accounts[0].recent = null; renderGrid()");
   assert.ok([...win.document.querySelectorAll(".card .c-deltas .delta")].some(c => /^Idle \d+ days$/.test(c.textContent.trim())));
 });
+
+// "The Average climb sparkline is a flat dotted line": 160×28 stretched over a wide
+// tile, with a dot on every day
+test("the Average climb line is drawn near the shape of its box, with one dot, on the latest day", () => {
+  const win = bootApp();
+  const D = 864e5, now = Date.now();
+  const hist = [0, 1, 2, 3, 4, 5, 6].map(i => ({ t: now - (7 - i) * D, tier: "GOLD", division: "II", lp: i * 12 }));
+  const el = win.document.createElement("div");
+  el.innerHTML = win.poolLpTrend([{ id: "a", history: hist }]).svg;
+  const svg = el.querySelector("svg");
+  const [, , vw, vh] = svg.getAttribute("viewBox").split(" ").map(Number);
+  const cssW = +html.match(/\n  \.pool-spark\{[^}]*max-width:(\d+)px/)[1], cssH = +html.match(/\n  \.pool-spark\{[^}]*height:(\d+)px/)[1];
+  assert.equal(cssH, vh, "drawn at its own height");
+  assert.ok((cssW / cssH) / (vw / vh) <= 1.4, "stretched sideways by no more than 1.4×");
+  assert.equal(el.querySelectorAll(".pool-dot").length, 1, "one dot");
+  const dot = el.querySelector(".pool-dot"), hits = [...el.querySelectorAll(".pool-hit")];
+  assert.equal(dot.getAttribute("cx"), hits.at(-1).getAttribute("cx"), "on the latest day");
+  assert.equal(hits.length, 7, "every day still answers on hover");
+});

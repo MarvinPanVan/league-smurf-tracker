@@ -3196,7 +3196,10 @@ function poolLpTrend(pool){
   if(days.length<2)return null;
   const pts=days.map(d=>d.avg);
   const min=Math.min(...pts), max=Math.max(...pts), span=Math.max(1,max-min);
-  const w=160,h=28,pad=4;
+  /* Drawn about the shape of its box: at 160×28 stretched over a wide tile, with a
+     dot on every day, it read as a flat dotted line under a climb of +246. Only the
+     latest day keeps a visible dot; every day still answers on hover. */
+  const w=120,h=34,pad=4;
   const coords=pts.map((v,i)=>{
     const x=pad+(i/(pts.length-1))*(w-pad*2);
     const y=h-pad-((v-min)/span)*(h-pad*2);
@@ -3206,13 +3209,13 @@ function poolLpTrend(pool){
   const delta=Math.round(pts[pts.length-1]-pts[0]);
   const fmtDay=t=>new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
   const from=fmtDay(days[0].t), to=fmtDay(days[days.length-1].t);
-  const dots=coords.map(c=>{
+  const dots=coords.map((c,i)=>{
     const ch=Math.round(c.v-pts[0]);
     const label=fmtDay(c.d.t)+"\n"+(ch>0?"+":ch<0?"−":"±")+Math.abs(ch)+" LP since "+fmtDay(days[0].t)+"\n"+c.d.n+" counted account"+(c.d.n===1?"":"s");
     return `<circle class="pool-hit" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="8" data-spark-tip="${esc(label)}"></circle>`
-      +`<circle class="pool-dot" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.2"></circle>`;
+      +(i===coords.length-1?`<circle class="pool-dot" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.6"></circle>`:"");
   }).join("");
-  const svg=`<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="100%" height="28" preserveAspectRatio="none" role="img" aria-label="Average climb of counted accounts from ${esc(from)} to ${esc(to)}"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/>${dots}</svg>`;
+  const svg=`<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Average climb of counted accounts from ${esc(from)} to ${esc(to)}"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/>${dots}</svg>`;
   const sign=delta>0?"↑ +":delta<0?"↓ ":"→ ";
   const headline=sign+Math.abs(delta);
   const note=from+" → "+to+" · the average climb of counted accounts; one added later counts from its first check";

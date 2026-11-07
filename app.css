@@ -404,7 +404,7 @@
   .stat .v.nw small{margin-left:1px}
   .stat .v.spark-wrap{font-size:calc(12px*var(--ts));line-height:1.2;overflow:visible;max-width:100%;width:100%;position:relative}
   /* capped: stretched 28px tall across a 400px cell, +246 LP drew as a flat line */
-  .pool-spark{display:block;width:100%;max-width:220px;height:28px;margin-top:4px;opacity:.85;overflow:visible;cursor:crosshair}
+  .pool-spark{display:block;width:100%;max-width:150px;height:34px;margin-top:4px;overflow:visible;cursor:crosshair}
   .pool-spark circle.pool-dot{fill:var(--teal);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
   .pool-spark .pool-hit{fill:transparent;stroke:none;cursor:pointer}
   .spark-tip{
