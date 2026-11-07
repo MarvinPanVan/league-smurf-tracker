@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.16.0";
+const APP_VERSION="2.17.0";
 const APP_CHANGELOG=[
+  {v:"2.17.0",items:[
+    "Details opens straight onto its contents, and each card's corner keeps the LP change and one signal",
+    "Charts leave out a label that would sit on the line, say \"One check so far\" instead of drawing one dot, and have a bigger D/W/M switch",
+    "Plainer words on cards: Last login, Idle 54 days, 1,762 LP to go, a real flag icon, and small text that stays readable over champion art",
+  ]},
   {v:"2.16.0",items:[
     "Login copies the username, then the password, one click each; the eye beside it shows the saved login",
     "A shorter Add account form: Riot ID, region and login first, the rest under More details, and a missing field marked where it is",
