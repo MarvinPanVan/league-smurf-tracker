@@ -34,7 +34,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="app.css?v=2.18.0">
+<link rel="stylesheet" href="app.css?v=2.19.0">
 </head>
 <body data-atmosphere="spotlight">
 <!-- A shared snapshot opens here instead of the app: see openSnapshot -->
@@ -428,23 +428,23 @@
 
       <div class="grp" data-tab="sync">
         <div class="grp-h tab-same">Device sync</div>
-        <div class="fw hint" style="margin-bottom:10px">
-          Pushes the <b>encrypted</b> vault blob to your worker (KV). Same sync token on phone and PC.
-          Last write wins. Needs a master password (Security) and your own worker with sync storage (Rank checks, Advanced).
-          There is no scrape cache, so don't hammer op.gg.
-        </div>
+        <!-- It was written for whoever built it: "Pushes the encrypted vault blob to
+             your worker (KV)", "Last write wins", "There is no scrape cache". The same
+             facts, for someone with a phone and a PC. -->
+        <p class="hint s-lead">Keeps this vault the same on your phone and your PC, through a worker of your own. Only an encrypted copy leaves this browser.</p>
         <div class="fld fw">
-          <label for="sSyncToken">Sync token (the same on every device; treat it like a password)</label>
+          <label for="sSyncToken">Sync key: the same on every device. Keep it private, like a password.</label>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <input type="text" id="sSyncToken" class="mask" placeholder="Generate or paste a long token" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="flex:1;min-width:170px">
+            <input type="text" id="sSyncToken" class="mask" placeholder="Generate one, or paste the key from your other device" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="flex:1;min-width:170px">
             <button type="button" id="sSyncGen">Generate</button>
           </div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-          <button type="button" id="sSyncPush">Push to cloud</button>
-          <button type="button" id="sSyncPull">Pull from cloud</button>
+          <button type="button" id="sSyncPush">Upload this vault</button>
+          <button type="button" id="sSyncPull">Download the synced copy</button>
         </div>
         <div id="sSyncStatus" class="hint" style="margin-top:8px"></div>
+        <p class="hint" style="margin:6px 0 0">The newest upload wins, so download on a device before you change things there. You are warned when the synced copy is newer than this one.</p>
       </div>
 
       <div class="grp" data-tab="backup">
@@ -617,6 +617,9 @@
           <option value="banned">Banned</option>
         </select>
       </div>
+      <!-- was "Exclude from stats" in the card's ⋯ menu: a setting of the account -->
+      <label class="fw chk f-x" for="fExStats"><input type="checkbox" id="fExStats" style="width:auto">
+        <span>Leave out of the combined stats (Season W/L, This week, Average climb)</span></label>
       <!-- Notes, with the things people kept typing into them by hand as fields
            of their own. Which fields, and any of your own, is one list for the
            whole vault: Fields… -->
@@ -665,7 +668,10 @@
     <button id="bCheckStale" class="b-teal hidden" title="Accounts last read over 3 days ago (not the never-checked or not-found ones)">Refresh stale</button>
     <button id="bCancelCheck" class="b-danger hidden">Stop</button>
     <button id="bAdd" class="b-fill">+ Add account</button>
-    <div class="cmd-r"><span id="count" class="cmd-count"></span>
+    <!-- What narrowed the grid, beside the count it explains. They had a row of
+         their own under the search, which appeared with the first filter and moved
+         everything under it down 45px; in this row they take no new space. -->
+    <div class="cmd-r"><span id="count" class="cmd-count"></span><span id="chips" class="chips"></span>
     <div id="density" class="seg" role="group" aria-label="Layout">
       <button data-density="cards" title="Cards" aria-label="Card view"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
       <button data-density="list" title="List" aria-label="List view"><svg class="ico" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
@@ -707,9 +713,6 @@
     <!-- phones only: a touch screen has no hover to reveal the checkboxes -->
     <button type="button" id="tSelectMode" class="t-select" aria-pressed="false">Select</button>
   </div>
-  <!-- under the search row, never above it: a row appearing over the box you are
-       typing in moved it while you typed -->
-  <div id="chips" class="chips"></div>
   </div>
   <div id="bulkbar" class="hidden" style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--teal) 38%,transparent);border-radius:var(--r-md);background:color-mix(in srgb,var(--teal) 7%,var(--panel));box-shadow:var(--sh-1)">
     <span id="bulkCount" style="font-size:calc(12px*var(--ts));color:var(--teal-txt);font-weight:600;letter-spacing:.02em"></span>
@@ -842,8 +845,10 @@
   </div>
 
   <div id="toast" role="status" aria-live="polite"></div>
+  <!-- what a copy button already shows on itself, said to a screen reader -->
+  <div id="srSay" class="sr-only" role="status" aria-live="polite"></div>
 </div>
 
-<script src="app.js?v=2.18.0"></script>
+<script src="app.js?v=2.19.0"></script>
 </body>
 </html>

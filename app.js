@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.18.0";
+const APP_VERSION="2.19.0";
 const APP_CHANGELOG=[
+  {v:"2.19.0",items:[
+    "Turning a filter on no longer moves the page: its chip sits beside the count it explains",
+    "Copying says so on the button you pressed, not in a message over the next card",
+    "Calmer charts, theme dots, a shorter card menu, Sync in plain words, and Level 23 in the list",
+  ]},
   {v:"2.18.0",items:[
     "Play next gives a reason to play: about to decay, a game or two from the next division, or not played in a week or more",
     "The stats end with \"Figures from all 3 ranked accounts\" instead of opening on a Counting control",
@@ -1600,25 +1605,24 @@ function genSyncToken(){
   return b64(b).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 }
 let syncBusy=false;
+/* What sync still needs, in the order it needs it, with a link to where that is set */
 function updateSyncStatus(){
   const el=$("sSyncStatus"); if(!el)return;
-  const parts=[];
-  if(!cfg.backendUrl)parts.push("Set a Backend URL first.");
-  else if(!cfg.syncToken)parts.push("Generate or paste a sync token.");
-  else if(!vaultPassword)parts.push("Set a master password first. Only ciphertext is synced.");
-  else parts.push("Ready to push/pull.");
-  if(cfg.lastSyncAt)parts.push("Last sync "+timeAgo(cfg.lastSyncAt)+".");
-  if(cfg.vaultRev)parts.push("Local rev "+new Date(cfg.vaultRev).toLocaleString()+".");
-  el.textContent=parts.join(" ");
+  const go=(tab,label)=>`<button type="button" class="link-btn" data-sync-go="${tab}">${label}</button>`;
+  const need=!cfg.backendUrl?`It needs your own worker first: ${go("checks","set one up")}.`
+    :!vaultPassword?`It needs a master password first, since only the encrypted copy is sent: ${go("security","set one")}.`
+    :!cfg.syncToken?"Generate a sync key, then paste the same key on your other devices."
+    :"Ready.";
+  setHTML(el,need+(cfg.lastSyncAt?" Last synced "+esc(timeAgo(cfg.lastSyncAt))+".":""));
 }
 async function pushVaultSync(){
   if(syncBusy){toast("Sync already in progress");return}
   const token=($("sSyncToken")&&$("sSyncToken").value.trim())||cfg.syncToken||"";
   if(token)cfg.syncToken=token;
   const url=vaultSyncUrl();
-  if(!url){toast("Set a Backend URL in Settings first");return}
-  if(!cfg.syncToken||cfg.syncToken.length<16){toast("Sync token must be at least 16 characters");return}
-  if(!vaultPassword){toast("Set a master password first. Sync only stores ciphertext");return}
+  if(!url){toast("Set up your own worker first: Settings, Rank checks, Advanced");return}
+  if(!cfg.syncToken||cfg.syncToken.length<16){toast("The sync key needs at least 16 characters");return}
+  if(!vaultPassword){toast("Set a master password first: only the encrypted copy is sent");return}
   if(vaultLocked()){toast("Unlock the vault first");return}
   syncBusy=true;
   try{
@@ -1634,8 +1638,8 @@ async function pushVaultSync(){
         let remote=null; try{remote=await peek.json()}catch(e){}
         const remoteAt=Number(remote&&remote.updatedAt)||0;
         if(remoteAt>updatedAt){
-          toast("Remote vault is newer. Pull first, or Push again after resolving","Pull…",()=>{
-            if(confirm("Replace this device's vault with the newer cloud copy?\nLocal changes since your last sync may be lost."))
+          toast("The synced copy is newer. Download it first, or upload again once you have sorted it out","Download…",()=>{
+            if(confirm("Replace this device's vault with the newer synced copy?\nChanges made here since your last sync may be lost."))
               pullVaultSync(true);
           });
           return;
@@ -1652,8 +1656,8 @@ async function pushVaultSync(){
     const text=await res.text();
     let data=null; try{data=JSON.parse(text)}catch(e){}
     if(res.status===409){
-      toast("Remote vault is newer. Pull first, or Push again after resolving","Pull…",()=>{
-        if(confirm("Replace this device's vault with the newer cloud copy?\nLocal changes since your last sync may be lost."))
+      toast("The synced copy is newer. Download it first, or upload again once you have sorted it out","Download…",()=>{
+        if(confirm("Replace this device's vault with the newer synced copy?\nChanges made here since your last sync may be lost."))
           pullVaultSync(true);
       });
       return;
@@ -1662,12 +1666,12 @@ async function pushVaultSync(){
       toast("Worker has no KV. Bind a namespace as VAULT and redeploy");
       return;
     }
-    if(!res.ok){toast("Push failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
+    if(!res.ok){toast("Upload failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
     currentEnvelope=envelope;
     markSynced(updatedAt);
     updateSyncStatus();
-    toast("Vault pushed to cloud");
-  }catch(e){toast("Push failed: "+(e.message||"network"))}
+    toast("Vault uploaded");
+  }catch(e){toast("Upload failed: "+(e.message||"network"))}
   finally{syncBusy=false;updateSyncStatus()}
 }
 async function pullVaultSync(force){
@@ -1675,21 +1679,21 @@ async function pullVaultSync(force){
   const token=($("sSyncToken")&&$("sSyncToken").value.trim())||cfg.syncToken||"";
   if(token)cfg.syncToken=token;
   const url=vaultSyncUrl();
-  if(!url){toast("Set a Backend URL in Settings first");return}
-  if(!cfg.syncToken||cfg.syncToken.length<16){toast("Sync token must be at least 16 characters");return}
-  if(!vaultPassword){toast("Set a master password first. It decrypts the cloud vault");return}
+  if(!url){toast("Set up your own worker first: Settings, Rank checks, Advanced");return}
+  if(!cfg.syncToken||cfg.syncToken.length<16){toast("The sync key needs at least 16 characters");return}
+  if(!vaultPassword){toast("Set a master password first: it unlocks the synced copy");return}
   if(vaultLocked()){toast("Unlock the vault first");return}
   syncBusy=true;
   try{
     const res=await fetch(url,{headers:{"Authorization":"Bearer "+cfg.syncToken}});
     const text=await res.text();
     let data=null; try{data=JSON.parse(text)}catch(e){}
-    if(res.status===404){toast("No cloud vault for this token yet. Push first");return}
+    if(res.status===404){toast("Nothing synced with this key yet. Upload from a device first");return}
     if(res.status===503&&data&&data.code==="no_kv"){
       toast("Worker has no KV. Bind a namespace as VAULT and redeploy");
       return;
     }
-    if(!res.ok){toast("Pull failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
+    if(!res.ok){toast("Download failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
     if(!data||!data.envelope||!data.envelope.__enc){toast("Cloud record is not an encrypted vault");return}
     const remoteAt=Number(data.updatedAt)||0;
     const localAt=Number(cfg.vaultRev)||0;
@@ -1703,21 +1707,21 @@ async function pullVaultSync(force){
     if(!force&&remoteAt>0&&remoteAt===localAt&&accounts.length){
       markSynced(remoteAt);
       updateSyncStatus();
-      toast("Already in sync with cloud");
+      toast("Already in sync");
       return;
     }
     if(!force&&accounts.length){
       if(localAt>remoteAt){
-        toast("Local vault is newer than cloud. Pull would overwrite it","Pull…",()=>{
-          if(confirm("Replace this device's vault with the older cloud copy?\nThis cannot be undone from here. Export first if unsure."))
+        toast("This vault is newer than the synced copy. Downloading would replace it","Download…",()=>{
+          if(confirm("Replace this device's vault with the older synced copy?\nThis cannot be undone from here. Export first if unsure."))
             pullVaultSync(true);
         });
         return;
       }
       // Remote newer, but this device also saved after the last successful sync.
       if(remoteAt>localAt&&localAt>lastSync){
-        toast("Cloud is newer, but this device changed after last sync","Pull…",()=>{
-          if(confirm("Replace this device's vault with the cloud copy?\nLocal changes since last sync will be lost."))
+        toast("The synced copy is newer, but this device changed since the last sync","Download…",()=>{
+          if(confirm("Replace this device's vault with the synced copy?\nChanges made here since the last sync will be lost."))
             pullVaultSync(true);
         });
         return;
@@ -1725,7 +1729,7 @@ async function pullVaultSync(force){
     }
     let next;
     try{next=await decryptData(vaultPassword,data.envelope)}
-    catch(e){toast("Wrong master password for this cloud vault (or corrupt data)");return}
+    catch(e){toast("Wrong master password for the synced copy (or it is damaged)");return}
     if(vaultLocked())return;
     if(!Array.isArray(next)){toast("Cloud vault did not contain an account list");return}
     accounts=next.map(sanitizeAccount).filter(Boolean);
@@ -1737,11 +1741,11 @@ async function pullVaultSync(force){
     // just performed.
     const ok=await saveDB({keepRev:true});
     if(vaultLocked())return;
-    if(!ok){toast("Pulled into memory but could not write to storage");render();updateSyncStatus();return}
+    if(!ok){toast("Downloaded, but could not save it in this browser");render();updateSyncStatus();return}
     render();
     updateSyncStatus();
-    toast("Vault pulled ("+accounts.length+" accounts)");
-  }catch(e){toast("Pull failed: "+(e.message||"network"))}
+    toast("Vault downloaded ("+accounts.length+" accounts)");
+  }catch(e){toast("Download failed: "+(e.message||"network"))}
   finally{syncBusy=false;updateSyncStatus()}
 }
 function celebrate(id,acc){
@@ -1781,7 +1785,11 @@ function celebrate(id,acc){
   document.body.appendChild(c);
   setTimeout(()=>c.remove(),1400);
 }
-async function copyText(v,label,sensitive){
+/* A copy made from a button says so on that button (flashCopied, or the card's
+   Login turning into "Username copied"), so it does not also put a toast at the
+   bottom of the screen, where it sat over the next card's buttons or a chart. A
+   screen reader still hears it, and a failed copy is still a toast. */
+async function copyText(v,label,sensitive,quiet){
   let ok=false;
   try{await navigator.clipboard.writeText(v);ok=true}
   catch(e){
@@ -1792,7 +1800,9 @@ async function copyText(v,label,sensitive){
       document.body.removeChild(ta);
     }catch(e2){}
   }
-  toast(ok?label+" copied"+(sensitive?". Clears from the clipboard in 30s":""):"Copy failed. Copy it by hand");
+  const said=ok?label+" copied"+(sensitive?". Clears from the clipboard in 30s":""):"Copy failed. Copy it by hand";
+  if(ok&&quiet){const sr=$("srSay");if(sr){sr.textContent="";requestAnimationFrame(()=>{sr.textContent=said})}}
+  else toast(said);
   if(!ok)return false;
   if(ok&&sensitive){
     lastCopiedSecret=v;
@@ -1820,6 +1830,11 @@ function flashCopied(btn){
 }
 let lastCopiedSecret=null;
 const loginSeq=new Set();   // cards whose username is copied and whose password is next
+const loginFlash=new Map(); // card id -> what its Login button just copied, for a moment
+function flashLogin(id,pw){
+  const token={pw};loginFlash.set(id,token);renderCard(id);
+  setTimeout(()=>{if(loginFlash.get(id)===token){loginFlash.delete(id);renderCard(id)}},1400);
+}
 /* A card's main button logs you in: it copies the username, then turns into
    "Copy password" and copies that (cleared from the clipboard after 30s), then
    starts over. It used to open a panel showing the login, whose own button then
@@ -1827,10 +1842,10 @@ const loginSeq=new Set();   // cards whose username is copied and whose password
    password, the email, the date of birth) is the eye beside it. With one of the
    two saved it copies that one; with neither it offers to add them. */
 function loginButtonsHTML(a,open){
-  const both=a.login&&a.password, next=both&&loginSeq.has(a.id);
+  const both=a.login&&a.password, next=both&&loginSeq.has(a.id), fl=loginFlash.get(a.id);
   const label=next||(!a.login&&a.password)?"Copy password":a.login?"Copy username":"Add login";
   const main=a.login||a.password
-    ?`<button data-act="copyseq" class="a-login" title="${both?"Copies the username, then the password":"Copies it to paste into the Riot client"}">${icon("key")} ${label}</button>`
+    ?`<button data-act="copyseq" class="a-login${fl?" copied":""}" title="${both?"Copies the username, then the password":"Copies it to paste into the Riot client"}">${fl?icon("check")+(fl.pw?" Copied, clears in 30s":" Username copied"):icon("key")+" "+label}</button>`
     :`<button data-act="addlogin" class="a-login" title="Save the username and password for this account">${icon("key")} ${label}</button>`;
   const eye=a.login||a.password||a.email||a.birthdate
     ?`<button data-act="login" class="c-lgn${open?" on":""}" aria-pressed="${open}" title="${open?"Hide":"Show"} the saved login" aria-label="${open?"Hide":"Show"} the saved login">${icon(open?"eyeOff":"eye")}</button>`:"";
@@ -3954,7 +3969,7 @@ function renderDash(){
   ${scopeShown?`<div class="dash-scope"><label for="dashMin">Figures from</label>
     <select id="dashMin">${floors.map(f=>{const n=floorN(f.v);
       return`<option value="${f.v}"${curFloor===f.v?" selected":""}>${f.v?esc(f.label)+" ("+n+")":"all "+n+" ranked account"+(n===1?"":"s")}</option>`}).join("")}</select>
-    ${handOutN||filterHint?`<span class="dash-ex">${[handOutN?handOutN+" left out from their cards":"",filterHint?esc(filterHint):""].filter(Boolean).join(" · ")}</span>`:""}
+    ${handOutN||filterHint?`<span class="dash-ex">${[handOutN?handOutN+" left out in their account settings":"",filterHint?esc(filterHint):""].filter(Boolean).join(" · ")}</span>`:""}
   </div>`:""}
   </div></div>
   ${bkNote}`);
@@ -4021,7 +4036,8 @@ function renderTagbar(){
   // reading as a grey rectangle.
   setHTML(el,`<button class="tag-handle${open?" open":""}${ui.tag?" lit":""}" data-k="tagtoggle" data-tagtoggle
       aria-expanded="${open}" title="${open?"Hide the tag list":"Show every tag in the vault"}">`
-    +icon("tag","tag-ico")+`<span>Tags</span><b>${all.length}</b>`+icon("chevron","tag-chev")+`</button>`
+    // with a tag picked it names it: "Tags 6" lit up said a tag was on, not which
+    +icon("tag","tag-ico")+(ui.tag?`<span>#${esc(ui.tag)}</span>`:`<span>Tags</span><b>${all.length}</b>`)+icon("chevron","tag-chev")+`</button>`
     +(open?`<div class="tag-list" data-k="taglist">${all.map(chip).join("")}</div>`:""));
 }
 // A number in a dashboard always raises "which ones?", so the stats panel sets
@@ -4031,14 +4047,16 @@ const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last c
 function renderChips(){
   syncFilterCount();
   const out=[];
-  if(ui.flag)out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
+  // "Needs refresh" has its own pressed button in the same row, the count's
+  if(ui.flag&&ui.flag!=="stale")out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
   if(ui.tier)out.push(["tier",ui.tier==="UNRANKED"?"Unranked":ui.tier.charAt(0)+ui.tier.slice(1).toLowerCase()]);
   if(ui.tag)out.push(["tag","Tag: "+ui.tag]);
   if(ui.favOnly)out.push(["favOnly","Favorites"]);
   // no chip for the search: the box already says what is in it
   setHTML($("chips"),!out.length?"":out.map(([k,label])=>
     `<button class="fchip" data-clear="${k}">${esc(label)}<span aria-hidden="true">✕</span></button>`).join("")
-    +(out.length>1?`<button class="fchip fchip-all" data-clear="all">Clear all</button>`:""));
+    // two have a ✕ each; Clear all earns its room from three
+    +(out.length>2?`<button class="fchip fchip-all" data-clear="all">Clear all</button>`:""));
 }
 
 // Everything the profile page carries that isn't the current rank: how the account
@@ -5147,6 +5165,8 @@ function rankPanelHTML(a,s,rev){
     </div></div>
     ${secHTML(a,"rkpeak","Season peak","",tint(pm),peakBody)}
     ${secHTML(a,"rkgoal","Goal","",tint(gm),goalBody)}
+    ${s&&isRanked(a)?`<div class="rk-season"><button type="button" class="b-quiet" data-act="seasonreset">${icon("reset")}<span>Start a new season for this account…</span></button>
+      <span class="hint">Moves today's rank into Past seasons.</span></div>`:""}
   </div>`;
 }
 /* Opened from the ⋯ menu, beside Account — which has always opened a window.
@@ -5233,7 +5253,8 @@ function rowHTML(a,i){
   else if(isRanked(a)){
     rank=tierLabel(s);
     if(s.lp!=null)lp=s.lp+" LP";
-  }else rank="Unranked";
+  // as the card says it: a levelling account is its level, not "Unranked"
+  }else rank=s.level?"Level "+s.level:"Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
   return `<div class="hx row${flashId===a.id?" flash":""}${open?" open":""}" data-id="${idAttr(a.id)}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
@@ -5253,7 +5274,7 @@ function rowHTML(a,i){
         // Nothing to plot yet, so the slot offers the one thing that would change
         // that. Sixty never-checked rows used to be sixty dead lines.
         ||(!isChecked(a)&&!isChecking?`<button class="rw-check" data-act="check" title="Check this account's rank now">${icon("refresh")} Check</button>`:"")}</span>
-      <span class="rw-rank" style="color:${col}"><b>${esc(rank)}</b>${lp?`<em>${esc(lp)}</em>`:""}</span>
+      <span class="rw-rank" style="color:${isRanked(a)?col:"var(--muted)"}"><b>${esc(rank)}</b>${lp?`<em>${esc(lp)}</em>`:""}</span>
       <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${Math.abs(dv)}</span>`:""}</span>
       <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wins}W ${losses}L</em>`
         :total>0?`<em>${wins!=null?wins+"W":losses+"L"}</em>`:""}</span>
@@ -5300,7 +5321,8 @@ function tileHTML(a){
   else if(isRanked(a)){
     rank=tierLabel(s);
     if(s.lp!=null)lp=s.lp+" LP";
-  }else rank="Unranked";
+  // as the card says it: a levelling account is its level, not "Unranked"
+  }else rank=s.level?"Level "+s.level:"Unranked";
   const st=STATUS[a.status]||STATUS.active;
   return `<div class="hx${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" · "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
@@ -5308,7 +5330,7 @@ function tileHTML(a){
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
     <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?flagMark():""}</span>
-    <span class="t-rk" style="color:${col}">${esc(rank)}</span>
+    <span class="t-rk" style="color:${isRanked(a)?col:"var(--muted)"}">${esc(rank)}</span>
     ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
   </div></div>`;
 }
@@ -5581,11 +5603,11 @@ function cardMenuHTML(a){
     +it("played","check","Played today",' title="Mark that you played on this account today"')
     +it("flag","flag",a.flagged?"Clear the flag":"Flag for attention")
     +it("compare","compare",compareIds.includes(a.id)?"Unselect compare":"Compare…")
+    /* Twelve actions under five headings. "Season reset…" is about the rank and
+       lives at the foot of the Rank window now; "Exclude from stats" is a setting
+       of the account and is in its form, under More details. */
     +grp("Vault")
     +it(a.archived?"unarchive":"archive","archive",a.archived?"Unarchive":"Archive")
-    +it("exstats","chart",a.excludeStats?"Count in stats":"Exclude from stats")
-    +it("seasonreset","reset","Season reset…")
-    +grp("Remove")
     +`<button data-act="del" class="b-danger" role="menuitem">${icon("trash")}<span>${armedDelete===a.id?"Sure? Click again":"Delete account"}</span></button>`
   +`</div>`;
 }
@@ -5792,7 +5814,7 @@ function renderGrid(){
        somewhere else on the page, with the demo as the only thing to press here.
        Now it says what the app is for in three steps, and both ways in are buttons
        of their own: start for real, or look around first. */
-    setHTML(grid,`<div class="hx" data-k="empty" style="grid-column:1/-1"><div class="hx-in empty welcome"><div class="d"><span class="empty-gem"></span></div>`
+    setHTML(grid,`<div class="hx" data-k="empty" style="grid-column:1/-1"><div class="hx-in empty welcome"><div class="d"><span class="brand-mark" aria-hidden="true"></span></div>`
       +`<h2 class="wl-t">No accounts yet</h2><p class="wl-s">Add your accounts to keep their ranks and logins in one place.</p>`
       +`<ol class="wl-steps"><li><span class="wl-n">1</span><b>Add an account</b><span>Its Riot ID and region. The login is optional.</span></li>`
       +`<li><span class="wl-n">2</span><b>Check its rank</b><span>Free and automatic, read from op.gg. No key needed.</span></li>`
@@ -6131,6 +6153,7 @@ function openForm(acc,focus){
   $("fCreated").value=acc?acc.createdOn||"":"";
   $("fBirth").value=acc?acc.birthdate||"":"";
   $("fStatus").value=acc?(acc.status||"active"):"active";
+  $("fExStats").checked=!!(acc&&acc.excludeStats);
   setPassShown(false);
   renderPassNote();
   renderPwMeter();
@@ -6148,7 +6171,7 @@ function openForm(acc,focus){
   // Folded unless you keep it open, the account already has some of it, or you came
   // for the notes. Opening the ones an account has hides nothing it holds.
   setFormMore(!!cfg.formMore||atNotes||!!(acc&&(acc.label||acc.email||acc.createdOn||acc.birthdate
-    ||(acc.tags||[]).length||(acc.status&&acc.status!=="active")||acc.notes||normInfo(acc.info))));
+    ||(acc.tags||[]).length||(acc.status&&acc.status!=="active")||acc.excludeStats||acc.notes||normInfo(acc.info))));
   $("fSave").textContent=acc?"Save changes":"Add account";
   $("formTitle").textContent=acc?"Edit account":"Add account";
   // Which one, in the header: over the page the card being edited is behind the
@@ -6259,11 +6282,12 @@ function submitForm(){
     // and survive a JSON round trip without a timezone deciding to shift them by a
     // day — which a Date object serialised to UTC absolutely will.
     createdOn:$("fCreated").value||"",birthdate:$("fBirth").value||"",
-    tags:parseTags($("fTags").value),notes:$("fNotes").value.trim(),info:readInfoFields(formInfoBase)};
+    tags:parseTags($("fTags").value),notes:$("fNotes").value.trim(),info:readInfoFields(formInfoBase),
+    excludeStats:$("fExStats").checked};
   if(editingId){
-    const a=accounts.find(x=>x.id===editingId);if(a){Object.assign(a,data);if(!a.info)delete a.info}
+    const a=accounts.find(x=>x.id===editingId);if(a){Object.assign(a,data);if(!a.info)delete a.info;if(!a.excludeStats)delete a.excludeStats}
   }else{
-    const a=Object.assign({id:uid(),fav:false,stats:null},data);if(!a.info)delete a.info;
+    const a=Object.assign({id:uid(),fav:false,stats:null},data);if(!a.info)delete a.info;if(!a.excludeStats)delete a.excludeStats;
     accounts.push(a);
     newId=a.id;
   }
@@ -6522,11 +6546,11 @@ function applyRankTheme(force){
 function renderThemes(){
   const el=$("sThemes");if(!el)return;
   const pa=$("sAccent").value.toLowerCase(), pb=$("sAccent2").value.toLowerCase(), rank=rankThemeOn();
-  const tile=(k,name,sw,on,sub)=>`<button type="button" role="radio" class="thm${on?" on":""}" data-theme="${k}" aria-checked="${on}">`
-    +`<span class="thm-sw" style="background:${sw}" aria-hidden="true"></span><span class="thm-n">${esc(name)}${sub?`<small>${esc(sub)}</small>`:""}</span></button>`;
-  const ladder=TIER_ORDER.map((t,i)=>`${TIER_COLORS[t]} ${Math.round(i/(TIER_ORDER.length-1)*100)}%`).join(",");
-  setHTML(el,THEMES.map(t=>tile(t.k,t.n,`linear-gradient(110deg,${t.a} 0 calc(50% - .6px),${t.b} calc(50% + .6px) 100%)`,!rank&&pa===t.a&&pb===t.b)).join("")
-    +tile("rank","My best rank",`linear-gradient(90deg,${ladder})`,rank,"follows your highest tier"));
+  const tile=(k,name,dots,on,sub)=>`<button type="button" role="radio" class="thm${on?" on":""}" data-theme="${k}" aria-checked="${on}">`
+    +`<span class="thm-dots" aria-hidden="true">${dots.map(c=>`<i style="background:${c}"></i>`).join("")}</span><span class="thm-n">${esc(name)}${sub?`<small>${esc(sub)}</small>`:""}</span></button>`;
+  const ladder=TIER_ORDER.map((t,i)=>`${TIER_COLORS[t]} ${Math.round(i/TIER_ORDER.length*360)}deg`).join(",");
+  setHTML(el,THEMES.map(t=>tile(t.k,t.n,[t.a,t.b],!rank&&pa===t.a&&pb===t.b)).join("")
+    +tile("rank","My best rank",[`conic-gradient(${ladder},${TIER_COLORS[TIER_ORDER[0]]} 360deg)`],rank,"follows your highest tier"));
 }
 function pickTheme(k){
   cancelAccentPreview();
@@ -7239,9 +7263,16 @@ let settingsSaveGen=0;
 $("sClose").addEventListener("click",closeSettings);
 if($("sSyncGen"))$("sSyncGen").addEventListener("click",()=>{
   const t=genSyncToken();
-  $("sSyncToken").value=t;cfg.syncToken=t;saveCfg();updateSyncStatus();toast("Sync token generated. Copy it to your other devices");
+  $("sSyncToken").value=t;cfg.syncToken=t;saveCfg();updateSyncStatus();toast("Sync key made. Paste the same key on your other devices");
 });
 if($("sSyncPush"))$("sSyncPush").addEventListener("click",()=>pushVaultSync());
+// the status line's links: to the worker under Rank checks, Advanced, or the master password
+$("sSyncStatus").addEventListener("click",e=>{
+  const b=e.target.closest("[data-sync-go]");if(!b)return;
+  const tab=b.dataset.syncGo;settingsTab(tab,true);
+  const f=tab==="checks"?(($("sChecksAdv").open=true),$("sBackend")):$("sVaultPass");
+  setTimeout(()=>{if(f){f.scrollIntoView&&f.scrollIntoView({block:"center"});f.focus()}},60);
+});
 if($("sSyncPull"))$("sSyncPull").addEventListener("click",()=>pullVaultSync(false));
 if($("sSyncToken"))$("sSyncToken").addEventListener("change",()=>{cfg.syncToken=$("sSyncToken").value.trim();saveCfg();updateSyncStatus()});
 $("sAtmosphere").addEventListener("click",e=>{
@@ -7420,7 +7451,7 @@ async function setVaultPassword(pass){
   const prev=vaultPassword;
   const changing=!!prev&&prev!==pass;
   if(changing&&cfg.syncToken&&cfg.backendUrl){
-    if(!confirm("You're changing the master password.\nThe cloud vault is still encrypted with the old one until you Push again from this device.\nOther devices must use the new password after that Push.\n\nContinue?"))return false;
+    if(!confirm("You're changing the master password.\nThe synced copy stays locked with the old one until you upload again from this device.\nOther devices need the new password after that upload.\n\nContinue?"))return false;
   }
   vaultPassword=pass;
   // If the envelope never reached the disk then the vault there is still the old
@@ -7439,7 +7470,7 @@ async function setVaultPassword(pass){
   const hadPk=changing&&!!pkRecord();if(hadPk)pkForget();
   updateVaultStatus();syncLockTimer();
   toast(changing
-    ?"Password changed. Push to cloud so other devices get the new ciphertext"+(hadPk?". Set Face ID / fingerprint up again in Security":"")
+    ?"Password changed. Upload the vault in Sync so other devices get it"+(hadPk?". Set Face ID / fingerprint up again in Security":"")
     :"Vault password set. Remember it: there's no way to recover it if lost");
   return true;
 }
@@ -8170,22 +8201,24 @@ async function onCardClick(e){
      clipboard after 30s, like any copied password) and starts over. */
   else if(act==="copyseq"){
     const both=acc.login&&acc.password;
-    if(acc.login&&(!both||!loginSeq.has(id))){copyText(acc.login,"Username");if(both)loginSeq.add(id)}
-    else if(acc.password){copyText(acc.password,"Password",true);loginSeq.delete(id)}
+    const pw=!(acc.login&&(!both||!loginSeq.has(id)));
+    if(!pw){if(both)loginSeq.add(id)}else loginSeq.delete(id);
+    copyText(pw?acc.password:acc.login,pw?"Password":"Username",pw,true).then(ok=>{if(ok)flashLogin(id,pw)});
     // copying the login is the closest thing to playing on it this app can see
     acc.lastLoginAt=Date.now();saveDB();
     renderCard(id);
   }
   else if(act==="addlogin")openForm(acc,"login");
-  else if(act==="copylogin")copyText(acc.login,"Username").then(ok=>{if(ok)flashCopied(btn)});
-  else if(act==="copypw")copyText(acc.password,"Password",true).then(ok=>{if(ok)flashCopied(btn)});
-  else if(act==="copymail")copyText(acc.email,"Email").then(ok=>{if(ok)flashCopied(btn)});
-  else if(act==="copybirth")copyText(acc.birthdate,"Date of birth").then(ok=>{if(ok)flashCopied(btn)});
+  else if(act==="copylogin")copyText(acc.login,"Username",false,true).then(ok=>{if(ok)flashCopied(btn)});
+  else if(act==="copypw")copyText(acc.password,"Password",true,true).then(ok=>{if(ok)flashCopied(btn)});
+  else if(act==="copymail")copyText(acc.email,"Email",false,true).then(ok=>{if(ok)flashCopied(btn)});
+  else if(act==="copybirth")copyText(acc.birthdate,"Date of birth",false,true).then(ok=>{if(ok)flashCopied(btn)});
   else if(act==="played"){markPlayed(id)}
   else if(act==="compare"){openMore.delete(id);openCompare(id)}
   else if(act==="seasonreset"){
     if(!confirm("Reset this account for a new season? Current rank moves into Past seasons."))return;
-    seasonReset(id)}
+    seasonReset(id);
+    if(e.target.closest("#rankModal"))renderRankBody(id)}
   else if(act==="flag"){
     acc.flagged=!acc.flagged;
     if(ui.flag==="attention")render();
@@ -8205,7 +8238,6 @@ async function onCardClick(e){
   else if(act==="edit")openForm(acc);
   else if(act==="art")openArtPicker(id);
   else if(act==="notefields"){commitNote();openForm(acc,"notes")}
-  else if(act==="exstats"){acc.excludeStats=!acc.excludeStats;renderCard(id);renderDash();saveThen(acc.excludeStats?"Left out of the combined stats":"Counted in the combined stats again")}
   else if(act==="archive"){acc.archived=true;render();saveThen("Archived. Turn on \"Archived\" in the toolbar to see it again")}
   else if(act==="unarchive"){acc.archived=false;render();saveThen("Restored to active accounts")}
   else if(act==="noteedit"){

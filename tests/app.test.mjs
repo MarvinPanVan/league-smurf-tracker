@@ -945,8 +945,8 @@ test("the accent buttons add no gradient rim or glow of their own; the wordmark 
   assert.match(h1, /color:var\(--gold-txt\)/);
   assert.doesNotMatch(rule(".brand-mark::before"), /gradient|animation|box-shadow/, "the gem is a solid stone, still");
   assert.doesNotMatch(html, /@keyframes gemGlow/);
-  // and the small things that still glittered: honor pips, the lit Tags handle, the skin chips, the empty-state gem
-  for (const sel of [".ni-pips i.on", ".tag-handle.lit", ".empty-gem"])
+  // and the small things that still glittered: honor pips, the lit Tags handle
+  for (const sel of [".ni-pips i.on", ".tag-handle.lit"])
     assert.doesNotMatch(rule(sel), /gradient|box-shadow:[^;]*0 0 \d+px/, sel + " is flat");
   // and the shared snapshot's title is plain white type, not haloed in the accent
   assert.doesNotMatch(html.match(/\n  \.sn-title\{([^}]*)\}/)[1], /text-shadow/, "the snapshot title has no glow");
@@ -1239,11 +1239,16 @@ test("a card's Login copies the username, then the password, without opening any
   await until(() => copied.length === 1, "the username to be copied");
   assert.equal(copied[0], "riotuser");
   assert.equal(card("L").querySelector(".login"), null, "nothing unfolded to get there");
-  assert.match(main("L").textContent, /^\s*Copy password$/, "the button moves on to the password");
+  // the button says it, in place of a toast over the rest of the page
+  await until(() => /Username copied/.test(main("L").textContent), "the button to say it copied");
+  assert.ok(main("L").classList.contains("copied"));
+  assert.doesNotMatch(win.document.getElementById("toast").textContent, /copied/i, "no toast");
+  await until(() => /^\s*Copy password$/.test(main("L").textContent), "the button to move on to the password", 3000);
   main("L").click();
   await until(() => copied.length === 2, "the password to be copied");
   assert.equal(copied[1], "hunter22!");
-  assert.match(main("L").textContent, /^\s*Copy username$/, "and starts over");
+  await until(() => /Copied, clears in 30s/.test(main("L").textContent), "the button to say when it clears");
+  await until(() => /^\s*Copy username$/.test(main("L").textContent), "and start over", 3000);
   await until(() => appGet(win, "lastCopiedSecret") === "hunter22!", "the password to be the secret that gets cleared later");
   // the eye beside it shows the saved login, and a fresh look starts at the username again
   const eye = card("L").querySelector('.acts [data-act="login"]');
@@ -4390,7 +4395,7 @@ test("the stats say which accounts they are from, as a footnote whose choices gi
   sel().value = "";
   sel().dispatchEvent(new win.Event("change", { bubbles: true }));
   runScript(win, "accounts.find(a => a.stats && a.stats.tier === 'GOLD').excludeStats = true; renderDash()");
-  assert.match(scope().querySelector(".dash-ex").textContent, /^1 left out from their cards$/);
+  assert.match(scope().querySelector(".dash-ex").textContent, /^1 left out in their account settings$/);
   assert.equal(sel().selectedOptions[0].textContent, "all 2 ranked accounts");
 });
 
@@ -4742,7 +4747,7 @@ test("a narrowed grid always says what narrowed it", async () => {
   await until(() => win.document.querySelectorAll(".card").length === 1, "the search to narrow the grid");
   // the box says what is in it; a chip repeating it appeared above the box mid-typing
   assert.deepEqual(chips(), [], "no chip repeats the search");
-  assert.equal(win.document.querySelector(".tools").nextElementSibling.id, "chips", "and chips sit under the search row, never over it");
+  assert.ok(win.document.getElementById("chips").parentElement.classList.contains("cmd-r"), "and chips sit beside the count, in no row of their own");
 
   win.document.getElementById("tFav").click();
   assert.deepEqual(chips(), ["Favorites"]);
@@ -5035,19 +5040,24 @@ test("themes: one click sets both colours and the atmosphere, kept only on Save"
   assert.deepEqual(on(), []);
 });
 
-test("swatches draw cleanly: no border for a gradient to repeat under, and a smoothed split", () => {
+test("swatches draw cleanly: no border for a gradient to repeat under, and a theme is two dots", () => {
   const win = bootApp();
   const css = [...win.document.querySelectorAll("style")].map(s => s.textContent).join("\n");
   // A background repeats under its own border, so a gradient swatch with a border
   // showed a sliver of its other end along each edge. The edge is an inset shadow.
-  for (const sel of [".thm-sw", ".atm-mini"]) {
-    const rule = css.match(new RegExp("\\" + sel + "\\{([^}]*)\\}"))[1];
+  for (const sel of [".thm-dots i", ".atm-mini"]) {
+    const rule = css.match(new RegExp(sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
     assert.match(rule, /border:0/, sel + " has no border");
     assert.match(rule, /box-shadow:inset 0 0 0 1px/, sel + " draws its edge as an inset shadow");
   }
+  // The pair was a bar split in two across each tile, the blocky look the header's
+  // rank bar was dropped for: two dots beside the name now, one per colour
   win.document.getElementById("bSettings").click();
-  const sw = win.document.querySelector('#sThemes [data-theme="noxus"] .thm-sw').getAttribute("style");
-  assert.match(sw, /calc\(50% - \.6px\).*calc\(50% \+ \.6px\)/, "the diagonal blends over a pixel instead of stepping");
+  const dots = [...win.document.querySelectorAll('#sThemes [data-theme="noxus"] .thm-dots i')];
+  assert.equal(dots.length, 2);
+  assert.ok(dots.every(d => /^background:\s*#[0-9a-f]{6}/i.test(d.getAttribute("style"))), "each a colour of its own");
+  assert.equal(win.document.querySelectorAll("#sThemes .thm-sw").length, 0, "no split bars");
+  assert.match(win.document.querySelector('#sThemes [data-theme="rank"] .thm-dots i').getAttribute("style"), /conic-gradient/, "the ladder theme is one dot of the tier colours");
 });
 
 test("themes: My best rank follows the highest tier, and moves when you climb", () => {
@@ -7745,7 +7755,7 @@ test("pushVaultSync sends content vaultRev, not a fresh Date.now stamp", async (
   assert.equal(puts, 1);
   assert.equal(body.updatedAt, 1234567890000, "must not stamp Date.now() over the content rev");
   assert.ok(body.envelope && body.envelope.__enc);
-  assert.match(win.document.getElementById("toast").textContent, /pushed/i);
+  assert.match(win.document.getElementById("toast").textContent, /uploaded/i);
 });
 
 test("pushVaultSync aborts when GET sees a newer remote vault", async () => {
@@ -7821,7 +7831,7 @@ test("a pull adopts the cloud revision instead of stamping a newer local one", a
   };
 
   await win.pullVaultSync(false);
-  await until(() => /pulled/i.test(win.document.getElementById("toast").textContent), "the pull to land");
+  await until(() => /downloaded/i.test(win.document.getElementById("toast").textContent), "the pull to land");
   assert.match(win.document.querySelector(".card").textContent, /FromCloud/);
   runScript(win, "window.__rev = cfg.vaultRev; window.__sync = cfg.lastSyncAt;");
   assert.equal(win.__rev, REMOTE, "the local revision is the cloud's, not a fresh Date.now()");
@@ -8118,10 +8128,10 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
   const win = bootApp(seededAccount());
   const m = cardMenu(win);
   assert.deepEqual([...m.querySelectorAll(".cm-g")].map(g => g.textContent.trim()),
-    ["Edit", "Look up", "Mark", "Vault", "Remove"],
+    ["Edit", "Look up", "Mark", "Vault"],
     "named groups — a hairline never says what either side of it is");
   const items = [...m.querySelectorAll("button,.cm-link")];
-  assert.equal(items.length, 12, "every action still reachable");
+  assert.equal(items.length, 10, "ten, now that Season reset and the stats setting live where they belong");
   for (const b of items) assert.ok(b.querySelector("svg.ico"), `"${b.textContent.trim()}" carries a mark`);
   // The account name used to sit at the top as the one row that was not an item,
   // which is exactly the row that got clipped once the list had to scroll.
@@ -8240,6 +8250,7 @@ test("folding the tag list away never hides a live tag filter", () => {
   handle().click();                                       // fold it away again
   assert.equal(bar().querySelectorAll("[data-tag]").length, 0, "no chips out here any more");
   assert.ok(handle().classList.contains("lit"), "but the handle says a tag is filtering");
+  assert.match(handle().textContent, /^#jungle$/, "and which one");
 
   const chip = [...win.document.querySelectorAll("#chips [data-clear]")]
     .find(c => /jungle/.test(c.textContent));
@@ -10060,12 +10071,12 @@ test("a pull from a device whose clock runs ahead does not make this one look ed
   const toast = () => win.document.getElementById("toast").textContent;
 
   await win.pullVaultSync(false);
-  await until(() => /pulled/i.test(toast()), "the first pull to land");
+  await until(() => /downloaded/i.test(toast()), "the first pull to land");
   record = { updatedAt: AHEAD + 5000, envelope: await vault("CloudTwo") };   // the other device pushes again
   await win.pullVaultSync(false);
   await until(() => /CloudTwo/.test(win.document.querySelector(".card").textContent)
-    || /changed after last sync/i.test(toast()), "the second pull to answer");
-  assert.doesNotMatch(toast(), /changed after last sync/i, "nothing was edited here, so there is nothing to lose");
+    || /changed since the last sync/i.test(toast()), "the second pull to answer");
+  assert.doesNotMatch(toast(), /changed since the last sync/i, "nothing was edited here, so there is nothing to lose");
   assert.match(win.document.querySelector(".card").textContent, /CloudTwo/);
 
   // and a real edit made here after that is still caught before a pull drops it
@@ -10073,7 +10084,7 @@ test("a pull from a device whose clock runs ahead does not make this one look ed
   await until(() => appGet(win, "cfg.vaultRev") > AHEAD + 5000, "the star to save");
   record = { updatedAt: AHEAD + 9000, envelope: await vault("CloudThree") };
   await win.pullVaultSync(false);
-  assert.match(toast(), /changed after last sync/i, "a local change still asks first");
+  assert.match(toast(), /changed since the last sync/i, "a local change still asks first");
   assert.match(win.document.querySelector(".card").textContent, /CloudTwo/, "and nothing was replaced");
 });
 
@@ -10265,7 +10276,8 @@ test("Rank checks says the free path first, with the worker and API key folded u
   assert.equal(adv.open, true);
   assert.match($("sChecksLead").textContent, /your own worker.*op\.gg when it can't answer/);
   // and the other tabs point to where the worker is now
-  assert.match(win.document.querySelector('#settings .grp[data-tab="sync"]').textContent, /Rank checks, Advanced/);
+  assert.equal(win.document.querySelector('#sSyncStatus [data-sync-go="checks"]'), null, "Sync no longer asks for a worker");
+  assert.ok(win.document.querySelector('#sSyncStatus [data-sync-go="security"]'), "it moves on to the master password");
   assert.match(win.document.querySelector('#settings .grp[data-tab="alerts"]').textContent, /Rank checks, Advanced/);
 });
 
@@ -10528,4 +10540,158 @@ test("the Average climb line is drawn near the shape of its box, with one dot, o
   const dot = el.querySelector(".pool-dot"), hits = [...el.querySelectorAll(".pool-hit")];
   assert.equal(dot.getAttribute("cx"), hits.at(-1).getAttribute("cx"), "on the latest day");
   assert.equal(hits.length, 7, "every day still answers on hover");
+});
+
+// Clicking "40 not found → Show" or a rank emblem added a row of filter chips under
+// the search, which moved everything below it down about 45px
+test("a filter's chip sits beside the count it explains, so turning one on moves nothing", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.doesNotMatch(css, /\.chips:not\(:empty\)\{padding/, "no padding that grows a row when the first chip arrives");
+  assert.match(css, /\n  \.chips:empty\{display:none\}/);
+  const win = bootApp(ladderSeed());
+  const doc = win.document, chips = () => [...doc.querySelectorAll("#chips .fchip")].map(c => c.textContent.replace("✕", "").trim());
+  const cmdR = doc.querySelector(".cmd-r");
+  assert.equal(doc.getElementById("chips").parentElement, cmdR, "in the command row's count area");
+  assert.equal(doc.getElementById("chips").previousElementSibling.id, "count", "right after the count");
+  assert.ok(!doc.querySelector(".tools ~ .chips, .console > .chips"), "not a row of the console");
+  doc.querySelector('#ribbon [data-tier="GOLD"]').click();
+  assert.deepEqual(chips(), ["Gold"]);
+  assert.match(doc.getElementById("count").textContent, /1 of \d+ shown/, "beside the count it explains");
+  doc.getElementById("tFav").click();
+  assert.deepEqual(chips(), ["Gold", "Favorites"], "two say themselves, with no Clear all yet");
+  // "need a refresh" is pressed in the same row already, so it gets no chip of its own
+  runScript(win, "ui.tier=''; ui.favOnly=false; ui.flag='stale'; render()");
+  assert.deepEqual(chips(), []);
+});
+
+// "Username copied" was a toast at the bottom centre of the screen, over the next
+// card's buttons on a desktop and over a chart on a phone
+test("a copy made from a button says so on the button, and to a screen reader, not in a toast", async () => {
+  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [],
+    login: "riotuser", password: "hunter22!", email: "a@b.c", stats: null }]);
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async () => {} } });
+  const doc = win.document, card = () => doc.querySelector('.card[data-id="L"]');
+  card().querySelector('.c-lgn[data-act="login"]').click();
+  for (const act of ["copylogin", "copypw", "copymail"]) {
+    card().querySelector(`[data-act="${act}"]`).click();
+    await until(() => card().querySelector(`[data-act="${act}"]`).classList.contains("copied"), act + " to flash");
+    assert.doesNotMatch(doc.getElementById("toast").textContent, /copied/i, act + ": no toast");
+  }
+  await until(() => /Email copied/.test(doc.getElementById("srSay").textContent), "a screen reader to hear it");
+  assert.equal(doc.getElementById("srSay").getAttribute("aria-live"), "polite");
+  // the card's Login turns green when it copies, hovered or not, since the pointer is on it
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const hov = css.indexOf("\n  .a-login:hover{"), cop = css.indexOf("\n  .a-login.copied,.a-login.copied:hover{");
+  assert.ok(cop > hov && hov > 0, "after the hover rule, so it wins over it");
+  // a copy with nothing on screen to say it (the Riot ID line) keeps its toast
+  card().querySelector('[data-act="copyid"]').click();
+  await until(() => /Riot ID copied/.test(doc.getElementById("toast").textContent), "the toast for the Riot ID");
+});
+
+// The list said "Unranked" for a levelling account, in the unranked blue that reads as
+// a link, beside a card that says "Level 23" in grey
+test("the list and the wall say Level 23 in grey for a levelling account, as the card does", () => {
+  const win = bootApp([{ id: "lv", gameName: "Fresh", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "UNRANKED", division: null, lp: null, level: 23, updatedAt: Date.now() } },
+    { id: "un", gameName: "Plain", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "UNRANKED", division: null, lp: null, updatedAt: Date.now() } }]);
+  const doc = win.document;
+  assert.match(doc.querySelector('.card[data-id="lv"]').textContent, /Level\s*23/, "the card");
+  doc.querySelector('[data-density="list"]').click();
+  const rk = id => doc.querySelector(`.rw[data-id="${id}"] .rw-rank`);
+  assert.equal(rk("lv").textContent, "Level 23");
+  assert.equal(rk("lv").style.color, "var(--muted)", "grey, not the unranked blue");
+  assert.equal(rk("un").textContent, "Unranked", "with no level known it is still Unranked");
+  assert.equal(rk("un").style.color, "var(--muted)");
+  doc.querySelector('[data-density="wall"]').click();
+  const t = doc.querySelector('.tile[data-id="lv"] .t-rk');
+  assert.equal(t.textContent, "Level 23");
+  assert.equal(t.style.color, "var(--muted)");
+});
+
+// "Updated 2 h ago" was plain text, and "Last login just now" beside it had a frame
+// like a button's
+test("the card's two times are set alike: plain text, no frame", () => {
+  const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
+  const src = rule(".src");
+  assert.doesNotMatch(src, /border:|background|padding/, "no frame, fill or padding: " + src);
+  assert.match(src, /font-size:calc\(12px\*var\(--ts\)\);color:var\(--faint\)/);
+});
+
+// "P III" sat just under the newest point on most climbing cards
+test("a chart's division numerals show while it is being read, not at rest", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /\n  \.lpc-plot \.lpc-sub\{opacity:0;transition:opacity \.13s ease\}/, "hidden at rest");
+  assert.match(css, /\n  \.lpc-plot:hover \.lpc-sub,\.lpc-plot:focus-within \.lpc-sub\{opacity:\.5\}/, "shown on hover or focus, as before");
+  // still drawn, for the moment they are wanted
+  const win = bootApp();
+  assert.ok(chartDom(win, hist(["GOLD", "I", 0], ["PLATINUM", "III", 74], ["PLATINUM", "II", 61])).querySelector(".lpc-sub"));
+});
+
+// The Sync tab was written for whoever built it: "Pushes the encrypted vault blob to
+// your worker (KV)", "Last write wins", "There is no scrape cache", "Set a Backend URL first"
+test("Sync says what it does in plain words, and what it still needs with a link to it", async () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document, $ = id => doc.getElementById(id);
+  $("bSettings").click();
+  doc.querySelector('[data-stab="sync"]').click();
+  const tab = doc.querySelector('#settings .grp[data-tab="sync"]').textContent;
+  for (const jargon of [/blob/i, /\bKV\b/, /Last write wins/i, /scrape cache/i, /Backend URL/, /ciphertext/i, /\btoken\b/i])
+    assert.doesNotMatch(tab, jargon, "no " + jargon);
+  assert.match(tab, /Keeps this vault the same on your phone and your PC/);
+  assert.equal($("sSyncPush").textContent, "Upload this vault");
+  assert.equal($("sSyncPull").textContent, "Download the synced copy");
+  // no worker yet: it says so, and the link goes to where one is set up
+  const link = $("sSyncStatus").querySelector('[data-sync-go="checks"]');
+  assert.ok(link, "a link to set up the worker");
+  link.click();
+  assert.equal($("settings").dataset.tab, "checks");
+  assert.equal($("sChecksAdv").open, true, "with Advanced open on it");
+  await until(() => doc.activeElement === $("sBackend"), "the Backend URL field focused");
+  // with a worker but no master password, it asks for that next
+  runScript(win, "cfg.backendUrl='https://w.example.workers.dev'; updateSyncStatus()");
+  assert.ok($("sSyncStatus").querySelector('[data-sync-go="security"]'), "then the master password");
+  assert.match($("sSyncStatus").textContent, /only the encrypted copy is sent/);
+});
+
+// The card's ⋯ menu had twelve actions under five headings
+test("the card menu keeps what you reach for; Season reset is in the Rank window, the stats setting in the form", async () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document, id = doc.querySelector(".card").dataset.id;
+  const acts = [...cardMenu(win).querySelectorAll("button[data-act]")].map(b => b.dataset.act);
+  assert.ok(!acts.includes("seasonreset") && !acts.includes("exstats"), acts.join(","));
+  win.closeAllPanels();
+  // Season reset, at the foot of the Rank window, for an account with a rank to move
+  const rank = rankWindow(win, id);
+  const reset = rank.querySelector('.rk-season [data-act="seasonreset"]');
+  assert.ok(reset, "in the Rank window");
+  reset.click();   // confirm() is stubbed to yes
+  assert.equal(appGet(win, `accounts.find(a => a.id === ${JSON.stringify(id)}).stats.tier`), "UNRANKED", "the rank moved into Past seasons");
+  assert.equal(doc.querySelector("#rankModal .rk-season"), null, "and the window shows the account as it is now");
+  win.closeAllPanels();
+  // the stats setting, in the account form under More details
+  cardMenu(win, id).querySelector('[data-act="edit"]').click();
+  const box = doc.getElementById("fExStats");
+  assert.ok(box.closest(".f-x"), "under More details");
+  assert.equal(box.checked, false);
+  box.checked = true;
+  doc.getElementById("fSave").click();
+  assert.equal(appGet(win, `accounts.find(a => a.id === ${JSON.stringify(id)}).excludeStats`), true);
+  cardMenu(win, id).querySelector('[data-act="edit"]').click();
+  assert.ok(doc.getElementById("fGrid").classList.contains("more"), "a form whose account is left out opens on it");
+  assert.equal(doc.getElementById("fExStats").checked, true);
+  doc.getElementById("fExStats").checked = false;
+  doc.getElementById("fSave").click();
+  assert.equal(appGet(win, `"excludeStats" in accounts.find(a => a.id === ${JSON.stringify(id)})`), false, "unticked leaves no field behind");
+});
+
+// The empty page's grey diamond read as a picture that had not loaded, and "place."
+// sat alone on the line under the heading
+test("an empty vault opens on the app's own gem, over a sentence that breaks evenly", () => {
+  const win = bootApp();
+  const gem = win.document.querySelector("#grid .empty .d .brand-mark");
+  assert.ok(gem, "the header's gem, not a placeholder shape");
+  assert.equal(win.document.querySelector(".empty-gem"), null);
+  assert.match(html, /\n  \.empty \.brand-mark\{width:56px;height:56px/);
+  assert.match(html.match(/\n  \.wl-s\{([^}]*)\}/)[1], /text-wrap:balance/);
 });

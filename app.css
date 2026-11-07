@@ -560,19 +560,23 @@
   .s-h{font-size:calc(13px*var(--ts));font-weight:600;color:var(--text);margin:0 0 8px;line-height:1.4}
   .fld>.s-h{margin:0}
   .s-gap{margin-top:22px}
-  /* themes: two colours side by side is the whole idea, so that is the tile */
+  /* themes: two colours are the whole idea, so a tile is the pair as two dots beside
+     the name. It was a bar split in two across the top of each tile, the same blocky
+     look the rank bar in the header was dropped for. */
   .thm-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-  .thm{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:6px 6px 7px;min-width:0;
-    border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--panel2);box-shadow:none;
+  .thm{--thm-bg:var(--panel2);display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;padding:8px 10px;min-width:0;
+    border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--thm-bg);box-shadow:none;
     color:var(--muted);font-size:calc(12px*var(--ts));font-weight:600;text-align:left}
-  .thm:hover{background:var(--panel3);border-color:var(--line2);color:var(--text)}
-  .thm.on{border-color:color-mix(in srgb,var(--gold) 55%,var(--line2));color:var(--gold-txt);
-    background:color-mix(in srgb,var(--gold) 10%,var(--panel2));box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 28%,transparent)}
+  .thm:hover{--thm-bg:var(--panel3);border-color:var(--line2);color:var(--text)}
+  .thm.on{--thm-bg:color-mix(in srgb,var(--gold) 10%,var(--panel2));border-color:color-mix(in srgb,var(--gold) 55%,var(--line2));color:var(--gold-txt);
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 28%,transparent)}
   .thm:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-  /* No border: a background repeats under its own border, so each end showed a
-     sliver of the other colour. The edge is an inset shadow drawn over it instead. */
-  .thm-sw{display:block;height:24px;border-radius:var(--r-xs);border:0;box-shadow:inset 0 0 0 1px #ffffff1f;pointer-events:none}
-  .thm-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
+  .thm-dots{display:inline-flex;flex:0 0 auto;pointer-events:none}
+  /* No border: a background repeats under its own border. The edge is an inset
+     shadow, and the second dot is ringed in the tile's own colour where it overlaps. */
+  .thm-dots i{width:16px;height:16px;border-radius:50%;border:0;box-shadow:inset 0 0 0 1px #ffffff26}
+  .thm-dots i+i{margin-left:-5px;box-shadow:inset 0 0 0 1px #ffffff26,0 0 0 2px var(--thm-bg)}
+  .thm-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
   .thm-n small{display:block;font-size:calc(12px*var(--ts));font-weight:500;color:var(--faint);white-space:normal;line-height:1.3}
   .atm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   @media(max-width:520px){.atm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -586,7 +590,7 @@
     background:color-mix(in srgb,var(--gold) 10%,var(--panel2));color:var(--gold-txt);
     box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 28%,transparent)}
   .atm-tile:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-  /* the edge is an inset shadow, not a border, for the same reason as .thm-sw:
+  /* the edge is an inset shadow, not a border, for the same reason as .thm-dots i:
      the glow at the top repeated under a border and showed along the bottom */
   .atm-mini{display:block;height:46px;border-radius:var(--r-xs);border:0;box-shadow:inset 0 0 0 1px #ffffff12;
     background:var(--bg);overflow:hidden;position:relative;pointer-events:none;flex-shrink:0}
@@ -649,8 +653,8 @@
   .fb-x{padding:5px 9px;background:none;border-color:transparent;box-shadow:none;color:var(--faint)}
   /* what the stats panel just filtered on — invisible filters make a short grid
      look like a bug */
-  .chips{display:flex;gap:7px;flex-wrap:wrap;padding:0 12px}
-  .chips:not(:empty){padding:0 12px 12px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .chips:empty{display:none}
   .fchip{font-size:calc(12px*var(--ts));font-weight:600;padding:4px 8px 4px 11px;gap:7px;border-radius:var(--r-xs);
     color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 45%,transparent);
     background:color-mix(in srgb,var(--gold) 12%,transparent)}
@@ -1388,6 +1392,8 @@
   .fm-retry{margin-left:8px;padding:2px 8px;font-size:calc(12px*var(--ts))}
   /* Settings → Rank checks: the free path said first, the rest under one fold with
      no box of its own, so the guides inside it are the only boxes */
+  .rk-season{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .rk-season button{display:inline-flex;align-items:center;gap:7px;margin-left:-10px}
   .s-lead{margin:0 0 18px;font-size:calc(13px*var(--ts));color:var(--muted)}
   .adv-fold>summary{display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;cursor:pointer;list-style:none;
     font-size:calc(13px*var(--ts));font-weight:600;color:var(--text)}
@@ -1578,6 +1584,14 @@
      names so the two never collide */
   .lpc-plot .lpc-sub{position:absolute;right:6px;font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.06em;
     color:#fff;opacity:.5;pointer-events:none;line-height:1;font-variant-numeric:tabular-nums}
+  /* The division numerals (P III, G I) and Master's LP marks are the chart's scale.
+     Standing at the line's end all the time, "P III" sat just under the newest point
+     on most climbing cards. They show while you read the chart (hover, or a point
+     focused), like the D/W/M switch; the band's colour says the tier meanwhile, and
+     a point's tip names its rank. */
+  .lpc-plot .lpc-sub{opacity:0;transition:opacity .13s ease}
+  .lpc-plot:hover .lpc-sub,.lpc-plot:focus-within .lpc-sub{opacity:.5}
+  @media (prefers-reduced-motion:reduce){.lpc-plot .lpc-sub{transition:none}}
   /* Each point owns the slice of the chart nearest to it, and the slices tile the
      chart exactly. The first version centred a fixed-width column on every point,
      which meant the outermost ones hung ~56 px past the edge of the chart — far
@@ -1672,6 +1686,7 @@
   .t-nm .flagmark .ico,.rw-nm .flagmark .ico{width:11px;height:11px}
   .lbtns{display:flex;gap:5px;flex-shrink:0}
   .lbtns button{font-size:calc(12px*var(--ts));padding:4px 9px}
+  .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
   .lbtns button.copied,button.copied{color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,transparent);gap:4px}
   button.copied .ico{width:11px;height:11px;stroke-width:2.6}
   .login .lseq{width:100%;font-size:calc(12px*var(--ts));font-weight:600;padding:8px 10px;color:var(--teal-txt);
@@ -1693,8 +1708,9 @@
   /* asOf is sometimes a source ("backend", a proxy name) and sometimes a date
      phrase op.gg printed ("updated today") — so no uppercasing, which would
      shout at a sentence fragment */
-  .src{font-size:calc(12px*var(--ts));font-weight:500;letter-spacing:.01em;color:var(--faint);
-    padding:2px 8px;border-radius:var(--r-xs);background:#ffffff0d;border:1px solid #ffffff1c;white-space:nowrap}
+  /* "Last login" is a time, like "Updated" beside it: plain text, not a framed pill
+     that looked like a button */
+  .src{font-size:calc(12px*var(--ts));color:var(--faint);white-space:nowrap}
   /* 11.5px type in 6px of padding is a 26px target, and there were five of them
      in a row. Mobile already got 40px; the desktop was left with whatever the
      text happened to measure. */
@@ -1791,6 +1807,9 @@
   /* The main action, and the one filled button on a card (see .b-fill) */
   .a-login{background-color:var(--teal);border-color:var(--teal);color:var(--teal-ink);font-weight:650}
   .a-login:hover{background-color:color-mix(in srgb,var(--teal) 86%,#fff);border-color:color-mix(in srgb,var(--teal) 86%,#fff);color:var(--teal-ink)}
+  /* just copied: the same filled plate in the green that means done, hovered or not
+     (the pointer is still on it the moment it changes) */
+  .a-login.copied,.a-login.copied:hover{color:var(--teal-ink);background-color:var(--good);border-color:var(--good)}
 
   /* One eyebrow. The small uppercase label over a figure is the most repeated
      element on the page — ACCOUNTS, PEAK, GOAL, CURRENT, RANK SPREAD — and it was
@@ -1854,12 +1873,15 @@
   .hidden{display:none!important}
   .empty{padding:64px 24px;text-align:center;color:var(--muted);font-size:calc(14px*var(--ts));line-height:1.7}
   .empty .d{height:84px;margin-bottom:20px;display:flex;align-items:center;justify-content:center}
-  .empty-gem{width:52px;height:52px;display:inline-block;border-radius:var(--r-xs);transform:rotate(45deg);
-    border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);
-    background:color-mix(in srgb,var(--gold) 12%,var(--panel2))}
+  /* The app's own gem, larger. A plain grey diamond here read as a placeholder
+     picture that had not loaded. */
+  .empty .brand-mark{width:56px;height:56px;margin:0}
+  .empty .brand-mark::before{width:22px;height:22px}
   .welcome{padding:56px 24px 52px}
   .wl-t{margin:0 0 8px;font-size:calc(20px*var(--ts));font-weight:600;letter-spacing:-.015em;color:var(--text);line-height:1.3}
-  .wl-s{margin:0 auto;max-width:46ch;font-size:calc(14px*var(--ts));color:var(--muted);line-height:1.6}
+  /* balanced, so the sentence breaks into two even lines rather than leaving
+     "place." alone on the second */
+  .wl-s{margin:0 auto;max-width:46ch;font-size:calc(14px*var(--ts));color:var(--muted);line-height:1.6;text-wrap:balance}
   .wl-steps{list-style:none;margin:28px auto 0;padding:0;max-width:760px;display:grid;
     grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;text-align:left}
   .wl-steps li{display:grid;grid-template-columns:auto 1fr;grid-template-rows:24px auto;column-gap:12px;row-gap:2px;align-items:center;
