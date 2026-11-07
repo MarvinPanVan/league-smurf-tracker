@@ -4448,7 +4448,15 @@ $("apTurnOn").addEventListener("click",()=>{cfg.champArt=null;saveCfg();renderGr
    only what the share window lists: never a login, password, email or note, and
    no Riot ID unless you tick the box. Opening one never reads or writes the
    opener's own vault or settings (see openSnapshot). */
-const SNAP_HOME="https://marvinpanvan.github.io/league-smurf-tracker/";
+/* Where the app lives. Until 2.14 that was marvinpanvan.github.io/league-smurf-tracker/,
+   but every GitHub Pages site under that account shares the origin
+   marvinpanvan.github.io, and with it one localStorage: any other project published
+   there could read the vault. smurf-tracker.pages.dev is an origin of its own. The
+   old address still serves the app, to hand vaults over (see the move, near boot). */
+const APP_HOME="https://smurf-tracker.pages.dev/", APP_ORIGIN="https://smurf-tracker.pages.dev";
+const OLD_ORIGIN="https://marvinpanvan.github.io";
+const onOldHome=()=>location.origin===OLD_ORIGIN;
+const SNAP_HOME=APP_HOME;
 const SNAP_MAX_HASH=16000, SNAP_MAX_JSON=200000, SNAP_MAX_ACC=60, SNAP_HIST=16;
 let snapMode=false;
 function b64url(bytes){return b64(bytes).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
@@ -4569,7 +4577,7 @@ function normSnap(o){
 }
 // Where a link should point: the page itself when it is hosted somewhere, the
 // published app when it is a file on this computer nobody else can open.
-function snapBase(){return/^https?:$/.test(location.protocol)&&!/^(localhost|127\.|\[::1\])/.test(location.hostname)?location.origin+location.pathname:SNAP_HOME}
+function snapBase(){return/^https?:$/.test(location.protocol)&&!/^(localhost|127\.|\[::1\])/.test(location.hostname)&&!onOldHome()?location.origin+location.pathname:SNAP_HOME}
 const snapDay=ts=>{const d=new Date(ts);return d.getDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]+" "+d.getFullYear()};
 // today as YYYY-MM-DD where you are: toISOString() is the date in London, so a backup
 // made just after midnight anywhere east of it was named for the day before

@@ -51,9 +51,9 @@ function runScript(window, code) {
 // `tweak` runs against the window just before the app's script does, which is the
 // only place to stand in front of something the app calls during boot — setInterval,
 // for one, where the assertion is about the call never happening.
-function bootApp(seed, tweak) {
+function bootApp(seed, tweak, url = "https://example.com/index.html") {
   const dom = new JSDOM(htmlNoScript, {
-    url: "https://example.com/index.html",
+    url,
     pretendToBeVisual: true,
     runScripts: "dangerously",
   });
@@ -1101,7 +1101,10 @@ test("a shared link unfurls into a card: title, description and an image that ex
   assert.equal(meta("name", "twitter:card"), "summary_large_image");
   const img = meta("property", "og:image");
   assert.match(img, /^https:\/\//, "absolute — link scrapers do not resolve relative URLs");
-  const local = path.join(__dirname, "..", img.replace(/^https:\/\/[^/]+\/[^/]+\//, ""));
+  // relative to where the page says it lives (og:url), which is the repo root
+  const base = new URL(meta("property", "og:url")).pathname, at = new URL(img).pathname;
+  assert.ok(at.startsWith(base), "the image is on the page's own site");
+  const local = path.join(__dirname, "..", at.slice(base.length));
   assert.ok(fs.existsSync(local), "and the image is in the repo at that path: " + local);
 });
 
@@ -8954,6 +8957,27 @@ test("the new address sends the page's own security policy, and forbids framing"
   assert.equal(hdr["referrer-policy"], "no-referrer");
   assert.equal(hdr["cross-origin-opener-policy"], undefined, "it would cut the old address's window.opener, which the vault move uses");
   for (const l of lines) assert.ok(l.length <= 2000, "Cloudflare's limit on a line");
+});
+
+// The app moved from marvinpanvan.github.io, an origin every GitHub Pages site of that
+// account shares, to an origin of its own
+const OLD_HOME = "https://marvinpanvan.github.io/league-smurf-tracker/", NEW_HOME = "https://smurf-tracker.pages.dev/";
+test("links, previews and snapshot links name the new address", () => {
+  assert.equal(pageHtml.match(/<meta property="og:url" content="([^"]+)">/)[1], NEW_HOME);
+  assert.ok(pageHtml.match(/<meta property="og:image" content="([^"]+)">/)[1].startsWith(NEW_HOME));
+  for (const f of ["README.md", "SECURITY.md", ".github/scripts/release-notes.mjs"]) {
+    const txt = fs.readFileSync(path.join(ROOT, f), "utf8");
+    assert.ok(txt.includes(NEW_HOME), f + " links the new address");
+    assert.ok(!txt.includes("](" + OLD_HOME + ")") && !txt.includes("(" + OLD_HOME + ")**"), f + " no longer sends anyone to the old one");
+  }
+  const seed = [{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() } }];
+  const old = bootApp(seed, null, OLD_HOME + "index.html");
+  runScript(old, "window.__b = snapBase()");
+  assert.equal(old.__b, NEW_HOME, "a snapshot shared from the old address opens at the new one");
+  const other = bootApp(seed, null, "https://my-own-copy.example/tracker/index.html");
+  runScript(other, "window.__b = snapBase()");
+  assert.equal(other.__b, "https://my-own-copy.example/tracker/index.html", "a copy hosted anywhere else still links to itself");
 });
 
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row

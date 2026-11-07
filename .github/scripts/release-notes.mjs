@@ -10,6 +10,6 @@ const body = src.slice(start, src.indexOf("]}", start));
 const items = [...body.matchAll(/"((?:[^"\\]|\\.)*)"/g)].slice(1).map(m => JSON.parse(`"${m[1]}"`));
 if (!items.length) throw new Error(`the ${version} entry has no items`);
 const notes = items.map(i => `- ${i}`).join("\n")
-  + "\n\n**[Open the app](https://marvinpanvan.github.io/league-smurf-tracker/)**: an open tab or installed copy picks this up on its next reload.\n";
+  + "\n\n**[Open the app](https://smurf-tracker.pages.dev/)**: an open tab or installed copy picks this up on its next reload.\n";
 fs.writeFileSync(process.argv[2] || "notes.md", notes);
 console.log(version);
