@@ -7053,11 +7053,14 @@ function renderRibbon(){
      size instead, big enough to read and click. The exact numbers are in the
      caption either way. */
   const isTail=s=>!!(s.flag||s.status);
+  // Five segments each printed "1" in a five-account vault: a number that only ever
+  // says "one" says nothing, and the caption under the bar counts them anyway.
+  const allOne=segs.every(s=>s.n===1);
   setHTML(el,`<div class="rib-bar" role="group" aria-label="Accounts by tier">${segs.map(s=>{
       const on=segOn(s);
       return `<button class="rib-seg${on?" on":""}${isTail(s)?" tail":""}" ${segAttr(s)} style="--c:${s.c}${isTail(s)?"":";flex:"+s.n}"
         aria-pressed="${on}" title="${esc(s.label)} — ${s.n} account${s.n===1?"":"s"} (click to show only these)"
-        aria-label="${esc(s.label)}, ${s.n}"><i>${s.n}</i></button>`}).join("")}</div>
+        aria-label="${esc(s.label)}, ${s.n}">${allOne?"":`<i>${s.n}</i>`}</button>`}).join("")}</div>
     <div class="rib-cap">${dotList([`<b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}`,
       unN&&`<b>${unN}</b> unranked`,missN&&`<b>${missN}</b> not found`,neverN&&`<b>${neverN}</b> never checked`,bannedN&&`<b>${bannedN}</b> banned`])}`
     // with the name: the stats panel's Best account tile said who, and it is gone

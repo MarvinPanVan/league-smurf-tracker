@@ -5627,7 +5627,7 @@ test("the Unranked count and the filter behind it agree", () => {
   const win = bootApp(ladderSeed());
   const gem = win.document.querySelector('#ribbon .rib-seg[data-tier="UNRANKED"]');
   assert.ok(gem, "the vault has an unranked account, so the header has a segment for it");
-  assert.equal(gem.textContent, "1", "the never-checked account is not one of these");
+  assert.match(gem.getAttribute("aria-label"), /, 1$/, "the never-checked account is not one of these");
 
   gem.click();
   assert.equal(win.document.querySelectorAll(".card").length, 1, "and clicking it shows that one");
@@ -6741,7 +6741,7 @@ test("Not found on the ribbon filters missing profiles, not every flagged accoun
   const win = bootApp(seed);
   const miss = win.document.querySelector('.rib-seg[data-flag="missing"]');
   assert.ok(miss, "Not found is its own band");
-  assert.equal(miss.querySelector("i").textContent, "1");
+  assert.match(miss.getAttribute("aria-label"), /, 1$/);
   miss.click();
   assert.equal(win.document.querySelectorAll(".card").length, 1);
   assert.equal(win.document.querySelector(".card").dataset.id, "m1");
@@ -8233,7 +8233,7 @@ test("the header bar leaves a banned account out of the tiers and counts it on i
   // still add up to the total the caption prints.
   const banned = win.document.querySelector('#ribbon .rib-seg[data-status="banned"]');
   assert.ok(banned, "banned accounts get their own segment");
-  assert.equal(banned.textContent, "1");
+  assert.match(banned.getAttribute("aria-label"), /, 1$/); // (a bar of all-ones prints no numbers)
   assert.match(win.document.querySelector(".rib-cap").textContent, /1<\/b> banned|1 banned/);
 
   // and clicking it shows exactly what it counted, through the status filter the
@@ -8745,6 +8745,17 @@ test("every main button wears one colour, the secondary (action) one", () => {
   for (const id of ["bCheckAll", "bAdd", "sSave", "fSave", "baSave", "lpSet", "rankSave", "shCopy", "bExitPreview", "lockBtn", "bHelpClose"])
     assert.ok(win.document.getElementById(id).classList.contains("b-teal"), id);
   assert.match(win.document.getElementById("settings").textContent, /Login and every main button, focus rings/, "Settings says so");
+});
+
+// Five segments each printing "1" in a five-account vault said nothing
+test("the rank bar prints its counts only when a tier holds more than one", () => {
+  const acc = (id, tier) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier, division: "II", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() } });
+  const ones = bootApp([acc("a", "GOLD"), acc("b", "SILVER"), acc("c", "BRONZE")]);
+  assert.equal(ones.document.querySelectorAll(".rib-seg i").length, 0, "all ones: no numbers");
+  assert.match(ones.document.querySelector(".rib-seg").getAttribute("aria-label"), /, 1$/, "still read out");
+  const some = bootApp([acc("a", "GOLD"), acc("b", "GOLD"), acc("c", "SILVER")]);
+  assert.deepEqual([...some.document.querySelectorAll(".rib-seg i")].map(i => i.textContent), ["2", "1"], "otherwise every count");
 });
 
 // On a phone the filters and the stats were the whole first screen
