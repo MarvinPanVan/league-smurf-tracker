@@ -273,7 +273,7 @@
     box-shadow:inset 0 0 0 1px var(--gold),0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold) 45%,var(--line))}
   .brand-mark::before{content:"";width:18px;height:18px;border-radius:1px;background:var(--gold)}
   .brand-sub{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;
-    font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+    font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--faint)}
   .brand-sub b{font-weight:600;letter-spacing:.14em;color:var(--gold-txt);padding:3px 9px;border-radius:var(--r-xs);
     background:color-mix(in srgb,var(--gold) 11%,transparent);
     border:1px solid color-mix(in srgb,var(--gold) 24%,transparent)}
@@ -370,7 +370,7 @@
     border-color:color-mix(in srgb,var(--gold) 30%,transparent);box-shadow:none}
   .setup{margin:-2px 0 16px}
   .setup-in{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 14px}
-  .setup-k{font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt)}
+  .setup-k{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--gold-txt)}
   .setup-k em{font-style:normal;color:var(--faint);letter-spacing:.04em;margin-left:6px}
   .setup-steps{display:flex;gap:8px;flex-wrap:wrap;margin:0;padding:0;list-style:none;flex:1}
   .setup-steps li{display:flex;align-items:center;gap:6px;font-size:calc(13px*var(--ts))}
@@ -379,7 +379,7 @@
   .setup-steps li.done span{text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--faint) 60%,transparent)}
   .setup-steps button{padding:6px 11px;font-size:calc(13px*var(--ts));font-weight:600}
   .setup-steps button b{display:inline-grid;place-items:center;width:18px;height:18px;flex-shrink:0;margin-right:2px;border-radius:50%;
-    font-size:calc(11px*var(--ts));color:var(--bg);background:var(--gold-mid)}
+    font-size:calc(12px*var(--ts));color:var(--bg);background:var(--gold-mid)}
   .setup-x{padding:4px 8px;font-size:calc(12px*var(--ts));color:var(--faint);background:none;border-color:transparent;box-shadow:none}
   .setup-x:hover{color:var(--text);background:none;border-color:transparent}
   @media (max-width:560px){
@@ -400,7 +400,7 @@
   .dash[style*="--cols"]{grid-template-columns:repeat(var(--cols),minmax(0,1fr))}
   .stat+.stat::before{content:"";position:absolute;left:0;top:15px;bottom:15px;width:1px;background:var(--line)}
   .stat.rs::before{display:none}
-  .stat .k{font-size:calc(11px*var(--ts));font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:7px}
+  .stat .k{font-size:calc(12px*var(--ts));font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted);margin-bottom:7px}
   .stat .v{font-size:calc(20px*var(--ts));font-weight:600;color:var(--text);line-height:1.25;letter-spacing:-.015em;font-variant-numeric:tabular-nums}
   /* nowrap, or a long enough figure breaks between the number and its unit and
      leaves "WR" alone on the next line. It wraps as one piece instead. */
@@ -427,7 +427,7 @@
   .dash-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px 0}
   .dash-filter{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
   .dash-filter select{font-size:calc(13px*var(--ts));height:var(--ctl-h);padding:0 30px 0 12px}
-  .dash-ex{font-size:calc(11px*var(--ts));color:var(--faint)}
+  .dash-ex{font-size:calc(12px*var(--ts));color:var(--faint)}
   /* Was a bare name, a percentage and a hanging "30G" all at different sizes with
      nothing holding them together — at eight across a row it read as debris. One
      pill per champion, with the games as a W-L pair rather than a count needing a
@@ -446,10 +446,10 @@
   .stat-b:hover{background:#ffffff08;border:0}
   .stat-b.on{background:color-mix(in srgb,var(--gold) 11%,transparent);border:0;
     box-shadow:inset 2px 0 0 var(--gold)}
-  .s-note{font-size:calc(11px*var(--ts));color:var(--faint);margin-top:4px;line-height:1.4}
+  .s-note{font-size:calc(12px*var(--ts));color:var(--faint);margin-top:4px;line-height:1.4}
   .gem.cmb b{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .gem.cmb b.wr-good{color:var(--good)}
-  .gem.cmb i.g{font-style:normal;font-size:calc(11px*var(--ts));font-weight:600;color:var(--muted);
+  .gem.cmb i.g{font-style:normal;font-size:calc(12px*var(--ts));font-weight:600;color:var(--muted);
     font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:var(--r-xs);background:#ffffff12}
   .gem.cmb i.g em{font-style:normal;opacity:.5;padding:0 1px}
   .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px;position:relative}
@@ -462,7 +462,7 @@
     background:linear-gradient(90deg,transparent,var(--line) 18%,var(--line2) 50%,var(--line) 82%,transparent)}
   .hx-in>.dist::after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;pointer-events:none;
     transform:translateX(-50%) rotate(45deg);background:var(--panel);border:1px solid var(--line2)}
-  .dist .k{font-size:calc(11px*var(--ts));font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-right:2px}
+  .dist .k{font-size:calc(12px*var(--ts));font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted);margin-right:2px}
   .hx-rule{position:relative;height:1px;width:100%;flex-shrink:0;
     background:linear-gradient(90deg,transparent,var(--line) 18%,var(--line2) 50%,var(--line) 82%,transparent)}
   .hx-rule::after{content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;
@@ -571,7 +571,7 @@
      sliver of the other colour. The edge is an inset shadow drawn over it instead. */
   .thm-sw{display:block;height:24px;border-radius:var(--r-xs);border:0;box-shadow:inset 0 0 0 1px #ffffff1f;pointer-events:none}
   .thm-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
-  .thm-n small{display:block;font-size:calc(10.5px*var(--ts));font-weight:500;color:var(--faint);white-space:normal;line-height:1.3}
+  .thm-n small{display:block;font-size:calc(12px*var(--ts));font-weight:500;color:var(--faint);white-space:normal;line-height:1.3}
   .atm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   @media(max-width:520px){.atm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .atm-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;
@@ -618,7 +618,7 @@
      ease, so the old one snapped on and off. Keep the fade, but open quickly:
      a long delay felt like lag. */
   .atm-tip{max-height:0;opacity:0;overflow:hidden;margin-top:-5px;padding:0 2px;
-    color:var(--faint);font-size:calc(11px*var(--ts));font-weight:450;line-height:1.4;
+    color:var(--faint);font-size:calc(12px*var(--ts));font-weight:450;line-height:1.4;
     pointer-events:none;
     transition:max-height .22s cubic-bezier(.22,1,.36,1),opacity .18s ease,margin-top .18s ease;
     transition-delay:.06s}
@@ -635,7 +635,7 @@
   .run-fill{position:absolute;left:0;top:0;bottom:0;width:0;
     background:linear-gradient(90deg,color-mix(in srgb,var(--gold) 34%,transparent),color-mix(in srgb,var(--gold) 16%,transparent));
     transition:width .3s cubic-bezier(.22,1,.36,1)}
-  .run-txt{position:relative;padding:0 13px;font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.02em;color:var(--gold-txt);
+  .run-txt{position:relative;padding:0 13px;font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:.02em;color:var(--gold-txt);
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* failures used to be a toast telling you to go and find them among sixty cards */
   .failbar{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:9px 13px;
@@ -652,7 +652,7 @@
   .fchip{font-size:calc(12px*var(--ts));font-weight:600;padding:4px 8px 4px 11px;gap:7px;border-radius:var(--r-xs);
     color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 45%,transparent);
     background:color-mix(in srgb,var(--gold) 12%,transparent)}
-  .fchip span{opacity:.65;font-size:calc(10px*var(--ts))}
+  .fchip span{opacity:.65;font-size:calc(12px*var(--ts))}
   .fchip:hover{color:var(--gold-txt);background:color-mix(in srgb,var(--gold) 22%,transparent);
     border-color:color-mix(in srgb,var(--gold) 70%,transparent)}
   .fchip-all{color:var(--faint);background:none;border-color:var(--edge);box-shadow:none;padding:4px 11px}
@@ -705,7 +705,7 @@
     background:color-mix(in srgb,var(--gold) 9%,var(--panel2))}
   /* how many tags the vault has — a fact, not a filter, so it is not gold until one is */
   .tag-handle b{font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums;
-    font-size:calc(10px*var(--ts));line-height:1.5;padding:0 6px;border-radius:var(--r-xs);
+    font-size:calc(12px*var(--ts));line-height:1.5;padding:0 6px;border-radius:var(--r-xs);
     color:var(--muted);background:#ffffff12;transition:color .16s ease,background .16s ease}
   .tag-handle:hover b{color:var(--text);background:#ffffff1f}
   .tag-ico{color:color-mix(in srgb,var(--gold) 42%,var(--muted));transition:color .16s ease}
@@ -770,7 +770,7 @@
     filter:drop-shadow(0 1px 2px #000000cc)}
   .t-crest .crest{width:100%;height:100%}
   .t-lv{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);
-    font-style:normal;font-size:calc(10px*var(--ts));font-weight:700;line-height:calc(14px*var(--ts));padding:0 5px;
+    font-style:normal;font-size:calc(12px*var(--ts));font-weight:700;line-height:calc(14px*var(--ts));padding:0 5px;
     min-width:20px;text-align:center;border-radius:var(--r-xs);font-variant-numeric:tabular-nums;
     color:var(--text);background:var(--panel);box-shadow:0 0 0 1px var(--line2)}
   .t-nm{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:-.01em;color:var(--text);max-width:100%;
@@ -778,7 +778,7 @@
   .t-nm .rw-star .ico{width:10px;height:10px}
   .t-rk{font-size:calc(12px*var(--ts));font-weight:700;max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .t-lp{font-size:calc(10px*var(--ts));font-weight:600;color:var(--faint);font-variant-numeric:tabular-nums}
+  .t-lp{font-size:calc(12px*var(--ts));font-weight:600;color:var(--faint);font-variant-numeric:tabular-nums}
   .grid.wall>.hx:hover{transform:translateY(-2px)}
   @media (max-width:520px){.grid.wall{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px}}
 
@@ -830,7 +830,7 @@
     grid-template-columns:var(--rw-cols);
     transition:background .14s ease}
   .rw-head{display:grid;grid-template-columns:var(--rw-cols);gap:var(--rw-gap);align-items:end;padding:2px 15px 8px;
-    font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+    font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
   .rw-head .h-chk{width:15px}
   .rw-head .h-r{text-align:right}.rw-head .h-c{text-align:center}
   /* copy the login straight from the row, the way a password manager's list does */
@@ -857,7 +857,7 @@
   /* same idea as the card: the level belongs to the picture, not to a column of
      performance numbers */
   .rw-lvb{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
-    font-style:normal;font-size:calc(10px*var(--ts));font-weight:700;line-height:calc(13px*var(--ts));padding:0 4px;
+    font-style:normal;font-size:calc(11px*var(--ts));font-weight:700;line-height:calc(13px*var(--ts));padding:0 4px;
     min-width:18px;text-align:center;border-radius:var(--r-xs);font-variant-numeric:tabular-nums;
     color:var(--text);background:var(--panel);box-shadow:0 0 0 1px var(--line2)}
   .rw-id{min-width:0;display:flex;flex-direction:column;gap:1px}
@@ -865,7 +865,7 @@
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
   .rw-star{color:var(--star);display:inline-flex;flex-shrink:0}
   .rw-star .ico{width:11px;height:11px;fill:var(--star)}
-  .rw-tag{font-size:calc(11px*var(--ts));color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rw-tag{font-size:calc(12px*var(--ts));color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* The tags ride on the Riot ID's line. On a line of their own they made every
      tagged row three lines tall: 85px a row, eight rows to a laptop screen, in the
      layout that exists to scan a long vault. The Riot ID keeps its width; the tags
@@ -873,12 +873,12 @@
   .rw-sub{display:flex;align-items:center;gap:8px;min-width:0}
   .rw-sub .rw-tag{flex:0 1 auto;min-width:40px}
   .rw-tags{display:flex;gap:4px;overflow:hidden;flex:0 1 auto;min-width:0}
-  .rw-tags i{font-style:normal;font-size:calc(10px*var(--ts));letter-spacing:.02em;color:var(--muted);
+  .rw-tags i{font-style:normal;font-size:calc(12px*var(--ts));letter-spacing:.02em;color:var(--muted);
     padding:1px 6px;border-radius:var(--r-xs);background:#ffffff0f;white-space:nowrap}
   /* the shape of the climb, which the list used to leave out entirely */
   .rw-spark{display:flex;align-items:center;height:30px}
   .spk{width:100%;height:100%;display:block}
-  .rw-check{font-size:calc(11px*var(--ts));padding:4px 9px;gap:5px;opacity:0;color:var(--teal-txt);
+  .rw-check{font-size:calc(12px*var(--ts));padding:4px 9px;gap:5px;opacity:0;color:var(--teal-txt);
     transition:opacity .15s ease,background .15s ease,border-color .15s ease}
   .rw-check .ico{width:11px;height:11px}
   .rw-check:focus-visible{opacity:1}
@@ -888,20 +888,20 @@
   .rw-rank{display:flex;flex-direction:column;gap:0;overflow:hidden;white-space:nowrap}
   .rw-rank b{font-size:calc(14px*var(--ts));font-weight:700;
     overflow:hidden;text-overflow:ellipsis}
-  .rw-rank em{font-style:normal;font-size:calc(11px*var(--ts));font-weight:600;color:var(--muted);
+  .rw-rank em{font-style:normal;font-size:calc(12px*var(--ts));font-weight:600;color:var(--muted);
     font-variant-numeric:tabular-nums}
   .rw-d,.rw-wr,.rw-lv{display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
   .rw-wr b,.rw-lv b{font-size:calc(13px*var(--ts));font-weight:700;color:var(--muted);line-height:1.1}
   .rw-wr b.wr-good{color:var(--good)}
-  .rw-wr em,.rw-lv em{font-style:normal;font-size:calc(10px*var(--ts));color:var(--faint);letter-spacing:.02em}
+  .rw-wr em,.rw-lv em{font-style:normal;font-size:calc(12px*var(--ts));color:var(--faint);letter-spacing:.02em}
   /* Sixty rows of "47%" are sixty identical grey blocks. Sixty bars of differing
      length are a shape you can run your eye down. */
   /* drawn as a record, like the card's: wins, then the losses as the remainder */
   .rw-bar{position:relative;display:block;height:3px;border-radius:1px;overflow:hidden;
     background:color-mix(in srgb,var(--danger) 34%,var(--panel2))}
   .rw-bar i{display:block;height:100%;border-radius:1px 0 0 1px;box-shadow:1px 0 0 var(--bg)}
-  .rw-d .delta{font-size:calc(11px*var(--ts));padding:2px 6px}
-  .rw-rg{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.09em;color:var(--faint);text-align:center}
+  .rw-d .delta{font-size:calc(12px*var(--ts));padding:2px 6px}
+  .rw-rg{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:.09em;color:var(--faint);text-align:center}
   /* An unranked row has nothing to say in four of its columns, and at full
      strength a wall of them drowns out the rows that do. */
   .rw-quiet .rw-pic{opacity:.62}
@@ -922,7 +922,7 @@
     text-decoration-thickness:1.5px;text-decoration-color:currentColor;opacity:.62}
   .card.dead .lpc-wrap,.rw.dead .spk{filter:grayscale(.75);opacity:.55}
   .card.dead .wrbar,.rw.dead .rw-bar{filter:grayscale(.9);opacity:.5}
-  .rw-up{font-size:calc(11px*var(--ts));color:var(--faint);text-align:right;white-space:nowrap;
+  .rw-up{font-size:calc(12px*var(--ts));color:var(--faint);text-align:right;white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis}
   .rw-up.stale{color:var(--warn-txt)}
   .rw-chev{width:14px;height:14px;color:var(--faint);transition:transform .24s cubic-bezier(.22,1,.36,1)}
@@ -1042,7 +1042,7 @@
      grid both halves lost: "Fresh leveli…" beside "RES…", a name cut short and a
      status nobody could read. Now the row wraps instead: the name keeps the first
      line, and a chip that does not fit beside it drops under it, whole. */
-  .stchip{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:var(--r-xs);
+  .stchip{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;padding:3px 7px;border-radius:var(--r-xs);
     flex:0 0 auto;white-space:nowrap}
   .c-chrome{display:flex;align-items:center;gap:9px;flex-shrink:0;align-self:flex-start}
   /* selection is chrome, not content — it stays out of the way until wanted */
@@ -1095,7 +1095,7 @@
   /* A label, not an action, so it is not in the action colour: tinted with the
      secondary accent, every card carried a second chip of Login's colour right
      beside the star, and the one button meant to stand out had company. */
-  .regiontag{font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:var(--r-xs);flex-shrink:0;
+  .regiontag{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:var(--r-xs);flex-shrink:0;
     background:#ffffff0a;color:var(--muted);border:1px solid var(--line)}
   /* the rank is why the card exists, so it gets the card's largest type */
   /* The tier as an emblem rather than only as a coloured word. It sits in the
@@ -1147,7 +1147,7 @@
   .lvt-ax span{position:absolute;top:0;transform:translateX(-50%)}
   .lvt-ax span:first-child{left:0;transform:none}
   .lvt-ax span:last-child{right:0;transform:none}
-  .d-cap{font-size:calc(10px*var(--ts));color:var(--faint);letter-spacing:.02em;white-space:nowrap;margin-top:-2px}
+  .d-cap{font-size:calc(12px*var(--ts));color:var(--faint);letter-spacing:.02em;white-space:nowrap;margin-top:-2px}
   /* Rank is the headline; LP is a labelled companion under it — not a smaller
      word jammed onto the same baseline with a leftover margin. */
   .rk{display:flex;align-items:center;gap:11px;min-width:0;white-space:nowrap;
@@ -1190,7 +1190,7 @@
   body.hide-goal .card:not(.info-open) .lvt,
   body.hide-tags .card:not(.info-open) .ctags,body.hide-notes .card:not(.info-open) .c-notes:not(.editing){display:none}
   .c-stats>div{display:flex;flex-direction:column;gap:2px;min-width:0}
-  .c-stats .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+  .c-stats .k{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--faint)}
   .c-stats .v{font-size:calc(13px*var(--ts));font-weight:500;color:var(--text);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
   /* This is the one thing on the card the user wrote themselves, so it reads as
      content on its own small surface rather than another grey caption line. */
@@ -1201,7 +1201,7 @@
      lives — no round trip through the Edit form */
   .c-notes[data-act]{cursor:text}
   .c-notes[data-act]:hover{background:#ffffff0f;border-color:#ffffff21}
-  .c-notes .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+  .c-notes .k{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--faint);
     display:flex;align-items:center;gap:5px;margin-bottom:4px}
   .c-notes .k .ico{width:11px;height:11px;opacity:0;transition:opacity .16s ease}
   @media (hover:hover){.c-notes[data-act]:hover .k .ico{opacity:.85}}
@@ -1214,7 +1214,7 @@
      repeated element on the page — fifty-one outlined rectangles, all empty.
      One quiet line now; the box arrives with the note, or as soon as you click. */
   .c-notes.blank{display:flex;align-items:center;gap:6px;padding:3px 5px;
-    background:none;border:0;color:var(--faint);font-size:calc(11px*var(--ts));opacity:.9}
+    background:none;border:0;color:var(--faint);font-size:calc(12px*var(--ts));opacity:.9}
   .c-notes.blank:hover{background:#ffffff0d;border:0;color:var(--muted);opacity:1}
   .c-notes.blank .ico{width:11px;height:11px;opacity:.8}
   /* ---- note fields on the card ----
@@ -1300,7 +1300,7 @@
   .c-drawer{margin:0 -17px -17px;padding:11px 14px 12px;gap:11px;
     border:0;border-radius:0 0 calc(var(--r-lg) - 2px) calc(var(--r-lg) - 2px);
     background:none;box-shadow:none;color:var(--faint);
-    font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+    font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;
     transition:background .18s ease,color .18s ease}
   .c-drawer:hover{color:var(--teal-txt);border:0;
     background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--teal) 11%,transparent))}
@@ -1329,9 +1329,9 @@
   .sec-h{width:100%;display:flex;align-items:center;gap:11px;padding:10px 13px;
     background:none;border:0;border-radius:0;box-shadow:none;white-space:normal}
   .sec-h:hover{background:#ffffff09;border:0}
-  .sec-n{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+  .sec-n{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted);
     display:inline-flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0}
-  .sec-n i{font-style:normal;font-size:calc(10px*var(--ts));letter-spacing:.03em;color:var(--faint);
+  .sec-n i{font-style:normal;font-size:calc(12px*var(--ts));letter-spacing:.03em;color:var(--faint);
     padding:1px 6px;border-radius:var(--r-xs);background:#ffffff0f}
   .sec-p{margin-left:auto;font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:-.01em;color:var(--muted);
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
@@ -1345,13 +1345,13 @@
     animation:sectionIn .22s cubic-bezier(.22,1,.36,1) both}
   /* one fact, one line — folding it would cost a click to reveal nothing extra */
   .sec.flat{display:flex;align-items:center;gap:11px;padding:11px 13px}
-  .chp-h{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  .chp-h{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;
     color:var(--faint);padding-bottom:5px;border-bottom:1px solid #ffffff12;margin-bottom:2px}
   .chp-h span:not(:first-child){text-align:right}
   .chp-h+.chp{border-top:0}
   .sea{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:3px 0;font-size:calc(12px*var(--ts))}
   .sea+.sea{border-top:1px solid #ffffff12}
-  .s-yr{color:var(--faint);font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.09em;text-transform:uppercase}
+  .s-yr{color:var(--faint);font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none}
   .s-rk{font-weight:600;font-size:calc(13px*var(--ts));letter-spacing:-.01em}
   /* a fixed grid, so the numbers line up into columns you can scan down */
   .chp{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:baseline;
@@ -1360,16 +1360,16 @@
   .c-nm{color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .c-wr{font-weight:600;color:var(--muted);text-align:right}
   .c-wr.wr-good{color:var(--good)}
-  .c-gm,.c-kd{color:var(--faint);font-size:calc(11px*var(--ts));text-align:right}
+  .c-gm,.c-kd{color:var(--faint);font-size:calc(12px*var(--ts));text-align:right}
   /* recent form: a pip per game, newest first, the way a match history reads */
   .fm-pips{display:inline-flex;gap:3px;margin-left:7px;vertical-align:-1px}
   .fm-pip{width:6px;height:11px;border-radius:2px;background:var(--danger)}
   .fm-pip.w{background:var(--good)}
-  .fm-res{display:inline-block;width:1.3em;font-weight:700;font-size:calc(11px*var(--ts));color:var(--danger)}
+  .fm-res{display:inline-block;width:1.3em;font-weight:700;font-size:calc(12px*var(--ts));color:var(--danger)}
   .fm-res.w{color:var(--good)}
-  .fm-retry{margin-left:8px;padding:2px 8px;font-size:calc(11px*var(--ts))}
+  .fm-retry{margin-left:8px;padding:2px 8px;font-size:calc(12px*var(--ts))}
   /* Settings → the worker guide */
-  .guide{margin-top:8px;border:1px solid var(--line);border-radius:var(--r-md);background:#ffffff05;font-size:calc(12.5px*var(--ts));color:var(--muted);line-height:1.55}
+  .guide{margin-top:8px;border:1px solid var(--line);border-radius:var(--r-md);background:#ffffff05;font-size:calc(13px*var(--ts));color:var(--muted);line-height:1.55}
   .guide summary{cursor:pointer;padding:10px 13px;font-weight:600;color:var(--text);list-style-position:inside}
   .adv-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px 16px;padding:4px 13px 13px}
   .adv-grid>.fld:first-child,.adv-grid>.hint{grid-column:1/-1}
@@ -1383,7 +1383,7 @@
     color:var(--text);border:1px solid color-mix(in srgb,var(--teal) 55%,transparent);background:color-mix(in srgb,var(--teal) 14%,transparent)}
   .guide .guide-btn:hover{background:color-mix(in srgb,var(--teal) 24%,transparent)}
   .guide-alt{padding:0 14px 11px;font-size:calc(12px*var(--ts));color:var(--faint)}
-  .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:calc(9px*var(--ts));font-weight:700;letter-spacing:.12em;
+  .lpc-cut{position:absolute;left:50%;transform:translateX(-50%);font-size:calc(11px*var(--ts));font-weight:700;letter-spacing:.12em;
     pointer-events:none;line-height:1;opacity:.9}
   /* Wins against losses, the way op.gg draws a record — not a fill on an empty
      track. That was exactly the goal rail's picture two lines below, so a 42% win
@@ -1395,7 +1395,7 @@
   .wrbar{position:relative;height:4px;border-radius:1px;overflow:hidden;
     background:color-mix(in srgb,var(--danger) 34%,var(--panel2))}
   .wrbar i{display:block;height:100%;border-radius:1px 0 0 1px;box-shadow:1px 0 0 var(--bg)}
-  .delta{font-size:calc(11px*var(--ts));padding:2px 8px;border-radius:var(--r-xs);font-weight:600;display:inline-block;white-space:nowrap}
+  .delta{font-size:calc(12px*var(--ts));padding:2px 8px;border-radius:var(--r-xs);font-weight:600;display:inline-block;white-space:nowrap}
   .d-up{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
   .d-down{color:var(--danger);background:color-mix(in srgb,var(--danger) 15%,transparent)}
   /* the warning colour, not an amber of its own: a hard-coded hex sat a shade off --warn,
@@ -1425,7 +1425,7 @@
   /* X is real time now, so the dates below are worth printing */
   .lpc-axis{position:relative;height:16px;border-top:1px solid var(--line)}
   .lpc-tick{position:absolute;top:3px;transform:translateX(-50%);white-space:nowrap;
-    font-size:calc(9px*var(--ts));font-weight:500;letter-spacing:.04em;color:var(--faint);pointer-events:none}
+    font-size:calc(11px*var(--ts));font-weight:500;letter-spacing:.04em;color:var(--faint);pointer-events:none}
   .lpc-tick.l{transform:none;left:5px!important}
   .lpc-tick.r{transform:none;left:auto!important;right:5px}
   .away-band{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;
@@ -1434,7 +1434,7 @@
     background:color-mix(in srgb,var(--teal) 8%,var(--panel));box-shadow:var(--sh-1);
     animation:barIn .3s cubic-bezier(.22,1,.36,1) both}
   .away-band.hidden{display:none}
-  .away-k{font-size:calc(10px*var(--ts));font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-txt)}
+  .away-k{font-size:calc(12px*var(--ts));font-weight:700;letter-spacing:0;text-transform:none;color:var(--teal-txt)}
   .away-band b{font-weight:600;color:var(--text)}
   .away-band .up{color:var(--good);font-weight:600}
   .away-band .down{color:var(--danger);font-weight:600}
@@ -1468,21 +1468,21 @@
   .pal-ico .ico{width:15px;height:15px}
   .pal-t{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px}
   .pal-n{font-size:calc(14px*var(--ts));font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .pal-s{font-size:calc(11px*var(--ts));color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pal-s{font-size:calc(12px*var(--ts));color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pal-r{font-size:calc(12px*var(--ts));font-weight:700;flex-shrink:0;letter-spacing:-.01em}
-  .pal-g{font-size:calc(10px*var(--ts));font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+  .pal-g{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--faint);
     padding:9px 10px 4px}
   .pal-empty{padding:26px 14px;text-align:center;color:var(--faint);font-size:calc(13px*var(--ts))}
   .pal-f{display:flex;gap:16px;padding:9px 16px;border-top:1px solid var(--line);flex-shrink:0;
-    font-size:calc(11px*var(--ts));color:var(--faint);background:color-mix(in srgb,var(--bg) 72%,transparent)}
-  .pal-f kbd{font-family:inherit;font-size:calc(10px*var(--ts));padding:1px 5px;border-radius:var(--r-xs);margin-right:3px;
+    font-size:calc(12px*var(--ts));color:var(--faint);background:color-mix(in srgb,var(--bg) 72%,transparent)}
+  .pal-f kbd{font-family:inherit;font-size:calc(12px*var(--ts));padding:1px 5px;border-radius:var(--r-xs);margin-right:3px;
     background:#ffffff12;box-shadow:inset 0 0 0 1px var(--line2)}
   .help{display:grid;grid-template-columns:118px minmax(0,1fr);gap:0 22px;margin:0;padding:8px 24px 12px;
     font-size:calc(13px*var(--ts));line-height:1.7;color:var(--muted)}
   .help dt,.help dd{padding:13px 0;border-top:1px solid var(--line)}
   .help-lic{margin:0;padding:0 24px 16px;font-size:calc(12px*var(--ts))}
   .help dt:first-of-type,.help dd:first-of-type{border-top:0}
-  .help dt{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt);line-height:2.2}
+  .help dt{font-size:calc(13px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--gold-txt);line-height:2.2}
   .help dd{margin:0}
   .help dd.terms::first-letter{text-transform:uppercase}
   .help b{color:var(--text);font-weight:600}
@@ -1511,7 +1511,7 @@
   /* except while a point is being read — the tip wants that corner and you asked
      for the tip. Outranks the hover rule above on specificity. */
   .lpc-plot:has(.lpc-pt:hover) .lpc-range{opacity:0;pointer-events:none}
-  .lpc-range button{font-size:calc(9px*var(--ts));font-weight:700;letter-spacing:.06em;line-height:1;
+  .lpc-range button{font-size:calc(11px*var(--ts));font-weight:700;letter-spacing:.06em;line-height:1;
     padding:3px 5px;border-radius:var(--r-xs);border:1px solid transparent;background:#ffffff0d;
     color:var(--faint);box-shadow:none}
   .lpc-range button:hover{background:#ffffff1c;border-color:transparent;color:var(--text)}
@@ -1522,16 +1522,16 @@
   .lpc-plot .lpc-lab,.lpc-plot .lpc-sub,.lpc-plot .lpc-peak{text-shadow:0 0 1px var(--bg),0 0 2px var(--bg),0 0 3px var(--bg),0 0 6px var(--bg)}
   /* Clear of the first point, which sits 1.6% in (X_IN in rankChart) with a 5px
      radius: at 6px flat the dot landed on the caption's first letter. */
-  .lpc-plot .lpc-lab{position:absolute;left:calc(1.6% + 9px);font-size:calc(9px*var(--ts));font-weight:600;letter-spacing:.09em;
+  .lpc-plot .lpc-lab{position:absolute;left:calc(1.6% + 9px);font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.09em;
     text-transform:uppercase;pointer-events:none;opacity:.82;line-height:1}
   /* the ceiling the line is climbing back towards; left lane, with the band
      captions, and dropped rather than stacked when one is already there */
   .lpc-plot .lpc-peak{position:absolute;left:50%;transform:translateX(-50%);
-    font-size:calc(9px*var(--ts));font-weight:700;letter-spacing:.12em;
+    font-size:calc(11px*var(--ts));font-weight:700;letter-spacing:.12em;
     text-transform:uppercase;pointer-events:none;line-height:1;color:var(--gold-txt);opacity:.9}
   /* division numerals below Master, LP marks above it — opposite side to the tier
      names so the two never collide */
-  .lpc-plot .lpc-sub{position:absolute;right:6px;font-size:calc(9px*var(--ts));font-weight:600;letter-spacing:.06em;
+  .lpc-plot .lpc-sub{position:absolute;right:6px;font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.06em;
     color:#fff;opacity:.5;pointer-events:none;line-height:1;font-variant-numeric:tabular-nums}
   /* Each point owns the slice of the chart nearest to it, and the slices tile the
      chart exactly. The first version centred a fixed-width column on every point,
@@ -1563,7 +1563,7 @@
     white-space:nowrap;font-size:calc(11px*var(--ts));font-weight:500;line-height:1.35;color:var(--text);
     padding:6px 9px;border-radius:var(--r-sm);background:var(--panel2);border:1px solid var(--line2);
     box-shadow:var(--sh-3)}
-  .lpc-tip em{display:block;font-style:normal;font-size:calc(10px*var(--ts));color:var(--faint);margin-top:1px}
+  .lpc-tip em{display:block;font-style:normal;font-size:calc(11px*var(--ts));color:var(--faint);margin-top:1px}
   .lpc-tip.l{left:-6px;transform:none}
   .lpc-tip.r{left:auto;right:-6px;transform:none}
   /* Below the dot when the dot sits too near the top for a tip to fit above it.
@@ -1578,20 +1578,20 @@
   .meta b{color:var(--text);font-weight:500}
   .meta .g{color:var(--gold-txt)}
   .ctags{display:flex;gap:6px;flex-wrap:wrap}
-  .ctags span{font-size:calc(11px*var(--ts));padding:3px 9px;border-radius:var(--r-xs);background:#ffffff0d;border:1px solid #ffffff1f;color:var(--muted)}
+  .ctags span{font-size:calc(12px*var(--ts));padding:3px 9px;border-radius:var(--r-xs);background:#ffffff0d;border:1px solid #ffffff1f;color:var(--muted)}
   /* the role is read from recent games, not typed by you, so it is set apart from your tags */
   .ctags .role-tag{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 35%,transparent);background:color-mix(in srgb,var(--teal) 8%,transparent)}
   .login{background:#00000038;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;font-size:calc(13px*var(--ts));display:flex;flex-direction:column;gap:9px}
-  .login .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:7px}
+  .login .k{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--faint);display:block;margin-bottom:7px}
   .lrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
   .lrow .val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .lrow .mono{font-family:ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:.01em}
   .lrow .none{color:var(--faint)}
   /* The recovery facts are labelled; the credentials above them are not, because
      a username and a password are obvious from their shape and these are not. */
-  .lrow .lk{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  .lrow .lk{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;
     color:var(--faint);margin-right:9px}
-  .lrow .lage{font-style:normal;font-size:calc(11px*var(--ts));color:var(--faint);margin-left:9px}
+  .lrow .lage{font-style:normal;font-size:calc(12px*var(--ts));color:var(--faint);margin-left:9px}
   /* what the password check-up found about this one, where you would change it */
   .lwarn{display:flex;align-items:flex-start;gap:7px;font-size:calc(12px*var(--ts));line-height:1.4;color:var(--gold-txt)}
   .lwarn .ico{width:14px;height:14px;flex-shrink:0;margin-top:1px}
@@ -1613,8 +1613,8 @@
   /* Drawn only when there is a goal. An account with nothing to climb towards
      should not be shown an empty progress bar to feel bad about. */
   .goal{display:flex;flex-direction:column;gap:5px;margin-top:-3px}
-  .goal-h{display:flex;align-items:baseline;gap:8px;font-size:calc(11px*var(--ts))}
-  .goal-h .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .goal-h{display:flex;align-items:baseline;gap:8px;font-size:calc(12px*var(--ts))}
+  .goal-h .k{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--faint)}
   .goal-t{font-weight:700;letter-spacing:-.01em;font-size:calc(12px*var(--ts))}
   .goal-r{margin-left:auto;color:var(--faint);font-variant-numeric:tabular-nums;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1626,7 +1626,7 @@
   .flagmark .ico{width:12px;height:12px;stroke-width:2.2}
   .t-nm .flagmark .ico,.rw-nm .flagmark .ico{width:11px;height:11px}
   .lbtns{display:flex;gap:5px;flex-shrink:0}
-  .lbtns button{font-size:calc(11px*var(--ts));padding:4px 9px}
+  .lbtns button{font-size:calc(12px*var(--ts));padding:4px 9px}
   .lbtns button.copied,button.copied{color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,transparent);gap:4px}
   button.copied .ico{width:11px;height:11px;stroke-width:2.6}
   .login .lseq{width:100%;font-size:calc(12px*var(--ts));font-weight:600;padding:8px 10px;color:var(--teal-txt);
@@ -1637,7 +1637,7 @@
   .c-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
   /* was a bare run-on caption floating above the buttons; now a dot-led timestamp
      with the source as its own tag, so it reads as a deliberate meta line */
-  .upd{font-size:calc(11px*var(--ts));color:var(--faint);letter-spacing:.015em;display:inline-flex;align-items:center;gap:7px;min-width:0}
+  .upd{font-size:calc(12px*var(--ts));color:var(--faint);letter-spacing:.015em;display:inline-flex;align-items:center;gap:7px;min-width:0}
   .upd::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.55;flex-shrink:0}
   .upd.stale{color:var(--warn-txt)}
   /* Out of date: amber (it used to be red; see .cmd-count .warn), with a warning
@@ -1648,7 +1648,7 @@
   /* asOf is sometimes a source ("backend", a proxy name) and sometimes a date
      phrase op.gg printed ("updated today") — so no uppercasing, which would
      shout at a sentence fragment */
-  .src{font-size:calc(10px*var(--ts));font-weight:500;letter-spacing:.01em;color:var(--faint);
+  .src{font-size:calc(12px*var(--ts));font-weight:500;letter-spacing:.01em;color:var(--faint);
     padding:2px 8px;border-radius:var(--r-xs);background:#ffffff0d;border:1px solid #ffffff1c;white-space:nowrap}
   /* 11.5px type in 6px of padding is a 26px target, and there were five of them
      in a row. Mobile already got 40px; the desktop was left with whatever the
@@ -1678,7 +1678,7 @@
   /* Named groups, not bare hairlines. A rule says "these are apart"; it never says
      what either side of it is. Same lockup as the list view's tier bands. */
   .cm-g{display:flex;align-items:center;gap:8px;padding:7px 11px 3px;
-    font-size:calc(10px*var(--ts));font-weight:700;line-height:1;letter-spacing:.14em;text-transform:uppercase;
+    font-size:calc(12px*var(--ts));font-weight:600;line-height:1;letter-spacing:0;text-transform:none;
     color:var(--muted);user-select:none}
   .cm-g::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
   .cm-g:first-child{padding-top:3px}
@@ -1708,7 +1708,7 @@
   /* The panel is the rank window's body now, and .mdl-b carries no padding of its
      own — the account form gets its 22px from .formgrid. This is that measure. */
   .rankpanel{display:flex;flex-direction:column;gap:14px;padding:20px 22px}
-  .rankpanel .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+  .rankpanel .k{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;
     color:var(--faint);display:block;margin-bottom:8px}
   /* Named fields that wrap, rather than a row of bare boxes sized to the shortest
      thing they might hold. Wide enough that four digits and a spinner are not
@@ -1719,7 +1719,7 @@
   .rk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 14px}
   @media (max-width:560px){.rk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .rk-f{display:flex;flex-direction:column;gap:5px;min-width:0}
-  .rk-f>span{font-size:calc(11px*var(--ts));font-weight:500;letter-spacing:.005em;color:var(--muted)}
+  .rk-f>span{font-size:calc(12px*var(--ts));font-weight:500;letter-spacing:.005em;color:var(--muted)}
   .rk-f>select,.rk-f>input{width:100%}
   /* The native steppers sit over the digits at this size and are no use for a
      season's win count anyway — these are numbers you type, not nudge. */
@@ -1727,7 +1727,7 @@
     font-variant-numeric:tabular-nums}
   .rk-f input[type=number]::-webkit-outer-spin-button,
   .rk-f input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;appearance:none;margin:0}
-  .rk-note{font-size:calc(11px*var(--ts));color:var(--faint);margin-top:9px;line-height:1.5}
+  .rk-note{font-size:calc(12px*var(--ts));color:var(--faint);margin-top:9px;line-height:1.5}
   .rk-none{color:var(--faint);font-weight:450}
   /* The two folds run the full width of the window and re-pad their own contents
      back to the same measure, so a closed fold reads as a divider across it. */
@@ -1749,7 +1749,7 @@
      so neighbouring labels never quite lined up. Colour still says how loud each
      one is; the shape is now the same everywhere. */
   .stat .k,.dist .k,.dash-filter .k,.c-stats .k,.c-notes .k,.sec-n,.chp-h,.away-k,.pal-g,.login .k,.lrow .lk,
-  .goal-h .k,.rankpanel .k,.grp-h,.cm-g,.c-drawer{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+  .goal-h .k,.rankpanel .k,.grp-h,.cm-g,.c-drawer{font-size:calc(12px*var(--ts));font-weight:500;letter-spacing:0;text-transform:none}
 
   /* ---- form + settings ---- */
   .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:22px}
@@ -1762,7 +1762,7 @@
      nothing. The bar now sits in the grid's own gap and the word rides the label. */
   .pw-fld{position:relative}
   .pw-fld label{display:flex;justify-content:space-between;gap:10px}
-  #pwMeterLabel{font-size:calc(11px*var(--ts));color:var(--faint)}
+  #pwMeterLabel{font-size:calc(12px*var(--ts));color:var(--faint)}
   #pwMeter{position:absolute;left:0;right:0;bottom:-9px;height:3px;display:flex;gap:4px}
   .hidden{display:none!important}
   .empty{padding:64px 24px;text-align:center;color:var(--muted);font-size:calc(14px*var(--ts));line-height:1.7}
@@ -1781,7 +1781,7 @@
     border-radius:50%;border:1px solid var(--line2);font-size:calc(12px*var(--ts));font-weight:600;color:var(--muted);
     font-variant-numeric:tabular-nums}
   .wl-steps b{font-size:calc(13px*var(--ts));font-weight:600;color:var(--text)}
-  .wl-steps li>span:last-child{align-self:start;font-size:calc(12.5px*var(--ts));color:var(--faint);line-height:1.5}
+  .wl-steps li>span:last-child{align-self:start;font-size:calc(13px*var(--ts));color:var(--faint);line-height:1.5}
   .wl-acts{margin-top:26px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
   .lp-p{margin:0;font-size:calc(13px*var(--ts));line-height:1.55;color:var(--muted)}
   .lp-off{display:flex;align-items:center;gap:8px;font-size:calc(12px*var(--ts));color:var(--muted);cursor:pointer}
@@ -1882,8 +1882,8 @@
   #settings .opt-seg button+button{border-left:1px solid var(--line)}
   #settings .opt-seg button:hover{color:var(--text);background:#ffffff0d}
   #settings .opt-seg button[aria-checked="true"]{color:var(--gold-txt);background:color-mix(in srgb,var(--gold) 14%,transparent)}
-  .grp-h{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:9px}
+  .grp-h{font-size:calc(13px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;
+    color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:9px}
   .grp-h::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
   .grp .formgrid{padding:0;gap:15px}
   .hint{font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.55}
@@ -1941,9 +1941,9 @@
     box-shadow:inset 0 0 0 1px var(--gold),0 0 0 2px var(--bg),0 0 0 3px color-mix(in srgb,var(--gold) 45%,var(--line))}
   .acc-prev-mark i{display:block;width:8px;height:8px;border-radius:1px;background:var(--gold)}
   .acc-prev-brand{min-width:0}
-  .acc-prev-t{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em;text-transform:uppercase;
+  .acc-prev-t{font-family:'Cinzel',Georgia,serif;letter-spacing:0;text-transform:none;
     font-size:calc(12px*var(--ts));color:var(--gold-txt);line-height:1.2}
-  .acc-prev-sub{font-size:calc(10px*var(--ts));color:var(--faint);margin-top:2px}
+  .acc-prev-sub{font-size:calc(12px*var(--ts));color:var(--faint);margin-top:2px}
   .acc-prev-sub b{color:var(--gold-txt);font-weight:600}
   .acc-prev-rib{display:flex;gap:2px;height:14px;padding:8px 14px 0}
   .acc-prev-rib i{flex:1;border-radius:1px;background:color-mix(in srgb,var(--c) 62%,var(--bg))}
@@ -1951,11 +1951,11 @@
     border-bottom:1px solid var(--line)}
   .acc-prev-cmd button,.acc-prev-card .bar button{padding:5px 9px;font:600 calc(11px*var(--ts))/1.2 'Inter',system-ui,sans-serif}
   .acc-prev-tools{display:flex;gap:6px;align-items:center;padding:10px 14px 12px}
-  .acc-prev-tools input{flex:1;min-width:0;font-size:calc(11px*var(--ts));padding:6px 9px;
+  .acc-prev-tools input{flex:1;min-width:0;font-size:calc(12px*var(--ts));padding:6px 9px;
     border-color:color-mix(in srgb,var(--teal) 60%,transparent);
     box-shadow:0 0 0 3px color-mix(in srgb,var(--teal) 13%,transparent);
     background-color:var(--panel3)}
-  .acc-prev-tools button{padding:5px 8px;font-size:calc(11px*var(--ts))}
+  .acc-prev-tools button{padding:5px 8px;font-size:calc(12px*var(--ts))}
   .acc-prev-tools button.on{color:var(--star);
     border-color:color-mix(in srgb,var(--star) 55%,transparent)}
   .acc-prev-side{flex:1 1 42%;min-width:0;padding:12px;display:flex;flex-direction:column;
@@ -1967,7 +1967,7 @@
   .acc-prev-star{color:var(--star);font-size:calc(13px*var(--ts));line-height:1;margin-left:auto}
   .acc-prev-rk{flex-basis:100%;font:700 calc(14px*var(--ts))/1.1 'Inter',system-ui,sans-serif;letter-spacing:-.01em;color:#7ea6f0}
   .acc-prev-rk small{font:600 calc(11px*var(--ts)) Inter,system-ui,sans-serif;text-transform:none;color:var(--muted);margin-left:4px}
-  .acc-prev-wl{font-size:calc(11px*var(--ts));color:var(--muted);margin-bottom:8px}
+  .acc-prev-wl{font-size:calc(12px*var(--ts));color:var(--muted);margin-bottom:8px}
   .acc-prev-card .bar{gap:6px}
   .acc-reset{width:27px;height:27px;padding:0;font-size:calc(13px*var(--ts));color:var(--muted)}
   .acc-reset:hover{color:var(--text)}
@@ -2026,7 +2026,7 @@
   .lock-in{display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px 34px 32px}
   .lock-in .brand-mark{margin:6px 0 24px}
   .lock-wm{font-size:calc(30px*var(--ts))}
-  .lock-sub{margin-top:8px;font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+  .lock-sub{margin-top:8px;font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
   .lock-in .hx-rule{margin:24px 0 20px}
   .lock-k{font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt)}
   .lock-txt{font-size:calc(13px*var(--ts));color:var(--muted);margin:8px 0 18px;line-height:1.6}
@@ -2121,7 +2121,7 @@
   .cmp-pic img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
   .cmp-pic b{font-size:calc(20px*var(--ts));font-weight:600;color:var(--faint)}
   .cmp-nm{font-size:calc(16px*var(--ts));font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cmp-id{font-size:calc(11px*var(--ts));color:var(--faint);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmp-id{font-size:calc(12px*var(--ts));color:var(--faint);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cmp-rk{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:calc(18px*var(--ts));line-height:1.1}
   .cmp-rk.q{font-family:inherit;text-transform:none;font-weight:600;font-size:calc(14px*var(--ts));color:var(--faint)!important}
   .cmp-crest{width:22px;height:22px}
@@ -2129,13 +2129,13 @@
   .cmp-vs{width:38px;height:38px;margin-top:30px;display:grid;place-items:center;transform:rotate(45deg);
     background:var(--panel2);border:1px solid color-mix(in srgb,var(--gold) 55%,var(--line));
     box-shadow:0 0 0 3px var(--bg),0 0 0 4px var(--line)}
-  .cmp-vs span{transform:rotate(-45deg);font-weight:700;font-size:calc(11px*var(--ts));letter-spacing:.06em;color:var(--gold-txt)}
+  .cmp-vs span{transform:rotate(-45deg);font-weight:700;font-size:calc(12px*var(--ts));letter-spacing:.06em;color:var(--gold-txt)}
   .cmp-rows{border-top:1px solid var(--line)}
   .cmp-row{display:grid;grid-template-columns:minmax(0,1fr) 92px minmax(0,1fr);gap:10px;align-items:center;
     padding:9px 0;border-bottom:1px solid var(--line);font-size:calc(13px*var(--ts));font-variant-numeric:tabular-nums;color:var(--text)}
   .cmp-row:last-child{border-bottom:0}
   .cmp-row>:first-child{text-align:right}
-  .cmp-row .k{text-align:center;font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  .cmp-row .k{text-align:center;font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--faint)}
   .cmp-row .win{color:var(--gold-txt);font-weight:600}
   /* ---- a shared snapshot: the page a link opens ----
      Somebody else's screen, so it is made to be looked at rather than worked in:
@@ -2149,13 +2149,13 @@
   .sn-brand{display:flex;align-items:center;gap:13px;color:var(--text);text-decoration:none}
   .sn-brand .brand-mark{width:30px;height:30px;margin:4px}
   .sn-brand .brand-mark::before{width:12px;height:12px}
-  .sn-brand .hex-display{font-size:calc(15px*var(--ts));font-weight:600}
+  .sn-brand .hex-display{font-size:calc(16px*var(--ts));font-weight:600}
   .sn-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:var(--r-xs);
-    font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.06em;color:var(--teal-txt);
+    font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:.06em;color:var(--teal-txt);
     background:color-mix(in srgb,var(--teal) 9%,transparent);border:1px solid color-mix(in srgb,var(--teal) 30%,transparent)}
   .sn-pill .ico{width:13px;height:13px}
   .sn-hero{text-align:center}
-  .sn-eyebrow{font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--gold-txt)}
+  .sn-eyebrow{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--gold-txt)}
   .sn-title{margin:12px auto 10px;max-width:22ch;font-size:calc(clamp(30px,5.4vw,48px)*var(--ts));font-weight:600;letter-spacing:-.025em;
     line-height:1.08;color:#fff;overflow-wrap:anywhere}
   .sn-sub{font-size:calc(14px*var(--ts));color:var(--muted)}
@@ -2163,7 +2163,7 @@
   .sn-sum .hx-in{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr))}
   .sn-sum .cell{padding:18px 20px;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:3px;border-left:1px solid #ffffff12}
   .sn-sum .cell:first-child{border-left:0;flex-direction:row;align-items:center;justify-content:flex-start;gap:16px}
-  .sn-sum .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .sn-sum .k{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--faint)}
   .sn-sum b{display:block;font-size:calc(22px*var(--ts));font-weight:600;letter-spacing:-.01em;color:var(--text);
     font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .sn-sum em{font-style:normal;font-size:calc(12px*var(--ts));color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2171,7 +2171,7 @@
   .sn-best-c{width:54px;height:54px;flex-shrink:0;filter:drop-shadow(0 4px 14px #0009)}
   .sn-dist{display:flex;gap:2px;height:5px;max-width:880px;margin:16px auto 0;border-radius:2px;overflow:hidden}
   .sn-dist i{display:block;min-width:4px}
-  .sn-legend{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:calc(11px*var(--ts));color:var(--muted)}
+  .sn-legend{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:calc(12px*var(--ts));color:var(--muted)}
   .sn-legend span{display:inline-flex;align-items:center;gap:6px}
   .sn-legend span::before{content:"";width:7px;height:7px;border-radius:1px;transform:rotate(45deg);background:var(--c)}
   .sn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:18px;margin-top:clamp(34px,6vw,52px)}
@@ -2191,7 +2191,7 @@
   .sn-crest-i{width:40px;height:40px}
   .sn-crest b{font-size:calc(22px*var(--ts));font-weight:600;color:var(--faint)}
   .sn-id{flex:1;min-width:0;padding-bottom:4px}
-  .sn-nm{display:flex;align-items:center;gap:6px;font-size:calc(17px*var(--ts));font-weight:600;color:#fff;
+  .sn-nm{display:flex;align-items:center;gap:6px;font-size:calc(16px*var(--ts));font-weight:600;color:#fff;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .sn-fav .ico{width:14px;height:14px;color:var(--gold);fill:var(--gold)}
   .sn-rid{font-size:calc(12px*var(--ts));color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2199,19 +2199,19 @@
   .sn-rank{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
   .sn-rank b{font-size:calc(22px*var(--ts));font-weight:600;letter-spacing:-.01em;color:var(--tier)}
   .sn-rank span{font-size:calc(14px*var(--ts));font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums}
-  .sn-rank .stchip{font-size:calc(11px*var(--ts));padding:2px 8px;border-radius:var(--r-xs);font-weight:600}
+  .sn-rank .stchip{font-size:calc(12px*var(--ts));padding:2px 8px;border-radius:var(--r-xs);font-weight:600}
   .sn-wl{display:flex;justify-content:space-between;gap:10px;font-size:calc(12px*var(--ts));color:var(--muted);font-variant-numeric:tabular-nums}
   .sn-wl b{font-weight:600;color:var(--text)}
   .sn-wl b.wr-good,.sn-sum b.wr-good{color:var(--good)}
   .sn-spk{height:44px;margin:2px 0}
   .sn-meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:calc(12px*var(--ts));color:var(--text)}
-  .sn-meta i{font-style:normal;font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-right:7px}
+  .sn-meta i{font-style:normal;font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--faint);margin-right:7px}
   .sn-notes{margin-top:2px}
   .sn-notes .sk{color:var(--star);border-color:color-mix(in srgb,var(--gold) 42%,transparent);background:color-mix(in srgb,var(--gold) 12%,transparent)}
   .sn-empty{text-align:center;color:var(--muted);margin-top:40px}
   .sn-foot{margin-top:clamp(44px,8vw,72px);text-align:center;font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.7}
   .sn-foot p{margin:0 auto 16px;max-width:52ch}
-  .sn-foot .sn-riot{margin:28px auto 0;font-size:calc(11px*var(--ts));max-width:68ch}
+  .sn-foot .sn-riot{margin:28px auto 0;font-size:calc(12px*var(--ts));max-width:68ch}
   .sn-foot .btn,.sn-err .btn{text-decoration:none;padding:10px 18px;font-weight:600}
   .sn-err{max-width:480px;margin:16vh auto 0;text-align:center}
   .sn-err .hx-in{padding:34px 28px 30px}
@@ -2232,7 +2232,7 @@
   .sh-body{display:flex;flex-direction:column;gap:18px}
   .sh-which{display:flex;width:100%}
   .sh-which button{flex:1;width:auto;height:38px;gap:6px;font-size:calc(13px*var(--ts));font-weight:600;color:var(--muted)}
-  .sh-which button b{font-weight:600;font-size:calc(11px*var(--ts));color:var(--faint);font-variant-numeric:tabular-nums}
+  .sh-which button b{font-weight:600;font-size:calc(12px*var(--ts));color:var(--faint);font-variant-numeric:tabular-nums}
   .sh-which button.on b{color:inherit}
   .sh-opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:10px}
   .sh-opt{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:var(--r-sm);cursor:pointer;
@@ -2267,10 +2267,10 @@
   .ap-cap{position:absolute;left:22px;right:22px;bottom:15px;z-index:1;min-width:0}
   .ap-cap b{display:block;font-size:calc(22px*var(--ts));font-weight:600;letter-spacing:-.01em;color:#fff;
     text-shadow:0 2px 12px #000c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .ap-cap span{display:block;margin-top:3px;font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.14em;
-    text-transform:uppercase;color:var(--gold-txt)}
+  .ap-cap span{display:block;margin-top:3px;font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;
+    text-transform:none;color:var(--gold-txt)}
   .ap-badge{position:absolute;top:13px;left:16px;z-index:1;display:inline-flex;align-items:center;gap:6px;
-    padding:4px 9px;border-radius:var(--r-xs);font-size:calc(11px*var(--ts));font-weight:600;color:var(--text);
+    padding:4px 9px;border-radius:var(--r-xs);font-size:calc(12px*var(--ts));font-weight:600;color:var(--text);
     background:color-mix(in srgb,var(--bg) 70%,transparent);border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);
     backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
   .ap-badge .ico{width:12px;height:12px;color:var(--gold-txt)}
@@ -2304,7 +2304,7 @@
   @media (max-width:620px){
     .ap-str{grid-template-columns:minmax(0,118px) minmax(0,1fr);gap:12px;padding:10px 16px}
     .ap-prev{height:60px}.ap-prev-t{left:9px;right:9px;top:8px;gap:2px}
-    .ap-prev-t b{font-size:calc(12px*var(--ts))}.ap-prev-t span{font-size:calc(11px*var(--ts))}
+    .ap-prev-t b{font-size:calc(12px*var(--ts))}.ap-prev-t span{font-size:calc(12px*var(--ts))}
     .ap-ctl{gap:4px}.ap-opts{gap:2px 10px}
   }
   .ap-off{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 22px;font-size:calc(12px*var(--ts));
@@ -2324,7 +2324,7 @@
   .ap-ch i{display:block;width:54px;height:54px;border-radius:var(--r-sm);overflow:hidden;
     background:var(--panel3);box-shadow:0 0 0 1px var(--line2);transition:box-shadow .16s ease,transform .16s ease}
   .ap-ch img{display:block;width:100%;height:100%;transform:scale(1.1)}
-  .ap-ch span{max-width:100%;font-size:calc(11px*var(--ts));color:var(--muted);text-align:center;
+  .ap-ch span{max-width:100%;font-size:calc(12px*var(--ts));color:var(--muted);text-align:center;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ap-ch:hover i{box-shadow:0 0 0 1px var(--gold-mid);transform:translateY(-2px)}
   .ap-ch:hover span{color:var(--text)}
@@ -2337,7 +2337,7 @@
   .ap-sk .nm{position:absolute;left:9px;right:9px;bottom:8px;z-index:1;font-size:calc(12px*var(--ts));font-weight:600;
     line-height:1.25;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .ap-sk .cur{position:absolute;top:7px;left:7px;z-index:1;padding:2px 6px;border-radius:var(--r-xs);
-    font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.04em;color:var(--teal-ink);background:var(--teal)}
+    font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:.04em;color:var(--teal-ink);background:var(--teal)}
   .ap-sk:hover{transform:translateY(-3px);box-shadow:0 0 0 1px var(--gold-mid),var(--sh-3)}
   .ap-sk.on{box-shadow:0 0 0 2px var(--gold),0 0 22px -6px var(--gold),var(--sh-3)}
   .ap-sk.on::before{content:"";position:absolute;top:7px;right:7px;z-index:2;width:20px;height:20px;border-radius:50%;
@@ -2352,7 +2352,7 @@
   .ap-msg button{margin-top:10px}
   @media (max-width:620px){
     .ap-cap,.ap-bar,.ap-off{padding-left:16px;padding-right:16px}.ap-cap{left:16px;right:16px}
-    .ap-hero{height:clamp(118px,32vw,150px)}.ap-cap{bottom:12px}.ap-cap b{font-size:calc(19px*var(--ts))}
+    .ap-hero{height:clamp(118px,32vw,150px)}.ap-cap{bottom:12px}.ap-cap b{font-size:calc(20px*var(--ts))}
     .ap-grid{padding:14px 16px 18px}
     .ap-grid.sk{grid-template-columns:repeat(auto-fill,minmax(102px,1fr));gap:10px}
   }
@@ -2526,7 +2526,7 @@
      a filter is never on unseen (the chips under the toolbar name the rest). */
   .t-filters{display:none}
   .t-filters .t-n{margin-left:2px;min-width:18px;height:18px;padding:0 5px;border-radius:var(--r-xs);display:inline-flex;align-items:center;
-    justify-content:center;font-size:calc(11px*var(--ts));font-weight:700;color:var(--teal-ink);background:var(--teal)}
+    justify-content:center;font-size:calc(12px*var(--ts));font-weight:700;color:var(--teal-ink);background:var(--teal)}
   .t-filters .t-n[hidden]{display:none}
   .t-select{display:none}
   @media (max-width:560px){
@@ -2566,7 +2566,7 @@
        above it, so DIAMOND II reads on one line instead of breaking at the space */
     .cmp{padding:18px 14px 4px}
     .cmp-head{gap:8px}
-    .cmp-rk{flex-direction:column;gap:4px;font-size:calc(15px*var(--ts))}
+    .cmp-rk{flex-direction:column;gap:4px;font-size:calc(16px*var(--ts))}
     .cmp-rk>span{white-space:nowrap}
     .cmp-vs{width:30px;height:30px;margin-top:24px}
     .cmp-row{grid-template-columns:minmax(0,1fr) 86px minmax(0,1fr);gap:8px;font-size:calc(12px*var(--ts))}

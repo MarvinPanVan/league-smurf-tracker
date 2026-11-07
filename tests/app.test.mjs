@@ -9076,6 +9076,26 @@ test("a card whose Riot ID op.gg doesn't know says so in amber, with a button th
   assert.equal(win.document.getElementById("fName").value, "Gone", "on this account");
 });
 
+// About 150 pieces of text sat at 9-11px across 18 sizes, and a dozen small-capital
+// labels made every surface look like a form
+test("one type scale: nothing under 11px, 11px only inside charts and badges, small capitals only where they head a list", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const sizes = new Set(), small = [];
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const sel = m[1].split("*/").pop().trim();
+    for (const f of m[2].matchAll(/font-size:calc\(([\d.]+)px\*var\(--ts\)\)/g)) {
+      const px = +f[1]; sizes.add(px);
+      if (px < 11) small.push(sel + " " + px);
+      if (px === 11 && !/lpc|spark|c-lvbadge|riot-notice|lvt-ax|lgrp|rw-head|lock-|lvb|crest/.test(sel)) small.push(sel + " 11");
+    }
+    if (/text-transform:uppercase/.test(m[2]) && !/lgrp-n|rw-head|lock-sub|lock-k|lpc-|first-letter/.test(sel)) small.push(sel + " caps");
+  }
+  assert.deepEqual(small, [], "small text, or small capitals, outside the few places that keep them");
+  assert.deepEqual([...sizes].filter(s => s < 24).sort((a, b) => a - b), [11, 12, 13, 14, 16, 18, 20, 22], "the scale below display sizes");
+  assert.match(css, /\.stat \.k,\.dist \.k,\.dash-filter \.k,[^{]*\{font-size:calc\(12px\*var\(--ts\)\);font-weight:500;letter-spacing:0;text-transform:none\}/,
+    "the shared label: a calm 12px in sentence case");
+});
+
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row
 // ended hundreds of pixels apart
 test("a card's notes keep to one row of two chips and +N more; Details shows them all", () => {
