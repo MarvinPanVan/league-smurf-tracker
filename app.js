@@ -1225,6 +1225,16 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
       for(let k=1;k<6;k++){const f=a+(b-a)*k/6;if(f<=LAB_W)leftYs.push(py(pts[i].v+(pts[i+1].v-pts[i].v)*k/6))}}
   }
   const labFree=y=>!leftYs.some(v=>v>=y-5&&v<=y+14);   // 9px of caption, and a point's own radius around it
+  // the same for the right edge, where the division numerals sit
+  const NUM_W=.12, rightYs=[];
+  for(let i=0;i<=last;i++){
+    const a=fx(i);if(a>=1-NUM_W)rightYs.push(py(pts[i].v));
+    if(i<last){const b=fx(i+1);
+      for(let k=1;k<6;k++){const f=a+(b-a)*k/6;if(f>=1-NUM_W)rightYs.push(py(pts[i].v+(pts[i+1].v-pts[i].v)*k/6))}}
+  }
+  // a numeral's box runs from 9.5px above its rule to the rule; a dot's colour is
+  // 4.5px each way, and its dark ring overlapping a letter's edge is not a collision
+  const numFree=v=>{const y=py(v);return !rightYs.some(r=>r>y-14&&r<y+4.5)};
 
   let bands="",lines="",labels="";
   for(let t=0;t<=mIdx;t++){
@@ -1245,8 +1255,11 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
        mark it is a caption for the whole view, so it goes to the top instead. */
     const fillsView=bot<=lo&&top>=hi;
     const spots=fillsView?[2]:yBot-yTop>=26?[yBot-11,yTop+3]:[yBot-11];
-    const labY=spots.find(labFree)??spots[0];
-    if(yBot-yTop>=14)labels+=`<span class="lpc-lab" style="top:${labY.toFixed(1)}px;color:${c}">${t===mIdx?"Master+":name.charAt(0)+name.slice(1).toLowerCase()}</span>`;
+    /* With no spot clear of the line and the dots, the caption is left out rather
+       than printed across them ("DIAM●ND"): the band's colour still says the tier,
+       and the tip on any point names it. */
+    const labY=spots.find(labFree);
+    if(labY!=null&&yBot-yTop>=14)labels+=`<span class="lpc-lab" style="top:${labY.toFixed(1)}px;color:${c}">${t===mIdx?"Master+":name.charAt(0)+name.slice(1).toLowerCase()}</span>`;
   }
   // Steps inside the bands. Below Master a step of 100 LP is exactly one division,
   // so the numerals come for free — but a fixed 100 stops working the moment the
@@ -1285,11 +1298,9 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
   const mixed=new Set(divs.filter(d=>d.n).map(d=>d.t)).size>1;
   const dupe=mixed||divs.some((d,i)=>divs.findIndex(o=>o.n===d.n)!==i);
   // The numerals sit at the right edge, which is where the newest point is; one the
-  // point lands on ("P II" under the dot) keeps its hairline and loses its label.
-  // a numeral's box runs from 9.5px above its line to the line; the dot's colour is
-  // 4.5px each way (its dark ring overlapping a letter's edge is not a collision)
-  const lastY=pts.length>1?py(pts[pts.length-1].v):-99, underDot=v=>lastY>py(v)-14&&lastY<py(v)+4.5;
-  for(const d of divs){if(!d.n)continue;rule(d.v);if(!underDot(d.v))mark(d.v,dupe?d.t.charAt(0)+" "+d.n:d.n)}
+  // point or the line lands on ("P II" under the dot) keeps its hairline and loses
+  // its label.
+  for(const d of divs){if(!d.n)continue;rule(d.v);if(numFree(d.v))mark(d.v,dupe?d.t.charAt(0)+" "+d.n:d.n)}
 
   // The Grandmaster and Challenger floors, where the view reaches them. These are
   // the current floors, so they are drawn as a reference against today's ladder —
@@ -1338,8 +1349,10 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     const lineAt=f=>{if(xs.length<2)return ys[0];let i=1;while(i<xs.length-1&&xs[i]<f)i++;
       const a=xs[i-1],b=xs[i],t=b>a?Math.min(1,Math.max(0,(f-a)/(b-a))):0;return ys[i-1]+(ys[i]-ys[i-1])*t};
     const lanes=[.5,.3,.7,.18,.82], clear=f=>Math.min(...[-.04,0,.04].map(o=>Math.abs(lineAt(f+o)-(y-5))));
-    const lane=lanes.find(f=>clear(f)>=11)??lanes.reduce((b,f)=>clear(f)>clear(b)?f:b,lanes[0]);
-    if(!cutYs.some(cy=>Math.abs(y-cy)<11))
+    // and with no stretch clear of the line, the dashed line goes unlabelled; the
+    // card's own Peak figure, under the chart, still says it
+    const lane=lanes.find(f=>clear(f)>=11);
+    if(lane!=null&&!cutYs.some(cy=>Math.abs(y-cy)<11))
       labels+=`<span class="lpc-peak" style="top:${(y-9.5).toFixed(1)}px;left:${(lane*100).toFixed(1)}%" title="${esc(peakLabel||"Season peak")}">Peak</span>`;
     cutYs.push(y);   // and an LP numeral must not land on it either
   }
@@ -1355,7 +1368,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
       // draws a second hairline a few pixels from a dashed one and prints a number
       // beside a label. The floor is the more useful of the two, so it wins.
       if(cutYs.some(cy=>Math.abs(py(v)-cy)<11))continue;
-      rule(v);if(!underDot(v))mark(v,(v-M_BASE)+" LP");
+      rule(v);if(numFree(v))mark(v,(v-M_BASE)+" LP");
     }
   }
 

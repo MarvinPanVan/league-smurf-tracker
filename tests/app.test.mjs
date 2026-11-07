@@ -10383,3 +10383,60 @@ test("the chart's D/W/M switch is 24px tall with 12px letters, on the plot's dar
   const win = bootApp(seededAccount());
   assert.deepEqual([...win.document.querySelectorAll(".card .lpc-range button")].map(b => b.textContent), ["D", "W", "M"]);
 });
+
+// "On Main, the dot sits on top of DIAMOND, and the line runs through MASTER+": a
+// caption, numeral or Peak with no clear spot used to be placed in the least bad one
+test("no chart label is printed across the line or a dot; one with no clear spot is left out", () => {
+  const win = bootApp();
+  const T = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND"], DV = ["IV", "III", "II", "I"];
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const walks = [
+    [["MASTER", null, 1000], ["MASTER", null, 400]],
+    [["GOLD", "I", 0], ["PLATINUM", "III", 74], ["PLATINUM", "II", 61]],
+    [["DIAMOND", "IV", 5], ["DIAMOND", "I", 90]],
+    [["EMERALD", "II", 40], ["EMERALD", "I", 80], ["DIAMOND", "IV", 20]],
+  ];
+  for (let n = 0; n < 60; n++) {
+    let t = 1 + Math.floor(rnd() * 6), d = Math.floor(rnd() * 4), lp = Math.floor(rnd() * 100);
+    const rows = [];
+    for (let k = 0, len = 2 + Math.floor(rnd() * 6); k < len; k++) {
+      rows.push([T[t], DV[d], lp]);
+      lp += Math.floor(rnd() * 160) - 70;
+      while (lp >= 100) { lp -= 100; if (d < 3) d++; else if (t < T.length - 1) { t++; d = 0 } else lp = 99 }
+      while (lp < 0) { lp += 100; if (d > 0) d--; else if (t > 0) { t--; d = 3 } else lp = 0 }
+    }
+    walks.push(rows);
+  }
+  let labelled = 0;
+  for (const rows of walks) {
+    const h = hist(...rows);
+    const vals = h.map(p => win.ladderLP(p));
+    const peak = Math.max(...vals) + 30;
+    const el = win.document.createElement("div");
+    el.innerHTML = win.rankChart(h, null, undefined, "k", peak, "Peak");
+    const pts = [...el.querySelectorAll(".lpc-pt")].map(p => ({ x: parseFloat(p.style.left) / 100, y: parseFloat(p.style.getPropertyValue("--y")) }));
+    const lineAt = x => { let i = 1; while (i < pts.length - 1 && pts[i].x < x) i++;
+      const a = pts[i - 1], b = pts[i], f = b.x > a.x ? Math.min(1, Math.max(0, (x - a.x) / (b.x - a.x))) : 0; return a.y + (b.y - a.y) * f; };
+    const hits = (x0, x1, top, bottom) => {
+      for (let x = x0; x <= x1; x += .005) { const y = lineAt(x); if (y > top && y < bottom) return true; }
+      return pts.some(p => p.x >= x0 && p.x <= x1 && p.y + 3 > top && p.y - 3 < bottom);
+    };
+    const where = rows.map(r => r.join(" ")).join(" → ");
+    for (const l of el.querySelectorAll(".lpc-lab")) {
+      labelled++;
+      const top = parseFloat(l.style.top);
+      assert.ok(!hits(0, .2, top + 1, top + 9), `caption "${l.textContent}" on the line: ${where}`);
+    }
+    for (const l of el.querySelectorAll(".lpc-sub")) {
+      labelled++;
+      const top = parseFloat(l.style.top);
+      assert.ok(!hits(.9, 1, top + 1, top + 9), `numeral "${l.textContent}" on the line: ${where}`);
+    }
+    for (const l of el.querySelectorAll(".lpc-peak")) {
+      const top = parseFloat(l.style.top), x = parseFloat(l.style.left) / 100;
+      assert.ok(!hits(x - .04, x + .04, top + 1, top + 9), `Peak on the line: ${where}`);
+    }
+  }
+  assert.ok(labelled > 60, "most charts still carry their labels (" + labelled + ")");
+});
