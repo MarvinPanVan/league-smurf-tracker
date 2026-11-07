@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.13.0";
+const APP_VERSION="2.14.0";
 const APP_CHANGELOG=[
+  {v:"2.14.0",items:[
+    "Smurf Tracker now lives at smurf-tracker.pages.dev, an address of its own",
+    "The old address moves your vault over in one click: Move my vault there",
+    "Stricter security headers at the new address: no other site can show the app in a frame",
+  ]},
   {v:"2.13.0",items:[
     "The fonts come with the app: opening it no longer asks Google Fonts for anything",
     "A security policy lets only the app's own script run on the page",
