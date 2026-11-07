@@ -253,41 +253,30 @@
      bands of decreasing importance, all left-aligned, which is what made it read
      as flat and pasted into the corner. This is a lockup instead: a mark the
      wordmark sits against, with the descriptor tucked under it. */
-  /* The whole vault's spread across the ladder, in the band the header was
-     wasting. The dashboard's gem row already answers "how many are Platinum";
-     this answers what shape the collection is, and answers it without being
-     opened. Best on the left, the same order the list is sorted in. */
-  .ribbon{flex:1 1 260px;min-width:0;max-width:640px;display:flex;flex-direction:column;gap:6px}
+  /* The vault at a glance (see renderRibbon): an emblem and a count per tier, the
+     other states as words, "not found" as the one warning. Quiet like the filters:
+     no fill until hovered, a tint when it is the filter that is on. */
+  .ribbon{flex:1 1 260px;min-width:0;max-width:760px;display:flex;align-items:center}
   .ribbon:empty{display:none}
-  .rib-bar{display:flex;gap:2px;height:16px}
-  .rib-seg{flex-grow:1;flex-basis:0;min-width:20px;padding:0;border:0;border-radius:2px;
-    /* the tier's own colour. Mixed 62% into the near-black page it came out as the
-       muddy version of every tier: Gold as olive, Silver as slate, Platinum as
-       a dull teal, which is what made the top of the page read as murky */
-    background:var(--c);box-shadow:none;
-    display:flex;align-items:center;justify-content:center;overflow:hidden;
-    transform:none;transition:background .16s ease,box-shadow .16s ease,filter .16s ease}
-  /* The states that are not rungs on the ladder: sized to their own number so
-     they cannot take the bar over, and set slightly back so the ladder reads
-     first. */
-  .rib-seg.tail{flex:0 0 auto;padding:0 10px;min-width:28px;opacity:.82}
-  .rib-seg.tail:hover,.rib-seg.tail.on{opacity:1}
-  .rib-seg:first-child{border-radius:var(--r-xs) 2px 2px var(--r-xs)}
-  .rib-seg:last-child{border-radius:2px var(--r-xs) var(--r-xs) 2px}
-  .rib-seg:only-child{border-radius:var(--r-xs)}
-  .rib-seg i{font-style:normal;font-size:calc(10px*var(--ts));font-weight:700;letter-spacing:.02em;
-    color:var(--bg);opacity:.72;font-variant-numeric:tabular-nums}
-  .rib-seg:hover{background:var(--c);transform:none;border:0;filter:brightness(1.06)}
-  .rib-seg:active{transform:none}
-  .rib-seg:hover i{opacity:.95}
-  /* the selected tier reads as the only lit one, so the bar doubles as a readout
-     of which filter is on */
-  .rib-bar:has(.rib-seg.on) .rib-seg:not(.on){background:color-mix(in srgb,var(--c) 22%,var(--bg))}
-  .rib-bar:has(.rib-seg.on) .rib-seg:not(.on) i{opacity:.4}
-  .rib-seg.on{background:var(--c);box-shadow:0 0 0 1px var(--bg),0 0 14px -2px var(--c)}
-  .rib-cap{display:flex;justify-content:space-between;gap:3px 12px;flex-wrap:wrap;
-    font-size:calc(11px*var(--ts));letter-spacing:.02em;color:var(--faint)}
-  .rib-cap b{font-weight:600;color:var(--muted)}
+  .rib-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px 2px}
+  .rib-i{height:30px;padding:0 8px;gap:6px;border-radius:var(--r-sm);background:none;border:1px solid transparent;
+    color:var(--text);font-size:calc(13px*var(--ts));font-weight:500;font-variant-numeric:tabular-nums}
+  .rib-i:hover{background:#ffffff10;border-color:transparent;color:var(--text)}
+  .rib-i.on{background:color-mix(in srgb,var(--gold) 12%,transparent);border-color:color-mix(in srgb,var(--gold) 45%,transparent)}
+  .rib-crest{width:18px;height:18px;flex-shrink:0}
+  .rib-t b{font-weight:600}
+  /* while one is the filter, the others step back */
+  .rib-row:has(.rib-i.on) .rib-i:not(.on){opacity:.55}
+  .rib-row:has(.rib-i.on) .rib-i:not(.on):hover{opacity:1}
+  .rib-states{display:inline-flex;align-items:center;margin-left:8px}
+  .rib-s{color:var(--muted);padding:0 6px}
+  .rib-dot{font-style:normal;color:var(--faint)}
+  .rib-warn{margin-left:10px;color:var(--warn-txt);border-color:color-mix(in srgb,var(--warn) 38%,transparent);
+    background:color-mix(in srgb,var(--warn) 9%,transparent)}
+  .rib-warn:hover{color:var(--warn-txt);border-color:color-mix(in srgb,var(--warn) 60%,transparent);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+  .rib-warn.on{color:var(--warn-txt);border-color:var(--warn);background:color-mix(in srgb,var(--warn) 18%,transparent)}
+  .rib-warn .ico{width:14px;height:14px}
+  .rib-warn u{text-decoration:none;font-weight:600;padding-left:8px;border-left:1px solid color-mix(in srgb,var(--warn) 35%,transparent)}
   .brand{display:flex;align-items:center;gap:16px;min-width:0}
   /* A gem set in a turned gold frame, rather than a rounded app-icon tile. */
   /* Flat and still, like everything round it: a solid stone in a two-line frame.
@@ -471,14 +460,6 @@
   .stat-b.on{background:color-mix(in srgb,var(--gold) 11%,transparent);border:0;
     box-shadow:inset 2px 0 0 var(--gold)}
   .s-note{font-size:calc(11px*var(--ts));color:var(--faint);margin-top:4px;line-height:1.4}
-  /* A "·" list (dotList) breaks between its pieces, never inside one, and never
-     leaves a dot at either end of a line: each dot sits in the gap before its
-     piece, so a piece that starts a line has its dot out past the left edge,
-     where the clip hides it. The dots stay real text for copying and tests. */
-  .dots{display:inline-flex;max-width:100%;clip-path:inset(-.5em -.5em -.5em 0)}
-  .dots-in{display:flex;flex-wrap:wrap;min-width:0;margin-left:-.8em}
-  .dot-i{position:relative;margin-left:.8em;white-space:nowrap}
-  .dot-s{position:absolute;right:100%;width:.8em;text-align:center;font-style:normal;white-space:pre}
   .gem.cmb b{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .gem.cmb b.wr-good{color:var(--good)}
   .gem.cmb i.g{font-style:normal;font-size:calc(11px*var(--ts));font-weight:600;color:var(--muted);
@@ -2500,7 +2481,6 @@
     .bulkchk,#tSelectAll{width:24px;height:24px}
     .lpc-range button{padding:7px 9px}
     .rid{padding-block:5px;margin-block:-3px}
-    .rib-bar{height:24px}
     .cmd-count .warn{padding:6px 10px}
     .c-notes.blank>button,.c-notes.blank .nf-link{min-height:30px} /* matches the all:unset rule it has to beat */
   }

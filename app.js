@@ -929,11 +929,6 @@ const ICON={
 };
 function icon(name,cls){return `<svg class="ico${cls?" "+cls:""}" viewBox="0 0 24 24">${ICON[name]}</svg>`}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-// pieces of HTML (escaped by the caller) as "a · b · c" that wraps cleanly; see .dots
-function dotList(parts){
-  return`<span class="dots"><span class="dots-in">${parts.filter(Boolean).map((p,i)=>
-    `<span class="dot-i">${i?`<i class="dot-s"> · </i>`:""}${p}</span>`).join("")}</span></span>`;
-}
 // data-id and querySelector both need the id to be inert. esc() for attributes;
 // CSS.escape for selectors — a poisoned id in localStorage used to break out of
 // data-id="…" on first paint, and a quote in an id made querySelector throw.
@@ -3707,16 +3702,18 @@ function mergeChampions(pool){
     .map(c=>({name:c.name,games:c.games,accs:c.accs,wins:c.wins,losses:c.games-c.wins,
       wr:Math.round(c.wins/c.games*100)}));
 }
-/* How the whole vault spreads across the ladder, as one bar. The dashboard's gem
-   row already answers "how many are Platinum"; this answers the question nobody
-   could ask before, which is what shape the collection is — and it does it without
-   being opened, because it lives in space the header was wasting anyway.
-   Segments are ordered the way the list is, best first, so the two agree. */
+/* The vault at a glance, in the header: a small emblem and a count for each tier
+   (each one filters to it), the states that are not ranks as plain words, and "not
+   found" (a Riot ID op.gg doesn't know: not entered yet, renamed or mistyped) as
+   the one warning, with a way to see them. It was a bar of thick tier-coloured
+   blocks with the counts squeezed inside and a caption under it saying the same in
+   words: the loudest thing on the page and the least important, with the statuses
+   on the same scale as the ranks, so forty unfinished Riot IDs made a red block
+   that crushed the ladder beside it. Tiers run best first, the way the list does. */
 function renderRibbon(){
   const el=$("ribbon");
   const pool=accounts.filter(a=>!a.archived);
-  // Under two accounts there is no distribution to show, only a full-width block
-  // of one colour pretending to be information.
+  // Under two accounts there is no spread to show, only one emblem saying "1".
   if(pool.length<2){setHTML(el,"");return}
   const dist={};let unN=0,neverN=0,missN=0,bannedN=0;
   for(const a of pool){
@@ -3724,8 +3721,7 @@ function renderRibbon(){
        spread asks the same question and has always answered it with isLive(),
        so a banned Bronze account made the two disagree about how many tiers the
        vault spans — and gave the ribbon a Bronze segment the gem row did not
-       have. It gets its own tail segment instead of vanishing, so the segments
-       still add up to the total in the caption. */
+       have. It is counted on its own instead of vanishing ("1 banned"). */
     if(!isLive(a)){bannedN++;continue}
     // Same predicate as the dash "Never checked" tile / filter.
     if(neverChecked(a)){neverN++;continue}
@@ -3733,49 +3729,25 @@ function renderRibbon(){
     else if(isUnrankedAnswer(a))unN++;
     else if(a.stats&&a.stats.found===false)missN++;
   }
-  const segs=TIER_ORDER.slice().reverse().filter(t=>dist[t])
-    .map(t=>({k:t,n:dist[t],c:TIER_COLORS[t],label:groupLabel(t)}));
-  const tierN=segs.length;   // counted before the two tail segments join them
-  /* The tail was one segment reading "Unranked or never checked", which is two
-     different things: an answer, and a job not done yet. They have separate filters
-     behind them and the stats panel has always counted them apart, so the bar shows
-     them apart too — and either one now shows exactly what it counted when clicked. */
-  if(unN)segs.push({k:"UNRANKED",n:unN,c:TIER_COLORS.UNRANKED,label:"Unranked"});
-  // Dedicated flag — not "attention". Auto-flagging a missing profile also marks
-  // Needs attention, but the ribbon count is only found===false; filtering by
-  // attention would pull in every hand-flagged account and disagree with the N.
-  if(missN)segs.push({flag:"missing",n:missN,c:"var(--danger)",label:"Not found"});
-  if(neverN)segs.push({flag:"unchecked",n:neverN,c:"var(--faint)",label:"Never checked"});
-  // Filtered by status rather than by a chore flag — "banned" is a state of the
-  // account, and the toolbar's status dropdown is the control that already means it.
-  if(bannedN)segs.push({status:"banned",n:bannedN,c:STATUS.banned.color,label:"Banned"});
-  if(!segs.length){setHTML(el,"");return}
-  // Best of the accounts still in play: a banned Challenger is not the best
-  // account in the vault, it is a gravestone.
-  const best=pool.filter(a=>isLive(a)&&isRanked(a)).sort((x,y)=>rankValue(y.stats)-rankValue(x.stats))[0];
-  const segAttr=s=>s.flag?`data-flag="${s.flag}"`:s.status?`data-status="${s.status}"`:`data-tier="${s.k}"`;
-  const segOn=s=>s.flag?ui.flag===s.flag:s.status?ui.status===s.status:ui.tier===s.k;
-  /* A tier segment is a share of the ladder, so it scales with its count. "Not
-     found", "Never checked" and "Banned" are not positions on the ladder — and
-     scaled the same way they take the bar over: a vault with forty dead Riot IDs
-     gave 72% of a bar labelled "by tier" to something that is not a tier, and
-     squeezed the whole actual spread into 12%. They sit at the end at a fixed
-     size instead, big enough to read and click. The exact numbers are in the
-     caption either way. */
-  const isTail=s=>!!(s.flag||s.status);
-  // Five segments each printed "1" in a five-account vault: a number that only ever
-  // says "one" says nothing, and the caption under the bar counts them anyway.
-  const allOne=segs.every(s=>s.n===1);
-  setHTML(el,`<div class="rib-bar" role="group" aria-label="Accounts by tier">${segs.map(s=>{
-      const on=segOn(s);
-      return `<button class="rib-seg${on?" on":""}${isTail(s)?" tail":""}" ${segAttr(s)} style="--c:${s.c}${isTail(s)?"":";flex:"+s.n}"
-        aria-pressed="${on}" title="${esc(s.label)}: ${s.n} account${s.n===1?"":"s"}. Click to show only these."
-        aria-label="${esc(s.label)}, ${s.n}">${allOne?"":`<i>${s.n}</i>`}</button>`}).join("")}</div>
-    <div class="rib-cap">${dotList([`<b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}`,
-      unN&&`<b>${unN}</b> unranked`,missN&&`<b>${missN}</b> not found`,neverN&&`<b>${neverN}</b> never checked`,bannedN&&`<b>${bannedN}</b> banned`])}`
-    // with the name: the stats panel's Best account tile said who, and it is gone
-    +(best?`<span class="rib-best">best ${nameOf(best)} · <b style="color:${tierColor(best.stats.tier)}">${esc(shortRank(best.stats))}</b></span>`:"")
-    +`</div>`);
+  const tiers=TIER_ORDER.slice().reverse().filter(t=>dist[t]);
+  if(!tiers.length&&!unN&&!missN&&!neverN&&!bannedN){setHTML(el,"");return}
+  const plural=n=>n===1?"":"s";
+  const tierItem=t=>{const on=ui.tier===t, n=dist[t], name=groupLabel(t);
+    return`<button class="rib-i rib-t${on?" on":""}" data-tier="${t}" aria-pressed="${on}"`
+      +` title="${esc(name)}: ${n} account${plural(n)}. Click to show only these." aria-label="${esc(name)}, ${n}">${crest(t,"rib-crest")}<b>${n}</b></button>`};
+  const word=(attr,on,n,label,why)=>`<button class="rib-i rib-s${on?" on":""}" ${attr} aria-pressed="${on}" title="${esc(why)} Click to show them."`
+    +` aria-label="${esc(label.charAt(0).toUpperCase()+label.slice(1))}, ${n}">${n} ${label}</button>`;
+  const states=[
+    unN&&word('data-tier="UNRANKED"',ui.tier==="UNRANKED",unN,"unranked","Checked, and not ranked this season."),
+    neverN&&word('data-flag="unchecked"',ui.flag==="unchecked",neverN,"never checked","No rank read yet."),
+    bannedN&&word('data-status="banned"',ui.status==="banned",bannedN,"banned","Marked banned."),
+  ].filter(Boolean);
+  const missOn=ui.flag==="missing";
+  const warn=missN?`<button class="rib-i rib-warn${missOn?" on":""}" data-flag="missing" aria-pressed="${missOn}" aria-label="Not found, ${missN}"`
+    +` title="op.gg has no profile for these Riot IDs: not entered yet, renamed, or mistyped.">${icon("alert")}<span>${missN} not found</span><u>${missOn?"Shown":"Show"}</u></button>`:"";
+  setHTML(el,`<div class="rib-row" role="group" aria-label="Accounts by tier">${tiers.map(tierItem).join("")}`
+    +(states.length?`<span class="rib-states">${states.join('<i class="rib-dot" aria-hidden="true">·</i>')}</span>`:"")
+    +warn+`</div>`);
 }
 /* Collapsed until asked for on a phone: there the stats were the whole first
    screen, ahead of every account. A choice made with the toggle is kept on any
