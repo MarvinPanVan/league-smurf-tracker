@@ -515,6 +515,8 @@ function playNext(pool){
   const since=best.lastPlayedAt?"played":best.lastLoginAt?"you opened its login":"its last check";
   return{a:best,why:days+" days since "+since};
 }
+// Said in words on hover and to a screen reader: unexplained, it was a mystery mark
+function flagMark(){return `<span class="flagmark" role="img" aria-label="Flagged for attention" title="Flagged for attention. Clear it in the ⋯ menu.">${icon("flag")}</span>`}
 function needsRotation(a){
   if(a.status==="banned"||a.archived)return false;
   const d=rotationDays(a);
@@ -908,7 +910,8 @@ const ICON={
   clipboard:'<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
   star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
   chevron:'<polyline points="6 9 12 15 18 9"/>',
-  flag:'<path d="M4 22V4h11l-1.4 3.5L15 11H4"/><line x1="4" y1="4" x2="4" y2="22"/>',
+  // a cloth on a pole: the pennant before it, small and red after a name, read as a "P"
+  flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
   plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
   eye:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
   eyeOff:'<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M1 1l22 22"/><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>',
@@ -5175,7 +5178,7 @@ function rowHTML(a,i){
       <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}">
       <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
       <span class="rw-id">
-        <span class="rw-nm" title="${esc(plainName(a))}"><span class="nm-t">${nameOf(a)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged: needs a look">${icon("flag")}</span>`:""}</span>
+        <span class="rw-nm" title="${esc(plainName(a))}"><span class="nm-t">${nameOf(a)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?flagMark():""}</span>
         <span class="rw-sub"><span class="rw-tag sens">${esc(a.gameName)}#${esc(a.tagLine)}</span>${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}</span>
       </span>
       <span class="rw-spark">${sparkline(a.history,col)
@@ -5236,7 +5239,7 @@ function tileHTML(a){
     <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
-    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?`<span class="flagmark" title="Flagged: needs a look">${icon("flag")}</span>`:""}</span>
+    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?flagMark():""}</span>
     <span class="t-rk" style="color:${col}">${esc(rank)}</span>
     ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
   </div></div>`;
@@ -5379,7 +5382,7 @@ function cardHTML(a,i){
       <div class="c-id">
         <!-- the name is ellipsised at the card's width, so the full one has to be
              available somewhere; hovering is the only place left for it -->
-        <div class="c-name"><span title="${esc(plainName(a))}"${a.label?"":' class="sens"'}>${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged: needs a look">${icon("flag")}</span>`:""}${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f" title="${esc(st.label)}">${esc(st.short||st.label)}</span>`:""}</div>
+        <div class="c-name"><span title="${esc(plainName(a))}"${a.label?"":' class="sens"'}>${esc(a.label||a.gameName)}</span>${a.flagged?flagMark():""}${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f" title="${esc(st.label)}">${esc(st.short||st.label)}</span>`:""}</div>
         <button class="rid" data-act="copyid" title="Copy Riot ID"><span class="sens">${esc(a.gameName)}<b>#${esc(a.tagLine)}</b></span></button>
       </div>
       <div class="c-chrome">

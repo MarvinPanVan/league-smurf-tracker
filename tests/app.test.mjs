@@ -10315,3 +10315,16 @@ test("on a phone Settings shows all six tabs, the theme names whole, and opens o
   runScript(win, "openSettings('security')");
   await until(() => win.document.activeElement && win.document.activeElement.id === "stab-security", "or on whichever tab it opened at");
 });
+
+// The flag after a name was a pennant, small and red, and people read it as a "P",
+// with nothing on hover saying what it was
+test("a flagged account carries a flag that looks like one and says what it means", () => {
+  const seed = seededAccount(); seed[0].flagged = true;
+  const win = bootApp(seed);
+  const mark = win.document.querySelector(".card .flagmark");
+  assert.equal(mark.getAttribute("aria-label"), "Flagged for attention");
+  assert.match(mark.getAttribute("title"), /^Flagged for attention\. Clear it in the ⋯ menu\.$/);
+  const d = [...mark.querySelectorAll("path")].map(p => p.getAttribute("d")).join(" ");
+  assert.match(d, /^M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3/, "a cloth on a pole");
+  assert.doesNotMatch(d, /M4 22V4h11/, "not the pennant");
+});
