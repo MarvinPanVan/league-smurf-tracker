@@ -1232,6 +1232,11 @@ test("Play next names the account to play: about to decay first, then the longes
   const both = bootApp([acc("old", "GOLD", 20), urgent]);
   assert.equal(tile(both).dataset.next, "dia", "an account about to decay comes before one that has merely sat");
   assert.match(tile(both).textContent, /decay in ~\dd/);
+  // Play next already names the one account at risk: a "Decay risk 1" tile beside it said it twice
+  assert.equal(both.document.querySelector('#dash [data-flag="decay"]'), null, "one at risk is said once, by Play next");
+  const dia2 = acc("dia2", "DIAMOND", 2, { history: [{ t: now - 24 * D, tier: "DIAMOND", division: "II", lp: 20, w: 10, l: 10 }] });
+  const two = bootApp([acc("old", "GOLD", 20), urgent, dia2]);
+  assert.equal(two.document.querySelector('#dash [data-flag="decay"] .v').textContent, "2", "two at risk: the tile counts and filters them");
   tile(both).click();
   assert.equal(appGet(both, "flashId"), "dia", "clicking it brings that account into view");
   // and the jump gets there even through a filter that hides the account
