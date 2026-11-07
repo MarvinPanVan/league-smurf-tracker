@@ -3854,8 +3854,8 @@ function renderDash(){
     // a tile saying "1" beside it only says it again. Two or more, and it filters.
     decayN&&!(decayN===1&&next&&decayRisk(next.a))&&`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left, estimated from the games seen between checks"><div class="k">Decay risk</div>
       <div class="v" style="color:var(--warn)">${decayN}</div><div class="s-note">a week or less banked · play a ranked game</div></button>`,
-    rotN&&`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
-      <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`,
+    rotN&&`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Idle</div>
+      <div class="v">${rotN}</div><div class="s-note">14+ days without a game, login or check</div></button>`,
     week&&(()=>{
       /* Two LP figures sat side by side here, +286 this week and +246 for the group,
          and read as a contradiction: this one is a total across the accounts, the
@@ -3965,7 +3965,7 @@ function renderTagbar(){
 // A number in a dashboard always raises "which ones?", so the stats panel sets
 // these — and they have to be visible and removable, or the grid just looks
 // mysteriously short.
-const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Needs attention",missing:"Not found",dup:"Duplicate IDs",rotate:"Due to rotate"};
+const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Needs attention",missing:"Not found",dup:"Duplicate IDs",rotate:"Idle 14+ days"};
 function renderChips(){
   syncFilterCount();
   const out=[];
@@ -5294,7 +5294,8 @@ function cardHTML(a,i){
   if(isUncertain(a))deltaChip+='<span class="delta" title="Parsed without op.gg meta description">Uncertain</span>';
   {
     const d=rotationDays(a);
-    if(needsRotation(a))deltaChip+='<span class="delta" title="No play/check in 14+ days">Rotate'+(d!=null?(" · "+d+"d"):"")+'</span>';
+    // "Rotate · 54d" meant nothing without the Help page; this says it
+    if(needsRotation(a))deltaChip+=`<span class="delta" title="No game, login or check here in ${d} days">Idle ${d} days</span>`;
   }
   {
     const tr=!dead&&wrTrend(a);

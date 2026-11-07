@@ -10328,3 +10328,17 @@ test("a flagged account carries a flag that looks like one and says what it mean
   assert.match(d, /^M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3/, "a cloth on a pole");
   assert.doesNotMatch(d, /M4 22V4h11/, "not the pennant");
 });
+
+// "Rotate · 54d" needed the Help page to make sense of
+test("an account left alone says Idle and for how long, in words", () => {
+  const D = 864e5;
+  const win = bootApp([{ id: "o1", region: "EUW", gameName: "Old", tagLine: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: Date.now() - 54 * D } }]);
+  const chip = [...win.document.querySelectorAll(".card .delta")].find(c => /Idle/.test(c.textContent));
+  assert.ok(chip, "the chip");
+  assert.equal(chip.textContent, "Idle 54 days");
+  assert.equal(chip.getAttribute("title"), "No game, login or check here in 54 days");
+  assert.doesNotMatch(win.document.getElementById("grid").textContent, /Rotate/);
+  const tile = win.document.querySelector('[data-flag="rotate"]');
+  if (tile) assert.match(tile.textContent, /Idle/);
+});
