@@ -8352,6 +8352,20 @@ test("the list is a table: headings over aligned columns, and a row copies its l
   assert.ok(rows.some(r => /^Copy username/.test(r)) && rows.some(r => /^Copy password/.test(r)), rows.join(" | "));
 });
 
+// A tagged row was three lines (name, Riot ID, tags): 85px, eight rows to a laptop screen
+test("a list row is two lines: the tags ride on the Riot ID's line", () => {
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: ["mid", "duo"], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 10, losses: 8, updatedAt: Date.now() } }]);
+  const doc = win.document;
+  doc.querySelector('[data-density="list"]').click();
+  const id = doc.querySelector('.rw[data-id="a"] .rw-id');
+  assert.deepEqual([...id.children].map(c => c.className), ["rw-nm", "rw-sub"], "a name line and one line under it");
+  const sub = id.querySelector(".rw-sub");
+  assert.equal(sub.querySelector(".rw-tag").textContent, "A#1");
+  assert.deepEqual([...sub.querySelectorAll(".rw-tags i")].map(i => i.textContent), ["mid", "duo"]);
+  assert.doesNotMatch(html.match(/\.rw-tags\{[^}]*\}/)[0], /margin-top/, "no gap left over from a line of their own");
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],

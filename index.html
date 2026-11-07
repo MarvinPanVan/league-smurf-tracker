@@ -905,7 +905,13 @@
   .rw-star{color:var(--star);display:inline-flex;flex-shrink:0}
   .rw-star .ico{width:11px;height:11px;fill:var(--star)}
   .rw-tag{font-size:calc(11px*var(--ts));color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .rw-tags{display:flex;gap:4px;margin-top:3px;overflow:hidden}
+  /* The tags ride on the Riot ID's line. On a line of their own they made every
+     tagged row three lines tall: 85px a row, eight rows to a laptop screen, in the
+     layout that exists to scan a long vault. The Riot ID keeps its width; the tags
+     take what is left and are clipped first. */
+  .rw-sub{display:flex;align-items:center;gap:8px;min-width:0}
+  .rw-sub .rw-tag{flex:0 1 auto;min-width:40px}
+  .rw-tags{display:flex;gap:4px;overflow:hidden;flex:0 1 auto;min-width:0}
   .rw-tags i{font-style:normal;font-size:calc(10px*var(--ts));letter-spacing:.02em;color:var(--muted);
     padding:1px 6px;border-radius:var(--r-xs);background:#ffffff0f;white-space:nowrap}
   /* the shape of the climb, which the list used to leave out entirely */
@@ -8274,8 +8280,7 @@ function rowHTML(a,i){
       <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
       <span class="rw-id">
         <span class="rw-nm" title="${esc(plainName(a))}"><span class="nm-t">${nameOf(a)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
-        <span class="rw-tag sens">${esc(a.gameName)}#${esc(a.tagLine)}</span>
-        ${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}
+        <span class="rw-sub"><span class="rw-tag sens">${esc(a.gameName)}#${esc(a.tagLine)}</span>${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}</span>
       </span>
       <span class="rw-spark">${sparkline(a.history,col)
         // Nothing to plot yet, so the slot offers the one thing that would change
