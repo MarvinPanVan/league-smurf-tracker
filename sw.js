@@ -10,6 +10,9 @@ const ASSETS = [
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png",
+  // the Latin files every page uses; the other alphabets are cached when first needed
+  "./fonts/inter-latin.woff2",
+  "./fonts/cinzel-latin.woff2",
 ];
 
 self.addEventListener("install", e => {
@@ -34,7 +37,7 @@ self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
 
   // Only ever touch our own files. Everything cross-origin — the op.gg rank
-  // proxies, the profile-icon CDN, the backend worker, Google Fonts — must go
+  // proxies, the profile-icon CDN, the backend worker — must go
   // straight to the network: caching a rank check would pin the account to
   // whatever rank it had the first time it was ever fetched.
   if (new URL(e.request.url).origin !== self.location.origin) return;

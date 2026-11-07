@@ -1009,7 +1009,8 @@ test("actions and window titles are set in the text face; Cinzel is the wordmark
   assert.doesNotMatch(rule, /Cinzel|uppercase|letter-spacing/);
   // Cinzel is the wordmark's now, and the wordmark's only
   const users = [...css.matchAll(/([^{}]+)\{[^}]*Cinzel[^}]*\}/g)].map(m => m[1].trim());
-  assert.ok(users.every(sel => /hex-display|lock-wm|acc-prev-t/.test(sel)), users.join(" | "));
+  // (the @font-face rules that bring the font in are not users of it)
+  assert.ok(users.every(sel => /hex-display|lock-wm|acc-prev-t|^@font-face$/.test(sel)), users.join(" | "));
 });
 
 test("Refresh stale refreshes found accounts that have gone old, not ones with no profile yet", () => {
@@ -8664,7 +8665,8 @@ test("what the app says leaves the browser is true: the Riot ID goes out for a r
   assert.doesNotMatch(note, /nothing is uploaded/i);
   assert.match(note, /Riot ID to op\.gg, through a public proxy/);
   const help = win.document.getElementById("help").textContent;
-  for (const host of ["corsproxy.io", "allorigins.win", "r.jina.ai", "Google Fonts"]) assert.ok(help.includes(host), "Help names " + host);
+  for (const host of ["corsproxy.io", "allorigins.win", "r.jina.ai"]) assert.ok(help.includes(host), "Help names " + host);
+  assert.doesNotMatch(help, /Google Fonts/, "the fonts come with the app now");
   for (const proxy of ["corsproxy.io", "allorigins.win", "r.jina.ai"]) assert.ok(html.includes(proxy + "/") || html.includes("//" + proxy), proxy + " is really used");
   assert.doesNotMatch(html, /Everything here stays in this browser/, "the add forms say the Riot ID is looked up");
 });
@@ -8788,6 +8790,24 @@ test("no sentence in the app's text, tooltips or messages leans on an em dash", 
   const said = [...appScript.matchAll(/(?:toast|confirm|notify|saveThen|lockError)\(\s*"([^"\n]*)"/g)].map(m => m[1])
     .concat([...appScript.matchAll(/textContent=[^;\n]*?"([^"\n]*\u2014[^"\n]*)"/g)].map(m => m[1]));
   assert.deepEqual(said.filter(x => x.includes("\u2014")), [], "and what it says when something happens");
+});
+
+// The page loaded Inter and Cinzel from Google Fonts, so every visit told Google about it
+test("the fonts come with the app: no Google Fonts, every file the styles name is here, with its licence", () => {
+  assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/);
+  const faces = [...html.matchAll(/@font-face\{font-family:'(\w+)'[^}]*src:url\((fonts\/[\w.-]+\.woff2)\)/g)];
+  assert.deepEqual([...new Set(faces.map(f => f[1]))].sort(), ["Cinzel", "Inter"]);
+  assert.ok(faces.length >= 9, "every alphabet Google served, so names in Cyrillic or Greek still get Inter");
+  const root = path.join(__dirname, "..");
+  for (const [, , file] of faces) {
+    const buf = fs.readFileSync(path.join(root, file));
+    assert.equal(buf.subarray(0, 4).toString("latin1"), "wOF2", file + " is a WOFF2 file");
+  }
+  for (const fam of ["Inter", "Cinzel"])
+    assert.match(fs.readFileSync(path.join(root, "fonts", `OFL-${fam}.txt`), "utf8"), /SIL Open Font License, Version 1\.1/);
+  const sw = fs.readFileSync(path.join(root, "sw.js"), "utf8");
+  for (const f of ["fonts/inter-latin.woff2", "fonts/cinzel-latin.woff2"]) assert.ok(sw.includes("./" + f), "offline too: " + f);
+  assert.match(html, /<link rel="preload" href="fonts\/inter-latin\.woff2" as="font" type="font\/woff2" crossorigin>/);
 });
 
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row
