@@ -682,7 +682,11 @@ test("frames are a neutral hairline; the accent edge is kept for a favourite and
   const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
   assert.doesNotMatch(rule(".hx"), /--gold|--teal/, "a plain frame carries no accent");
   assert.match(rule(".hx"), /var\(--line2\),var\(--line\)/, "a step lighter along the top");
-  assert.match(rule(".hx.gold"), /var\(--gold\)/, "a favourite's edge is the accent");
+  assert.match(rule(".hx.gold"), /var\(--gold\)/, "an open panel's edge is the accent");
+  // ...and only a panel's: on a favourite card it read as "selected", and the star says favourite
+  const win = bootApp([{ id: "f", gameName: "F", tagLine: "1", region: "EUW", status: "active", fav: true, tags: [], history: [], stats: null }]);
+  assert.equal(win.document.querySelector('.grid>.hx[data-id="f"]').classList.contains("gold"), false, "a favourite card has the plain frame");
+  assert.ok(win.document.querySelector('.card[data-id="f"] .star.on, .card[data-id="f"] [data-act="fav"]'), "and its star");
   assert.doesNotMatch(rule(".hx.gold"), /box-shadow/, "with no halo round it");
   assert.doesNotMatch(html, /\.hx\.gold \.hx-in\{/, "and no tint inside it");
   for (const sel of [".hx-in>.dist::before", ".hx-rule"]) assert.doesNotMatch(rule(sel), /--gold/, sel + " is a neutral line");
@@ -921,7 +925,7 @@ test("Login stays the one filled control on a card, in the same material as ever
 // and every accent button is the same plate, edged and lettered in the accent, never metal
 test("the accent buttons add no gradient rim or glow of their own; the wordmark and gem are solid", () => {
   const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
-  for (const sel of [".b-gold", ".b-gold:hover", ".b-teal", ".b-teal:hover"]) {
+  for (const sel of [".b-teal", ".b-teal:hover"]) {
     assert.doesNotMatch(rule(sel), /gradient|box-shadow/, sel);
   }
   const h1 = html.match(/\n  h1,\.lock-wm\{([^}]*)\}/)[1];
@@ -949,7 +953,7 @@ test("every button, dropdown and switch wears the same satin; icons, links and m
   assert.match(base, /background-image:var\(--sheen\)/);
   assert.match(base, /box-shadow:var\(--sh-btn\)/);
   // ...and a variant recolours the plate without wiping it: the background shorthand would reset the image
-  for (const sel of ["button:hover,.btn:hover", ".b-gold", ".b-gold:hover", ".b-teal", ".b-teal:hover", ".b-danger:hover",
+  for (const sel of ["button:hover,.btn:hover", ".b-teal", ".b-teal:hover", ".b-danger:hover",
       ".a-login:hover", ".a-dpm", ".a-dpm:hover", ".c-more.on", ".ghost-toggle", ".ghost-toggle:hover"])
     assert.doesNotMatch(rule(sel), /(^|[;{\s])background:/, sel + " sets background-color, keeping the sheen");
   // a dropdown is a button that opens a list: the chevron sits on the same satin, hovered or not
@@ -3416,8 +3420,8 @@ test("picking a colour opens a miniature homepage beside the colour popup", asyn
   assert.ok(prev.querySelector(".acc-prev-home"), "homepage half");
   assert.ok(prev.querySelector(".acc-prev-card"), "and the card beside it");
   assert.ok(prev.querySelector(".acc-prev-mark"), "it carries the brand");
-  assert.ok(prev.querySelector(".b-gold"), "something driven by the primary");
-  assert.ok(prev.querySelector(".b-teal"), "and something driven by the secondary");
+  assert.ok(prev.querySelector(".acc-prev-mark"), "something driven by the primary: the brand");
+  assert.ok(prev.querySelector(".b-teal"), "and something driven by the secondary: the buttons");
   assert.ok(prev.querySelector(".acc-prev-star"), "favorites are a primary thing");
   // the colour field is the larger hit target next to the reset — reset stays as it is
   assert.equal(win.getComputedStyle(swatch).width, "52px");
@@ -3514,6 +3518,28 @@ function chartDom(win, h, mode) {
   return el;
 }
 
+// "P II" sat under the newest dot, and the line ran through "PEAK" at the chart's middle
+test("chart labels keep off the line: no numeral under the newest point, PEAK where the line is not", () => {
+  const win = bootApp();
+  const marks = h => [...chartDom(win, h).querySelectorAll(".lpc-sub")].map(n => n.textContent);
+  // the newest point sits just above Platinum II's line: that numeral steps aside, the others stay
+  const m = marks(hist(["GOLD", "I", 0], ["PLATINUM", "III", 74], ["PLATINUM", "II", 61]));
+  assert.ok(!m.includes("P II"), "no label under the dot: " + m.join(", "));
+  assert.ok(m.includes("P III") && m.includes("G I"), "the rest are still there: " + m.join(", "));
+  assert.ok(marks(hist(["PLATINUM", "IV", 5], ["PLATINUM", "II", 90])).includes("II"), "a numeral well clear of the dot stays");
+  // a peak level with the middle of a falling line: the label moves along to a clear stretch
+  const h = hist(["GOLD", "II", 35], ["GOLD", "II", 35], ["GOLD", "II", 30], ["GOLD", "III", 70], ["GOLD", "III", 22]);
+  const el = win.document.createElement("div");
+  el.innerHTML = win.rankChart(h, null, undefined, "pk", win.ladderLP({ tier: "GOLD", division: "II", lp: 35 }), "Gold II · 35 LP");
+  const peak = el.querySelector(".lpc-peak");
+  assert.ok(peak, "the peak is labelled");
+  assert.ok(peak.style.left, "placed along the line, not fixed in the centre");
+  // and the stats panel's Average climb line is short enough to show its slope (stretched
+  // 28px tall over a 400px cell, +246 LP drew flat)
+  assert.ok(+html.match(/\.pool-spark\{[^}]*max-width:(\d+)px/)[1] <= 240);
+  assert.notEqual(peak.style.left, "50%", "not in the middle, where the line passes: " + peak.style.left);
+});
+
 test("a point's hit area is a window around it, never a slab of the whole chart", () => {
   const win = bootApp();
   // Horizontal extent only — the vertical band is the test below. Two failure
@@ -3588,11 +3614,15 @@ test("the two halves of the ladder get their own scale", () => {
 
   // above it a fixed 100 is far too fine — a Master account decaying 1600 -> 800
   // would be dozens of lines, so that step grows with the range
-  assert.deepEqual(marks(hist(["MASTER", null, 1600], ["MASTER", null, 800])), ["800 LP", "1200 LP"]);
-  assert.deepEqual(marks(hist(["MASTER", null, 2400], ["MASTER", null, 300])), ["400 LP", "1200 LP", "2000 LP"]);
+  // (the newest point sits exactly on the 800 LP line, so that label steps out from under it)
+  assert.deepEqual(marks(hist(["MASTER", null, 1600], ["MASTER", null, 800])), ["1200 LP"]);
+  assert.deepEqual(marks(hist(["MASTER", null, 800], ["MASTER", null, 1600])), ["800 LP", "1200 LP"], "with the dot elsewhere, both");
+  // (300 LP sits 3px under the 400 LP line on this scale, so that label steps aside too)
+  assert.deepEqual(marks(hist(["MASTER", null, 2400], ["MASTER", null, 300])), ["1200 LP", "2000 LP"]);
 
   // both at once, each on its own scale
-  assert.deepEqual(marks(hist(["MASTER", null, 393], ["MASTER", null, 196], ["DIAMOND", "I", 52])),
+  // (ending between the two marks, so the newest point covers neither)
+  assert.deepEqual(marks(hist(["MASTER", null, 393], ["DIAMOND", "I", 52], ["MASTER", null, 110])),
     ["I", "200 LP"]);
 
   // too much ladder in view for a 100 LP line to be readable: the bands carry it
@@ -5407,35 +5437,40 @@ test("list rows draw a sparkline only when there is a shape to draw", () => {
   assert.equal(row("t9").classList.contains("rw-quiet"), false);
 });
 
-// Favourites are pinned above everything by filtered(). Grouping purely by tier
-// therefore opened a heading for the favourite's tier at the top and a second one
-// for the same tier further down — two headings sharing a data-id, which is the
-// one thing syncGrid cannot survive.
-test("the rank-sorted list groups by tier, with favorites in a band of their own", () => {
-  const win = bootApp(ladderSeed());
-  win.document.querySelector('[data-density="list"]').click();
+// Two accounts a tier, so every heading has rows to head
+const ladderSeed2 = () => [...ladderSeed(), ...ladderSeed().map(a => ({ ...a, id: a.id + "b", gameName: a.gameName + "Two", fav: false }))];
 
+// Favourites had a band of their own at the top, which pulled a favourite out of its
+// tier (no Gold heading at all with one Gold account); and five accounts in five
+// tiers came out as five headings for five rows
+test("the rank-sorted list groups by tier, favourites first inside their own tier, headings only when worth it", () => {
+  const win = bootApp(ladderSeed2());
+  win.document.querySelector('[data-density="list"]').click();
   const heads = [...win.document.querySelectorAll(".lgrp")];
   const labels = heads.map(h => h.querySelector(".lgrp-n").textContent);
-  assert.equal(labels[0], "Favorites", "the pinned favourite gets its own band first");
-  assert.equal(labels[1], "Challenger", "then the ladder, top down");
+  assert.ok(!labels.includes("Favorites"), "no band of their own");
+  assert.equal(labels[0], "Challenger", "the ladder, top down");
   assert.equal(labels[labels.length - 1], "Never checked");
-  assert.ok(labels.includes("Unranked"));
-  // The favourite here is the only Gold account, so it is pulled into the
-  // Favorites band and no Gold heading is opened at all. What has to hold either
-  // way is that no heading is ever opened twice.
+  assert.ok(labels.includes("Gold"), "the favourite's tier keeps its heading");
   assert.equal(new Set(labels).size, labels.length, "no band is named twice");
-
   const ids = heads.map(h => h.dataset.id);
   assert.equal(new Set(ids).size, ids.length, "no two headings share a data-id");
-
-  // the counts have to add up to the accounts actually on screen
   const counted = heads.reduce((n, h) => n + Number(h.querySelector(".lgrp-k").textContent), 0);
-  assert.equal(counted, win.document.querySelectorAll(".rw").length);
+  assert.equal(counted, win.document.querySelectorAll(".rw").length, "the counts add up");
+  // inside Gold, the favourite comes first
+  const kids = [...win.document.getElementById("grid").children];
+  const gold = kids.findIndex(e => e.classList.contains("lgrp") && /Gold/.test(e.textContent));
+  assert.equal(kids[gold + 1].dataset.id, "t3", "the favourite Gold account leads its tier");
+  assert.match(html.match(/function groupColor\(k\)\{[^}]*\}/)[0], /UNRANKED"\)return"var\(--muted\)"/, "Unranked is grey, not link blue");
+  // one account a tier: no headings, the rows say their rank themselves
+  const thin = bootApp(ladderSeed());
+  thin.document.querySelector('[data-density="list"]').click();
+  assert.equal(thin.document.querySelectorAll(".lgrp").length, 0, "twelve tiers of one: no headings");
+  assert.equal(thin.document.querySelectorAll(".rw").length, 12);
 });
 
 test("grouping is dropped when the list is not in rank order", () => {
-  const win = bootApp(ladderSeed());
+  const win = bootApp(ladderSeed2());
   win.document.querySelector('[data-density="list"]').click();
   assert.ok(win.document.querySelectorAll(".lgrp").length > 0);
 
@@ -5444,7 +5479,7 @@ test("grouping is dropped when the list is not in rank order", () => {
   sort.dispatchEvent(new win.Event("change"));
   assert.equal(win.document.querySelectorAll(".lgrp").length, 0,
     "headings scattered through a name-sorted list would mean nothing");
-  assert.equal(win.document.querySelectorAll(".rw").length, 12, "every row is still there");
+  assert.equal(win.document.querySelectorAll(".rw").length, 24, "every row is still there");
 });
 
 // Same guarantee the cards already had: unchanged rows must produce byte-identical
@@ -5592,7 +5627,7 @@ test("the Unranked count and the filter behind it agree", () => {
   const win = bootApp(ladderSeed());
   const gem = win.document.querySelector('#ribbon .rib-seg[data-tier="UNRANKED"]');
   assert.ok(gem, "the vault has an unranked account, so the header has a segment for it");
-  assert.equal(gem.textContent, "1", "the never-checked account is not one of these");
+  assert.match(gem.getAttribute("aria-label"), /, 1$/, "the never-checked account is not one of these");
 
   gem.click();
   assert.equal(win.document.querySelectorAll(".card").length, 1, "and clicking it shows that one");
@@ -6706,7 +6741,7 @@ test("Not found on the ribbon filters missing profiles, not every flagged accoun
   const win = bootApp(seed);
   const miss = win.document.querySelector('.rib-seg[data-flag="missing"]');
   assert.ok(miss, "Not found is its own band");
-  assert.equal(miss.querySelector("i").textContent, "1");
+  assert.match(miss.getAttribute("aria-label"), /, 1$/);
   miss.click();
   assert.equal(win.document.querySelectorAll(".card").length, 1);
   assert.equal(win.document.querySelector(".card").dataset.id, "m1");
@@ -8124,6 +8159,18 @@ test("folding the tag list away never hides a live tag filter", () => {
   assert.equal(handle().classList.contains("lit"), false, "handle goes quiet again");
 });
 
+// A tab hanging off the toolbar's bottom edge read as a layout bug, twice
+test("Tags is a filter button inside the toolbar, and counts on a phone's Filters badge", () => {
+  const win = bootApp(tagged());
+  const bar = win.document.getElementById("tagbar");
+  assert.ok(bar.parentElement.classList.contains("tools"), "inside the tools row");
+  assert.match(html.match(/\n  \.tagbar\{([^}]*)\}/)[1], /^display:contents$/, "its handle sits in the row like the others");
+  assert.doesNotMatch(html, /\.tagbar\{[^}]*margin:-/, "no negative margin hanging it off the edge");
+  bar.querySelector("[data-tagtoggle]").click();
+  bar.querySelector('[data-tag="adc"]').click();
+  assert.equal(win.document.querySelector("#tFilters .t-n").textContent, "1", "a tag filter counts as on");
+});
+
 test("a vault with no tags gets no tag bar at all", () => {
   const win = bootApp([{ id: "n1", gameName: "None", tagLine: "1", region: "EUW",
     status: "active", history: [], stats: null, tags: [] }]);
@@ -8186,7 +8233,7 @@ test("the header bar leaves a banned account out of the tiers and counts it on i
   // still add up to the total the caption prints.
   const banned = win.document.querySelector('#ribbon .rib-seg[data-status="banned"]');
   assert.ok(banned, "banned accounts get their own segment");
-  assert.equal(banned.textContent, "1");
+  assert.match(banned.getAttribute("aria-label"), /, 1$/); // (a bar of all-ones prints no numbers)
   assert.match(win.document.querySelector(".rib-cap").textContent, /1<\/b> banned|1 banned/);
 
   // and clicking it shows exactly what it counted, through the status filter the
@@ -8480,12 +8527,14 @@ test("a wide screen gets a wide page, and the list spreads its columns rather th
   assert.ok(cols(2560) >= 6, "six cards to a row at 2560: " + cols(2560));
   assert.ok(cols(1920) >= 5, "five at 1920: " + cols(1920));
   // the list, on a page that wide: every column after the picture takes a share
-  const wide = html.match(/@media \(min-width:1800px\)\{\s*\.grid\.list\{--rw-cols:([^}]+)\}([^@]*?)\n  \}/);
+  const wide = html.match(/@media \(min-width:1181px\)\{\s*\.grid\.list\{--rw-cols:([^}]+)\}([^@]*?)\n  \}/);
   assert.ok(wide, "a wide-screen list template");
   const tracks = wide[1].match(/minmax\([^)]*\)|[^\s]+/g);
   assert.deepEqual(tracks.slice(0, 2), ["auto", "40px"], "the box and the picture stay put, beside the name");
   assert.ok(tracks.filter(t => /fr\)$/.test(t)).length >= 6, "the slack is shared, not one hole: " + wide[1]);
   assert.match(wide[2], /\.rw-d\{align-items:flex-start\}/, "the change pill keeps its size in a wider column");
+  // and it starts where the narrower templates stop, not at 1800: a laptop's list had a 450px hole too
+  assert.match(html, /@media \(max-width:1180px\)\{\s*\.grid\.list\{--rw-cols:/, "the template below it");
 });
 
 // The preview's first card was a famous pro's real account, showed MMR and "Recent avg"
@@ -8686,6 +8735,27 @@ test("on a phone the toolbar has one ranks button: Refresh stale when there is a
     stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() - ago } });
   const win = bootApp([acc("old", 6 * D), acc("new", 3600000)]); // one stale, one fresh
   assert.equal(win.document.getElementById("bCheckStale").classList.contains("hidden"), false, "the stale button is what shows");
+});
+
+// Check all ranks wore the primary colour and Add account the secondary: two "this is
+// the button" colours side by side, though Settings said the secondary was for Login and Add
+test("every main button wears one colour, the secondary (action) one", () => {
+  assert.doesNotMatch(html, /b-gold/, "no button in the primary colour");
+  const win = bootApp();
+  for (const id of ["bCheckAll", "bAdd", "sSave", "fSave", "baSave", "lpSet", "rankSave", "shCopy", "bExitPreview", "lockBtn", "bHelpClose"])
+    assert.ok(win.document.getElementById(id).classList.contains("b-teal"), id);
+  assert.match(win.document.getElementById("settings").textContent, /Login and every main button, focus rings/, "Settings says so");
+});
+
+// Five segments each printing "1" in a five-account vault said nothing
+test("the rank bar prints its counts only when a tier holds more than one", () => {
+  const acc = (id, tier) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier, division: "II", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() } });
+  const ones = bootApp([acc("a", "GOLD"), acc("b", "SILVER"), acc("c", "BRONZE")]);
+  assert.equal(ones.document.querySelectorAll(".rib-seg i").length, 0, "all ones: no numbers");
+  assert.match(ones.document.querySelector(".rib-seg").getAttribute("aria-label"), /, 1$/, "still read out");
+  const some = bootApp([acc("a", "GOLD"), acc("b", "GOLD"), acc("c", "SILVER")]);
+  assert.deepEqual([...some.document.querySelectorAll(".rib-seg i")].map(i => i.textContent), ["2", "1"], "otherwise every count");
 });
 
 // On a phone the filters and the stats were the whole first screen

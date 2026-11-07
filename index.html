@@ -242,6 +242,8 @@
      gold edge was invisible in a row of cards, so it is a solid accent edge, a
      step brighter along the top. It used to add a warm halo and a yellowish fill
      as well, and against any accent but gold that read as a stain. */
+  /* The accent edge marks an open panel. Favourite cards wore it too, and an accent
+     frame round a card reads as "selected"; the star already says favourite. */
   .hx.gold{background:linear-gradient(180deg,var(--gold),color-mix(in srgb,var(--gold) 72%,var(--line)) 30%)}
   .hx.teal{background:linear-gradient(180deg,var(--teal),color-mix(in srgb,var(--teal) 62%,var(--line)) 30%)}
 
@@ -362,9 +364,11 @@
      the top, a glow underneath that grew on hover, which beside the flat buttons
      next to them read as chrome next to matte. Light text on a tinted plate
      rather than dark on a fill, because the accent is the user's to pick. */
-  .b-gold{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 60%,var(--edge));
-    background-color:color-mix(in srgb,var(--gold) 9%,var(--panel2))}
-  .b-gold:hover{color:var(--text);border-color:var(--gold);background-color:color-mix(in srgb,var(--gold) 17%,var(--panel2))}
+  /* One colour for every main button: the secondary (action) colour, which Settings
+     has always described as "Login, Refresh, Add". Check all, Save, Unlock, Add all
+     and the rest wore the primary instead, so a toolbar showed two "this is the
+     button" colours side by side. The primary keeps the title, favorites and what
+     is selected. */
   .b-teal{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 60%,var(--edge));
     background-color:color-mix(in srgb,var(--teal) 9%,var(--panel2))}
   .b-teal:hover{color:var(--text);border-color:var(--teal);background-color:color-mix(in srgb,var(--teal) 17%,var(--panel2))}
@@ -442,7 +446,8 @@
   .stat .v.nw{white-space:nowrap}
   .stat .v.nw small{margin-left:1px}
   .stat .v.spark-wrap{font-size:calc(12px*var(--ts));line-height:1.2;overflow:visible;max-width:100%;width:100%;position:relative}
-  .pool-spark{display:block;width:100%;max-width:100%;height:28px;margin-top:4px;opacity:.85;overflow:visible;cursor:crosshair}
+  /* capped: stretched 28px tall across a 400px cell, +246 LP drew as a flat line */
+  .pool-spark{display:block;width:100%;max-width:220px;height:28px;margin-top:4px;opacity:.85;overflow:visible;cursor:crosshair}
   .pool-spark circle.pool-dot{fill:var(--teal);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
   .pool-spark .pool-hit{fill:transparent;stroke:none;cursor:pointer}
   .spark-tip{
@@ -731,28 +736,19 @@
     background:color-mix(in srgb,var(--star) 12%,transparent)}
   .tools button.on:hover{color:var(--star);border-color:color-mix(in srgb,var(--star) 80%,transparent);
     background:color-mix(in srgb,var(--star) 20%,transparent)}
-  /* A tab hanging off the console's bottom-left corner, not a band of its own.
-     Same idea as a card's Details drawer: an edge you pull, rather than a row of
-     content sitting there whether or not anyone wanted it. It rides up into the
-     18px the console already leaves below itself, so folded it costs a couple of
-     pixels instead of a full row — which is what made the previous version feel
-     like it had saved nothing. z-index under the console (10) so the tab reads as
-     coming out from underneath it. */
-  .tagbar{display:flex;flex-direction:column;align-items:flex-start;gap:10px;
-    position:relative;z-index:9;margin:-19px 0 14px 20px}
-  .tagbar:empty{display:none;margin:0}
+  /* Tags are one more filter button in the tools row (display:contents puts the
+     handle straight into the row's flex), and the list, when open, takes a line of
+     its own under it. It used to be a tab hanging off the console's bottom edge,
+     which read as a layout bug; on a phone it folds behind Filters with the rest. */
+  .tagbar{display:contents}
+  .tagbar:empty{display:none}
   /* Gold on this handle means one thing: a tag is filtering. It used to mean two —
      the resting state also had a gold count on a gold wash inside a gold-washed
      tab, so "off" and "on" were the same picture at two strengths and a vault with
      one tag and no filter looked like a filter was on. Only the mark keeps a tint
      at rest, because a glyph is identity and a lit pill full of a number is status.
      Everything else waits for .lit. */
-  .tag-handle{gap:7px;padding:4px 11px 5px;min-height:0;
-    border-radius:0 0 var(--r-sm) var(--r-sm);border:1px solid var(--edge);border-top:0;
-    background:var(--panel2);
-    color:var(--muted);box-shadow:0 3px 8px -4px #0009;
-    font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;
-    transition:color .16s ease,border-color .16s ease,background .16s ease}
+  .tag-handle{gap:7px;transition:color .16s ease,border-color .16s ease,background .16s ease}
   .tag-handle:hover{color:var(--text);border-color:color-mix(in srgb,var(--gold) 38%,var(--line2));
     background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 17%,var(--panel2)),var(--panel2))}
   /* how many tags the vault has — a fact, not a filter, so it is not gold until one is */
@@ -771,7 +767,7 @@
   .tag-chev{transition:transform .22s cubic-bezier(.22,1,.36,1);opacity:.75}
   .tag-handle:hover .tag-chev{opacity:1}
   .tag-handle.open .tag-chev{transform:rotate(180deg)}
-  .tag-list{display:flex;gap:7px;flex-wrap:wrap;padding-bottom:2px}
+  .tag-list{display:flex;gap:7px;flex-wrap:wrap;flex-basis:100%;padding-top:2px;order:99} /* last, on a line of its own */
   @media (prefers-reduced-motion:reduce){.tag-handle,.tag-handle .ico{transition:none}}
   .chip{font-size:calc(12px*var(--ts));font-weight:500;padding:5px 12px;border:1px solid var(--edge);border-radius:var(--r-xs);
     background:var(--panel2);color:var(--muted);cursor:pointer;
@@ -848,14 +844,12 @@
   .lgrp:first-child{padding-top:3px}
   .lgrp-crest{width:16px;height:16px;flex-shrink:0}
   .lgrp-dot{width:8px;height:8px;border-radius:2px;transform:rotate(45deg);flex-shrink:0;opacity:.8}
-  .lgrp-star{width:13px;height:13px;fill:var(--star);stroke:var(--star);flex-shrink:0}
   .lgrp-n{font-size:calc(11px*var(--ts));font-weight:700;letter-spacing:.14em;text-transform:uppercase}
   .lgrp-ln{flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
   .lgrp-k{font-size:calc(11px*var(--ts));font-weight:600;color:var(--faint);letter-spacing:.05em;
     font-variant-numeric:tabular-nums}
   .hx.row{padding:1px;background:#ffffff0d;border-radius:var(--r-md)}
   .hx.row:hover{background:#ffffff1c}
-  .hx.row.gold{background:color-mix(in srgb,var(--gold) 40%,transparent)}
   .hx.row.open{background:color-mix(in srgb,var(--teal) 34%,transparent)}
   .rw{border-radius:calc(var(--r-md) - 1px);background:var(--panel);overflow:hidden}
   /* Roughly 46px of row, of which about a third was padding: a 30px picture,
@@ -868,11 +862,12 @@
      the slack is all after the name, like any table, and the figures sit together
      as one block under their headings. The heading row uses the same columns. */
   .grid.list{--rw-cols:auto 40px minmax(160px,1fr) 124px 124px 60px 94px 38px 72px 62px 16px;--rw-gap:13px}
-  /* Up to a point: on a page wider than about 1800px, "all the slack after the
-     name" was a thousand-pixel hole between a name and its own rank. There every
-     column after the picture takes a share, more for the name and the climb, the
-     way a full-width table spreads; the picture stays beside the name. */
-  @media (min-width:1800px){
+  /* Up to a point: past about 1180px, "all the slack after the name" was a hole
+     between a name and its own rank (450px of nothing at 1440, a thousand at 2560).
+     There every column after the picture takes a share, more for the name and the
+     climb, the way a full-width table spreads; the picture stays beside the name.
+     Below that width the narrower templates further down take over. */
+  @media (min-width:1181px){
     .grid.list{--rw-cols:auto 40px minmax(160px,2.4fr) minmax(124px,1.4fr) minmax(124px,1fr) minmax(60px,.6fr) minmax(94px,1fr) minmax(38px,.5fr) minmax(72px,.8fr) minmax(62px,.5fr) 16px}
     /* a wider column is room around the change pill and the record bar, not a
        longer pill or a bar whose length stops meaning the same thing row to row */
@@ -2400,7 +2395,6 @@
   .grid>.hx::after{content:"";position:absolute;inset:0;border-radius:inherit;z-index:0;
     pointer-events:none;opacity:0;transition:opacity .34s ease;
     background:linear-gradient(155deg,#ffffff3d,#ffffff12 38%,#ffffff06)}
-  .grid>.hx.gold::after{background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 92%,transparent),color-mix(in srgb,var(--gold) 24%,transparent) 42%,#ffffff08)}
   /* Lift and glow only under a real pointer: on a touch screen the glow fading in
      is "something appeared", which Safari answers by swallowing the tap that
      caused it — and a lifted card that stays lifted after a tap says nothing. */
@@ -2606,7 +2600,7 @@
     <p class="lock-txt" id="lockTxt">Enter your master password to open it.</p>
     <input type="password" id="lockPass" placeholder="Master password" aria-label="Master password" autocomplete="current-password">
     <div id="lockErr" class="lock-err" role="alert" style="display:none">Wrong password — try again.</div>
-    <button id="lockBtn" class="b-gold lock-go">Unlock</button>
+    <button id="lockBtn" class="b-teal lock-go">Unlock</button>
     <button id="lockPk" type="button" class="lock-pk hidden" title="Or Windows Hello, a phone or a security key: whatever holds this vault's passkey">Unlock with Face ID / fingerprint</button>
   </div></div>
 
@@ -2666,7 +2660,7 @@
        the page under it, was most of a phone's first screen in the preview. -->
   <div id="previewBanner" class="hidden">
     <span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> <b>Preview</b>: example data, nothing is saved</span>
-    <button id="bExitPreview" class="b-gold">Exit preview</button>
+    <button id="bExitPreview" class="b-teal">Exit preview</button>
   </div>
 
   <!-- help -->
@@ -2703,7 +2697,7 @@
       <dt>Using this app</dt>
       <dd class="terms">free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.</dd>
     </dl></div>
-    <div class="mdl-f"><button id="bHelpClose" class="b-gold" data-autofocus>Got it</button></div>
+    <div class="mdl-f"><button id="bHelpClose" class="b-teal" data-autofocus>Got it</button></div>
   </div></div></div>
 
   <!-- settings -->
@@ -2739,7 +2733,7 @@
           </div>
           <div class="acc-swatch">
             <input type="color" id="sAccent2" aria-label="Secondary accent color">
-            <span style="font-size:calc(12px*var(--ts));color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login, Refresh, Add, focus rings</span></span>
+            <span style="font-size:calc(12px*var(--ts));color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login and every main button, focus rings</span></span>
             <button id="sAccentReset2" class="acc-reset" type="button" title="Back to the default secondary" aria-label="Reset the secondary color">↺</button>
           </div>
         </div>
@@ -2971,7 +2965,7 @@
         <div id="sBackupLast" class="hint" style="margin-bottom:14px"></div>
         <!-- the same actions as the ⋯ menu, where you would look for them in Settings -->
         <div class="bk-acts">
-          <button type="button" data-proxy="bExportEnc" class="b-gold">Export encrypted backup…</button>
+          <button type="button" data-proxy="bExportEnc" class="b-teal">Export encrypted backup…</button>
           <button type="button" data-proxy="bExport">Export backup (JSON, plaintext)</button>
           <button type="button" data-proxy="bExportCsv">Export as CSV</button>
           <button type="button" data-proxy="bImport">Import backup</button>
@@ -2985,7 +2979,7 @@
 
     </div>
     <div class="mdl-f">
-      <button id="sSave" class="b-gold">Save settings</button>
+      <button id="sSave" class="b-teal">Save settings</button>
       <button id="sClose">Close</button>
       <span class="sp hint" id="sFootHint" aria-live="polite">Stays in this browser unless you use Device sync.</span>
     </div>
@@ -3009,7 +3003,7 @@
         <i style="--c:var(--faint);flex:.6"></i>
       </div>
       <div class="acc-prev-cmd bar">
-        <button class="b-gold" type="button" tabindex="-1">Check all ranks</button>
+        <button class="b-teal" type="button" tabindex="-1">Check all ranks</button>
         <button class="b-teal" type="button" tabindex="-1">+ Add account</button>
       </div>
       <div class="acc-prev-tools">
@@ -3054,7 +3048,7 @@
     </div>
     </div>
     <div class="mdl-f">
-      <button id="baSave" class="b-gold">Add all</button>
+      <button id="baSave" class="b-teal">Add all</button>
       <button id="baCancel">Cancel</button>
       <span class="sp hint">The Riot IDs are looked up on op.gg; nothing else here leaves this browser.</span>
     </div>
@@ -3076,7 +3070,7 @@
       <label class="fw lp-off"><input type="checkbox" id="lpOff"> Don't ask again on this device</label>
     </div></div>
     <div class="mdl-f">
-      <button id="lpSet" class="b-gold">Encrypt the vault</button>
+      <button id="lpSet" class="b-teal">Encrypt the vault</button>
       <button id="lpLater">Not now</button>
     </div>
   </div></div></div>
@@ -3140,7 +3134,7 @@
     </div>
     </div>
     <div class="mdl-f">
-      <button id="fSave" class="b-gold">Add account</button>
+      <button id="fSave" class="b-teal">Add account</button>
       <button id="fCancel">Cancel</button>
       <span class="sp hint">The login stays in this browser; the Riot ID is looked up on op.gg.</span>
     </div>
@@ -3158,7 +3152,7 @@
     </div>
     <div class="mdl-b" id="rankBody"></div>
     <div class="mdl-f">
-      <button id="rankSave" class="b-gold" data-act="rankapply">Save rank</button>
+      <button id="rankSave" class="b-teal" data-act="rankapply">Save rank</button>
       <button id="rankCancel">Cancel</button>
       <span class="sp hint">A refresh overwrites this the next time it reads a rank.</span>
     </div>
@@ -3172,7 +3166,7 @@
   <!-- toolbar -->
   <div class="console">
   <div class="cmd">
-    <button id="bCheckAll" class="b-gold"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg> Check all ranks</button>
+    <button id="bCheckAll" class="b-teal"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg> Check all ranks</button>
     <button id="bCheckStale" class="hidden" title="Accounts that were found and last read over 3 days ago — not the never-checked or not-found ones">Refresh stale</button>
     <button id="bCancelCheck" class="b-danger hidden">Stop</button>
     <button id="bAdd" class="b-teal">+ Add account</button>
@@ -3210,6 +3204,9 @@
     </select>
     <button id="tFav" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Favorites</button>
     <button id="tArchived" aria-pressed="false" title="Show archived accounts instead of active ones">Archived</button>
+    <!-- Tags sit with the other filters. As a tab hanging off the box's bottom edge,
+         two reviewers in a row read it as a layout bug. -->
+    <div id="tagbar" class="tagbar"></div>
     <label style="display:flex;align-items:center;gap:6px;font-size:calc(12px*var(--ts));color:var(--muted);cursor:pointer;padding:0 4px">
       <input type="checkbox" id="tSelectAll" style="width:auto">Select all shown
     </label>
@@ -3217,10 +3214,6 @@
     <button type="button" id="tSelectMode" class="t-select" aria-pressed="false">Select</button>
   </div>
   </div>
-  <!-- Hangs off the console's bottom-left corner rather than sitting in a band
-       of its own; see .tagbar in the CSS. Directly after the console so the
-       negative margin it rides up on is predictable. -->
-  <div id="tagbar" class="tagbar"></div>
   <div id="bulkbar" class="hidden" style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--teal) 38%,transparent);border-radius:var(--r-md);background:color-mix(in srgb,var(--teal) 7%,var(--panel));box-shadow:var(--sh-1)">
     <span id="bulkCount" style="font-size:calc(12px*var(--ts));color:var(--teal-txt);font-weight:600;letter-spacing:.02em"></span>
     <select id="bulkStatus">
@@ -3314,7 +3307,7 @@
       </div>
       <div class="mdl-b"><div class="ap-grid" id="apGrid" role="group" aria-label="Choices"></div></div>
       <div class="mdl-f">
-        <button type="button" id="apUse" class="b-gold">Save</button>
+        <button type="button" id="apUse" class="b-teal">Save</button>
         <button type="button" id="apCancel">Cancel</button>
         <button type="button" id="apAuto" class="sp">Back to most-played</button>
       </div>
@@ -3339,7 +3332,7 @@
         </div>
       </div></div>
       <div class="mdl-f">
-        <button type="button" id="shCopy" class="b-gold">Copy link</button>
+        <button type="button" id="shCopy" class="b-teal">Copy link</button>
         <button type="button" id="shOpen">Preview</button>
         <button type="button" id="shCancel">Cancel</button>
         <span class="sp hint" id="shSize"></span>
@@ -3458,8 +3451,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.10.0";
+const APP_VERSION="2.11.0";
 const APP_CHANGELOG=[
+  {v:"2.11.0",items:[
+    "Every main button is one colour now, the one Settings calls Secondary",
+    "The list keeps favourites in their own tier, shows tier headings only when tiers hold several, and spreads out on a laptop",
+    "Tags is a button in the toolbar; chart labels keep clear of the line; favourite cards lose the \"selected\" frame",
+  ]},
   {v:"2.10.0",items:[
     "On a phone your accounts are on the first screen: stats fold away, one ranks button, a one-line preview banner",
     "The phone list copies a login in one tap; checkboxes come with Select",
@@ -4461,15 +4459,14 @@ function listGroup(a){
   return"UNCHECKED";
 }
 function groupLabel(k){
-  if(k==="FAV")return "Favorites";
   if(k==="UNCHECKED")return "Never checked";
   if(k==="UNRANKED")return "Unranked";
   if(k==="MISSING")return "Not found";
   return k.charAt(0)+k.slice(1).toLowerCase();
 }
 function groupColor(k){
-  if(k==="FAV")return "var(--gold-txt)";
   if(k==="MISSING")return"var(--danger)";
+  if(k==="UNRANKED")return"var(--muted)"; // grey: in the unranked tier's blue it read as a link
   return k==="UNCHECKED"?"#5d6577":tierColor(k);
 }
 // The old sparkline plotted LP with no scale at all: it showed the number moving
@@ -4583,7 +4580,12 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
   // the I being Gold I, which looked like a numbering mistake. "P II, P III, G I".
   const mixed=new Set(divs.filter(d=>d.n).map(d=>d.t)).size>1;
   const dupe=mixed||divs.some((d,i)=>divs.findIndex(o=>o.n===d.n)!==i);
-  for(const d of divs){if(!d.n)continue;rule(d.v);mark(d.v,dupe?d.t.charAt(0)+" "+d.n:d.n)}
+  // The numerals sit at the right edge, which is where the newest point is; one the
+  // point lands on ("P II" under the dot) keeps its hairline and loses its label.
+  // a numeral's box runs from 9.5px above its line to the line; the dot's colour is
+  // 4.5px each way (its dark ring overlapping a letter's edge is not a collision)
+  const lastY=pts.length>1?py(pts[pts.length-1].v):-99, underDot=v=>lastY>py(v)-14&&lastY<py(v)+4.5;
+  for(const d of divs){if(!d.n)continue;rule(d.v);if(!underDot(d.v))mark(d.v,dupe?d.t.charAt(0)+" "+d.n:d.n)}
 
   // The Grandmaster and Challenger floors, where the view reaches them. These are
   // the current floors, so they are drawn as a reference against today's ladder —
@@ -4626,8 +4628,15 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     // rather than the left, where the band captions live. A peak just above the
     // current rank is the common case, and there the caption is right at the top
     // and swallowed the label every time, leaving a dashed line explaining nothing.
+    // ...and where the line is not: dead centre, the line ran straight through it
+    // on any chart that was still near its peak halfway along.
+    const xs=pts.map((p,i)=>fxi(i)), ys=pts.map(p=>py(p.v));
+    const lineAt=f=>{if(xs.length<2)return ys[0];let i=1;while(i<xs.length-1&&xs[i]<f)i++;
+      const a=xs[i-1],b=xs[i],t=b>a?Math.min(1,Math.max(0,(f-a)/(b-a))):0;return ys[i-1]+(ys[i]-ys[i-1])*t};
+    const lanes=[.5,.3,.7,.18,.82], clear=f=>Math.min(...[-.04,0,.04].map(o=>Math.abs(lineAt(f+o)-(y-5))));
+    const lane=lanes.find(f=>clear(f)>=11)??lanes.reduce((b,f)=>clear(f)>clear(b)?f:b,lanes[0]);
     if(!cutYs.some(cy=>Math.abs(y-cy)<11))
-      labels+=`<span class="lpc-peak" style="top:${(y-9.5).toFixed(1)}px" title="${esc(peakLabel||"Season peak")}">Peak</span>`;
+      labels+=`<span class="lpc-peak" style="top:${(y-9.5).toFixed(1)}px;left:${(lane*100).toFixed(1)}%" title="${esc(peakLabel||"Season peak")}">Peak</span>`;
     cutYs.push(y);   // and an LP numeral must not land on it either
   }
 
@@ -4642,7 +4651,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
       // draws a second hairline a few pixels from a dashed one and prints a number
       // beside a label. The floor is the more useful of the two, so it wins.
       if(cutYs.some(cy=>Math.abs(py(v)-cy)<11))continue;
-      rule(v);mark(v,(v-M_BASE)+" LP");
+      rule(v);if(!underDot(v))mark(v,(v-M_BASE)+" LP");
     }
   }
 
@@ -7049,11 +7058,14 @@ function renderRibbon(){
      size instead, big enough to read and click. The exact numbers are in the
      caption either way. */
   const isTail=s=>!!(s.flag||s.status);
+  // Five segments each printed "1" in a five-account vault: a number that only ever
+  // says "one" says nothing, and the caption under the bar counts them anyway.
+  const allOne=segs.every(s=>s.n===1);
   setHTML(el,`<div class="rib-bar" role="group" aria-label="Accounts by tier">${segs.map(s=>{
       const on=segOn(s);
       return `<button class="rib-seg${on?" on":""}${isTail(s)?" tail":""}" ${segAttr(s)} style="--c:${s.c}${isTail(s)?"":";flex:"+s.n}"
         aria-pressed="${on}" title="${esc(s.label)} — ${s.n} account${s.n===1?"":"s"} (click to show only these)"
-        aria-label="${esc(s.label)}, ${s.n}"><i>${s.n}</i></button>`}).join("")}</div>
+        aria-label="${esc(s.label)}, ${s.n}">${allOne?"":`<i>${s.n}</i>`}</button>`}).join("")}</div>
     <div class="rib-cap">${dotList([`<b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}`,
       unN&&`<b>${unN}</b> unranked`,missN&&`<b>${missN}</b> not found`,neverN&&`<b>${neverN}</b> never checked`,bannedN&&`<b>${bannedN}</b> banned`])}`
     // with the name: the stats panel's Best account tile said who, and it is gone
@@ -7874,7 +7886,7 @@ function snapCardHTML(a,i){
     total?`<span><i>Games</i>${esc(total)}</span>`:""].filter(Boolean).join("");
   const notes=(a.honor!=null?`<span class="ni-f"><span class="ni-pips" aria-hidden="true">${[1,2,3,4,5].map(n=>`<i${n<=a.honor?' class="on"':""}></i>`).join("")}</span>Honor <b>${a.honor}</b></span>`:"")
     +a.skins.map(s=>`<span class="ni-f sk">${esc(s)}</span>`).join("");
-  return`<article class="hx${a.fav?" gold":""} sn-card${a.status==="banned"?" dead":""}" style="--tier:${col};--i:${i}"><div class="hx-in sn-c">
+  return`<article class="hx sn-card${a.status==="banned"?" dead":""}" style="--tier:${col};--i:${i}"><div class="hx-in sn-c">
     <div class="sn-art">${a.art?`<img src="${splashUrl(a.art.champ,a.art.skin)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">`:""}</div>
     <div class="sn-head">
       <span class="sn-crest">${r?crest(r.tier,"sn-crest-i"):`<b>${esc(a.name.charAt(0).toUpperCase())}</b>`}</span>
@@ -7922,7 +7934,7 @@ function snapHTML(s){
       :`<p class="sn-empty">This snapshot has no accounts in it.</p>`}
     <footer class="sn-foot">
       <p>A snapshot${s.at?" taken "+esc(snapDay(s.at)):""} — it doesn't update. Logins, emails and notes are never part of one.</p>
-      <a class="btn b-gold" href="${esc(home)}">Track your own accounts</a>
+      <a class="btn b-teal" href="${esc(home)}">Track your own accounts</a>
       <p class="sn-riot">${esc(RIOT_NOTICE)}</p>
     </footer>`;
 }
@@ -7934,7 +7946,7 @@ function snapErrorHTML(){
     <span class="brand-mark" aria-hidden="true"></span>
     <h1>This snapshot link is broken</h1>
     <p>Part of it may have been cut off when it was copied. Ask for the link again, and paste all of it.</p>
-    <a class="btn b-gold" href="${esc(snapBase())}">Open Smurf Tracker</a></div></div>`;
+    <a class="btn b-teal" href="${esc(snapBase())}">Open Smurf Tracker</a></div></div>`;
 }
 /* The viewer. It runs instead of the app, before anything has read this
    browser's storage, and switches storage off for the rest of the page's life:
@@ -8424,7 +8436,7 @@ function rowHTML(a,i){
   }else rank="Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
-  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${idAttr(a.id)}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx row${flashId===a.id?" flash":""}${open?" open":""}" data-id="${idAttr(a.id)}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     <div class="rw-main" data-act="info" role="button" tabindex="0" aria-expanded="${open}">
       <!-- No stopPropagation here: every click on a card is handled by one
            delegated listener on #grid, and closest("[data-act]") already stops at
@@ -8490,7 +8502,7 @@ function tileHTML(a){
     if(s.lp!=null)lp=s.lp+" LP";
   }else rank="Unranked";
   const st=STATUS[a.status]||STATUS.active;
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
@@ -8620,7 +8632,7 @@ function cardHTML(a,i){
   // worth spotting get one.
   const railed=a.status&&a.status!=="active"&&a.status!=="banned"; // banned says it with its badge and strikethrough
   const icon0=iconUrl(s);
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}${openInfo.has(a.id)?" info-open":""}" data-id="${idAttr(a.id)}"${railed?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}${openInfo.has(a.id)?" info-open":""}" data-id="${idAttr(a.id)}"${railed?` style="--st:${st.color}"`:""}>
     ${champArtHTML(a)}${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <div class="c-head">
       <div class="c-portrait">
@@ -8907,27 +8919,26 @@ function closeCardPanels(){
 
 /* The rank-sorted list as a flat sequence with a heading before each new tier.
    Sixty rows of identical grey is a wall you scroll past; the headings are what
-   turn the same sixty rows into a ladder you can read down. The count is filled
-   in as the list is walked, which is safe because nothing renders until the whole
-   sequence has been built. */
+   turn the same sixty rows into a ladder you can read down.
+   Favourites used to have a band of their own at the top, which pulled a favourite
+   Platinum account out of Platinum: with one Platinum account there was then no
+   Platinum heading at all, and the grouping stopped saying what it said. They sit
+   at the top of their own tier now, with the star on the row.
+   And a heading is only worth its line when tiers hold more than one account: five
+   accounts in five tiers came out as five headings for five rows. Headings are kept
+   while the list averages two rows a tier, for every tier, so a lone row never
+   looks like it belongs to the heading above it. */
+function groupRank(k){const i=TIER_ORDER.indexOf(k);return i>=0?100+i:({UNRANKED:3,MISSING:2,UNCHECKED:1})[k]||0}
 function withGroups(list){
-  const out=[];let cur=null,head=null;const seen=new Map();
-  for(const a of list){
-    // Favourites are pinned above everything by filtered(), so they need a band of
-    // their own: grouped by tier alone, a favourite Gold account opened a GOLD
-    // heading at the top of the list and the real Gold accounts opened a second
-    // one further down — two headings claiming the same data-id, which is the one
-    // thing syncGrid cannot survive.
-    const k=a.fav?"FAV":listGroup(a);
-    if(k!==cur){
-      cur=k;
-      // And belt-and-braces for any future sort that interleaves groups again.
-      const n=(seen.get(k)||0)+1;seen.set(k,n);
-      head={id:"grp:"+k+(n>1?":"+n:""),group:k,n:0};
-      out.push(head);
-    }
-    head.n++;
-    out.push(a);
+  const buckets=new Map();
+  for(const a of list){const k=listGroup(a);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(a)}
+  const keys=[...buckets.keys()].sort((x,y)=>groupRank(y)-groupRank(x));
+  const headed=list.length>=2*keys.length;
+  const out=[];
+  for(const k of keys){
+    const rows=buckets.get(k).sort((x,y)=>(y.fav?1:0)-(x.fav?1:0)); // stable: favourites first, then rank order
+    if(headed)out.push({id:"grp:"+k,group:k,n:rows.length});
+    out.push(...rows);
   }
   return out;
 }
@@ -8938,8 +8949,7 @@ function listHeadHTML(){
 }
 function groupHTML(g){
   const c=groupColor(g.group);
-  const mark=g.group==="FAV"?icon("star","lgrp-star")
-    :CRESTS[g.group]?crest(g.group,"lgrp-crest")
+  const mark=CRESTS[g.group]?crest(g.group,"lgrp-crest")
     :`<span class="lgrp-dot" style="background:${c}"></span>`;
   return `<div class="lgrp" data-id="${idAttr(g.id)}" role="presentation">${mark}`
     +`<span class="lgrp-n" style="color:${c}">${esc(groupLabel(g.group))}</span>`
@@ -10686,7 +10696,7 @@ function syncToggles(){
 }
 // how many of the folded filters are on, on the phone's Filters button
 function syncFilterCount(){
-  const n=[ui.region,ui.status,ui.favOnly,ui.showArchived].filter(Boolean).length, b=$("tFilters");
+  const n=[ui.region,ui.status,ui.favOnly,ui.showArchived,ui.tag].filter(Boolean).length, b=$("tFilters");
   if(!b)return;
   const badge=b.querySelector(".t-n");
   badge.hidden=!n;badge.textContent=n?String(n):"";
