@@ -8462,6 +8462,18 @@ test("a first visit opens on the welcome, not on How this works; the help is sti
   assert.equal(win.document.getElementById("help").classList.contains("hidden"), false, "the ? still opens it");
 });
 
+// An empty vault showed a full toolbar of search, sort, filters, Select all and a
+// disabled Check all over the welcome, plus a second Add account button
+test("an empty vault shows the welcome without a toolbar; the toolbar comes with the first account", () => {
+  const win = bootApp();
+  const bar = () => win.document.querySelector(".console");
+  assert.ok(bar().classList.contains("hidden"), "nothing to search or filter yet");
+  assert.ok(win.document.getElementById("bEmptyAdd"), "the welcome keeps its own Add account");
+  win.check = async () => null;
+  addRealAccount(win, "Faker", "KR1");
+  assert.equal(bar().classList.contains("hidden"), false, "one account, and the toolbar is back");
+});
+
 // The first screen anyone sees: what the app does, and both ways in as buttons
 test("an empty vault says what the app does in three steps, with Add account and the preview as buttons", () => {
   const win = bootApp();

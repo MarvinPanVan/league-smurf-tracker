@@ -8782,6 +8782,10 @@ function renderGrid(){
     if(selected.size!==before)lastSelectedId=null;
   }
   const grid=$("grid");
+  /* An empty vault has nothing to search, sort, filter, select or check, and the
+     toolbar's Add account was the welcome's own button said a second time. The
+     welcome is the whole first screen; the toolbar arrives with the first account. */
+  document.querySelector(".console").classList.toggle("hidden",accounts.length===0);
   if(accounts.length===0){
     /* The first screen anyone sees. It was one grey sentence pointing at a button
        somewhere else on the page, with the demo as the only thing to press here.
