@@ -10611,3 +10611,13 @@ test("the card's two times are set alike: plain text, no frame", () => {
   assert.doesNotMatch(src, /border:|background|padding/, "no frame, fill or padding: " + src);
   assert.match(src, /font-size:calc\(12px\*var\(--ts\)\);color:var\(--faint\)/);
 });
+
+// "P III" sat just under the newest point on most climbing cards
+test("a chart's division numerals show while it is being read, not at rest", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /\n  \.lpc-plot \.lpc-sub\{opacity:0;transition:opacity \.13s ease\}/, "hidden at rest");
+  assert.match(css, /\n  \.lpc-plot:hover \.lpc-sub,\.lpc-plot:focus-within \.lpc-sub\{opacity:\.5\}/, "shown on hover or focus, as before");
+  // still drawn, for the moment they are wanted
+  const win = bootApp();
+  assert.ok(chartDom(win, hist(["GOLD", "I", 0], ["PLATINUM", "III", 74], ["PLATINUM", "II", 61])).querySelector(".lpc-sub"));
+});

@@ -1578,6 +1578,14 @@
      names so the two never collide */
   .lpc-plot .lpc-sub{position:absolute;right:6px;font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.06em;
     color:#fff;opacity:.5;pointer-events:none;line-height:1;font-variant-numeric:tabular-nums}
+  /* The division numerals (P III, G I) and Master's LP marks are the chart's scale.
+     Standing at the line's end all the time, "P III" sat just under the newest point
+     on most climbing cards. They show while you read the chart (hover, or a point
+     focused), like the D/W/M switch; the band's colour says the tier meanwhile, and
+     a point's tip names its rank. */
+  .lpc-plot .lpc-sub{opacity:0;transition:opacity .13s ease}
+  .lpc-plot:hover .lpc-sub,.lpc-plot:focus-within .lpc-sub{opacity:.5}
+  @media (prefers-reduced-motion:reduce){.lpc-plot .lpc-sub{transition:none}}
   /* Each point owns the slice of the chart nearest to it, and the slices tile the
      chart exactly. The first version centred a fixed-width column on every point,
      which meant the outermost ones hung ~56 px past the edge of the chart — far
