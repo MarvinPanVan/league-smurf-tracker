@@ -10262,3 +10262,22 @@ test("no two Appearance choices share a name; the flat background is Plain and k
   assert.equal(win.document.getElementById("sAtmosphere").getAttribute("aria-label"), "Page background");
   assert.ok([...win.document.querySelectorAll('#settings .grp[data-tab="look"] .s-h')].some(h => h.textContent === "Background"));
 });
+
+// Opened on a phone, the filters took five rows, with both a Select all checkbox and
+// a Select button
+test("a phone's filters are three rows, and Select all shows only while selecting", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const phone = css.slice(css.indexOf(".tools:not(.open)>:not(input[type=search]):not(.t-filters){display:none!important}"));
+  assert.match(phone, /^[^@]*\.tools>#tagbar\{order:1\}/, "Tags beside the statuses");
+  assert.match(phone, /^[^@]*\.tools>#tFav,\.tools>#tArchived,\.tools>#tSelectMode\{order:2;flex:1 1 calc\(33\.3% - 6px\)/, "the three toggles share a row");
+  assert.match(phone, /^[^@]*body:not\(\.selecting\) \.tools>label:has\(#tSelectAll\)\{display:none!important\}/, "Select all waits for Select");
+  // and Select is what turns selecting on and off
+  const win = bootApp(seededAccount());
+  const sel = win.document.getElementById("tSelectMode");
+  sel.click();
+  assert.ok(win.document.body.classList.contains("selecting"));
+  assert.equal(sel.textContent, "Done");
+  sel.click();
+  assert.ok(!win.document.body.classList.contains("selecting"));
+});
+

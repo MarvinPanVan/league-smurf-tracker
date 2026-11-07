@@ -2610,6 +2610,13 @@
     .tools>:not(input[type=search]):not(.t-filters){flex:1 1 calc(50% - 4px)}
     /* !important: Select all is a label with an inline display of its own */
     .tools:not(.open)>:not(input[type=search]):not(.t-filters){display:none!important}
+    /* Opened, the filters took five rows, with both a Select all checkbox and a
+       Select button. Three now: Tags beside the statuses, the three toggles on one
+       row, and Select all only while selecting, beside the Done it goes with. */
+    .tools>#tagbar{order:1}
+    .tools>#tFav,.tools>#tArchived,.tools>#tSelectMode{order:2;flex:1 1 calc(33.3% - 6px);min-width:0;padding-inline:8px}
+    .tools>label:has(#tSelectAll){order:3}
+    body:not(.selecting) .tools>label:has(#tSelectAll){display:none!important}
     /* One ranks button, not two stacked: with accounts out of date, Refresh N stale
        is the one a phone needs (the rest were read recently); with none, Check all. */
     .cmd:has(#bCheckStale:not(.hidden)) #bCheckAll{display:none}
