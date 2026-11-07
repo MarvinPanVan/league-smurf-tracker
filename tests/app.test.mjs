@@ -8196,6 +8196,31 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// The list had no headings, two empty bands, and no way to copy a login from it
+test("the list is a table: headings over aligned columns, and a row copies its login in one click", async () => {
+  const win = bootApp([{ id: "a", label: "Main", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    login: "main_login", password: "hunter22!", stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 10, losses: 8, updatedAt: Date.now() } },
+    { id: "b", gameName: "B", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], stats: null }]);
+  const copied = [];
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async v => { copied.push(v); } } });
+  const doc = win.document;
+  doc.querySelector('[data-density="list"]').click();
+  const head = doc.querySelector("#grid .rw-head");
+  assert.ok(head && head === doc.getElementById("grid").firstElementChild, "headings first");
+  assert.deepEqual([...head.children].map(c => c.textContent), ["", "", "Account", "Trend", "Rank", "Change", "Win rate", "Region", "Updated", "Copy", ""]);
+  assert.equal(head.children.length, doc.querySelector(".rw-main").children.length, "one heading per column");
+  // the copy buttons, only where there is something to copy
+  const row = id => doc.querySelector(`.rw[data-id="${id}"]`);
+  assert.equal(row("b").querySelectorAll(".rw-key").length, 0, "nothing saved, nothing to copy");
+  row("a").querySelector('.rw-key[data-act="copypw"]').click();
+  await until(() => copied.includes("hunter22!"), "the password copied from the row");
+  assert.equal(row("a").classList.contains("open") || doc.querySelector('.hx.row[data-id="a"]').classList.contains("open"), false, "without opening the row");
+  await until(() => row("a").querySelector('.rw-key[data-act="copypw"]').classList.contains("copied"), "a check where you clicked");
+  // and the slack is the name's alone, so the figures sit together under their headings
+  const cols = html.match(/\.grid\.list\{--rw-cols:([^;]+);/)[1];
+  assert.equal((cols.match(/fr\)/g) || []).length, 1, "one stretching column: " + cols);
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
@@ -8699,15 +8724,17 @@ test("Tab stays inside Settings", () => {
    and the chevron was off the edge altogether (Chromium: 40 of 40 rows). Nothing
    lays out in jsdom, so this guards the declarations; the fix was measured there. */
 test("on a phone a list row fits its rank instead of cutting it short", () => {
-  const at = html.indexOf("@media (max-width:720px){\n    .rw-main{");
+  // the columns are one --rw-cols the rows and the list's heading row share
+  const at = html.indexOf("@media (max-width:720px){\n    .grid.list{--rw-cols:");
   assert.ok(at > -1, "the phone list rule is still there");
   const phone = html.slice(at, html.indexOf("}", at));
-  assert.match(phone, /grid-template-columns:auto 36px minmax\(0,1fr\) 106px 58px 16px/,
+  assert.match(phone, /--rw-cols:auto 36px minmax\(0,1fr\) 106px 58px 16px/,
     "the name takes what is left; rank and change are wide enough for their longest labels, and fixed so they line up");
+  assert.match(html.slice(at, html.indexOf("\n  }", at)), /\.rw-keys,\.rw-head\{display:none\}/, "no copy column or headings on a phone");
   const n = html.indexOf("@media (max-width:440px){");
   assert.ok(n > at, "and a narrower step for the smallest phones, after it so it wins");
   const small = html.slice(n, html.indexOf("\n  }", n));
-  assert.match(small, /\.rw-main\{grid-template-columns:auto 36px minmax\(0,1fr\) 106px 16px;/,
+  assert.match(small, /\.grid\.list\{--rw-cols:auto 36px minmax\(0,1fr\) 106px 16px;/,
     "where the change gives its column up rather than the rank");
   assert.match(small, /\.rw-d\{display:none\}/);
   // Measured in Chromium at 390: 15 + 36 + 106 + 16 + 4 gaps of 8 leaves the name

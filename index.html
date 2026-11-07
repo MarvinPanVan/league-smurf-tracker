@@ -863,9 +863,24 @@
      13.5px type, and six hundred pixels of nothing between the name and the rank.
      Taller, and with that gap given to the two things the list had been throwing
      away — the shape of the climb, and how the wins and losses actually sit. */
-  .rw-main{display:grid;align-items:center;gap:13px;padding:11px 14px;cursor:pointer;
-    grid-template-columns:auto 40px minmax(140px,1.35fr) 124px minmax(102px,1fr) 60px 94px 38px 72px 16px;
+  /* The name is the one column that stretches. It used to share the slack with the
+     rank (1.35fr and 1fr), so a wide screen opened two empty bands — one after the
+     name and one after the rank — and the figures crowded at the right edge. Now
+     the slack is all after the name, like any table, and the figures sit together
+     as one block under their headings. The heading row uses the same columns. */
+  .grid.list{--rw-cols:auto 40px minmax(160px,1fr) 124px 124px 60px 94px 38px 72px 62px 16px;--rw-gap:13px}
+  .rw-main{display:grid;align-items:center;gap:var(--rw-gap);padding:11px 14px;cursor:pointer;
+    grid-template-columns:var(--rw-cols);
     transition:background .14s ease}
+  .rw-head{display:grid;grid-template-columns:var(--rw-cols);gap:var(--rw-gap);align-items:end;padding:2px 15px 8px;
+    font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+  .rw-head .h-chk{width:15px}
+  .rw-head .h-r{text-align:right}.rw-head .h-c{text-align:center}
+  /* copy the login straight from the row, the way a password manager's list does */
+  .rw-keys{display:flex;gap:4px;justify-content:flex-end}
+  .rw-key{width:28px;height:28px;padding:0;color:var(--muted)}
+  .rw-key .ico{width:14px;height:14px}
+  .rw-key:hover{color:var(--text)}
   .rw-main:hover{background:#ffffff07}
   .rw-main:focus-visible{outline-offset:-2px}
   .rw{position:relative}
@@ -953,12 +968,12 @@
      The sparkline outranks the region code and the timestamp: it is the only
      column that says anything a glance can't already get from the rank. */
   @media (max-width:1180px){
-    .rw-main{grid-template-columns:auto 40px minmax(130px,1.35fr) 104px minmax(96px,1fr) 58px 88px 72px 16px;gap:11px}
-    .rw-rg{display:none}
+    .grid.list{--rw-cols:auto 40px minmax(130px,1fr) 104px 112px 58px 88px 72px 62px 16px;--rw-gap:11px}
+    .rw-rg,.h-rg{display:none}
   }
   @media (max-width:980px){
-    .rw-main{grid-template-columns:auto 40px minmax(120px,1.4fr) 92px minmax(92px,1fr) 56px 16px;gap:10px}
-    .rw-wr,.rw-up{display:none}
+    .grid.list{--rw-cols:auto 40px minmax(120px,1fr) 92px 104px 56px 62px 16px;--rw-gap:10px}
+    .rw-wr,.rw-up,.h-wr,.h-up{display:none}
   }
   /* Fixed minimums here — 110px of name, 90px of rank, 54px of change — came to 36px
      more than a 390px row holds, so every row overflowed: "Diamond IV" was cut to
@@ -967,9 +982,10 @@
      figure drop), fixed so they still line up from row to row; the name takes what
      is left and ellipsises. */
   @media (max-width:720px){
-    .rw-main{grid-template-columns:auto 36px minmax(0,1fr) 106px 58px 16px;gap:10px;
-      min-height:52px;padding:12px 12px;align-items:center}
-    .rw-spark,.rw-tags{display:none}
+    .grid.list{--rw-cols:auto 36px minmax(0,1fr) 106px 58px 16px;--rw-gap:10px}
+    .rw-main{min-height:52px;padding:12px 12px;align-items:center}
+    /* a phone is not where a client gets logged into, and the name needs the room */
+    .rw-spark,.rw-tags,.rw-keys,.rw-head{display:none}
     .rw-check{opacity:1} /* thumb-friendly: always show Refresh on phones */
     .rw-pic{width:36px;height:36px}
     .acts{flex-wrap:wrap;gap:6px}
@@ -988,7 +1004,7 @@
     /* a 360 phone's card has ~190px beside the crest and the LP chip, and
        "Grandmaster" at full size wants most of it */
     .card .rk-t{font-size:calc(20px*var(--ts))} /* .card: the base rule comes later in the sheet */
-    .rw-main{grid-template-columns:auto 36px minmax(0,1fr) 106px 16px;gap:8px}
+    .grid.list{--rw-cols:auto 36px minmax(0,1fr) 106px 16px;--rw-gap:8px}
     .rw-d{display:none}
   }
   @supports (padding:max(0px)){
@@ -4031,6 +4047,8 @@ const ICON={
   compare:'<rect x="3" y="5" width="7" height="14" rx="1.5"/><rect x="14" y="5" width="7" height="14" rx="1.5"/>',
   archive:'<rect x="3" y="4" width="18" height="4.5" rx="1"/><path d="M5 8.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><line x1="10" y1="13" x2="14" y2="13"/>',
   reset:'<path d="M3.5 12a8.5 8.5 0 1 0 2.9-6.4"/><polyline points="3 4 3 9.5 8.5 9.5"/>',
+  // a list row's copy-password button
+  key:'<circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.3-9.3"/><path d="m15.5 7.5 3 3"/><path d="m13 10 2 2"/>',
   // the welcome's privacy line: a padlock, for "stays here"
   lock:'<rect x="4.5" y="11" width="15" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>',
   trash:'<line x1="3.5" y1="6" x2="20.5" y2="6"/><path d="M18.5 6l-.9 13.1A2 2 0 0 1 15.6 21H8.4a2 2 0 0 1-2-1.9L5.5 6"/><line x1="10" y1="10.5" x2="10" y2="17"/><line x1="14" y1="10.5" x2="14" y2="17"/><path d="M9 6V4.2A1.2 1.2 0 0 1 10.2 3h3.6A1.2 1.2 0 0 1 15 4.2V6"/>'
@@ -4841,7 +4859,7 @@ async function copyText(v,label,sensitive){
 function flashCopied(btn){
   if(!btn||!btn.isConnected)return;
   if(btn._copied)clearTimeout(btn._copied);else btn._copyHTML=btn.innerHTML;
-  btn.innerHTML=icon("check")+"Copied";btn.classList.add("copied");
+  btn.innerHTML=icon("check")+(btn.classList.contains("rw-key")?"":"Copied");btn.classList.add("copied");
   btn._copied=setTimeout(()=>{btn._copied=null;if(!btn.isConnected)return;btn.innerHTML=btn._copyHTML;btn.classList.remove("copied")},1400);
 }
 let lastCopiedSecret=null;
@@ -8208,6 +8226,7 @@ function rowHTML(a,i){
         :total>0?`<em>${wins!=null?wins+"W":losses+"L"}</em>`:""}</span>
       <span class="rw-rg">${esc(a.region)}</span>
       <span class="rw-up${isStale(a)||!hasReading(s)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
+      <span class="rw-keys">${a.login?`<button class="rw-key" data-act="copylogin" title="Copy username" aria-label="Copy username for ${esc(plainName(a))}">${icon("user")}</button>`:""}${a.password?`<button class="rw-key" data-act="copypw" title="Copy password" aria-label="Copy password for ${esc(plainName(a))}">${icon("key")}</button>`:""}</span>
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     ${open?`<div class="rw-open">
@@ -8671,6 +8690,11 @@ function withGroups(list){
   }
   return out;
 }
+function listHeadHTML(){
+  return `<div class="rw-head" data-id="rw:head" aria-hidden="true"><span class="h-chk"></span><span></span>`
+    +`<span>Account</span><span>Trend</span><span>Rank</span><span>Change</span><span class="h-wr">Win rate</span>`
+    +`<span class="h-rg h-c">Region</span><span class="h-up h-r">Updated</span><span class="h-r">Copy</span><span></span></div>`;
+}
 function groupHTML(g){
   const c=groupColor(g.group);
   const mark=g.group==="FAV"?icon("star","lgrp-star")
@@ -8730,8 +8754,10 @@ function renderGrid(){
     if(grid.dataset.layout!==layout){closeCardMenu();grid.textContent="";cardCache.clear();grid.dataset.layout=layout}
     // Grouped only when the list is actually in rank order — under any other sort
     // the headings would be scattered through the list and mean nothing.
-    const items=asList&&ui.sort==="rank"?withGroups(list):list;
-    syncGrid(grid,items,items.map((it,i)=>it.group?groupHTML(it)
+    const grouped=asList&&ui.sort==="rank"?withGroups(list):list;
+    // the list's column headings, so a figure says what it is without a hover
+    const items=asList?[{id:"rw:head",head:true},...grouped]:grouped;
+    syncGrid(grid,items,items.map((it,i)=>it.head?listHeadHTML():it.group?groupHTML(it)
       :layout==="wall"?tileHTML(it):asList?rowHTML(it,i):cardHTML(it,i)));
   }
   reveal=null; // consumed by the render above — the next one must not replay it
