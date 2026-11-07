@@ -10581,3 +10581,24 @@ test("a copy made from a button says so on the button, and to a screen reader, n
   card().querySelector('[data-act="copyid"]').click();
   await until(() => /Riot ID copied/.test(doc.getElementById("toast").textContent), "the toast for the Riot ID");
 });
+
+// The list said "Unranked" for a levelling account, in the unranked blue that reads as
+// a link, beside a card that says "Level 23" in grey
+test("the list and the wall say Level 23 in grey for a levelling account, as the card does", () => {
+  const win = bootApp([{ id: "lv", gameName: "Fresh", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "UNRANKED", division: null, lp: null, level: 23, updatedAt: Date.now() } },
+    { id: "un", gameName: "Plain", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "UNRANKED", division: null, lp: null, updatedAt: Date.now() } }]);
+  const doc = win.document;
+  assert.match(doc.querySelector('.card[data-id="lv"]').textContent, /Level\s*23/, "the card");
+  doc.querySelector('[data-density="list"]').click();
+  const rk = id => doc.querySelector(`.rw[data-id="${id}"] .rw-rank`);
+  assert.equal(rk("lv").textContent, "Level 23");
+  assert.equal(rk("lv").style.color, "var(--muted)", "grey, not the unranked blue");
+  assert.equal(rk("un").textContent, "Unranked", "with no level known it is still Unranked");
+  assert.equal(rk("un").style.color, "var(--muted)");
+  doc.querySelector('[data-density="wall"]').click();
+  const t = doc.querySelector('.tile[data-id="lv"] .t-rk');
+  assert.equal(t.textContent, "Level 23");
+  assert.equal(t.style.color, "var(--muted)");
+});

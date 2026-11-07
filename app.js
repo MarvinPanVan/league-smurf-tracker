@@ -5247,7 +5247,8 @@ function rowHTML(a,i){
   else if(isRanked(a)){
     rank=tierLabel(s);
     if(s.lp!=null)lp=s.lp+" LP";
-  }else rank="Unranked";
+  // as the card says it: a levelling account is its level, not "Unranked"
+  }else rank=s.level?"Level "+s.level:"Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
   return `<div class="hx row${flashId===a.id?" flash":""}${open?" open":""}" data-id="${idAttr(a.id)}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
@@ -5267,7 +5268,7 @@ function rowHTML(a,i){
         // Nothing to plot yet, so the slot offers the one thing that would change
         // that. Sixty never-checked rows used to be sixty dead lines.
         ||(!isChecked(a)&&!isChecking?`<button class="rw-check" data-act="check" title="Check this account's rank now">${icon("refresh")} Check</button>`:"")}</span>
-      <span class="rw-rank" style="color:${col}"><b>${esc(rank)}</b>${lp?`<em>${esc(lp)}</em>`:""}</span>
+      <span class="rw-rank" style="color:${isRanked(a)?col:"var(--muted)"}"><b>${esc(rank)}</b>${lp?`<em>${esc(lp)}</em>`:""}</span>
       <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${Math.abs(dv)}</span>`:""}</span>
       <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wins}W ${losses}L</em>`
         :total>0?`<em>${wins!=null?wins+"W":losses+"L"}</em>`:""}</span>
@@ -5314,7 +5315,8 @@ function tileHTML(a){
   else if(isRanked(a)){
     rank=tierLabel(s);
     if(s.lp!=null)lp=s.lp+" LP";
-  }else rank="Unranked";
+  // as the card says it: a levelling account is its level, not "Unranked"
+  }else rank=s.level?"Level "+s.level:"Unranked";
   const st=STATUS[a.status]||STATUS.active;
   return `<div class="hx${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" · "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
@@ -5322,7 +5324,7 @@ function tileHTML(a){
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
     <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?flagMark():""}</span>
-    <span class="t-rk" style="color:${col}">${esc(rank)}</span>
+    <span class="t-rk" style="color:${isRanked(a)?col:"var(--muted)"}">${esc(rank)}</span>
     ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
   </div></div>`;
 }
