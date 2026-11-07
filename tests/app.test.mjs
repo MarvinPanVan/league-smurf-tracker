@@ -945,8 +945,8 @@ test("the accent buttons add no gradient rim or glow of their own; the wordmark 
   assert.match(h1, /color:var\(--gold-txt\)/);
   assert.doesNotMatch(rule(".brand-mark::before"), /gradient|animation|box-shadow/, "the gem is a solid stone, still");
   assert.doesNotMatch(html, /@keyframes gemGlow/);
-  // and the small things that still glittered: honor pips, the lit Tags handle, the skin chips, the empty-state gem
-  for (const sel of [".ni-pips i.on", ".tag-handle.lit", ".empty-gem"])
+  // and the small things that still glittered: honor pips, the lit Tags handle
+  for (const sel of [".ni-pips i.on", ".tag-handle.lit"])
     assert.doesNotMatch(rule(sel), /gradient|box-shadow:[^;]*0 0 \d+px/, sel + " is flat");
   // and the shared snapshot's title is plain white type, not haloed in the accent
   assert.doesNotMatch(html.match(/\n  \.sn-title\{([^}]*)\}/)[1], /text-shadow/, "the snapshot title has no glow");
@@ -10683,4 +10683,15 @@ test("the card menu keeps what you reach for; Season reset is in the Rank window
   doc.getElementById("fExStats").checked = false;
   doc.getElementById("fSave").click();
   assert.equal(appGet(win, `"excludeStats" in accounts.find(a => a.id === ${JSON.stringify(id)})`), false, "unticked leaves no field behind");
+});
+
+// The empty page's grey diamond read as a picture that had not loaded, and "place."
+// sat alone on the line under the heading
+test("an empty vault opens on the app's own gem, over a sentence that breaks evenly", () => {
+  const win = bootApp();
+  const gem = win.document.querySelector("#grid .empty .d .brand-mark");
+  assert.ok(gem, "the header's gem, not a placeholder shape");
+  assert.equal(win.document.querySelector(".empty-gem"), null);
+  assert.match(html, /\n  \.empty \.brand-mark\{width:56px;height:56px/);
+  assert.match(html.match(/\n  \.wl-s\{([^}]*)\}/)[1], /text-wrap:balance/);
 });

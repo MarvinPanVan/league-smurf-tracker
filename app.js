@@ -5809,7 +5809,7 @@ function renderGrid(){
        somewhere else on the page, with the demo as the only thing to press here.
        Now it says what the app is for in three steps, and both ways in are buttons
        of their own: start for real, or look around first. */
-    setHTML(grid,`<div class="hx" data-k="empty" style="grid-column:1/-1"><div class="hx-in empty welcome"><div class="d"><span class="empty-gem"></span></div>`
+    setHTML(grid,`<div class="hx" data-k="empty" style="grid-column:1/-1"><div class="hx-in empty welcome"><div class="d"><span class="brand-mark" aria-hidden="true"></span></div>`
       +`<h2 class="wl-t">No accounts yet</h2><p class="wl-s">Add your accounts to keep their ranks and logins in one place.</p>`
       +`<ol class="wl-steps"><li><span class="wl-n">1</span><b>Add an account</b><span>Its Riot ID and region. The login is optional.</span></li>`
       +`<li><span class="wl-n">2</span><b>Check its rank</b><span>Free and automatic, read from op.gg. No key needed.</span></li>`
