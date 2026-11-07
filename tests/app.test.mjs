@@ -8190,6 +8190,37 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// Every add started on EUW, and "Faker#KR1" stayed on EUW unless you changed it
+test("a new account starts on the vault's usual region, and a server's own tag picks its region", () => {
+  const acc = (id, region) => ({ id, region, gameName: id, tagLine: "1", status: "active", tags: [], history: [], stats: null });
+  const win = bootApp([acc("a", "NA"), acc("b", "NA"), acc("c", "EUW")]);
+  win.check = async () => null;
+  const doc = win.document, reg = () => doc.getElementById("fRegion").value;
+  doc.getElementById("bAdd").click();
+  assert.equal(reg(), "NA", "where most of the vault is");
+  const name = doc.getElementById("fName");
+  name.value = "Faker#KR1"; name.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(reg(), "KR", "the tag is Korea's own");
+  const tag = doc.getElementById("fTag");
+  tag.value = "EUNE"; tag.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(reg(), "EUNE");
+  tag.value = "1234"; tag.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(reg(), "EUNE", "a tag that names no server leaves it be");
+  // once the user picks, the tag no longer moves it
+  const sel = doc.getElementById("fRegion"); sel.value = "BR"; sel.dispatchEvent(new win.Event("change", { bubbles: true }));
+  tag.value = "NA1"; tag.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(reg(), "BR", "the user's choice stands");
+  doc.getElementById("fCancel").click();
+  // editing never guesses: the account already has a region
+  win.openForm(appGet(win, "accounts.find(a => a.id === \"c\")"));
+  tag.value = "KR1"; tag.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(reg(), "EUW");
+  doc.getElementById("fCancel").click();
+  // bulk add starts on the usual region too, not on whatever is first in the list
+  doc.getElementById("bBulkAdd").click();
+  assert.equal(doc.getElementById("baRegion").value, "NA");
+});
+
 // A new account sat at "Never checked" until somebody found Refresh
 test("a new account's rank is read straight away, and bulk-added ones go through Check all", async () => {
   const win = bootApp();

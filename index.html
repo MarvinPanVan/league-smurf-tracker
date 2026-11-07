@@ -4837,6 +4837,22 @@ function parseTags(str){return String(str||"").split(",").map(t=>t.trim()).filte
 // up, so an unknown one only survives as a wrong label on the card and a filter
 // entry that matches nothing — pin it to something real on the way in.
 function normRegion(r){const k=String(r||"").toUpperCase().trim();return REGIONS[k]?k:"EUW"}
+/* Where a new account most likely lives: where most of this vault does. Every add
+   used to start on EUW, so someone with a vault of NA accounts changed the region
+   by hand on every single one. */
+function usualRegion(){
+  const n={};for(const a of accounts)if(a.region)n[a.region]=(n[a.region]||0)+1;
+  let best="EUW",most=0;for(const r of Object.keys(n))if(n[r]>most){most=n[r];best=r}
+  return normRegion(best);
+}
+/* A tag nobody chose is the server's own id: KR1, NA1, EUW, BR1, OC1… so
+   "Faker#KR1" is almost certainly Korea. Only a guess — a tag survives a server
+   transfer — so it fills a region the user has not picked, on the form where the
+   change is in plain sight, and never decides one on its own anywhere else. */
+const TAG_REGION={NA:"NA",NA1:"NA",EUW:"EUW",EUW1:"EUW",EUNE:"EUNE",EUN1:"EUNE",KR:"KR",KR1:"KR",JP:"JP",JP1:"JP",
+  BR:"BR",BR1:"BR",LAN:"LAN",LA1:"LAN",LAS:"LAS",LA2:"LAS",OCE:"OCE",OC1:"OCE",TR:"TR",TR1:"TR",RU:"RU",RU1:"RU",
+  ME:"ME",ME1:"ME",SG:"SG",SG2:"SG",PH2:"SG",TH2:"SG",TW:"TW",TW2:"TW",VN:"VN",VN2:"VN"};
+function regionFromTag(tag){const r=TAG_REGION[String(tag||"").trim().toUpperCase()];return r&&REGIONS[r]?r:null}
 // Same for the status: an unrecognised one renders as "Active" everywhere while
 // still filtering as its own value, so the status dropdown grows a second entry
 // reading "Active" that matches a different set of accounts.
@@ -8986,7 +9002,7 @@ function openForm(acc,focus){
   closeAllPanels();
   editingId=acc?acc.id:null;
   $("fLabel").value=acc?acc.label||"":"";
-  $("fRegion").value=acc?normRegion(acc.region):"EUW";
+  $("fRegion").value=acc?normRegion(acc.region):usualRegion();delete $("fRegion").dataset.picked;
   $("fName").value=acc?acc.gameName:"";
   $("fTag").value=acc?acc.tagLine:"";
   $("fLogin").value=acc?acc.login||"":"";
@@ -9028,10 +9044,19 @@ function splitRiotId(){
   if(i<0)return;
   const tag=v.slice(i+1).trim();
   f.value=v.slice(0,i).trim();
-  if(tag)$("fTag").value=tag;
+  if(tag){$("fTag").value=tag;regionFromTagField()}
   else $("fTag").focus();
 }
+// New accounts only, and only until the user picks a region themselves
+function regionFromTagField(){
+  const sel=$("fRegion");
+  if(editingId||sel.dataset.picked)return;
+  const r=regionFromTag($("fTag").value);
+  if(r)sel.value=r;
+}
 $("fName").addEventListener("input",splitRiotId);
+$("fTag").addEventListener("input",regionFromTagField);
+$("fRegion").addEventListener("change",()=>{$("fRegion").dataset.picked="1"});
 function submitForm(){
   let newId=null;
   splitRiotId();
@@ -10221,6 +10246,7 @@ $("bBulkAdd").addEventListener("click",()=>{
   if(previewMode){previewMode=false;accounts=[];render()}
   closeAllPanels();
   $("baList").value="";
+  $("baRegion").value=usualRegion(); // it started on NA, the first in the list, for everyone
   // The list carries data-autofocus: the first field is the region select, and
   // the one you came here to fill is the list.
   $("bulkAdd").classList.remove("hidden");
