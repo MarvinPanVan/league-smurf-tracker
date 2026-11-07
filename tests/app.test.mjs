@@ -8452,7 +8452,7 @@ test("on a touch screen the small controls reach WCAG's 24px, and nothing change
   const px = (sel, prop) => { const m = coarse.match(new RegExp(sel.replace(/[.#()[\]>*+]/g, "\\$&") + "[^{]*\\{[^}]*" + prop + ":(\\d+)px")); return m && +m[1]; };
   assert.ok(px(".bulkchk,#tSelectAll", "width") >= 24, "selection boxes");
   assert.ok(px(".c-notes.blank>button,.c-notes.blank .nf-link", "min-height") >= 24, "Add a note");
-  assert.match(coarse, /\.lpc-range button\{padding:[6-9]px/, "the chart's range buttons");
+  assert.match(coarse, /\.lpc-range button\{height:30px/, "the chart's range buttons");
   assert.match(coarse, /\.rid\{padding-block:[4-9]px/, "the Riot ID's copy line");
   // a mouse keeps the sizes it had
   assert.match(css, /\n  \.bulkchk\{width:15px;height:15px/);
@@ -10368,4 +10368,15 @@ test("a Master card says how many LP are still to go to Grandmaster, not a bare 
   const stat = id => [...win.document.querySelectorAll(`.card[data-id="${id}"] .c-stats > div`)].map(d => d.textContent).join(" | ");
   assert.match(stat("m"), /To Grandmaster1,762 LP to go/);
   assert.match(stat("top"), /Abovethe Challenger cutoff/);
+});
+
+// The D/W/M switch over the chart was about 17px tall, lettered in the card's
+// smallest type: hard to read and harder to hit
+test("the chart's D/W/M switch is 24px tall with 12px letters, on the plot's dark", () => {
+  const rule = html.match(/\n  \.lpc-range button\{([^}]*)\}/)[1];
+  assert.match(rule, /font-size:calc\(12px\*var\(--ts\)\)/);
+  assert.match(rule, /height:24px;min-width:26px/);
+  assert.match(rule, /background:color-mix\(in srgb,var\(--panel\) 88%,transparent\)/, "the line doesn't show through");
+  const win = bootApp(seededAccount());
+  assert.deepEqual([...win.document.querySelectorAll(".card .lpc-range button")].map(b => b.textContent), ["D", "W", "M"]);
 });

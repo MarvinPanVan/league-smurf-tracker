@@ -1543,11 +1543,14 @@
   /* except while a point is being read — the tip wants that corner and you asked
      for the tip. Outranks the hover rule above on specificity. */
   .lpc-plot:has(.lpc-pt:hover) .lpc-range{opacity:0;pointer-events:none}
-  .lpc-range button{font-size:calc(11px*var(--ts));font-weight:700;letter-spacing:.06em;line-height:1;
-    padding:3px 5px;border-radius:var(--r-xs);border:1px solid transparent;background:#ffffff0d;
-    color:var(--faint);box-shadow:none}
-  .lpc-range button:hover{background:#ffffff1c;border-color:transparent;color:var(--text)}
-  .lpc-range button.on{background:color-mix(in srgb,var(--teal) 22%,transparent);color:var(--teal-txt)}
+  /* 24px and 12px: at about 17px with the smallest type on the card they were hard
+     to read and harder to hit. On the plot's own dark, so the line under them
+     doesn't show through the letters. */
+  .lpc-range button{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:.04em;line-height:1;
+    height:24px;min-width:26px;padding:0 7px;border-radius:var(--r-xs);border:1px solid transparent;
+    background:color-mix(in srgb,var(--panel) 88%,transparent);color:var(--muted);box-shadow:none}
+  .lpc-range button:hover{background:var(--panel3);border-color:transparent;color:var(--text)}
+  .lpc-range button.on{background:color-mix(in srgb,var(--teal) 24%,var(--panel));color:var(--teal-txt)}
   /* The line passes under the captions wherever it climbs through a band's
      corner, and ran straight through them: "GOLD" read as a line with letters
      on it. A halo in the plot's own dark lifts the letters off it. */
@@ -2557,7 +2560,7 @@
        bar's segments 16px. Each is at least WCAG's 24px now — on touch screens
        only; with a mouse nothing changes size. */
     .bulkchk,#tSelectAll{width:24px;height:24px}
-    .lpc-range button{padding:7px 9px}
+    .lpc-range button{height:30px;padding:0 9px}
     .rid{padding-block:5px;margin-block:-3px}
     .cmd-count .warn{padding:6px 10px}
     .c-notes.blank>button,.c-notes.blank .nf-link{min-height:30px} /* matches the all:unset rule it has to beat */
