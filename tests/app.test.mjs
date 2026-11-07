@@ -921,7 +921,7 @@ test("Login stays the one filled control on a card, in the same material as ever
 // and every accent button is the same plate, edged and lettered in the accent, never metal
 test("the accent buttons add no gradient rim or glow of their own; the wordmark and gem are solid", () => {
   const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
-  for (const sel of [".b-gold", ".b-gold:hover", ".b-teal", ".b-teal:hover"]) {
+  for (const sel of [".b-teal", ".b-teal:hover"]) {
     assert.doesNotMatch(rule(sel), /gradient|box-shadow/, sel);
   }
   const h1 = html.match(/\n  h1,\.lock-wm\{([^}]*)\}/)[1];
@@ -949,7 +949,7 @@ test("every button, dropdown and switch wears the same satin; icons, links and m
   assert.match(base, /background-image:var\(--sheen\)/);
   assert.match(base, /box-shadow:var\(--sh-btn\)/);
   // ...and a variant recolours the plate without wiping it: the background shorthand would reset the image
-  for (const sel of ["button:hover,.btn:hover", ".b-gold", ".b-gold:hover", ".b-teal", ".b-teal:hover", ".b-danger:hover",
+  for (const sel of ["button:hover,.btn:hover", ".b-teal", ".b-teal:hover", ".b-danger:hover",
       ".a-login:hover", ".a-dpm", ".a-dpm:hover", ".c-more.on", ".ghost-toggle", ".ghost-toggle:hover"])
     assert.doesNotMatch(rule(sel), /(^|[;{\s])background:/, sel + " sets background-color, keeping the sheen");
   // a dropdown is a button that opens a list: the chevron sits on the same satin, hovered or not
@@ -3416,8 +3416,8 @@ test("picking a colour opens a miniature homepage beside the colour popup", asyn
   assert.ok(prev.querySelector(".acc-prev-home"), "homepage half");
   assert.ok(prev.querySelector(".acc-prev-card"), "and the card beside it");
   assert.ok(prev.querySelector(".acc-prev-mark"), "it carries the brand");
-  assert.ok(prev.querySelector(".b-gold"), "something driven by the primary");
-  assert.ok(prev.querySelector(".b-teal"), "and something driven by the secondary");
+  assert.ok(prev.querySelector(".acc-prev-mark"), "something driven by the primary: the brand");
+  assert.ok(prev.querySelector(".b-teal"), "and something driven by the secondary: the buttons");
   assert.ok(prev.querySelector(".acc-prev-star"), "favorites are a primary thing");
   // the colour field is the larger hit target next to the reset — reset stays as it is
   assert.equal(win.getComputedStyle(swatch).width, "52px");
@@ -8686,6 +8686,16 @@ test("on a phone the toolbar has one ranks button: Refresh stale when there is a
     stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() - ago } });
   const win = bootApp([acc("old", 6 * D), acc("new", 3600000)]); // one stale, one fresh
   assert.equal(win.document.getElementById("bCheckStale").classList.contains("hidden"), false, "the stale button is what shows");
+});
+
+// Check all ranks wore the primary colour and Add account the secondary: two "this is
+// the button" colours side by side, though Settings said the secondary was for Login and Add
+test("every main button wears one colour, the secondary (action) one", () => {
+  assert.doesNotMatch(html, /b-gold/, "no button in the primary colour");
+  const win = bootApp();
+  for (const id of ["bCheckAll", "bAdd", "sSave", "fSave", "baSave", "lpSet", "rankSave", "shCopy", "bExitPreview", "lockBtn", "bHelpClose"])
+    assert.ok(win.document.getElementById(id).classList.contains("b-teal"), id);
+  assert.match(win.document.getElementById("settings").textContent, /Login and every main button, focus rings/, "Settings says so");
 });
 
 // On a phone the filters and the stats were the whole first screen

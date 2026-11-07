@@ -362,9 +362,11 @@
      the top, a glow underneath that grew on hover, which beside the flat buttons
      next to them read as chrome next to matte. Light text on a tinted plate
      rather than dark on a fill, because the accent is the user's to pick. */
-  .b-gold{color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 60%,var(--edge));
-    background-color:color-mix(in srgb,var(--gold) 9%,var(--panel2))}
-  .b-gold:hover{color:var(--text);border-color:var(--gold);background-color:color-mix(in srgb,var(--gold) 17%,var(--panel2))}
+  /* One colour for every main button: the secondary (action) colour, which Settings
+     has always described as "Login, Refresh, Add". Check all, Save, Unlock, Add all
+     and the rest wore the primary instead, so a toolbar showed two "this is the
+     button" colours side by side. The primary keeps the title, favorites and what
+     is selected. */
   .b-teal{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 60%,var(--edge));
     background-color:color-mix(in srgb,var(--teal) 9%,var(--panel2))}
   .b-teal:hover{color:var(--text);border-color:var(--teal);background-color:color-mix(in srgb,var(--teal) 17%,var(--panel2))}
@@ -2606,7 +2608,7 @@
     <p class="lock-txt" id="lockTxt">Enter your master password to open it.</p>
     <input type="password" id="lockPass" placeholder="Master password" aria-label="Master password" autocomplete="current-password">
     <div id="lockErr" class="lock-err" role="alert" style="display:none">Wrong password — try again.</div>
-    <button id="lockBtn" class="b-gold lock-go">Unlock</button>
+    <button id="lockBtn" class="b-teal lock-go">Unlock</button>
     <button id="lockPk" type="button" class="lock-pk hidden" title="Or Windows Hello, a phone or a security key: whatever holds this vault's passkey">Unlock with Face ID / fingerprint</button>
   </div></div>
 
@@ -2666,7 +2668,7 @@
        the page under it, was most of a phone's first screen in the preview. -->
   <div id="previewBanner" class="hidden">
     <span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> <b>Preview</b>: example data, nothing is saved</span>
-    <button id="bExitPreview" class="b-gold">Exit preview</button>
+    <button id="bExitPreview" class="b-teal">Exit preview</button>
   </div>
 
   <!-- help -->
@@ -2703,7 +2705,7 @@
       <dt>Using this app</dt>
       <dd class="terms">free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.</dd>
     </dl></div>
-    <div class="mdl-f"><button id="bHelpClose" class="b-gold" data-autofocus>Got it</button></div>
+    <div class="mdl-f"><button id="bHelpClose" class="b-teal" data-autofocus>Got it</button></div>
   </div></div></div>
 
   <!-- settings -->
@@ -2739,7 +2741,7 @@
           </div>
           <div class="acc-swatch">
             <input type="color" id="sAccent2" aria-label="Secondary accent color">
-            <span style="font-size:calc(12px*var(--ts));color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login, Refresh, Add, focus rings</span></span>
+            <span style="font-size:calc(12px*var(--ts));color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login and every main button, focus rings</span></span>
             <button id="sAccentReset2" class="acc-reset" type="button" title="Back to the default secondary" aria-label="Reset the secondary color">↺</button>
           </div>
         </div>
@@ -2971,7 +2973,7 @@
         <div id="sBackupLast" class="hint" style="margin-bottom:14px"></div>
         <!-- the same actions as the ⋯ menu, where you would look for them in Settings -->
         <div class="bk-acts">
-          <button type="button" data-proxy="bExportEnc" class="b-gold">Export encrypted backup…</button>
+          <button type="button" data-proxy="bExportEnc" class="b-teal">Export encrypted backup…</button>
           <button type="button" data-proxy="bExport">Export backup (JSON, plaintext)</button>
           <button type="button" data-proxy="bExportCsv">Export as CSV</button>
           <button type="button" data-proxy="bImport">Import backup</button>
@@ -2985,7 +2987,7 @@
 
     </div>
     <div class="mdl-f">
-      <button id="sSave" class="b-gold">Save settings</button>
+      <button id="sSave" class="b-teal">Save settings</button>
       <button id="sClose">Close</button>
       <span class="sp hint" id="sFootHint" aria-live="polite">Stays in this browser unless you use Device sync.</span>
     </div>
@@ -3009,7 +3011,7 @@
         <i style="--c:var(--faint);flex:.6"></i>
       </div>
       <div class="acc-prev-cmd bar">
-        <button class="b-gold" type="button" tabindex="-1">Check all ranks</button>
+        <button class="b-teal" type="button" tabindex="-1">Check all ranks</button>
         <button class="b-teal" type="button" tabindex="-1">+ Add account</button>
       </div>
       <div class="acc-prev-tools">
@@ -3054,7 +3056,7 @@
     </div>
     </div>
     <div class="mdl-f">
-      <button id="baSave" class="b-gold">Add all</button>
+      <button id="baSave" class="b-teal">Add all</button>
       <button id="baCancel">Cancel</button>
       <span class="sp hint">The Riot IDs are looked up on op.gg; nothing else here leaves this browser.</span>
     </div>
@@ -3076,7 +3078,7 @@
       <label class="fw lp-off"><input type="checkbox" id="lpOff"> Don't ask again on this device</label>
     </div></div>
     <div class="mdl-f">
-      <button id="lpSet" class="b-gold">Encrypt the vault</button>
+      <button id="lpSet" class="b-teal">Encrypt the vault</button>
       <button id="lpLater">Not now</button>
     </div>
   </div></div></div>
@@ -3140,7 +3142,7 @@
     </div>
     </div>
     <div class="mdl-f">
-      <button id="fSave" class="b-gold">Add account</button>
+      <button id="fSave" class="b-teal">Add account</button>
       <button id="fCancel">Cancel</button>
       <span class="sp hint">The login stays in this browser; the Riot ID is looked up on op.gg.</span>
     </div>
@@ -3158,7 +3160,7 @@
     </div>
     <div class="mdl-b" id="rankBody"></div>
     <div class="mdl-f">
-      <button id="rankSave" class="b-gold" data-act="rankapply">Save rank</button>
+      <button id="rankSave" class="b-teal" data-act="rankapply">Save rank</button>
       <button id="rankCancel">Cancel</button>
       <span class="sp hint">A refresh overwrites this the next time it reads a rank.</span>
     </div>
@@ -3172,7 +3174,7 @@
   <!-- toolbar -->
   <div class="console">
   <div class="cmd">
-    <button id="bCheckAll" class="b-gold"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg> Check all ranks</button>
+    <button id="bCheckAll" class="b-teal"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg> Check all ranks</button>
     <button id="bCheckStale" class="hidden" title="Accounts that were found and last read over 3 days ago — not the never-checked or not-found ones">Refresh stale</button>
     <button id="bCancelCheck" class="b-danger hidden">Stop</button>
     <button id="bAdd" class="b-teal">+ Add account</button>
@@ -3314,7 +3316,7 @@
       </div>
       <div class="mdl-b"><div class="ap-grid" id="apGrid" role="group" aria-label="Choices"></div></div>
       <div class="mdl-f">
-        <button type="button" id="apUse" class="b-gold">Save</button>
+        <button type="button" id="apUse" class="b-teal">Save</button>
         <button type="button" id="apCancel">Cancel</button>
         <button type="button" id="apAuto" class="sp">Back to most-played</button>
       </div>
@@ -3339,7 +3341,7 @@
         </div>
       </div></div>
       <div class="mdl-f">
-        <button type="button" id="shCopy" class="b-gold">Copy link</button>
+        <button type="button" id="shCopy" class="b-teal">Copy link</button>
         <button type="button" id="shOpen">Preview</button>
         <button type="button" id="shCancel">Cancel</button>
         <span class="sp hint" id="shSize"></span>
@@ -7922,7 +7924,7 @@ function snapHTML(s){
       :`<p class="sn-empty">This snapshot has no accounts in it.</p>`}
     <footer class="sn-foot">
       <p>A snapshot${s.at?" taken "+esc(snapDay(s.at)):""} — it doesn't update. Logins, emails and notes are never part of one.</p>
-      <a class="btn b-gold" href="${esc(home)}">Track your own accounts</a>
+      <a class="btn b-teal" href="${esc(home)}">Track your own accounts</a>
       <p class="sn-riot">${esc(RIOT_NOTICE)}</p>
     </footer>`;
 }
@@ -7934,7 +7936,7 @@ function snapErrorHTML(){
     <span class="brand-mark" aria-hidden="true"></span>
     <h1>This snapshot link is broken</h1>
     <p>Part of it may have been cut off when it was copied. Ask for the link again, and paste all of it.</p>
-    <a class="btn b-gold" href="${esc(snapBase())}">Open Smurf Tracker</a></div></div>`;
+    <a class="btn b-teal" href="${esc(snapBase())}">Open Smurf Tracker</a></div></div>`;
 }
 /* The viewer. It runs instead of the app, before anything has read this
    browser's storage, and switches storage off for the rest of the page's life:
