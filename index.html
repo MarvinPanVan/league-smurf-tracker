@@ -9033,6 +9033,7 @@ function splitRiotId(){
 }
 $("fName").addEventListener("input",splitRiotId);
 function submitForm(){
+  let newId=null;
   splitRiotId();
   const gameName=$("fName").value.trim(), tagLine=$("fTag").value.trim().replace(/^#/,"");
   if(!gameName||!tagLine){toast("Riot name and tag are required");return}
@@ -9058,8 +9059,15 @@ function submitForm(){
   }else{
     const a=Object.assign({id:uid(),fav:false,stats:null},data);if(!a.info)delete a.info;
     accounts.push(a);
+    newId=a.id;
   }
   saveDB();closeForm();render();
+  /* A new account came in as "Never checked" and stayed that way until somebody
+     found Refresh, on an app that says rank checks are free and automatic. It is
+     read straight away now, the same check its own Refresh runs. Not in the
+     preview (nothing there is real), not for a banned one (checks skip those),
+     and not under a Check all run that is already going through the vault. */
+  if(newId&&!previewMode&&!run&&data.status!=="banned")check(newId);
 }
 
 // ---------- settings ----------
@@ -10267,15 +10275,19 @@ function parseBulk(text,fallbackRegion){
 $("baSave").addEventListener("click",()=>{
   const parsed=parseBulk($("baList").value,$("baRegion").value);
   if(!parsed.entries.length&&!parsed.bad){toast("Paste at least one Name#TAG, an op.gg link or the lobby chat");return}
-  let added=0,skipped=0,bad=parsed.bad;
+  let added=0,skipped=0,bad=parsed.bad;const newIds=[];
   for(const{gameName,tagLine,region}of parsed.entries){
     const dup=accounts.find(a=>a.gameName.toLowerCase()===gameName.toLowerCase()&&a.tagLine.toLowerCase()===tagLine.toLowerCase()&&a.region===region);
     if(dup){skipped++;continue}
-    accounts.push({id:uid(),fav:false,stats:null,label:"",region,gameName,tagLine,status:"active",login:"",password:"",email:"",tags:[],notes:"",history:[]});
+    const id=uid();newIds.push(id);
+    accounts.push({id,fav:false,stats:null,label:"",region,gameName,tagLine,status:"active",login:"",password:"",email:"",tags:[],notes:"",history:[]});
     added++;
   }
   render();$("bulkAdd").classList.add("hidden");
-  saveThen(added+" added"+(skipped?", "+skipped+" duplicate"+(skipped===1?"":"s")+" skipped":"")+(bad?", "+bad+" line"+(bad===1?"":"s")+" couldn't be parsed":""));
+  const msg=added+" added"+(skipped?", "+skipped+" duplicate"+(skipped===1?"":"s")+" skipped":"")+(bad?", "+bad+" line"+(bad===1?"":"s")+" couldn't be parsed":"");
+  // The new ones are read straight away, through the same paced run as Check all
+  // ranks: its progress bar, its Stop, its summary at the end.
+  saveThen(msg).then(()=>{if(newIds.length&&!previewMode&&!run)checkAll(newIds)});
 });
 // Wrapped, not passed directly: addEventListener hands the listener a MouseEvent,
 // which checkAll would take as its `ids` list and immediately call .map() on — so

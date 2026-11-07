@@ -2977,6 +2977,7 @@ test("a superseded failure cannot paste its note onto a later success", async ()
    watch, two accounts added in one tick costing one AES-GCM pass instead of two. */
 test("a save that is out of date before it starts is not encrypted at all", async () => {
   const win = bootApp();
+  win.check = async () => null; // about saving: the rank check a new account gets runs saves of its own
   win.document.getElementById("sVaultPass").value = "hunter2pass";
   win.document.getElementById("sVaultSet").click();
   await until(() => encrypted(win), "the vault to go encrypted");
@@ -4255,6 +4256,7 @@ test("Check all ranks starts a run instead of throwing", () => {
 // while doing it, so a search left it quietly refreshing three of sixty.
 test("the Check all label says how many it would actually refresh", async () => {
   const win = bootApp();
+  win.check = async () => null; // the label at rest, not mid-check on the accounts just added
   addRealAccount(win, "Alpha", "1");
   addRealAccount(win, "Beta", "2");
   addRealAccount(win, "Gamma", "3");
@@ -4543,6 +4545,7 @@ test("locking clears every scrap of per-card state", async () => {
 // to click to undo it, which is the one thing the chips were added to prevent.
 test("a narrowed grid always says what narrowed it", async () => {
   const win = bootApp();
+  win.check = async () => null; // about the filter chips, not the first check a new account gets
   addRealAccount(win, "Alpha", "1");
   addRealAccount(win, "Beta", "2");
   const chips = () => [...win.document.querySelectorAll(".fchip")].map(c => c.textContent.replace("✕", "").trim());
@@ -8185,6 +8188,30 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false,
     stats: { found: true, tier: "GOLD", division: "II", lp: 10 } }), false);
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
+});
+
+// A new account sat at "Never checked" until somebody found Refresh
+test("a new account's rank is read straight away, and bulk-added ones go through Check all", async () => {
+  const win = bootApp();
+  const seen = [];
+  win.fetchViaProxy = async acc => { seen.push(acc.gameName);
+    return { found: true, tier: "GOLD", division: "II", lp: 47, wins: 31, losses: 27, level: 142, updatedAt: Date.now() }; };
+  addRealAccount(win, "Fresh", "EUW");
+  await until(() => seen.includes("Fresh"), "the new account to be checked");
+  await until(() => /Gold II/.test(win.document.querySelector(".card").textContent), "its rank on the card");
+  // bulk add: the new ones only, through the paced run with its progress bar
+  win.document.getElementById("bBulkAdd").click();
+  win.document.getElementById("baList").value = "Bulk One#EUW\nBulk Two#EUW";
+  win.document.getElementById("baSave").click();
+  await until(() => seen.includes("Bulk One") && seen.includes("Bulk Two"), "both bulk accounts to be checked", 15000);
+  assert.equal(seen.filter(n => n === "Fresh").length, 1, "the account already checked is left alone");
+  // a banned account is skipped, as every check skips it
+  win.document.getElementById("bAdd").click();
+  win.document.getElementById("fName").value = "Gone"; win.document.getElementById("fTag").value = "1";
+  win.document.getElementById("fStatus").value = "banned";
+  win.document.getElementById("fSave").click();
+  await new Promise(r => setTimeout(r, 50));
+  assert.equal(seen.includes("Gone"), false);
 });
 
 // A first visit opened on an eleven-section reference manual over an empty page
