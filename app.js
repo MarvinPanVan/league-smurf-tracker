@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.19.0";
+const APP_VERSION="2.20.0";
 const APP_CHANGELOG=[
+  {v:"2.20.0",items:[
+    "Login in the list says it copied, the same way the card does",
+    "A copy the browser refuses no longer moves Login on to the password",
+    "CSV import reads tiers and divisions however a spreadsheet wrote them, and a banned account's chart is grey again",
+  ]},
   {v:"2.19.0",items:[
     "Turning a filter on no longer moves the page: its chip sits beside the count it explains",
     "Copying says so on the button you pressed, not in a message over the next card",
