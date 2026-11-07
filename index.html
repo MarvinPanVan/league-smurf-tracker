@@ -2199,6 +2199,7 @@
   .sn-empty{text-align:center;color:var(--muted);margin-top:40px}
   .sn-foot{margin-top:clamp(44px,8vw,72px);text-align:center;font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.7}
   .sn-foot p{margin:0 auto 16px;max-width:52ch}
+  .sn-foot .sn-riot{margin:28px auto 0;font-size:calc(11px*var(--ts));max-width:68ch}
   .sn-foot .btn,.sn-err .btn{text-decoration:none;padding:10px 18px;font-weight:600}
   .sn-err{max-width:480px;margin:16vh auto 0;text-align:center}
   .sn-err .hx-in{padding:34px 28px 30px}
@@ -3203,8 +3204,11 @@
 
   <!-- Filled from APP_VERSION at boot rather than typed in here, so the number in
        the footer can never disagree with the one the changelog toast announces. -->
-  <div class="count" style="margin-top:8px">© 2026 MarvinPanVan · Smurf Tracker — not affiliated with Riot Games · Discord: marvinpanvan · <span id="appVer" class="ver"></span></div>
+  <div class="count" style="margin-top:8px">© 2026 MarvinPanVan · Smurf Tracker · Discord: marvinpanvan · <span id="appVer" class="ver"></span></div>
   <div class="count" style="margin-top:4px;font-size:calc(11px*var(--ts))">Free for personal use. Do not resell, rebrand, publish modified versions, or use for anything malicious. <a href="https://github.com/MarvinPanVan/league-smurf-tracker/blob/main/LICENSE" target="_blank" rel="noreferrer" style="color:var(--gold-txt)">Terms</a></div>
+  <!-- Riot's own wording for projects that use its games and data (its developer
+       policy), in place of a bare "not affiliated with Riot Games" -->
+  <div class="count riot-notice" style="margin-top:4px;font-size:calc(11px*var(--ts))">Smurf Tracker isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</div>
 
   <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
   <input type="file" id="fileInCsv" accept=".csv,text/csv" class="hidden">
@@ -7857,8 +7861,12 @@ function snapHTML(s){
     <footer class="sn-foot">
       <p>A snapshot${s.at?" taken "+esc(snapDay(s.at)):""} — it doesn't update. Logins, emails and notes are never part of one.</p>
       <a class="btn b-gold" href="${esc(home)}">Track your own accounts</a>
+      <p class="sn-riot">${esc(RIOT_NOTICE)}</p>
     </footer>`;
 }
+// Riot's wording for projects built on its games (its developer policy). The app's
+// footer carries the same sentence in the markup.
+const RIOT_NOTICE="Smurf Tracker isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.";
 function snapErrorHTML(){
   return`<div class="sn-err hx gold"><div class="hx-in">
     <span class="brand-mark" aria-hidden="true"></span>
