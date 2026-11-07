@@ -1846,6 +1846,11 @@
   .mdl-h .s{font-size:calc(12px*var(--ts));color:var(--faint);margin-left:auto;margin-right:34px;
     min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .mdl-b{flex:1;min-height:0;overflow:auto;overflow-x:hidden}
+  /* Settings is one height whatever its tab: sized to its content it went from 345px
+     to 812px between tabs, and being centred, its tab row moved under the pointer.
+     It takes the most a window may (the cap above) and its content scrolls. On a
+     phone every window is the whole screen already. */
+  #settings .mdl-in{height:calc(100vh - clamp(28px,10vh,120px))}
   .mdl-f{display:flex;gap:9px;align-items:center;flex-wrap:wrap;flex-shrink:0;
     padding:14px 22px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 72%,transparent)}
   .mdl-f .sp{margin-left:auto}

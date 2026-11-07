@@ -9164,6 +9164,11 @@ test("switching Settings tabs is not a change: the footer says Not saved yet onl
   doc.querySelector("#settings [data-atmosphere]").click();
   assert.match(foot(), /Not saved yet/, "a background picked is a change");
 });
+// The Settings window was sized to each tab, 345px to 812px, and its tabs moved
+test("Settings keeps one height across its tabs", () => {
+  const cap = html.match(/\n  \.mdl-in\{[^}]*max-height:(calc\([^;]*\))/)[1];
+  assert.ok(html.includes("#settings .mdl-in{height:" + cap + "}"), "the most a window may, whatever the tab");
+});
 
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row
 // ended hundreds of pixels apart
