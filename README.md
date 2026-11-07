@@ -53,7 +53,7 @@ Out of the box, rank checks read op.gg through free public proxies. That works m
 2. Cloudflare copies this repo into your GitHub account. Keep that copy private: it is yours alone, as the [terms](#terms-of-use) allow.
 3. It asks for `RIOT_API_KEY`. Paste a key if you have one (see below), or leave it empty for now.
 4. When it finishes, copy the `https://….workers.dev` address.
-5. In the app: **Settings → Backend URL**, paste it, **Save**. The line under the field says what your worker has: the Riot key, and sync storage.
+5. In the app: **Settings → Rank checks → Advanced → Backend URL**, paste it, **Save**. The line under the field says what your worker has: the Riot key, and sync storage.
 
 <details>
 <summary>Without the button (paste the code by hand)</summary>
@@ -61,7 +61,7 @@ Out of the box, rank checks read op.gg through free public proxies. That works m
 1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Create Worker** → name it → **Deploy**.
 2. **Edit code** → paste the whole of [`cloudflare-worker.js`](cloudflare-worker.js) → **Deploy**.
 3. For sync and alerts: **Storage & Databases → KV** → create a namespace, then in the worker **Settings → Bindings → Add → KV namespace**, variable name `VAULT`. For alerts, also add a Cron Trigger `17 9 * * *` under **Settings → Triggers**.
-4. Copy the `workers.dev` address into **Settings → Backend URL** in the app.
+4. Copy the `workers.dev` address into **Settings → Rank checks → Advanced → Backend URL** in the app.
 
 </details>
 

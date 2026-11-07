@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.15.0";
+const APP_VERSION="2.16.0";
 const APP_CHANGELOG=[
+  {v:"2.16.0",items:[
+    "Login copies the username, then the password, one click each; the eye beside it shows the saved login",
+    "A shorter Add account form: Riot ID, region and login first, the rest under More details, and a missing field marked where it is",
+    "Calmer type, only the search row pinned as you scroll, failed checks shown on the card, and a tidier Settings, Help and phone layout",
+  ]},
   {v:"2.15.0",items:[
     "Flat buttons in three kinds, and every control in a toolbar row is the same height",
     "The header shows your ranks as small emblems with counts; accounts not found are one warning with Show",
@@ -1761,6 +1766,22 @@ function flashCopied(btn){
 }
 let lastCopiedSecret=null;
 const loginSeq=new Set();   // cards whose username is copied and whose password is next
+/* A card's main button logs you in: it copies the username, then turns into
+   "Copy password" and copies that (cleared from the clipboard after 30s), then
+   starts over. It used to open a panel showing the login, whose own button then
+   had to be pressed for the copying, the thing you came for. The panel (to see the
+   password, the email, the date of birth) is the eye beside it. With one of the
+   two saved it copies that one; with neither it offers to add them. */
+function loginButtonsHTML(a,open){
+  const both=a.login&&a.password, next=both&&loginSeq.has(a.id);
+  const label=next||(!a.login&&a.password)?"Copy password":a.login?"Copy username":"Add login";
+  const main=a.login||a.password
+    ?`<button data-act="copyseq" class="a-login" title="${both?"Copies the username, then the password":"Copies it to paste into the Riot client"}">${icon("key")} ${label}</button>`
+    :`<button data-act="addlogin" class="a-login" title="Save the username and password for this account">${icon("key")} ${label}</button>`;
+  const eye=a.login||a.password||a.email||a.birthdate
+    ?`<button data-act="login" class="c-lgn${open?" on":""}" aria-pressed="${open}" title="${open?"Hide":"Show"} the saved login" aria-label="${open?"Hide":"Show"} the saved login">${icon(open?"eyeOff":"eye")}</button>`:"";
+  return main+eye;
+}
 function uid(){return Date.now()+"-"+Math.random().toString(36).slice(2,7)}
 function cryptoInt(max){
   // Rejection sampling — a raw `% max` is slightly biased whenever max does not
@@ -2879,6 +2900,7 @@ function renderRun(){
   const bar=$("runbar"), cancel=$("bCancelCheck");
   bar.classList.toggle("hidden",!run);
   cancel.classList.toggle("hidden",!run);
+  document.querySelector(".console").classList.toggle("running",!!run);   // Stop stays pinned
   if(!run)return;
   const pct=run.total?Math.round(run.done/run.total*100):0;
   bar.querySelector(".run-fill").style.width=pct+"%";
@@ -2892,7 +2914,7 @@ function renderFailbar(){
   el.classList.remove("hidden");
   setHTML(el,`<span class="fb-n">${fails.length} account${fails.length===1?"":"s"} failed to refresh</span>`
     +`<span class="fb-l">${fails.slice(0,6).map(f=>esc(f.name)).join(", ")}${fails.length>6?" +"+(fails.length-6)+" more":""}</span>`
-    +`<button id="bRetryFails">Try again</button><button id="bDismissFails" class="fb-x" aria-label="Dismiss">✕</button>`);
+    +`<button id="bShowFails">Show</button><button id="bRetryFails">Try again</button><button id="bDismissFails" class="fb-x" aria-label="Dismiss">✕</button>`);
 }
 let lastFails=null;
 async function checkAll(ids){
@@ -2970,17 +2992,19 @@ async function checkAll(ids){
   if(dirty)saveDB();
   render(); // the sort order was deliberately left alone during the run
   renderRun();renderFailbar();
-  let msg;
+  let msg, notifyMsg="";
   if(stop)msg="Stopped after "+nDone+" of "+list.length;
   else{
     const parts=[];
     if(ok)parts.push(ok+" refreshed");
     if(missing)parts.push(missing+" not found");
-    if(failed.length)parts.push(failed.length+" failed");
-    msg=parts.length?parts.join(", "):"Nothing changed";
+    // On the page the failures are the banner's to say (see renderFailbar), and each
+    // card's; a desktop notice reaches someone away from the page, so it says them.
+    msg=parts.length?parts.join(", "):failed.length?"":"Nothing changed";
+    if(failed.length)notifyMsg=parts.concat(failed.length+" failed").join(", ");
   }
-  toast(msg);
-  if(!stop)notify("Check all ranks finished",msg);
+  if(msg)toast(msg);
+  if(!stop)notify("Check all ranks finished",notifyMsg||msg);
 }
 
 // LP moved since the check before last — what "who is climbing right now" means.
@@ -3772,12 +3796,15 @@ function syncDashToggle(){
 function renderDash(){
   applyRankTheme(); // a new best tier is news the dashboard already gets; the colours follow it
   const el=$("dash");
-  const Q=parseQuery(ui.search);
-  // Chore counts use the same toolbar filters as the grid (region/tag/search/…),
-  // but always from the active vault — archived view is exited when a tile is clicked.
+  /* Chore counts use the same toolbar filters as the grid (region/tag/status/…),
+     but not the search: that is a quick find, not a scope, and a panel that redrew
+     its counts, and its height, on every keystroke moved the search box under the
+     typing. Always from the active vault — archived view is exited when a tile is
+     clicked. */
+  const Q=parseQuery("");
   const countPool=accounts.filter(a=>passesBaseFilters(a,Q,{forceActive:true}));
   const allActive=accounts.filter(a=>!a.archived);
-  const filterHint=[ui.region&&ui.region,ui.status&&ui.status,ui.tag&&("#"+ui.tag),ui.favOnly&&"★",ui.search&&("“"+ui.search+"”")].filter(Boolean).join(" · ");
+  const filterHint=[ui.region&&ui.region,ui.status&&ui.status,ui.tag&&("#"+ui.tag),ui.favOnly&&"★"].filter(Boolean).join(" · ");
   syncDashToggle();
   if(!allActive.length){hideSparkTip();el.innerHTML="";return}
   if(dashCollapsed()){hideSparkTip();el.innerHTML="";return}
@@ -3790,7 +3817,6 @@ function renderDash(){
   const topChamps=mergeChampions(pool);
   const neverN=countPool.filter(neverChecked).length;
   const attentionN=countPool.filter(needsAttention).length;
-  const failedN=countPool.filter(a=>isLive(a)&&isFailed(a)).length;
   let bk="";
   if(hasStorage){
     const remindDays=clampExportDays(cfg.exportRemindDays);
@@ -3817,8 +3843,6 @@ function renderDash(){
       <div class="v" style="color:var(--warn-txt)">${neverN}</div><div class="s-note">no rank pulled yet · click to see them</div></button>`,
     attentionN&&`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
       <div class="v" style="color:var(--danger)">${attentionN}</div><div class="s-note">flagged by you, or the profile no longer exists</div></button>`,
-    failedN&&`<button class="stat stat-b${ui.flag==="failed"?" on":""}" data-flag="failed" aria-pressed="${ui.flag==="failed"}"><div class="k">Last check failed</div>
-      <div class="v" style="color:var(--danger)">${failedN}</div><div class="s-note">auto-fetch failed · enter the rank by hand or retry</div></button>`,
     dupN&&`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`,
     next&&`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
@@ -3946,7 +3970,7 @@ function renderChips(){
   if(ui.tier)out.push(["tier",ui.tier==="UNRANKED"?"Unranked":ui.tier.charAt(0)+ui.tier.slice(1).toLowerCase()]);
   if(ui.tag)out.push(["tag","Tag: "+ui.tag]);
   if(ui.favOnly)out.push(["favOnly","Favorites"]);
-  if(ui.search)out.push(["search",'"'+ui.search+'"']);
+  // no chip for the search: the box already says what is in it
   setHTML($("chips"),!out.length?"":out.map(([k,label])=>
     `<button class="fchip" data-clear="${k}">${esc(label)}<span aria-hidden="true">✕</span></button>`).join("")
     +(out.length>1?`<button class="fchip fchip-all" data-clear="all">Clear all</button>`:""));
@@ -5245,8 +5269,10 @@ function cardHTML(a,i){
        pace had a whole row of the card to itself ("Climb · +21 LP/day"), and
        without "since last check" the two numbers read as a contradiction. */
     const r=dead?null:climbRate(hist), pace=r&&Math.abs(r.lpPerDay)>=1?(r.lpPerDay>0?"+":"")+Math.round(r.lpPerDay)+" LP/day":"";
-    const cap=[dv&&!dead?"since last check":"",pace].filter(Boolean).join(" · ");
-    if(cap)deltaChip+=`<span class="d-cap" title="${pace?"The average pace over the chart's checks":"Since previous check"}">${esc(cap)}</span>`;
+    // each piece unbroken, so a narrow card wraps at the "·" and the rank name beside
+    // it keeps its width ("Platinum II" was cut to "Platinu…" on a phone)
+    const cap=[dv&&!dead?"since last check":"",pace].filter(Boolean).map(t=>`<span>${esc(t)}</span>`).join(" · ");
+    if(cap)deltaChip+=`<span class="d-cap" title="${pace?"The average pace over the chart's checks":"Since previous check"}">${cap}</span>`;
   }
   /* There was a flame "Climbing" chip here too (LP up three checks running). It was
      the fourth way the card said "going up", beside the +LP chip, the Climb figure
@@ -5363,7 +5389,7 @@ function cardHTML(a,i){
       </div>
     </div>
     <div class="c-rank">
-      <div style="min-width:0">${rankBlock}</div>
+      <div class="c-rk-l">${rankBlock}</div>
       ${deltaChip?`<div class="c-deltas">${deltaChip}</div>`:""}
     </div>
     ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
@@ -5395,7 +5421,6 @@ function cardHTML(a,i){
     ${(()=>{const role=mainRole(a),tags=a.tags||[];
       return role||tags.length?`<div class="ctags">${role?`<span class="role-tag" title="Played in 3 or more of the last 5 ranked games">${esc(role)}</span>`:""}${tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""})()}
     ${loginOpen?`<div class="login${rv("login")}">
-      ${a.login&&a.password?`<button class="lseq" data-act="copyseq">${loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`:""}
       <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
       <div class="lrow"><span class="val mono ${a.password?"":"none"}" style="font-family:${a.password?"":"inherit"}">${a.password?(pw?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${pw?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
       ${pwWarnHTML(a)}
@@ -5410,7 +5435,7 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}${a.status==="banned"?"":`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`}</span>
+      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${isLive(a)&&isFailed(a)?`<span class="c-failed" title="${esc(s.note)}">${icon("alert")}Last check failed</span>`:""}${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}${a.status==="banned"?"":`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`}</span>
       <!-- Three buttons, not five, and the ⋯ no longer unfolds a second toolbar
            into the card: it opens one shared floating menu (see cardMenuHTML).
            DPM moved in there with the rest — it is an outbound link you follow
@@ -5419,7 +5444,7 @@ function cardHTML(a,i){
         <!-- A key, not a person: a person beside "Login" read as "sign in to this
              app". Refresh moved up beside "Updated 2 h ago", the thing it changes;
              here it weighed nearly as much as Login, which is what a card is for. -->
-        <button data-act="login" class="a-login" title="Show saved login">${icon("key")} ${loginOpen?"Hide login":"Login"}</button>
+        ${loginButtonsHTML(a,loginOpen)}
         <button data-act="more" class="c-more${openMore.has(a.id)?" on":""}" aria-haspopup="menu" aria-expanded="${openMore.has(a.id)}" title="More actions" aria-label="More actions">⋯</button>
       </div>
     </div>
@@ -5692,7 +5717,7 @@ function renderGrid(){
       +`<h2 class="wl-t">No accounts yet</h2><p class="wl-s">Add your accounts to keep their ranks and logins in one place.</p>`
       +`<ol class="wl-steps"><li><span class="wl-n">1</span><b>Add an account</b><span>Its Riot ID and region. The login is optional.</span></li>`
       +`<li><span class="wl-n">2</span><b>Check its rank</b><span>Free and automatic, read from op.gg. No key needed.</span></li>`
-      +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Login shows the username and password, each one click to copy.</span></li></ol>`
+      +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Login copies the username, then the password, one click each.</span></li></ol>`
       +`<div class="wl-acts"><button id="bEmptyAdd" class="b-fill">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div>`
       +`<p class="wl-note">${icon("lock")}<span>Logins, passwords and notes stay in this browser. A rank check sends only the Riot ID to op.gg, through a public proxy. Clearing the browser's data clears the vault too, so keep a backup.</span></p></div></div>`);
   }else if(list.length===0){
@@ -6028,17 +6053,23 @@ function openForm(acc,focus){
   $("fBirth").value=acc?acc.birthdate||"":"";
   $("fStatus").value=acc?(acc.status||"active"):"active";
   setPassShown(false);
-  $("fPass").placeholder=vaultPassword?"Encrypted at rest with your master password":"Stored unencrypted, locally";
+  renderPassNote();
   renderPwMeter();
   $("fTags").value=acc?(acc.tags||[]).join(", "):"";
   $("fNotes").value=acc?acc.notes||"":"";
   formInfoBase=acc?normInfo(acc.info):null;
   $("fFieldsCfg").classList.add("hidden");$("fFieldsBtn").setAttribute("aria-expanded","false");
   // From a card's note fields, the window starts at them rather than at the name
-  const atNotes=focus==="notes", atPw=focus==="password";
-  $("fName").toggleAttribute("data-autofocus",!atNotes&&!atPw);
+  const atNotes=focus==="notes", atPw=focus==="password", atLogin=focus==="login";
+  $("fName").toggleAttribute("data-autofocus",!atNotes&&!atPw&&!atLogin);
+  $("fLogin").toggleAttribute("data-autofocus",atLogin);   // from a card's Add login
   $("fPass").toggleAttribute("data-autofocus",atPw);   // from the password check-up
   renderInfoFields(formInfoBase,atNotes);
+  clearFormErrors();
+  // Folded unless you keep it open, the account already has some of it, or you came
+  // for the notes. Opening the ones an account has hides nothing it holds.
+  setFormMore(!!cfg.formMore||atNotes||!!(acc&&(acc.label||acc.email||acc.createdOn||acc.birthdate
+    ||(acc.tags||[]).length||(acc.status&&acc.status!=="active")||acc.notes||normInfo(acc.info))));
   $("fSave").textContent=acc?"Save changes":"Add account";
   $("formTitle").textContent=acc?"Edit account":"Add account";
   // Which one, in the header: over the page the card being edited is behind the
@@ -6047,7 +6078,40 @@ function openForm(acc,focus){
   // The modal observer focuses the name, which carries data-autofocus — the first
   // field is the optional label, and the one you came here to type is the name.
   $("form").classList.remove("hidden");
+  formBase=formSnapshot();
   if(atNotes)requestAnimationFrame(()=>{const h=$("fNotesHead");if(h&&h.scrollIntoView)h.scrollIntoView({block:"start"})});
+}
+function setFormMore(on){
+  $("fGrid").classList.toggle("more",on);
+  const b=$("fMoreBtn");b.setAttribute("aria-expanded",String(on));
+  b.firstChild.textContent=on?"Fewer details":"More details";
+}
+/* Everything the form holds, to tell whether leaving it would lose something */
+let formBase="";
+function formSnapshot(){
+  return JSON.stringify([[...$("form").querySelectorAll("input,select,textarea")].map(e=>e.type==="checkbox"?e.checked:e.value),
+    readInfoFields(formInfoBase)]);
+}
+/* A field that stops the save says why under itself. Typing in it clears that. */
+function fieldError(id,msg){
+  const f=$(id), m=$(id+"Msg");
+  f.closest(".fld").classList.add("bad");f.setAttribute("aria-invalid","true");
+  if(m)m.textContent=msg;
+}
+function clearFieldError(id){
+  const f=$(id), m=$(id+"Msg");
+  f.closest(".fld").classList.remove("bad");f.removeAttribute("aria-invalid");
+  if(m)m.textContent="";
+}
+function clearFormErrors(){clearFieldError("fName");clearFieldError("fTag")}
+/* What happens to the password, under the box: it was the placeholder, in the
+   password's monospace, gone at the first letter. Without a master password the
+   line offers to set one; leaving a form with typing in it asks first. */
+function renderPassNote(){
+  const el=$("fPassNote");
+  el.classList.toggle("open",!vaultPassword);
+  setHTML(el,vaultPassword?`${icon("lock")}<span>Encrypted with your master password</span>`
+    :`<span>Saved in this browser without encryption.</span><button type="button" class="f-link" id="fSetMaster">Set a master password</button>`);
 }
 function closeForm(){$("form").classList.add("hidden");editingId=null}
 /* A Riot ID is copied as one string — "Hide on Bush#EUW" from op.gg, the client,
@@ -6070,14 +6134,36 @@ function regionFromTagField(){
   const r=regionFromTag($("fTag").value);
   if(r)sel.value=r;
 }
-$("fName").addEventListener("input",splitRiotId);
+$("fName").addEventListener("input",()=>{
+  splitRiotId();clearFieldError("fName");
+  if($("fTag").value.trim())clearFieldError("fTag");   // a pasted Name#TAG filled it
+});
+$("fTag").addEventListener("input",()=>clearFieldError("fTag"));
+$("fRegion").addEventListener("change",()=>clearFieldError("fName"));   // a duplicate is per region
+$("fMoreBtn").addEventListener("click",()=>{
+  const on=!$("fGrid").classList.contains("more");
+  setFormMore(on);cfg.formMore=on;saveCfg();   // kept the way you leave it, for the next account
+  if(on)$("fLabel").focus();
+});
+$("fPassNote").addEventListener("click",e=>{
+  if(!e.target.closest("#fSetMaster"))return;
+  if(formSnapshot()!==formBase&&!confirm("Leave this form? What you typed here isn't saved yet."))return;
+  openSettings("security");
+  setTimeout(()=>{const f=$("sVaultPass");if(f){f.scrollIntoView&&f.scrollIntoView({block:"center"});f.focus()}},60);
+});
 $("fTag").addEventListener("input",regionFromTagField);
 $("fRegion").addEventListener("change",()=>{$("fRegion").dataset.picked="1"});
 function submitForm(){
   let newId=null;
   splitRiotId();
   const gameName=$("fName").value.trim(), tagLine=$("fTag").value.trim().replace(/^#/,"");
-  if(!gameName||!tagLine){toast("Riot name and tag are required");return}
+  clearFormErrors();
+  if(!gameName||!tagLine){
+    if(!tagLine)fieldError("fTag","Needed for the lookup, the part after #");
+    if(!gameName)fieldError("fName","Needed: the name before the #");
+    $(gameName?"fTag":"fName").focus();
+    return;
+  }
   // Checked on edit too, not only on add: renaming one account onto another was
   // the one way to get two rows for the same Riot ID past the guard, and every
   // check then refreshed both of them off the same profile.
@@ -6086,7 +6172,7 @@ function submitForm(){
       &&a.gameName.toLowerCase()===gameName.toLowerCase()
       &&a.tagLine.toLowerCase()===tagLine.toLowerCase()
       &&a.region===$("fRegion").value);
-    if(dup){toast("Already in the vault: "+plainName(dup));return}
+    if(dup){fieldError("fName","Already in the vault as "+plainName(dup));$("fName").focus();return}
   }
   const data={label:$("fLabel").value.trim(),region:$("fRegion").value,gameName,tagLine,status:$("fStatus").value,
     login:$("fLogin").value,password:$("fPass").value,email:$("fEmail").value.trim(),
@@ -6121,6 +6207,9 @@ function settingsTab(tab,focus){
   for(const b of m.querySelectorAll("[data-stab]")){
     const on=b.dataset.stab===tab;
     b.setAttribute("aria-selected",String(on));b.tabIndex=on?0:-1;
+    // Settings starts on its tab, not on the first field of the page: that was the
+    // colour picker, which on a phone sits below the themes and scrolled them away
+    b.toggleAttribute("data-autofocus",on);
     if(on&&focus)b.focus();
   }
   const body=m.querySelector(".mdl-b");if(body)body.scrollTop=0;
@@ -6145,7 +6234,13 @@ function openSettings(tab){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();renderPwCheck();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sDeployHelp").open=!cfg.backendUrl;$("sAdvanced").open=!!cfg.apiKey;$("settings").classList.remove("hidden");centreSettingsTab();settingsDirty(false)
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();renderPwCheck();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sChecksLead").textContent=checksLead();$("sChecksAdv").open=!!(cfg.backendUrl||cfg.apiKey);$("sDeployHelp").open=!cfg.backendUrl;$("sAdvanced").open=!!cfg.apiKey;$("settings").classList.remove("hidden");centreSettingsTab();settingsDirty(false)
+}
+// Where ranks come from, in the order check() tries them
+function checksLead(){
+  return cfg.backendUrl?"Ranks are read by your own worker, set up under Advanced, and from op.gg when it can't answer."
+    :cfg.apiKey?"Ranks are read with your Anthropic API key, set under Advanced, and from op.gg when that fails."
+    :"Ranks are read from op.gg for free. There is nothing to set up.";
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -6180,7 +6275,15 @@ $("sPwList").addEventListener("click",e=>{
   const b=e.target.closest("[data-pwedit]");if(!b)return;
   const acc=accounts.find(a=>a.id===b.dataset.pwedit);if(acc)openForm(acc,"password");
 });
-function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted.";updatePkStatus();renderSetup()}
+/* Remove protection was red and pressable with nothing protected, where all it could
+   do was say so in a toast. It shows once there is a password to remove, and the
+   button beside it says which of the two it will do. */
+function updateVaultStatus(){
+  $("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted.";
+  $("sVaultRemove").classList.toggle("hidden",!vaultPassword);
+  $("sVaultSet").textContent=vaultPassword?"Change password":"Set password";
+  updatePkStatus();renderSetup();
+}
 function updatePkStatus(){
   const r=pkRecord(), ok=pkAvailable();
   $("sPkSet").classList.toggle("hidden",!!r);$("sPkOff").classList.toggle("hidden",!r);
@@ -6724,7 +6827,8 @@ $("fCancel").addEventListener("click",closeForm);
 // still means a newline.
 $("form").addEventListener("keydown",e=>{
   if(e.key!=="Enter")return;
-  if(e.target&&e.target.tagName==="TEXTAREA")return;
+  // a button (More details, Fields…, Gen) does its own thing on Enter
+  if(e.target&&(e.target.tagName==="TEXTAREA"||e.target.tagName==="BUTTON"))return;
   e.preventDefault();
   submitForm();
 });
@@ -6963,7 +7067,11 @@ const S_SELF=new Set(["sVaultPass"]);
 $("settings").addEventListener("input",e=>{if(e.target.closest(".mdl-b")&&!S_SELF.has(e.target.id))settingsDirty(true)});
 $("settings").addEventListener("change",e=>{if(e.target.closest(".mdl-b")&&!S_SELF.has(e.target.id))settingsDirty(true)});
 $("settings").addEventListener("click",e=>{
-  if(e.target.closest("[data-theme],[data-atmosphere],#sEffects [data-v],#sTextSize [data-v],#sCompact,.acc-reset"))settingsDirty(true);
+  // inside this window only: <body> carries data-atmosphere for the page's own
+  // background, so closest() matched it on every click, a tab included, and the
+  // footer said "Not saved yet" when nothing had changed
+  const hit=e.target.closest("[data-theme],[data-atmosphere],#sEffects [data-v],#sTextSize [data-v],#sCompact,.acc-reset");
+  if(hit&&e.currentTarget.contains(hit))settingsDirty(true);
 });
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
 $("bNewSeason").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");newSeasonAll()});
@@ -7215,7 +7323,7 @@ function resetAccent(which){
 }
 $("sAccentReset1").addEventListener("click",()=>resetAccent("primary"));
 $("sAccentReset2").addEventListener("click",()=>resetAccent("secondary"));
-// Settings' Set / change and the first-run prompt both come through here, so
+// Settings' Set password and the first-run prompt both come through here, so
 // there is one way a vault becomes encrypted, with one set of checks.
 $("sVaultSet").addEventListener("click",async()=>{if(await setVaultPassword($("sVaultPass").value))$("sVaultPass").value=""});
 $("lpSet").addEventListener("click",async()=>{
@@ -7391,7 +7499,8 @@ $("bCheckAll").addEventListener("click",()=>checkAll());
 // and nothing to click to undo it.
 function renderFilters(){renderChips();renderGrid();renderDash()}
 let searchT;
-$("tSearch").addEventListener("input",e=>{ui.search=e.target.value;clearTimeout(searchT);searchT=setTimeout(renderFilters,120)});
+// the grid and the chips only: the stats panel above does not follow the search (see renderDash)
+$("tSearch").addEventListener("input",e=>{ui.search=e.target.value;clearTimeout(searchT);searchT=setTimeout(()=>{renderChips();renderGrid()},120)});
 $("tRegion").addEventListener("change",e=>{ui.region=e.target.value;renderFilters()});
 $("tSort").addEventListener("change",e=>{
   ui.sort=e.target.value;
@@ -7458,13 +7567,25 @@ $("bDashToggle").addEventListener("click",()=>{
   if("IntersectionObserver"in window&&head){
     new IntersectionObserver(([e])=>{
       btn.classList.toggle("hidden",e.isIntersecting);
-      // The sticky console keeps two full rows pinned to the top of the viewport
-      // for the whole scroll. Once the header is gone it tightens up: same
-      // controls, less of the screen spent on them. One observer for both, so
-      // there is still no scroll listener anywhere in this file.
-      document.body.classList.toggle("scrolled",!e.isIntersecting);
     },{threshold:0}).observe(head);
   }
+  /* How far the console may scroll before it sticks: the height of its command
+     row, so only the search row stays pinned (see .console in app.css). Measured,
+     because the row wraps at some widths. Without ResizeObserver it stays 0 and the
+     whole console pins, as it always did. */
+  const con=document.querySelector(".console"), cmd=con&&con.querySelector(".cmd");
+  if(cmd&&"ResizeObserver"in window)
+    new ResizeObserver(()=>con.style.setProperty("--cmd-pin",cmd.offsetHeight+con.clientTop+"px")).observe(cmd);
+  /* Phones only: away while scrolling down, back on the way up (see .to-top.away).
+     Passive, and it only compares two numbers, so it costs nothing per frame. */
+  const narrow=window.matchMedia&&window.matchMedia("(max-width:560px)");
+  let lastY=window.scrollY||0;
+  window.addEventListener("scroll",()=>{
+    const y=window.scrollY||0, d=y-lastY;
+    if(Math.abs(d)<6)return;
+    btn.classList.toggle("away",!!(narrow&&narrow.matches)&&d>0);
+    lastY=y;
+  },{passive:true});
   btn.addEventListener("click",()=>{
     window.scrollTo({top:0,behavior:prefersReducedMotion()?"auto":"smooth"});
     const first=document.querySelector("#tSearch");
@@ -7731,6 +7852,7 @@ $("bCheckStale").addEventListener("click",()=>
 $("bCancelCheck").addEventListener("click",()=>{if(run){run.stop=true;toast("Stopping after this account…")}});
 $("failbar").addEventListener("click",e=>{
   if(e.target.closest("#bDismissFails")){lastFails=null;renderFailbar();return}
+  if(e.target.closest("#bShowFails")){setChoreFlag("failed");return}
   if(e.target.closest("#bRetryFails")&&lastFails)checkAll(lastFails.map(f=>f.id));
 });
 $("dash").addEventListener("change",e=>{
@@ -7968,10 +8090,14 @@ async function onCardClick(e){
      button becomes "Copy password"; the second copies that (cleared from the
      clipboard after 30s, like any copied password) and starts over. */
   else if(act==="copyseq"){
-    if(!loginSeq.has(id)){copyText(acc.login,"Username");loginSeq.add(id)}
-    else{copyText(acc.password,"Password",true);loginSeq.delete(id)}
+    const both=acc.login&&acc.password;
+    if(acc.login&&(!both||!loginSeq.has(id))){copyText(acc.login,"Username");if(both)loginSeq.add(id)}
+    else if(acc.password){copyText(acc.password,"Password",true);loginSeq.delete(id)}
+    // copying the login is the closest thing to playing on it this app can see
+    acc.lastLoginAt=Date.now();saveDB();
     renderCard(id);
   }
+  else if(act==="addlogin")openForm(acc,"login");
   else if(act==="copylogin")copyText(acc.login,"Username").then(ok=>{if(ok)flashCopied(btn)});
   else if(act==="copypw")copyText(acc.password,"Password",true).then(ok=>{if(ok)flashCopied(btn)});
   else if(act==="copymail")copyText(acc.email,"Email").then(ok=>{if(ok)flashCopied(btn)});

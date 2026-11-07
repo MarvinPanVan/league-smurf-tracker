@@ -932,7 +932,7 @@ test("Login stays the one filled control on a card, flat like every other button
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [] }]);
   const filled = [...win.document.querySelectorAll('.card[data-id="a"] .acts > *')]
     .filter(b => /var\(--teal\)/.test((html.match(new RegExp("\\n  \\." + b.className.split(" ")[0] + "\\{([^}]*)\\}")) || [])[1] || ""));
-  assert.deepEqual(filled.map(b => b.dataset.act), ["login"], "and the only filled one");
+  assert.deepEqual(filled.map(b => b.className), ["a-login"], "and the only filled one");
 });
 // and every accent button is the same plate, edged and lettered in the accent, never metal
 test("the accent buttons add no gradient rim or glow of their own; the wordmark and gem are solid", () => {
@@ -1224,24 +1224,44 @@ test("a levelling account shows its way to ranked, and says when it is ready", (
   });
 });
 
-test("one button copies the username, then the password", async () => {
-  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [],
-    login: "riotuser", password: "hunter22!", stats: null }]);
+test("a card's Login copies the username, then the password, without opening anything", async () => {
+  const win = bootApp([
+    { id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [], login: "riotuser", password: "hunter22!", stats: null },
+    { id: "P", region: "EUW", gameName: "P", tagLine: "1", status: "active", tags: [], history: [], password: "onlypw", stats: null },
+    { id: "N", region: "EUW", gameName: "N", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
   const copied = [];
   Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async v => { copied.push(v); } } });
-  const card = () => win.document.querySelector('.card[data-id="L"]');
-  card().querySelector('[data-act="login"]').click();
-  const seq = () => card().querySelector('[data-act="copyseq"]');
-  assert.match(seq().textContent, /Copy username, then password/);
-  seq().click();
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  const main = id => card(id).querySelector(".acts .a-login");
+  assert.equal(main("L").dataset.act, "copyseq", "the main button copies; it no longer opens a panel");
+  assert.match(main("L").textContent, /^\s*Copy username$/);
+  main("L").click();
   await until(() => copied.length === 1, "the username to be copied");
   assert.equal(copied[0], "riotuser");
-  assert.match(seq().textContent, /^\s*Copy password$/, "the button moves on to the password");
-  seq().click();
+  assert.equal(card("L").querySelector(".login"), null, "nothing unfolded to get there");
+  assert.match(main("L").textContent, /^\s*Copy password$/, "the button moves on to the password");
+  main("L").click();
   await until(() => copied.length === 2, "the password to be copied");
   assert.equal(copied[1], "hunter22!");
-  assert.match(seq().textContent, /Copy username, then password/, "and starts over");
+  assert.match(main("L").textContent, /^\s*Copy username$/, "and starts over");
   await until(() => appGet(win, "lastCopiedSecret") === "hunter22!", "the password to be the secret that gets cleared later");
+  // the eye beside it shows the saved login, and a fresh look starts at the username again
+  const eye = card("L").querySelector('.acts [data-act="login"]');
+  assert.equal(eye.getAttribute("aria-label"), "Show the saved login");
+  main("L").click(); eye.click();
+  assert.ok(card("L").querySelector(".login .lrow"), "the panel opens from the eye");
+  assert.equal(card("L").querySelector(".lseq"), null, "with no second copy-everything button in it");
+  assert.match(main("L").textContent, /^\s*Copy username$/);
+  // only a password saved: the button copies that
+  assert.match(main("P").textContent, /^\s*Copy password$/);
+  main("P").click();
+  await until(() => copied.includes("onlypw"), "the lone password to be copied");
+  // nothing saved: the button offers to add it, and the form opens at the username
+  assert.match(main("N").textContent, /^\s*Add login$/);
+  assert.equal(card("N").querySelector('.acts [data-act="login"]'), null, "no eye on an empty login");
+  main("N").click();
+  assert.ok(!win.document.getElementById("form").classList.contains("hidden"), "the account form opens");
+  assert.ok(win.document.getElementById("fLogin").hasAttribute("data-autofocus"), "at the username field");
 });
 
 // the toast says "copied" at the bottom of the screen; the button says it where you clicked
@@ -2686,14 +2706,14 @@ test("Settings is six tabs, one section at a time, and a step that needs a field
   const tabs = [...m.querySelectorAll('[role="tab"]')];
   assert.deepEqual(tabs.map(t => t.textContent.trim()), ["Appearance", "Rank checks", "Alerts", "Security", "Sync", "Backup"]);
   const shown = () => [...m.querySelectorAll(".grp")].filter(g => win.getComputedStyle(g).display !== "none")
-    .map(g => g.querySelector(".grp-h").textContent.trim());
+    .map(g => g.querySelector(".grp-h, .adv-fold > summary").textContent.trim());
   doc.getElementById("bSettings").click();
   assert.deepEqual(shown(), ["Appearance"], "opens on Appearance, alone");
   const panel = doc.getElementById("settingsPanel");
   assert.equal(panel.getAttribute("role"), "tabpanel");
   assert.ok(tabs.every(t => t.getAttribute("aria-controls") === "settingsPanel"), "each tab names the panel it controls");
   tabs[1].click();
-  assert.deepEqual(shown(), ["Rank checks", "Automatic refresh"], "the backend first, then when it runs");
+  assert.deepEqual(shown(), ["Rank checks", "Advanced: your own worker or API key"], "when checks run first, then the worker, folded");
   assert.equal(tabs[1].getAttribute("aria-selected"), "true");
   assert.equal(panel.getAttribute("aria-labelledby"), tabs[1].id, "and the panel is read as that tab's");
   assert.equal(tabs[0].getAttribute("aria-selected"), "false");
@@ -4038,6 +4058,7 @@ test("a compact select keeps room for its arrow", () => {
 test("sorting by last opened: the account you were just on first, never-opened ones last", () => {
   const now = Date.now();
   const mk = (id, lastLoginAt) => ({ id, gameName: id, tagLine: "EUW", region: "EUW", status: "active", lastLoginAt,
+    login: id + "user", password: "pw-" + id,
     stats: { found: true, tier: "GOLD", division: "II", lp: 10, updatedAt: now }, history: [] });
   const win = bootApp([mk("never"), mk("week", now - 7 * 864e5), mk("junk", "soon"), mk("now", now - 60000)]);
   const names = () => [...win.document.querySelectorAll(".c-name span")].map(n => n.textContent);
@@ -4046,8 +4067,8 @@ test("sorting by last opened: the account you were just on first, never-opened o
   sort.value = "opened"; sort.dispatchEvent(new win.Event("change"));
   assert.deepEqual(names().slice(0, 2), ["now", "week"], "most recently opened first");
   assert.deepEqual(names().slice(2).sort(), ["junk", "never"], "no stamp, or a broken one, sorts last");
-  // opening a login doesn't make the card jump while you're using it
-  win.document.querySelector('.card[data-id="never"] [data-act="login"]').click();
+  // copying a login doesn't make the card jump while you're using it
+  win.document.querySelector('.card[data-id="never"] .a-login').click();
   assert.deepEqual(names().slice(0, 2), ["now", "week"]);
   sort.dispatchEvent(new win.Event("change"));
   assert.equal(names()[0], "never", "it moves up on the next sort");
@@ -4680,14 +4701,18 @@ test("a narrowed grid always says what narrowed it", async () => {
   search.value = "Alpha";
   search.dispatchEvent(new win.Event("input", { bubbles: true }));
   await until(() => win.document.querySelectorAll(".card").length === 1, "the search to narrow the grid");
-  assert.deepEqual(chips(), ['"Alpha"'], "the search says so");
+  // the box says what is in it; a chip repeating it appeared above the box mid-typing
+  assert.deepEqual(chips(), [], "no chip repeats the search");
+  assert.equal(win.document.querySelector(".tools").nextElementSibling.id, "chips", "and chips sit under the search row, never over it");
 
   win.document.getElementById("tFav").click();
-  assert.deepEqual(chips(), ["Favorites", '"Alpha"', "Clear all"]);
+  assert.deepEqual(chips(), ["Favorites"]);
 
-  win.document.querySelector('[data-clear="all"]').click();
+  win.document.querySelector('[data-clear="favOnly"]').click();
   assert.deepEqual(chips(), []);
-  assert.equal(win.document.querySelectorAll(".card").length, 2, "and the grid comes back");
+  search.value = "";
+  search.dispatchEvent(new win.Event("input", { bubbles: true }));
+  await until(() => win.document.querySelectorAll(".card").length === 2, "the grid to come back");
 });
 
 // ---- Settings, Help and the account form as modal panels ----
@@ -5065,7 +5090,7 @@ test("the settings body is grouped rather than one flat run of fields", () => {
   const groups = [...win.document.querySelectorAll("#settings .grp-h")].map(g => g.textContent.trim());
   // in the order of the tab row, which is one click to any of them; sync still
   // comes after both of the things it needs (a master password and a worker)
-  assert.deepEqual(groups, ["Appearance", "Rank checks", "Automatic refresh", "Alerts", "Security", "Device sync", "Backup"]);
+  assert.deepEqual(groups, ["Appearance", "Rank checks", "Alerts", "Security", "Device sync", "Backup"]);
   const tabOrder = [...win.document.querySelectorAll("#settings [data-stab]")].map(b => b.dataset.stab);
   const grpOrder = [...new Set([...win.document.querySelectorAll("#settings .grp")].map(g => g.dataset.tab))];
   assert.deepEqual(grpOrder, tabOrder, "the groups run in the tabs' order");
@@ -5115,7 +5140,7 @@ test("an edit cannot rename one account on top of another", () => {
 
   assert.equal(win.document.getElementById("form").classList.contains("hidden"), false,
     "the form stays open, the save was refused");
-  assert.match(win.document.getElementById("toast").textContent, /Already in the vault/);
+  assert.match(win.document.getElementById("fNameMsg").textContent, /^Already in the vault as First$/, "said under the name");
   assert.equal(win.document.querySelectorAll(".card").length, 2);
 
   // but editing an account without changing its identity still saves
@@ -6116,20 +6141,26 @@ test("a check records the season totals so the next one can subtract them", () =
 });
 
 // "Status: resting" was a label you had to keep up by hand.
-test("opening the login panel records that the account was reached for", () => {
-  const win = bootApp(ladderSeed());
+test("copying a login, or looking at it, records that the account was reached for", () => {
+  const seed = ladderSeed();
+  Object.assign(seed[4], { login: "riotuser", password: "hunter22!" });
+  const win = bootApp(seed);
   const card = () => win.document.querySelector('.card[data-id="t4"]');
-  assert.ok(!win.filtered().find(a => a.id === "t4").lastLoginAt);
+  const stamp = () => win.filtered().find(a => a.id === "t4").lastLoginAt;
+  assert.ok(!stamp());
 
-  card().querySelector('[data-act="login"]').click();
-  const at = win.filtered().find(a => a.id === "t4").lastLoginAt;
+  card().querySelector(".a-login").click();   // Copy username
+  const at = stamp();
   assert.ok(at && Date.now() - at < 5000);
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.id === "t4").lastLoginAt, at,
     "and it survives the reload");
   assert.match(card().querySelector(".c-foot").textContent, /Opened/);
 
+  card().querySelector('[data-act="login"]').click();   // the eye: looking stamps too
+  const seen = stamp();
+  assert.ok(seen >= at);
   card().querySelector('[data-act="login"]').click();   // closing must not re-stamp
-  assert.equal(win.filtered().find(a => a.id === "t4").lastLoginAt, at);
+  assert.equal(stamp(), seen);
 });
 
 test("sorting by climb puts the account actually moving at the top", () => {
@@ -7519,16 +7550,24 @@ test("check returns null when the account was deleted mid-flight", async () => {
   assert.equal(await win.check("gone"), null);
 });
 
-test("Failed dash tile filters only transport failures", () => {
+// One failed check was said four times (a stats tile, which also pushed the panel to
+// five columns, a banner, a toast and the run's counter) and not at all on the card
+test("a failed check shows on its card and in one banner, whose Show takes only transport failures", () => {
   const win = bootApp([
     { id: "miss", region: "EUW", gameName: "M", tagLine: "A", status: "active", tags: [],
       stats: { found: false, updatedAt: Date.now() }, history: [] },
     { id: "fail", region: "EUW", gameName: "F", tagLine: "B", status: "active", tags: [],
       stats: { found: true, tier: "GOLD", division: "I", lp: 1, note: "Auto-fetch failed (x)", updatedAt: Date.now() }, history: [] },
   ]);
-  const tile = win.document.querySelector('[data-flag="failed"]');
-  assert.ok(tile, "Last check failed tile is shown when failures exist");
-  tile.click();
+  const doc = win.document;
+  const on = doc.querySelector('.card[data-id="fail"] .c-failed');
+  assert.ok(on, "the card that failed says so");
+  assert.match(on.textContent, /Last check failed/);
+  assert.match(on.title, /Auto-fetch failed \(x\)/, "with what went wrong");
+  assert.equal(doc.querySelector('.card[data-id="miss"] .c-failed'), null, "not found is not a failed check");
+  assert.equal(doc.querySelector('#dash [data-flag="failed"]'), null, "no stats tile");
+  runScript(win, 'lastFails = [{ id: "fail", name: "F" }]; renderFailbar()');
+  doc.getElementById("bShowFails").click();
   assert.equal(win.filtered().map(a => String(a.id)).join(","), "fail");
 });
 
@@ -7914,9 +7953,10 @@ test("Rank opens as a window, the way Account does", () => {
 });
 
 test("Escape clears what a card has unfolded before it touches the page's panels", () => {
-  const win = bootApp(seededAccount());
+  const seed = seededAccount(); seed[0].login = "riotuser";
+  const win = bootApp(seed);
   const id = win.document.querySelector(".card").dataset.id;
-  win.document.querySelector('.card [data-act="login"]').click();
+  win.document.querySelector('.card .c-lgn[data-act="login"]').click();
   win.document.querySelector(".c-drawer").click();
   cardMenu(win, id);
 
@@ -8053,8 +8093,9 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
 test("the card footer is Login and a ⋯, with Refresh on the timestamp it changes", () => {
   const win = bootApp(seededAccount());
   const acts = win.document.querySelector(".card .acts");
-  // Refresh weighed nearly as much as Login there; it sits by "Updated …" now
-  assert.deepEqual([...acts.children].map(el => el.textContent.trim()), ["Login", "⋯"]);
+  // Refresh weighed nearly as much as Login there; it sits by "Updated …" now.
+  // This account has no login saved yet, so the Login button offers to add one.
+  assert.deepEqual([...acts.children].map(el => el.textContent.trim()), ["Add login", "⋯"]);
   const ref = win.document.querySelector('.card .c-meta .c-ref[data-act="check"]');
   assert.ok(ref && ref.previousElementSibling.classList.contains("upd"), "beside the timestamp");
   assert.equal(ref.getAttribute("aria-label"), "Refresh rank", "an icon with a name");
@@ -8338,7 +8379,7 @@ test("on a phone the header is one app bar: the wordmark left, the tray right, t
   const r = css.slice(at, css.indexOf("\n  }", at));
   assert.match(r, /\.top>\.bar\{grid-column:2;grid-row:1/, "the tray beside the wordmark, not on a row of its own");
   assert.match(r, /\.top>\.ribbon\{grid-column:1\/-1;grid-row:2/);
-  assert.match(r, /\.brand-mark,\.top>\.brand \.brand-sub\{display:none\}/);
+  assert.match(r, /\.top>\.brand \.brand-mark\{display:none\}/);
   assert.match(r, /#bDashToggle \.dt-v\{display:none\}/, "the toggle says just Stats");
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
     stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 3, losses: 2, updatedAt: Date.now() } }]);
@@ -8417,16 +8458,113 @@ test("on a touch screen the small controls reach WCAG's 24px, and nothing change
   assert.match(css, /\n  \.bulkchk\{width:15px;height:15px/);
 });
 
-// The optional Label led the form; the required Riot name and tag were its second row
-test("the account form starts with what it needs, and every label names its field", () => {
-  const win = bootApp();
-  win.document.getElementById("bAdd").click();
-  const fields = [...win.document.querySelectorAll("#form .formgrid > .fld")].map(f => f.querySelector("input,select,textarea")).filter(Boolean).map(c => c.id);
-  assert.deepEqual(fields.slice(0, 4), ["fName", "fTag", "fRegion", "fLabel"]);
-  for (const l of win.document.querySelectorAll("#form .formgrid > .fld > label")) {
+// The optional Label led the form; the required Riot name and tag were its second row.
+// Then it showed all eleven fields and the notes at once, for an account that needs two.
+test("the account form starts with what it needs, folds the rest, and every label names its field", () => {
+  const win = bootApp([
+    { id: "plain", gameName: "Plain", tagLine: "1", region: "EUW", status: "active", tags: [], history: [] },
+    { id: "rich", gameName: "Rich", tagLine: "1", region: "EUW", status: "active", tags: ["jungle"], history: [] }]);
+  const doc = win.document;
+  doc.getElementById("bAdd").click();
+  const ids = sel => [...doc.querySelectorAll(sel)].map(f => f.querySelector("input,select,textarea")).filter(Boolean).map(c => c.id);
+  assert.deepEqual(ids("#fGrid > .fld:not(.f-x)"), ["fName", "fTag", "fRegion", "fLogin", "fPass"], "the Riot ID, its region, the login");
+  assert.deepEqual(ids("#fGrid > .fld.f-x"), ["fLabel", "fEmail", "fCreated", "fBirth", "fTags", "fStatus", "fNotes"], "the rest folds");
+  assert.ok(["fNotesHead", "fFieldsCfg", "fInfo"].every(id => doc.getElementById(id).classList.contains("f-x")), "the notes too");
+  assert.match(html, /\n  #fGrid:not\(\.more\)>\.f-x\{display:none\}/);
+  const grid = doc.getElementById("fGrid"), more = doc.getElementById("fMoreBtn");
+  assert.ok(!grid.classList.contains("more"));
+  assert.equal(more.getAttribute("aria-expanded"), "false");
+  assert.equal(more.textContent.trim(), "More details");
+  // Enter on the button opens the details; it does not try to save the empty form
+  more.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  assert.equal(doc.getElementById("fNameMsg").textContent, "", "no save was tried");
+  more.click();
+  assert.ok(grid.classList.contains("more"));
+  assert.equal(more.getAttribute("aria-expanded"), "true");
+  assert.equal(more.textContent.trim(), "Fewer details");
+  assert.equal(doc.activeElement.id, "fLabel", "and the first of them is ready to type in");
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).formMore, true, "kept the way you leave it");
+  more.click();
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).formMore, false);
+  // editing an account that has some of the details opens with them showing; one without stays short
+  doc.getElementById("fCancel").click();
+  cardMenu(win, "rich").querySelector('[data-act="edit"]').click();
+  assert.ok(grid.classList.contains("more"), "an account with a tag shows it");
+  doc.getElementById("fCancel").click();
+  cardMenu(win, "plain").querySelector('[data-act="edit"]').click();
+  assert.ok(!grid.classList.contains("more"));
+  for (const l of doc.querySelectorAll("#form .formgrid > .fld > label")) {
     const f = l.getAttribute("for");
-    assert.ok(f && win.document.getElementById(f), "a label for: " + l.textContent.trim());
+    assert.ok(f && doc.getElementById(f), "a label for: " + l.textContent.trim());
   }
+});
+
+// "Riot name and tag are required" was a toast at the bottom, over the form's own
+// footer, with neither field marked
+test("a missing Riot name or tag is said under the field, not in a toast over the form", () => {
+  const win = bootApp();
+  const doc = win.document, $ = id => doc.getElementById(id);
+  const bad = id => $(id).closest(".fld").classList.contains("bad") && $(id).getAttribute("aria-invalid") === "true" && $(id + "Msg").textContent !== "";
+  $("bAdd").click();
+  $("fSave").click();
+  assert.ok(!$("form").classList.contains("hidden"), "nothing was saved");
+  assert.ok(bad("fName") && bad("fTag"), "both fields are marked, each with a reason");
+  assert.equal($("fName").getAttribute("aria-describedby"), "fNameMsg", "read out with the field");
+  assert.equal(doc.activeElement.id, "fName", "and the first one has the caret");
+  assert.doesNotMatch($("toast").textContent, /required/);
+  assert.match(html, /\n  \.fld\.bad input,\.fld\.bad select\{border-color:/, "the box goes red");
+  // typing clears its own mark, and only its own
+  $("fName").value = "Foo";
+  $("fName").dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.ok(!bad("fName") && bad("fTag"));
+  $("fSave").click();
+  assert.equal(doc.activeElement.id, "fTag", "the one still missing gets the caret");
+  // pasting Name#TAG fills the tag, so both are fine and the save goes through
+  $("fName").value = "Foo#EUW";
+  $("fName").dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.ok(!bad("fName") && !bad("fTag"));
+  $("fSave").click();
+  assert.ok($("form").classList.contains("hidden"));
+  // and a form opened again starts clean
+  $("bAdd").click(); $("fSave").click(); $("fCancel").click(); $("bAdd").click();
+  assert.ok(!bad("fName") && !bad("fTag"));
+});
+
+// "Stored unencrypted, locally" was the field's placeholder, set in the password's
+// monospace and gone at the first letter typed
+test("what happens to the password is a line under the box, with a way to set a master password", () => {
+  const win = bootApp();
+  const doc = win.document, $ = id => doc.getElementById(id);
+  $("bAdd").click();
+  assert.ok(!$("fPass").getAttribute("placeholder"), "no placeholder to vanish");
+  assert.ok($("fPassNote").closest(".pw-fld"), "under the password box");
+  assert.match($("fPassNote").textContent, /Saved in this browser without encryption/);
+  $("fPass").value = "hunter22!";
+  $("fPass").dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.match($("fPassNote").textContent, /without encryption/, "still said once there is a password");
+  // with something typed, the link asks before leaving the form; a no keeps it
+  let asked = 0;
+  win.confirm = () => { asked++; return false; };
+  $("fSetMaster").click();
+  assert.equal(asked, 1);
+  assert.ok(!$("form").classList.contains("hidden"), "the form and what's in it stay");
+  win.confirm = () => { asked++; return true; };
+  $("fSetMaster").click();
+  assert.ok($("form").classList.contains("hidden"));
+  assert.ok(!$("settings").classList.contains("hidden"));
+  assert.equal($("settings").dataset.tab, "security", "at the master password");
+  // an untouched form has nothing to lose, so it just goes
+  $("settings").querySelector("[data-close-panel]").click();
+  $("bAdd").click(); asked = 0;
+  $("fSetMaster").click();
+  assert.equal(asked, 0);
+  assert.equal($("settings").dataset.tab, "security");
+  // with a master password, the line says the password is encrypted, and offers nothing
+  runScript(win, "vaultPassword='correct horse'");
+  $("settings").querySelector("[data-close-panel]").click();
+  $("bAdd").click();
+  assert.match($("fPassNote").textContent, /^Encrypted with your master password$/);
+  assert.equal($("fSetMaster"), null);
 });
 
 // The ⋯ menu led with the plaintext export, put Delete all mid-list and Settings last
@@ -8574,7 +8712,7 @@ test("a banned card shows no movement and no Refresh; a live one with the same r
   assert.ok(card("live").querySelector(".c-ref"), "and it can be refreshed");
   assert.equal(card("ban").querySelector(".delta.d-up,.delta.d-down"), null, "a closed account does not climb");
   assert.equal(card("ban").querySelector(".c-ref"), null, "nor get checked; checks skip it");
-  assert.ok(card("ban").querySelector('[data-act="login"]'), "its login is still there");
+  assert.ok(card("ban").querySelector(".a-login"), "its login is still there");
   // ...but as a plain button, and with no red rail: the badge and the strikethrough say banned
   assert.match(html, /\n  \.card\.dead \.a-login\{background-color:var\(--panel2\)/, "Login is not the brightest thing on a dead card");
   const hx = id => win.document.querySelector(`.grid>.hx[data-id="${id}"]`);
@@ -8708,6 +8846,11 @@ test("the LP chip says it is since the last check, with the pace beside it, and 
   const card = win.document.querySelector('.card[data-id="a"]');
   assert.match(card.querySelector(".c-deltas .delta").textContent, /\+87 LP/);
   assert.match(card.querySelector(".c-deltas .d-cap").textContent, /^since last check · \+\d+ LP\/day$/);
+  // at 12px the caption pushed "Platinum II" to "Platinu…" on a phone: the rank keeps
+  // its width, and the caption wraps at its "·", never inside a piece
+  assert.equal(card.querySelectorAll(".d-cap>span").length, 2);
+  assert.match(html, /\n  \.c-rk-l\{min-width:0;flex:0 0 auto;max-width:100%\}/);
+  assert.match(html, /\n  \.d-cap>span\{white-space:nowrap\}/);
   assert.doesNotMatch(card.querySelector(".c-stats")?.textContent || "", /Climb/, "no row of its own");
 });
 
@@ -9074,6 +9217,83 @@ test("a card whose Riot ID op.gg doesn't know says so in amber, with a button th
   fix.click();
   assert.equal(win.document.getElementById("form").classList.contains("hidden"), false, "it opens the account form");
   assert.equal(win.document.getElementById("fName").value, "Gone", "on this account");
+});
+
+// About 150 pieces of text sat at 9-11px across 18 sizes, and a dozen small-capital
+// labels made every surface look like a form
+test("one type scale: nothing under 11px, 11px only inside charts and badges, small capitals only where they head a list", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const sizes = new Set(), small = [];
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const sel = m[1].split("*/").pop().trim();
+    for (const f of m[2].matchAll(/font-size:calc\(([\d.]+)px\*var\(--ts\)\)/g)) {
+      const px = +f[1]; sizes.add(px);
+      if (px < 11) small.push(sel + " " + px);
+      if (px === 11 && !/lpc|spark|c-lvbadge|riot-notice|lvt-ax|lgrp|rw-head|lock-|lvb|crest/.test(sel)) small.push(sel + " 11");
+    }
+    if (/text-transform:uppercase/.test(m[2]) && !/lgrp-n|rw-head|lock-sub|lock-k|lpc-|first-letter/.test(sel)) small.push(sel + " caps");
+  }
+  assert.deepEqual(small, [], "small text, or small capitals, outside the few places that keep them");
+  assert.deepEqual([...sizes].filter(s => s < 24).sort((a, b) => a - b), [11, 12, 13, 14, 16, 18, 20, 22], "the scale below display sizes");
+  assert.match(css, /\.stat \.k,\.dist \.k,\.dash-filter \.k,[^{]*\{font-size:calc\(12px\*var\(--ts\)\);font-weight:500;letter-spacing:0;text-transform:none\}/,
+    "the shared label: a calm 12px in sentence case");
+});
+
+// The header carried two names and a slogan badge beside the rank emblems and buttons
+test("the header has one name, the wordmark, and no slogan badge", () => {
+  const win = bootApp();
+  const brand = win.document.querySelector(".top>.brand");
+  assert.equal(brand.textContent.trim(), "Smurf Tracker");
+  for (const sel of [".top", "#settings"])
+    assert.doesNotMatch(win.document.querySelector(sel).textContent, /Private by default|Summoner Vault/, sel + ", the Settings preview of the header included");
+});
+
+// Panel, card, notes box, chip: four borders deep. The card is the box now; chips are fills
+test("chips are fills, not outlines, and the notes have no frame of their own", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const rule = sel => css.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
+  for (const sel of [".ni-f", ".ctags span", ".gem.cmb"]) {
+    assert.match(rule(sel), /border:1px solid transparent/, sel + " has no outline");
+    assert.match(rule(sel), /background:#ffffff[0-9a-f]{2}/, sel + " is a fill");
+  }
+  for (const sel of [".ni-f.ok", ".ni-f.warn", ".ctags .role-tag"]) assert.doesNotMatch(rule(sel), /border-color/, sel + ": tinted, not outlined");
+  const notes = rule(".c-notes");
+  assert.match(notes, /background:none;border:1px solid transparent/, "the notes sit on the card itself");
+  assert.match(notes, /margin:0 -9px/, "their text lined up with the card's");
+});
+
+// Typing in search redrew the stats panel above the box on every keystroke, and its
+// height with it, so the box moved under the typing
+test("typing in search leaves the stats panel above it as it was", async () => {
+  const D = 864e5, now = Date.now();
+  const acc = (id, champs) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 3, losses: 2, updatedAt: now - D, champs } });
+  const win = bootApp([acc("Alpha", [{ name: "Lux", games: 9, wins: 5, losses: 4, wr: 56 }]), acc("Beta", [])]);
+  const dash = () => win.document.getElementById("dash").innerHTML;
+  const before = dash();
+  const search = win.document.getElementById("tSearch");
+  search.value = "Beta";
+  search.dispatchEvent(new win.Event("input", { bubbles: true }));
+  await until(() => win.document.querySelectorAll(".card").length === 1, "the search to narrow the grid");
+  assert.equal(dash(), before, "same counts, same champions, same height");
+});
+
+// <body data-atmosphere> made every click in Settings look like a change
+test("switching Settings tabs is not a change: the footer says Not saved yet only after one", () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document, foot = () => doc.getElementById("sFootHint").textContent;
+  doc.getElementById("bSettings").click();
+  for (const tab of ["checks", "alerts", "security", "sync", "backup", "look"]) {
+    doc.querySelector(`[data-stab="${tab}"]`).click();
+    assert.doesNotMatch(foot(), /Not saved yet/, "after opening " + tab);
+  }
+  doc.querySelector("#settings [data-atmosphere]").click();
+  assert.match(foot(), /Not saved yet/, "a background picked is a change");
+});
+// The Settings window was sized to each tab, 345px to 812px, and its tabs moved
+test("Settings keeps one height across its tabs", () => {
+  const cap = html.match(/\n  \.mdl-in\{[^}]*max-height:(calc\([^;]*\))/)[1];
+  assert.ok(html.includes("#settings .mdl-in{height:" + cap + "}"), "the most a window may, whatever the tab");
 });
 
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row
@@ -9926,3 +10146,172 @@ test("frozen: both export files and the CSV import into an empty vault", async (
   assert.equal(own.honor, 3, "and the note fields at the end of each row");
 });
 
+
+// The console was pinned whole, two rows and about 110px of every screen, and its
+// rows lost padding as the header left, which moved every card 16px at that moment
+test("scrolled down, only the search row stays pinned, and nothing shifts on the way", async () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /\n  \.console\{position:sticky;top:calc\(-1\*var\(--cmd-pin,0px\)\)/, "it sticks at minus the command row");
+  assert.match(css, /\n  \.console\.running\{top:0\}/, "and whole while a check runs");
+  assert.doesNotMatch(css, /body\.scrolled/, "no row changes size once the header is gone");
+  // the offset is the command row's measured height, kept up to date as it wraps
+  const watched = [];
+  const win = bootApp(seededAccount(), w => {
+    w.ResizeObserver = class { constructor(cb) { this.cb = cb; } observe(el) { watched.push([el, this.cb]); this.cb([]); } };
+    Object.defineProperty(w.HTMLElement.prototype, "offsetHeight", { configurable: true, get() { return this.classList.contains("cmd") ? 59 : 0; } });
+    Object.defineProperty(w.HTMLElement.prototype, "clientTop", { configurable: true, get() { return this.classList.contains("console") ? 1 : 0; } });
+  });
+  const con = win.document.querySelector(".console");
+  assert.ok(watched.some(([el]) => el.classList.contains("cmd")), "the command row is watched");
+  assert.equal(con.style.getPropertyValue("--cmd-pin"), "60px", "its height and the console's top edge");
+  assert.ok(!con.classList.contains("running"));
+  win.fetch = () => new Promise(() => {});   // a check that never answers
+  win.document.getElementById("bCheckAll").click();
+  await until(() => con.classList.contains("running"), "the console to pin whole while checking");
+  assert.ok(!win.document.getElementById("bCancelCheck").classList.contains("hidden"), "with Stop in it");
+});
+
+// The Cards entry was one sentence chained with "·" over eight lines, and Keys and
+// More the same; and it still described Login as a panel to open
+test("Help lists what a card does, one thing a line, and says Login copies", () => {
+  const win = bootApp();
+  const dd = label => [...win.document.querySelectorAll("#help dl.help dt")].find(d => d.textContent === label).nextElementSibling;
+  for (const label of ["Cards", "Keys", "More"]) {
+    const items = dd(label).querySelectorAll(":scope > ul.help-ul > li");
+    assert.ok(items.length >= 3, label + " is a list");
+    assert.doesNotMatch(dd(label).textContent, / · /, label + " has no chained dots left");
+  }
+  assert.match(dd("Cards").querySelector("li").textContent, /^Login copies the username, then the password/);
+  assert.match(html, /\n  \.help-ul\{margin:0;padding:0 0 0 18px/);
+  // and the empty page's third step says the same
+  assert.match(win.document.getElementById("grid").textContent, /Login copies the username, then the password, one click each/);
+});
+
+// "Remove protection" was red and pressable with nothing protected
+test("Remove protection shows only when there is a master password to remove", async () => {
+  const win = bootApp(seededAccount());
+  const $ = id => win.document.getElementById(id);
+  $("bSettings").click();
+  assert.ok($("sVaultRemove").classList.contains("hidden"), "nothing protected, nothing to remove");
+  assert.equal($("sVaultSet").textContent, "Set password");
+  $("sVaultPass").value = "correct horse battery";
+  $("sVaultSet").click();
+  await until(() => appGet(win, "vaultPassword") === "correct horse battery", "the vault to be encrypted");
+  await until(() => !$("sVaultRemove").classList.contains("hidden"), "Remove protection to appear");
+  assert.equal($("sVaultSet").textContent, "Change password");
+  $("sVaultRemove").click();   // confirm() is stubbed to yes
+  await until(() => $("sVaultRemove").classList.contains("hidden"), "it to go again with the password");
+  assert.equal($("sVaultSet").textContent, "Set password");
+});
+
+// The tab opened on a Backend URL field and a Cloudflare tutorial, ahead of the one
+// setting most people want, for a free path that needs none of it
+test("Rank checks says the free path first, with the worker and API key folded under Advanced", () => {
+  const win = bootApp();
+  const $ = id => win.document.getElementById(id);
+  $("bSettings").click();
+  win.document.querySelector('[data-stab="checks"]').click();
+  const groups = [...win.document.querySelectorAll('#settings .grp[data-tab="checks"]')];
+  assert.match(groups[0].textContent, /Ranks are read from op\.gg for free\. There is nothing to set up\./, "said first");
+  assert.ok(groups[0].contains($("sAuto")), "with Automatic refresh in the first group");
+  const adv = $("sChecksAdv");
+  assert.equal(adv.tagName, "DETAILS");
+  for (const id of ["sBackend", "sDeployHelp", "sAdvanced", "sKey"]) assert.ok(adv.contains($(id)), id + " is under Advanced");
+  assert.equal(adv.open, false, "folded while nothing there is set");
+  win.document.querySelector("#settings [data-close-panel]").click();
+  // with a worker set it opens on its own, and the lead says where ranks come from now
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev'");
+  win.fetch = async () => ({ ok: true, status: 200, json: async () => ({ ok: true, riot: true, vault: true }) });
+  $("bSettings").click();
+  assert.equal(adv.open, true);
+  assert.match($("sChecksLead").textContent, /your own worker.*op\.gg when it can't answer/);
+  // and the other tabs point to where the worker is now
+  assert.match(win.document.querySelector('#settings .grp[data-tab="sync"]').textContent, /Rank checks, Advanced/);
+  assert.match(win.document.querySelector('#settings .grp[data-tab="alerts"]').textContent, /Rank checks, Advanced/);
+});
+
+// Appearance had one kind of sub-heading, Rank checks a ruled one, and Security used
+// field labels, one of them a whole sentence
+test("Settings uses one kind of sub-heading in every tab, and every label names a field", () => {
+  const win = bootApp();
+  const doc = win.document;
+  const heads = tab => [...doc.querySelectorAll(`#settings .grp[data-tab="${tab}"] .s-h`)].map(h => h.textContent.trim());
+  assert.equal(doc.querySelectorAll("#settings .atm-h").length, 0, "Appearance's own kind is gone");
+  assert.deepEqual(heads("look").slice(0, 2), ["Theme", "Your own colours"]);
+  assert.deepEqual(heads("checks"), ["Automatic refresh"], "no ruled heading");
+  assert.deepEqual(heads("security"), ["Storage", "Master password", "Unlock with Face ID, fingerprint or Windows Hello", "Locking", "Password check-up"]);
+  assert.match(doc.querySelector('#settings .grp[data-tab="security"]').textContent, /Encrypts the whole vault at rest with AES-256/, "what it means, under it");
+  assert.equal(doc.getElementById("sVaultPass").getAttribute("aria-label"), "New master password");
+  // a label is for a field: it names one, or holds one
+  for (const l of doc.querySelectorAll("#settings .mdl-b label")) {
+    const f = l.getAttribute("for");
+    assert.ok((f && doc.getElementById(f)) || l.querySelector("input,select,textarea"), "a label for nothing: " + l.textContent.trim().slice(0, 40));
+  }
+  assert.match(html, /\n  \.s-h\{font-size:calc\(13px\*var\(--ts\)\);font-weight:600;color:var\(--text\)/);
+});
+
+// "Void" named both a theme and a background
+test("no two Appearance choices share a name; the flat background is Plain and keeps its saved value", () => {
+  const win = bootApp();
+  win.document.getElementById("bSettings").click();
+  const themes = [...win.document.querySelectorAll("#sThemes [data-theme]")].map(b => b.textContent.trim().split("\n")[0].trim());
+  const bgs = [...win.document.querySelectorAll("#sAtmosphere .atm-name")].map(n => n.textContent.trim());
+  assert.ok(themes.length >= 6 && bgs.length === 6);
+  for (const b of bgs) assert.ok(!themes.some(t => t.toLowerCase().startsWith(b.toLowerCase())), b + " is also a theme");
+  assert.equal(win.document.querySelector('#sAtmosphere [data-atmosphere="void"] .atm-name').textContent, "Plain");
+  assert.equal(win.document.getElementById("sAtmosphere").getAttribute("aria-label"), "Page background");
+  assert.ok([...win.document.querySelectorAll('#settings .grp[data-tab="look"] .s-h')].some(h => h.textContent === "Background"));
+});
+
+// Opened on a phone, the filters took five rows, with both a Select all checkbox and
+// a Select button
+test("a phone's filters are three rows, and Select all shows only while selecting", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const phone = css.slice(css.indexOf(".tools:not(.open)>:not(input[type=search]):not(.t-filters){display:none!important}"));
+  assert.match(phone, /^[^@]*\.tools>#tagbar\{order:1\}/, "Tags beside the statuses");
+  assert.match(phone, /^[^@]*\.tools>#tFav,\.tools>#tArchived,\.tools>#tSelectMode\{order:2;flex:1 1 calc\(33\.3% - 6px\)/, "the three toggles share a row");
+  assert.match(phone, /^[^@]*body:not\(\.selecting\) \.tools>label:has\(#tSelectAll\)\{display:none!important\}/, "Select all waits for Select");
+  // and Select is what turns selecting on and off
+  const win = bootApp(seededAccount());
+  const sel = win.document.getElementById("tSelectMode");
+  sel.click();
+  assert.ok(win.document.body.classList.contains("selecting"));
+  assert.equal(sel.textContent, "Done");
+  sel.click();
+  assert.ok(!win.document.body.classList.contains("selecting"));
+});
+
+// On a phone the button sat on the cards' right edge, over an LP badge or a note
+test("on a phone, back to top steps aside while you scroll down and returns on the way up", () => {
+  const run = phone => {
+    let y = 0;
+    const win = bootApp(seededAccount(), w => {
+      w.matchMedia = q => ({ matches: phone && /max-width:\s*560px/.test(q), addListener() {}, removeListener() {} });
+      Object.defineProperty(w, "scrollY", { configurable: true, get: () => y });
+    });
+    const btn = win.document.getElementById("toTop");
+    const to = v => { y = v; win.dispatchEvent(new win.Event("scroll")); return btn.classList.contains("away"); };
+    return [to(800), to(1600), to(1597), to(1200), to(1900)];
+  };
+  assert.deepEqual(run(true), [true, true, true, false, true], "down hides it, a few pixels do nothing, up brings it back");
+  assert.deepEqual(run(false), [false, false, false, false, false], "a wide screen has room for it");
+  assert.match(html, /\n  \.to-top\.away\{opacity:0;pointer-events:none/);
+});
+
+// On a phone the six tabs scrolled sideways with nothing saying so, and Settings
+// opened focused on the colour picker, which scrolled the themes away
+test("on a phone Settings shows all six tabs, the theme names whole, and opens on its tab", async () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const at = css.indexOf("#settings .stabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))");
+  assert.ok(at > 0, "two rows of three");
+  assert.match(css.slice(css.lastIndexOf("@media", at), at), /^@media \(max-width:560px\)\{/);
+  assert.match(css.slice(at, at + 400), /\.thm-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/, "themes two to a row");
+  const win = bootApp(seededAccount());
+  win.document.getElementById("bSettings").click();
+  await until(() => win.document.activeElement && win.document.activeElement.id === "stab-look", "focus on the Appearance tab");
+  win.closeAllPanels();
+  await until(() => !win.document.body.classList.contains("modal-open"), "the window to close");
+  win.document.activeElement.blur();   // a browser drops focus from a hidden element; jsdom leaves it
+  runScript(win, "openSettings('security')");
+  await until(() => win.document.activeElement && win.document.activeElement.id === "stab-security", "or on whichever tab it opened at");
+});

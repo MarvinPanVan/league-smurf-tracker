@@ -34,7 +34,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="app.css?v=2.15.0">
+<link rel="stylesheet" href="app.css?v=2.16.0">
 </head>
 <body data-atmosphere="spotlight">
 <!-- A shared snapshot opens here instead of the app: see openSnapshot -->
@@ -65,10 +65,10 @@
   <div class="top">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"></span>
-      <div>
-        <h1 class="hex-display">Smurf Tracker</h1>
-        <div class="brand-sub">Summoner Vault <b>Private by default</b></div>
-      </div>
+      <!-- One name: the wordmark. "Summoner Vault" under it was a second one, and the
+           "Private by default" badge beside that oversold it: a rank check sends the
+           Riot ID out (see Help, "Your data"). -->
+      <h1 class="hex-display">Smurf Tracker</h1>
     </div>
     <!-- The header ran brand on the left, two buttons on the right and a whole
          empty band between them, with the stats toggle orphaned on its own row
@@ -134,19 +134,40 @@
       <dt>Layouts</dt>
       <dd>Cards for browsing, the list for working through the vault a row at a time, and the wall for seeing them all at once. Click a tile to go to that account's card.</dd>
       <dt>Cards</dt>
-      <dd>The bar across a card's bottom edge opens <b>Details</b>: flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot, or its fields (honor, skins, Blue Essence…) to edit them (<b>Fields…</b> in the account form picks which ones and adds your own) · <b>Card art…</b> in the ⋯ menu sets the champion and skin behind a card, and how strongly it shows, on that card or on all of them.</dd>
+      <!-- Cards, Keys and More were one sentence each, chained with "·" over eight
+           lines. They are lists of separate things, so they are lists. -->
+      <dd><ul class="help-ul">
+        <li><b>Login</b> copies the username, then the password, which clears from the clipboard after 30 seconds. The eye beside it shows the saved login.</li>
+        <li>The bar across the bottom edge opens <b>Details</b>: flex rank, past seasons and the champions played.</li>
+        <li>The star pins a favorite to the top.</li>
+        <li>A status marks a banned or resting account. Checks skip banned ones.</li>
+        <li>Tick cards' checkboxes to change the status or tags of several at once, or delete them.</li>
+        <li>Click a note to rewrite it, or a field (honor, skins, Blue Essence…) to edit it. <b>Fields…</b> in the account form picks which fields there are and adds your own.</li>
+        <li><b>Card art…</b> in the ⋯ menu sets the champion and skin behind a card, and how strongly it shows.</li>
+      </ul></dd>
       <dt>Search</dt>
       <dd>Matches names, tags, notes and skins, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code> <code>champ:yasuo</code> (played this season, or in its top mastery) <code>role:mid</code> (from the last five ranked games), <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
       <dt>Quick find</dt>
       <dd><kbd>Ctrl</kbd><kbd>K</kbd> (or <kbd>⌘</kbd><kbd>K</kbd>) anywhere, then type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.</dd>
       <dt>Keys</dt>
-      <dd><kbd>/</kbd> search · <kbd>n</kbd> new account · <kbd>f</kbd> favorites · <kbd>h</kbd> streamer mode (hides Riot IDs, logins, emails and notes; its red marker in the header turns it off) · <kbd>Esc</kbd> closes panels · shift-click a card's checkbox to select a range.</dd>
+      <dd><ul class="help-ul keys">
+        <li><kbd>/</kbd> search</li>
+        <li><kbd>n</kbd> new account</li>
+        <li><kbd>f</kbd> favorites</li>
+        <li><kbd>h</kbd> streamer mode: hides Riot IDs, logins, emails and notes. Its red marker in the header turns it off.</li>
+        <li><kbd>Esc</kbd> closes panels</li>
+        <li>Shift-click a card's checkbox to select a range.</li>
+      </ul></dd>
       <dt>Goals</dt>
       <dd>Set a target rank in a card's <b>Rank</b> panel and the card grows a rail showing how far there is left, plus a rough estimate once there's a fortnight of checks to work from.</dd>
       <dt>Extra privacy</dt>
-      <dd>Set a master password in <b>Settings → Security</b> to encrypt everything at rest, with an auto-lock timer, and unlock with Face ID, a fingerprint or Windows Hello instead of typing it. Don't lose the password: there's no recovery. The <b>Password check-up</b> there finds passwords used on more than one account, weak ones and, when you ask, ones in known data leaks · <b>Sort: Last opened</b> brings up the account you were just on.</dd>
+      <dd>Set a master password in <b>Settings → Security</b> to encrypt everything at rest, with an auto-lock timer, and unlock with Face ID, a fingerprint or Windows Hello instead of typing it. Don't lose the password: there's no recovery. The <b>Password check-up</b> there finds passwords used on more than one account, weak ones and, when you ask, ones in known data leaks. <b>Sort: Last opened</b> brings up the account you last copied a login from.</dd>
       <dt>More</dt>
-      <dd>The <b>⋯</b> menu has bulk add (paste Name#TAGs, an op.gg multi-search link or the lobby chat), CSV import, <b>New season</b> (every rank into Past seasons at once, with Undo), streamer mode and <b>Share a snapshot</b> (a read-only page of your ranks in one link, with no logins, emails or notes in it) · archive an account to hide it without deleting (toggle <b>Archived</b> in the toolbar) · <b>Settings → Appearance</b> has themes, effects, text size and what each card shows.</dd>
+      <dd><ul class="help-ul">
+        <li>The <b>⋯</b> menu has bulk add (paste Name#TAGs, an op.gg multi-search link or the lobby chat), CSV import, <b>New season</b> (every rank into Past seasons at once, with Undo), streamer mode and <b>Share a snapshot</b> (a read-only page of your ranks in one link, with no logins, emails or notes in it).</li>
+        <li>Archive an account to hide it without deleting it. <b>Archived</b> in the toolbar shows them.</li>
+        <li><b>Settings → Appearance</b> has themes, effects, text size and what each card shows.</li>
+      </ul></dd>
       <dt id="helpTerms">Using this app</dt>
       <dd class="terms">free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.</dd>
     </dl><p class="help-lic"><a href="https://github.com/MarvinPanVan/league-smurf-tracker/blob/main/LICENSE" target="_blank" rel="noreferrer">The full licence</a></p></div>
@@ -174,9 +195,9 @@
 
       <div class="grp" data-tab="look">
         <div class="grp-h tab-same">Appearance</div>
-        <div class="atm-h">Theme</div>
+        <div class="s-h">Theme</div>
         <div id="sThemes" class="thm-grid" role="radiogroup" aria-label="Theme"></div>
-        <div class="atm-h" style="margin-top:18px">Your own colours</div>
+        <div class="s-h s-gap">Your own colours</div>
         <div class="hint" style="margin-bottom:12px">Pick a colour and a preview of the homepage opens beside it. Everything here changes live; close without saving to put it back.</div>
         <div class="acc-swatches">
           <div class="acc-swatch">
@@ -191,8 +212,10 @@
           </div>
         </div>
         <div class="atm-block">
-          <div class="atm-h">Atmosphere</div>
-          <div id="sAtmosphere" class="atm-grid" role="radiogroup" aria-label="Page atmosphere">
+          <!-- "Background", not "Atmosphere"; and the flat one is "Plain", because the
+               purple theme above is called Void too. Its saved value stays "void". -->
+          <div class="s-h">Background</div>
+          <div id="sAtmosphere" class="atm-grid" role="radiogroup" aria-label="Page background">
             <button type="button" role="radio" data-atmosphere="spotlight" class="atm-tile on" aria-checked="true">
               <span class="atm-mini" data-atm="spotlight" aria-hidden="true"></span>
               <span class="atm-name">Spotlight</span>
@@ -220,13 +243,13 @@
             </button>
             <button type="button" role="radio" data-atmosphere="void" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="void" aria-hidden="true"></span>
-              <span class="atm-name">Void</span>
-              <span class="atm-tip">Flat background. The UI is the atmosphere.</span>
+              <span class="atm-name">Plain</span>
+              <span class="atm-tip">A flat background, with nothing behind the cards.</span>
             </button>
           </div>
         </div>
         <div class="atm-block">
-          <div class="atm-h">Effects</div>
+          <div class="s-h">Effects</div>
           <div id="sEffects" class="opt-seg" role="radiogroup" aria-label="Effects">
             <button type="button" role="radio" data-v="full">Full</button>
             <button type="button" role="radio" data-v="subtle">Subtle</button>
@@ -235,7 +258,7 @@
           <div class="hint" style="margin-top:7px">Full: cards lift and glow under the pointer. Subtle: nothing moves under the pointer and the glow is quieter. Off: no animation and no glow. Your system's "reduce motion" setting is always respected.</div>
         </div>
         <div class="atm-block">
-          <div class="atm-h">Text size</div>
+          <div class="s-h">Text size</div>
           <div id="sTextSize" class="opt-seg" role="radiogroup" aria-label="Text size">
             <button type="button" role="radio" data-v="small">Small</button>
             <button type="button" role="radio" data-v="default">Default</button>
@@ -244,7 +267,7 @@
           <div class="hint" style="margin-top:7px">Only the type changes size; the layout stays put. Small fits more on a screen, Large reads easier from further away.</div>
         </div>
         <div class="atm-block">
-          <div class="atm-h">On each card</div>
+          <div class="s-h">On each card</div>
           <div id="sCardParts" class="part-chks"></div>
           <div class="hint" style="margin-top:7px">What you untick waits under each card's <b>Details</b>, so cards get shorter and more fit on a screen.
             <button type="button" id="sCompact" class="link-btn">Compact: chart and stats under Details</button></div>
@@ -256,10 +279,34 @@
       </div>
 
       <div class="grp" data-tab="checks">
-        <div class="grp-h">Rank checks</div>
-        <div class="formgrid">
+        <div class="grp-h tab-same">Rank checks</div>
+        <!-- The tab opened on a Backend URL field and a five-minute Cloudflare
+             tutorial, ahead of the one setting most people want, for a free path
+             that needs none of it. That is said first now; the worker and the API
+             key fold under Advanced, open on their own once either is set. -->
+        <p class="hint s-lead" id="sChecksLead">Ranks are read from op.gg for free. There is nothing to set up.</p>
+        <div class="s-h">Automatic refresh</div>
+        <div class="chk">
+          <input type="checkbox" id="sAuto" style="width:auto">
+          <label for="sAuto">Auto-check stale accounts when opening the app</label>
+        </div>
+        <div class="sub-fld inline">
+          <label for="sAutoEvery">Refresh at most</label>
+          <select id="sAutoEvery"></select>
+        </div>
+        <div class="sub-fld">
+          <input type="checkbox" id="sAutoRanked" style="width:auto">
+          <label for="sAutoRanked" style="font-size:calc(13px*var(--ts));color:var(--muted);max-width:560px">Ranked accounts only. Unranked and never-placed ones give the same answer every time, so they are skipped</label>
+        </div>
+      </div>
+
+      <div class="grp" data-tab="checks">
+        <details class="adv-fold" id="sChecksAdv">
+          <summary>Advanced: your own worker or API key</summary>
+          <p class="hint">A Cloudflare worker of your own reads ranks straight from Riot, and is what Device sync and Discord decay alerts run on.</p>
+          <div class="formgrid">
           <div class="fld fw">
-            <label>Backend URL (optional: your own rank server, e.g. a Cloudflare Worker)</label>
+            <label for="sBackend">Backend URL (optional: your own rank server, e.g. a Cloudflare Worker)</label>
             <input id="sBackend" placeholder="https://... (leave empty for the free auto-fetch)" autocomplete="off">
             <div id="sBackendStatus" class="hint" style="margin-top:2px" aria-live="polite"></div>
           </div>
@@ -285,11 +332,10 @@
               <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>,
               bind a KV namespace named <code>VAULT</code> for sync, and add the Cron Trigger <code>17 9 * * *</code> for Discord alerts.</div>
           </details>
-          <!-- Paid and for power users, by its own description — three fields every
-               visitor had to read past to find the free path above. Folded, and open
-               on its own when a key is already set. -->
+          <!-- Paid and for power users, by its own description. Folded, and open on
+               its own when a key is already set. -->
           <details class="fw guide" id="sAdvanced">
-            <summary>Advanced: rank checks with your own Anthropic API key (paid)</summary>
+            <summary>Rank checks with your own Anthropic API key (paid)</summary>
             <div class="adv-grid">
           <div class="fld">
             <label for="sKey">Anthropic API key (optional, stored only in this browser)</label>
@@ -307,25 +353,9 @@
           </div>
             </div>
           </details>
-        </div>
+          </div>
+        </details>
       </div>
-
-      <div class="grp" data-tab="checks">
-        <div class="grp-h">Automatic refresh</div>
-        <div class="chk">
-          <input type="checkbox" id="sAuto" style="width:auto">
-          <label for="sAuto">Auto-check stale accounts when opening the app</label>
-        </div>
-        <div class="sub-fld inline">
-          <label for="sAutoEvery">Refresh at most</label>
-          <select id="sAutoEvery"></select>
-        </div>
-        <div class="sub-fld">
-          <input type="checkbox" id="sAutoRanked" style="width:auto">
-          <label for="sAutoRanked" style="font-size:calc(13px*var(--ts));color:var(--muted);max-width:560px">Ranked accounts only. Unranked and never-placed ones give the same answer every time, so they are skipped</label>
-        </div>
-      </div>
-
 
       <div class="grp" data-tab="alerts">
         <div class="grp-h tab-same">Alerts</div>
@@ -334,7 +364,7 @@
           <label for="sNotify">Browser notifications for tier-ups and finished "Check all" runs</label>
         </div>
         <div class="fld fw" style="margin-top:14px">
-          <label>Discord webhook URL (optional, posts tier-ups to a channel)</label>
+          <label for="sDiscord">Discord webhook URL (optional, posts tier-ups to a channel)</label>
           <input id="sDiscord" placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
         </div>
         <div class="chk" style="margin-top:16px">
@@ -342,36 +372,41 @@
           <label for="sWatch">Decay alerts on Discord, even with the app closed: once a day your worker checks your Diamond+ accounts and posts to the webhook above when one is about to decay</label>
         </div>
         <div id="sWatchStatus" class="hint" style="margin-top:6px" aria-live="polite"></div>
-        <div class="hint" style="margin-top:4px">Needs your worker (Rank checks) and the webhook above. Your worker then keeps a short list: those accounts' Riot IDs, labels and decay estimates, never logins.</div>
+        <div class="hint" style="margin-top:4px">Needs your own worker (Rank checks, Advanced) and the webhook above. Your worker then keeps a short list: those accounts' Riot IDs, labels and decay estimates, never logins.</div>
       </div>
 
       <div class="grp" data-tab="security">
         <div class="grp-h tab-same">Security</div>
-        <div class="fld fw" style="margin-bottom:14px">
-          <label>Storage</label>
+        <!-- Its headings were field labels ("Master password. It encrypts the whole
+             vault…" was one), in a third style beside Appearance's and Rank checks'.
+             One kind of heading in every tab now, .s-h, with what it means under it. -->
+        <div class="fld fw">
+          <div class="s-h">Storage</div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <span id="sStorageStatus" class="hint" style="margin:0;flex:1;min-width:200px"></span>
             <button type="button" id="sStorageProtect" class="hidden">Protect</button>
           </div>
         </div>
-        <div class="fld fw">
-          <label>Master password. It encrypts the whole vault at rest with AES-256. There is no recovery: if you lose the password, the vault is gone.</label>
+        <div class="fld fw s-gap">
+          <div class="s-h">Master password</div>
+          <div class="hint">Encrypts the whole vault at rest with AES-256. There is no recovery: if you lose the password, the vault is gone.</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <input type="password" id="sVaultPass" placeholder="New master password" autocomplete="new-password" style="flex:1;min-width:170px">
-            <button id="sVaultSet">Set / change</button>
-            <button id="sVaultRemove" class="b-danger">Remove protection</button>
+            <input type="password" id="sVaultPass" placeholder="New master password" aria-label="New master password" autocomplete="new-password" style="flex:1;min-width:170px">
+            <button id="sVaultSet">Set password</button>
+            <button id="sVaultRemove" class="b-danger hidden">Remove protection</button>
           </div>
           <div id="sVaultStatus" class="hint" style="margin-top:2px"></div>
         </div>
-        <div class="fld fw" style="margin-top:14px">
-          <label>Unlock with Face ID, fingerprint or Windows Hello</label>
+        <div class="fld fw s-gap">
+          <div class="s-h">Unlock with Face ID, fingerprint or Windows Hello</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button type="button" id="sPkSet">Set up</button>
             <button type="button" id="sPkOff" class="hidden">Turn off</button>
           </div>
           <div id="sPkStatus" class="hint" style="margin-top:2px"></div>
         </div>
-        <div class="sub-fld inline" style="padding-left:0;margin-top:14px">
+        <div class="s-h s-gap">Locking</div>
+        <div class="sub-fld inline" style="padding-left:0">
           <label for="sAutoLock">Auto-lock after</label>
           <select id="sAutoLock" aria-describedby="sAutoLockHint"></select>
         </div>
@@ -380,8 +415,8 @@
           <button type="button" id="sLockNow" title="Lock the vault now. The master password opens it again.">Lock now</button>
           <div class="hint" style="margin-top:6px">Locks this tab immediately. Other open tabs keep their own unlock state until you reload them.</div>
         </div>
-        <div class="fld fw" style="margin-top:22px">
-          <label>Password check-up</label>
+        <div class="fld fw s-gap">
+          <div class="s-h">Password check-up</div>
           <div id="sPwSum" class="hint" style="margin:0"></div>
           <div id="sPwList" class="pwc-list"></div>
           <div class="pwc-leak">
@@ -395,11 +430,11 @@
         <div class="grp-h tab-same">Device sync</div>
         <div class="fw hint" style="margin-bottom:10px">
           Pushes the <b>encrypted</b> vault blob to your worker (KV). Same sync token on phone and PC.
-          Last write wins. Needs a master password (Security) and a Backend URL with a KV binding (Rank checks), both above.
+          Last write wins. Needs a master password (Security) and your own worker with sync storage (Rank checks, Advanced).
           There is no scrape cache, so don't hammer op.gg.
         </div>
         <div class="fld fw">
-          <label>Sync token (the same on every device; treat it like a password)</label>
+          <label for="sSyncToken">Sync token (the same on every device; treat it like a password)</label>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <input type="text" id="sSyncToken" class="mask" placeholder="Generate or paste a long token" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="flex:1;min-width:170px">
             <button type="button" id="sSyncGen">Generate</button>
@@ -445,7 +480,6 @@
         <span class="acc-prev-mark" aria-hidden="true"><i></i></span>
         <div class="acc-prev-brand">
           <div class="acc-prev-t">Smurf Tracker</div>
-          <div class="acc-prev-sub">Summoner Vault <b>Private by default</b></div>
         </div>
       </div>
       <div class="acc-prev-rib" aria-hidden="true">
@@ -537,37 +571,45 @@
       <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     </div>
     <div class="mdl-b">
-    <div class="formgrid">
-      <!-- The two fields the account cannot be added without come first, then where
-           it lives, then the login; the label, which is optional, used to lead the
-           form and pushed the required pair to its second row. Every label names its
-           field (for=), so clicking one lands in it and a screen reader reads it. -->
-      <div class="fld"><label for="fName">Riot name *</label><input id="fName" placeholder="Game name, or paste Name#TAG" data-autofocus></div>
-      <div class="fld"><label for="fTag">Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234 (no #)"></div>
-      <div class="fld"><label for="fRegion">Region</label>
+    <div class="formgrid" id="fGrid">
+      <!-- What an account can't be added without comes first: the Riot ID and where
+           it lives, then the login the card copies. The rest, which most accounts
+           never get, folds under More details. Every label names its field (for=),
+           so clicking one lands in it and a screen reader reads it. A field that
+           stops the save says why under itself (.f-msg), not in a toast. -->
+      <div class="fld f-3"><label for="fName">Riot name *</label><input id="fName" placeholder="Game name, or paste Name#TAG" data-autofocus aria-describedby="fNameMsg"><span class="f-msg" id="fNameMsg"></span></div>
+      <div class="fld f-3"><label for="fTag">Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234" aria-describedby="fTagMsg"><span class="f-msg" id="fTagMsg"></span></div>
+      <div class="fld f-3"><label for="fRegion">Region</label>
         <select id="fRegion"></select>
       </div>
-      <div class="fld"><label for="fLabel">Label (optional)</label><input id="fLabel" placeholder="e.g. ADC smurf"></div>
       <div class="fld"><label for="fLogin">Login username</label><input id="fLogin" placeholder="Riot client login" autocomplete="off"></div>
-      <div class="fld pw-fld"><label for="fPass">Password <span id="pwMeterLabel"></span></label><div style="display:flex;gap:6px">
+      <div class="fld pw-fld"><label for="fPass">Password <span id="pwMeterLabel"></span></label><div style="display:flex;gap:6px;position:relative">
         <div style="position:relative;flex:1;display:flex">
           <!-- Deliberately not type="password": see the .mask rule in the CSS. -->
-          <input type="text" id="fPass" class="mask" placeholder="Stored unencrypted, locally" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" style="width:100%;padding-right:34px">
+          <input type="text" id="fPass" class="mask" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" style="width:100%;padding-right:34px">
           <button id="fTogglePass" class="eye-btn" type="button" title="Show password" aria-label="Show password"><svg id="fToggleIco" class="ico" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
         <button id="fGen" type="button" title="Generate a new safe password (asks first if there's already one)"><svg class="ico" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg> Gen</button>
+        <div id="pwMeter"></div>
       </div>
-      <div id="pwMeter"></div>
+      <!-- was the field's placeholder, set in the password's monospace and gone
+           at the first letter typed: what happens to the password stays said -->
+      <p class="f-note" id="fPassNote"></p>
       </div>
-      <div class="fld"><label for="fEmail">Email on the account</label><input id="fEmail" placeholder="mail the account is registered to" autocomplete="off"></div>
-      <!-- These two were being kept in the Notes box by hand — "birthdate 8/1/1987,
-           created 4/2/2022" — which means they could not be searched, sorted or
+      <div class="fw f-more-row">
+        <button type="button" id="fMoreBtn" class="b-quiet f-more" aria-expanded="false" aria-controls="fGrid">More details<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <span class="hint" id="fMoreHint">Label, email, dates, tags, status and notes</span>
+      </div>
+      <div class="fld f-x"><label for="fLabel">Label</label><input id="fLabel" placeholder="e.g. ADC smurf"></div>
+      <div class="fld f-x"><label for="fEmail">Email on the account</label><input id="fEmail" placeholder="mail the account is registered to" autocomplete="off"></div>
+      <!-- These two were being kept in the Notes box by hand ("birthdate 8/1/1987,
+           created 4/2/2022"), which means they could not be searched, sorted or
            shown anywhere in particular. They are facts about the account, so they
            get fields. -->
-      <div class="fld"><label for="fCreated">Account created</label><input type="date" id="fCreated" title="When the account itself was made"></div>
-      <div class="fld"><label for="fBirth">Date of birth on file</label><input type="date" id="fBirth" title="The date of birth the account was registered with. Riot asks for it on recovery."></div>
-      <div class="fld"><label for="fTags">Tags (comma-separated)</label><input id="fTags" placeholder="e.g. ranked-ready, jungle, honor3"></div>
-      <div class="fld"><label for="fStatus">Status</label>
+      <div class="fld f-x"><label for="fCreated">Account created</label><input type="date" id="fCreated" title="When the account itself was made"></div>
+      <div class="fld f-x"><label for="fBirth">Date of birth on file</label><input type="date" id="fBirth" title="The date of birth the account was registered with. Riot asks for it on recovery."></div>
+      <div class="fld f-x"><label for="fTags">Tags (comma-separated)</label><input id="fTags" placeholder="e.g. ranked-ready, jungle, honor3"></div>
+      <div class="fld f-x"><label for="fStatus">Status</label>
         <select id="fStatus">
           <option value="active">Active</option>
           <option value="resting">Resting / unused</option>
@@ -578,12 +620,12 @@
       <!-- Notes, with the things people kept typing into them by hand as fields
            of their own. Which fields, and any of your own, is one list for the
            whole vault: Fields… -->
-      <div class="fld fw nf-head" id="fNotesHead"><span class="nf-t">Notes</span>
+      <div class="fld fw nf-head f-x" id="fNotesHead"><span class="nf-t">Notes</span>
         <span class="hint">Shown on the card, and searchable.</span>
         <button type="button" id="fFieldsBtn" aria-expanded="false" aria-controls="fFieldsCfg">Fields…</button></div>
-      <div class="fw nf-cfg hidden" id="fFieldsCfg"></div>
-      <div class="fw nf-grid" id="fInfo"></div>
-      <div class="fld fw"><label for="fNotes">Anything else</label><textarea id="fNotes" rows="2" placeholder="Free text for whatever doesn't fit a field"></textarea></div>
+      <div class="fw nf-cfg hidden f-x" id="fFieldsCfg"></div>
+      <div class="fw nf-grid f-x" id="fInfo"></div>
+      <div class="fld fw f-x"><label for="fNotes">Anything else</label><textarea id="fNotes" rows="2" placeholder="Free text for whatever doesn't fit a field"></textarea></div>
     </div>
     </div>
     <div class="mdl-f">
@@ -632,7 +674,6 @@
   </div>
   <div id="runbar" class="runbar hidden"><div class="run-fill"></div><span class="run-txt"></span></div>
   <div id="failbar" class="failbar hidden"></div>
-  <div id="chips" class="chips"></div>
   <div class="tools">
     <input type="search" id="tSearch" placeholder="Search name, label, tag, email…">
     <!-- a phone's whole first screen was filters; there they fold behind this -->
@@ -666,6 +707,9 @@
     <!-- phones only: a touch screen has no hover to reveal the checkboxes -->
     <button type="button" id="tSelectMode" class="t-select" aria-pressed="false">Select</button>
   </div>
+  <!-- under the search row, never above it: a row appearing over the box you are
+       typing in moved it while you typed -->
+  <div id="chips" class="chips"></div>
   </div>
   <div id="bulkbar" class="hidden" style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--teal) 38%,transparent);border-radius:var(--r-md);background:color-mix(in srgb,var(--teal) 7%,var(--panel));box-shadow:var(--sh-1)">
     <span id="bulkCount" style="font-size:calc(12px*var(--ts));color:var(--teal-txt);font-weight:600;letter-spacing:.02em"></span>
@@ -800,6 +844,6 @@
   <div id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="app.js?v=2.15.0"></script>
+<script src="app.js?v=2.16.0"></script>
 </body>
 </html>
