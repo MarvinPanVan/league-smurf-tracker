@@ -212,8 +212,10 @@
           </div>
         </div>
         <div class="atm-block">
-          <div class="s-h">Atmosphere</div>
-          <div id="sAtmosphere" class="atm-grid" role="radiogroup" aria-label="Page atmosphere">
+          <!-- "Background", not "Atmosphere"; and the flat one is "Plain", because the
+               purple theme above is called Void too. Its saved value stays "void". -->
+          <div class="s-h">Background</div>
+          <div id="sAtmosphere" class="atm-grid" role="radiogroup" aria-label="Page background">
             <button type="button" role="radio" data-atmosphere="spotlight" class="atm-tile on" aria-checked="true">
               <span class="atm-mini" data-atm="spotlight" aria-hidden="true"></span>
               <span class="atm-name">Spotlight</span>
@@ -241,8 +243,8 @@
             </button>
             <button type="button" role="radio" data-atmosphere="void" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="void" aria-hidden="true"></span>
-              <span class="atm-name">Void</span>
-              <span class="atm-tip">Flat background. The UI is the atmosphere.</span>
+              <span class="atm-name">Plain</span>
+              <span class="atm-tip">A flat background, with nothing behind the cards.</span>
             </button>
           </div>
         </div>

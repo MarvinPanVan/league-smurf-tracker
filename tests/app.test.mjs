@@ -10249,3 +10249,16 @@ test("Settings uses one kind of sub-heading in every tab, and every label names 
   }
   assert.match(html, /\n  \.s-h\{font-size:calc\(13px\*var\(--ts\)\);font-weight:600;color:var\(--text\)/);
 });
+
+// "Void" named both a theme and a background
+test("no two Appearance choices share a name; the flat background is Plain and keeps its saved value", () => {
+  const win = bootApp();
+  win.document.getElementById("bSettings").click();
+  const themes = [...win.document.querySelectorAll("#sThemes [data-theme]")].map(b => b.textContent.trim().split("\n")[0].trim());
+  const bgs = [...win.document.querySelectorAll("#sAtmosphere .atm-name")].map(n => n.textContent.trim());
+  assert.ok(themes.length >= 6 && bgs.length === 6);
+  for (const b of bgs) assert.ok(!themes.some(t => t.toLowerCase().startsWith(b.toLowerCase())), b + " is also a theme");
+  assert.equal(win.document.querySelector('#sAtmosphere [data-atmosphere="void"] .atm-name').textContent, "Plain");
+  assert.equal(win.document.getElementById("sAtmosphere").getAttribute("aria-label"), "Page background");
+  assert.ok([...win.document.querySelectorAll('#settings .grp[data-tab="look"] .s-h')].some(h => h.textContent === "Background"));
+});
