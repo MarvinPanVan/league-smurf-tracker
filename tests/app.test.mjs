@@ -10713,3 +10713,21 @@ test("in the list, the login panel's one-button copy says it copied, as the card
   assert.ok(seq().classList.contains("copied"));
   await until(() => /Copy password/.test(seq().textContent), "and move on", 3000);
 });
+
+// ".card.dead .lpc-wrap" greyed a banned account's chart until the chart stopped being
+// wrapped in .lpc-wrap; then it matched nothing and the chart stayed in full colour
+test("every class the stylesheet styles is one the app still uses, and a banned card's chart is grey", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>")).replace(/\/\*[\s\S]*?\*\//g, "");
+  const src = appJs + pageHtml;
+  const classes = new Set();
+  for (const m of css.matchAll(/([^{}]+)\{/g)) if (!m[1].trim().startsWith("@")) for (const c of m[1].matchAll(/\.([A-Za-z][\w-]*)/g)) classes.add(c[1]);
+  // built in code: "hide-"+part for the card parts, "n"+count for the stat grid
+  const dynamic = c => /^hide-/.test(c) || /^n\d$/.test(c);
+  const dead = [...classes].filter(c => !dynamic(c) && !new RegExp("(?<![\\w-])" + c.replace(/[-]/g, "\\-") + "(?![\\w-])").test(src));
+  assert.deepEqual(dead, [], "styled but never used");
+  const win = bootApp([{ id: "b", gameName: "B", tagLine: "1", region: "EUW", status: "banned", tags: [],
+    history: [{ t: Date.now() - 864e5 * 3, tier: "BRONZE", division: "II", lp: 30 }, { t: Date.now() - 864e5, tier: "BRONZE", division: "I", lp: 12 }],
+    stats: { found: true, tier: "BRONZE", division: "I", lp: 12, wins: 4, losses: 5, updatedAt: Date.now() - 864e5 } }]);
+  assert.ok(win.document.querySelector(".card.dead .lpc"), "the selector meets a real chart");
+  assert.match(css, /\.card\.dead \.lpc,\.rw\.dead \.spk\{filter:grayscale/);
+});

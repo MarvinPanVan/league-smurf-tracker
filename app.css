@@ -415,7 +415,6 @@
     opacity:0;transform:translateY(4px);transition:opacity .12s ease,transform .12s ease;
   }
   .spark-tip.on{opacity:1;transform:none}
-  .dash-toggle{display:flex;justify-content:flex-end;margin-bottom:14px}
   .ghost-toggle{padding:0 12px;border-radius:var(--r-sm)}
   .ghost-toggle .ico{transition:transform .22s cubic-bezier(.22,1,.36,1)}
   .ghost-toggle.open .ico{transform:rotate(180deg)}
@@ -896,10 +895,10 @@
     overflow:hidden;text-overflow:ellipsis}
   .rw-rank em{font-style:normal;font-size:calc(12px*var(--ts));font-weight:600;color:var(--muted);
     font-variant-numeric:tabular-nums}
-  .rw-d,.rw-wr,.rw-lv{display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
-  .rw-wr b,.rw-lv b{font-size:calc(13px*var(--ts));font-weight:700;color:var(--muted);line-height:1.1}
+  .rw-d,.rw-wr{display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
+  .rw-wr b{font-size:calc(13px*var(--ts));font-weight:700;color:var(--muted);line-height:1.1}
   .rw-wr b.wr-good{color:var(--good)}
-  .rw-wr em,.rw-lv em{font-style:normal;font-size:calc(12px*var(--ts));color:var(--faint);letter-spacing:.02em}
+  .rw-wr em{font-style:normal;font-size:calc(12px*var(--ts));color:var(--faint);letter-spacing:.02em}
   /* Sixty rows of "47%" are sixty identical grey blocks. Sixty bars of differing
      length are a shape you can run your eye down. */
   /* drawn as a record, like the card's: wins, then the losses as the remainder */
@@ -926,7 +925,9 @@
   .card.dead .rk-crest,.rw.dead .rw-crest{filter:grayscale(.9);opacity:.55}
   .card.dead .rk .rk-t,.rw.dead .rw-rank b{text-decoration:line-through;
     text-decoration-thickness:1.5px;text-decoration-color:currentColor;opacity:.62}
-  .card.dead .lpc-wrap,.rw.dead .spk{filter:grayscale(.75);opacity:.55}
+  /* a banned account's chart in grey, like its struck-through rank: this aimed at
+     .lpc-wrap, which the chart stopped being wrapped in, and quietly did nothing */
+  .card.dead .lpc,.rw.dead .spk{filter:grayscale(.75);opacity:.55}
   .card.dead .wrbar,.rw.dead .rw-bar{filter:grayscale(.9);opacity:.5}
   .rw-up{font-size:calc(12px*var(--ts));color:var(--faint);text-align:right;white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis}
@@ -936,7 +937,6 @@
   .rw-open{display:flex;flex-direction:column;gap:11px;padding:4px 13px 13px;
     border-top:1px solid var(--line);margin-top:1px;
     animation:sectionIn .22s cubic-bezier(.22,1,.36,1) both}
-  .rw-open .lpc-wrap{margin:0}
   /* The columns that are nice-to-know go first, the identity and the rank stay.
      The sparkline outranks the region code and the timestamp: it is the only
      column that says anything a glance can't already get from the rank. */
@@ -1800,10 +1800,6 @@
   .rankpanel .sec-h{padding:12px 22px}
   .rankpanel .sec-b{padding:2px 22px 14px}
   .rankpanel .sec:last-child{border-bottom:1px solid var(--line)}
-  /* DPM and OP.GG are the same kind of thing — an outbound profile link — so they
-     look the same. The gold tint implied a hierarchy that isn't there. */
-  .a-dpm{border:1px solid var(--edge);color:var(--text);font-weight:500;background-color:var(--panel2)}
-  .a-dpm:hover{color:var(--text);border-color:var(--line2);background-color:var(--panel3)}
   /* The main action, and the one filled button on a card (see .b-fill) */
   .a-login{background-color:var(--teal);border-color:var(--teal);color:var(--teal-ink);font-weight:650}
   .a-login:hover{background-color:color-mix(in srgb,var(--teal) 86%,#fff);border-color:color-mix(in srgb,var(--teal) 86%,#fff);color:var(--teal-ink)}
@@ -2476,7 +2472,6 @@
     .ap-grid{padding:14px 16px 18px}
     .ap-grid.sk{grid-template-columns:repeat(auto-fill,minmax(102px,1fr));gap:10px}
   }
-  .toast-log{max-width:420px;font-size:calc(12px*var(--ts));line-height:1.45}
 
   .panel-close{transition:color .16s,background .16s,transform .2s cubic-bezier(.22,1,.36,1)}
   .panel-close:hover{transform:rotate(90deg)}
