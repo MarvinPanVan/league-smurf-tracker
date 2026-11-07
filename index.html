@@ -631,7 +631,6 @@
   </div>
   <div id="runbar" class="runbar hidden"><div class="run-fill"></div><span class="run-txt"></span></div>
   <div id="failbar" class="failbar hidden"></div>
-  <div id="chips" class="chips"></div>
   <div class="tools">
     <input type="search" id="tSearch" placeholder="Search name, label, tag, email…">
     <!-- a phone's whole first screen was filters; there they fold behind this -->
@@ -665,6 +664,9 @@
     <!-- phones only: a touch screen has no hover to reveal the checkboxes -->
     <button type="button" id="tSelectMode" class="t-select" aria-pressed="false">Select</button>
   </div>
+  <!-- under the search row, never above it: a row appearing over the box you are
+       typing in moved it while you typed -->
+  <div id="chips" class="chips"></div>
   </div>
   <div id="bulkbar" class="hidden" style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--teal) 38%,transparent);border-radius:var(--r-md);background:color-mix(in srgb,var(--teal) 7%,var(--panel));box-shadow:var(--sh-1)">
     <span id="bulkCount" style="font-size:calc(12px*var(--ts));color:var(--teal-txt);font-weight:600;letter-spacing:.02em"></span>

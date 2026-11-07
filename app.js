@@ -3772,12 +3772,15 @@ function syncDashToggle(){
 function renderDash(){
   applyRankTheme(); // a new best tier is news the dashboard already gets; the colours follow it
   const el=$("dash");
-  const Q=parseQuery(ui.search);
-  // Chore counts use the same toolbar filters as the grid (region/tag/search/…),
-  // but always from the active vault — archived view is exited when a tile is clicked.
+  /* Chore counts use the same toolbar filters as the grid (region/tag/status/…),
+     but not the search: that is a quick find, not a scope, and a panel that redrew
+     its counts, and its height, on every keystroke moved the search box under the
+     typing. Always from the active vault — archived view is exited when a tile is
+     clicked. */
+  const Q=parseQuery("");
   const countPool=accounts.filter(a=>passesBaseFilters(a,Q,{forceActive:true}));
   const allActive=accounts.filter(a=>!a.archived);
-  const filterHint=[ui.region&&ui.region,ui.status&&ui.status,ui.tag&&("#"+ui.tag),ui.favOnly&&"★",ui.search&&("“"+ui.search+"”")].filter(Boolean).join(" · ");
+  const filterHint=[ui.region&&ui.region,ui.status&&ui.status,ui.tag&&("#"+ui.tag),ui.favOnly&&"★"].filter(Boolean).join(" · ");
   syncDashToggle();
   if(!allActive.length){hideSparkTip();el.innerHTML="";return}
   if(dashCollapsed()){hideSparkTip();el.innerHTML="";return}
@@ -3946,7 +3949,7 @@ function renderChips(){
   if(ui.tier)out.push(["tier",ui.tier==="UNRANKED"?"Unranked":ui.tier.charAt(0)+ui.tier.slice(1).toLowerCase()]);
   if(ui.tag)out.push(["tag","Tag: "+ui.tag]);
   if(ui.favOnly)out.push(["favOnly","Favorites"]);
-  if(ui.search)out.push(["search",'"'+ui.search+'"']);
+  // no chip for the search: the box already says what is in it
   setHTML($("chips"),!out.length?"":out.map(([k,label])=>
     `<button class="fchip" data-clear="${k}">${esc(label)}<span aria-hidden="true">✕</span></button>`).join("")
     +(out.length>1?`<button class="fchip fchip-all" data-clear="all">Clear all</button>`:""));
@@ -7393,7 +7396,8 @@ $("bCheckAll").addEventListener("click",()=>checkAll());
 // and nothing to click to undo it.
 function renderFilters(){renderChips();renderGrid();renderDash()}
 let searchT;
-$("tSearch").addEventListener("input",e=>{ui.search=e.target.value;clearTimeout(searchT);searchT=setTimeout(renderFilters,120)});
+// the grid and the chips only: the stats panel above does not follow the search (see renderDash)
+$("tSearch").addEventListener("input",e=>{ui.search=e.target.value;clearTimeout(searchT);searchT=setTimeout(()=>{renderChips();renderGrid()},120)});
 $("tRegion").addEventListener("change",e=>{ui.region=e.target.value;renderFilters()});
 $("tSort").addEventListener("change",e=>{
   ui.sort=e.target.value;

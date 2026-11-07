@@ -4680,14 +4680,18 @@ test("a narrowed grid always says what narrowed it", async () => {
   search.value = "Alpha";
   search.dispatchEvent(new win.Event("input", { bubbles: true }));
   await until(() => win.document.querySelectorAll(".card").length === 1, "the search to narrow the grid");
-  assert.deepEqual(chips(), ['"Alpha"'], "the search says so");
+  // the box says what is in it; a chip repeating it appeared above the box mid-typing
+  assert.deepEqual(chips(), [], "no chip repeats the search");
+  assert.equal(win.document.querySelector(".tools").nextElementSibling.id, "chips", "and chips sit under the search row, never over it");
 
   win.document.getElementById("tFav").click();
-  assert.deepEqual(chips(), ["Favorites", '"Alpha"', "Clear all"]);
+  assert.deepEqual(chips(), ["Favorites"]);
 
-  win.document.querySelector('[data-clear="all"]').click();
+  win.document.querySelector('[data-clear="favOnly"]').click();
   assert.deepEqual(chips(), []);
-  assert.equal(win.document.querySelectorAll(".card").length, 2, "and the grid comes back");
+  search.value = "";
+  search.dispatchEvent(new win.Event("input", { bubbles: true }));
+  await until(() => win.document.querySelectorAll(".card").length === 2, "the grid to come back");
 });
 
 // ---- Settings, Help and the account form as modal panels ----
@@ -9122,6 +9126,22 @@ test("chips are fills, not outlines, and the notes have no frame of their own", 
   const notes = rule(".c-notes");
   assert.match(notes, /background:none;border:1px solid transparent/, "the notes sit on the card itself");
   assert.match(notes, /margin:0 -9px/, "their text lined up with the card's");
+});
+
+// Typing in search redrew the stats panel above the box on every keystroke, and its
+// height with it, so the box moved under the typing
+test("typing in search leaves the stats panel above it as it was", async () => {
+  const D = 864e5, now = Date.now();
+  const acc = (id, champs) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 3, losses: 2, updatedAt: now - D, champs } });
+  const win = bootApp([acc("Alpha", [{ name: "Lux", games: 9, wins: 5, losses: 4, wr: 56 }]), acc("Beta", [])]);
+  const dash = () => win.document.getElementById("dash").innerHTML;
+  const before = dash();
+  const search = win.document.getElementById("tSearch");
+  search.value = "Beta";
+  search.dispatchEvent(new win.Event("input", { bubbles: true }));
+  await until(() => win.document.querySelectorAll(".card").length === 1, "the search to narrow the grid");
+  assert.equal(dash(), before, "same counts, same champions, same height");
 });
 
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row
