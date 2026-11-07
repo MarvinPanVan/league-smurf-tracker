@@ -2,6 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- The security policy. Script runs only from this site's own files: markup that
+     slipped past escaping could not run anything, nor load a script from elsewhere.
+     Styles may be inline (the cards set colours and sizes in style=""), images may
+     come from any https host (rank icons, champion art), and requests may go to any
+     https host because the backend URL, the Discord webhook and the proxies are
+     yours to choose; plain http only to a worker running on this computer. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#090c10">

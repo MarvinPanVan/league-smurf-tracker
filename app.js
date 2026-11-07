@@ -2336,6 +2336,10 @@ function markIconDead(img){
   if(u)deadIcons.add(u);
   img.remove();
 }
+// A profile icon that fails to load reports it here. An inline onerror attribute is
+// script, which the page's security policy does not run; error does not bubble, so
+// one listener on the document catches it on the way down instead.
+document.addEventListener("error",e=>{const t=e.target;if(t&&t.tagName==="IMG"&&t.hasAttribute("data-ico"))markIconDead(t)},true);
 function parseProfileIcon(raw){
   if(!raw)return null;
   const m=String(raw).match(/profile_icons?\/profileicon(\d+)/i);
@@ -3201,7 +3205,7 @@ function renderCompare(){
     const initial=(acc.label||acc.gameName||"?").trim().charAt(0).toUpperCase()||"?";
     const rank=ranked?tierLabel(s):!hasReading(s)?"Never checked":s.found===false?"Not found":"Unranked";
     return `<div class="cmp-side">
-      <span class="cmp-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}</span>
+      <span class="cmp-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" data-ico>`:`<b>${esc(initial)}</b>`}</span>
       <div class="cmp-nm" title="${esc(plainName(acc))}">${nameOf(acc)}</div>
       <div class="cmp-id">${sens(esc(acc.gameName)+"#"+esc(acc.tagLine))} · ${esc(acc.region)}</div>
       <div class="cmp-rk${ranked?"":" q"}" style="color:${tierColor(s.tier)}">${ranked?crest(s.tier,"cmp-crest"):""}<span>${esc(rank)}</span></div>
@@ -5149,7 +5153,7 @@ function rowHTML(a,i){
            stopped that listener from ever running, so ticking a row selected
            nothing and the bulk bar never appeared. -->
       <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}">
-      <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
+      <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
       <span class="rw-id">
         <span class="rw-nm" title="${esc(plainName(a))}"><span class="nm-t">${nameOf(a)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged: needs a look">${icon("flag")}</span>`:""}</span>
         <span class="rw-sub"><span class="rw-tag sens">${esc(a.gameName)}#${esc(a.tagLine)}</span>${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}</span>
@@ -5209,7 +5213,7 @@ function tileHTML(a){
   const st=STATUS[a.status]||STATUS.active;
   return `<div class="hx${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" · "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
-    <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}
+    <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
     <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?`<span class="flagmark" title="Flagged: needs a look">${icon("flag")}</span>`:""}</span>
@@ -5342,7 +5346,7 @@ function cardHTML(a,i){
     <div class="c-head">
       <div class="c-portrait">
         <span class="c-initial">${esc(initial)}</span>
-        ${icon0?`<img class="c-avatar" src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:""}
+        ${icon0?`<img class="c-avatar" src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:""}
         <!-- no tier crest here any more: it earns its place beside the rank
              itself, and two of them on one card is one too many -->
         ${""}
@@ -7609,7 +7613,7 @@ function renderPalette(){
       const url=iconUrl(s);
       const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
       html+=`<button class="pal-i${sel}" data-i="${i}" role="option" aria-selected="${i===palSel}">`
-        +`<span class="pal-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" onerror="markIconDead(this)">`:esc(initial)}`
+        +`<span class="pal-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" data-ico>`:esc(initial)}`
         +`${isRanked(a)?crest(s.tier):""}</span>`
         +`<span class="pal-t"><span class="pal-n">${nameOf(a)}</span>`
         +`<span class="pal-s">${sens(esc(a.gameName)+"#"+esc(a.tagLine))} · ${esc(a.region)}</span></span>`

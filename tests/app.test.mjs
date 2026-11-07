@@ -8911,6 +8911,35 @@ test("index.html is markup only, and loads this version's app.css and app.js", (
   assert.ok(appJs.startsWith('"use strict";'), "the script is still strict from its first line");
 });
 
+// With the script in app.js, the page can forbid inline script: markup that ever slipped
+// past escaping could not run, nor pull a script in from somewhere else
+test("the page's security policy runs only its own script, and nothing in the app needs more", () => {
+  const meta = pageHtml.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/);
+  assert.ok(meta, "a policy in the page");
+  assert.ok(pageHtml.indexOf(meta[0]) < pageHtml.search(/<link|<script/), "before anything it governs is loaded");
+  const pol = Object.fromEntries(meta[1].split(";").map(d => d.trim().split(/\s+/)).map(([k, ...v]) => [k, v]));
+  assert.deepEqual(pol["script-src"], ["'self'"], "no inline script, no eval, no other host");
+  for (const [k, v] of [["object-src", "'none'"], ["base-uri", "'none'"], ["form-action", "'none'"], ["frame-src", "'none'"], ["font-src", "'self'"]])
+    assert.deepEqual(pol[k], [v], k);
+  assert.ok(pol["connect-src"].includes("https:"), "the backend, webhook and proxies are the user's to choose");
+  assert.ok(!pol["connect-src"].includes("http:"), "but plain http only to this computer");
+  // what the policy would block, the app must not use
+  const handler = /\son(?:error|load|click|dblclick|mouse\w+|key\w+|focus|blur|input|change|submit|pointer\w+)\s*=\s*["']/;
+  assert.doesNotMatch(pageHtml, handler, "no inline handlers in the page");
+  assert.doesNotMatch(appJs, handler, "nor in the markup the script builds");
+  assert.doesNotMatch(appJs, /\beval\(|new Function\(|set(?:Timeout|Interval)\(\s*["'`]|javascript:/, "no code from strings");
+  // the icons' failed-load handling moved from onerror="" to a listener: it still works
+  const seed = seededAccount();
+  seed[0].stats.icon = "https://example.com/gone.jpg";
+  const win = bootApp(seed);
+  const img = win.document.querySelector(".c-avatar");
+  assert.ok(img && img.hasAttribute("data-ico"));
+  img.dispatchEvent(new win.Event("error"));
+  assert.equal(win.document.querySelector(".c-avatar"), null, "a dead icon is taken out");
+  win.renderGrid();
+  assert.equal(win.document.querySelector(".c-avatar"), null, "and not asked for again");
+});
+
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row
 // ended hundreds of pixels apart
 test("a card's notes keep to one row of two chips and +N more; Details shows them all", () => {
