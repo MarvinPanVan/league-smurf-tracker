@@ -7568,6 +7568,16 @@ $("bDashToggle").addEventListener("click",()=>{
   const con=document.querySelector(".console"), cmd=con&&con.querySelector(".cmd");
   if(cmd&&"ResizeObserver"in window)
     new ResizeObserver(()=>con.style.setProperty("--cmd-pin",cmd.offsetHeight+con.clientTop+"px")).observe(cmd);
+  /* Phones only: away while scrolling down, back on the way up (see .to-top.away).
+     Passive, and it only compares two numbers, so it costs nothing per frame. */
+  const narrow=window.matchMedia&&window.matchMedia("(max-width:560px)");
+  let lastY=window.scrollY||0;
+  window.addEventListener("scroll",()=>{
+    const y=window.scrollY||0, d=y-lastY;
+    if(Math.abs(d)<6)return;
+    btn.classList.toggle("away",!!(narrow&&narrow.matches)&&d>0);
+    lastY=y;
+  },{passive:true});
   btn.addEventListener("click",()=>{
     window.scrollTo({top:0,behavior:prefersReducedMotion()?"auto":"smooth"});
     const first=document.querySelector("#tSearch");

@@ -10281,3 +10281,20 @@ test("a phone's filters are three rows, and Select all shows only while selectin
   assert.ok(!win.document.body.classList.contains("selecting"));
 });
 
+// On a phone the button sat on the cards' right edge, over an LP badge or a note
+test("on a phone, back to top steps aside while you scroll down and returns on the way up", () => {
+  const run = phone => {
+    let y = 0;
+    const win = bootApp(seededAccount(), w => {
+      w.matchMedia = q => ({ matches: phone && /max-width:\s*560px/.test(q), addListener() {}, removeListener() {} });
+      Object.defineProperty(w, "scrollY", { configurable: true, get: () => y });
+    });
+    const btn = win.document.getElementById("toTop");
+    const to = v => { y = v; win.dispatchEvent(new win.Event("scroll")); return btn.classList.contains("away"); };
+    return [to(800), to(1600), to(1597), to(1200), to(1900)];
+  };
+  assert.deepEqual(run(true), [true, true, true, false, true], "down hides it, a few pixels do nothing, up brings it back");
+  assert.deepEqual(run(false), [false, false, false, false, false], "a wide screen has room for it");
+  assert.match(html, /\n  \.to-top\.away\{opacity:0;pointer-events:none/);
+});
+
