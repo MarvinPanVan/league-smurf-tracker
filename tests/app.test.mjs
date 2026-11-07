@@ -821,11 +821,14 @@ test("the header tray is a solid plate: nothing behind it can tint its edge", ()
 test("the page speaks in line icons, not emoji", () => {
   const h = n => ({ t: Date.now() - n * 86400000, tier: "GOLD", division: "II", lp: 10 + (3 - n) * 20 });
   const win = bootApp([{ id: "up", region: "EUW", gameName: "Up", tagLine: "1", status: "active",
-    stats: { found: true, tier: "GOLD", division: "II", lp: 70, updatedAt: Date.now() }, history: [h(3), h(2), h(1), h(0)], tags: [] }]);
-  const chip = [...win.document.querySelectorAll(".delta.d-up")].find(d => /Climbing/.test(d.textContent));
-  assert.ok(chip, "the climbing chip is drawn");
-  assert.ok(chip.querySelector("svg.ico.flame"), "with the flame, drawn rather than an emoji");
-  assert.doesNotMatch(chip.textContent, /\u{1F525}/u);
+    stats: { found: true, tier: "GOLD", division: "II", lp: 70, updatedAt: Date.now() - 6 * 86400000 }, history: [h(9), h(8), h(7), h(6)], tags: [] }]);
+  const upd = win.document.querySelector('.card[data-id="up"] .upd.stale');
+  assert.ok(upd && upd.querySelector("svg.ico"), "the out-of-date warning is drawn rather than an emoji");
+  assert.doesNotMatch(upd.textContent, /\u26A0/u);
+  // the flame "Climbing" chip was a fourth way of saying "going up" (the +LP chip,
+  // Climb and the chart say it), so it went, and its orange with it
+  assert.equal([...win.document.querySelectorAll(".delta")].find(d => /Climbing/.test(d.textContent)), undefined);
+  assert.doesNotMatch(html, /#ff8f2e/i, "no orange left in the palette");
   assert.ok(win.document.querySelector("#previewBanner svg.ico"), "the preview banner's eye is drawn too");
   // UI markup only: the Discord post is a chat message, where an emoji belongs
   const ui = html.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, "").replace(/postDiscord\([^\n]*/g, "");
