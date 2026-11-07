@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.20.0";
+const APP_VERSION="2.21.0";
 const APP_CHANGELOG=[
+  {v:"2.21.0",items:[
+    "A check that fails is said once on the card, with the reason in plain words",
+    "List rows show \"Last check failed\" too",
+    "Charts no longer show division numbers. Point at a dot to see its rank",
+  ]},
   {v:"2.20.0",items:[
     "Login in the list says it copied, the same way the card does",
     "A copy the browser refuses no longer moves Login on to the password",
