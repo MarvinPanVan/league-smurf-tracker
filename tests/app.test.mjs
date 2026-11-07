@@ -8485,12 +8485,14 @@ test("a wide screen gets a wide page, and the list spreads its columns rather th
   assert.ok(cols(2560) >= 6, "six cards to a row at 2560: " + cols(2560));
   assert.ok(cols(1920) >= 5, "five at 1920: " + cols(1920));
   // the list, on a page that wide: every column after the picture takes a share
-  const wide = html.match(/@media \(min-width:1800px\)\{\s*\.grid\.list\{--rw-cols:([^}]+)\}([^@]*?)\n  \}/);
+  const wide = html.match(/@media \(min-width:1181px\)\{\s*\.grid\.list\{--rw-cols:([^}]+)\}([^@]*?)\n  \}/);
   assert.ok(wide, "a wide-screen list template");
   const tracks = wide[1].match(/minmax\([^)]*\)|[^\s]+/g);
   assert.deepEqual(tracks.slice(0, 2), ["auto", "40px"], "the box and the picture stay put, beside the name");
   assert.ok(tracks.filter(t => /fr\)$/.test(t)).length >= 6, "the slack is shared, not one hole: " + wide[1]);
   assert.match(wide[2], /\.rw-d\{align-items:flex-start\}/, "the change pill keeps its size in a wider column");
+  // and it starts where the narrower templates stop, not at 1800: a laptop's list had a 450px hole too
+  assert.match(html, /@media \(max-width:1180px\)\{\s*\.grid\.list\{--rw-cols:/, "the template below it");
 });
 
 // The preview's first card was a famous pro's real account, showed MMR and "Recent avg"
