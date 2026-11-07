@@ -1290,7 +1290,7 @@ test("a Copy button turns into a green Copied for a moment, and only when the co
   assert.match(html, /\n  \.lbtns button\.copied,button\.copied\{color:var\(--good\)/, "in the colour that means done");
 });
 
-test("Play next names the account to play: about to decay first, then the longest left", () => {
+test("Play next names the account to play: about to decay first, then one about to go up, then the longest left", () => {
   const D = 86400000, now = Date.now();
   const acc = (id, tier, playedAgo, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [],
     history: [], lastPlayedAt: now - playedAgo * D,
@@ -1298,7 +1298,7 @@ test("Play next names the account to play: about to decay first, then the longes
   const sitting = bootApp([acc("recent", "GOLD", 1), acc("old", "GOLD", 20), acc("resting", "GOLD", 60, { status: "resting" })]);
   const tile = w => w.document.querySelector("#dash [data-next]");
   assert.equal(tile(sitting).dataset.next, "old", "the active account left longest; resting ones are not suggested");
-  assert.match(tile(sitting).textContent, /20 days since played/);
+  assert.match(tile(sitting).textContent, /not played in 20 days/);
   const urgent = acc("dia", "DIAMOND", 2, { history: [{ t: now - 25 * D, tier: "DIAMOND", division: "II", lp: 20, w: 10, l: 10 }] });
   const both = bootApp([acc("old", "GOLD", 20), urgent]);
   assert.equal(tile(both).dataset.next, "dia", "an account about to decay comes before one that has merely sat");
@@ -1316,12 +1316,29 @@ test("Play next names the account to play: about to decay first, then the longes
   assert.equal(appGet(both, "ui.search"), "");
   const fresh = bootApp([acc("a", "GOLD", 0), acc("b", "GOLD", 1)]);
   assert.equal(tile(fresh), null, "nothing has sat long enough to suggest");
-  // "4 days since played" was printed when all the app knew was the last check
+  // A few days left alone is not yet a reason: a week is
+  assert.equal(tile(bootApp([acc("a", "GOLD", 5)])), null);
+  // "4 days since its last check" was offered as a reason to play: days since the app
+  // looked, which says nothing about playing. A check alone suggests nothing now.
   const checkedOnly = acc("c", "GOLD", 0, { lastPlayedAt: undefined });
   checkedOnly.stats.updatedAt = now - 9 * D;
-  const known = bootApp([checkedOnly, acc("d", "GOLD", 1)]);
-  assert.match(tile(known).textContent, /9 days since its last check/, "it says what it counted from");
-  assert.doesNotMatch(tile(known).textContent, /played/);
+  assert.equal(tile(bootApp([checkedOnly])), null, "no game or login seen, no suggestion");
+  // a game counted between two checks is a game played
+  const counted = acc("g", "GOLD", 0, { lastPlayedAt: undefined, history: [
+    { t: now - 30 * D, tier: "GOLD", division: "II", lp: 0, w: 9, l: 10 }, { t: now - 12 * D, tier: "GOLD", division: "II", lp: 20, w: 10, l: 10 },
+    { t: now - 2 * D, tier: "GOLD", division: "II", lp: 20, w: 10, l: 10 }] });
+  assert.match(tile(bootApp([counted])).textContent, /not played in 12 days/, "from the check that saw the game, not the last check");
+  // a login copied, and nothing played, says that
+  const login = acc("l", "GOLD", 0, { lastPlayedAt: undefined, lastLoginAt: now - 10 * D });
+  assert.match(tile(bootApp([login])).textContent, /login last used 10 days ago/);
+  // one a game or two from going up comes before one that has merely sat
+  const close = acc("up", "GOLD", 1); close.stats.lp = 88;
+  const top = acc("top", "SILVER", 1); Object.assign(top.stats, { division: "I", lp: 80 });
+  const w = bootApp([acc("old", "GOLD", 20), close, top]);
+  assert.equal(tile(w).dataset.next, "up", "the nearest to its next division");
+  assert.match(tile(w).textContent, /12 LP from Gold I/);
+  const w2 = bootApp([acc("old", "GOLD", 20), top]);
+  assert.match(tile(w2).textContent, /20 LP from Gold$/m, "division I goes up a tier");
 });
 
 test("a new vault gets four set-up steps, each a button, until they are done or hidden", async () => {
@@ -4337,12 +4354,8 @@ test("Not found is not Unranked", () => {
 test("the combined stats pool respects the rank floor and per-account exclusions", () => {
   const win = bootApp();
   const a = (tier, extra) => Object.assign({ stats: { found: true, tier } }, extra);
-  const setFloor = v => {
-    win.loadDemo();
-    const sel = win.document.getElementById("dashMin");
-    sel.value = v;
-    sel.dispatchEvent(new win.Event("change", { bubbles: true }));
-  };
+  // set directly: the picker only offers floors that change something in the vault
+  const setFloor = v => runScript(win, `cfg.statsMinTier = ${JSON.stringify(v)}`);
 
   setFloor("");
   assert.equal(win.inCombined(a("SILVER")), true);
@@ -4355,16 +4368,38 @@ test("the combined stats pool respects the rank floor and per-account exclusions
   assert.equal(win.inCombined(a("DIAMOND", { excludeStats: true })), false);
 });
 
-test("the floor narrows what the dashboard counts, and says how many it left out", () => {
+// "Counting: all ranked accounts ▾ / 3 of 3 ranked" headed the panel, a control
+// nobody could make sense of, shown even where it could not change a thing
+test("the stats say which accounts they are from, as a footnote whose choices give their counts", () => {
   const win = bootApp();
-  win.loadDemo(); // Platinum, Gold, Silver, Bronze + one unranked
+  win.loadDemo(); // Platinum, Gold, Silver live; Bronze banned; one unranked; one levelling
+  const scope = () => win.document.querySelector("#dash .dash-scope");
   const sel = () => win.document.getElementById("dashMin");
-  const summary = () => win.document.querySelector(".dash-ex").textContent.replace(/s+/g, " ").trim();
-
-  assert.match(summary(), /^3 of 3 ranked$/, "demo's banned ranked account is left out of combined counts");
+  const opts = () => [...sel().options].map(o => o.textContent);
+  assert.equal(win.document.querySelector("#dash .dash-head"), null, "nothing heads the panel");
+  assert.equal(scope().previousElementSibling.className, "dist", "it closes the panel, under Most played");
+  assert.match(scope().textContent, /^Figures from/);
+  assert.equal(sel().selectedOptions[0].textContent, "all 3 ranked accounts", "the banned one is not counted");
+  assert.deepEqual(opts(), ["all 3 ranked accounts", "Gold and above (2)", "Platinum and above (1)"],
+    "only floors that change something, each with how many it keeps");
   sel().value = "PLATINUM";
   sel().dispatchEvent(new win.Event("change", { bubbles: true }));
-  assert.match(summary(), /^1 of 3 ranked · 2 left out$/);
+  assert.equal(sel().selectedOptions[0].textContent, "Platinum and above (1)");
+  assert.match(win.document.querySelector("#dash .stat .s-note").textContent, /1 counted account/);
+  // one account left out from its own card is said too
+  sel().value = "";
+  sel().dispatchEvent(new win.Event("change", { bubbles: true }));
+  runScript(win, "accounts.find(a => a.stats && a.stats.tier === 'GOLD').excludeStats = true; renderDash()");
+  assert.match(scope().querySelector(".dash-ex").textContent, /^1 left out from their cards$/);
+  assert.equal(sel().selectedOptions[0].textContent, "all 2 ranked accounts");
+});
+
+test("with nothing to choose between, the stats name no scope at all", () => {
+  const acc = (id, tier) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier, division: "II", lp: 10, wins: 10, losses: 8, updatedAt: Date.now() } });
+  const win = bootApp([acc("a", "GOLD"), acc("b", "GOLD")]);
+  assert.ok(win.document.querySelector("#dash .stat"), "the panel is there");
+  assert.equal(win.document.getElementById("dashMin"), null, "two Gold accounts: every floor keeps both or neither, so no picker");
 });
 
 test("combined champion stats are weighted by games, not by winrate", () => {
@@ -9239,7 +9274,7 @@ test("one type scale: nothing under 11px, 11px only inside charts and badges, sm
   }
   assert.deepEqual(small, [], "small text, or small capitals, outside the few places that keep them");
   assert.deepEqual([...sizes].filter(s => s < 24).sort((a, b) => a - b), [11, 12, 13, 14, 16, 18, 20, 22], "the scale below display sizes");
-  assert.match(css, /\.stat \.k,\.dist \.k,\.dash-filter \.k,[^{]*\{font-size:calc\(12px\*var\(--ts\)\);font-weight:500;letter-spacing:0;text-transform:none\}/,
+  assert.match(css, /\.stat \.k,\.dist \.k,\.dash-scope label,[^{]*\{font-size:calc\(12px\*var\(--ts\)\);font-weight:500;letter-spacing:0;text-transform:none\}/,
     "the shared label: a calm 12px in sentence case");
 });
 
@@ -9368,7 +9403,7 @@ test("the stats panel shows a figure only once there is something behind it", ()
   // one account, never checked: the one thing worth saying is that
   const fresh = bootApp([{ id: "n", gameName: "New", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], stats: null }]);
   assert.deepEqual(tiles(fresh), ["Never checked"]);
-  assert.equal(fresh.document.querySelector("#dash .dash-head"), null, "no Counting picker with nothing ranked to count");
+  assert.equal(fresh.document.querySelector("#dash .dash-scope"), null, "no scope picker with nothing ranked to count");
   // a checked, unranked account with no games: nothing at all, and no Hide stats for an empty panel
   const quiet = bootApp([{ id: "u", gameName: "Lvl", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
     stats: { found: true, tier: "UNRANKED", division: null, lp: null, level: 12, updatedAt: Date.now() } }]);
@@ -10474,4 +10509,23 @@ test("a card's corner keeps the LP change and the one signal that matters most; 
   // with no streak, the idle days are what the corner says
   runScript(win, "accounts[0].recent = null; renderGrid()");
   assert.ok([...win.document.querySelectorAll(".card .c-deltas .delta")].some(c => /^Idle \d+ days$/.test(c.textContent.trim())));
+});
+
+// "The Average climb sparkline is a flat dotted line": 160×28 stretched over a wide
+// tile, with a dot on every day
+test("the Average climb line is drawn near the shape of its box, with one dot, on the latest day", () => {
+  const win = bootApp();
+  const D = 864e5, now = Date.now();
+  const hist = [0, 1, 2, 3, 4, 5, 6].map(i => ({ t: now - (7 - i) * D, tier: "GOLD", division: "II", lp: i * 12 }));
+  const el = win.document.createElement("div");
+  el.innerHTML = win.poolLpTrend([{ id: "a", history: hist }]).svg;
+  const svg = el.querySelector("svg");
+  const [, , vw, vh] = svg.getAttribute("viewBox").split(" ").map(Number);
+  const cssW = +html.match(/\n  \.pool-spark\{[^}]*max-width:(\d+)px/)[1], cssH = +html.match(/\n  \.pool-spark\{[^}]*height:(\d+)px/)[1];
+  assert.equal(cssH, vh, "drawn at its own height");
+  assert.ok((cssW / cssH) / (vw / vh) <= 1.4, "stretched sideways by no more than 1.4×");
+  assert.equal(el.querySelectorAll(".pool-dot").length, 1, "one dot");
+  const dot = el.querySelector(".pool-dot"), hits = [...el.querySelectorAll(".pool-hit")];
+  assert.equal(dot.getAttribute("cx"), hits.at(-1).getAttribute("cx"), "on the latest day");
+  assert.equal(hits.length, 7, "every day still answers on hover");
 });

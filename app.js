@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.17.0";
+const APP_VERSION="2.18.0";
 const APP_CHANGELOG=[
+  {v:"2.18.0",items:[
+    "Play next gives a reason to play: about to decay, a game or two from the next division, or not played in a week or more",
+    "The stats end with \"Figures from all 3 ranked accounts\" instead of opening on a Counting control",
+    "The Average climb line keeps its shape instead of lying flat",
+  ]},
   {v:"2.17.0",items:[
     "Details opens straight onto its contents, and each card's corner keeps the LP change and one signal",
     "Charts leave out a label that would sit on the line, say \"One check so far\" instead of drawing one dot, and have a bigger D/W/M switch",
@@ -508,17 +513,44 @@ function decayRisk(a){const d=decayDays(a);return isLive(a)&&d!==null&&d<=7}
    without being played or opened. Resting, banned and archived accounts are out
    by definition, and so is anything never read. Nothing is suggested until some
    account has sat for 3 days: "play the one you played yesterday" is not advice. */
+/* When an account was last played, from what the app can actually see: a game
+   counted between two checks (its wins and losses went up), the last five games
+   a worker brought back, or Mark played. A check alone is not a game. */
+function lastPlayedOf(a){
+  let t=Number(a.lastPlayedAt)||0;
+  const r=normRecent(a.recent);if(r)for(const g of r.games)if(g.at>t)t=g.at;
+  const h=(a.history||[]).filter(p=>p.w!=null&&p.l!=null);
+  for(let i=1;i<h.length;i++)if((+h[i].w)+(+h[i].l)>(+h[i-1].w)+(+h[i-1].l)&&+h[i].t>t)t=+h[i].t;
+  return t||null;
+}
+// "Gold I" for a Gold II account, "Platinum" for a Gold I one
+function nextStep(s){
+  const t=(s.tier||"").toUpperCase(), D=["IV","III","II","I"], i=D.indexOf(normDivision(t,s.division));
+  return i<3?tierLabel({tier:t,division:D[i+1]}):tierLabel({tier:TIER_ORDER[TIER_ORDER.indexOf(t)+1],division:null});
+}
+/* What to play, and a reason that is a reason to play. It used to fall back on
+   "4 days since its last check", which counts days since the app looked, not since
+   anyone played. In order: an account about to decay; one a game or two from going
+   up a division; the one left longest, counted from a game or its login, and only
+   once that is a week. Nothing qualifies, nothing is suggested. */
 function playNext(pool){
   const live=(pool||accounts).filter(a=>isLive(a)&&(a.status||"active")==="active"&&isChecked(a)&&a.stats.found!==false);
   const urgent=live.filter(decayRisk).sort((x,y)=>decayDays(x)-decayDays(y));
   if(urgent.length){const a=urgent[0],d=decayDays(a);return{a,why:d<0?"decaying · play a ranked game":"decay in "+decayIn(d)}}
-  let best=null,days=-1;
-  for(const a of live){const d=rotationDays(a);if(d!=null&&d>days){best=a;days=d}}
-  // Say what the days are counted from. rotationDays falls back from "played" to
-  // "opened here" to "last checked", and all three used to be printed as "played".
-  if(!best||days<3)return null;
-  const since=best.lastPlayedAt?"played":best.lastLoginAt?"you opened its login":"its last check";
-  return{a:best,why:days+" days since "+since};
+  const MI=TIER_ORDER.indexOf("MASTER");
+  const near=live.filter(a=>{const s=a.stats,lp=Number(s.lp),t=TIER_ORDER.indexOf((s.tier||"").toUpperCase());
+    return isRanked(a)&&t>=0&&t<MI&&normDivision(s.tier.toUpperCase(),s.division)&&lp>=75&&lp<100})
+    .sort((x,y)=>y.stats.lp-x.stats.lp);
+  if(near.length){const a=near[0];return{a,why:(100-a.stats.lp)+" LP from "+nextStep(a.stats)}}
+  let best=null,days=-1,played=false;
+  for(const a of live){
+    const p=lastPlayedOf(a)||0, l=Number(a.lastLoginAt)||0, t=Math.max(p,l);
+    if(!t)continue;
+    const d=Math.floor((Date.now()-t)/86400000);
+    if(d>days){best=a;days=d;played=p>=l}
+  }
+  if(!best||days<7)return null;
+  return{a:best,why:played?"not played in "+days+" days":"login last used "+days+" days ago"};
 }
 // Said in words on hover and to a screen reader: unexplained, it was a mystery mark
 function flagMark(){return `<span class="flagmark" role="img" aria-label="Flagged for attention" title="Flagged for attention. Clear it in the ⋯ menu.">${icon("flag")}</span>`}
@@ -3169,7 +3201,10 @@ function poolLpTrend(pool){
   if(days.length<2)return null;
   const pts=days.map(d=>d.avg);
   const min=Math.min(...pts), max=Math.max(...pts), span=Math.max(1,max-min);
-  const w=160,h=28,pad=4;
+  /* Drawn about the shape of its box: at 160×28 stretched over a wide tile, with a
+     dot on every day, it read as a flat dotted line under a climb of +246. Only the
+     latest day keeps a visible dot; every day still answers on hover. */
+  const w=120,h=34,pad=4;
   const coords=pts.map((v,i)=>{
     const x=pad+(i/(pts.length-1))*(w-pad*2);
     const y=h-pad-((v-min)/span)*(h-pad*2);
@@ -3179,13 +3214,13 @@ function poolLpTrend(pool){
   const delta=Math.round(pts[pts.length-1]-pts[0]);
   const fmtDay=t=>new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
   const from=fmtDay(days[0].t), to=fmtDay(days[days.length-1].t);
-  const dots=coords.map(c=>{
+  const dots=coords.map((c,i)=>{
     const ch=Math.round(c.v-pts[0]);
     const label=fmtDay(c.d.t)+"\n"+(ch>0?"+":ch<0?"−":"±")+Math.abs(ch)+" LP since "+fmtDay(days[0].t)+"\n"+c.d.n+" counted account"+(c.d.n===1?"":"s");
     return `<circle class="pool-hit" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="8" data-spark-tip="${esc(label)}"></circle>`
-      +`<circle class="pool-dot" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.2"></circle>`;
+      +(i===coords.length-1?`<circle class="pool-dot" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.6"></circle>`:"");
   }).join("");
-  const svg=`<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="100%" height="28" preserveAspectRatio="none" role="img" aria-label="Average climb of counted accounts from ${esc(from)} to ${esc(to)}"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/>${dots}</svg>`;
+  const svg=`<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Average climb of counted accounts from ${esc(from)} to ${esc(to)}"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/>${dots}</svg>`;
   const sign=delta>0?"↑ +":delta<0?"↓ ":"→ ";
   const headline=sign+Math.abs(delta);
   const note=from+" → "+to+" · the average climb of counted accounts; one added later counts from its first check";
@@ -3832,7 +3867,17 @@ function renderDash(){
   if(dashCollapsed()){hideSparkTip();el.innerHTML="";return}
   const ranked=countPool.filter(a=>isLive(a)&&a.stats&&a.stats.found!==false&&a.stats.tier&&a.stats.tier.toUpperCase()!=="UNRANKED");
   const pool=ranked.filter(inCombined);
-  const excludedN=ranked.length-pool.length;
+  /* "Counting: all ranked accounts ▾ / 3 of 3 ranked" headed the panel, a control
+     nobody could make sense of, on every vault, including the many where it could
+     not change a thing. It is a footnote now that reads as one ("Figures from all
+     5 ranked accounts"), each choice says how many accounts it keeps, and it only
+     shows when there is a choice to make, or one already made to undo. */
+  const handOutN=ranked.filter(a=>a.excludeStats).length;
+  const tierAt=a=>TIER_ORDER.indexOf((a.stats.tier||"").toUpperCase());
+  const floorN=f=>ranked.filter(a=>!a.excludeStats&&(!f||tierAt(a)>=TIER_ORDER.indexOf(f))).length;
+  const curFloor=cfg.statsMinTier||"", allN=floorN("");
+  const floors=COMBINED_FLOORS.filter(f=>!f.v||f.v===curFloor||(floorN(f.v)>0&&floorN(f.v)<allN));
+  const scopeShown=floors.length>1||!!curFloor||handOutN>0;
   let W=0,L=0;
   pool.forEach(a=>{W+=Number(a.stats.wins)||0;L+=Number(a.stats.losses)||0});
   const wr=(W+L)>0?Math.round(W/(W+L)*100)+"%":"—";
@@ -3898,13 +3943,6 @@ function renderDash(){
   if(!cells.length&&!topChamps.length){hideSparkTip();setHTML(el,bkNote);dashJustOpened=false;wireBkNow(el);return}
   setHTML(el,`
   <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
-  ${ranked.length?`<div class="dash-head">
-    <div class="dash-filter">
-      <span class="k">Counting</span>
-      <select id="dashMin">${COMBINED_FLOORS.map(f=>`<option value="${f.v}"${(cfg.statsMinTier||"")===f.v?" selected":""}>${esc(f.label)}</option>`).join("")}</select>
-      <span class="dash-ex">${pool.length} of ${ranked.length} ranked${excludedN?" · "+excludedN+" left out":""}${filterHint?" · "+esc(filterHint):""}</span>
-    </div>
-  </div>`:""}
   ${cells.length?`<div class="dash">${cells.join("")}</div>`:""}
   ${topChamps.length?`<div class="dist"${cells.length||ranked.length?' style="border-top:1px solid var(--line)"':""}><span class="k">Most played</span>${
     // Sorted by games, so "Best" was the wrong word: a 44% champion sat in it.
@@ -3913,6 +3951,11 @@ function renderDash(){
       +`<span class="n">${esc(c.name)}</span>`
       +`<b class="${c.wr>=50&&c.games>=10?"wr-good":""}">${esc(c.wr)}%</b>`
       +`<i class="g">${esc(c.wins)}<em>-</em>${esc(c.losses)}</i></span>`).join("")}</div>`:""}
+  ${scopeShown?`<div class="dash-scope"><label for="dashMin">Figures from</label>
+    <select id="dashMin">${floors.map(f=>{const n=floorN(f.v);
+      return`<option value="${f.v}"${curFloor===f.v?" selected":""}>${f.v?esc(f.label)+" ("+n+")":"all "+n+" ranked account"+(n===1?"":"s")}</option>`}).join("")}</select>
+    ${handOutN||filterHint?`<span class="dash-ex">${[handOutN?handOutN+" left out from their cards":"",filterHint?esc(filterHint):""].filter(Boolean).join(" · ")}</span>`:""}
+  </div>`:""}
   </div></div>
   ${bkNote}`);
   dashJustOpened=false; // consumed by the render above

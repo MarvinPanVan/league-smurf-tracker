@@ -404,7 +404,7 @@
   .stat .v.nw small{margin-left:1px}
   .stat .v.spark-wrap{font-size:calc(12px*var(--ts));line-height:1.2;overflow:visible;max-width:100%;width:100%;position:relative}
   /* capped: stretched 28px tall across a 400px cell, +246 LP drew as a flat line */
-  .pool-spark{display:block;width:100%;max-width:220px;height:28px;margin-top:4px;opacity:.85;overflow:visible;cursor:crosshair}
+  .pool-spark{display:block;width:100%;max-width:150px;height:34px;margin-top:4px;overflow:visible;cursor:crosshair}
   .pool-spark circle.pool-dot{fill:var(--teal);stroke:var(--panel);stroke-width:1.5;pointer-events:none}
   .pool-spark .pool-hit{fill:transparent;stroke:none;cursor:pointer}
   .spark-tip{
@@ -419,9 +419,10 @@
   .ghost-toggle{padding:0 12px;border-radius:var(--r-sm)}
   .ghost-toggle .ico{transition:transform .22s cubic-bezier(.22,1,.36,1)}
   .ghost-toggle.open .ico{transform:rotate(180deg)}
-  .dash-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px 0}
-  .dash-filter{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .dash-filter select{font-size:calc(13px*var(--ts));height:var(--ctl-h);padding:0 30px 0 12px}
+  /* which accounts the figures are from: a footnote, worded as one */
+  .dash-scope{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 14px 11px;border-top:1px solid var(--line);
+    font-size:calc(12px*var(--ts));color:var(--faint)}
+  .dash-scope select{font-size:calc(12px*var(--ts));height:30px;padding:0 28px 0 10px}
   .dash-ex{font-size:calc(12px*var(--ts));color:var(--faint)}
   /* Was a bare name, a percentage and a hanging "30G" all at different sizes with
      nothing holding them together — at eight across a row it read as debris. One
@@ -1796,7 +1797,7 @@
      set four sizes and seven trackings apart, from 9px to 10.5px and .1em to .16em,
      so neighbouring labels never quite lined up. Colour still says how loud each
      one is; the shape is now the same everywhere. */
-  .stat .k,.dist .k,.dash-filter .k,.c-stats .k,.c-notes .k,.sec-n,.chp-h,.away-k,.pal-g,.login .k,.lrow .lk,
+  .stat .k,.dist .k,.dash-scope label,.c-stats .k,.c-notes .k,.sec-n,.chp-h,.away-k,.pal-g,.login .k,.lrow .lk,
   .goal-h .k,.rankpanel .k,.grp-h,.cm-g,.c-drawer{font-size:calc(12px*var(--ts));font-weight:500;letter-spacing:0;text-transform:none}
 
   /* ---- form + settings ---- */
