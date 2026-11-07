@@ -7612,6 +7612,33 @@ test("a failed check is said once on its card, in plain words", () => {
   assert.match(win.failReason("Auto-fetch failed (timeout) — enter it by hand with ✎ Rank"), /too long/, "and notes written by older versions");
 });
 
+// Cards marked a failed check; the same account in the list looked like any other
+test("a list row whose last check failed says so on its name line, the way its card does", () => {
+  const failed = { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: Date.now(),
+    note: "Auto-fetch failed (timeout). Enter it by hand with ✎ Rank" };
+  const win = bootApp([
+    { id: "f", region: "EUW", gameName: "F", tagLine: "1", status: "active", tags: [], history: [], stats: failed },
+    { id: "b", region: "EUW", gameName: "B", tagLine: "1", status: "banned", tags: [], history: [], stats: failed },
+    { id: "m", region: "EUW", gameName: "M", tagLine: "1", status: "active", tags: [], history: [], stats: { found: false, updatedAt: Date.now() } },
+    { id: "ok", region: "EUW", gameName: "K", tagLine: "1", status: "active", tags: [], history: [],
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: Date.now() } },
+  ]);
+  win.document.querySelector('[data-density="list"]').click();
+  const row = id => win.document.querySelector(`.rw[data-id="${id}"]`);
+  assert.ok(row("f"), "the list is showing");
+  const mark = row("f").querySelector(".rw-nm .rw-failed");
+  assert.ok(mark, "the failed row is marked on its first line");
+  assert.equal(mark.textContent.trim(), "Last check failed", "in the card's words");
+  assert.equal(mark.getAttribute("aria-label"), "Last check failed");
+  assert.match(mark.title, /^Last check failed\. The rank source took too long to answer\./, "and why, in plain words");
+  for (const id of ["b", "m", "ok"]) assert.equal(row(id).querySelector(".rw-failed"), null, id + " is not marked");
+  // a phone's name line keeps the mark and drops the words; the name gives way first
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const phone = css.slice(css.indexOf("@media (max-width:720px){"));
+  assert.match(phone.slice(0, phone.indexOf("\n  }")), /\.rw-failed-t\{display:none\}/);
+  assert.match(css, /\n  \.rw-failed\{[^}]*flex-shrink:0/);
+});
+
 // One failed check was said four times (a stats tile, which also pushed the panel to
 // five columns, a banner, a toast and the run's counter) and not at all on the card
 test("a failed check shows on its card and in one banner, whose Show takes only transport failures", () => {

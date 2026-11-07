@@ -870,6 +870,10 @@
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
   .rw-star{color:var(--star);display:inline-flex;flex-shrink:0}
   .rw-star .ico{width:11px;height:11px;fill:var(--star)}
+  /* the card's "Last check failed", in its amber; the name gives way before it does */
+  .rw-failed{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;color:var(--warn-txt);
+    font-size:calc(12px*var(--ts));font-weight:500;letter-spacing:0}
+  .rw-failed .ico{width:12px;height:12px}
   .rw-tag{font-size:calc(12px*var(--ts));color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* The tags ride on the Riot ID's line. On a line of their own they made every
      tagged row three lines tall: 85px a row, eight rows to a laptop screen, in the
@@ -958,6 +962,7 @@
     .grid.list{--rw-cols:auto 36px minmax(0,1fr) 106px 58px 16px;--rw-gap:10px}
     .rw-main{min-height:52px;padding:12px 12px;align-items:center}
     .rw-spark,.rw-tags,.rw-keys,.rw-head{display:none}
+    .rw-failed-t{display:none}   /* a phone's name line has room for the mark, not the words */
     /* A phone row is two lines: the name, the rank under it, and the login's copy
        buttons on the right. It used to hide those buttons ("a phone is not where a
        client gets logged into"), but a phone is exactly where people read a
