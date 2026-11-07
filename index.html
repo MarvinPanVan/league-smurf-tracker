@@ -2082,6 +2082,11 @@
   @keyframes dashIn{from{opacity:0;transform:translateY(-12px) scaleY(.94)}to{opacity:1;transform:none}}
   .hx.dash-in{transform-origin:top center;animation:dashIn .32s cubic-bezier(.22,1,.36,1) both}
   @keyframes barIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+  #previewBanner{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    border:1px solid color-mix(in srgb,var(--gold) 42%,transparent);background:color-mix(in srgb,var(--gold) 9%,transparent);
+    color:var(--text);padding:7px 8px 7px 14px;border-radius:var(--r-md);font-size:calc(13px*var(--ts));margin-bottom:14px}
+  #previewBanner>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #previewBanner>button{flex:0 0 auto;padding:5px 12px;min-height:30px}
   #bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show{animation:barIn .26s cubic-bezier(.22,1,.36,1) both}
 
   /* Card sections open by re-rendering the whole grid, so only the block flagged
@@ -2629,8 +2634,10 @@
        grid and had to spot what moved. -->
   <div id="awayBand" class="away-band hidden"></div>
 
-  <div id="previewBanner" class="hidden" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border:1px solid color-mix(in srgb,var(--gold) 42%,transparent);background:color-mix(in srgb,var(--gold) 9%,transparent);color:var(--text);padding:13px 16px;border-radius:var(--r-md);font-size:calc(13px*var(--ts));margin-bottom:18px">
-    <span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> <b>Preview mode</b> — this is example data to show you the layout. Nothing here is saved.</span>
+  <!-- One line: a banner over two lines, plus a toast saying the same thing, plus
+       the page under it, was most of a phone's first screen in the preview. -->
+  <div id="previewBanner" class="hidden">
+    <span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> <b>Preview</b>: example data, nothing is saved</span>
     <button id="bExitPreview" class="b-gold">Exit preview</button>
   </div>
 
@@ -9929,7 +9936,6 @@ function loadDemo(){
       history:[{t:now-50*D,tier:"BRONZE",division:"II",lp:30},{t:now-40*D,tier:"BRONZE",division:"I",lp:12}]})
   ];
   previewMode=true;render();
-  toast("Previewing example data — nothing is saved until you exit preview and add real accounts");
 }
 
 // ---------- events ----------

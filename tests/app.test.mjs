@@ -8604,6 +8604,17 @@ test("what the app says leaves the browser is true: the Riot ID goes out for a r
   assert.doesNotMatch(html, /Everything here stays in this browser/, "the add forms say the Riot ID is looked up");
 });
 
+// The preview said "nothing is saved" twice: a two-line banner, and a toast over the cards
+test("the preview says it once, on one line", () => {
+  const win = bootApp();
+  win.document.getElementById("bDemo").click();
+  const banner = win.document.getElementById("previewBanner");
+  assert.equal(banner.querySelector("span").textContent.trim(), "Preview: example data, nothing is saved");
+  assert.doesNotMatch(win.document.getElementById("toast").textContent, /preview|example data/i, "no toast repeating it");
+  assert.match(html.match(/\n  #previewBanner>span\{([^}]*)\}/)[1], /white-space:nowrap/, "one line, clipped rather than wrapped");
+  assert.doesNotMatch(banner.textContent, /—/, "and no em dash");
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
