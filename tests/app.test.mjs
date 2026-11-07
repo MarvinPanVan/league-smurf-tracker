@@ -976,6 +976,22 @@ test("a stale card warns with a drawn mark, which a fresh card does not carry", 
   assert.equal(upd("f1").querySelector("svg"), null, "a fresh card has nothing to warn about");
 });
 
+// A banned card wore an amber "Updated 40 days ago" warning the toolbar did not count
+test("a card is out of date by the toolbar's own rule: never a banned account, never a not-found one", () => {
+  const D = 86400000, old = Date.now() - 40 * D;
+  const acc = (id, status, stats) => ({ id, region: "EUW", gameName: id, tagLine: "1", status, history: [], tags: [], stats });
+  const win = bootApp([
+    acc("live", "active", { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: old }),
+    acc("ban", "banned", { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: old }),
+    acc("gone", "active", { found: false, updatedAt: old })]);
+  const upd = id => win.document.querySelector(`.card[data-id="${id}"] .upd`);
+  assert.ok(upd("live").classList.contains("stale"));
+  assert.equal(upd("ban").classList.contains("stale"), false, "a banned account is never checked again, so never out of date");
+  assert.equal(upd("ban").querySelector("svg"), null);
+  assert.equal(upd("gone").classList.contains("stale"), false, "not found is its own state, not a stale one");
+  assert.match(win.document.getElementById("count").textContent, /1 needs? a refresh/, "and the count agrees: one");
+});
+
 test("actions and window titles are set in the text face; Cinzel is the wordmark's alone", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
   const rule = css.match(/\.cmd>button,\.acts>button:not\(\.c-more\)[^{]*\{[^}]*\}/)[0];

@@ -8352,7 +8352,11 @@ function tileHTML(a){
 }
 function cardHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
-  const stale=!!(s&&s.updatedAt&&Date.now()-s.updatedAt>STALE_MS);
+  /* The toolbar's "N need a refresh", Refresh stale and the list all go by isStale.
+     The card had a rule of its own, so a banned account (never checked again, so it
+     ages forever) and a Riot ID that came back not found wore an amber "out of
+     date" warning the toolbar didn't count and Refresh stale wouldn't touch. */
+  const stale=isStale(a);
   const hist=a.history||[];
   const st=STATUS[a.status]||STATUS.active;
   let peak=null,peakV=null;
