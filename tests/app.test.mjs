@@ -8196,6 +8196,23 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// Picking a theme and pressing Esc undid it without a word
+test("once a setting changes, Settings says Save keeps it and closing puts it back", () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document, hint = () => doc.getElementById("sFootHint");
+  win.openSettings("look");
+  assert.equal(hint().classList.contains("dirty"), false);
+  doc.querySelector('#sEffects [data-v="subtle"]').click();
+  assert.ok(hint().classList.contains("dirty"), "a change is flagged");
+  assert.match(hint().textContent, /Save keeps it, closing puts it back/);
+  doc.getElementById("sClose").click();
+  win.openSettings("security");
+  assert.equal(hint().classList.contains("dirty"), false, "a fresh open starts clean");
+  const pw = doc.getElementById("sVaultPass");
+  pw.value = "x"; pw.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(hint().classList.contains("dirty"), false, "the master password field acts on its own button, not on Save");
+});
+
 // 47 Tab presses from the top of the page to the first account's Login
 test("a skip link is the first stop for the keyboard and lands on the accounts", () => {
   const win = bootApp(seededAccount());

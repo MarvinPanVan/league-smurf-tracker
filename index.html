@@ -1767,6 +1767,7 @@
     box-shadow:var(--sh-2);transition:top .15s ease}
   .skip-link:focus{top:16px}
   #grid:focus{outline:none}
+  #sFootHint.dirty{color:var(--warn-txt)}
   .count{margin-top:30px;text-align:center;font-size:calc(12px*var(--ts));color:var(--faint)}
   .count a{color:var(--gold-txt);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
   .count a:hover{border-bottom-color:currentColor}
@@ -2884,7 +2885,7 @@
     <div class="mdl-f">
       <button id="sSave" class="b-gold">Save settings</button>
       <button id="sClose">Close</button>
-      <span class="sp hint">Stays in this browser unless you use Device sync.</span>
+      <span class="sp hint" id="sFootHint" aria-live="polite">Stays in this browser unless you use Device sync.</span>
     </div>
   </div></div>
   <!-- Floated beside the browser's colour popup, not inside the scrolling body —
@@ -9201,7 +9202,7 @@ function openSettings(tab){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();renderPwCheck();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden");centreSettingsTab()
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();renderPwCheck();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden");centreSettingsTab();settingsDirty(false)
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -9987,6 +9988,23 @@ function revertLookPreviews(){
   if(pendingCardHide||pendingChampArt!==null){pendingCardHide=null;pendingChampArt=null;applyCompact();renderGrid()}
 }
 function closeSettings(){revertLookPreviews();settingsSaveGen++;$("settings").classList.add("hidden")}
+/* Every change here shows live and waits for Save: closing puts it back, so a
+   colour can be tried and walked away from. Picking a theme and pressing Esc
+   undid it without a word, though. Once something has changed, the footer says
+   what Save and closing each do. */
+const S_FOOT="Stays in this browser unless you use Device sync.";
+function settingsDirty(on){
+  const h=$("sFootHint");if(!h)return;
+  h.classList.toggle("dirty",!!on);
+  h.textContent=on?"Not saved yet — Save keeps it, closing puts it back.":S_FOOT;
+}
+// fields that act on their own button, not on Save
+const S_SELF=new Set(["sVaultPass"]);
+$("settings").addEventListener("input",e=>{if(e.target.closest(".mdl-b")&&!S_SELF.has(e.target.id))settingsDirty(true)});
+$("settings").addEventListener("change",e=>{if(e.target.closest(".mdl-b")&&!S_SELF.has(e.target.id))settingsDirty(true)});
+$("settings").addEventListener("click",e=>{
+  if(e.target.closest("[data-theme],[data-atmosphere],#sEffects [data-v],#sTextSize [data-v],#sCompact,.acc-reset"))settingsDirty(true);
+});
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
 $("bNewSeason").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");newSeasonAll()});
 $("bStreamer").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");setStreamer(!streamerOn())});
