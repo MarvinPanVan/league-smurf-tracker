@@ -1159,6 +1159,8 @@
   .lvt-ax span:last-child{right:0;transform:none}
   .d-cap{font-size:calc(12px*var(--ts));color:var(--faint);letter-spacing:.02em;text-align:right;margin-top:-2px;line-height:1.4}
   .d-cap>span{white-space:nowrap}
+  /* the win-rate trend, beside the win rate: the colour and arrow, no chip */
+  .wl .wr-tr{font-size:calc(12px*var(--ts));font-weight:600;background:none;margin-left:2px}
   /* Rank is the headline; LP is a labelled companion under it — not a smaller
      word jammed onto the same baseline with a leftover margin. */
   .rk{display:flex;align-items:center;gap:11px;min-width:0;white-space:nowrap;

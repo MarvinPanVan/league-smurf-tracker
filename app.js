@@ -5300,27 +5300,33 @@ function cardHTML(a,i){
   /* There was a flame "Climbing" chip here too (LP up three checks running). It was
      the fourth way the card said "going up", beside the +LP chip, the Climb figure
      and the chart's own line, and the only orange anywhere in the app. */
-  {const st=!dead&&streakOf(a);if(st)deltaChip+=`<span class="delta ${st.win?"d-up":"d-down"} streak" title="The last ${st.n} ranked games were all ${st.win?"wins":"losses"}">${st.n}${st.win?"W":"L"} streak</span>`}
+  /* The corner under the LP change held up to four more chips (a streak, decay,
+     "Rotate", a win-rate trend), three or four to a card and in a different order
+     on each. It keeps the one that matters most now: decay, which costs LP, then a
+     streak, then a long idle. A Riot ID shared by two cards or a reading op.gg
+     didn't confirm are data problems, rare, and still always said. The win-rate
+     trend moved beside the win rate it is about. */
+  const signals=[];
   {
     const dd=dead?null:decayDays(a);
     if(dd!==null&&dd<=7){
       const r=DECAY_RULES[(a.stats.tier||"").toUpperCase()];
       const why=`Estimated from the games seen between checks. A ranked game banks ${r.per===1?"1 day":r.per+" days"}, up to ${r.cap}; past that the account loses ${r.lp} LP a day.`;
-      deltaChip+=dd<0?`<span class="delta d-down" title="${esc(why)}">${icon("alert")} Decaying</span>`
-        :`<span class="delta d-warn" title="${esc(why)}">${icon("alert")} Decay in ${decayIn(dd)}</span>`;
+      signals.push(dd<0?`<span class="delta d-down" title="${esc(why)}">${icon("alert")} Decaying</span>`
+        :`<span class="delta d-warn" title="${esc(why)}">${icon("alert")} Decay in ${decayIn(dd)}</span>`);
     }
   }
-  if(isDuplicate(a))deltaChip+='<span class="delta" title="Another card shares this Riot ID + region">Duplicate ID</span>';
-  if(isUncertain(a))deltaChip+='<span class="delta" title="Parsed without op.gg meta description">Uncertain</span>';
+  {const st=!dead&&streakOf(a);if(st)signals.push(`<span class="delta ${st.win?"d-up":"d-down"} streak" title="The last ${st.n} ranked games were all ${st.win?"wins":"losses"}">${st.n}${st.win?"W":"L"} streak</span>`)}
   {
     const d=rotationDays(a);
     // "Rotate · 54d" meant nothing without the Help page; this says it
-    if(needsRotation(a))deltaChip+=`<span class="delta" title="No game, login or check here in ${d} days">Idle ${d} days</span>`;
+    if(needsRotation(a))signals.push(`<span class="delta" title="No game, login or check here in ${d} days">Idle ${d} days</span>`);
   }
-  {
-    const tr=!dead&&wrTrend(a);
-    if(tr&&Math.abs(tr.d)>=3)deltaChip+='<span class="delta '+(tr.d>0?"d-up":"d-down")+'" title="Winrate vs ~4 checks ago">'+(tr.d>0?"▲":"▼")+" WR "+(tr.d>0?"+":"")+tr.d+'</span>';
-  }
+  if(signals.length)deltaChip+=signals[0];
+  if(isDuplicate(a))deltaChip+='<span class="delta" title="Another card shares this Riot ID + region">Duplicate ID</span>';
+  if(isUncertain(a))deltaChip+='<span class="delta" title="Parsed without op.gg meta description">Uncertain</span>';
+  const tr=!dead&&wrTrend(a), wrTr=tr&&Math.abs(tr.d)>=3
+    ?` <span class="wr-tr ${tr.d>0?"d-up":"d-down"}" title="Win rate against about four checks ago">${tr.d>0?"▲":"▼"}${Math.abs(tr.d)}</span>`:"";
   const {w:wins,l:losses,total,wr}=winLoss(s);
   // whichever of the two is known — printing both from coerced numbers is what put
   // an invented "0L" beside a real win count
@@ -5347,9 +5353,9 @@ function cardHTML(a,i){
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
     ${s.level>=30?`<div class="wl"><span class="ready" title="Level 30 reached. Ranked also needs 20 champions owned, which the app cannot see.">Ready for ranked</span></div>`:""}`;
   else if(!isRanked(a))rankBlock=`<div class="rk" style="color:${col}"><span class="rk-main"><span class="rk-t">Unranked</span></span></div>
-    <div class="wl">${total>0?wlTxt+(wr!==null?` · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:""):"No ranked games found"}</div>`;
+    <div class="wl">${total>0?wlTxt+(wr!==null?` · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>${wrTr}`:""):"No ranked games found"}</div>`;
   else rankBlock=`<div class="rk" style="color:${col}">${crest(s.tier,"rk-crest")}<span class="rk-main"><span class="rk-t">${esc(tierTxt)}</span>${lpTxt?`<span class="rk-lp">${esc(lpTxt)}</span>`:""}</span></div>
-    <div class="wl">${total>0?wlTxt+(wr!==null?` · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:""):"No ranked games found"}</div>`;
+    <div class="wl">${total>0?wlTxt+(wr!==null?` · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>${wrTr}`:""):"No ranked games found"}</div>`;
   // Peak / Level / MMR are unrelated facts — label them instead of running them
   // together in one muted sentence.
   const microStats=[];

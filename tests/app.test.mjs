@@ -10453,3 +10453,25 @@ test("the small text over a card's champion art gets a dark halo, and the art fa
   const mask = css.match(/\n  \.c-art\{[^}]*mask-image:linear-gradient\(180deg,#000,#000?7 (\d+)%,transparent (\d+)%\)\}/);
   assert.ok(mask && +mask[2] <= 80, "gone by the win-rate bar, not the chart");
 });
+
+// The corner under the LP change held a streak, decay, "Rotate" and a win-rate trend,
+// three or four to a card and in a different order on each
+test("a card's corner keeps the LP change and the one signal that matters most; the WR trend sits by the WR", () => {
+  const D = 864e5, now = Date.now();
+  const win = bootApp([{ id: "c", gameName: "Busy", tagLine: "1", region: "EUW", status: "active", tags: [],
+    recent: { at: now, games: [{ win: true, at: now - 1e5 }, { win: true, at: now - 2e5 }, { win: true, at: now - 3e5 }] },
+    history: [{ t: now - 50 * D, tier: "GOLD", division: "II", lp: 20, w: 10, l: 10 }, { t: now - 40 * D, tier: "GOLD", division: "I", lp: 40, w: 20, l: 10 }],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 40, wins: 20, losses: 10, updatedAt: now - 40 * D } }]);
+  const card = win.document.querySelector(".card");
+  const chips = [...card.querySelectorAll(".c-deltas .delta")].map(c => c.textContent.trim());
+  assert.ok(chips.includes("3W streak"), "the streak: " + chips.join(" | "));
+  assert.ok(!chips.some(c => /^Idle/.test(c)), "and not the idle days as well: " + chips.join(" | "));
+  assert.ok(!chips.some(c => /WR/.test(c)), "no win-rate chip in the corner");
+  const tr = card.querySelector(".wl .wr-tr");
+  assert.ok(tr, "the trend rides the win rate");
+  assert.equal(tr.textContent, "▲17");
+  assert.ok(tr.previousElementSibling.classList.contains("wrv"), "right after it");
+  // with no streak, the idle days are what the corner says
+  runScript(win, "accounts[0].recent = null; renderGrid()");
+  assert.ok([...win.document.querySelectorAll(".card .c-deltas .delta")].some(c => /^Idle \d+ days$/.test(c.textContent.trim())));
+});
