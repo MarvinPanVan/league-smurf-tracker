@@ -1761,6 +1761,22 @@ function flashCopied(btn){
 }
 let lastCopiedSecret=null;
 const loginSeq=new Set();   // cards whose username is copied and whose password is next
+/* A card's main button logs you in: it copies the username, then turns into
+   "Copy password" and copies that (cleared from the clipboard after 30s), then
+   starts over. It used to open a panel showing the login, whose own button then
+   had to be pressed for the copying, the thing you came for. The panel (to see the
+   password, the email, the date of birth) is the eye beside it. With one of the
+   two saved it copies that one; with neither it offers to add them. */
+function loginButtonsHTML(a,open){
+  const both=a.login&&a.password, next=both&&loginSeq.has(a.id);
+  const label=next||(!a.login&&a.password)?"Copy password":a.login?"Copy username":"Add login";
+  const main=a.login||a.password
+    ?`<button data-act="copyseq" class="a-login" title="${both?"Copies the username, then the password":"Copies it to paste into the Riot client"}">${icon("key")} ${label}</button>`
+    :`<button data-act="addlogin" class="a-login" title="Save the username and password for this account">${icon("key")} ${label}</button>`;
+  const eye=a.login||a.password||a.email||a.birthdate
+    ?`<button data-act="login" class="c-lgn${open?" on":""}" aria-pressed="${open}" title="${open?"Hide":"Show"} the saved login" aria-label="${open?"Hide":"Show"} the saved login">${icon(open?"eyeOff":"eye")}</button>`:"";
+  return main+eye;
+}
 function uid(){return Date.now()+"-"+Math.random().toString(36).slice(2,7)}
 function cryptoInt(max){
   // Rejection sampling — a raw `% max` is slightly biased whenever max does not
@@ -5399,7 +5415,6 @@ function cardHTML(a,i){
     ${(()=>{const role=mainRole(a),tags=a.tags||[];
       return role||tags.length?`<div class="ctags">${role?`<span class="role-tag" title="Played in 3 or more of the last 5 ranked games">${esc(role)}</span>`:""}${tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""})()}
     ${loginOpen?`<div class="login${rv("login")}">
-      ${a.login&&a.password?`<button class="lseq" data-act="copyseq">${loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`:""}
       <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
       <div class="lrow"><span class="val mono ${a.password?"":"none"}" style="font-family:${a.password?"":"inherit"}">${a.password?(pw?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${pw?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
       ${pwWarnHTML(a)}
@@ -5423,7 +5438,7 @@ function cardHTML(a,i){
         <!-- A key, not a person: a person beside "Login" read as "sign in to this
              app". Refresh moved up beside "Updated 2 h ago", the thing it changes;
              here it weighed nearly as much as Login, which is what a card is for. -->
-        <button data-act="login" class="a-login" title="Show saved login">${icon("key")} ${loginOpen?"Hide login":"Login"}</button>
+        ${loginButtonsHTML(a,loginOpen)}
         <button data-act="more" class="c-more${openMore.has(a.id)?" on":""}" aria-haspopup="menu" aria-expanded="${openMore.has(a.id)}" title="More actions" aria-label="More actions">⋯</button>
       </div>
     </div>
@@ -6039,8 +6054,9 @@ function openForm(acc,focus){
   formInfoBase=acc?normInfo(acc.info):null;
   $("fFieldsCfg").classList.add("hidden");$("fFieldsBtn").setAttribute("aria-expanded","false");
   // From a card's note fields, the window starts at them rather than at the name
-  const atNotes=focus==="notes", atPw=focus==="password";
-  $("fName").toggleAttribute("data-autofocus",!atNotes&&!atPw);
+  const atNotes=focus==="notes", atPw=focus==="password", atLogin=focus==="login";
+  $("fName").toggleAttribute("data-autofocus",!atNotes&&!atPw&&!atLogin);
+  $("fLogin").toggleAttribute("data-autofocus",atLogin);   // from a card's Add login
   $("fPass").toggleAttribute("data-autofocus",atPw);   // from the password check-up
   renderInfoFields(formInfoBase,atNotes);
   $("fSave").textContent=acc?"Save changes":"Add account";
@@ -7978,10 +7994,14 @@ async function onCardClick(e){
      button becomes "Copy password"; the second copies that (cleared from the
      clipboard after 30s, like any copied password) and starts over. */
   else if(act==="copyseq"){
-    if(!loginSeq.has(id)){copyText(acc.login,"Username");loginSeq.add(id)}
-    else{copyText(acc.password,"Password",true);loginSeq.delete(id)}
+    const both=acc.login&&acc.password;
+    if(acc.login&&(!both||!loginSeq.has(id))){copyText(acc.login,"Username");if(both)loginSeq.add(id)}
+    else if(acc.password){copyText(acc.password,"Password",true);loginSeq.delete(id)}
+    // copying the login is the closest thing to playing on it this app can see
+    acc.lastLoginAt=Date.now();saveDB();
     renderCard(id);
   }
+  else if(act==="addlogin")openForm(acc,"login");
   else if(act==="copylogin")copyText(acc.login,"Username").then(ok=>{if(ok)flashCopied(btn)});
   else if(act==="copypw")copyText(acc.password,"Password",true).then(ok=>{if(ok)flashCopied(btn)});
   else if(act==="copymail")copyText(acc.email,"Email").then(ok=>{if(ok)flashCopied(btn)});

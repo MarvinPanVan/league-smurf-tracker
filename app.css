@@ -1662,6 +1662,10 @@
      text happened to measure. */
   .acts{display:flex;gap:7px;flex-wrap:wrap}
   .acts button,.acts a{font-size:calc(12px*var(--ts));padding:7px 12px;min-height:32px;text-decoration:none}
+  /* the login panel's eye, beside the main button: square, like the ⋯ */
+  .c-lgn{min-width:36px;padding:7px 9px;color:var(--text)}
+  .c-lgn .ico{width:16px;height:16px}
+  .c-lgn.on{background-color:var(--panel3);border-color:var(--line2)}
   .c-more{min-width:36px;padding:7px 10px;font-size:calc(16px*var(--ts));line-height:1;color:var(--text);
     letter-spacing:.08em}
   .c-more:hover{color:var(--text)}
@@ -1673,8 +1677,8 @@
      other. Card only: a list row's action bar has seven of these and wants its
      natural widths. */
   .c-foot .acts{gap:8px}
-  .c-foot .acts>button:not(.c-more){flex:1 1 0;min-width:0}
-  .c-foot .acts>.c-more{flex:0 0 auto}
+  .c-foot .acts>button:not(.c-more):not(.c-lgn){flex:1 1 0;min-width:0}
+  .c-foot .acts>.c-more,.c-foot .acts>.c-lgn{flex:0 0 auto}
 
   /* ---- the card's ⋯ menu: one fixed element, shared by every card ---- */
   .card-menu{position:fixed;z-index:70;width:232px;max-width:calc(100vw - 16px)}

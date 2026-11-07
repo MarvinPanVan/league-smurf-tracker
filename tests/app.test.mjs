@@ -932,7 +932,7 @@ test("Login stays the one filled control on a card, flat like every other button
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [] }]);
   const filled = [...win.document.querySelectorAll('.card[data-id="a"] .acts > *')]
     .filter(b => /var\(--teal\)/.test((html.match(new RegExp("\\n  \\." + b.className.split(" ")[0] + "\\{([^}]*)\\}")) || [])[1] || ""));
-  assert.deepEqual(filled.map(b => b.dataset.act), ["login"], "and the only filled one");
+  assert.deepEqual(filled.map(b => b.className), ["a-login"], "and the only filled one");
 });
 // and every accent button is the same plate, edged and lettered in the accent, never metal
 test("the accent buttons add no gradient rim or glow of their own; the wordmark and gem are solid", () => {
@@ -1224,24 +1224,44 @@ test("a levelling account shows its way to ranked, and says when it is ready", (
   });
 });
 
-test("one button copies the username, then the password", async () => {
-  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [],
-    login: "riotuser", password: "hunter22!", stats: null }]);
+test("a card's Login copies the username, then the password, without opening anything", async () => {
+  const win = bootApp([
+    { id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [], login: "riotuser", password: "hunter22!", stats: null },
+    { id: "P", region: "EUW", gameName: "P", tagLine: "1", status: "active", tags: [], history: [], password: "onlypw", stats: null },
+    { id: "N", region: "EUW", gameName: "N", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
   const copied = [];
   Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async v => { copied.push(v); } } });
-  const card = () => win.document.querySelector('.card[data-id="L"]');
-  card().querySelector('[data-act="login"]').click();
-  const seq = () => card().querySelector('[data-act="copyseq"]');
-  assert.match(seq().textContent, /Copy username, then password/);
-  seq().click();
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  const main = id => card(id).querySelector(".acts .a-login");
+  assert.equal(main("L").dataset.act, "copyseq", "the main button copies; it no longer opens a panel");
+  assert.match(main("L").textContent, /^\s*Copy username$/);
+  main("L").click();
   await until(() => copied.length === 1, "the username to be copied");
   assert.equal(copied[0], "riotuser");
-  assert.match(seq().textContent, /^\s*Copy password$/, "the button moves on to the password");
-  seq().click();
+  assert.equal(card("L").querySelector(".login"), null, "nothing unfolded to get there");
+  assert.match(main("L").textContent, /^\s*Copy password$/, "the button moves on to the password");
+  main("L").click();
   await until(() => copied.length === 2, "the password to be copied");
   assert.equal(copied[1], "hunter22!");
-  assert.match(seq().textContent, /Copy username, then password/, "and starts over");
+  assert.match(main("L").textContent, /^\s*Copy username$/, "and starts over");
   await until(() => appGet(win, "lastCopiedSecret") === "hunter22!", "the password to be the secret that gets cleared later");
+  // the eye beside it shows the saved login, and a fresh look starts at the username again
+  const eye = card("L").querySelector('.acts [data-act="login"]');
+  assert.equal(eye.getAttribute("aria-label"), "Show the saved login");
+  main("L").click(); eye.click();
+  assert.ok(card("L").querySelector(".login .lrow"), "the panel opens from the eye");
+  assert.equal(card("L").querySelector(".lseq"), null, "with no second copy-everything button in it");
+  assert.match(main("L").textContent, /^\s*Copy username$/);
+  // only a password saved: the button copies that
+  assert.match(main("P").textContent, /^\s*Copy password$/);
+  main("P").click();
+  await until(() => copied.includes("onlypw"), "the lone password to be copied");
+  // nothing saved: the button offers to add it, and the form opens at the username
+  assert.match(main("N").textContent, /^\s*Add login$/);
+  assert.equal(card("N").querySelector('.acts [data-act="login"]'), null, "no eye on an empty login");
+  main("N").click();
+  assert.ok(!win.document.getElementById("form").classList.contains("hidden"), "the account form opens");
+  assert.ok(win.document.getElementById("fLogin").hasAttribute("data-autofocus"), "at the username field");
 });
 
 // the toast says "copied" at the bottom of the screen; the button says it where you clicked
@@ -4038,6 +4058,7 @@ test("a compact select keeps room for its arrow", () => {
 test("sorting by last opened: the account you were just on first, never-opened ones last", () => {
   const now = Date.now();
   const mk = (id, lastLoginAt) => ({ id, gameName: id, tagLine: "EUW", region: "EUW", status: "active", lastLoginAt,
+    login: id + "user", password: "pw-" + id,
     stats: { found: true, tier: "GOLD", division: "II", lp: 10, updatedAt: now }, history: [] });
   const win = bootApp([mk("never"), mk("week", now - 7 * 864e5), mk("junk", "soon"), mk("now", now - 60000)]);
   const names = () => [...win.document.querySelectorAll(".c-name span")].map(n => n.textContent);
@@ -4046,8 +4067,8 @@ test("sorting by last opened: the account you were just on first, never-opened o
   sort.value = "opened"; sort.dispatchEvent(new win.Event("change"));
   assert.deepEqual(names().slice(0, 2), ["now", "week"], "most recently opened first");
   assert.deepEqual(names().slice(2).sort(), ["junk", "never"], "no stamp, or a broken one, sorts last");
-  // opening a login doesn't make the card jump while you're using it
-  win.document.querySelector('.card[data-id="never"] [data-act="login"]').click();
+  // copying a login doesn't make the card jump while you're using it
+  win.document.querySelector('.card[data-id="never"] .a-login').click();
   assert.deepEqual(names().slice(0, 2), ["now", "week"]);
   sort.dispatchEvent(new win.Event("change"));
   assert.equal(names()[0], "never", "it moves up on the next sort");
@@ -6120,20 +6141,26 @@ test("a check records the season totals so the next one can subtract them", () =
 });
 
 // "Status: resting" was a label you had to keep up by hand.
-test("opening the login panel records that the account was reached for", () => {
-  const win = bootApp(ladderSeed());
+test("copying a login, or looking at it, records that the account was reached for", () => {
+  const seed = ladderSeed();
+  Object.assign(seed[4], { login: "riotuser", password: "hunter22!" });
+  const win = bootApp(seed);
   const card = () => win.document.querySelector('.card[data-id="t4"]');
-  assert.ok(!win.filtered().find(a => a.id === "t4").lastLoginAt);
+  const stamp = () => win.filtered().find(a => a.id === "t4").lastLoginAt;
+  assert.ok(!stamp());
 
-  card().querySelector('[data-act="login"]').click();
-  const at = win.filtered().find(a => a.id === "t4").lastLoginAt;
+  card().querySelector(".a-login").click();   // Copy username
+  const at = stamp();
   assert.ok(at && Date.now() - at < 5000);
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.id === "t4").lastLoginAt, at,
     "and it survives the reload");
   assert.match(card().querySelector(".c-foot").textContent, /Opened/);
 
+  card().querySelector('[data-act="login"]').click();   // the eye: looking stamps too
+  const seen = stamp();
+  assert.ok(seen >= at);
   card().querySelector('[data-act="login"]').click();   // closing must not re-stamp
-  assert.equal(win.filtered().find(a => a.id === "t4").lastLoginAt, at);
+  assert.equal(stamp(), seen);
 });
 
 test("sorting by climb puts the account actually moving at the top", () => {
@@ -7926,9 +7953,10 @@ test("Rank opens as a window, the way Account does", () => {
 });
 
 test("Escape clears what a card has unfolded before it touches the page's panels", () => {
-  const win = bootApp(seededAccount());
+  const seed = seededAccount(); seed[0].login = "riotuser";
+  const win = bootApp(seed);
   const id = win.document.querySelector(".card").dataset.id;
-  win.document.querySelector('.card [data-act="login"]').click();
+  win.document.querySelector('.card .c-lgn[data-act="login"]').click();
   win.document.querySelector(".c-drawer").click();
   cardMenu(win, id);
 
@@ -8065,8 +8093,9 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
 test("the card footer is Login and a ⋯, with Refresh on the timestamp it changes", () => {
   const win = bootApp(seededAccount());
   const acts = win.document.querySelector(".card .acts");
-  // Refresh weighed nearly as much as Login there; it sits by "Updated …" now
-  assert.deepEqual([...acts.children].map(el => el.textContent.trim()), ["Login", "⋯"]);
+  // Refresh weighed nearly as much as Login there; it sits by "Updated …" now.
+  // This account has no login saved yet, so the Login button offers to add one.
+  assert.deepEqual([...acts.children].map(el => el.textContent.trim()), ["Add login", "⋯"]);
   const ref = win.document.querySelector('.card .c-meta .c-ref[data-act="check"]');
   assert.ok(ref && ref.previousElementSibling.classList.contains("upd"), "beside the timestamp");
   assert.equal(ref.getAttribute("aria-label"), "Refresh rank", "an icon with a name");
@@ -8586,7 +8615,7 @@ test("a banned card shows no movement and no Refresh; a live one with the same r
   assert.ok(card("live").querySelector(".c-ref"), "and it can be refreshed");
   assert.equal(card("ban").querySelector(".delta.d-up,.delta.d-down"), null, "a closed account does not climb");
   assert.equal(card("ban").querySelector(".c-ref"), null, "nor get checked; checks skip it");
-  assert.ok(card("ban").querySelector('[data-act="login"]'), "its login is still there");
+  assert.ok(card("ban").querySelector(".a-login"), "its login is still there");
   // ...but as a plain button, and with no red rail: the badge and the strikethrough say banned
   assert.match(html, /\n  \.card\.dead \.a-login\{background-color:var\(--panel2\)/, "Login is not the brightest thing on a dead card");
   const hx = id => win.document.querySelector(`.grid>.hx[data-id="${id}"]`);
