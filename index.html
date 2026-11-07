@@ -949,11 +949,10 @@
   .rw-wr em,.rw-lv em{font-style:normal;font-size:calc(10px*var(--ts));color:var(--faint);letter-spacing:.02em}
   /* Sixty rows of "47%" are sixty identical grey blocks. Sixty bars of differing
      length are a shape you can run your eye down. */
-  /* drawn as a record, like the card's: wins, the losses as the remainder, even marked */
+  /* drawn as a record, like the card's: wins, then the losses as the remainder */
   .rw-bar{position:relative;display:block;height:3px;border-radius:1px;overflow:hidden;
     background:color-mix(in srgb,var(--danger) 34%,var(--panel2))}
   .rw-bar i{display:block;height:100%;border-radius:1px 0 0 1px;box-shadow:1px 0 0 var(--bg)}
-  .rw-bar::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--bg)}
   .rw-d .delta{font-size:calc(11px*var(--ts));padding:2px 6px}
   .rw-rg{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.09em;color:var(--faint);text-align:center}
   /* An unranked row has nothing to say in four of its columns, and at full
@@ -1393,11 +1392,13 @@
   /* Wins against losses, the way op.gg draws a record — not a fill on an empty
      track. That was exactly the goal rail's picture two lines below, so a 42% win
      rate and a goal 42% of the way there looked the same. The losses are the red
-     remainder, and a notch marks even. */
+     remainder. There was a notch at 50% too, to mark even, but it cut through
+     whichever side it fell in, so a 57% record drew as two wins segments and a
+     losses one, a split nobody could read. The win rate beside the bar, green
+     from 50%, already says which side of even it is. */
   .wrbar{position:relative;height:4px;border-radius:1px;overflow:hidden;
     background:color-mix(in srgb,var(--danger) 34%,var(--panel2))}
   .wrbar i{display:block;height:100%;border-radius:1px 0 0 1px;box-shadow:1px 0 0 var(--bg)}
-  .wrbar::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--bg)}
   .delta{font-size:calc(11px*var(--ts));padding:2px 8px;border-radius:var(--r-xs);font-weight:600;display:inline-block;white-space:nowrap}
   .d-up{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
   .d-down{color:var(--danger);background:color-mix(in srgb,var(--danger) 15%,transparent)}
