@@ -7016,13 +7016,20 @@ function renderRibbon(){
     +(best?`<span class="rib-best">best ${nameOf(best)} · <b style="color:${tierColor(best.stats.tier)}">${esc(shortRank(best.stats))}</b></span>`:"")
     +`</div>`);
 }
+/* Collapsed until asked for on a phone: there the stats were the whole first
+   screen, ahead of every account. A choice made with the toggle is kept on any
+   screen; until then a phone starts closed and a wider screen open. */
+function dashCollapsed(){
+  if(typeof cfg.dashCollapsed==="boolean")return cfg.dashCollapsed;
+  return !!(window.matchMedia&&matchMedia("(max-width:560px)").matches);
+}
 function syncDashToggle(){
   const b=$("bDashToggle");
   const show=accounts.some(a=>!a.archived);
   b.classList.toggle("hidden",!show);
-  b.classList.toggle("open",!cfg.dashCollapsed);
+  b.classList.toggle("open",!dashCollapsed());
   // the verb is its own span so a phone, short of room, can say just "Stats"
-  setHTML(b,icon("chevron")+` <span class="dt-v">${cfg.dashCollapsed?"Show":"Hide"} </span><span class="dt-n">stats</span>`);
+  setHTML(b,icon("chevron")+` <span class="dt-v">${dashCollapsed()?"Show":"Hide"} </span><span class="dt-n">stats</span>`);
 }
 function renderDash(){
   applyRankTheme(); // a new best tier is news the dashboard already gets; the colours follow it
@@ -7035,7 +7042,7 @@ function renderDash(){
   const filterHint=[ui.region&&ui.region,ui.status&&ui.status,ui.tag&&("#"+ui.tag),ui.favOnly&&"★",ui.search&&("“"+ui.search+"”")].filter(Boolean).join(" · ");
   syncDashToggle();
   if(!allActive.length){hideSparkTip();el.innerHTML="";return}
-  if(cfg.dashCollapsed){hideSparkTip();el.innerHTML="";return}
+  if(dashCollapsed()){hideSparkTip();el.innerHTML="";return}
   const ranked=countPool.filter(a=>isLive(a)&&a.stats&&a.stats.found!==false&&a.stats.tier&&a.stats.tier.toUpperCase()!=="UNRANKED");
   const pool=ranked.filter(inCombined);
   const excludedN=ranked.length-pool.length;
@@ -10648,7 +10655,7 @@ $("tFilters").addEventListener("click",()=>{
 $("tFav").addEventListener("click",()=>{ui.favOnly=!ui.favOnly;syncToggles();renderFilters()});
 $("tArchived").addEventListener("click",()=>{ui.showArchived=!ui.showArchived;syncToggles();render()});
 $("bDashToggle").addEventListener("click",()=>{
-  cfg.dashCollapsed=!cfg.dashCollapsed;
+  cfg.dashCollapsed=!dashCollapsed();
   // one-shot: renderDash also runs on every account change, and the panel must
   // not re-animate then — only when the user actually opened it
   dashJustOpened=!cfg.dashCollapsed;

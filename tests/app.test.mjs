@@ -8615,6 +8615,22 @@ test("the preview says it once, on one line", () => {
   assert.doesNotMatch(banner.textContent, /—/, "and no em dash");
 });
 
+// On a phone the stats were the first screen, ahead of every account
+test("a phone starts with the stats folded away, and keeps them open once you open them", () => {
+  const seed = [{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 10, losses: 8, updatedAt: Date.now() } }];
+  const phone = w => { w.matchMedia = q => ({ matches: /max-width:\s*560px/.test(q), addListener() {}, removeListener() {} }); };
+  const win = bootApp(seed, phone);
+  assert.equal(win.document.getElementById("dash").innerHTML, "", "folded on a phone");
+  assert.match(win.document.getElementById("bDashToggle").textContent, /Show/);
+  win.document.getElementById("bDashToggle").click();
+  assert.notEqual(win.document.getElementById("dash").innerHTML, "", "one tap opens them");
+  assert.equal(appGet(win, "cfg.dashCollapsed"), false, "and the choice is kept");
+  const again = bootApp(seed, w => { phone(w); w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ dashCollapsed: false })); });
+  assert.notEqual(again.document.getElementById("dash").innerHTML, "", "open next time too");
+  assert.notEqual(bootApp(seed).document.getElementById("dash").innerHTML, "", "a wider screen starts open");
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
