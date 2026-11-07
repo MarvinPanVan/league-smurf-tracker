@@ -8631,6 +8631,30 @@ test("a phone starts with the stats folded away, and keeps them open once you op
   assert.notEqual(bootApp(seed).document.getElementById("dash").innerHTML, "", "a wider screen starts open");
 });
 
+// A phone list row showed a checkbox and hid the login: the reverse of what a phone is used for
+test("on a phone a list row copies its login, and checkboxes come with Select", () => {
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], login: "u", password: "p",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 10, losses: 8, updatedAt: Date.now() } }]);
+  const doc = win.document;
+  // the phone layout: name over rank, copy buttons on the right, no checkbox until Select
+  const phone = html.slice(html.indexOf("@media (max-width:720px){"), html.indexOf("@media (max-width:720px){") + 6000);
+  assert.match(phone, /\.grid\.list \.rw-main\{grid-template-columns:36px minmax\(0,1fr\) auto;grid-template-areas:"pic id keys" "pic rank keys"/);
+  assert.match(phone, /\.grid\.list \.rw-keys\{grid-area:keys;display:flex/, "the copy buttons show on a phone");
+  assert.match(phone, /\.grid\.list \.rw-key\{width:40px;height:40px\}/, "at a thumb's size");
+  assert.match(phone, /body:not\(\.selecting\) \.bulkchk\{display:none\}/, "checkboxes wait for Select");
+  doc.querySelector('[data-density="list"]').click();
+  const sel = doc.getElementById("tSelectMode");
+  assert.equal(doc.body.classList.contains("selecting"), false);
+  sel.click();
+  assert.ok(doc.body.classList.contains("selecting"), "Select shows the checkboxes");
+  assert.equal(sel.textContent, "Done");
+  doc.querySelector('.rw[data-id="a"] .bulkchk').click();
+  assert.equal(appGet(win, "selected.size"), 1);
+  doc.getElementById("tSelectMode").click();
+  assert.equal(doc.body.classList.contains("selecting"), false, "Done ends it");
+  assert.equal(appGet(win, "selected.size"), 0, "and drops the selection with it");
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],

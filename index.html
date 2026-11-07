@@ -999,8 +999,26 @@
   @media (max-width:720px){
     .grid.list{--rw-cols:auto 36px minmax(0,1fr) 106px 58px 16px;--rw-gap:10px}
     .rw-main{min-height:52px;padding:12px 12px;align-items:center}
-    /* a phone is not where a client gets logged into, and the name needs the room */
     .rw-spark,.rw-tags,.rw-keys,.rw-head{display:none}
+    /* A phone row is two lines: the name, the rank under it, and the login's copy
+       buttons on the right. It used to hide those buttons ("a phone is not where a
+       client gets logged into"), but a phone is exactly where people read a
+       password off while typing it into the PC, and the row showed a checkbox
+       instead, which is the thing you need least. Placed by area, so whatever is
+       hidden leaves no hole. The checkboxes come with Select. */
+    .grid.list .rw-main{grid-template-columns:36px minmax(0,1fr) auto;grid-template-areas:"pic id keys" "pic rank keys";
+      column-gap:12px;row-gap:1px;padding:10px 10px 10px 12px}
+    body.selecting .grid.list .rw-main{grid-template-columns:auto 36px minmax(0,1fr) auto;
+      grid-template-areas:"chk pic id keys" "chk pic rank keys"}
+    .grid.list .bulkchk{grid-area:chk}
+    .grid.list .rw-pic{grid-area:pic}
+    .grid.list .rw-id{grid-area:id;align-self:end}
+    .grid.list .rw-rank{grid-area:rank;flex-direction:row;align-items:baseline;gap:6px;align-self:start}
+    .grid.list .rw-keys{grid-area:keys;display:flex;gap:6px}
+    .grid.list .rw-key{width:40px;height:40px}
+    .grid.list .rw-sub,.grid.list .rw-d,.grid.list .rw-chev{display:none}
+    body:not(.selecting) .bulkchk{display:none}
+    .tools>.t-select{display:inline-flex}
     .rw-check{opacity:1} /* thumb-friendly: always show Refresh on phones */
     .rw-pic{width:36px;height:36px}
     .acts{flex-wrap:wrap;gap:6px}
@@ -2523,6 +2541,7 @@
   .t-filters .t-n{margin-left:2px;min-width:18px;height:18px;padding:0 5px;border-radius:var(--r-xs);display:inline-flex;align-items:center;
     justify-content:center;font-size:calc(11px*var(--ts));font-weight:700;color:var(--teal-ink);background:var(--teal)}
   .t-filters .t-n[hidden]{display:none}
+  .t-select{display:none}
   @media (max-width:560px){
     .tools{display:flex;flex-wrap:wrap}
     /* search and Filters share the first row (search takes all but Filters' width,
@@ -3185,6 +3204,8 @@
     <label style="display:flex;align-items:center;gap:6px;font-size:calc(12px*var(--ts));color:var(--muted);cursor:pointer;padding:0 4px">
       <input type="checkbox" id="tSelectAll" style="width:auto">Select all shown
     </label>
+    <!-- phones only: a touch screen has no hover to reveal the checkboxes -->
+    <button type="button" id="tSelectMode" class="t-select" aria-pressed="false">Select</button>
   </div>
   </div>
   <!-- Hangs off the console's bottom-left corner rather than sitting in a band
@@ -6887,8 +6908,16 @@ function render(){
 }
 // `shown` is passed in by renderGrid, which has just built the same list — this
 // is called on every filter change and filtered() sorts.
+/* Phones show the bulk checkboxes only while selecting: tapping Select starts it,
+   Done (the same button) or the bar's Clear ends it and drops the selection. */
+function syncSelecting(){
+  const on=!!ui.selecting||selected.size>0;
+  document.body.classList.toggle("selecting",on);
+  const b=$("tSelectMode");if(b){b.setAttribute("aria-pressed",String(on));b.textContent=on?"Done":"Select"}
+}
 function renderBulkBar(shown){
   const n=selected.size;
+  syncSelecting();
   $("bulkbar").classList.toggle("hidden",n===0);
   $("bulkCount").textContent=n+" selected";
   // "Select all shown" stayed ticked after the filter under it changed, so it
@@ -10998,7 +11027,12 @@ $("bulkDelete").addEventListener("click",()=>{
   selected.clear();lastSelectedId=null;render();
   saveThen(n+" account"+(n===1?"":"s")+" deleted");
 });
-$("bulkClear").addEventListener("click",()=>{selected.clear();lastSelectedId=null;render()});
+$("bulkClear").addEventListener("click",()=>{selected.clear();lastSelectedId=null;ui.selecting=false;render()});
+$("tSelectMode").addEventListener("click",()=>{
+  if(ui.selecting||selected.size){ui.selecting=false;selected.clear();lastSelectedId=null}
+  else ui.selecting=true;
+  render();
+});
 
 // the note editor lives inside the grid, which re-renders from scratch — so its
 // two listeners are delegated like everything else on a card
