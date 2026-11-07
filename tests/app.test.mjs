@@ -1184,12 +1184,16 @@ test("a levelling account shows its way to ranked, and says when it is ready", (
     stats: { found: true, tier: "UNRANKED", level, wins: 0, losses: 0, updatedAt: Date.now() } });
   const win = bootApp([acc("lv24", 24), acc("lv30", 31)]);
   const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
-  const rail = card("lv24").querySelector(".goal.lvl");
-  assert.ok(rail, "a rail toward level 30");
-  assert.match(rail.textContent, /at level 30\s*6 levels to go/);
-  assert.equal(rail.querySelector(".goal-bar i").style.width, "80%");
+  // the way to ranked takes the room a ranked card gives its chart: thirty steps
+  const track = card("lv24").querySelector(".lvt");
+  assert.ok(track, "a track toward level 30");
+  assert.match(track.textContent, /To ranked\s*6 levels to go/);
+  assert.equal(track.querySelectorAll(".lvt-track i").length, 30);
+  assert.equal(win.getComputedStyle(track.querySelector(".lvt-h .k")).textTransform, "uppercase", "labelled like PEAK and NOTES");
+  assert.equal(track.querySelectorAll(".lvt-track i.on").length, 24, "the levels done, lit");
+  assert.ok(track.querySelectorAll(".lvt-track i")[23].classList.contains("now"), "and where it is now");
   assert.ok(card("lv30").querySelector(".ready"), "level 30 and unranked: ready");
-  assert.equal(card("lv30").querySelector(".goal.lvl"), null, "no rail once it is there");
+  assert.equal(card("lv30").querySelector(".lvt"), null, "no track once it is there");
   const search = q => { const el = win.document.getElementById("tSearch"); el.value = q; el.dispatchEvent(new win.Event("input", { bubbles: true })); };
   search("is:ready");
   return until(() => win.document.querySelectorAll(".card").length === 1, "is:ready to narrow").then(() => {
@@ -2009,7 +2013,7 @@ test("passkey unlock: a cancel leaves the password box, and the typed password s
   doc.getElementById("lockPass").value = "nope";
   doc.getElementById("lockBtn").click();
   await until(() => doc.getElementById("lockErr").style.display === "block", "the wrong password");
-  assert.equal(doc.getElementById("lockErr").textContent, "Wrong password — try again.");
+  assert.equal(doc.getElementById("lockErr").textContent, "Wrong password. Try again.");
 });
 
 test("passkey unlock: changing or removing the master password turns it off, and an old one is dropped at the lock", async () => {
@@ -2155,6 +2159,8 @@ test("note fields: shown on the card as facts, skins and a penalty line, searcha
     fieldsAcc("b", { honor: 9, owned: -1, be: "lots", twofa: "yes", skins: "Lux", own: [1] }),
     fieldsAcc("c", { skins: Array.from({ length: 9 }, (_, i) => "Skin " + i) })]);
   const doc = win.document, card = id => doc.querySelector(`.card[data-id="${id}"]`);
+  // the card face keeps to one row of them (tested further down); Details has the full set
+  runScript(win, "accounts.forEach(a => openInfo.add(a.id)); render()");
   const facts = id => [...card(id).querySelectorAll(".ni > .ni-row:not(.ni-skins) .ni-f")].map(f => f.textContent.trim());
   assert.deepEqual(facts("a"), ["Honor 4", "142 champions", "34,250 BE", "No 2-step", "Price 12.5", "Phone linked", "__proto__x 1"],
     "in the list's order; RP is off unless you switch it on; your own fields after the built-in ones");
@@ -2727,7 +2733,7 @@ test("Discord decay alerts: switched on in Alerts, the worker gets a list of Dia
   doc.getElementById("sBackend").value = "https://w.example.workers.dev";
   doc.getElementById("sWatch").checked = true;
   doc.getElementById("sSave").click();
-  await until(() => /decay alerts need the worker and the Discord webhook/.test(doc.getElementById("toast").textContent), "the missing webhook named");
+  await until(() => /Decay alerts need the worker and the Discord webhook/.test(doc.getElementById("toast").textContent), "the missing webhook named");
   assert.equal(appGet(win, "cfg.watch"), undefined, "no webhook, no alerts");
   doc.getElementById("bSettings").click();
   doc.getElementById("sDiscord").value = "https://discord.com/api/webhooks/1/abc";
@@ -2753,11 +2759,11 @@ test("Discord decay alerts: switched on in Alerts, the worker gets a list of Dia
   runScript(win, `commitStats("g", accounts.find(x => x.id === "g"), {found:true,tier:"GOLD",division:"I",lp:5,wins:1,losses:0,updatedAt:Date.now()})`);
   assert.equal(win.__soon, 1, "a Gold reading cannot change a decay estimate");
   doc.getElementById("bSettings").click();
-  await until(() => /On — watching 1 account · last checked 1 h ago/.test(doc.getElementById("sWatchStatus").textContent), "the status line");
+  await until(() => /On, watching 1 account · last checked 1 h ago/.test(doc.getElementById("sWatchStatus").textContent), "the status line");
   // a worker deployed before alerts existed answers 405: say so instead of failing quietly
   win.fetch = async () => ({ ok: false, status: 405, json: async () => ({ error: "method not allowed" }) });
   runScript(win, "updateWatchStatus()");
-  await until(() => /older version without decay alerts — redeploy/.test(doc.getElementById("sWatchStatus").textContent), "the old worker named");
+  await until(() => /older version without decay alerts\. Redeploy/.test(doc.getElementById("sWatchStatus").textContent), "the old worker named");
   win.fetch = async (u, init = {}) => { calls.push({ method: init.method || "GET" }); return { ok: true, status: 200, json: async () => ({ ok: true }) }; };
   doc.getElementById("sWatch").checked = false;
   doc.getElementById("sSave").click();
@@ -8394,7 +8400,7 @@ test("once a setting changes, Settings says Save keeps it and closing puts it ba
   assert.equal(hint().classList.contains("dirty"), false);
   doc.querySelector('#sEffects [data-v="subtle"]').click();
   assert.ok(hint().classList.contains("dirty"), "a change is flagged");
-  assert.match(hint().textContent, /Save keeps it, closing puts it back/);
+  assert.match(hint().textContent, /Not saved yet\. Save keeps it; closing puts it back\./);
   doc.getElementById("sClose").click();
   win.openSettings("security");
   assert.equal(hint().classList.contains("dirty"), false, "a fresh open starts clean");
@@ -8758,6 +8764,67 @@ test("the rank bar prints its counts only when a tier holds more than one", () =
   assert.deepEqual([...some.document.querySelectorAll(".rib-seg i")].map(i => i.textContent), ["2", "1"], "otherwise every count");
 });
 
+// Em dashes all through the labels, tooltips, Help and messages read as machine-written.
+// A lone "—" for an empty value is fine; a dash inside a sentence is not. The old
+// changelog entries keep theirs: they are history.
+test("no sentence in the app's text, tooltips or messages leans on an em dash", () => {
+  const win = bootApp();
+  win.document.getElementById("bDemo").click();
+  const doc = win.document, bad = [];
+  const walk = doc.createTreeWalker(doc.body, 4 /* text */);
+  for (let n; (n = walk.nextNode());) {
+    if (n.parentElement.closest("script,style")) continue;
+    const t = n.textContent.trim();
+    if (t.includes("\u2014") && t !== "\u2014") bad.push(t.slice(0, 80));
+  }
+  for (const el of doc.querySelectorAll("[title],[placeholder],[aria-label],[content]"))
+    for (const k of ["title", "placeholder", "aria-label", "content"]) {
+      const v = (el.getAttribute(k) || "").trim();
+      if (v.includes("\u2014") && v !== "\u2014") bad.push(k + ": " + v.slice(0, 80));
+    }
+  assert.deepEqual(bad, [], "the page as it renders");
+  assert.ok(!doc.title.includes("\u2014"), "the tab title too");
+  // toasts, confirms and status lines only exist once something happens: read them off the source
+  const said = [...appScript.matchAll(/(?:toast|confirm|notify|saveThen|lockError)\(\s*"([^"\n]*)"/g)].map(m => m[1])
+    .concat([...appScript.matchAll(/textContent=[^;\n]*?"([^"\n]*\u2014[^"\n]*)"/g)].map(m => m[1]));
+  assert.deepEqual(said.filter(x => x.includes("\u2014")), [], "and what it says when something happens");
+});
+
+// The notes box was 200px on one card and 28px on the next: most of why cards in a row
+// ended hundreds of pixels apart
+test("a card's notes keep to one row of two chips and +N more; Details shows them all", () => {
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], notes: "Line one\nline two\nline three",
+    info: { honor: 3, owned: 96, be: 23400, twofa: false, skins: ["One", "Two", "Three"], own: { Bought: "no" } },
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() } }]);
+  const notes = () => win.document.querySelector('.card[data-id="a"] .c-notes');
+  assert.ok(notes().classList.contains("capped"), "capped on the card face");
+  const chips = [...notes().querySelectorAll(".ni-row .ni-f")].map(c => c.textContent.replace(/\s+/g, " ").trim());
+  assert.equal(chips.length, 3, "two chips and the count: " + chips.join(" | "));
+  assert.match(chips[0], /No 2-step/, "a warning comes first");
+  assert.match(chips[2], /^\+6 more$/, "4 facts + 3 skins + 1 field, less the two shown");
+  assert.match(html, /\.c-notes\.capped \.ni-row\{flex-wrap:nowrap\}/, "one row, whatever the width");
+  assert.match(html, /\.c-notes\.capped \.nt\{[^}]*-webkit-line-clamp:2/, "and two lines of the note");
+  notes().querySelector(".ni-f.more").click();
+  assert.equal(notes().classList.contains("capped"), false, "+6 more opens Details, where they are all");
+  assert.equal(notes().querySelectorAll(".ni-skins .ni-f").length, 3);
+  assert.ok(notes().querySelector(".ni-kv"), "your own fields too");
+});
+
+// A levelling account had no chart, so its card was half the height of the rest
+test("a levelling account's level is kept at each check, and its track says the pace", () => {
+  const D = 864e5, now = Date.now();
+  const win = bootApp([{ id: "lv", gameName: "Lv", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    lvls: [{ t: now - 4 * D, v: 16 }, { t: "bad", v: 3 }, { t: now - D, v: 22 }],
+    stats: { found: true, tier: "UNRANKED", level: 24, wins: 0, losses: 0, updatedAt: now - D } }]);
+  assert.equal(appGet(win, "accounts[0].lvls.length"), 2, "a malformed reading is dropped on load");
+  runScript(win, 'applyStats(accounts[0], { found: true, tier: "UNRANKED", division: null, lp: null, level: 24, wins: 0, losses: 0, updatedAt: Date.now() }); render()');
+  assert.equal(appGet(win, "accounts[0].lvls.length"), 3, "a check that reads a new level keeps it");
+  runScript(win, 'applyStats(accounts[0], { found: true, tier: "UNRANKED", division: null, lp: null, level: 24, wins: 0, losses: 0, updatedAt: Date.now() }); render()');
+  assert.equal(appGet(win, "accounts[0].lvls.length"), 3, "the same level twice is one reading");
+  assert.match(win.document.querySelector('.card[data-id="lv"] .lvt-pace').textContent, /^about 2 levels a day$/);
+  assert.match(html, /body\.hide-goal \.card:not\(\.info-open\) \.lvt\b/, "Settings' Goal switch hides it, as it hid the old bar");
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
@@ -9006,7 +9073,7 @@ test("a status chip says its piece without crowding out the account name", () =>
 test("the example data never says the same thing twice on one card", () => {
   const win = bootApp();
   win.document.getElementById("bDemo").click();
-  const card = [...win.document.querySelectorAll(".card")].find(c => c.querySelector(".goal.lvl"));
+  const card = [...win.document.querySelectorAll(".card")].find(c => c.querySelector(".lvt"));
   assert.ok(card, "the preview still has an account below level 30");
   assert.equal(card.textContent.match(/to go/g).length, 1, "the distance to 30 is said once");
   assert.equal(card.textContent.match(/Level \d/g).length, 1, "and so is the level");

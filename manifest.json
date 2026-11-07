@@ -1,7 +1,7 @@
 {
   "name": "Smurf Tracker",
   "short_name": "Smurf Tracker",
-  "description": "Local-only tracker for League of Legends smurf accounts — logins, ranks, notes.",
+  "description": "Tracker for League of Legends smurf accounts: logins, ranks and notes, kept in your browser.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

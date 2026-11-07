@@ -114,7 +114,7 @@ This project is **source-available, not open source** — see [LICENSE](LICENSE)
 
 **You may not** use it for anything malicious or unlawful (including accessing accounts you don't own, or breaking Riot's terms of service), publish a modified/rebranded/rewritten version of it, sell it or bundle it into anything paid, or present it as your own work.
 
-Found a bug or want a feature? Open an issue — contributions and suggestions are welcome.
+Found a bug or want a feature? Open an issue. Contributions and suggestions are welcome.
 
 ## Credits
 
