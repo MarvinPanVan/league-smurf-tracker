@@ -5040,19 +5040,24 @@ test("themes: one click sets both colours and the atmosphere, kept only on Save"
   assert.deepEqual(on(), []);
 });
 
-test("swatches draw cleanly: no border for a gradient to repeat under, and a smoothed split", () => {
+test("swatches draw cleanly: no border for a gradient to repeat under, and a theme is two dots", () => {
   const win = bootApp();
   const css = [...win.document.querySelectorAll("style")].map(s => s.textContent).join("\n");
   // A background repeats under its own border, so a gradient swatch with a border
   // showed a sliver of its other end along each edge. The edge is an inset shadow.
-  for (const sel of [".thm-sw", ".atm-mini"]) {
-    const rule = css.match(new RegExp("\\" + sel + "\\{([^}]*)\\}"))[1];
+  for (const sel of [".thm-dots i", ".atm-mini"]) {
+    const rule = css.match(new RegExp(sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
     assert.match(rule, /border:0/, sel + " has no border");
     assert.match(rule, /box-shadow:inset 0 0 0 1px/, sel + " draws its edge as an inset shadow");
   }
+  // The pair was a bar split in two across each tile, the blocky look the header's
+  // rank bar was dropped for: two dots beside the name now, one per colour
   win.document.getElementById("bSettings").click();
-  const sw = win.document.querySelector('#sThemes [data-theme="noxus"] .thm-sw').getAttribute("style");
-  assert.match(sw, /calc\(50% - \.6px\).*calc\(50% \+ \.6px\)/, "the diagonal blends over a pixel instead of stepping");
+  const dots = [...win.document.querySelectorAll('#sThemes [data-theme="noxus"] .thm-dots i')];
+  assert.equal(dots.length, 2);
+  assert.ok(dots.every(d => /^background:\s*#[0-9a-f]{6}/i.test(d.getAttribute("style"))), "each a colour of its own");
+  assert.equal(win.document.querySelectorAll("#sThemes .thm-sw").length, 0, "no split bars");
+  assert.match(win.document.querySelector('#sThemes [data-theme="rank"] .thm-dots i').getAttribute("style"), /conic-gradient/, "the ladder theme is one dot of the tier colours");
 });
 
 test("themes: My best rank follows the highest tier, and moves when you climb", () => {

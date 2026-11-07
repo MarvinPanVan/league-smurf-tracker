@@ -560,19 +560,23 @@
   .s-h{font-size:calc(13px*var(--ts));font-weight:600;color:var(--text);margin:0 0 8px;line-height:1.4}
   .fld>.s-h{margin:0}
   .s-gap{margin-top:22px}
-  /* themes: two colours side by side is the whole idea, so that is the tile */
+  /* themes: two colours are the whole idea, so a tile is the pair as two dots beside
+     the name. It was a bar split in two across the top of each tile, the same blocky
+     look the rank bar in the header was dropped for. */
   .thm-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-  .thm{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:6px 6px 7px;min-width:0;
-    border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--panel2);box-shadow:none;
+  .thm{--thm-bg:var(--panel2);display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;padding:8px 10px;min-width:0;
+    border:1px solid var(--edge);border-radius:var(--r-sm);background:var(--thm-bg);box-shadow:none;
     color:var(--muted);font-size:calc(12px*var(--ts));font-weight:600;text-align:left}
-  .thm:hover{background:var(--panel3);border-color:var(--line2);color:var(--text)}
-  .thm.on{border-color:color-mix(in srgb,var(--gold) 55%,var(--line2));color:var(--gold-txt);
-    background:color-mix(in srgb,var(--gold) 10%,var(--panel2));box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 28%,transparent)}
+  .thm:hover{--thm-bg:var(--panel3);border-color:var(--line2);color:var(--text)}
+  .thm.on{--thm-bg:color-mix(in srgb,var(--gold) 10%,var(--panel2));border-color:color-mix(in srgb,var(--gold) 55%,var(--line2));color:var(--gold-txt);
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 28%,transparent)}
   .thm:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-  /* No border: a background repeats under its own border, so each end showed a
-     sliver of the other colour. The edge is an inset shadow drawn over it instead. */
-  .thm-sw{display:block;height:24px;border-radius:var(--r-xs);border:0;box-shadow:inset 0 0 0 1px #ffffff1f;pointer-events:none}
-  .thm-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
+  .thm-dots{display:inline-flex;flex:0 0 auto;pointer-events:none}
+  /* No border: a background repeats under its own border. The edge is an inset
+     shadow, and the second dot is ringed in the tile's own colour where it overlaps. */
+  .thm-dots i{width:16px;height:16px;border-radius:50%;border:0;box-shadow:inset 0 0 0 1px #ffffff26}
+  .thm-dots i+i{margin-left:-5px;box-shadow:inset 0 0 0 1px #ffffff26,0 0 0 2px var(--thm-bg)}
+  .thm-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
   .thm-n small{display:block;font-size:calc(12px*var(--ts));font-weight:500;color:var(--faint);white-space:normal;line-height:1.3}
   .atm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   @media(max-width:520px){.atm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -586,7 +590,7 @@
     background:color-mix(in srgb,var(--gold) 10%,var(--panel2));color:var(--gold-txt);
     box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 28%,transparent)}
   .atm-tile:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-  /* the edge is an inset shadow, not a border, for the same reason as .thm-sw:
+  /* the edge is an inset shadow, not a border, for the same reason as .thm-dots i:
      the glow at the top repeated under a border and showed along the bottom */
   .atm-mini{display:block;height:46px;border-radius:var(--r-xs);border:0;box-shadow:inset 0 0 0 1px #ffffff12;
     background:var(--bg);overflow:hidden;position:relative;pointer-events:none;flex-shrink:0}

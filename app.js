@@ -6538,11 +6538,11 @@ function applyRankTheme(force){
 function renderThemes(){
   const el=$("sThemes");if(!el)return;
   const pa=$("sAccent").value.toLowerCase(), pb=$("sAccent2").value.toLowerCase(), rank=rankThemeOn();
-  const tile=(k,name,sw,on,sub)=>`<button type="button" role="radio" class="thm${on?" on":""}" data-theme="${k}" aria-checked="${on}">`
-    +`<span class="thm-sw" style="background:${sw}" aria-hidden="true"></span><span class="thm-n">${esc(name)}${sub?`<small>${esc(sub)}</small>`:""}</span></button>`;
-  const ladder=TIER_ORDER.map((t,i)=>`${TIER_COLORS[t]} ${Math.round(i/(TIER_ORDER.length-1)*100)}%`).join(",");
-  setHTML(el,THEMES.map(t=>tile(t.k,t.n,`linear-gradient(110deg,${t.a} 0 calc(50% - .6px),${t.b} calc(50% + .6px) 100%)`,!rank&&pa===t.a&&pb===t.b)).join("")
-    +tile("rank","My best rank",`linear-gradient(90deg,${ladder})`,rank,"follows your highest tier"));
+  const tile=(k,name,dots,on,sub)=>`<button type="button" role="radio" class="thm${on?" on":""}" data-theme="${k}" aria-checked="${on}">`
+    +`<span class="thm-dots" aria-hidden="true">${dots.map(c=>`<i style="background:${c}"></i>`).join("")}</span><span class="thm-n">${esc(name)}${sub?`<small>${esc(sub)}</small>`:""}</span></button>`;
+  const ladder=TIER_ORDER.map((t,i)=>`${TIER_COLORS[t]} ${Math.round(i/TIER_ORDER.length*360)}deg`).join(",");
+  setHTML(el,THEMES.map(t=>tile(t.k,t.n,[t.a,t.b],!rank&&pa===t.a&&pb===t.b)).join("")
+    +tile("rank","My best rank",[`conic-gradient(${ladder},${TIER_COLORS[TIER_ORDER[0]]} 360deg)`],rank,"follows your highest tier"));
 }
 function pickTheme(k){
   cancelAccentPreview();
