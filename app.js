@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.15.0";
+const APP_VERSION="2.16.0";
 const APP_CHANGELOG=[
+  {v:"2.16.0",items:[
+    "Login copies the username, then the password, one click each; the eye beside it shows the saved login",
+    "A shorter Add account form: Riot ID, region and login first, the rest under More details, and a missing field marked where it is",
+    "Calmer type, only the search row pinned as you scroll, failed checks shown on the card, and a tidier Settings, Help and phone layout",
+  ]},
   {v:"2.15.0",items:[
     "Flat buttons in three kinds, and every control in a toolbar row is the same height",
     "The header shows your ranks as small emblems with counts; accounts not found are one warning with Show",
