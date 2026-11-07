@@ -7071,10 +7071,12 @@ function renderDash(){
     </div>
   </div>`:""}
   ${cells.length?`<div class="dash">${cells.join("")}</div>`:""}
-  ${topChamps.length?`<div class="dist"${cells.length||ranked.length?' style="border-top:1px solid var(--line)"':""}><span class="k">Best champions</span>${
+  ${topChamps.length?`<div class="dist"${cells.length||ranked.length?' style="border-top:1px solid var(--line)"':""}><span class="k">Most played</span>${
+    // Sorted by games, so "Best" was the wrong word: a 44% champion sat in it.
+    // And 4-4 is not a good record yet; green waits for ten games.
     topChamps.map(c=>`<span class="gem cmb" title="${esc(c.games)} games across ${esc(c.accs)} account${c.accs===1?"":"s"}">`
       +`<span class="n">${esc(c.name)}</span>`
-      +`<b class="${c.wr>=50?"wr-good":""}">${esc(c.wr)}%</b>`
+      +`<b class="${c.wr>=50&&c.games>=10?"wr-good":""}">${esc(c.wr)}%</b>`
       +`<i class="g">${esc(c.wins)}<em>-</em>${esc(c.losses)}</i></span>`).join("")}</div>`:""}
   </div></div>
   ${bkNote}`);

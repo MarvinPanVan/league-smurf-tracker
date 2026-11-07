@@ -8499,6 +8499,20 @@ test("a card shows Peak only when the peak is above today's rank", () => {
   assert.ok(stats("fell").some(t => /^Peak\s*Diamond IV/i.test(t)), "a higher peak is shown: " + stats("fell").join(" | "));
 });
 
+// "Best champions" was sorted by games played (a 44% champion sat in it), and an 8-game 50% was green
+test("the champion strip is called Most played, and a win rate is green only from ten games", () => {
+  const now = Date.now();
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 30, losses: 20, updatedAt: now,
+      champs: [{ name: "Lux", games: 24, wins: 15, losses: 9 }, { name: "Syndra", games: 9, wins: 4, losses: 5 }, { name: "Lee Sin", games: 8, wins: 4, losses: 4 }] } }]);
+  const dist = [...win.document.querySelectorAll("#dash .dist")].find(d => d.querySelector(".cmb"));
+  assert.equal(dist.querySelector(".k").textContent, "Most played");
+  const wr = n => [...dist.querySelectorAll(".cmb")].find(c => c.querySelector(".n").textContent === n).querySelector("b");
+  assert.ok(wr("Lux").classList.contains("wr-good"), "63% over 24 games");
+  assert.equal(wr("Lee Sin").classList.contains("wr-good"), false, "4-4 is too few to call");
+  assert.equal(wr("Syndra").classList.contains("wr-good"), false);
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
