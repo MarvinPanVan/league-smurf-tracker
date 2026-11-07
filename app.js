@@ -8465,7 +8465,9 @@ function renderMoveBand(waiting){
     ?`<span class="mv-t">${icon("external")}<span><b>Opening ${esc(host)}…</b> If no new tab appears, allow pop-ups for this page and try again.</span></span>`
       +`<span class="mv-acts"><button type="button" id="mvGo">Try again</button></span>`
     :`<span class="mv-t">${icon("external")}<span><b>Smurf Tracker has moved to ${esc(host)}.</b> Your vault is saved per address, so it stays here until you move it.</span></span>`
-      +`<span class="mv-acts"><button type="button" id="mvGo" class="b-teal">Move my vault there</button><a class="btn" href="${esc(APP_HOME)}">Open ${esc(host)}</a></span>`);
+      +`<span class="mv-acts"><button type="button" id="mvGo" class="b-teal">Move my vault there</button><a class="btn" href="${esc(APP_HOME)}">Open ${esc(host)}</a>`
+      // moved by hand already (Export, then Import there): the copy here still needs a way out
+      +`<button type="button" id="mvRemove" class="mv-quiet" title="Only if your accounts are already at ${esc(host)}">Already moved? Remove it here</button></span>`);
   el.classList.remove("hidden");
 }
 function moveVaultOut(){
@@ -8494,7 +8496,10 @@ function moveOutMessage(e){
   }
 }
 function removeOldCopy(){
-  if(!confirm("Remove the vault and settings saved at this old address?\nThe copy at "+new URL(APP_HOME).host+" stays as it is."))return;
+  const host=new URL(APP_HOME).host;
+  if(!confirm(Number(cfg.movedAt)>0
+    ?"Remove the vault and settings saved at this old address?\nThe copy at "+host+" stays as it is."
+    :"Remove the vault and settings saved at this old address?\nOnly do this if your accounts are already at "+host+" (moved with Export and Import). This can't be undone."))return;
   hasStorage=false;   // nothing on this page may save them back on its way out
   try{for(const k of [DB_KEY,CFG_KEY,PK_KEY])localStorage.removeItem(k)}catch(e){}
   location.replace(APP_HOME);

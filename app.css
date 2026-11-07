@@ -2113,6 +2113,8 @@
   .mv-acts{display:flex;gap:8px;flex-wrap:wrap}
   .mv-acts>*{min-height:34px}
   .mv-acts>a{display:inline-flex;align-items:center;text-decoration:none}
+  .mv-acts>.mv-quiet{background:none;border-color:transparent;box-shadow:none;color:var(--muted);font-weight:500}
+  .mv-acts>.mv-quiet:hover{color:var(--text);background:#ffffff0a}
 
   /* Card sections open by re-rendering the whole grid, so only the block flagged
      by `reveal` animates — see the note on that variable. */

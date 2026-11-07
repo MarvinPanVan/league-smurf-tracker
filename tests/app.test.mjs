@@ -9005,6 +9005,12 @@ test("the old address sends on a visit with nothing saved there, and keeps one w
   assert.equal(band.classList.contains("hidden"), false);
   assert.match(band.textContent, /Smurf Tracker has moved to smurf-tracker\.pages\.dev/);
   assert.ok(band.querySelector("#mvGo"), "Move my vault there");
+  // moved by hand already, with Export and Import: the copy here can still be removed, after a sterner question
+  let asked = "";
+  kept.confirm = q => { asked = q; return false; };
+  band.querySelector("#mvRemove").click();
+  assert.match(asked, /Only do this if your accounts are already at smurf-tracker\.pages\.dev/);
+  assert.ok(kept.localStorage.getItem("smurf-tracker"), "and nothing goes when the answer is no");
   assert.equal(kept.document.querySelectorAll(".card").length, 1, "and the vault still opens here meanwhile");
   const elsewhere = bootApp(oneAcc());
   assert.equal(elsewhere.document.getElementById("moveBand").classList.contains("hidden"), true, "no band anywhere but the old address");
