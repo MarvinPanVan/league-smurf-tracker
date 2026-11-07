@@ -1124,7 +1124,10 @@
   .c-tint{position:absolute;inset:0;z-index:-1;pointer-events:none;
     background:radial-gradient(110% 64% at 0% 0%,
       color-mix(in srgb,var(--tier) 7%,transparent),transparent 58%)}
-  .c-deltas{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+  /* the rank keeps its width; the chip and its caption take what is left, and the
+     caption wraps at its "·" when that is not much */
+  .c-rk-l{min-width:0;flex:0 0 auto;max-width:100%}
+  .c-deltas{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:1 1 0;min-width:0}
   /* the note's first two lines on the card face; all of it in Details or the editor */
   .c-notes.capped .ni-row{flex-wrap:nowrap}
   .c-notes.capped .ni-row>.ni-f{min-width:0;flex-shrink:1}
@@ -1142,7 +1145,8 @@
   .lvt-ax span{position:absolute;top:0;transform:translateX(-50%)}
   .lvt-ax span:first-child{left:0;transform:none}
   .lvt-ax span:last-child{right:0;transform:none}
-  .d-cap{font-size:calc(12px*var(--ts));color:var(--faint);letter-spacing:.02em;white-space:nowrap;margin-top:-2px}
+  .d-cap{font-size:calc(12px*var(--ts));color:var(--faint);letter-spacing:.02em;text-align:right;margin-top:-2px;line-height:1.4}
+  .d-cap>span{white-space:nowrap}
   /* Rank is the headline; LP is a labelled companion under it — not a smaller
      word jammed onto the same baseline with a leftover margin. */
   .rk{display:flex;align-items:center;gap:11px;min-width:0;white-space:nowrap;

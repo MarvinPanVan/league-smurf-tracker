@@ -5245,8 +5245,10 @@ function cardHTML(a,i){
        pace had a whole row of the card to itself ("Climb · +21 LP/day"), and
        without "since last check" the two numbers read as a contradiction. */
     const r=dead?null:climbRate(hist), pace=r&&Math.abs(r.lpPerDay)>=1?(r.lpPerDay>0?"+":"")+Math.round(r.lpPerDay)+" LP/day":"";
-    const cap=[dv&&!dead?"since last check":"",pace].filter(Boolean).join(" · ");
-    if(cap)deltaChip+=`<span class="d-cap" title="${pace?"The average pace over the chart's checks":"Since previous check"}">${esc(cap)}</span>`;
+    // each piece unbroken, so a narrow card wraps at the "·" and the rank name beside
+    // it keeps its width ("Platinum II" was cut to "Platinu…" on a phone)
+    const cap=[dv&&!dead?"since last check":"",pace].filter(Boolean).map(t=>`<span>${esc(t)}</span>`).join(" · ");
+    if(cap)deltaChip+=`<span class="d-cap" title="${pace?"The average pace over the chart's checks":"Since previous check"}">${cap}</span>`;
   }
   /* There was a flame "Climbing" chip here too (LP up three checks running). It was
      the fourth way the card said "going up", beside the +LP chip, the Climb figure
@@ -5363,7 +5365,7 @@ function cardHTML(a,i){
       </div>
     </div>
     <div class="c-rank">
-      <div style="min-width:0">${rankBlock}</div>
+      <div class="c-rk-l">${rankBlock}</div>
       ${deltaChip?`<div class="c-deltas">${deltaChip}</div>`:""}
     </div>
     ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}

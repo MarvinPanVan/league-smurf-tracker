@@ -8708,6 +8708,11 @@ test("the LP chip says it is since the last check, with the pace beside it, and 
   const card = win.document.querySelector('.card[data-id="a"]');
   assert.match(card.querySelector(".c-deltas .delta").textContent, /\+87 LP/);
   assert.match(card.querySelector(".c-deltas .d-cap").textContent, /^since last check · \+\d+ LP\/day$/);
+  // at 12px the caption pushed "Platinum II" to "Platinu…" on a phone: the rank keeps
+  // its width, and the caption wraps at its "·", never inside a piece
+  assert.equal(card.querySelectorAll(".d-cap>span").length, 2);
+  assert.match(html, /\n  \.c-rk-l\{min-width:0;flex:0 0 auto;max-width:100%\}/);
+  assert.match(html, /\n  \.d-cap>span\{white-space:nowrap\}/);
   assert.doesNotMatch(card.querySelector(".c-stats")?.textContent || "", /Climb/, "no row of its own");
 });
 
