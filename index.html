@@ -733,28 +733,19 @@
     background:color-mix(in srgb,var(--star) 12%,transparent)}
   .tools button.on:hover{color:var(--star);border-color:color-mix(in srgb,var(--star) 80%,transparent);
     background:color-mix(in srgb,var(--star) 20%,transparent)}
-  /* A tab hanging off the console's bottom-left corner, not a band of its own.
-     Same idea as a card's Details drawer: an edge you pull, rather than a row of
-     content sitting there whether or not anyone wanted it. It rides up into the
-     18px the console already leaves below itself, so folded it costs a couple of
-     pixels instead of a full row — which is what made the previous version feel
-     like it had saved nothing. z-index under the console (10) so the tab reads as
-     coming out from underneath it. */
-  .tagbar{display:flex;flex-direction:column;align-items:flex-start;gap:10px;
-    position:relative;z-index:9;margin:-19px 0 14px 20px}
-  .tagbar:empty{display:none;margin:0}
+  /* Tags are one more filter button in the tools row (display:contents puts the
+     handle straight into the row's flex), and the list, when open, takes a line of
+     its own under it. It used to be a tab hanging off the console's bottom edge,
+     which read as a layout bug; on a phone it folds behind Filters with the rest. */
+  .tagbar{display:contents}
+  .tagbar:empty{display:none}
   /* Gold on this handle means one thing: a tag is filtering. It used to mean two —
      the resting state also had a gold count on a gold wash inside a gold-washed
      tab, so "off" and "on" were the same picture at two strengths and a vault with
      one tag and no filter looked like a filter was on. Only the mark keeps a tint
      at rest, because a glyph is identity and a lit pill full of a number is status.
      Everything else waits for .lit. */
-  .tag-handle{gap:7px;padding:4px 11px 5px;min-height:0;
-    border-radius:0 0 var(--r-sm) var(--r-sm);border:1px solid var(--edge);border-top:0;
-    background:var(--panel2);
-    color:var(--muted);box-shadow:0 3px 8px -4px #0009;
-    font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;
-    transition:color .16s ease,border-color .16s ease,background .16s ease}
+  .tag-handle{gap:7px;transition:color .16s ease,border-color .16s ease,background .16s ease}
   .tag-handle:hover{color:var(--text);border-color:color-mix(in srgb,var(--gold) 38%,var(--line2));
     background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 17%,var(--panel2)),var(--panel2))}
   /* how many tags the vault has — a fact, not a filter, so it is not gold until one is */
@@ -773,7 +764,7 @@
   .tag-chev{transition:transform .22s cubic-bezier(.22,1,.36,1);opacity:.75}
   .tag-handle:hover .tag-chev{opacity:1}
   .tag-handle.open .tag-chev{transform:rotate(180deg)}
-  .tag-list{display:flex;gap:7px;flex-wrap:wrap;padding-bottom:2px}
+  .tag-list{display:flex;gap:7px;flex-wrap:wrap;flex-basis:100%;padding-top:2px;order:99} /* last, on a line of its own */
   @media (prefers-reduced-motion:reduce){.tag-handle,.tag-handle .ico{transition:none}}
   .chip{font-size:calc(12px*var(--ts));font-weight:500;padding:5px 12px;border:1px solid var(--edge);border-radius:var(--r-xs);
     background:var(--panel2);color:var(--muted);cursor:pointer;
@@ -3212,6 +3203,9 @@
     </select>
     <button id="tFav" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Favorites</button>
     <button id="tArchived" aria-pressed="false" title="Show archived accounts instead of active ones">Archived</button>
+    <!-- Tags sit with the other filters. As a tab hanging off the box's bottom edge,
+         two reviewers in a row read it as a layout bug. -->
+    <div id="tagbar" class="tagbar"></div>
     <label style="display:flex;align-items:center;gap:6px;font-size:calc(12px*var(--ts));color:var(--muted);cursor:pointer;padding:0 4px">
       <input type="checkbox" id="tSelectAll" style="width:auto">Select all shown
     </label>
@@ -3219,10 +3213,6 @@
     <button type="button" id="tSelectMode" class="t-select" aria-pressed="false">Select</button>
   </div>
   </div>
-  <!-- Hangs off the console's bottom-left corner rather than sitting in a band
-       of its own; see .tagbar in the CSS. Directly after the console so the
-       negative margin it rides up on is predictable. -->
-  <div id="tagbar" class="tagbar"></div>
   <div id="bulkbar" class="hidden" style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--teal) 38%,transparent);border-radius:var(--r-md);background:color-mix(in srgb,var(--teal) 7%,var(--panel));box-shadow:var(--sh-1)">
     <span id="bulkCount" style="font-size:calc(12px*var(--ts));color:var(--teal-txt);font-weight:600;letter-spacing:.02em"></span>
     <select id="bulkStatus">
@@ -10685,7 +10675,7 @@ function syncToggles(){
 }
 // how many of the folded filters are on, on the phone's Filters button
 function syncFilterCount(){
-  const n=[ui.region,ui.status,ui.favOnly,ui.showArchived].filter(Boolean).length, b=$("tFilters");
+  const n=[ui.region,ui.status,ui.favOnly,ui.showArchived,ui.tag].filter(Boolean).length, b=$("tFilters");
   if(!b)return;
   const badge=b.querySelector(".t-n");
   badge.hidden=!n;badge.textContent=n?String(n):"";

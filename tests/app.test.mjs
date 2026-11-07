@@ -8129,6 +8129,18 @@ test("folding the tag list away never hides a live tag filter", () => {
   assert.equal(handle().classList.contains("lit"), false, "handle goes quiet again");
 });
 
+// A tab hanging off the toolbar's bottom edge read as a layout bug, twice
+test("Tags is a filter button inside the toolbar, and counts on a phone's Filters badge", () => {
+  const win = bootApp(tagged());
+  const bar = win.document.getElementById("tagbar");
+  assert.ok(bar.parentElement.classList.contains("tools"), "inside the tools row");
+  assert.match(html.match(/\n  \.tagbar\{([^}]*)\}/)[1], /^display:contents$/, "its handle sits in the row like the others");
+  assert.doesNotMatch(html, /\.tagbar\{[^}]*margin:-/, "no negative margin hanging it off the edge");
+  bar.querySelector("[data-tagtoggle]").click();
+  bar.querySelector('[data-tag="adc"]').click();
+  assert.equal(win.document.querySelector("#tFilters .t-n").textContent, "1", "a tag filter counts as on");
+});
+
 test("a vault with no tags gets no tag bar at all", () => {
   const win = bootApp([{ id: "n1", gameName: "None", tagLine: "1", region: "EUW",
     status: "active", history: [], stats: null, tags: [] }]);
