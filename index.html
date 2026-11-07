@@ -1178,6 +1178,11 @@
     background:radial-gradient(110% 64% at 0% 0%,
       color-mix(in srgb,var(--tier) 7%,transparent),transparent 58%)}
   .c-deltas{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+  /* the note's first two lines on the card face; all of it in Details or the editor */
+  .c-notes.capped .ni-row{flex-wrap:nowrap}
+  .c-notes.capped .ni-row>.ni-f{min-width:0;flex-shrink:1}
+  .c-notes.capped .ni-row>.ni-f.more{flex-shrink:0}
+  .c-notes.capped .nt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .d-cap{font-size:calc(10px*var(--ts));color:var(--faint);letter-spacing:.02em;white-space:nowrap;margin-top:-2px}
   /* Rank is the headline; LP is a labelled companion under it — not a smaller
      word jammed onto the same baseline with a leftover margin. */
@@ -8207,9 +8212,14 @@ function noteFieldsText(a){
   return noteFields().map(f=>{const v=nfValue(info,f);
     return v==null?"":Array.isArray(v)?v.join(" "):typeof v==="string"?v:""}).filter(Boolean).join(" ");
 }
-function noteFactsHTML(a,clickable){
+/* `cap`: the card's own view keeps to one row, two chips and "+N more",
+   which opens Details, where the whole set is. Honor, champions, BE, 2-step, three
+   skins and a note made the notes box 200px on one card and 28px on the next, and
+   that box was most of why cards in a row ended hundreds of pixels apart. A
+   penalty stays in view: it is a warning, not a fact. */
+function noteFactsHTML(a,clickable,cap){
   const info=normInfo(a.info);if(!info)return"";
-  const facts=[], kv=[];let skins="", pen="";
+  const facts=[], kv=[];let skins="", pen="", skinList=[];
   for(const f of noteFields()){
     const v=nfValue(info,f);if(v==null)continue;
     if(f.k==="honor")facts.push(`<span class="ni-f" title="Honor level ${v} of 5"><span class="ni-pips" aria-hidden="true">${[1,2,3,4,5].map(i=>`<i${i<=v?' class="on"':""}></i>`).join("")}</span>Honor <b>${v}</b></span>`);
@@ -8219,6 +8229,7 @@ function noteFactsHTML(a,clickable){
     else if(f.k==="be")facts.push(`<span class="ni-f" title="Blue Essence"><b>${fmtN(v)}</b> BE</span>`);
     else if(f.k==="rp")facts.push(`<span class="ni-f"><b>${fmtN(v)}</b> RP</span>`);
     else if(f.k==="skins"){
+      skinList=v;
       const shown=v.slice(0,6);
       skins=`<div class="ni-row ni-skins" title="${esc(v.join(", "))}">${shown.map(s=>`<span class="ni-f">${esc(s)}</span>`).join("")}`
         +(v.length>6?`<span class="ni-f more">+${v.length-6} more</span>`:"")+`</div>`;
@@ -8230,7 +8241,15 @@ function noteFactsHTML(a,clickable){
     else if(typeof v==="number")facts.push(`<span class="ni-f">${esc(f.label)} <b>${fmtN(v)}</b></span>`);
     else kv.push(`<span class="k2">${esc(f.label)}</span><span class="v2">${sens(esc(v))}</span>`);
   }
-  const body=(facts.length?`<div class="ni-row">${facts.join("")}</div>`:"")+skins+pen+(kv.length?`<div class="ni-kv">${kv.join("")}</div>`:"");
+  let body;
+  if(cap){
+    // two, so the row stays one row on the narrowest card; a warning ("No 2-step")
+    // goes first, since it is the one chip that asks for something
+    const warn=facts.filter(c=>/ni-f warn/.test(c)), rest0=facts.filter(c=>!/ni-f warn/.test(c));
+    const chips=warn.concat(rest0,skinList.map(x=>`<span class="ni-f">${esc(x)}</span>`)), rest=chips.length-2+kv.length;
+    body=(chips.length||kv.length?`<div class="ni-row">${chips.slice(0,2).join("")}`
+      +(rest>0?`<span class="ni-f more" data-act="info" title="Show all of them in Details">+${rest} more</span>`:"")+`</div>`:"")+pen;
+  }else body=(facts.length?`<div class="ni-row">${facts.join("")}</div>`:"")+skins+pen+(kv.length?`<div class="ni-kv">${kv.join("")}</div>`:"");
   return body?`<div class="ni"${clickable?' data-act="notefields" title="Click to edit these fields"':""}>${body}</div>`:"";
 }
 // Split out of cardHTML so opening the editor can swap this one block instead of
@@ -8243,8 +8262,9 @@ function noteBlockHTML(a,rev){
     +`<textarea data-f="notetext" rows="3" placeholder="Anything worth remembering about this account…">${esc(noteDraft)}</textarea></div>`;
   // Always clickable, so there is no separate "add a note" action to find — an
   // empty one is just a quiet line rather than a filled box.
-  const facts=noteFactsHTML(a,true);
-  if(a.notes||facts)return`<div class="c-notes" data-act="noteedit" title="Click to edit the note"><span class="k">Notes ${icon("pencil")}</span>${facts}${a.notes?`<div class="nt">${sens(esc(a.notes))}</div>`:""}</div>`;
+  // capped on the card face; whole once Details is open
+  const cap=!openInfo.has(a.id), facts=noteFactsHTML(a,true,cap);
+  if(a.notes||facts)return`<div class="c-notes${cap?" capped":""}" data-act="noteedit" title="Click to edit the note"><span class="k">Notes ${icon("pencil")}</span>${facts}${a.notes?`<div class="nt">${sens(esc(a.notes))}</div>`:""}</div>`;
   return`<div class="c-notes blank"><button type="button" data-act="noteedit" title="Click to write a note">${icon("pencil")} Add a note</button>`
     +`<button type="button" class="nf-link" data-act="notefields" title="Honor, skins, Blue Essence and more">Honor, skins…</button></div>`;
 }

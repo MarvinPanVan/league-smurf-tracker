@@ -2155,6 +2155,8 @@ test("note fields: shown on the card as facts, skins and a penalty line, searcha
     fieldsAcc("b", { honor: 9, owned: -1, be: "lots", twofa: "yes", skins: "Lux", own: [1] }),
     fieldsAcc("c", { skins: Array.from({ length: 9 }, (_, i) => "Skin " + i) })]);
   const doc = win.document, card = id => doc.querySelector(`.card[data-id="${id}"]`);
+  // the card face keeps to one row of them (tested further down); Details has the full set
+  runScript(win, "accounts.forEach(a => openInfo.add(a.id)); render()");
   const facts = id => [...card(id).querySelectorAll(".ni > .ni-row:not(.ni-skins) .ni-f")].map(f => f.textContent.trim());
   assert.deepEqual(facts("a"), ["Honor 4", "142 champions", "34,250 BE", "No 2-step", "Price 12.5", "Phone linked", "__proto__x 1"],
     "in the list's order; RP is off unless you switch it on; your own fields after the built-in ones");
@@ -8756,6 +8758,26 @@ test("the rank bar prints its counts only when a tier holds more than one", () =
   assert.match(ones.document.querySelector(".rib-seg").getAttribute("aria-label"), /, 1$/, "still read out");
   const some = bootApp([acc("a", "GOLD"), acc("b", "GOLD"), acc("c", "SILVER")]);
   assert.deepEqual([...some.document.querySelectorAll(".rib-seg i")].map(i => i.textContent), ["2", "1"], "otherwise every count");
+});
+
+// The notes box was 200px on one card and 28px on the next: most of why cards in a row
+// ended hundreds of pixels apart
+test("a card's notes keep to one row of two chips and +N more; Details shows them all", () => {
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], notes: "Line one\nline two\nline three",
+    info: { honor: 3, owned: 96, be: 23400, twofa: false, skins: ["One", "Two", "Three"], own: { Bought: "no" } },
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() } }]);
+  const notes = () => win.document.querySelector('.card[data-id="a"] .c-notes');
+  assert.ok(notes().classList.contains("capped"), "capped on the card face");
+  const chips = [...notes().querySelectorAll(".ni-row .ni-f")].map(c => c.textContent.replace(/\s+/g, " ").trim());
+  assert.equal(chips.length, 3, "two chips and the count: " + chips.join(" | "));
+  assert.match(chips[0], /No 2-step/, "a warning comes first");
+  assert.match(chips[2], /^\+6 more$/, "4 facts + 3 skins + 1 field, less the two shown");
+  assert.match(html, /\.c-notes\.capped \.ni-row\{flex-wrap:nowrap\}/, "one row, whatever the width");
+  assert.match(html, /\.c-notes\.capped \.nt\{[^}]*-webkit-line-clamp:2/, "and two lines of the note");
+  notes().querySelector(".ni-f.more").click();
+  assert.equal(notes().classList.contains("capped"), false, "+6 more opens Details, where they are all");
+  assert.equal(notes().querySelectorAll(".ni-skins .ni-f").length, 3);
+  assert.ok(notes().querySelector(".ni-kv"), "your own fields too");
 });
 
 // On a phone the filters and the stats were the whole first screen
