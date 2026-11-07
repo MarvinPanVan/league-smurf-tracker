@@ -2114,7 +2114,7 @@ test("dates are where you are: backup and export file names, and the passkey's d
 test("Help names 2.4 and 2.5's features, and doesn't assume sixty accounts", () => {
   const win = bootApp();
   const help = win.document.getElementById("help").textContent;
-  for (const w of ["Password check-up", "Face ID", "Windows Hello", "Sort: Last opened", "Settings → Security"]) assert.ok(help.includes(w), w);
+  for (const w of ["Password check-up", "Face ID", "Windows Hello", "Sort: Last login", "Settings → Security"]) assert.ok(help.includes(w), w);
   assert.doesNotMatch(help, /sixty/);
 });
 
@@ -2626,8 +2626,7 @@ test("Mastery: asked for every three days, kept on the account, shown under Deta
   const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
   card("due").querySelector('[data-act="info"]').click();
   assert.match(card("due").querySelector('[data-k="sec-mastery"]').textContent, /Mastery\s*2\s*Yasuo · M7/);
-  card("due").querySelector('[data-act="sec"][data-s="mastery"]').click();
-  assert.match(card("due").querySelector('[data-k="sec-mastery"]').textContent, /Yasuo\s*M7\s*1\.2M pts/);
+  assert.match(card("due").querySelector('[data-k="sec-mastery"]').textContent, /Yasuo\s*M7\s*1\.2M pts/, "open, no second click");
   // and champ: finds it, by mastery or by this season's champions
   const shown = q => { runScript(win, `ui.search = ${JSON.stringify(q)}; renderGrid()`); return [...win.document.querySelectorAll("#grid .card")].map(c => c.dataset.id).sort(); };
   assert.deepEqual(shown("champ:yas"), ["due"]);
@@ -2661,7 +2660,6 @@ test("Recent form: a Riot-read account's Details fetch its last five ranked game
   assert.equal(u.searchParams.get("region"), "kr", "match-v5 needs the region to pick its cluster");
   assert.equal(card("r").querySelectorAll(".fm-pip").length, 3);
   assert.equal(card("r").querySelectorAll(".fm-pip.w").length, 2);
-  card("r").querySelector('[data-act="sec"][data-s="form"]').click();
   const rows = [...card("r").querySelectorAll('[data-k="sec-form"] .chp')].map(r => [...r.children].map(c => c.textContent).join("|"));
   assert.equal(rows.length, 3);
   assert.equal(rows[0], "WAhri|8/2/5|31 min|1 h ago");
@@ -3225,13 +3223,16 @@ test("the chart's captions keep a dark halo, so the line crossing one doesn't cu
   assert.ok(layers.every(l => /^0 0 \d+px var\(--bg\)/.test(l.trim())), "centred, in the page's own dark");
 });
 
-test("one check still gets a chart — it says where on the ladder the account sits", () => {
+// One check was a whole chart frame with a single dot in it
+test("one check is a line saying when the chart comes, not a frame with one dot", () => {
   const win = bootApp();
   const el = chartDom(win, [{ t: Date.now(), tier: "GOLD", division: "I", lp: 10 }]);
-  assert.equal(el.querySelectorAll(".lpc-pt").length, 1);
-  assert.equal(el.querySelectorAll(".lpc-line").length, 0, "one point is not a line");
-  assert.match(el.querySelector(".lpc-tip").textContent, /Gold I · 10 LP/);
-  assert.doesNotMatch(el.innerHTML, /undefined|NaN/);
+  assert.equal(el.querySelectorAll(".lpc-pt, .lpc-plot").length, 0, "no frame, no dot");
+  assert.equal(el.textContent, "One check so far. The chart starts after the next one.");
+  // two checks are a chart again
+  const two = chartDom(win, [{ t: Date.now() - 864e5, tier: "GOLD", division: "I", lp: 10 }, { t: Date.now(), tier: "GOLD", division: "I", lp: 30 }]);
+  assert.equal(two.querySelectorAll(".lpc-pt").length, 2);
+  assert.doesNotMatch(two.innerHTML, /undefined|NaN/);
   // nothing rankable at all is still nothing to draw
   assert.equal(win.rankChart([]), "");
   assert.equal(win.rankChart([{ t: 1, tier: "UNRANKED", division: null, lp: null }]), "");
@@ -3803,15 +3804,15 @@ test("the info panel only exists once a check has brought something back for it"
     champs: [{ name: "Ashe", kda: 2.25, wr: 60, games: 25 }],
   } });
   const el = win.document.createElement("div"); el.innerHTML = html;
-  // Folded: every group announces itself, with a count and the headline answer,
-  // and none of the rows behind it are in the DOM yet.
+  // Every group announces itself, with a count and the headline answer, and its
+  // rows are shown straight away (they used to wait behind a second click)
   assert.match(el.textContent, /Flex rank/);
   assert.match(el.textContent, /Past seasons · Solo/);
   assert.match(el.textContent, /Champions this season/);
   assert.match(el.textContent, /Master · 135 LP/, "the peak of those seasons is the headline");
   assert.match(el.textContent, /Ashe/, "and the champion actually played");
-  assert.equal(el.querySelectorAll(".sea").length, 0, "season rows stay behind the click");
-  assert.equal(el.querySelectorAll(".chp").length, 0, "so do champion rows");
+  assert.equal(el.querySelectorAll(".sea").length, 1, "the season row is there");
+  assert.equal(el.querySelectorAll(".chp").length, 2, "and the champion's, under its column header");
   assert.doesNotMatch(html, /undefined|NaN/);
 });
 
@@ -3923,21 +3924,24 @@ test("the details drawer sits on the card's bottom edge", () => {
   assert.equal(win.document.querySelector(".card").lastElementChild.className.includes("c-drawer"), true,
     "the handle stays pinned to the bottom edge with the panel above it");
   assert.equal(panel.querySelectorAll(".sec").length, 3, "flex, past solo seasons, champions");
-  assert.equal(panel.querySelectorAll(".sea").length, 0, "still folded");
+  // Details opened onto more folded rows, each wanting a click of its own: its
+  // contents are shown straight away now
+  assert.equal(panel.querySelectorAll(".sea").length, 2, "both seasons are listed");
+  assert.match(panel.textContent, /S2025/);
+  assert.equal(panel.querySelectorAll(".chp").length, 3, "two champions plus the column header");
 
-  // each group opens on its own, and leaves the others alone
+  // each group still folds on its own, and leaves the others alone
   const solo = [...panel.querySelectorAll(".sec-h")].find(b => b.textContent.includes("Past seasons"));
   solo.click();
   const after = win.document.querySelector(".login.info");
-  assert.equal(after.querySelectorAll(".sea").length, 2, "both seasons are now listed");
-  assert.match(after.textContent, /S2025/);
-  assert.equal(after.querySelectorAll(".chp").length, 0, "opening one does not open the rest");
-
-  const champs = [...after.querySelectorAll(".sec-h")].find(b => b.textContent.includes("Champions"));
-  champs.click();
-  const both = win.document.querySelector(".login.info");
-  assert.equal(both.querySelectorAll(".sea").length, 2, "and the first one stays open");
-  assert.equal(both.querySelectorAll(".chp").length, 3, "two champions plus the column header");
+  assert.equal(after.querySelectorAll(".sea").length, 0, "the seasons fold away");
+  assert.equal(after.querySelectorAll(".chp").length, 3, "folding one leaves the rest open");
+  assert.equal(after.querySelector('[data-k="sec-solo"] .sec-h').getAttribute("aria-expanded"), "false");
+  // and stays folded the next time Details is opened
+  win.document.querySelector(".c-drawer").click();
+  win.document.querySelector(".c-drawer").click();
+  assert.equal(win.document.querySelectorAll(".login.info .sea").length, 0, "remembered");
+  assert.equal(win.document.querySelectorAll(".login.info .chp").length, 3);
 });
 
 // ---- working through sixty accounts ----
@@ -4063,7 +4067,7 @@ test("sorting by last opened: the account you were just on first, never-opened o
   const win = bootApp([mk("never"), mk("week", now - 7 * 864e5), mk("junk", "soon"), mk("now", now - 60000)]);
   const names = () => [...win.document.querySelectorAll(".c-name span")].map(n => n.textContent);
   const sort = win.document.getElementById("tSort");
-  assert.ok([...sort.options].some(o => o.value === "opened" && /Last opened/.test(o.textContent)));
+  assert.ok([...sort.options].some(o => o.value === "opened" && /Last login/.test(o.textContent)));
   sort.value = "opened"; sort.dispatchEvent(new win.Event("change"));
   assert.deepEqual(names().slice(0, 2), ["now", "week"], "most recently opened first");
   assert.deepEqual(names().slice(2).sort(), ["junk", "never"], "no stamp, or a broken one, sorts last");
@@ -6154,7 +6158,7 @@ test("copying a login, or looking at it, records that the account was reached fo
   assert.ok(at && Date.now() - at < 5000);
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.id === "t4").lastLoginAt, at,
     "and it survives the reload");
-  assert.match(card().querySelector(".c-foot").textContent, /Opened/);
+  assert.match(card().querySelector(".c-foot").textContent, /Last login just now/);
 
   card().querySelector('[data-act="login"]').click();   // the eye: looking stamps too
   const seen = stamp();
@@ -8452,7 +8456,7 @@ test("on a touch screen the small controls reach WCAG's 24px, and nothing change
   const px = (sel, prop) => { const m = coarse.match(new RegExp(sel.replace(/[.#()[\]>*+]/g, "\\$&") + "[^{]*\\{[^}]*" + prop + ":(\\d+)px")); return m && +m[1]; };
   assert.ok(px(".bulkchk,#tSelectAll", "width") >= 24, "selection boxes");
   assert.ok(px(".c-notes.blank>button,.c-notes.blank .nf-link", "min-height") >= 24, "Add a note");
-  assert.match(coarse, /\.lpc-range button\{padding:[6-9]px/, "the chart's range buttons");
+  assert.match(coarse, /\.lpc-range button\{height:30px/, "the chart's range buttons");
   assert.match(coarse, /\.rid\{padding-block:[4-9]px/, "the Riot ID's copy line");
   // a mouse keeps the sizes it had
   assert.match(css, /\n  \.bulkchk\{width:15px;height:15px/);
@@ -10314,4 +10318,160 @@ test("on a phone Settings shows all six tabs, the theme names whole, and opens o
   win.document.activeElement.blur();   // a browser drops focus from a hidden element; jsdom leaves it
   runScript(win, "openSettings('security')");
   await until(() => win.document.activeElement && win.document.activeElement.id === "stab-security", "or on whichever tab it opened at");
+});
+
+// The flag after a name was a pennant, small and red, and people read it as a "P",
+// with nothing on hover saying what it was
+test("a flagged account carries a flag that looks like one and says what it means", () => {
+  const seed = seededAccount(); seed[0].flagged = true;
+  const win = bootApp(seed);
+  const mark = win.document.querySelector(".card .flagmark");
+  assert.equal(mark.getAttribute("aria-label"), "Flagged for attention");
+  assert.match(mark.getAttribute("title"), /^Flagged for attention\. Clear it in the ⋯ menu\.$/);
+  const d = [...mark.querySelectorAll("path")].map(p => p.getAttribute("d")).join(" ");
+  assert.match(d, /^M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3/, "a cloth on a pole");
+  assert.doesNotMatch(d, /M4 22V4h11/, "not the pennant");
+});
+
+// "Rotate · 54d" needed the Help page to make sense of
+test("an account left alone says Idle and for how long, in words", () => {
+  const D = 864e5;
+  const win = bootApp([{ id: "o1", region: "EUW", gameName: "Old", tagLine: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: Date.now() - 54 * D } }]);
+  const chip = [...win.document.querySelectorAll(".card .delta")].find(c => /Idle/.test(c.textContent));
+  assert.ok(chip, "the chip");
+  assert.equal(chip.textContent, "Idle 54 days");
+  assert.equal(chip.getAttribute("title"), "No game, login or check here in 54 days");
+  assert.doesNotMatch(win.document.getElementById("grid").textContent, /Rotate/);
+  const tile = win.document.querySelector('[data-flag="rotate"]');
+  if (tile) assert.match(tile.textContent, /Idle/);
+});
+
+// "Updated just now" beside "Opened 67 days ago" read as two clocks for one thing,
+// with Refresh between the second and nothing, far from the one it changes
+test("a card's footer says Updated, then Refresh, then Last login, each named for what it is", () => {
+  const seed = seededAccount();
+  Object.assign(seed[0], { lastLoginAt: Date.now() - 3 * 864e5 });
+  const win = bootApp(seed);
+  const meta = win.document.querySelector(".card .c-meta");
+  const kids = [...meta.children].map(el => el.className.split(" ")[0]);
+  assert.deepEqual(kids, ["upd", "c-ref", "src"], "Refresh beside the time it resets");
+  assert.match(meta.querySelector(".src").textContent, /^Last login 3 days ago$/);
+  assert.match(meta.querySelector(".src").title, /copied or looked at this account's login/);
+  assert.doesNotMatch(meta.textContent, /Opened/);
+});
+
+// "To Grandmaster 1762 LP" read as the cutoff as easily as the distance to it
+test("a Master card says how many LP are still to go to Grandmaster, not a bare number", () => {
+  const acc = (id, lp) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "MASTER", division: null, lp, wins: 50, losses: 40, updatedAt: Date.now() } });
+  const win = bootApp([acc("m", 23), acc("top", 2600)], w => {
+    w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, lastChangelog: "9.9.9", lockPromptOff: true,
+      cutoffs: { euw: { gm: 1785, chall: 2417 } } }));
+  });
+  const stat = id => [...win.document.querySelectorAll(`.card[data-id="${id}"] .c-stats > div`)].map(d => d.textContent).join(" | ");
+  assert.match(stat("m"), /To Grandmaster1,762 LP to go/);
+  assert.match(stat("top"), /Abovethe Challenger cutoff/);
+});
+
+// The D/W/M switch over the chart was about 17px tall, lettered in the card's
+// smallest type: hard to read and harder to hit
+test("the chart's D/W/M switch is 24px tall with 12px letters, on the plot's dark", () => {
+  const rule = html.match(/\n  \.lpc-range button\{([^}]*)\}/)[1];
+  assert.match(rule, /font-size:calc\(12px\*var\(--ts\)\)/);
+  assert.match(rule, /height:24px;min-width:26px/);
+  assert.match(rule, /background:color-mix\(in srgb,var\(--panel\) 88%,transparent\)/, "the line doesn't show through");
+  const win = bootApp(seededAccount());
+  assert.deepEqual([...win.document.querySelectorAll(".card .lpc-range button")].map(b => b.textContent), ["D", "W", "M"]);
+});
+
+// "On Main, the dot sits on top of DIAMOND, and the line runs through MASTER+": a
+// caption, numeral or Peak with no clear spot used to be placed in the least bad one
+test("no chart label is printed across the line or a dot; one with no clear spot is left out", () => {
+  const win = bootApp();
+  const T = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND"], DV = ["IV", "III", "II", "I"];
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const walks = [
+    [["MASTER", null, 1000], ["MASTER", null, 400]],
+    [["GOLD", "I", 0], ["PLATINUM", "III", 74], ["PLATINUM", "II", 61]],
+    [["DIAMOND", "IV", 5], ["DIAMOND", "I", 90]],
+    [["EMERALD", "II", 40], ["EMERALD", "I", 80], ["DIAMOND", "IV", 20]],
+  ];
+  for (let n = 0; n < 60; n++) {
+    let t = 1 + Math.floor(rnd() * 6), d = Math.floor(rnd() * 4), lp = Math.floor(rnd() * 100);
+    const rows = [];
+    for (let k = 0, len = 2 + Math.floor(rnd() * 6); k < len; k++) {
+      rows.push([T[t], DV[d], lp]);
+      lp += Math.floor(rnd() * 160) - 70;
+      while (lp >= 100) { lp -= 100; if (d < 3) d++; else if (t < T.length - 1) { t++; d = 0 } else lp = 99 }
+      while (lp < 0) { lp += 100; if (d > 0) d--; else if (t > 0) { t--; d = 3 } else lp = 0 }
+    }
+    walks.push(rows);
+  }
+  let labelled = 0;
+  for (const rows of walks) {
+    const h = hist(...rows);
+    const vals = h.map(p => win.ladderLP(p));
+    const peak = Math.max(...vals) + 30;
+    const el = win.document.createElement("div");
+    el.innerHTML = win.rankChart(h, null, undefined, "k", peak, "Peak");
+    const pts = [...el.querySelectorAll(".lpc-pt")].map(p => ({ x: parseFloat(p.style.left) / 100, y: parseFloat(p.style.getPropertyValue("--y")) }));
+    const lineAt = x => { let i = 1; while (i < pts.length - 1 && pts[i].x < x) i++;
+      const a = pts[i - 1], b = pts[i], f = b.x > a.x ? Math.min(1, Math.max(0, (x - a.x) / (b.x - a.x))) : 0; return a.y + (b.y - a.y) * f; };
+    const hits = (x0, x1, top, bottom) => {
+      for (let x = x0; x <= x1; x += .005) { const y = lineAt(x); if (y > top && y < bottom) return true; }
+      return pts.some(p => p.x >= x0 && p.x <= x1 && p.y + 3 > top && p.y - 3 < bottom);
+    };
+    const where = rows.map(r => r.join(" ")).join(" → ");
+    for (const l of el.querySelectorAll(".lpc-lab")) {
+      labelled++;
+      const top = parseFloat(l.style.top);
+      assert.ok(!hits(0, .2, top + 1, top + 9), `caption "${l.textContent}" on the line: ${where}`);
+    }
+    for (const l of el.querySelectorAll(".lpc-sub")) {
+      labelled++;
+      const top = parseFloat(l.style.top);
+      assert.ok(!hits(.9, 1, top + 1, top + 9), `numeral "${l.textContent}" on the line: ${where}`);
+    }
+    for (const l of el.querySelectorAll(".lpc-peak")) {
+      const top = parseFloat(l.style.top), x = parseFloat(l.style.left) / 100;
+      assert.ok(!hits(x - .04, x + .04, top + 1, top + 9), `Peak on the line: ${where}`);
+    }
+  }
+  assert.ok(labelled > 60, "most charts still carry their labels (" + labelled + ")");
+});
+
+// On a bright splash the small grey text over the art all but disappeared
+test("the small text over a card's champion art gets a dark halo, and the art fades out sooner", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const halo = css.match(/\n  \.card:has\(\.c-art\) :is\(([^)]*)\)\{text-shadow:([^}]*)\}/);
+  assert.ok(halo, "a halo rule for cards with art");
+  for (const sel of [".rid", ".d-cap", ".rk-lp"]) assert.ok(halo[1].split(",").includes(sel), sel);
+  assert.ok(halo[2].split(/,(?![^(]*\))/).every(l => /^0 0 \d+px var\(--panel\)$/.test(l.trim())), "in the card's own dark");
+  assert.match(css, /\n  \.card:has\(\.c-art\) :is\(\.rid,\.d-cap\)\{color:var\(--muted\)\}/, "a step lighter than faint");
+  const mask = css.match(/\n  \.c-art\{[^}]*mask-image:linear-gradient\(180deg,#000,#000?7 (\d+)%,transparent (\d+)%\)\}/);
+  assert.ok(mask && +mask[2] <= 80, "gone by the win-rate bar, not the chart");
+});
+
+// The corner under the LP change held a streak, decay, "Rotate" and a win-rate trend,
+// three or four to a card and in a different order on each
+test("a card's corner keeps the LP change and the one signal that matters most; the WR trend sits by the WR", () => {
+  const D = 864e5, now = Date.now();
+  const win = bootApp([{ id: "c", gameName: "Busy", tagLine: "1", region: "EUW", status: "active", tags: [],
+    recent: { at: now, games: [{ win: true, at: now - 1e5 }, { win: true, at: now - 2e5 }, { win: true, at: now - 3e5 }] },
+    history: [{ t: now - 50 * D, tier: "GOLD", division: "II", lp: 20, w: 10, l: 10 }, { t: now - 40 * D, tier: "GOLD", division: "I", lp: 40, w: 20, l: 10 }],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 40, wins: 20, losses: 10, updatedAt: now - 40 * D } }]);
+  const card = win.document.querySelector(".card");
+  const chips = [...card.querySelectorAll(".c-deltas .delta")].map(c => c.textContent.trim());
+  assert.ok(chips.includes("3W streak"), "the streak: " + chips.join(" | "));
+  assert.ok(!chips.some(c => /^Idle/.test(c)), "and not the idle days as well: " + chips.join(" | "));
+  assert.ok(!chips.some(c => /WR/.test(c)), "no win-rate chip in the corner");
+  const tr = card.querySelector(".wl .wr-tr");
+  assert.ok(tr, "the trend rides the win rate");
+  assert.equal(tr.textContent, "▲17");
+  assert.ok(tr.previousElementSibling.classList.contains("wrv"), "right after it");
+  // with no streak, the idle days are what the corner says
+  runScript(win, "accounts[0].recent = null; renderGrid()");
+  assert.ok([...win.document.querySelectorAll(".card .c-deltas .delta")].some(c => /^Idle \d+ days$/.test(c.textContent.trim())));
 });

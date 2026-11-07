@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.16.0";
+const APP_VERSION="2.17.0";
 const APP_CHANGELOG=[
+  {v:"2.17.0",items:[
+    "Details opens straight onto its contents, and each card's corner keeps the LP change and one signal",
+    "Charts leave out a label that would sit on the line, say \"One check so far\" instead of drawing one dot, and have a bigger D/W/M switch",
+    "Plainer words on cards: Last login, Idle 54 days, 1,762 LP to go, a real flag icon, and small text that stays readable over champion art",
+  ]},
   {v:"2.16.0",items:[
     "Login copies the username, then the password, one click each; the eye beside it shows the saved login",
     "A shorter Add account form: Riot ID, region and login first, the rest under More details, and a missing field marked where it is",
@@ -515,6 +520,8 @@ function playNext(pool){
   const since=best.lastPlayedAt?"played":best.lastLoginAt?"you opened its login":"its last check";
   return{a:best,why:days+" days since "+since};
 }
+// Said in words on hover and to a screen reader: unexplained, it was a mystery mark
+function flagMark(){return `<span class="flagmark" role="img" aria-label="Flagged for attention" title="Flagged for attention. Clear it in the ⋯ menu.">${icon("flag")}</span>`}
 function needsRotation(a){
   if(a.status==="banned"||a.archived)return false;
   const d=rotationDays(a);
@@ -557,7 +564,7 @@ function needsAttention(a){return !!a.flagged&&a.status!=="banned"&&!a.archived}
 /* Active vault accounts — chore counts (never checked, failed, …) ignore banned
    and archived, which are already dealt with and only clutter those tiles. */
 function isLive(a){return !a.archived&&a.status!=="banned"}
-let checking=new Set(), checkGen=new Map(), openInfo=new Set(), openSec=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
+let checking=new Set(), checkGen=new Map(), openInfo=new Set(), openSec=new Set(), shutSec=new Set(), openLogin=new Set(), shownPw=new Set(), openRank=new Set(), selected=new Set(), openMore=new Set(), armedDelete=null, editingId=null, flashId=null;
 // Which card has its note open, plus the live text. The draft is kept out here
 // on purpose: the grid re-renders wholesale, so a textarea rendered from a.notes
 // would throw away whatever was typed the moment an unrelated card updated.
@@ -908,7 +915,8 @@ const ICON={
   clipboard:'<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
   star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
   chevron:'<polyline points="6 9 12 15 18 9"/>',
-  flag:'<path d="M4 22V4h11l-1.4 3.5L15 11H4"/><line x1="4" y1="4" x2="4" y2="22"/>',
+  // a cloth on a pole: the pennant before it, small and red after a name, read as a "P"
+  flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
   plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
   eye:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
   eyeOff:'<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M1 1l22 22"/><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>',
@@ -1175,10 +1183,11 @@ function groupColor(k){
 // them to mean anything, and every check as its own hoverable point.
 function rankChart(hist,cut,mode,key,peakV,peakLabel){
   let pts=(hist||[]).map(h=>({h,v:ladderLP(h)})).filter(p=>p.v!==null);
-  // A brand new account has exactly one check, and showing it nothing at all was
-  // the least useful answer available — one point still says where on the ladder
-  // it sits, which is most of what the chart is for.
   if(!pts.length)return"";
+  // One check was drawn as a whole chart frame with a single dot in it, saying
+  // where on the ladder the account sits, which the card already says above it in
+  // large type. A line saying when the chart comes is more use, and smaller.
+  if(pts.length===1)return`<p class="lpc-one">One check so far. The chart starts after the next one.</p>`;
   pts=bucketHistory(pts,mode);
   const vals=pts.map(p=>p.v);
   let lo=Math.min(...vals), hi=Math.max(...vals);
@@ -1221,6 +1230,16 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
       for(let k=1;k<6;k++){const f=a+(b-a)*k/6;if(f<=LAB_W)leftYs.push(py(pts[i].v+(pts[i+1].v-pts[i].v)*k/6))}}
   }
   const labFree=y=>!leftYs.some(v=>v>=y-5&&v<=y+14);   // 9px of caption, and a point's own radius around it
+  // the same for the right edge, where the division numerals sit
+  const NUM_W=.12, rightYs=[];
+  for(let i=0;i<=last;i++){
+    const a=fx(i);if(a>=1-NUM_W)rightYs.push(py(pts[i].v));
+    if(i<last){const b=fx(i+1);
+      for(let k=1;k<6;k++){const f=a+(b-a)*k/6;if(f>=1-NUM_W)rightYs.push(py(pts[i].v+(pts[i+1].v-pts[i].v)*k/6))}}
+  }
+  // a numeral's box runs from 9.5px above its rule to the rule; a dot's colour is
+  // 4.5px each way, and its dark ring overlapping a letter's edge is not a collision
+  const numFree=v=>{const y=py(v);return !rightYs.some(r=>r>y-14&&r<y+4.5)};
 
   let bands="",lines="",labels="";
   for(let t=0;t<=mIdx;t++){
@@ -1241,8 +1260,11 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
        mark it is a caption for the whole view, so it goes to the top instead. */
     const fillsView=bot<=lo&&top>=hi;
     const spots=fillsView?[2]:yBot-yTop>=26?[yBot-11,yTop+3]:[yBot-11];
-    const labY=spots.find(labFree)??spots[0];
-    if(yBot-yTop>=14)labels+=`<span class="lpc-lab" style="top:${labY.toFixed(1)}px;color:${c}">${t===mIdx?"Master+":name.charAt(0)+name.slice(1).toLowerCase()}</span>`;
+    /* With no spot clear of the line and the dots, the caption is left out rather
+       than printed across them ("DIAM●ND"): the band's colour still says the tier,
+       and the tip on any point names it. */
+    const labY=spots.find(labFree);
+    if(labY!=null&&yBot-yTop>=14)labels+=`<span class="lpc-lab" style="top:${labY.toFixed(1)}px;color:${c}">${t===mIdx?"Master+":name.charAt(0)+name.slice(1).toLowerCase()}</span>`;
   }
   // Steps inside the bands. Below Master a step of 100 LP is exactly one division,
   // so the numerals come for free — but a fixed 100 stops working the moment the
@@ -1281,11 +1303,9 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
   const mixed=new Set(divs.filter(d=>d.n).map(d=>d.t)).size>1;
   const dupe=mixed||divs.some((d,i)=>divs.findIndex(o=>o.n===d.n)!==i);
   // The numerals sit at the right edge, which is where the newest point is; one the
-  // point lands on ("P II" under the dot) keeps its hairline and loses its label.
-  // a numeral's box runs from 9.5px above its line to the line; the dot's colour is
-  // 4.5px each way (its dark ring overlapping a letter's edge is not a collision)
-  const lastY=pts.length>1?py(pts[pts.length-1].v):-99, underDot=v=>lastY>py(v)-14&&lastY<py(v)+4.5;
-  for(const d of divs){if(!d.n)continue;rule(d.v);if(!underDot(d.v))mark(d.v,dupe?d.t.charAt(0)+" "+d.n:d.n)}
+  // point or the line lands on ("P II" under the dot) keeps its hairline and loses
+  // its label.
+  for(const d of divs){if(!d.n)continue;rule(d.v);if(numFree(d.v))mark(d.v,dupe?d.t.charAt(0)+" "+d.n:d.n)}
 
   // The Grandmaster and Challenger floors, where the view reaches them. These are
   // the current floors, so they are drawn as a reference against today's ladder —
@@ -1334,8 +1354,10 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     const lineAt=f=>{if(xs.length<2)return ys[0];let i=1;while(i<xs.length-1&&xs[i]<f)i++;
       const a=xs[i-1],b=xs[i],t=b>a?Math.min(1,Math.max(0,(f-a)/(b-a))):0;return ys[i-1]+(ys[i]-ys[i-1])*t};
     const lanes=[.5,.3,.7,.18,.82], clear=f=>Math.min(...[-.04,0,.04].map(o=>Math.abs(lineAt(f+o)-(y-5))));
-    const lane=lanes.find(f=>clear(f)>=11)??lanes.reduce((b,f)=>clear(f)>clear(b)?f:b,lanes[0]);
-    if(!cutYs.some(cy=>Math.abs(y-cy)<11))
+    // and with no stretch clear of the line, the dashed line goes unlabelled; the
+    // card's own Peak figure, under the chart, still says it
+    const lane=lanes.find(f=>clear(f)>=11);
+    if(lane!=null&&!cutYs.some(cy=>Math.abs(y-cy)<11))
       labels+=`<span class="lpc-peak" style="top:${(y-9.5).toFixed(1)}px;left:${(lane*100).toFixed(1)}%" title="${esc(peakLabel||"Season peak")}">Peak</span>`;
     cutYs.push(y);   // and an LP numeral must not land on it either
   }
@@ -1351,7 +1373,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
       // draws a second hairline a few pixels from a dashed one and prints a number
       // beside a label. The floor is the more useful of the two, so it wins.
       if(cutYs.some(cy=>Math.abs(py(v)-cy)<11))continue;
-      rule(v);if(!underDot(v))mark(v,(v-M_BASE)+" LP");
+      rule(v);if(numFree(v))mark(v,(v-M_BASE)+" LP");
     }
   }
 
@@ -3424,7 +3446,7 @@ function filtered(){
     rank:(x,y)=>rankValue(y.stats)-rankValue(x.stats),
     name:(x,y)=>(x.label||x.gameName).localeCompare(y.label||y.gameName),
     updated:(x,y)=>((y.stats&&y.stats.updatedAt)||0)-((x.stats&&x.stats.updatedAt)||0),
-    // the stamp the Login button leaves ("Opened 3 days ago"): the account you were
+    // the stamp the Login button leaves ("Last login 3 days ago"): the account you were
     // just on comes first, the ones you never open sink to the bottom
     opened:(x,y)=>openedAt(y)-openedAt(x),
     // the only number that matters on an account that isn't ranked yet
@@ -3631,7 +3653,7 @@ function pruneCardState(){
   for(const id of openMore)if(!live.has(id)){closeCardMenu();break}
   for(const s of [selected,openInfo,openLogin,shownPw,openRank,openMore,checking])
     for(const id of [...s])if(!live.has(id))s.delete(id);
-  for(const k of [...openSec])if(!live.has(k.slice(0,k.lastIndexOf("|"))))openSec.delete(k);
+  for(const set of [openSec,shutSec])for(const k of [...set])if(!live.has(k.slice(0,k.lastIndexOf("|"))))set.delete(k);
   for(const id of [...chartRange.keys()])if(!live.has(id))chartRange.delete(id);
   for(const id of [...checkGen.keys()])if(!live.has(id))checkGen.delete(id);
   if(compareIds.some(id=>!live.has(id))){
@@ -3851,8 +3873,8 @@ function renderDash(){
     // a tile saying "1" beside it only says it again. Two or more, and it filters.
     decayN&&!(decayN===1&&next&&decayRisk(next.a))&&`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left, estimated from the games seen between checks"><div class="k">Decay risk</div>
       <div class="v" style="color:var(--warn)">${decayN}</div><div class="s-note">a week or less banked · play a ranked game</div></button>`,
-    rotN&&`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
-      <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`,
+    rotN&&`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Idle</div>
+      <div class="v">${rotN}</div><div class="s-note">14+ days without a game, login or check</div></button>`,
     week&&(()=>{
       /* Two LP figures sat side by side here, +286 this week and +246 for the group,
          and read as a contradiction: this one is a total across the accounts, the
@@ -3962,7 +3984,7 @@ function renderTagbar(){
 // A number in a dashboard always raises "which ones?", so the stats panel sets
 // these — and they have to be visible and removable, or the grid just looks
 // mysteriously short.
-const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Needs attention",missing:"Not found",dup:"Duplicate IDs",rotate:"Due to rotate"};
+const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Needs attention",missing:"Not found",dup:"Duplicate IDs",rotate:"Idle 14+ days"};
 function renderChips(){
   syncFilterCount();
   const out=[];
@@ -4778,8 +4800,14 @@ function highestOf(list){let best=null,v=-1;for(const e of list){const x=ladderL
 // buried the one number you came for under thirty others. Each group is a
 // headline that already answers most of the question — the ranked peak, the
 // champion you actually play — and the rows behind it are one click away.
+/* Details opened onto more folded rows, "Champions this season 3" among them, each
+   wanting a click of its own to show anything: two clicks to see what Details was
+   opened for. Its sections start open and remember being closed (shutSec); the
+   Rank panel's start folded and remember being opened (openSec). */
+const DRAWER_SECS=new Set(["form","solo","flexhist","champs","mastery"]);
+function secOn(id,key){const k=id+"|"+key;return DRAWER_SECS.has(key)?!shutSec.has(k):openSec.has(k)}
 function secHTML(a,key,label,n,peek,body){
-  const on=openSec.has(a.id+"|"+key);
+  const on=secOn(a.id,key);
   return `<div class="sec${on?" on":""}" data-k="sec-${key}">`
     +`<button class="sec-h" data-act="sec" data-s="${key}" aria-expanded="${on}">`
       +`<span class="sec-n">${esc(label)}${n===""||n==null?"":`<i>${n}</i>`}</span>`
@@ -5175,7 +5203,7 @@ function rowHTML(a,i){
       <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}">
       <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
       <span class="rw-id">
-        <span class="rw-nm" title="${esc(plainName(a))}"><span class="nm-t">${nameOf(a)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged: needs a look">${icon("flag")}</span>`:""}</span>
+        <span class="rw-nm" title="${esc(plainName(a))}"><span class="nm-t">${nameOf(a)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?flagMark():""}</span>
         <span class="rw-sub"><span class="rw-tag sens">${esc(a.gameName)}#${esc(a.tagLine)}</span>${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}</span>
       </span>
       <span class="rw-spark">${sparkline(a.history,col)
@@ -5236,7 +5264,7 @@ function tileHTML(a){
     <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
-    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?`<span class="flagmark" title="Flagged: needs a look">${icon("flag")}</span>`:""}</span>
+    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?flagMark():""}</span>
     <span class="t-rk" style="color:${col}">${esc(rank)}</span>
     ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
   </div></div>`;
@@ -5277,26 +5305,33 @@ function cardHTML(a,i){
   /* There was a flame "Climbing" chip here too (LP up three checks running). It was
      the fourth way the card said "going up", beside the +LP chip, the Climb figure
      and the chart's own line, and the only orange anywhere in the app. */
-  {const st=!dead&&streakOf(a);if(st)deltaChip+=`<span class="delta ${st.win?"d-up":"d-down"} streak" title="The last ${st.n} ranked games were all ${st.win?"wins":"losses"}">${st.n}${st.win?"W":"L"} streak</span>`}
+  /* The corner under the LP change held up to four more chips (a streak, decay,
+     "Rotate", a win-rate trend), three or four to a card and in a different order
+     on each. It keeps the one that matters most now: decay, which costs LP, then a
+     streak, then a long idle. A Riot ID shared by two cards or a reading op.gg
+     didn't confirm are data problems, rare, and still always said. The win-rate
+     trend moved beside the win rate it is about. */
+  const signals=[];
   {
     const dd=dead?null:decayDays(a);
     if(dd!==null&&dd<=7){
       const r=DECAY_RULES[(a.stats.tier||"").toUpperCase()];
       const why=`Estimated from the games seen between checks. A ranked game banks ${r.per===1?"1 day":r.per+" days"}, up to ${r.cap}; past that the account loses ${r.lp} LP a day.`;
-      deltaChip+=dd<0?`<span class="delta d-down" title="${esc(why)}">${icon("alert")} Decaying</span>`
-        :`<span class="delta d-warn" title="${esc(why)}">${icon("alert")} Decay in ${decayIn(dd)}</span>`;
+      signals.push(dd<0?`<span class="delta d-down" title="${esc(why)}">${icon("alert")} Decaying</span>`
+        :`<span class="delta d-warn" title="${esc(why)}">${icon("alert")} Decay in ${decayIn(dd)}</span>`);
     }
   }
-  if(isDuplicate(a))deltaChip+='<span class="delta" title="Another card shares this Riot ID + region">Duplicate ID</span>';
-  if(isUncertain(a))deltaChip+='<span class="delta" title="Parsed without op.gg meta description">Uncertain</span>';
+  {const st=!dead&&streakOf(a);if(st)signals.push(`<span class="delta ${st.win?"d-up":"d-down"} streak" title="The last ${st.n} ranked games were all ${st.win?"wins":"losses"}">${st.n}${st.win?"W":"L"} streak</span>`)}
   {
     const d=rotationDays(a);
-    if(needsRotation(a))deltaChip+='<span class="delta" title="No play/check in 14+ days">Rotate'+(d!=null?(" · "+d+"d"):"")+'</span>';
+    // "Rotate · 54d" meant nothing without the Help page; this says it
+    if(needsRotation(a))signals.push(`<span class="delta" title="No game, login or check here in ${d} days">Idle ${d} days</span>`);
   }
-  {
-    const tr=!dead&&wrTrend(a);
-    if(tr&&Math.abs(tr.d)>=3)deltaChip+='<span class="delta '+(tr.d>0?"d-up":"d-down")+'" title="Winrate vs ~4 checks ago">'+(tr.d>0?"▲":"▼")+" WR "+(tr.d>0?"+":"")+tr.d+'</span>';
-  }
+  if(signals.length)deltaChip+=signals[0];
+  if(isDuplicate(a))deltaChip+='<span class="delta" title="Another card shares this Riot ID + region">Duplicate ID</span>';
+  if(isUncertain(a))deltaChip+='<span class="delta" title="Parsed without op.gg meta description">Uncertain</span>';
+  const tr=!dead&&wrTrend(a), wrTr=tr&&Math.abs(tr.d)>=3
+    ?` <span class="wr-tr ${tr.d>0?"d-up":"d-down"}" title="Win rate against about four checks ago">${tr.d>0?"▲":"▼"}${Math.abs(tr.d)}</span>`:"";
   const {w:wins,l:losses,total,wr}=winLoss(s);
   // whichever of the two is known — printing both from coerced numbers is what put
   // an invented "0L" beside a real win count
@@ -5323,9 +5358,9 @@ function cardHTML(a,i){
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
     ${s.level>=30?`<div class="wl"><span class="ready" title="Level 30 reached. Ranked also needs 20 champions owned, which the app cannot see.">Ready for ranked</span></div>`:""}`;
   else if(!isRanked(a))rankBlock=`<div class="rk" style="color:${col}"><span class="rk-main"><span class="rk-t">Unranked</span></span></div>
-    <div class="wl">${total>0?wlTxt+(wr!==null?` · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:""):"No ranked games found"}</div>`;
+    <div class="wl">${total>0?wlTxt+(wr!==null?` · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>${wrTr}`:""):"No ranked games found"}</div>`;
   else rankBlock=`<div class="rk" style="color:${col}">${crest(s.tier,"rk-crest")}<span class="rk-main"><span class="rk-t">${esc(tierTxt)}</span>${lpTxt?`<span class="rk-lp">${esc(lpTxt)}</span>`:""}</span></div>
-    <div class="wl">${total>0?wlTxt+(wr!==null?` · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>`:""):"No ranked games found"}</div>`;
+    <div class="wl">${total>0?wlTxt+(wr!==null?` · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>${wrTr}`:""):"No ranked games found"}</div>`;
   // Peak / Level / MMR are unrelated facts — label them instead of running them
   // together in one muted sentence.
   const microStats=[];
@@ -5344,9 +5379,10 @@ function cardHTML(a,i){
         const lp=cur-mBase;
         // gm can be missing when the ladder scrape only found Challenger — treating
         // null as 0 made Master cards claim "To Grandmaster −400 LP".
-        if(cut.gm!=null&&lp<cut.gm)microStats.push(["To Grandmaster",(cut.gm-lp)+" LP"]);
-        else if(cut.chall!=null&&lp<cut.chall)microStats.push(["To Challenger",(cut.chall-lp)+" LP"]);
-        else if(cut.chall!=null)microStats.push(["Above","Challenger floor"]);
+        // "To Grandmaster 1762 LP" read as the cutoff as easily as the distance to it
+        if(cut.gm!=null&&lp<cut.gm)microStats.push(["To Grandmaster",fmtN(cut.gm-lp)+" LP to go"]);
+        else if(cut.chall!=null&&lp<cut.chall)microStats.push(["To Challenger",fmtN(cut.chall-lp)+" LP to go"]);
+        else if(cut.chall!=null)microStats.push(["Above","the Challenger cutoff"]);
       }
     }
     {
@@ -5379,7 +5415,7 @@ function cardHTML(a,i){
       <div class="c-id">
         <!-- the name is ellipsised at the card's width, so the full one has to be
              available somewhere; hovering is the only place left for it -->
-        <div class="c-name"><span title="${esc(plainName(a))}"${a.label?"":' class="sens"'}>${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged: needs a look">${icon("flag")}</span>`:""}${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f" title="${esc(st.label)}">${esc(st.short||st.label)}</span>`:""}</div>
+        <div class="c-name"><span title="${esc(plainName(a))}"${a.label?"":' class="sens"'}>${esc(a.label||a.gameName)}</span>${a.flagged?flagMark():""}${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f" title="${esc(st.label)}">${esc(st.short||st.label)}</span>`:""}</div>
         <button class="rid" data-act="copyid" title="Copy Riot ID"><span class="sens">${esc(a.gameName)}<b>#${esc(a.tagLine)}</b></span></button>
       </div>
       <div class="c-chrome">
@@ -5435,7 +5471,7 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${isLive(a)&&isFailed(a)?`<span class="c-failed" title="${esc(s.note)}">${icon("alert")}Last check failed</span>`:""}${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}${a.status==="banned"?"":`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`}</span>
+      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.status==="banned"?"":`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`}${isLive(a)&&isFailed(a)?`<span class="c-failed" title="${esc(s.note)}">${icon("alert")}Last check failed</span>`:""}${a.lastLoginAt?`<span class="src" title="The last time you copied or looked at this account's login here">Last login ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
       <!-- Three buttons, not five, and the ⋯ no longer unfolds a second toolbar
            into the card: it opens one shared floating menu (see cardMenuHTML).
            DPM moved in there with the rest — it is an outbound link you follow
@@ -8140,7 +8176,7 @@ async function onCardClick(e){
   else if(act==="info"){const on=!openInfo.has(id);on?openInfo.add(id):openInfo.delete(id);reveal=on?id+":info":null;
     if(on)loadForm(id);renderCard(id)}
   else if(act==="formretry"){formCache.delete(id);loadForm(id);renderCard(id)}
-  else if(act==="sec"){const k=id+"|"+btn.dataset.s;openSec.has(k)?openSec.delete(k):openSec.add(k);
+  else if(act==="sec"){const k=id+"|"+btn.dataset.s, set=DRAWER_SECS.has(btn.dataset.s)?shutSec:openSec;set.has(k)?set.delete(k):set.add(k);
     e.target.closest("#rankModal")?renderRankBody(id):renderCard(id)}
   else if(act==="rank")openRankModal(id);
   else if(act==="rankapply"){
@@ -8428,7 +8464,7 @@ function relock(){
   if(run)run.stop=true;
   // Drop every per-card UI state too — otherwise a password that was revealed
   // before the auto-lock would still be on screen after the next unlock.
-  [checking,openInfo,openLogin,shownPw,openRank,selected,openMore,openSec].forEach(s=>s.clear());
+  [checking,openInfo,openLogin,shownPw,openRank,selected,openMore,openSec,shutSec].forEach(s=>s.clear());
   checkGen.clear();
   chartRange.clear();
   armedDelete=null;editingId=null;lastSelectedId=null;flashId=null;

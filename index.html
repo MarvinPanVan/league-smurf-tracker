@@ -34,7 +34,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="app.css?v=2.16.0">
+<link rel="stylesheet" href="app.css?v=2.17.0">
 </head>
 <body data-atmosphere="spotlight">
 <!-- A shared snapshot opens here instead of the app: see openSnapshot -->
@@ -161,7 +161,7 @@
       <dt>Goals</dt>
       <dd>Set a target rank in a card's <b>Rank</b> panel and the card grows a rail showing how far there is left, plus a rough estimate once there's a fortnight of checks to work from.</dd>
       <dt>Extra privacy</dt>
-      <dd>Set a master password in <b>Settings → Security</b> to encrypt everything at rest, with an auto-lock timer, and unlock with Face ID, a fingerprint or Windows Hello instead of typing it. Don't lose the password: there's no recovery. The <b>Password check-up</b> there finds passwords used on more than one account, weak ones and, when you ask, ones in known data leaks. <b>Sort: Last opened</b> brings up the account you last copied a login from.</dd>
+      <dd>Set a master password in <b>Settings → Security</b> to encrypt everything at rest, with an auto-lock timer, and unlock with Face ID, a fingerprint or Windows Hello instead of typing it. Don't lose the password: there's no recovery. The <b>Password check-up</b> there finds passwords used on more than one account, weak ones and, when you ask, ones in known data leaks. <b>Sort: Last login</b> brings up the account you last copied a login from.</dd>
       <dt>More</dt>
       <dd><ul class="help-ul">
         <li>The <b>⋯</b> menu has bulk add (paste Name#TAGs, an op.gg multi-search link or the lobby chat), CSV import, <b>New season</b> (every rank into Past seasons at once, with Undo), streamer mode and <b>Share a snapshot</b> (a read-only page of your ranks in one link, with no logins, emails or notes in it).</li>
@@ -691,7 +691,7 @@
       <option value="away">Sort: While away</option>
       <option value="climb">Sort: Climbing fastest</option>
       <option value="updated">Sort: Last updated</option>
-      <option value="opened">Sort: Last opened</option>
+      <option value="opened">Sort: Last login</option>
     </select>
     <select id="tStatus">
       <option value="">All statuses</option>
@@ -844,6 +844,6 @@
   <div id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="app.js?v=2.16.0"></script>
+<script src="app.js?v=2.17.0"></script>
 </body>
 </html>
