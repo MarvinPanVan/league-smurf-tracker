@@ -8219,6 +8219,11 @@ test("the list is a table: headings over aligned columns, and a row copies its l
   // and the slack is the name's alone, so the figures sit together under their headings
   const cols = html.match(/\.grid\.list\{--rw-cols:([^;]+);/)[1];
   assert.equal((cols.match(/fr\)/g) || []).length, 1, "one stretching column: " + cols);
+  // Quick find: the top match's login is one Enter away
+  win.openPalette();
+  const input = doc.getElementById("palInput"); input.value = "main"; input.dispatchEvent(new win.Event("input", { bubbles: true }));
+  const rows = [...doc.querySelectorAll("#palList .pal-i")].map(b => b.textContent.replace(/\s+/g, " ").trim());
+  assert.ok(rows.some(r => /^Copy username/.test(r)) && rows.some(r => /^Copy password/.test(r)), rows.join(" | "));
 });
 
 // On a phone the filters and the stats were the whole first screen

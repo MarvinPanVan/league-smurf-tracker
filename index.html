@@ -10572,7 +10572,12 @@ function palResults(q){
   // palette never disagrees with the page behind it.
   accs.sort((x,y)=>(y.fav?1:0)-(x.fav?1:0)||rankValue(y.stats)-rankValue(x.stats));
   const cmds=palCommands().filter(c=>!s||(c.k+" "+c.n).toLowerCase().includes(s));
-  return accs.slice(0,8).map(a=>({type:"acc",a})).concat(cmds.slice(0,6).map(c=>({type:"cmd",c})));
+  /* The top match's login, one Enter away. Landing on the card was half the trip:
+     the password was then Login, Copy — the clicks this window exists to save. */
+  const top=s&&accs[0], keys=[];
+  if(top&&top.login)keys.push({type:"key",c:{n:"Copy username",s:plainName(top),i:"user",run:()=>copyText(top.login,"Username")}});
+  if(top&&top.password)keys.push({type:"key",c:{n:"Copy password",s:plainName(top)+" · clears from the clipboard in 30s",i:"key",run:()=>copyText(top.password,"Password",true)}});
+  return accs.slice(0,8).map(a=>({type:"acc",a})).concat(keys,cmds.slice(0,6).map(c=>({type:"cmd",c})));
 }
 function renderPalette(){
   palItems=palResults($("palInput").value);
@@ -10584,7 +10589,7 @@ function renderPalette(){
   let html="",lastType=null;
   palItems.forEach((it,i)=>{
     if(it.type!==lastType){
-      html+=`<div class="pal-g">${it.type==="acc"?"Accounts":"Commands"}</div>`;
+      html+=`<div class="pal-g">${it.type==="acc"?"Accounts":it.type==="key"?"Log in":"Commands"}</div>`;
       lastType=it.type;
     }
     const sel=i===palSel?" sel":"";
@@ -10623,7 +10628,7 @@ function closePalette(){$("palette").classList.add("hidden")}
 function runPalette(i){
   const it=palItems[i];if(!it)return;
   closePalette();
-  if(it.type==="cmd"){it.c.run();return}
+  if(it.type==="cmd"||it.type==="key"){it.c.run();return}
   // An account is a place, not an action: go there, in the layout that can
   // actually show it, and light it up so it is obvious which one you landed on.
   const id=it.a.id;
