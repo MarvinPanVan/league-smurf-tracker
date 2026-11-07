@@ -10356,3 +10356,16 @@ test("a card's footer says Updated, then Refresh, then Last login, each named fo
   assert.match(meta.querySelector(".src").title, /copied or looked at this account's login/);
   assert.doesNotMatch(meta.textContent, /Opened/);
 });
+
+// "To Grandmaster 1762 LP" read as the cutoff as easily as the distance to it
+test("a Master card says how many LP are still to go to Grandmaster, not a bare number", () => {
+  const acc = (id, lp) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "MASTER", division: null, lp, wins: 50, losses: 40, updatedAt: Date.now() } });
+  const win = bootApp([acc("m", 23), acc("top", 2600)], w => {
+    w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, lastChangelog: "9.9.9", lockPromptOff: true,
+      cutoffs: { euw: { gm: 1785, chall: 2417 } } }));
+  });
+  const stat = id => [...win.document.querySelectorAll(`.card[data-id="${id}"] .c-stats > div`)].map(d => d.textContent).join(" | ");
+  assert.match(stat("m"), /To Grandmaster1,762 LP to go/);
+  assert.match(stat("top"), /Abovethe Challenger cutoff/);
+});

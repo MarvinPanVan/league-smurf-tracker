@@ -5348,9 +5348,10 @@ function cardHTML(a,i){
         const lp=cur-mBase;
         // gm can be missing when the ladder scrape only found Challenger — treating
         // null as 0 made Master cards claim "To Grandmaster −400 LP".
-        if(cut.gm!=null&&lp<cut.gm)microStats.push(["To Grandmaster",(cut.gm-lp)+" LP"]);
-        else if(cut.chall!=null&&lp<cut.chall)microStats.push(["To Challenger",(cut.chall-lp)+" LP"]);
-        else if(cut.chall!=null)microStats.push(["Above","Challenger floor"]);
+        // "To Grandmaster 1762 LP" read as the cutoff as easily as the distance to it
+        if(cut.gm!=null&&lp<cut.gm)microStats.push(["To Grandmaster",fmtN(cut.gm-lp)+" LP to go"]);
+        else if(cut.chall!=null&&lp<cut.chall)microStats.push(["To Challenger",fmtN(cut.chall-lp)+" LP to go"]);
+        else if(cut.chall!=null)microStats.push(["Above","the Challenger cutoff"]);
       }
     }
     {
