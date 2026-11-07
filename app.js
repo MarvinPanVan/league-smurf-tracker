@@ -8203,11 +8203,15 @@ async function onCardClick(e){
   else if(act==="copyseq"){
     const both=acc.login&&acc.password;
     const pw=!(acc.login&&(!both||!loginSeq.has(id)));
-    if(!pw){if(both)loginSeq.add(id)}else loginSeq.delete(id);
-    copyText(pw?acc.password:acc.login,pw?"Password":"Username",pw,true).then(ok=>{if(ok)flashLogin(id,pw)});
-    // copying the login is the closest thing to playing on it this app can see
-    acc.lastLoginAt=Date.now();saveDB();
-    renderCard(id);
+    copyText(pw?acc.password:acc.login,pw?"Password":"Username",pw,true).then(ok=>{
+      // only a copy that worked moves on to the next step: a failed one (the toast
+      // says so) left the button on "Copy password" with the username never copied
+      if(!ok)return;
+      if(!pw){if(both)loginSeq.add(id)}else loginSeq.delete(id);
+      // copying the login is the closest thing to playing on it this app can see
+      acc.lastLoginAt=Date.now();saveDB();
+      flashLogin(id,pw);
+    });
   }
   else if(act==="addlogin")openForm(acc,"login");
   else if(act==="copylogin")copyText(acc.login,"Username",false,true).then(ok=>{if(ok)flashCopied(btn)});

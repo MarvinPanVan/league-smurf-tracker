@@ -4081,7 +4081,7 @@ test("a compact select keeps room for its arrow", () => {
   assert.ok(html.indexOf(rule[0]) > html.indexOf(".sub-fld.inline select,.sub-fld.inline input[type=number]{"), "after the shorthand that took it");
 });
 
-test("sorting by last opened: the account you were just on first, never-opened ones last", () => {
+test("sorting by last opened: the account you were just on first, never-opened ones last", async () => {
   const now = Date.now();
   const mk = (id, lastLoginAt) => ({ id, gameName: id, tagLine: "EUW", region: "EUW", status: "active", lastLoginAt,
     login: id + "user", password: "pw-" + id,
@@ -4094,7 +4094,9 @@ test("sorting by last opened: the account you were just on first, never-opened o
   assert.deepEqual(names().slice(0, 2), ["now", "week"], "most recently opened first");
   assert.deepEqual(names().slice(2).sort(), ["junk", "never"], "no stamp, or a broken one, sorts last");
   // copying a login doesn't make the card jump while you're using it
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async () => {} } });
   win.document.querySelector('.card[data-id="never"] .a-login').click();
+  await until(() => appGet(win, 'accounts.find(a => a.id === "never").lastLoginAt'), "the copy to be recorded");
   assert.deepEqual(names().slice(0, 2), ["now", "week"]);
   sort.dispatchEvent(new win.Event("change"));
   assert.equal(names()[0], "never", "it moves up on the next sort");
@@ -6190,15 +6192,17 @@ test("a check records the season totals so the next one can subtract them", () =
 });
 
 // "Status: resting" was a label you had to keep up by hand.
-test("copying a login, or looking at it, records that the account was reached for", () => {
+test("copying a login, or looking at it, records that the account was reached for", async () => {
   const seed = ladderSeed();
   Object.assign(seed[4], { login: "riotuser", password: "hunter22!" });
   const win = bootApp(seed);
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async () => {} } });
   const card = () => win.document.querySelector('.card[data-id="t4"]');
   const stamp = () => win.filtered().find(a => a.id === "t4").lastLoginAt;
   assert.ok(!stamp());
 
   card().querySelector(".a-login").click();   // Copy username
+  await until(() => stamp(), "the copy to be recorded");
   const at = stamp();
   assert.ok(at && Date.now() - at < 5000);
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.id === "t4").lastLoginAt, at,
@@ -10730,4 +10734,18 @@ test("every class the stylesheet styles is one the app still uses, and a banned 
     stats: { found: true, tier: "BRONZE", division: "I", lp: 12, wins: 4, losses: 5, updatedAt: Date.now() - 864e5 } }]);
   assert.ok(win.document.querySelector(".card.dead .lpc"), "the selector meets a real chart");
   assert.match(css, /\.card\.dead \.lpc,\.rw\.dead \.spk\{filter:grayscale/);
+});
+
+// A failed copy still moved the card's Login on to "Copy password", so the username
+// was never copied and the next click skipped it
+test("a Login copy that fails stays on the step it failed, and records nothing", async () => {
+  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [],
+    login: "riotuser", password: "hunter22!", stats: null }]);
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async () => { throw new Error("denied"); } } });
+  win.document.execCommand = () => false;
+  const main = () => win.document.querySelector('.card[data-id="L"] .a-login');
+  main().click();
+  await until(() => /Copy failed/.test(win.document.getElementById("toast").textContent), "the failure to be said");
+  assert.match(main().textContent, /^\s*Copy username$/, "still on the username");
+  assert.equal(appGet(win, 'accounts[0].lastLoginAt'), undefined, "and no Last login stamped");
 });
