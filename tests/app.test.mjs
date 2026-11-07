@@ -959,7 +959,7 @@ test("every button, dropdown and switch wears the same satin; icons, links and m
   for (const sel of [".opt-seg"]) assert.match(rule(sel), /background:var\(--sheen\),var\(--panel2\)/, sel);
   assert.match(css, /\n  \.seg\{[^}]*background:var\(--sheen\),var\(--panel2\);box-shadow:var\(--sh-btn\)/);
   // what is not a plate clears both, so it does not pick up a lit edge and a shadow around nothing
-  for (const sel of [".rid,.star,.eye-btn,.panel-close", "#bMore,#bHelp", "#moreMenu button", ".fb-x", ".fchip-all",
+  for (const sel of [".rid,.star,.eye-btn,.panel-close,.c-ref", "#bMore,#bHelp", "#moreMenu button", ".fb-x", ".fchip-all",
       ".bk-note button", ".setup-x"]) {
     assert.match(rule(sel), /box-shadow:none/, sel);
     assert.match(rule(sel), /background:none/, sel);
@@ -7978,10 +7978,20 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
   assert.equal(m.querySelectorAll(".cm-sep").length, 0, "and no leftover bare separators");
 });
 
-test("the card footer is two buttons and a ⋯, not five", () => {
+test("the card footer is Login and a ⋯, with Refresh on the timestamp it changes", () => {
   const win = bootApp(seededAccount());
   const acts = win.document.querySelector(".card .acts");
-  assert.deepEqual([...acts.children].map(el => el.textContent.trim()), ["Login", "Refresh", "⋯"]);
+  // Refresh weighed nearly as much as Login there; it sits by "Updated …" now
+  assert.deepEqual([...acts.children].map(el => el.textContent.trim()), ["Login", "⋯"]);
+  const ref = win.document.querySelector('.card .c-meta .c-ref[data-act="check"]');
+  assert.ok(ref && ref.previousElementSibling.classList.contains("upd"), "beside the timestamp");
+  assert.equal(ref.getAttribute("aria-label"), "Refresh rank", "an icon with a name");
+  const called = []; win.check = async id => { called.push(id); };
+  ref.click();
+  assert.deepEqual(called, ["seed1"], "and it still checks the account");
+  // a key, not a person: a person beside "Login" read as signing in to this app
+  const d = [...acts.querySelectorAll(".a-login svg path")].map(p => p.getAttribute("d"));
+  assert.ok(d.includes("m10.7 12.3 9.3-9.3"), "the key icon: " + d.join(" | "));
   // Neither profile link vanished — they are one kind of thing and now sit
   // together under Look up, rather than op.gg in the footer and dpm.lol in here.
   const links = [...cardMenu(win).querySelectorAll(".cm-link")];

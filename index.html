@@ -1088,7 +1088,13 @@
   @media (hover:none){.bulkchk{opacity:.5}}
 
   /* bare icon buttons — must beat the generic button rules */
-  .rid,.star,.eye-btn,.panel-close{background:none;border:1px solid transparent;box-shadow:none;padding:0}
+  .rid,.star,.eye-btn,.panel-close,.c-ref{background:none;border:1px solid transparent;box-shadow:none;padding:0}
+  /* the card's Refresh: an icon on the timestamp's line */
+  .c-ref{width:26px;height:26px;margin:-5px 0 -5px -5px;display:inline-flex;align-items:center;justify-content:center;
+    color:var(--teal-txt);border-radius:var(--r-xs)}
+  .c-ref .ico{width:13px;height:13px}
+  .c-ref:hover:not(:disabled){background:#ffffff0d;border-color:var(--line)}
+  .c-ref:disabled{opacity:.7;cursor:default}
   .rid:hover,.star:hover,.eye-btn:hover{background:none;border-color:transparent}
   .star{font-size:calc(18px*var(--ts));color:var(--line2);line-height:1;display:inline-flex;transition:color .15s ease,transform .15s ease}
   .star:hover{color:var(--star);transform:scale(1.12)}
@@ -2431,6 +2437,7 @@
     html{scroll-behavior:auto}
   }
   @media (pointer:coarse){
+    .c-ref{width:36px;height:36px;margin-block:-11px}
     .acts button,.acts a,.lbtns button{font-size:calc(13px*var(--ts));padding:9px 13px}
     .star{font-size:calc(20px*var(--ts));padding:2px 6px 2px 0}
     button,.btn{padding:10px 15px}
@@ -8559,14 +8566,16 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
+      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button></span>
       <!-- Three buttons, not five, and the ⋯ no longer unfolds a second toolbar
            into the card: it opens one shared floating menu (see cardMenuHTML).
            DPM moved in there with the rest — it is an outbound link you follow
            occasionally, not one of the three things you do on a card. -->
       <div class="acts">
-        <button data-act="login" class="a-login" title="Show saved login">${icon("user")} ${loginOpen?"Hide login":"Login"}</button>
-        <button data-act="check" ${isChecking?"disabled":""} style="color:var(--teal-txt)">${isChecking?"…":icon("refresh")+" Refresh"}</button>
+        <!-- A key, not a person: a person beside "Login" read as "sign in to this
+             app". Refresh moved up beside "Updated 2 h ago", the thing it changes;
+             here it weighed nearly as much as Login, which is what a card is for. -->
+        <button data-act="login" class="a-login" title="Show saved login">${icon("key")} ${loginOpen?"Hide login":"Login"}</button>
         <button data-act="more" class="c-more${openMore.has(a.id)?" on":""}" aria-haspopup="menu" aria-expanded="${openMore.has(a.id)}" title="More actions" aria-label="More actions">⋯</button>
       </div>
     </div>
