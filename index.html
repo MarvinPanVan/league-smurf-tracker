@@ -2462,6 +2462,22 @@
     .tools>label{justify-content:center}
   }
   @media (max-width:440px){.cmd{gap:8px}.cmd>button{padding-inline:10px}}
+  /* A phone's header was four rows before anything else: the gem and the wordmark,
+     "Summoner Vault" and its badge, the rank bar, then the tray alone on a row of
+     its own — 230px. It is an app bar now: the wordmark on the left, the tray on
+     the right, the rank bar under both. The gem and the strapline stand down;
+     the wordmark is the brand at this size. */
+  @media (max-width:560px){
+    .top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px 10px}
+    .top>.brand{grid-column:1;grid-row:1;gap:0;min-width:0}
+    .top>.brand .brand-mark,.top>.brand .brand-sub{display:none}
+    .top>.bar{grid-column:2;grid-row:1;margin-left:0}
+    .top>.ribbon{grid-column:1/-1;grid-row:2;max-width:none}
+    .top h1{font-size:calc(20px*var(--ts));white-space:nowrap}
+    #bDashToggle .dt-v{display:none}
+    #bDashToggle .dt-n{text-transform:capitalize}
+  }
+  @media (max-width:400px){.top h1{font-size:calc(18px*var(--ts))}}
   /* On a phone the toolbar's filters were the whole first screen: search, two rows
      of dropdowns, Favorites, Archived and Select all, before a single account. Only
      search stays out; the rest fold behind Filters, whose badge counts what is on so
@@ -6896,7 +6912,8 @@ function syncDashToggle(){
   const show=accounts.some(a=>!a.archived);
   b.classList.toggle("hidden",!show);
   b.classList.toggle("open",!cfg.dashCollapsed);
-  setHTML(b,icon("chevron")+" "+(cfg.dashCollapsed?"Show stats":"Hide stats"));
+  // the verb is its own span so a phone, short of room, can say just "Stats"
+  setHTML(b,icon("chevron")+` <span class="dt-v">${cfg.dashCollapsed?"Show":"Hide"} </span><span class="dt-n">stats</span>`);
 }
 function renderDash(){
   applyRankTheme(); // a new best tier is news the dashboard already gets; the colours follow it

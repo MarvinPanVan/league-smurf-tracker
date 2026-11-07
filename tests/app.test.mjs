@@ -8196,6 +8196,23 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// A phone's header was four rows: gem and wordmark, strapline, rank bar, then the tray alone
+test("on a phone the header is one app bar: the wordmark left, the tray right, the rank bar under both", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const at = css.indexOf("@media (max-width:560px){\n    .top{display:grid");
+  assert.ok(at > -1, "a phone rule for the header");
+  const r = css.slice(at, css.indexOf("\n  }", at));
+  assert.match(r, /\.top>\.bar\{grid-column:2;grid-row:1/, "the tray beside the wordmark, not on a row of its own");
+  assert.match(r, /\.top>\.ribbon\{grid-column:1\/-1;grid-row:2/);
+  assert.match(r, /\.brand-mark,\.top>\.brand \.brand-sub\{display:none\}/);
+  assert.match(r, /#bDashToggle \.dt-v\{display:none\}/, "the toggle says just Stats");
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 3, losses: 2, updatedAt: Date.now() } }]);
+  const b = win.document.getElementById("bDashToggle");
+  assert.equal(b.querySelector(".dt-v").textContent.trim(), "Hide");
+  assert.equal(b.querySelector(".dt-n").textContent, "stats");
+});
+
 // Every card carried a second chip in Login's colour beside the star
 test("a card's region is a neutral label, so Login is the one thing in the action colour", () => {
   const rule = html.match(/\n  \.regiontag\{([^}]*)\}/)[1];
