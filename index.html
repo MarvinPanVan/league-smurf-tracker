@@ -540,9 +540,10 @@
       <!-- What an account can't be added without comes first: the Riot ID and where
            it lives, then the login the card copies. The rest, which most accounts
            never get, folds under More details. Every label names its field (for=),
-           so clicking one lands in it and a screen reader reads it. -->
-      <div class="fld f-3"><label for="fName">Riot name *</label><input id="fName" placeholder="Game name, or paste Name#TAG" data-autofocus></div>
-      <div class="fld f-3"><label for="fTag">Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234"></div>
+           so clicking one lands in it and a screen reader reads it. A field that
+           stops the save says why under itself (.f-msg), not in a toast. -->
+      <div class="fld f-3"><label for="fName">Riot name *</label><input id="fName" placeholder="Game name, or paste Name#TAG" data-autofocus aria-describedby="fNameMsg"><span class="f-msg" id="fNameMsg"></span></div>
+      <div class="fld f-3"><label for="fTag">Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234" aria-describedby="fTagMsg"><span class="f-msg" id="fTagMsg"></span></div>
       <div class="fld f-3"><label for="fRegion">Region</label>
         <select id="fRegion"></select>
       </div>

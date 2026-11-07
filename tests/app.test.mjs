@@ -5140,7 +5140,7 @@ test("an edit cannot rename one account on top of another", () => {
 
   assert.equal(win.document.getElementById("form").classList.contains("hidden"), false,
     "the form stays open, the save was refused");
-  assert.match(win.document.getElementById("toast").textContent, /Already in the vault/);
+  assert.match(win.document.getElementById("fNameMsg").textContent, /^Already in the vault as First$/, "said under the name");
   assert.equal(win.document.querySelectorAll(".card").length, 2);
 
   // but editing an account without changing its identity still saves
@@ -8477,7 +8477,7 @@ test("the account form starts with what it needs, folds the rest, and every labe
   assert.equal(more.textContent.trim(), "More details");
   // Enter on the button opens the details; it does not try to save the empty form
   more.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-  assert.ok(!doc.getElementById("form").classList.contains("hidden"), "no save was tried");
+  assert.equal(doc.getElementById("fNameMsg").textContent, "", "no save was tried");
   more.click();
   assert.ok(grid.classList.contains("more"));
   assert.equal(more.getAttribute("aria-expanded"), "true");
@@ -8497,6 +8497,37 @@ test("the account form starts with what it needs, folds the rest, and every labe
     const f = l.getAttribute("for");
     assert.ok(f && doc.getElementById(f), "a label for: " + l.textContent.trim());
   }
+});
+
+// "Riot name and tag are required" was a toast at the bottom, over the form's own
+// footer, with neither field marked
+test("a missing Riot name or tag is said under the field, not in a toast over the form", () => {
+  const win = bootApp();
+  const doc = win.document, $ = id => doc.getElementById(id);
+  const bad = id => $(id).closest(".fld").classList.contains("bad") && $(id).getAttribute("aria-invalid") === "true" && $(id + "Msg").textContent !== "";
+  $("bAdd").click();
+  $("fSave").click();
+  assert.ok(!$("form").classList.contains("hidden"), "nothing was saved");
+  assert.ok(bad("fName") && bad("fTag"), "both fields are marked, each with a reason");
+  assert.equal($("fName").getAttribute("aria-describedby"), "fNameMsg", "read out with the field");
+  assert.equal(doc.activeElement.id, "fName", "and the first one has the caret");
+  assert.doesNotMatch($("toast").textContent, /required/);
+  assert.match(html, /\n  \.fld\.bad input,\.fld\.bad select\{border-color:/, "the box goes red");
+  // typing clears its own mark, and only its own
+  $("fName").value = "Foo";
+  $("fName").dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.ok(!bad("fName") && bad("fTag"));
+  $("fSave").click();
+  assert.equal(doc.activeElement.id, "fTag", "the one still missing gets the caret");
+  // pasting Name#TAG fills the tag, so both are fine and the save goes through
+  $("fName").value = "Foo#EUW";
+  $("fName").dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.ok(!bad("fName") && !bad("fTag"));
+  $("fSave").click();
+  assert.ok($("form").classList.contains("hidden"));
+  // and a form opened again starts clean
+  $("bAdd").click(); $("fSave").click(); $("fCancel").click(); $("bAdd").click();
+  assert.ok(!bad("fName") && !bad("fTag"));
 });
 
 // The ⋯ menu led with the plaintext export, put Delete all mid-list and Settings last

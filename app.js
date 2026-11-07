@@ -6060,6 +6060,7 @@ function openForm(acc,focus){
   $("fLogin").toggleAttribute("data-autofocus",atLogin);   // from a card's Add login
   $("fPass").toggleAttribute("data-autofocus",atPw);   // from the password check-up
   renderInfoFields(formInfoBase,atNotes);
+  clearFormErrors();
   // Folded unless you keep it open, the account already has some of it, or you came
   // for the notes. Opening the ones an account has hides nothing it holds.
   setFormMore(!!cfg.formMore||atNotes||!!(acc&&(acc.label||acc.email||acc.createdOn||acc.birthdate
@@ -6079,6 +6080,18 @@ function setFormMore(on){
   const b=$("fMoreBtn");b.setAttribute("aria-expanded",String(on));
   b.firstChild.textContent=on?"Fewer details":"More details";
 }
+/* A field that stops the save says why under itself. Typing in it clears that. */
+function fieldError(id,msg){
+  const f=$(id), m=$(id+"Msg");
+  f.closest(".fld").classList.add("bad");f.setAttribute("aria-invalid","true");
+  if(m)m.textContent=msg;
+}
+function clearFieldError(id){
+  const f=$(id), m=$(id+"Msg");
+  f.closest(".fld").classList.remove("bad");f.removeAttribute("aria-invalid");
+  if(m)m.textContent="";
+}
+function clearFormErrors(){clearFieldError("fName");clearFieldError("fTag")}
 function closeForm(){$("form").classList.add("hidden");editingId=null}
 /* A Riot ID is copied as one string — "Hide on Bush#EUW" from op.gg, the client,
    a friend's message — and the form wanted it in two boxes, so a paste into the
@@ -6100,7 +6113,12 @@ function regionFromTagField(){
   const r=regionFromTag($("fTag").value);
   if(r)sel.value=r;
 }
-$("fName").addEventListener("input",splitRiotId);
+$("fName").addEventListener("input",()=>{
+  splitRiotId();clearFieldError("fName");
+  if($("fTag").value.trim())clearFieldError("fTag");   // a pasted Name#TAG filled it
+});
+$("fTag").addEventListener("input",()=>clearFieldError("fTag"));
+$("fRegion").addEventListener("change",()=>clearFieldError("fName"));   // a duplicate is per region
 $("fMoreBtn").addEventListener("click",()=>{
   const on=!$("fGrid").classList.contains("more");
   setFormMore(on);cfg.formMore=on;saveCfg();   // kept the way you leave it, for the next account
@@ -6112,7 +6130,13 @@ function submitForm(){
   let newId=null;
   splitRiotId();
   const gameName=$("fName").value.trim(), tagLine=$("fTag").value.trim().replace(/^#/,"");
-  if(!gameName||!tagLine){toast("Riot name and tag are required");return}
+  clearFormErrors();
+  if(!gameName||!tagLine){
+    if(!tagLine)fieldError("fTag","Needed for the lookup, the part after #");
+    if(!gameName)fieldError("fName","Needed: the name before the #");
+    $(gameName?"fTag":"fName").focus();
+    return;
+  }
   // Checked on edit too, not only on add: renaming one account onto another was
   // the one way to get two rows for the same Riot ID past the guard, and every
   // check then refreshed both of them off the same profile.
@@ -6121,7 +6145,7 @@ function submitForm(){
       &&a.gameName.toLowerCase()===gameName.toLowerCase()
       &&a.tagLine.toLowerCase()===tagLine.toLowerCase()
       &&a.region===$("fRegion").value);
-    if(dup){toast("Already in the vault: "+plainName(dup));return}
+    if(dup){fieldError("fName","Already in the vault as "+plainName(dup));$("fName").focus();return}
   }
   const data={label:$("fLabel").value.trim(),region:$("fRegion").value,gameName,tagLine,status:$("fStatus").value,
     login:$("fLogin").value,password:$("fPass").value,email:$("fEmail").value.trim(),
