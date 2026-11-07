@@ -2013,7 +2013,7 @@ test("passkey unlock: a cancel leaves the password box, and the typed password s
   doc.getElementById("lockPass").value = "nope";
   doc.getElementById("lockBtn").click();
   await until(() => doc.getElementById("lockErr").style.display === "block", "the wrong password");
-  assert.equal(doc.getElementById("lockErr").textContent, "Wrong password — try again.");
+  assert.equal(doc.getElementById("lockErr").textContent, "Wrong password. Try again.");
 });
 
 test("passkey unlock: changing or removing the master password turns it off, and an old one is dropped at the lock", async () => {
@@ -2733,7 +2733,7 @@ test("Discord decay alerts: switched on in Alerts, the worker gets a list of Dia
   doc.getElementById("sBackend").value = "https://w.example.workers.dev";
   doc.getElementById("sWatch").checked = true;
   doc.getElementById("sSave").click();
-  await until(() => /decay alerts need the worker and the Discord webhook/.test(doc.getElementById("toast").textContent), "the missing webhook named");
+  await until(() => /Decay alerts need the worker and the Discord webhook/.test(doc.getElementById("toast").textContent), "the missing webhook named");
   assert.equal(appGet(win, "cfg.watch"), undefined, "no webhook, no alerts");
   doc.getElementById("bSettings").click();
   doc.getElementById("sDiscord").value = "https://discord.com/api/webhooks/1/abc";
@@ -2759,11 +2759,11 @@ test("Discord decay alerts: switched on in Alerts, the worker gets a list of Dia
   runScript(win, `commitStats("g", accounts.find(x => x.id === "g"), {found:true,tier:"GOLD",division:"I",lp:5,wins:1,losses:0,updatedAt:Date.now()})`);
   assert.equal(win.__soon, 1, "a Gold reading cannot change a decay estimate");
   doc.getElementById("bSettings").click();
-  await until(() => /On — watching 1 account · last checked 1 h ago/.test(doc.getElementById("sWatchStatus").textContent), "the status line");
+  await until(() => /On, watching 1 account · last checked 1 h ago/.test(doc.getElementById("sWatchStatus").textContent), "the status line");
   // a worker deployed before alerts existed answers 405: say so instead of failing quietly
   win.fetch = async () => ({ ok: false, status: 405, json: async () => ({ error: "method not allowed" }) });
   runScript(win, "updateWatchStatus()");
-  await until(() => /older version without decay alerts — redeploy/.test(doc.getElementById("sWatchStatus").textContent), "the old worker named");
+  await until(() => /older version without decay alerts\. Redeploy/.test(doc.getElementById("sWatchStatus").textContent), "the old worker named");
   win.fetch = async (u, init = {}) => { calls.push({ method: init.method || "GET" }); return { ok: true, status: 200, json: async () => ({ ok: true }) }; };
   doc.getElementById("sWatch").checked = false;
   doc.getElementById("sSave").click();
@@ -8400,7 +8400,7 @@ test("once a setting changes, Settings says Save keeps it and closing puts it ba
   assert.equal(hint().classList.contains("dirty"), false);
   doc.querySelector('#sEffects [data-v="subtle"]').click();
   assert.ok(hint().classList.contains("dirty"), "a change is flagged");
-  assert.match(hint().textContent, /Save keeps it, closing puts it back/);
+  assert.match(hint().textContent, /Not saved yet\. Save keeps it; closing puts it back\./);
   doc.getElementById("sClose").click();
   win.openSettings("security");
   assert.equal(hint().classList.contains("dirty"), false, "a fresh open starts clean");
@@ -8762,6 +8762,32 @@ test("the rank bar prints its counts only when a tier holds more than one", () =
   assert.match(ones.document.querySelector(".rib-seg").getAttribute("aria-label"), /, 1$/, "still read out");
   const some = bootApp([acc("a", "GOLD"), acc("b", "GOLD"), acc("c", "SILVER")]);
   assert.deepEqual([...some.document.querySelectorAll(".rib-seg i")].map(i => i.textContent), ["2", "1"], "otherwise every count");
+});
+
+// Em dashes all through the labels, tooltips, Help and messages read as machine-written.
+// A lone "—" for an empty value is fine; a dash inside a sentence is not. The old
+// changelog entries keep theirs: they are history.
+test("no sentence in the app's text, tooltips or messages leans on an em dash", () => {
+  const win = bootApp();
+  win.document.getElementById("bDemo").click();
+  const doc = win.document, bad = [];
+  const walk = doc.createTreeWalker(doc.body, 4 /* text */);
+  for (let n; (n = walk.nextNode());) {
+    if (n.parentElement.closest("script,style")) continue;
+    const t = n.textContent.trim();
+    if (t.includes("\u2014") && t !== "\u2014") bad.push(t.slice(0, 80));
+  }
+  for (const el of doc.querySelectorAll("[title],[placeholder],[aria-label],[content]"))
+    for (const k of ["title", "placeholder", "aria-label", "content"]) {
+      const v = (el.getAttribute(k) || "").trim();
+      if (v.includes("\u2014") && v !== "\u2014") bad.push(k + ": " + v.slice(0, 80));
+    }
+  assert.deepEqual(bad, [], "the page as it renders");
+  assert.ok(!doc.title.includes("\u2014"), "the tab title too");
+  // toasts, confirms and status lines only exist once something happens: read them off the source
+  const said = [...appScript.matchAll(/(?:toast|confirm|notify|saveThen|lockError)\(\s*"([^"\n]*)"/g)].map(m => m[1])
+    .concat([...appScript.matchAll(/textContent=[^;\n]*?"([^"\n]*\u2014[^"\n]*)"/g)].map(m => m[1]));
+  assert.deepEqual(said.filter(x => x.includes("\u2014")), [], "and what it says when something happens");
 });
 
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row

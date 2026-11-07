@@ -12,7 +12,7 @@
 <meta name="description" content="Every League of Legends account in one place: ranks, LP history and logins. Logins stay in your browser; only Riot IDs go out, to look up ranks.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Smurf Tracker">
-<meta property="og:title" content="Smurf Tracker — every League account in one place">
+<meta property="og:title" content="Smurf Tracker: every League account in one place">
 <meta property="og:description" content="Ranks, LP history and logins for all your League of Legends accounts. Free, no sign-up, runs in your browser.">
 <meta property="og:url" content="https://marvinpanvan.github.io/league-smurf-tracker/">
 <meta property="og:image" content="https://marvinpanvan.github.io/league-smurf-tracker/icons/social.jpg">
@@ -20,7 +20,7 @@
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="Smurf Tracker: account cards with rank crests, LP charts and win rates">
 <meta name="twitter:card" content="summary_large_image">
-<title>Smurf Tracker — Summoner Vault</title>
+<title>Smurf Tracker · Summoner Vault</title>
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
@@ -2616,7 +2616,7 @@
     <div class="lock-k">Vault locked</div>
     <p class="lock-txt" id="lockTxt">Enter your master password to open it.</p>
     <input type="password" id="lockPass" placeholder="Master password" aria-label="Master password" autocomplete="current-password">
-    <div id="lockErr" class="lock-err" role="alert" style="display:none">Wrong password — try again.</div>
+    <div id="lockErr" class="lock-err" role="alert" style="display:none">Wrong password. Try again.</div>
     <button id="lockBtn" class="b-teal lock-go">Unlock</button>
     <button id="lockPk" type="button" class="lock-pk hidden" title="Or Windows Hello, a phone or a security key: whatever holds this vault's passkey">Unlock with Face ID / fingerprint</button>
   </div></div>
@@ -2649,24 +2649,24 @@
           <button id="bSettings" style="justify-content:flex-start;width:100%"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</button>
           <div class="cm-g">Accounts</div>
           <button id="bBulkAdd" style="justify-content:flex-start;width:100%">Bulk add accounts…</button>
-          <button id="bShare" style="justify-content:flex-start;width:100%" title="A read-only page of your ranks, in a link — no logins, ever">Share a snapshot…</button>
+          <button id="bShare" style="justify-content:flex-start;width:100%" title="A read-only page of your ranks in one link. Logins are never in it.">Share a snapshot…</button>
           <button id="bNewSeason" style="justify-content:flex-start;width:100%" title="Move every ranked account's current rank into its Past seasons">New season…</button>
           <button id="bStreamer" style="justify-content:flex-start;width:100%" title="Hide Riot IDs, logins, emails and notes while you stream or share your screen (H)">Streamer mode</button>
           <div class="cm-g">Backup</div>
-          <button id="bExportEnc" style="justify-content:flex-start;width:100%" title="AES-encrypted backup — needs your master password to open">Export encrypted backup…</button>
-          <button id="bExport" style="justify-content:flex-start;width:100%" title="Downloads plaintext JSON — includes login passwords">Export backup (JSON, plaintext)</button>
+          <button id="bExportEnc" style="justify-content:flex-start;width:100%" title="AES-encrypted backup. Your master password opens it.">Export encrypted backup…</button>
+          <button id="bExport" style="justify-content:flex-start;width:100%" title="Plaintext JSON, login passwords included">Export backup (JSON, plaintext)</button>
           <button id="bExportCsv" style="justify-content:flex-start;width:100%">Export as CSV</button>
           <button id="bImport" style="justify-content:flex-start;width:100%">Import backup</button>
           <button id="bImportCsv" style="justify-content:flex-start;width:100%">Import CSV</button>
           <div style="border-top:1px solid var(--line);margin:2px 0"></div>
-          <button id="bDeleteAll" class="b-danger" style="justify-content:flex-start;width:100%" title="Wipe every account — useful for clearing out demo/test data">Delete all accounts</button>
+          <button id="bDeleteAll" class="b-danger" style="justify-content:flex-start;width:100%" title="Deletes every account in this vault">Delete all accounts</button>
         </div></div>
       </div>
       <button id="bHelp" title="How this works">?</button>
     </div>
   </div>
 
-  <div id="banner" class="banner">Persistent storage is not available in this environment — data will be lost when you close the page. Download the file and open it locally on your PC.</div>
+  <div id="banner" class="banner">Storage is not available here, so your data will be lost when you close the page. Download the file and open it locally on your PC.</div>
 
   <!-- This app is built to sit open in a background tab for days and check by
        itself. It had no idea of "since you last looked" — you came back to the same
@@ -2694,15 +2694,15 @@
       <dt>Your data</dt>
       <dd><b>Stays here, apart from the Riot ID.</b> Accounts, logins and notes are saved in this browser on this device. To read a rank, the Riot ID goes to op.gg through a public proxy (corsproxy.io, allorigins.win or r.jina.ai), or to your own Worker if you set one up. The page's fonts load from Google Fonts. The optional extras send only what they need: Device sync uploads an encrypted vault to your own Worker, Discord alerts go to your webhook, and the AI rank check goes to Anthropic. Clearing browser data wipes the vault, so use <b>Export</b> for backups and <b>Import</b> to restore or merge them.</dd>
       <dt>Rank checks</dt>
-      <dd><b>Free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b>Rank</b> in a card's ⋯ menu to enter it by hand — history, the chart and the stats all work the same either way.</dd>
+      <dd><b>Free.</b> Refresh reads the current rank from op.gg. No account or key needed. If that is ever blocked, enter the rank by hand with <b>Rank</b> in a card's ⋯ menu. History, the chart and the stats work the same either way.</dd>
       <dt>Layouts</dt>
-      <dd>Cards for browsing, the list for working through the vault a row at a time, and the wall for seeing them all at once — click any tile to land back on that account's card.</dd>
+      <dd>Cards for browsing, the list for working through the vault a row at a time, and the wall for seeing them all at once. Click a tile to go to that account's card.</dd>
       <dt>Cards</dt>
-      <dd>The bar across a card's bottom edge opens <b>Details</b> — flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot, or its fields (honor, skins, Blue Essence…) to edit them — <b>Fields…</b> in the account form picks which ones, and adds your own · <b>Card art…</b> in the ⋯ menu sets the champion and skin behind a card, and how strongly it shows — on that card or on all of them.</dd>
+      <dd>The bar across a card's bottom edge opens <b>Details</b>: flex rank, past seasons and the champions played, each folded until you click it · the star pins favorites on top · statuses mark banned/resting smurfs, banned ones are skipped by checks · tick a card's checkbox to bulk-edit status/tags or delete several at once · click a card's note to rewrite it on the spot, or its fields (honor, skins, Blue Essence…) to edit them (<b>Fields…</b> in the account form picks which ones and adds your own) · <b>Card art…</b> in the ⋯ menu sets the champion and skin behind a card, and how strongly it shows, on that card or on all of them.</dd>
       <dt>Search</dt>
       <dd>Matches names, tags, notes and skins, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code> <code>champ:yasuo</code> (played this season, or in its top mastery) <code>role:mid</code> (from the last five ranked games), <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
       <dt>Quick find</dt>
-      <dd><kbd>Ctrl</kbd><kbd>K</kbd> (or <kbd>⌘</kbd><kbd>K</kbd>) anywhere — type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.</dd>
+      <dd><kbd>Ctrl</kbd><kbd>K</kbd> (or <kbd>⌘</kbd><kbd>K</kbd>) anywhere, then type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.</dd>
       <dt>Keys</dt>
       <dd><kbd>/</kbd> search · <kbd>n</kbd> new account · <kbd>f</kbd> favorites · <kbd>h</kbd> streamer mode (hides Riot IDs, logins, emails and notes; its red marker in the header turns it off) · <kbd>Esc</kbd> closes panels · shift-click a card's checkbox to select a range.</dd>
       <dt>Goals</dt>
@@ -2710,7 +2710,7 @@
       <dt>Extra privacy</dt>
       <dd>Set a master password in <b>Settings → Security</b> to encrypt everything at rest, with an auto-lock timer, and unlock with Face ID, a fingerprint or Windows Hello instead of typing it. Don't lose the password: there's no recovery. The <b>Password check-up</b> there finds passwords used on more than one account, weak ones and, when you ask, ones in known data leaks · <b>Sort: Last opened</b> brings up the account you were just on.</dd>
       <dt>More</dt>
-      <dd>The <b>⋯</b> menu has bulk add (paste Name#TAGs, an op.gg multi-search link or the lobby chat), CSV import, <b>New season</b> (every rank into Past seasons at once, with Undo), streamer mode and <b>Share a snapshot</b> — a read-only page of your ranks in one link, with no logins, emails or notes in it · archive an account to hide it without deleting (toggle <b>Archived</b> in the toolbar) · <b>Settings → Appearance</b> has themes, effects, text size and what each card shows.</dd>
+      <dd>The <b>⋯</b> menu has bulk add (paste Name#TAGs, an op.gg multi-search link or the lobby chat), CSV import, <b>New season</b> (every rank into Past seasons at once, with Undo), streamer mode and <b>Share a snapshot</b> (a read-only page of your ranks in one link, with no logins, emails or notes in it) · archive an account to hide it without deleting (toggle <b>Archived</b> in the toolbar) · <b>Settings → Appearance</b> has themes, effects, text size and what each card shows.</dd>
       <dt>Using this app</dt>
       <dd class="terms">free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.</dd>
     </dl></div>
@@ -2770,7 +2770,7 @@
             <button type="button" role="radio" data-atmosphere="noir" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="noir" aria-hidden="true"></span>
               <span class="atm-name">Noir</span>
-              <span class="atm-tip">Darker edges and heavier grain. No accent colour — quiet on purpose.</span>
+              <span class="atm-tip">Darker edges and heavier grain, and no accent colour.</span>
             </button>
             <button type="button" role="radio" data-atmosphere="lattice" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="lattice" aria-hidden="true"></span>
@@ -2823,19 +2823,19 @@
         <div class="grp-h">Rank checks</div>
         <div class="formgrid">
           <div class="fld fw">
-            <label>Backend URL (optional — your own rank server, e.g. Cloudflare Worker)</label>
-            <input id="sBackend" placeholder="https://... — leave empty to use the free auto-fetch" autocomplete="off">
+            <label>Backend URL (optional: your own rank server, e.g. a Cloudflare Worker)</label>
+            <input id="sBackend" placeholder="https://... (leave empty for the free auto-fetch)" autocomplete="off">
             <div id="sBackendStatus" class="hint" style="margin-top:2px" aria-live="polite"></div>
           </div>
           <!-- The whole setup, where you paste its result. It was one paragraph of
                dashboard clicks; it is now the Deploy button and three pastes. -->
           <details class="fw guide" id="sDeployHelp">
-            <summary>Set up your own worker — free, about 5 minutes</summary>
+            <summary>Set up your own worker (free, about 5 minutes)</summary>
             <ol>
               <li><b>Riot API key</b> (optional, for ranks straight from Riot and your last 5 ranked games). Sign in at
                 <a href="https://developer.riotgames.com" target="_blank" rel="noreferrer">developer.riotgames.com</a> with your Riot account.
                 The <b>Development API Key</b> on your dashboard works at once but expires every 24 hours; for one that lasts,
-                <b>Register Product → Personal API Key</b>. Keep the key to yourself — it is a password.</li>
+                <b>Register Product → Personal API Key</b>. Keep the key to yourself. It works like a password.</li>
               <li><a class="guide-btn" href="https://deploy.workers.cloudflare.com/?url=https://github.com/MarvinPanVan/league-smurf-tracker" target="_blank" rel="noreferrer">Deploy to Cloudflare</a>
                 and sign in (a free account is enough). Keep the copy of the repo it makes private. Paste your key where it asks for
                 <code>RIOT_API_KEY</code>, or leave it empty. Sync storage is set up for you.</li>
@@ -2862,8 +2862,8 @@
           <div class="fld">
             <label for="sModel">Model for rank checks</label>
             <select id="sModel">
-              <option value="claude-sonnet-5">Sonnet — more reliable (~1–2 ct/check)</option>
-              <option value="claude-haiku-4-5">Haiku — cheaper, may miss data</option>
+              <option value="claude-sonnet-5">Sonnet: more reliable (~1–2 ct/check)</option>
+              <option value="claude-haiku-4-5">Haiku: cheaper, may miss data</option>
             </select>
           </div>
           <div class="fw hint">
@@ -2886,7 +2886,7 @@
         </div>
         <div class="sub-fld">
           <input type="checkbox" id="sAutoRanked" style="width:auto">
-          <label for="sAutoRanked" style="font-size:calc(13px*var(--ts));color:var(--muted);max-width:560px">Ranked accounts only — skip unranked and never-placed ones, which answer the same every time</label>
+          <label for="sAutoRanked" style="font-size:calc(13px*var(--ts));color:var(--muted);max-width:560px">Ranked accounts only. Unranked and never-placed ones give the same answer every time, so they are skipped</label>
         </div>
       </div>
 
@@ -2898,7 +2898,7 @@
           <label for="sNotify">Browser notifications for tier-ups and finished "Check all" runs</label>
         </div>
         <div class="fld fw" style="margin-top:14px">
-          <label>Discord webhook URL (optional — posts tier-ups to a channel)</label>
+          <label>Discord webhook URL (optional, posts tier-ups to a channel)</label>
           <input id="sDiscord" placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
         </div>
         <div class="chk" style="margin-top:16px">
@@ -2919,7 +2919,7 @@
           </div>
         </div>
         <div class="fld fw">
-          <label>Master password — encrypts the whole vault at rest with AES-256. There is no recovery: lose the password and the vault is gone.</label>
+          <label>Master password. It encrypts the whole vault at rest with AES-256. There is no recovery: if you lose the password, the vault is gone.</label>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <input type="password" id="sVaultPass" placeholder="New master password" autocomplete="new-password" style="flex:1;min-width:170px">
             <button id="sVaultSet">Set / change</button>
@@ -2941,7 +2941,7 @@
         </div>
         <div id="sAutoLockHint" class="hint" style="margin-top:6px">Only applies while a master password is set. Off means the vault stays unlocked until you lock it.</div>
         <div class="sub-fld" style="padding-left:0;margin-top:12px">
-          <button type="button" id="sLockNow" title="Lock the vault now — needs the master password to open again">Lock now</button>
+          <button type="button" id="sLockNow" title="Lock the vault now. The master password opens it again.">Lock now</button>
           <div class="hint" style="margin-top:6px">Locks this tab immediately. Other open tabs keep their own unlock state until you reload them.</div>
         </div>
         <div class="fld fw" style="margin-top:22px">
@@ -2960,10 +2960,10 @@
         <div class="fw hint" style="margin-bottom:10px">
           Pushes the <b>encrypted</b> vault blob to your worker (KV). Same sync token on phone and PC.
           Last write wins. Needs a master password (Security) and a Backend URL with a KV binding (Rank checks), both above.
-          No scrape cache — you are responsible for not hammering op.gg.
+          There is no scrape cache, so don't hammer op.gg.
         </div>
         <div class="fld fw">
-          <label>Sync token (same on every device — treat like a password)</label>
+          <label>Sync token (the same on every device; treat it like a password)</label>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <input type="text" id="sSyncToken" class="mask" placeholder="Generate or paste a long token" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="flex:1;min-width:170px">
             <button type="button" id="sSyncGen">Generate</button>
@@ -3129,7 +3129,7 @@
            shown anywhere in particular. They are facts about the account, so they
            get fields. -->
       <div class="fld"><label for="fCreated">Account created</label><input type="date" id="fCreated" title="When the account itself was made"></div>
-      <div class="fld"><label for="fBirth">Date of birth on file</label><input type="date" id="fBirth" title="The date of birth the account was registered with — Riot asks for it on recovery"></div>
+      <div class="fld"><label for="fBirth">Date of birth on file</label><input type="date" id="fBirth" title="The date of birth the account was registered with. Riot asks for it on recovery."></div>
       <div class="fld"><label for="fTags">Tags (comma-separated)</label><input id="fTags" placeholder="e.g. ranked-ready, jungle, honor3"></div>
       <div class="fld"><label for="fStatus">Status</label>
         <select id="fStatus">
@@ -3147,7 +3147,7 @@
         <button type="button" id="fFieldsBtn" aria-expanded="false" aria-controls="fFieldsCfg">Fields…</button></div>
       <div class="fw nf-cfg hidden" id="fFieldsCfg"></div>
       <div class="fw nf-grid" id="fInfo"></div>
-      <div class="fld fw"><label for="fNotes">Anything else</label><textarea id="fNotes" rows="2" placeholder="Free text — whatever doesn't fit a field"></textarea></div>
+      <div class="fld fw"><label for="fNotes">Anything else</label><textarea id="fNotes" rows="2" placeholder="Free text for whatever doesn't fit a field"></textarea></div>
     </div>
     </div>
     <div class="mdl-f">
@@ -3184,14 +3184,14 @@
   <div class="console">
   <div class="cmd">
     <button id="bCheckAll" class="b-teal"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg> Check all ranks</button>
-    <button id="bCheckStale" class="hidden" title="Accounts that were found and last read over 3 days ago — not the never-checked or not-found ones">Refresh stale</button>
+    <button id="bCheckStale" class="hidden" title="Accounts last read over 3 days ago (not the never-checked or not-found ones)">Refresh stale</button>
     <button id="bCancelCheck" class="b-danger hidden">Stop</button>
     <button id="bAdd" class="b-teal">+ Add account</button>
     <div class="cmd-r"><span id="count" class="cmd-count"></span>
     <div id="density" class="seg" role="group" aria-label="Layout">
       <button data-density="cards" title="Cards" aria-label="Card view"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
       <button data-density="list" title="List" aria-label="List view"><svg class="ico" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
-      <button data-density="wall" title="Wall — the whole vault on one screen" aria-label="Wall view"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="9.5" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16" y="9.5" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><rect x="9.5" y="16" width="5" height="5" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/></svg></button>
+      <button data-density="wall" title="Wall: the whole vault on one screen" aria-label="Wall view"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="9.5" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16" y="9.5" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><rect x="9.5" y="16" width="5" height="5" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/></svg></button>
     </div></div>
   </div>
   <div id="runbar" class="runbar hidden"><div class="run-fill"></div><span class="run-txt"></span></div>
@@ -3337,15 +3337,15 @@
         <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
       </div>
       <div class="mdl-b"><div class="grp sh-body">
-        <p class="sh-intro">A read-only page of your ranks, in one link. Nothing is uploaded — <b>the link is the page</b>, and it shows
-          what it showed today. Logins, passwords, emails and notes are never in it.</p>
+        <p class="sh-intro">A read-only page of your ranks, in one link. Nothing is uploaded: the page is stored in the link itself,
+          so it keeps showing your ranks as they are today. Logins, passwords, emails and notes are never in it.</p>
         <div class="fld"><label for="shName">Title</label><input id="shName" maxlength="60" placeholder="My League accounts" autocomplete="off" data-autofocus></div>
         <div class="fld"><label id="shWhichL">Accounts</label><div class="seg sh-which" id="shWhich" role="group" aria-labelledby="shWhichL"></div></div>
         <div class="sh-opts">
           <label class="sh-opt"><input type="checkbox" id="shIds"><span><b>Riot IDs</b><em>Off: your labels only, so nobody can look the accounts up.</em></span></label>
           <label class="sh-opt"><input type="checkbox" id="shArt" checked><span><b>Champion art</b><em>Each card's art, as a banner.</em></span></label>
           <label class="sh-opt"><input type="checkbox" id="shHist" checked><span><b>LP history</b><em>The climb as a line on each card.</em></span></label>
-          <label class="sh-opt"><input type="checkbox" id="shNotes"><span><b>Honor &amp; skins</b><em>From the note fields — nothing else from notes.</em></span></label>
+          <label class="sh-opt"><input type="checkbox" id="shNotes"><span><b>Honor &amp; skins</b><em>From the note fields only, never the notes themselves.</em></span></label>
         </div>
       </div></div>
       <div class="mdl-f">
@@ -3436,7 +3436,7 @@ const DEFAULT_AUTO_HOURS=72;
    like a spreadsheet cell in Settings and stretched across the panel; presets
    read as a sentence the way "Refresh at most" does. */
 const AUTO_LOCK=[
-  {v:0,label:"Off — never"},
+  {v:0,label:"Never"},
   {v:5,label:"5 minutes"},
   {v:15,label:"15 minutes"},
   {v:30,label:"30 minutes"},
@@ -3843,7 +3843,7 @@ function decayRisk(a){const d=decayDays(a);return isLive(a)&&d!==null&&d<=7}
 function playNext(pool){
   const live=(pool||accounts).filter(a=>isLive(a)&&(a.status||"active")==="active"&&isChecked(a)&&a.stats.found!==false);
   const urgent=live.filter(decayRisk).sort((x,y)=>decayDays(x)-decayDays(y));
-  if(urgent.length){const a=urgent[0],d=decayDays(a);return{a,why:d<0?"decaying — play a ranked game":"decay in "+decayIn(d)}}
+  if(urgent.length){const a=urgent[0],d=decayDays(a);return{a,why:d<0?"decaying · play a ranked game":"decay in "+decayIn(d)}}
   let best=null,days=-1;
   for(const a of live){const d=rotationDays(a);if(d!=null&&d>days){best=a;days=d}}
   // Say what the days are counted from. rotationDays falls back from "played" to
@@ -4001,18 +4001,18 @@ async function updateBackendStatus(){
     const res=await fetch(u.href,{signal:c.signal}).finally(()=>clearTimeout(t));
     const d=await res.json().catch(()=>null);
     if(d&&d.ok===true){
-      el.textContent=(d.riot?"Riot API key: set — ranks come from Riot":"Riot API key: not set — ranks come from op.gg (the guide below adds one)")
+      el.textContent=(d.riot?"Riot API key: set. Ranks come from Riot.":"Riot API key: not set. Ranks come from op.gg (the guide below adds one).")
         +" · "+(d.vault?"Sync storage: ready":"Sync storage: not bound");
-    }else el.textContent="Worker reached, but it is an older version — redeploy it for Riot API support and this status line.";
+    }else el.textContent="Worker reached, but it is an older version. Redeploy it for Riot API support and this status line.";
   }catch(e){el.textContent="Could not reach the worker at that URL.";el.style.color="var(--danger)"}
 }
 async function updateStorageStatus(){
   const el=$("sStorageStatus"),btn=$("sStorageProtect");
   if(!el)return;
   const st=await storageState();
-  el.textContent=st==="protected"?"Protected — this browser will not clear the vault on its own."
-    :st==="open"?"Not protected — the browser may clear it when space runs low, and Safari does after 7 days without a visit. Protect it, install the app, and keep a backup."
-    :"This browser does not say whether it keeps the vault — keep a backup.";
+  el.textContent=st==="protected"?"Protected. This browser will not clear the vault on its own."
+    :st==="open"?"Not protected. The browser may clear it when space runs low, and Safari does after 7 days without a visit. Protect it, install the app, and keep a backup."
+    :"This browser does not say whether it keeps the vault, so keep a backup.";
   // a warning, not an error: nothing has been lost, and one click fixes it
   el.style.color=st==="open"?"var(--warn-txt)":"";
   btn.classList.toggle("hidden",st!=="open");
@@ -4035,7 +4035,7 @@ function saveDB(opts){invalidateDupCache();
   // has always been able to assume of an unencrypted vault.
   if(!vaultPassword){
     try{localStorage.setItem(DB_KEY,JSON.stringify(accounts));stampRev();return Promise.resolve(true)}
-    catch(e){toast("Saving failed — storage error");return Promise.resolve(false)}
+    catch(e){toast("Saving failed (storage error)");return Promise.resolve(false)}
   }
   saveChain=saveChain.then(async()=>{
     if(seq!==saveSeq)return true; // superseded while queued; the newer one is next
@@ -4048,12 +4048,12 @@ function saveDB(opts){invalidateDupCache();
       currentEnvelope=envelope;
       stampRev();
       return true;
-    }catch(e){toast("Saving failed — storage error");return false}
+    }catch(e){toast("Saving failed (storage error)");return false}
   });
   return saveChain;
 }
 /* Report a change only once it is actually on disk. saveDB() answers, and it
-   toasts its own "Saving failed — storage error" — but a caller that fires its
+   toasts its own "Saving failed (storage error)" — but a caller that fires its
    own "Archived" into the same toast a line later paints straight over that
    warning, and the user is told a change was kept when it was not. Set / remove
    master password already awaited the answer; this is the same discipline for
@@ -4810,8 +4810,8 @@ async function syncWatch(force){
       body:JSON.stringify({webhook:cfg.discordWebhook,accounts:watchList()})});
     const d=await res.json().catch(()=>null);
     if(res.ok){cfg.watchSyncedAt=Date.now();saveCfg();return true}
-    if(res.status===409&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker already sends decay alerts for another browser — turn them off there first")}
-    else if((res.status===405||res.status===404&&!d)&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker is an older version without decay alerts — redeploy it (Settings → Rank checks → the guide)")}
+    if(res.status===409&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker already sends decay alerts for another browser. Turn them off there first")}
+    else if((res.status===405||res.status===404&&!d)&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker is an older version without decay alerts. Redeploy it (Settings → Rank checks → the guide)")}
     else if(d&&d.code==="no_kv")toast("Decay alerts need sync storage on your worker (a KV namespace bound as VAULT)");
   }catch(e){}
   return false;
@@ -4828,12 +4828,12 @@ async function updateWatchStatus(){
   try{
     const res=await fetch(watchUrl(),{headers:{Authorization:"Bearer "+cfg.watchToken}});
     const d=await res.json().catch(()=>null);
-    el.textContent=res.ok&&d?"On — watching "+d.accounts+" account"+(d.accounts===1?"":"s")
+    el.textContent=res.ok&&d?"On, watching "+d.accounts+" account"+(d.accounts===1?"":"s")
       +(d.lastRun?" · last checked "+timeAgo(d.lastRun):" · first check at the next daily run")+(d.lastSent?" · last alert "+timeAgo(d.lastSent):"")
       :res.status===409?"Another browser owns the alerts on this worker."
-      :res.status===405?"Your worker is an older version without decay alerts — redeploy it, then save here again."
-      :"On, but the worker does not have the list yet — it is sent after your next check.";
-  }catch(e){el.textContent="On — could not reach the worker to check."}
+      :res.status===405?"Your worker is an older version without decay alerts. Redeploy it, then save here again."
+      :"On, but the worker does not have the list yet. It gets it after your next check.";
+  }catch(e){el.textContent="On, but the worker could not be reached to check."}
 }
 function postDiscord(content){
   if(!cfg.discordWebhook)return;
@@ -4893,7 +4893,7 @@ function updateSyncStatus(){
   const parts=[];
   if(!cfg.backendUrl)parts.push("Set a Backend URL first.");
   else if(!cfg.syncToken)parts.push("Generate or paste a sync token.");
-  else if(!vaultPassword)parts.push("Set a master password — only ciphertext is synced.");
+  else if(!vaultPassword)parts.push("Set a master password first. Only ciphertext is synced.");
   else parts.push("Ready to push/pull.");
   if(cfg.lastSyncAt)parts.push("Last sync "+timeAgo(cfg.lastSyncAt)+".");
   if(cfg.vaultRev)parts.push("Local rev "+new Date(cfg.vaultRev).toLocaleString()+".");
@@ -4906,7 +4906,7 @@ async function pushVaultSync(){
   const url=vaultSyncUrl();
   if(!url){toast("Set a Backend URL in Settings first");return}
   if(!cfg.syncToken||cfg.syncToken.length<16){toast("Sync token must be at least 16 characters");return}
-  if(!vaultPassword){toast("Set a master password — sync only stores ciphertext");return}
+  if(!vaultPassword){toast("Set a master password first. Sync only stores ciphertext");return}
   if(vaultLocked()){toast("Unlock the vault first");return}
   syncBusy=true;
   try{
@@ -4922,7 +4922,7 @@ async function pushVaultSync(){
         let remote=null; try{remote=await peek.json()}catch(e){}
         const remoteAt=Number(remote&&remote.updatedAt)||0;
         if(remoteAt>updatedAt){
-          toast("Remote vault is newer — Pull first, or Push again after resolving","Pull…",()=>{
+          toast("Remote vault is newer. Pull first, or Push again after resolving","Pull…",()=>{
             if(confirm("Replace this device's vault with the newer cloud copy?\nLocal changes since your last sync may be lost."))
               pullVaultSync(true);
           });
@@ -4940,14 +4940,14 @@ async function pushVaultSync(){
     const text=await res.text();
     let data=null; try{data=JSON.parse(text)}catch(e){}
     if(res.status===409){
-      toast("Remote vault is newer — Pull first, or Push again after resolving","Pull…",()=>{
+      toast("Remote vault is newer. Pull first, or Push again after resolving","Pull…",()=>{
         if(confirm("Replace this device's vault with the newer cloud copy?\nLocal changes since your last sync may be lost."))
           pullVaultSync(true);
       });
       return;
     }
     if(res.status===503&&data&&data.code==="no_kv"){
-      toast("Worker has no KV — bind a namespace as VAULT and redeploy");
+      toast("Worker has no KV. Bind a namespace as VAULT and redeploy");
       return;
     }
     if(!res.ok){toast("Push failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
@@ -4965,16 +4965,16 @@ async function pullVaultSync(force){
   const url=vaultSyncUrl();
   if(!url){toast("Set a Backend URL in Settings first");return}
   if(!cfg.syncToken||cfg.syncToken.length<16){toast("Sync token must be at least 16 characters");return}
-  if(!vaultPassword){toast("Set a master password — needed to decrypt the cloud vault");return}
+  if(!vaultPassword){toast("Set a master password first. It decrypts the cloud vault");return}
   if(vaultLocked()){toast("Unlock the vault first");return}
   syncBusy=true;
   try{
     const res=await fetch(url,{headers:{"Authorization":"Bearer "+cfg.syncToken}});
     const text=await res.text();
     let data=null; try{data=JSON.parse(text)}catch(e){}
-    if(res.status===404){toast("No cloud vault for this token yet — Push first");return}
+    if(res.status===404){toast("No cloud vault for this token yet. Push first");return}
     if(res.status===503&&data&&data.code==="no_kv"){
-      toast("Worker has no KV — bind a namespace as VAULT and redeploy");
+      toast("Worker has no KV. Bind a namespace as VAULT and redeploy");
       return;
     }
     if(!res.ok){toast("Pull failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
@@ -4996,8 +4996,8 @@ async function pullVaultSync(force){
     }
     if(!force&&accounts.length){
       if(localAt>remoteAt){
-        toast("Local vault is newer than cloud — Pull would overwrite it","Pull…",()=>{
-          if(confirm("Replace this device's vault with the older cloud copy?\nThis cannot be undone from here — Export first if unsure."))
+        toast("Local vault is newer than cloud. Pull would overwrite it","Pull…",()=>{
+          if(confirm("Replace this device's vault with the older cloud copy?\nThis cannot be undone from here. Export first if unsure."))
             pullVaultSync(true);
         });
         return;
@@ -5036,7 +5036,7 @@ function celebrate(id,acc){
   const prev=acc.history[acc.history.length-2]||{};
   toast("Tier up: "+(prev.tier||"?")+" → "+acc.stats.tier);
   // a system notification shows on screen like the page does, so streamer mode applies
-  notify("Tier up — "+plainName(acc),(prev.tier||"?")+" → "+acc.stats.tier);
+  notify("Tier up: "+plainName(acc),(prev.tier||"?")+" → "+acc.stats.tier);
   postDiscord("🎉 **"+(acc.label||acc.gameName)+"** tiered up: "+(prev.tier||"?")+" → "+acc.stats.tier);
   if(prefersReducedMotion())return;
   // The crest is now a different emblem than it was a second ago, which is the
@@ -5080,7 +5080,7 @@ async function copyText(v,label,sensitive){
       document.body.removeChild(ta);
     }catch(e2){}
   }
-  toast(ok?label+" copied"+(sensitive?" — clears from clipboard in 30s":""):"Copy failed — copy manually");
+  toast(ok?label+" copied"+(sensitive?". Clears from the clipboard in 30s":""):"Copy failed. Copy it by hand");
   if(!ok)return false;
   if(ok&&sensitive){
     lastCopiedSecret=v;
@@ -5742,7 +5742,7 @@ async function fetchViaProxy(acc){
           icon:parseProfileIcon(text),mmr:null,avgRecent:null,uncertain,source:uncertain?"body":"meta",
           asOf:"auto-fetch (op.gg via "+proxies[idx].name+")",note:null,updatedAt:Date.now()};
       }
-      lastErr="page loaded but no rank found — name/tag/region correct?";
+      lastErr="page loaded but no rank found; check the name, tag and region";
     }catch(e){lastErr=e.name==="AbortError"?"timeout":(e.message||"fetch blocked")}
   }
   throw new Error(lastErr);
@@ -5926,7 +5926,7 @@ function normChamps(list){
   return out.length?out:null;
 }
 async function fetchViaClaude(acc){
-  if(!cfg.apiKey)throw new Error("No API key — add one in Settings");
+  if(!cfg.apiKey)throw new Error("No API key. Add one in Settings");
   const r=REGIONS[acc.region]||REGIONS.EUW;
   const prompt=`Search the web for the current League of Legends ranked Solo/Duo stats of the player "${acc.gameName}#${acc.tagLine}" on the ${r.full} (${acc.region}) server.
 Preferred sources: dpm.lol first, then op.gg, leagueofgraphs, u.gg. Try queries like: dpm.lol ${acc.gameName} ${acc.tagLine} | op.gg ${acc.gameName} ${acc.tagLine} ${r.opgg}.
@@ -6208,7 +6208,7 @@ async function check(id){
     return s.found===false?"missing":true;
   }
   if(checkGen.get(id)!==gen)return null;
-  acc.stats=Object.assign({},acc.stats||{},{note:"Auto-fetch failed ("+err+") — enter it by hand with ✎ Rank"});
+  acc.stats=Object.assign({},acc.stats||{},{note:"Auto-fetch failed ("+err+"). Enter it by hand with ✎ Rank"});
   if(run)run.dirty=true; else saveDB();
   renderCard(id);
   if(!run){renderDash();renderRibbon()}
@@ -6348,7 +6348,7 @@ function seasonReset(id){
   openMore.delete(id);
   seasonResetCore(a);
   renderCard(id); renderDash(); renderRibbon();
-  saveThen("Season reset — previous rank kept in Past seasons");
+  saveThen("Season reset. The previous rank is in Past seasons");
 }
 // The data side of a season reset, shared by one account's ⋯ menu and New season.
 function seasonResetCore(a){
@@ -7112,7 +7112,7 @@ function renderRibbon(){
   setHTML(el,`<div class="rib-bar" role="group" aria-label="Accounts by tier">${segs.map(s=>{
       const on=segOn(s);
       return `<button class="rib-seg${on?" on":""}${isTail(s)?" tail":""}" ${segAttr(s)} style="--c:${s.c}${isTail(s)?"":";flex:"+s.n}"
-        aria-pressed="${on}" title="${esc(s.label)} — ${s.n} account${s.n===1?"":"s"} (click to show only these)"
+        aria-pressed="${on}" title="${esc(s.label)}: ${s.n} account${s.n===1?"":"s"}. Click to show only these."
         aria-label="${esc(s.label)}, ${s.n}">${allOne?"":`<i>${s.n}</i>`}</button>`}).join("")}</div>
     <div class="rib-cap">${dotList([`<b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}`,
       unN&&`<b>${unN}</b> unranked`,missN&&`<b>${missN}</b> not found`,neverN&&`<b>${neverN}</b> never checked`,bannedN&&`<b>${bannedN}</b> banned`])}`
@@ -7180,19 +7180,19 @@ function renderDash(){
     (W+L)>0&&`<div class="stat"><div class="k">Season W/L</div><div class="v nw">${W}<small>W</small> ${L}<small>L</small></div>
       <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>`,
     neverN&&`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
-      <div class="v" style="color:var(--warn-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`,
+      <div class="v" style="color:var(--warn-txt)">${neverN}</div><div class="s-note">no rank pulled yet · click to see them</div></button>`,
     attentionN&&`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
       <div class="v" style="color:var(--danger)">${attentionN}</div><div class="s-note">flagged by you, or the profile no longer exists</div></button>`,
     failedN&&`<button class="stat stat-b${ui.flag==="failed"?" on":""}" data-flag="failed" aria-pressed="${ui.flag==="failed"}"><div class="k">Last check failed</div>
-      <div class="v" style="color:var(--danger)">${failedN}</div><div class="s-note">auto-fetch failed — enter rank by hand or retry</div></button>`,
+      <div class="v" style="color:var(--danger)">${failedN}</div><div class="s-note">auto-fetch failed · enter the rank by hand or retry</div></button>`,
     dupN&&`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`,
     next&&`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
       <div class="v" style="font-size:calc(14px*var(--ts))">${nameOf(next.a)}</div><div class="s-note">${esc(next.why)}</div></button>`,
     // Play next already names the one account at decay risk and when it decays;
     // a tile saying "1" beside it only says it again. Two or more, and it filters.
-    decayN&&!(decayN===1&&next&&decayRisk(next.a))&&`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left — estimated from the games seen between checks"><div class="k">Decay risk</div>
-      <div class="v" style="color:var(--warn)">${decayN}</div><div class="s-note">a week or less banked — play a ranked game</div></button>`,
+    decayN&&!(decayN===1&&next&&decayRisk(next.a))&&`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left, estimated from the games seen between checks"><div class="k">Decay risk</div>
+      <div class="v" style="color:var(--warn)">${decayN}</div><div class="s-note">a week or less banked · play a ranked game</div></button>`,
     rotN&&`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
       <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`,
     week&&(()=>{
@@ -7203,7 +7203,7 @@ function renderDash(){
         +(week.games?" · "+week.games+" game"+(week.games===1?"":"s"):"")
         +(week.best?" · best "+nameOf(week.best.a)+" +"+week.best.d:"");
       const inner=`<div class="k">This week</div><div class="v">${week.lp>0?"+":week.lp<0?"−":""}${Math.abs(week.lp)} <small>LP</small></div><div class="s-note">${note}</div>`;
-      return week.best?`<button class="stat stat-b" id="weekStat" data-next="${idAttr(week.best.a.id)}" title="The last seven days across the counted accounts — click to see the best climber">${inner}</button>`
+      return week.best?`<button class="stat stat-b" id="weekStat" data-next="${idAttr(week.best.a.id)}" title="The last seven days across the counted accounts. Click to see the best climber">${inner}</button>`
         :`<div class="stat" id="weekStat" title="The last seven days across the counted accounts">${inner}</div>`;
     })(),
     poolTrend&&`<div class="stat" id="ladderTrendStat" title="${esc(poolTrend.note)}">
@@ -7360,7 +7360,7 @@ async function loadForm(id){
       next={state:"ok",games,at:Date.now()};
       const keep=accounts.find(a=>a.id===id);
       if(keep&&!previewMode){keep.recent=normRecent({at:Date.now(),games});if(!keep.recent)delete keep.recent;saveDB()}
-    }else next={state:"error",msg:res.status===503?"Riot's rate limit — try again in a minute"
+    }else next={state:"error",msg:res.status===503?"Riot's rate limit. Try again in a minute"
       :res.status===404?"Your worker has no Riot API key, or is an older version"
       :"Could not load them"+(d&&d.error?" ("+String(d.error).slice(0,80)+")":"")};
   }catch(e){next={state:"error",msg:"Could not reach your worker"}}
@@ -7707,7 +7707,7 @@ function apSave(){
   }
   closeArtPicker();
   if(opChanged&&all)renderGrid();else renderCard(acc.id);
-  saveThen(champArtOn()?msgs.join(" · "):"Saved — turn on Champion art in Settings to see it");
+  saveThen(champArtOn()?msgs.join(" · "):"Saved. Turn on Champion art in Settings to see it");
 }
 function apAuto(){
   const acc=apAcc();if(!acc)return;
@@ -7981,7 +7981,7 @@ function snapHTML(s){
     ${list.length?`<section class="sn-grid" aria-label="Accounts">${list.map(snapCardHTML).join("")}</section>`
       :`<p class="sn-empty">This snapshot has no accounts in it.</p>`}
     <footer class="sn-foot">
-      <p>A snapshot${s.at?" taken "+esc(snapDay(s.at)):""} — it doesn't update. Logins, emails and notes are never part of one.</p>
+      <p>A snapshot${s.at?" taken "+esc(snapDay(s.at)):""}. It doesn't update. Logins, emails and notes are never part of one.</p>
       <a class="btn b-teal" href="${esc(home)}">Track your own accounts</a>
       <p class="sn-riot">${esc(RIOT_NOTICE)}</p>
     </footer>`;
@@ -8033,8 +8033,8 @@ window.addEventListener("hashchange",()=>{
 const share={which:"ranked",gen:0,url:""};
 function shareCounts(){return{ranked:snapAccounts("ranked").length,fav:snapAccounts("fav").length,sel:snapAccounts("sel").length,all:snapAccounts("all").length}}
 function openShare(){
-  if(previewMode){toast("Exit preview first — this is example data, not your accounts");return}
-  if(!accounts.some(a=>!a.archived)){toast("Add an account first — there is nothing to share yet");return}
+  if(previewMode){toast("Exit preview first. This is example data, not your accounts");return}
+  if(!accounts.some(a=>!a.archived)){toast("Add an account first. There is nothing to share yet");return}
   closeAllPanels();
   const n=shareCounts();
   share.which=selected.size&&n.sel?"sel":n.ranked?"ranked":"all";
@@ -8090,7 +8090,7 @@ function applyStreamer(){
 }
 function setStreamer(on){
   cfg.streamer=on?true:null;saveCfg();applyStreamer();render();
-  toast(on?"Streamer mode on — Riot IDs, logins, emails and notes are hidden":"Streamer mode off");
+  toast(on?"Streamer mode on. Riot IDs, logins, emails and notes are hidden":"Streamer mode off");
 }
 function drawerTitle(){
   const h=new Set(cardHidden());
@@ -8340,7 +8340,7 @@ function focusNoteEditor(root){
    something the app believed in. */
 function divOff(tier){
   return hasDivisions(tier)?""
-    :' disabled style="opacity:.35" title="No divisions above Master — up there the ladder is only LP"';
+    :' disabled style="opacity:.35" title="No divisions above Master. Up there the ladder is only LP"';
 }
 /* A tier with no divisions gets a dash, not a greyed-out "I". Disabling the
    select said the numeral did not apply; it still left a numeral sitting there
@@ -8358,7 +8358,7 @@ function setDivisionOptions(ds,tier){
   const off=!hasDivisions(tier);
   ds.disabled=off;
   ds.style.opacity=off?".35":"";
-  ds.title=off?"No divisions above Master — up there the ladder is only LP":"";
+  ds.title=off?"No divisions above Master. Up there the ladder is only LP":"";
   const want=off?[DIV_NONE]:["I","II","III","IV"];
   const have=[...ds.options].map(o=>o.textContent);
   if(have.join("|")===want.join("|"))return;   // already right; keep the value
@@ -8390,14 +8390,14 @@ function rankPanelHTML(a,s,rev){
   const fld=(label,control)=>`<label class="rk-f"><span>${esc(label)}</span>${control}</label>`;
   const num=(f,val,extra)=>`<input data-f="${f}" type="number" min="0"${extra||""} value="${val}">`;
   const peakBody=`<div class="rk-grid">`
-    +fld("Tier",`<select data-f="ptier">${tierOpts(pm,"— none —")}</select>`)
+    +fld("Tier",`<select data-f="ptier">${tierOpts(pm,"None")}</select>`)
     +fld("Division",`<select data-f="pdiv"${divOff(pm&&pm.tier)}>${divOpts(pm)}</select>`)
     +fld("LP",num("plp",pm&&pm.lp!=null?numVal(pm.lp):"",' max="2000"'))
-    +`</div><div class="rk-note">Refresh reads op.gg's own "Top tier" peak when the profile has one, and the app also tracks the highest rank it has seen itself. Set a peak here as well if you know better — whichever is genuinely highest is the one shown.</div>`;
+    +`</div><div class="rk-note">Refresh reads op.gg's own "Top tier" peak when the profile has one, and the app also tracks the highest rank it has seen itself. Set a peak here as well if you know better. The highest of them is the one shown.</div>`;
   const goalBody=`<div class="rk-grid">`
-    +fld("Tier",`<select data-f="gtier">${tierOpts(gm,"— none —")}</select>`)
+    +fld("Tier",`<select data-f="gtier">${tierOpts(gm,"None")}</select>`)
     +fld("Division",`<select data-f="gdiv"${divOff(gm&&gm.tier)}>${divOpts(gm)}</select>`)
-    +`</div><div class="rk-note">The card gets a rail showing how far there is left to go, and — once there is a fortnight of checks to work from — roughly how long at the rate this account has actually been climbing.</div>`;
+    +`</div><div class="rk-note">The card gets a rail showing how far there is left to go and, after two weeks of checks, roughly how long it will take at the rate this account has been climbing.</div>`;
   const tint=e=>e&&e.tier?`<span style="color:${tierColor(e.tier)}">${esc(shortRank(e)||"")}</span>`:`<span class="rk-none">not set</span>`;
   // Body only: the window around it carries the title, the ✕ and Save.
   return `<div class="rankpanel">
@@ -8509,7 +8509,7 @@ function rowHTML(a,i){
       <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}">
       <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
       <span class="rw-id">
-        <span class="rw-nm" title="${esc(plainName(a))}"><span class="nm-t">${nameOf(a)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
+        <span class="rw-nm" title="${esc(plainName(a))}"><span class="nm-t">${nameOf(a)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged: needs a look">${icon("flag")}</span>`:""}</span>
         <span class="rw-sub"><span class="rw-tag sens">${esc(a.gameName)}#${esc(a.tagLine)}</span>${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}</span>
       </span>
       <span class="rw-spark">${sparkline(a.history,col)
@@ -8565,12 +8565,12 @@ function tileHTML(a){
     if(s.lp!=null)lp=s.lp+" LP";
   }else rank="Unranked";
   const st=STATUS[a.status]||STATUS.active;
-  return `<div class="hx${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" · "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
-    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
+    <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?`<span class="flagmark" title="Flagged: needs a look">${icon("flag")}</span>`:""}</span>
     <span class="t-rk" style="color:${col}">${esc(rank)}</span>
     ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
   </div></div>`;
@@ -8649,7 +8649,7 @@ function cardHTML(a,i){
   let rankBlock;
   if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
   else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">Never checked</div>`;
-  else if(s.found===false)rankBlock=`<div class="wl" style="color:var(--danger)">Not found — check name/tag/region</div>`;
+  else if(s.found===false)rankBlock=`<div class="wl" style="color:var(--danger)">Not found. Check the name, tag and region</div>`;
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
     ${s.level>=30?`<div class="wl"><span class="ready" title="Level 30 reached. Ranked also needs 20 champions owned, which the app cannot see.">Ready for ranked</span></div>`:""}`;
   else if(!isRanked(a))rankBlock=`<div class="rk" style="color:${col}"><span class="rk-main"><span class="rk-t">Unranked</span></span></div>
@@ -8709,7 +8709,7 @@ function cardHTML(a,i){
       <div class="c-id">
         <!-- the name is ellipsised at the card's width, so the full one has to be
              available somewhere; hovering is the only place left for it -->
-        <div class="c-name"><span title="${esc(plainName(a))}"${a.label?"":' class="sens"'}>${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f" title="${esc(st.label)}">${esc(st.short||st.label)}</span>`:""}</div>
+        <div class="c-name"><span title="${esc(plainName(a))}"${a.label?"":' class="sens"'}>${esc(a.label||a.gameName)}</span>${a.flagged?`<span class="flagmark" title="Flagged: needs a look">${icon("flag")}</span>`:""}${a.status&&a.status!=="active"?`<span class="stchip" style="color:${st.color};background:${st.color}1f" title="${esc(st.label)}">${esc(st.short||st.label)}</span>`:""}</div>
         <button class="rid" data-act="copyid" title="Copy Riot ID"><span class="sens">${esc(a.gameName)}<b>#${esc(a.tagLine)}</b></span></button>
       </div>
       <div class="c-chrome">
@@ -9045,7 +9045,7 @@ function renderGrid(){
        Now it says what the app is for in three steps, and both ways in are buttons
        of their own: start for real, or look around first. */
     setHTML(grid,`<div class="hx" data-k="empty" style="grid-column:1/-1"><div class="hx-in empty welcome"><div class="d"><span class="empty-gem"></span></div>`
-      +`<h2 class="wl-t">No accounts yet</h2><p class="wl-s">Store your first smurf: its rank checked for you, its login a click away, every account on one page.</p>`
+      +`<h2 class="wl-t">No accounts yet</h2><p class="wl-s">Add your accounts to keep their ranks and logins in one place.</p>`
       +`<ol class="wl-steps"><li><span class="wl-n">1</span><b>Add an account</b><span>Its Riot ID and region. The login is optional.</span></li>`
       +`<li><span class="wl-n">2</span><b>Check its rank</b><span>Free and automatic, read from op.gg. No key needed.</span></li>`
       +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Login shows the username and password, each one click to copy.</span></li></ol>`
@@ -9084,7 +9084,7 @@ function renderGrid(){
   // patching keeps a focused textarea alive, so this is normally a no-op — it
   // only matters if the note block was structurally replaced rather than patched
   if(editingNote)focusNoteEditor(grid);
-  document.title=accounts.length?"Smurf Tracker ("+accounts.length+")":"Smurf Tracker — Summoner Vault";
+  document.title=accounts.length?"Smurf Tracker ("+accounts.length+")":"Smurf Tracker · Summoner Vault";
   // isStale(), not a second hand-rolled version of it: this one required an
   // updatedAt, so never-checked accounts were left out and the readout disagreed
   // with both the "Refresh N stale" button and the stats panel beside it.
@@ -9219,7 +9219,7 @@ function renderInfoFields(info,focusFirst){
         +(f.own?' step="any"':` min="0" max="${f.max}" step="1"`)+` value="${esc(val)}" placeholder="—"></div>`;
     }
     if(f.kind==="list")return`<div class="fld wide"><label for="${id}">${esc(f.label)}</label><input id="${id}" data-nf="skins" autocomplete="off"`
-      +` value="${esc((v||[]).join(", "))}" placeholder="Comma-separated — e.g. Elementalist Lux, Spirit Blossom Yasuo"></div>`;
+      +` value="${esc((v||[]).join(", "))}" placeholder="Comma-separated, e.g. Elementalist Lux, Spirit Blossom Yasuo"></div>`;
     const val=v==null?"":String(v);
     return`<div class="fld wide"><label for="${id}">${esc(f.label)}</label><input id="${id}" class="nf-sens" data-nf="${f.k}"${at} autocomplete="off" value="${esc(val)}"`
       +` placeholder="${f.k==="penalty"?"e.g. 14-day chat restriction, ends 12 Oct":"—"}"></div>`;
@@ -9279,7 +9279,7 @@ function renderFieldsCfg(){
     +(own.length?own.map((c,i)=>`<div class="row"><input data-own-label="${i}" value="${esc(c.label)}" maxlength="32" aria-label="Field name">`
       +`<select data-own-kind="${i}" aria-label="Kind of field">${kinds(c.kind)}</select>`
       +`<button type="button" data-own-del="${i}" title="Remove this field" aria-label="Remove ${esc(c.label)}">✕</button></div>`).join("")
-      :`<span class="none">Anything else you track on every account — where it came from, what it cost, the recovery question.</span>`)
+      :`<span class="none">Anything else you track on every account: where it came from, what it cost, the recovery question.</span>`)
     +(own.length<NF_MAX_OWN?`<div class="row"><input id="nfNewLabel" maxlength="32" placeholder="New field, e.g. Bought from" aria-label="New field name">`
       +`<select id="nfNewKind" aria-label="Kind of field">${kinds("text")}</select><button type="button" id="nfAdd">Add</button></div>`
       :`<span class="none">That's ${NF_MAX_OWN}, the most a vault can have.</span>`)
@@ -9549,7 +9549,7 @@ $("sPkSet").addEventListener("click",async()=>{
     toast(done?"Face ID / fingerprint unlock is on for this browser":"Passkey made. Tap Finish set-up and confirm it once more");
   }catch(e){
     toast(e.name==="NoPrf"?"This browser or device can't unlock with a passkey yet. Recent Chrome, Edge and Safari can."
-      :e.name==="NotAllowedError"?(pkPending?"Cancelled. Tap Finish set-up to try again":"Cancelled — nothing was set up")
+      :e.name==="NotAllowedError"?(pkPending?"Cancelled. Tap Finish set-up to try again":"Cancelled. Nothing was set up")
       :"Couldn't set it up: "+(e.message||e.name||"unknown error"));
   }finally{updatePkStatus()}
 });
@@ -9822,18 +9822,18 @@ function downloadBlob(blob,filename){
   setTimeout(()=>URL.revokeObjectURL(a.href),3000);
 }
 function doExport(){
-  if(previewMode){toast("Exit preview before exporting — this is example data, not your vault");return}
+  if(previewMode){toast("Exit preview before exporting. This is example data, not your vault");return}
   const hasSecrets=accounts.some(a=>a.password||a.login||a.email);
   if(hasSecrets&&!confirm("This downloads a PLAINTEXT JSON backup.\nLogin passwords and emails are readable in the file.\n\nContinue?"))return;
   const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),plaintext:true,accounts};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   downloadBlob(blob,"smurf-backup-plaintext-"+localDay()+".json");
   cfg.lastExport=Date.now();saveCfg();renderDash();renderSetup();
-  toast("Plaintext backup exported — keep it private");
+  toast("Plaintext backup exported. Keep it private");
 }
 async function doExportEnc(){
-  if(previewMode){toast("Exit preview before exporting — this is example data, not your vault");return}
-  if(!vaultPassword){toast("Set a master password in Settings first — encrypted export needs it");return}
+  if(previewMode){toast("Exit preview before exporting. This is example data, not your vault");return}
+  if(!vaultPassword){toast("Set a master password in Settings first. Encrypted export needs it");return}
   if(vaultLocked()){toast("Unlock the vault first");return}
   try{
     const envelope=await encryptData(vaultPassword,accounts);
@@ -9842,7 +9842,7 @@ async function doExportEnc(){
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
     downloadBlob(blob,"smurf-backup-encrypted-"+localDay()+".json");
     cfg.lastExport=Date.now();saveCfg();renderDash();renderSetup();
-    toast("Encrypted backup exported — same master password opens it");
+    toast("Encrypted backup exported. Your master password opens it");
   }catch(e){toast("Encrypted export failed: "+(e.message||"error"))}
 }
 function csvCell(v){
@@ -9855,7 +9855,7 @@ function csvCell(v){
   return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
 }
 function doExportCSV(){
-  if(previewMode){toast("Exit preview before exporting — this is example data, not your vault");return}
+  if(previewMode){toast("Exit preview before exporting. This is example data, not your vault");return}
   // The note fields go on the end, so every column a spreadsheet already reads by
   // position stays where it was.
   const nf=noteFields();
@@ -9892,7 +9892,7 @@ function doImport(file){
       const envelope=(p&&p.envelope&&p.envelope.__enc)?p.envelope
         :(p&&p.__enc)?p:null;
       if(envelope){
-        if(!vaultPassword){toast("Set a master password first — this backup is encrypted");return}
+        if(!vaultPassword){toast("Set a master password first. This backup is encrypted");return}
         try{list=await decryptData(vaultPassword,envelope)}
         catch(e){toast("Wrong master password for this encrypted backup");return}
       }else{
@@ -10091,11 +10091,11 @@ function setPassShown(show){
   $("fTogglePass").setAttribute("aria-label",show?"Hide password":"Show password");
 }
 $("fGen").addEventListener("click",()=>{
-  if($("fPass").value&&!confirm("This overwrites the password already in this field — there's no undo. Continue?"))return;
+  if($("fPass").value&&!confirm("This replaces the password already in this field, with no undo. Continue?"))return;
   $("fPass").value=genPassword(16);
   setPassShown(true);
   renderPwMeter();
-  toast("Password generated — shown in clear so you can note it");
+  toast("Password generated. It is shown in clear so you can note it");
 });
 $("fPass").addEventListener("input",renderPwMeter);
 $("fTogglePass").addEventListener("click",()=>{
@@ -10142,7 +10142,7 @@ document.addEventListener("keydown",e=>{
   if(e.key==="n"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();openForm(null)}
   if(e.key==="f"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$("tFav").click()}
   // H only ever hides: turning streamer mode off is the pill's job, never a stray key
-  if((e.key==="h"||e.key==="H")&&!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();if(!streamerOn())setStreamer(true);else toast("Streamer mode is on — click its pill in the header to turn it off")}
+  if((e.key==="h"||e.key==="H")&&!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();if(!streamerOn())setStreamer(true);else toast("Streamer mode is on. Click its pill in the header to turn it off")}
   if(e.key==="Escape"){
     if($("accPrev").classList.contains("show")){hideAccPrev();return}
     // Quick find sits over everything, so it goes first. With a card's login
@@ -10305,7 +10305,7 @@ const S_FOOT="Stays in this browser unless you use Device sync.";
 function settingsDirty(on){
   const h=$("sFootHint");if(!h)return;
   h.classList.toggle("dirty",!!on);
-  h.textContent=on?"Not saved yet — Save keeps it, closing puts it back.":S_FOOT;
+  h.textContent=on?"Not saved yet. Save keeps it; closing puts it back.":S_FOOT;
 }
 // fields that act on their own button, not on Save
 const S_SELF=new Set(["sVaultPass"]);
@@ -10330,7 +10330,7 @@ for(const b of document.querySelectorAll("#settings [data-proxy]"))b.addEventLis
   // away: go there rather than saying "in Settings" to someone already in it.
   if(b.dataset.proxy==="bExportEnc"&&!vaultPassword&&!previewMode){
     settingsTab("security");$("sVaultPass").focus();
-    toast("Set a master password here first — the encrypted backup is locked with it");return;
+    toast("Set a master password here first. The encrypted backup is locked with it");return;
   }
   const t=$(b.dataset.proxy);if(t)t.click();setTimeout(updateBackupLast,0);
 });
@@ -10360,9 +10360,9 @@ $("sSave").addEventListener("click",async()=>{
     const perm=await Notification.requestPermission();
     if(saveGen!==settingsSaveGen)return; // a newer Save, or we gave up
     if($("settings").classList.contains("hidden"))return; // closed during the prompt
-    if(perm!=="granted"){wantNotify=false;$("sNotify").checked=false;notifyNote=" — notifications blocked by the browser"}
+    if(perm!=="granted"){wantNotify=false;$("sNotify").checked=false;notifyNote=". Notifications are blocked by the browser"}
   }else if(wantNotify&&"Notification"in window&&Notification.permission==="denied"){
-    wantNotify=false;$("sNotify").checked=false;notifyNote=" — notifications are blocked in the browser's site settings";
+    wantNotify=false;$("sNotify").checked=false;notifyNote=". Notifications are blocked in the browser's site settings";
   }
   if(saveGen!==settingsSaveGen)return;
   cancelAccentPreview();
@@ -10371,7 +10371,7 @@ $("sSave").addEventListener("click",async()=>{
   cfg.notify=wantNotify;
   cfg.discordWebhook=whOk;$("sDiscord").value=whOk;
   const wantWatch=$("sWatch").checked&&!!backendOk&&!!whOk;
-  if($("sWatch").checked&&!wantWatch)notifyNote+=" — decay alerts need the worker and the Discord webhook";
+  if($("sWatch").checked&&!wantWatch)notifyNote+=". Decay alerts need the worker and the Discord webhook";
   if(wantWatch){if(!cfg.watchToken)cfg.watchToken=genSyncToken();const was=cfg.watch;cfg.watch=true;if(!was)setTimeout(()=>syncWatch(true).then(updateWatchStatus),0)}
   else if(cfg.watch){stopWatch();cfg.watch=null}
   $("sWatch").checked=wantWatch;
@@ -10401,7 +10401,7 @@ let settingsSaveGen=0;
 $("sClose").addEventListener("click",closeSettings);
 if($("sSyncGen"))$("sSyncGen").addEventListener("click",()=>{
   const t=genSyncToken();
-  $("sSyncToken").value=t;cfg.syncToken=t;saveCfg();updateSyncStatus();toast("Sync token generated — copy it to your other devices");
+  $("sSyncToken").value=t;cfg.syncToken=t;saveCfg();updateSyncStatus();toast("Sync token generated. Copy it to your other devices");
 });
 if($("sSyncPush"))$("sSyncPush").addEventListener("click",()=>pushVaultSync());
 if($("sSyncPull"))$("sSyncPull").addEventListener("click",()=>pullVaultSync(false));
@@ -10593,7 +10593,7 @@ async function setVaultPassword(pass){
   if(!await saveDB()){
     vaultPassword=prev;
     updateVaultStatus();
-    toast("Could not write the encrypted vault — the password has not been set");
+    toast("Could not write the encrypted vault. The password has not been set");
     return false;
   }
   $("sVaultPass").value="";
@@ -10601,12 +10601,12 @@ async function setVaultPassword(pass){
   const hadPk=changing&&!!pkRecord();if(hadPk)pkForget();
   updateVaultStatus();syncLockTimer();
   toast(changing
-    ?"Password changed — Push to cloud so other devices get the new ciphertext"+(hadPk?". Set Face ID / fingerprint up again in Security":"")
-    :"Vault password set — remember it, there's no way to recover it if lost");
+    ?"Password changed. Push to cloud so other devices get the new ciphertext"+(hadPk?". Set Face ID / fingerprint up again in Security":"")
+    :"Vault password set. Remember it: there's no way to recover it if lost");
   return true;
 }
 if($("sLockNow"))$("sLockNow").addEventListener("click",()=>{
-  if(!vaultPassword){toast("Set a master password first — there's nothing to lock");return}
+  if(!vaultPassword){toast("Set a master password first. There's nothing to lock yet");return}
   if(vaultLocked()){toast("Already locked");return}
   if(!confirm("Lock the vault now? You'll need the master password to open it again."))return;
   $("settings").classList.add("hidden");
@@ -10624,7 +10624,7 @@ $("sVaultRemove").addEventListener("click",async()=>{
   if(!await saveDB()){
     vaultPassword=prev;
     updateVaultStatus();
-    toast("Could not write the vault — the password is still in place");
+    toast("Could not write the vault. The password is still in place");
     return;
   }
   pkForget();pkDropPending();
@@ -10638,15 +10638,15 @@ $("sBackend").addEventListener("change",updateBackendStatus);
 $("sStorageProtect").addEventListener("click",async()=>{
   const ok=await protectStorage();
   await updateStorageStatus();
-  toast(ok?"Storage protected — the browser will not clear the vault on its own"
-    :"The browser said no — installing the app or using it more often usually changes that. Keep a backup meanwhile.");
+  toast(ok?"Storage protected. The browser will not clear the vault on its own"
+    :"The browser said no. Installing the app or using it more often usually changes that. Keep a backup meanwhile.");
 });
 if($("bExportEnc"))$("bExportEnc").addEventListener("click",()=>{doExportEnc()});
 $("bExportCsv").addEventListener("click",doExportCSV);
 $("bImport").addEventListener("click",()=>$("fileIn").click());
 $("bDeleteAll").addEventListener("click",()=>{
   if(accounts.length===0)return;
-  if(!confirm("Delete all "+accounts.length+" account"+(accounts.length===1?"":"s")+" in this vault? This can't be undone — export a backup first if you're not sure."))return;
+  if(!confirm("Delete all "+accounts.length+" account"+(accounts.length===1?"":"s")+" in this vault? This can't be undone, so export a backup first if you're not sure."))return;
   accounts=[];selected.clear();lastSelectedId=null;render();
   saveThen("Vault cleared");
 });
@@ -10861,7 +10861,7 @@ function renderAwayBand(){
   if(sum.down.length)bits.push(`<span class="down">${sum.down.length} fell</span>`);
   const star=best&&(!worst||best.d>=-worst.d)?best:worst;
   setHTML(el,`<span class="away-k">While you were away</span>`
-    +`<span>${bits.join(" · ")}${star?` — biggest mover <b>${nameOf(star.a)}</b> `
+    +`<span>${bits.join(" · ")}${star?` · biggest mover <b>${nameOf(star.a)}</b> `
       +`<span class="${star.d>0?"up":"down"}">${star.d>0?"+":""}${star.d} LP</span>`:""}</span>`
     +`<span class="sp"><button id="awayShow">Sort by movement</button><button id="awayHide">Dismiss</button></span>`);
   el.classList.remove("hidden");
@@ -11331,7 +11331,7 @@ async function onCardClick(e){
     acc.flagged=!acc.flagged;
     if(ui.flag==="attention")render();
     else{renderCard(id);renderDash();renderChips()}
-    saveThen(acc.flagged?"Flagged — it's under Needs attention now":"Flag cleared")}
+    saveThen(acc.flagged?"Flagged. It's under Needs attention now":"Flag cleared")}
   else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderCard(id)}
   else if(act==="login"){
     const on=togglePanel(id,"login");   // puts ✎ Rank away if it was open
@@ -11347,7 +11347,7 @@ async function onCardClick(e){
   else if(act==="art")openArtPicker(id);
   else if(act==="notefields"){commitNote();openForm(acc,"notes")}
   else if(act==="exstats"){acc.excludeStats=!acc.excludeStats;renderCard(id);renderDash();saveThen(acc.excludeStats?"Left out of the combined stats":"Counted in the combined stats again")}
-  else if(act==="archive"){acc.archived=true;render();saveThen("Archived — toggle \"Archived\" in the toolbar to see it again")}
+  else if(act==="archive"){acc.archived=true;render();saveThen("Archived. Turn on \"Archived\" in the toolbar to see it again")}
   else if(act==="unarchive"){acc.archived=false;render();saveThen("Restored to active accounts")}
   else if(act==="noteedit"){
     if(editingNote===id)return;
@@ -11443,7 +11443,7 @@ function migrateStats(){
   let touched=false;
   for(const a of accounts){
     if(a.stats&&a.stats.note&&/paste/i.test(a.stats.note)){
-      a.stats.note=a.stats.note.replace(/\s*—.*$/,"")+" — enter it by hand with ✎ Rank";
+      a.stats.note=a.stats.note.replace(/\s*—.*$/,"")+". Enter it by hand with ✎ Rank";
       touched=true;
     }
     /* Vaults are already carrying divisions on Master, Grandmaster and Challenger
@@ -11495,7 +11495,7 @@ try{startAction=new URLSearchParams(location.search).get("action");if(startActio
 function runStartAction(){
   const a=startAction;startAction=null;
   if(a==="add")openForm(null);
-  else if(a==="checkall"){if(accounts.length)checkAll();else toast("No accounts to check yet — add one first")}
+  else if(a==="checkall"){if(accounts.length)checkAll();else toast("No accounts to check yet. Add one first")}
 }
 function startApp(){
   $("appRoot").classList.remove("hidden");
@@ -11540,7 +11540,7 @@ async function tryUnlock(){
   if(!currentEnvelope||unlocking)return;
   const pass=$("lockPass").value;
   if(!pass)return;
-  if(!await unlockWith(pass))lockError("Wrong password — try again.");
+  if(!await unlockWith(pass))lockError("Wrong password. Try again.");
 }
 function lockError(msg){
   const el=$("lockErr");el.textContent=msg;el.style.display="block";
@@ -11673,7 +11673,7 @@ window.addEventListener("storage",e=>{
   if(previewMode)return;
   if(vaultPassword&&!vaultLocked()){
     relock();
-    toast("Vault changed in another tab — unlock to reload");
+    toast("Vault changed in another tab. Unlock to reload");
     return;
   }
   if(!vaultPassword&&!vaultLocked()){
@@ -11698,7 +11698,7 @@ window.addEventListener("storage",e=>{
     $("lock").classList.add("hidden");
     lastActivity=Date.now();
     startApp();
-    toast("Vault opened — its master password was removed in another tab");
+    toast("Vault opened: its master password was removed in another tab");
   }
 });
 /* cfg is one object written whole, and every vault save writes it as well — the
@@ -11760,14 +11760,14 @@ function keepUnreadableVault(raw){
   if(!side)hasStorage=false;
   $("banner").textContent=side
     ?"The saved vault could not be read, so this opened empty. What was there is kept untouched in this browser's storage as \""+side+"\"."
-    :"The saved vault could not be read, and there was no room to keep a copy — nothing will be saved this session, so the original stays as it was.";
+    :"The saved vault could not be read, and there was no room to keep a copy. Nothing will be saved this session, so the original stays as it was.";
   $("banner").classList.add("show");
 }
 function boot(){
   // A snapshot link is somebody else's page, opened before this browser's own
   // vault or settings have been read — and they never are, in this tab.
   {const m=/^#s=(.+)$/.exec(location.hash||"");if(m){openSnapshot(m[1]);return}}
-  $("fRegion").innerHTML=Object.keys(REGIONS).map(r=>`<option value="${r}">${esc(r)} — ${esc(REGIONS[r].full)}</option>`).join("");
+  $("fRegion").innerHTML=Object.keys(REGIONS).map(r=>`<option value="${r}">${esc(r)} · ${esc(REGIONS[r].full)}</option>`).join("");
   $("sAutoEvery").innerHTML=AUTO_EVERY.map(o=>`<option value="${o.v}">${esc(o.label)}</option>`).join("");
   fillAutoLock($("sAutoLock"),0);
   $("baRegion").innerHTML=$("fRegion").innerHTML;
