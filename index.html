@@ -9,7 +9,7 @@
      a card. Sharing the link is how the licence asks for this to be passed on, and
      without them it arrived as a bare URL. Absolute URLs, because a scraper does
      not resolve relative ones. -->
-<meta name="description" content="Every League of Legends account in one place: ranks, LP history and logins. Runs in your browser — nothing leaves it.">
+<meta name="description" content="Every League of Legends account in one place: ranks, LP history and logins. Logins stay in your browser; only Riot IDs go out, to look up ranks.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Smurf Tracker">
 <meta property="og:title" content="Smurf Tracker — every League account in one place">
@@ -2646,7 +2646,7 @@
          reading the privacy notes first; operators and keys look like what you type. -->
     <div class="mdl-b"><dl class="help">
       <dt>Your data</dt>
-      <dd><b>Stays here by default.</b> Accounts are saved in this browser on this device. Optional Device sync (Settings) uploads only an encrypted vault blob to your own Worker; Discord/API/rank proxies leave the browser when you enable them. Clearing browser data wipes the vault, so use <b>Export</b> for backups and <b>Import</b> to restore or merge them.</dd>
+      <dd><b>Stays here, apart from the Riot ID.</b> Accounts, logins and notes are saved in this browser on this device. To read a rank, the Riot ID goes to op.gg through a public proxy (corsproxy.io, allorigins.win or r.jina.ai), or to your own Worker if you set one up. The page's fonts load from Google Fonts. The optional extras send only what they need: Device sync uploads an encrypted vault to your own Worker, Discord alerts go to your webhook, and the AI rank check goes to Anthropic. Clearing browser data wipes the vault, so use <b>Export</b> for backups and <b>Import</b> to restore or merge them.</dd>
       <dt>Rank checks</dt>
       <dd><b>Free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b>Rank</b> in a card's ⋯ menu to enter it by hand — history, the chart and the stats all work the same either way.</dd>
       <dt>Layouts</dt>
@@ -3021,7 +3021,7 @@
     <div class="mdl-f">
       <button id="baSave" class="b-gold">Add all</button>
       <button id="baCancel">Cancel</button>
-      <span class="sp hint">Everything here stays in this browser.</span>
+      <span class="sp hint">The Riot IDs are looked up on op.gg; nothing else here leaves this browser.</span>
     </div>
   </div></div></div>
 
@@ -3107,7 +3107,7 @@
     <div class="mdl-f">
       <button id="fSave" class="b-gold">Add account</button>
       <button id="fCancel">Cancel</button>
-      <span class="sp hint">Everything here stays in this browser.</span>
+      <span class="sp hint">The login stays in this browser; the Riot ID is looked up on op.gg.</span>
     </div>
   </div></div></div>
 
@@ -8916,7 +8916,7 @@ function renderGrid(){
       +`<li><span class="wl-n">2</span><b>Check its rank</b><span>Free and automatic, read from op.gg. No key needed.</span></li>`
       +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Login shows the username and password, each one click to copy.</span></li></ol>`
       +`<div class="wl-acts"><button id="bEmptyAdd" class="b-teal">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div>`
-      +`<p class="wl-note">${icon("lock")}<span>Everything stays in this browser; nothing is uploaded. Clearing the browser's data clears the vault too, so keep a backup.</span></p></div></div>`);
+      +`<p class="wl-note">${icon("lock")}<span>Logins, passwords and notes stay in this browser. A rank check sends only the Riot ID to op.gg, through a public proxy. Clearing the browser's data clears the vault too, so keep a backup.</span></p></div></div>`);
   }else if(list.length===0){
     /* The zero-accounts state offers Add account and the demo; this one used to
        be a sentence and nothing else — on a page where the filters are spread

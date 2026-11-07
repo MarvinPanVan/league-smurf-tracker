@@ -8588,6 +8588,22 @@ test("the master password prompt comes once a visit, and Don't ask again stops i
   assert.equal(open(none), false);
 });
 
+// "Runs in your browser, nothing leaves it" and "nothing is uploaded": but a rank
+// check sends the Riot ID through a public proxy to op.gg
+test("what the app says leaves the browser is true: the Riot ID goes out for a rank check", () => {
+  const win = bootApp();
+  const desc = html.match(/<meta name="description" content="([^"]*)"/)[1];
+  assert.doesNotMatch(desc, /nothing leaves/i);
+  assert.match(desc, /Riot IDs? go(es)? out/i);
+  const note = win.document.querySelector(".wl-note").textContent;
+  assert.doesNotMatch(note, /nothing is uploaded/i);
+  assert.match(note, /Riot ID to op\.gg, through a public proxy/);
+  const help = win.document.getElementById("help").textContent;
+  for (const host of ["corsproxy.io", "allorigins.win", "r.jina.ai", "Google Fonts"]) assert.ok(help.includes(host), "Help names " + host);
+  for (const proxy of ["corsproxy.io", "allorigins.win", "r.jina.ai"]) assert.ok(html.includes(proxy + "/") || html.includes("//" + proxy), proxy + " is really used");
+  assert.doesNotMatch(html, /Everything here stays in this browser/, "the add forms say the Riot ID is looked up");
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
@@ -8697,7 +8713,7 @@ test("a first visit opens on the welcome, not on How this works; the help is sti
   assert.ok(win.document.getElementById("help").classList.contains("hidden"), "no manual over the empty page");
   assert.ok(win.document.querySelector(".welcome"), "the welcome is the first thing");
   assert.equal(win.document.getElementById("intro"), null, "the intro paragraph it repeated is gone");
-  assert.match(win.document.querySelector(".wl-note").textContent, /stays in this browser/, "its point lives in the welcome");
+  assert.match(win.document.querySelector(".wl-note").textContent, /stay in this browser/, "its point lives in the welcome");
   assert.match(win.document.querySelector(".wl-note").textContent, /backup/);
   win.document.getElementById("bHelp").click();
   assert.equal(win.document.getElementById("help").classList.contains("hidden"), false, "the ? still opens it");
