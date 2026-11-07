@@ -965,6 +965,11 @@
      rank will ever change again. It should read as finished from across the room. */
   .card.dead .c-portrait,.rw.dead .rw-pic{filter:grayscale(.9);opacity:.5}
   .card.dead .c-tint{opacity:.35}
+  /* A banned account said so five times (rail, badge, strikethrough, a red border,
+     its notes) while its Login was the brightest thing on the card. The badge and
+     the strikethrough say it; the rail is gone, and Login is a plain button. */
+  .card.dead .a-login{background-color:var(--panel2);background-image:var(--sheen);border-color:var(--line2);color:var(--muted);font-weight:600}
+  .card.dead .a-login:hover{color:var(--text)}
   .card.dead .rk-crest,.rw.dead .rw-crest{filter:grayscale(.9);opacity:.55}
   .card.dead .rk .rk-t,.rw.dead .rw-rank b{text-decoration:line-through;
     text-decoration-thickness:1.5px;text-decoration-color:currentColor;opacity:.62}
@@ -8397,7 +8402,8 @@ function rowHTML(a,i){
   const st=STATUS[a.status]||STATUS.active;
   const open=openInfo.has(a.id);
   const {w:wins,l:losses,total,wr}=winLoss(s);
-  const dv=lastDelta(a);
+  // a banned account's rank will never move again: its last change is not news here either
+  const dv=a.status==="banned"?0:lastDelta(a);
   let rank="—",lp="";
   if(isChecking)rank="…";
   else if(!hasReading(s))rank="Never checked";
@@ -8408,7 +8414,7 @@ function rowHTML(a,i){
   }else rank="Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
-  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${idAttr(a.id)}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${idAttr(a.id)}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     <div class="rw-main" data-act="info" role="button" tabindex="0" aria-expanded="${open}">
       <!-- No stopPropagation here: every click on a card is handled by one
            delegated listener on #grid, and closest("[data-act]") already stops at
@@ -8474,7 +8480,7 @@ function tileHTML(a){
     if(s.lp!=null)lp=s.lp+" LP";
   }else rank="Unranked";
   const st=STATUS[a.status]||STATUS.active;
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
@@ -8598,7 +8604,7 @@ function cardHTML(a,i){
   // Active is the default state of almost every account, so railing it green just
   // paints the same stripe down the whole grid and says nothing. Only the states
   // worth spotting get one.
-  const railed=a.status&&a.status!=="active";
+  const railed=a.status&&a.status!=="active"&&a.status!=="banned"; // banned says it with its badge and strikethrough
   const icon0=iconUrl(s);
   return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}${openInfo.has(a.id)?" info-open":""}" data-id="${idAttr(a.id)}"${railed?` style="--st:${st.color}"`:""}>
     ${champArtHTML(a)}${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}

@@ -8542,6 +8542,16 @@ test("a banned card shows no movement and no Refresh; a live one with the same r
   assert.equal(card("ban").querySelector(".delta.d-up,.delta.d-down"), null, "a closed account does not climb");
   assert.equal(card("ban").querySelector(".c-ref"), null, "nor get checked; checks skip it");
   assert.ok(card("ban").querySelector('[data-act="login"]'), "its login is still there");
+  // ...but as a plain button, and with no red rail: the badge and the strikethrough say banned
+  assert.match(html, /\n  \.card\.dead \.a-login\{background-color:var\(--panel2\)/, "Login is not the brightest thing on a dead card");
+  const hx = id => win.document.querySelector(`.grid>.hx[data-id="${id}"]`);
+  assert.doesNotMatch(hx("ban").getAttribute("style") || "", /--st/, "no status rail on the card");
+  // and the list says the same: no "+82" on a closed account
+  win.document.querySelector('[data-density="list"]').click();
+  const row = id => win.document.querySelector(`.rw[data-id="${id}"]`);
+  assert.ok(row("live").querySelector(".rw-d .delta"), "the live row shows its change");
+  assert.equal(row("ban").querySelector(".rw-d .delta"), null, "the banned row does not");
+  assert.doesNotMatch(row("ban").getAttribute("style") || "", /--st/, "nor a rail");
 });
 
 // Logins sat in plain text unless someone found Settings → Security: now it asks
