@@ -725,7 +725,9 @@ test("dividers, control edges and faint text stay visible on a card", () => {
   assert.ok(ratio(tok("edge"), card) >= 1.9, "control edges at " + ratio(tok("edge"), card).toFixed(2));
   assert.ok(ratio(tok("line2"), card) > ratio(tok("edge"), card), "hover is a step above rest");
   assert.ok(ratio(tok("faint"), card) >= 5.3, "faint text at " + ratio(tok("faint"), card).toFixed(2));
-  assert.match(html, /button,\.btn\{[^}]*border:1px solid var\(--edge\)/, "buttons");
+  assert.match(html, /button,\.btn\{[^}]*border:1px solid var\(--btn-edge\)/, "buttons, on an edge of their own");
+  assert.ok(ratio(tok("btn-edge"), card) > ratio(tok("edge"), card), "a step lighter than a field's, so a flat button still has an outline");
+  assert.ok(ratio(tok("line2"), card) > ratio(tok("btn-edge"), card), "and hover a step lighter again");
   assert.match(html, /input,select,textarea\{[^}]*border:1px solid var\(--edge\)/, "fields");
   for (const sel of [".tag-handle", ".chip", ".ghost-toggle", ".thm", ".opt-seg"])
     assert.doesNotMatch(html.match(new RegExp("\\n  \\" + sel + "\\{([^}]*)\\}"))[1], /border[^;]*var\(--line\)/, sel + " is pressed, so it has an edge, not a divider");
@@ -915,16 +917,11 @@ test("a card's tier tint is a hint in its corner, not a wash over the art", () =
   assert.ok(pct <= 8, "at most 8% of the tier colour (" + pct + "%)");
 });
 
-test("Login stays the one filled control on a card, in the same material as every other button", () => {
+test("Login stays the one filled control on a card, flat like every other button", () => {
   const rule = html.match(/\n  \.a-login\{[^}]*\}/)[0];
   assert.match(rule, /background-color:var\(--teal\)/, "filled with the accent");
   assert.match(rule, /color:var\(--teal-ink\)/, "lettered in the ink that reads on it");
-  // the buttons' own satin, turned up for a bright fill; no gloss or glow of its own
-  assert.match(rule, /background-image:var\(--sheen-fill\)/);
-  assert.match(rule, /box-shadow:var\(--sh-fill\)/);
-  assert.doesNotMatch(rule, /gradient|box-shadow:0 /, "no finish of its own");
-  const fill = html.match(/--sh-fill:([^;]*);/)[1];
-  assert.doesNotMatch(fill, /(^|,)\s*0 0 \d+px/, "the fill's shadow is a lift, not a glow");
+  assert.doesNotMatch(rule, /gradient|background-image|box-shadow/, "flat: no gloss, rim or shadow");
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [] }]);
   const filled = [...win.document.querySelectorAll('.card[data-id="a"] .acts > *')]
     .filter(b => /var\(--teal\)/.test((html.match(new RegExp("\\n  \\." + b.className.split(" ")[0] + "\\{([^}]*)\\}")) || [])[1] || ""));
@@ -947,37 +944,39 @@ test("the accent buttons add no gradient rim or glow of their own; the wordmark 
   // and the shared snapshot's title is plain white type, not haloed in the accent
   assert.doesNotMatch(html.match(/\n  \.sn-title\{([^}]*)\}/)[1], /text-shadow/, "the snapshot title has no glow");
 });
-// Every raised control wears one finish, satin: lit from above, shaded at its foot.
-// The variants only recolour the plate, and what is not a plate stays bare.
-test("every button, dropdown and switch wears the same satin; icons, links and menu rows do not", () => {
+// Buttons wore "satin": a gloss from above, an inner rim top and bottom and a shadow,
+// which blurred their edges, on about ten kinds of button in five heights. Now they
+// are flat, of three kinds, and every control in a toolbar row is one height.
+test("buttons are flat, of three kinds, and every control in a toolbar row is one height", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-  const rule = sel => { const m = css.match(new RegExp("\\n  " + sel.replace(/[.#()*+?[\]^$|]/g, "\\$&") + "\\{([^}]*)\\}")); assert.ok(m, sel); return m[1]; };
-  // the finish: a broad, low light with no stop bright enough to read as chrome, and a lift, not a glow
-  const sheen = css.match(/--sheen:([^;]*);/)[1];
-  for (const [, a] of sheen.matchAll(/#ffffff([0-9a-f]{2})/g)) assert.ok(parseInt(a, 16) <= 0x26, "a soft light: " + sheen);
-  assert.doesNotMatch(css.match(/--sh-btn:([^;]*);/)[1], /(^|,)\s*0 0 \d+px/, "a lift, not a glow");
-  // the plate wears it...
+  const rule = sel => { const m = css.match(new RegExp("\\n  " + sel.replace(/[.#()*+?[\]^$|>]/g, "\\$&") + "\\{([^}]*)\\}")); assert.ok(m, sel); return m[1]; };
+  assert.doesNotMatch(css, /--sheen|--sh-btn|--sh-fill/, "the satin tokens are gone");
   const base = rule("button,.btn");
-  assert.match(base, /background-image:var\(--sheen\)/);
-  assert.match(base, /box-shadow:var\(--sh-btn\)/);
-  // ...and a variant recolours the plate without wiping it: the background shorthand would reset the image
-  for (const sel of ["button:hover,.btn:hover", ".b-teal", ".b-teal:hover", ".b-danger:hover",
-      ".a-login:hover", ".a-dpm", ".a-dpm:hover", ".c-more.on", ".ghost-toggle", ".ghost-toggle:hover"])
-    assert.doesNotMatch(rule(sel), /(^|[;{\s])background:/, sel + " sets background-color, keeping the sheen");
-  // a dropdown is a button that opens a list: the chevron sits on the same satin, hovered or not
-  assert.match(rule("select"), /background-image:url\([^)]*\),var\(--sheen\)/);
-  assert.match(rule("select"), /box-shadow:var\(--sh-btn\)/);
-  assert.match(rule("select:hover,select:focus"), /,var\(--sheen\)/);
-  // a switch is one plate split into options
-  for (const sel of [".opt-seg"]) assert.match(rule(sel), /background:var\(--sheen\),var\(--panel2\)/, sel);
-  assert.match(css, /\n  \.seg\{[^}]*background:var\(--sheen\),var\(--panel2\);box-shadow:var\(--sh-btn\)/);
-  // what is not a plate clears both, so it does not pick up a lit edge and a shadow around nothing
+  assert.doesNotMatch(base, /background-image|box-shadow:|gradient/, "the plate is a fill and an edge");
+  assert.match(base, /border:1px solid var\(--btn-edge\)/);
+  assert.match(rule("button:hover,.btn:hover"), /background-color:var\(--panel3\);border-color:var\(--line2\)/, "hover: one step lighter");
+  for (const sel of ["select", "select:hover,select:focus"]) assert.doesNotMatch(rule(sel), /,var\(|gradient|box-shadow:var/, sel + ": the chevron only");
+  for (const sel of [".seg", ".opt-seg"]) assert.doesNotMatch(rule(sel), /gradient|box-shadow/, sel);
+  // the three kinds
+  assert.match(rule(".b-fill"), /background-color:var\(--teal\);border-color:var\(--teal\);color:var\(--teal-ink\)/, "filled");
+  assert.match(rule(".b-teal"), /color:var\(--teal-txt\)[^}]*background-color:var\(--panel2\)/, "outlined in the accent");
+  const quiet = css.match(/\n  (\.b-quiet,[^{]*)\{([^}]*)\}/);
+  assert.match(quiet[2], /background:none;border-color:transparent;color:var\(--text\)/, "quiet: no fill until hovered, and text you can read");
+  for (const who of [".ghost-toggle", ".tools>button", ".tag-handle"]) assert.ok(quiet[1].split(",").includes(who), who + " is quiet");
+  assert.match(rule("#bMore,#bHelp"), /color:var\(--text\)/, "⋯ and ? are not greyed out");
+  // one height, size and weight across a toolbar row
+  assert.match(css, /--ctl-h:36px/);
+  const row = css.match(/\n  (\.cmd>button,\.cmd \.seg,[^{]*)\{([^}]*)\}/);
+  for (const who of [".cmd>button", ".cmd .seg", ".tools>button", ".tools>select", ".tools>input[type=search]", ".tag-handle", "#bulkbar>button", "#bulkbar>select", ".bar>button"])
+    assert.ok(row[1].split(",").map(x => x.trim()).includes(who), who + " is in the row rule");
+  assert.match(row[2], /height:var\(--ctl-h\)[^}]*font-size:calc\(13px\*var\(--ts\)\);font-weight:500/);
+  assert.match(rule(".seg button"), /height:calc\(var\(--ctl-h\) - 2px\)/, "the layout switch, inside its 1px edge");
+  // what is not a plate at all still clears fill and shadow
   for (const sel of [".rid,.star,.eye-btn,.panel-close,.c-ref", "#bMore,#bHelp", "#moreMenu button", ".fb-x", ".fchip-all",
       ".bk-note button", ".setup-x"]) {
     assert.match(rule(sel), /box-shadow:none/, sel);
     assert.match(rule(sel), /background:none/, sel);
   }
-  for (const sel of [".stat-b", ".c-drawer", ".sec-h"]) assert.match(rule(sel), /background:none[^}]*box-shadow:none|box-shadow:none[^}]*background:none/, sel);
 });
 
 test("a stale card warns with a drawn mark, which a fresh card does not carry", () => {
@@ -1012,7 +1011,7 @@ test("a card is out of date by the toolbar's own rule: never a banned account, n
 
 test("actions and window titles are set in the text face; Cinzel is the wordmark's alone", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-  const rule = css.match(/\.cmd>button,\.acts>button:not\(\.c-more\)[^{]*\{[^}]*\}/)[0];
+  const rule = css.match(/\n  \.acts>button:not\(\.c-more\)[^{]*\{[^}]*\}/)[0];
   assert.match(rule, /font-weight:600/);
   assert.doesNotMatch(rule, /Cinzel|uppercase|letter-spacing/);
   // Cinzel is the wordmark's now, and the wordmark's only
@@ -8761,8 +8760,11 @@ test("on a phone the toolbar has one ranks button: Refresh stale when there is a
 test("every main button wears one colour, the secondary (action) one", () => {
   assert.doesNotMatch(html, /b-gold/, "no button in the primary colour");
   const win = bootApp();
-  for (const id of ["bCheckAll", "bAdd", "sSave", "fSave", "baSave", "lpSet", "rankSave", "shCopy", "bExitPreview", "lockBtn", "bHelpClose"])
-    assert.ok(win.document.getElementById(id).classList.contains("b-teal"), id);
+  // a view's one main action is filled with it, a second action is outlined in it
+  for (const id of ["bAdd", "sSave", "fSave", "baSave", "lpSet", "rankSave", "shCopy", "lockBtn", "bHelpClose"])
+    assert.ok(win.document.getElementById(id).classList.contains("b-fill"), id + " is filled");
+  for (const id of ["bCheckAll", "bExitPreview"])
+    assert.ok(win.document.getElementById(id).classList.contains("b-teal"), id + " is outlined");
   assert.match(win.document.getElementById("settings").textContent, /Login and every main button, focus rings/, "Settings says so");
 });
 
@@ -9238,7 +9240,8 @@ test("an empty vault says what the app does in three steps, with Add account and
   const steps = [...grid.querySelectorAll(".wl-steps li b")].map(b => b.textContent);
   assert.deepEqual(steps, ["Add an account", "Check its rank", "Log in fast"]);
   const add = win.document.getElementById("bEmptyAdd");
-  assert.ok(add && add.classList.contains("b-teal"), "Add account is a button here, dressed as the toolbar's");
+  assert.ok(add && add.classList.contains("b-fill"), "Add account is the filled button here, as in the toolbar, and the preview is not");
+  assert.equal(win.document.getElementById("bDemo").classList.contains("b-fill"), false);
   add.click();
   assert.equal(win.document.getElementById("form").classList.contains("hidden"), false, "and it opens the form");
   win.document.getElementById("fCancel").click();

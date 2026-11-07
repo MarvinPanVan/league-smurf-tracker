@@ -4646,7 +4646,7 @@ function snapHTML(s){
       :`<p class="sn-empty">This snapshot has no accounts in it.</p>`}
     <footer class="sn-foot">
       <p>A snapshot${s.at?" taken "+esc(snapDay(s.at)):""}. It doesn't update. Logins, emails and notes are never part of one.</p>
-      <a class="btn b-teal" href="${esc(home)}">Track your own accounts</a>
+      <a class="btn b-fill" href="${esc(home)}">Track your own accounts</a>
       <p class="sn-riot">${esc(RIOT_NOTICE)}</p>
     </footer>`;
 }
@@ -4658,7 +4658,7 @@ function snapErrorHTML(){
     <span class="brand-mark" aria-hidden="true"></span>
     <h1>This snapshot link is broken</h1>
     <p>Part of it may have been cut off when it was copied. Ask for the link again, and paste all of it.</p>
-    <a class="btn b-teal" href="${esc(snapBase())}">Open Smurf Tracker</a></div></div>`;
+    <a class="btn b-fill" href="${esc(snapBase())}">Open Smurf Tracker</a></div></div>`;
 }
 /* The viewer. It runs instead of the app, before anything has read this
    browser's storage, and switches storage off for the rest of the page's life:
@@ -5713,7 +5713,7 @@ function renderGrid(){
       +`<ol class="wl-steps"><li><span class="wl-n">1</span><b>Add an account</b><span>Its Riot ID and region. The login is optional.</span></li>`
       +`<li><span class="wl-n">2</span><b>Check its rank</b><span>Free and automatic, read from op.gg. No key needed.</span></li>`
       +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Login shows the username and password, each one click to copy.</span></li></ol>`
-      +`<div class="wl-acts"><button id="bEmptyAdd" class="b-teal">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div>`
+      +`<div class="wl-acts"><button id="bEmptyAdd" class="b-fill">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div>`
       +`<p class="wl-note">${icon("lock")}<span>Logins, passwords and notes stay in this browser. A rank check sends only the Riot ID to op.gg, through a public proxy. Clearing the browser's data clears the vault too, so keep a backup.</span></p></div></div>`);
   }else if(list.length===0){
     /* The zero-accounts state offers Add account and the demo; this one used to
@@ -8465,7 +8465,7 @@ function renderMoveBand(waiting){
     ?`<span class="mv-t">${icon("external")}<span><b>Opening ${esc(host)}…</b> If no new tab appears, allow pop-ups for this page and try again.</span></span>`
       +`<span class="mv-acts"><button type="button" id="mvGo">Try again</button></span>`
     :`<span class="mv-t">${icon("external")}<span><b>Smurf Tracker has moved to ${esc(host)}.</b> Your vault is saved per address, so it stays here until you move it.</span></span>`
-      +`<span class="mv-acts"><button type="button" id="mvGo" class="b-teal">Move my vault there</button><a class="btn" href="${esc(APP_HOME)}">Open ${esc(host)}</a>`
+      +`<span class="mv-acts"><button type="button" id="mvGo" class="b-fill">Move my vault there</button><a class="btn" href="${esc(APP_HOME)}">Open ${esc(host)}</a>`
       // moved by hand already (Export, then Import there): the copy here still needs a way out
       +`<button type="button" id="mvRemove" class="mv-quiet" title="Only if your accounts are already at ${esc(host)}">Already moved? Remove it here</button></span>`);
   el.classList.remove("hidden");
