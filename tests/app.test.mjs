@@ -3240,7 +3240,7 @@ test("the chart's captions keep a dark halo, so the line crossing one doesn't cu
   // measured in Chromium: the line ran through "GOLD" and the "II" beside the latest point
   const rule = html.match(/\n  ([^{\n]*\.lpc-lab[^{\n]*)\{text-shadow:([^}]*)\}/);
   assert.ok(rule, "one text-shadow rule for the captions");
-  for (const sel of [".lpc-plot .lpc-lab", ".lpc-plot .lpc-sub", ".lpc-plot .lpc-peak"])
+  for (const sel of [".lpc-plot .lpc-lab", ".lpc-plot .lpc-peak"])
     assert.ok(rule[1].split(",").map(x => x.trim()).includes(sel), sel + " has it");
   const layers = rule[2].split(/,(?![^(]*\))/);
   assert.ok(layers.length >= 3, "stacked, since one soft shadow is too faint to hide a 2px line");
@@ -3579,15 +3579,9 @@ function chartDom(win, h, mode) {
   return el;
 }
 
-// "P II" sat under the newest dot, and the line ran through "PEAK" at the chart's middle
-test("chart labels keep off the line: no numeral under the newest point, PEAK where the line is not", () => {
+// The line ran through "PEAK" at the chart's middle
+test("PEAK sits where the line is not", () => {
   const win = bootApp();
-  const marks = h => [...chartDom(win, h).querySelectorAll(".lpc-sub")].map(n => n.textContent);
-  // the newest point sits just above Platinum II's line: that numeral steps aside, the others stay
-  const m = marks(hist(["GOLD", "I", 0], ["PLATINUM", "III", 74], ["PLATINUM", "II", 61]));
-  assert.ok(!m.includes("P II"), "no label under the dot: " + m.join(", "));
-  assert.ok(m.includes("P III") && m.includes("G I"), "the rest are still there: " + m.join(", "));
-  assert.ok(marks(hist(["PLATINUM", "IV", 5], ["PLATINUM", "II", 90])).includes("II"), "a numeral well clear of the dot stays");
   // a peak level with the middle of a falling line: the label moves along to a clear stretch
   const h = hist(["GOLD", "II", 35], ["GOLD", "II", 35], ["GOLD", "II", 30], ["GOLD", "III", 70], ["GOLD", "III", 22]);
   const el = win.document.createElement("div");
@@ -3668,26 +3662,26 @@ test("the line spans the full chart, with no pathLength for a dash pattern to di
 
 test("the two halves of the ladder get their own scale", () => {
   const win = bootApp();
-  const marks = h => [...chartDom(win, h).querySelectorAll(".lpc-sub")].map(n => n.textContent);
+  // the steps are white hairlines; tier boundaries are drawn in the tier's colour
+  const steps = h => [...chartDom(win, h).querySelectorAll('line[stroke="#ffffff"]')].map(l => +l.getAttribute("y1"));
+  const gaps = ys => ys.slice(1).map((y, i) => Math.abs(y - ys[i]));
 
-  // below Master the unit of interest is the division, which is always 100 LP
-  assert.deepEqual(marks(hist(["PLATINUM", "IV", 5], ["PLATINUM", "I", 88])), ["III", "II", "I"]);
+  // below Master the unit of interest is the division, which is always 100 LP: III, II and I
+  assert.equal(steps(hist(["PLATINUM", "IV", 5], ["PLATINUM", "I", 88])).length, 3);
 
-  // above it a fixed 100 is far too fine — a Master account decaying 1600 -> 800
-  // would be dozens of lines, so that step grows with the range
-  // (the newest point sits exactly on the 800 LP line, so that label steps out from under it)
-  assert.deepEqual(marks(hist(["MASTER", null, 1600], ["MASTER", null, 800])), ["1200 LP"]);
-  assert.deepEqual(marks(hist(["MASTER", null, 800], ["MASTER", null, 1600])), ["800 LP", "1200 LP"], "with the dot elsewhere, both");
-  // (300 LP sits 3px under the 400 LP line on this scale, so that label steps aside too)
-  assert.deepEqual(marks(hist(["MASTER", null, 2400], ["MASTER", null, 300])), ["1200 LP", "2000 LP"]);
+  // above it a fixed 100 is far too fine (a Master account decaying 1600 -> 800
+  // would be dozens of lines), so that step grows with the range
+  for (const h of [hist(["MASTER", null, 1600], ["MASTER", null, 800]), hist(["MASTER", null, 2400], ["MASTER", null, 300])]) {
+    const ys = steps(h);
+    assert.ok(ys.length >= 1 && ys.length <= 5, "a few lines, not dozens: " + ys.length);
+    assert.ok(gaps(ys).every(g => g >= 22), "and room between them: " + gaps(ys));
+  }
 
   // both at once, each on its own scale
-  // (ending between the two marks, so the newest point covers neither)
-  assert.deepEqual(marks(hist(["MASTER", null, 393], ["DIAMOND", "I", 52], ["MASTER", null, 110])),
-    ["I", "200 LP"]);
+  assert.ok(steps(hist(["MASTER", null, 393], ["DIAMOND", "I", 52], ["MASTER", null, 110])).length >= 2);
 
   // too much ladder in view for a 100 LP line to be readable: the bands carry it
-  assert.deepEqual(marks(hist(["SILVER", "II", 20], ["PLATINUM", "IV", 8])), []);
+  assert.deepEqual(steps(hist(["SILVER", "II", 20], ["PLATINUM", "IV", 8])), []);
 });
 
 test("the chart's x axis is real time, so a gap in the record shows as a gap", () => {
@@ -3719,31 +3713,6 @@ test("a history with no usable timestamps still plots, evenly spaced", () => {
   const xs = el.querySelector(".lpc-line").getAttribute("points").split(" ").map(c => parseFloat(c.split(",")[0]));
   assert.deepEqual(xs, [3.2, 100, 196.8]);
   assert.equal(el.querySelectorAll(".lpc-tick").length, 0, "no timestamps, no date axis");
-});
-
-// A Gold-to-Platinum climb read II, III, I down the chart's edge: the I was Gold I
-test("division marks from two tiers carry the tier's initial", () => {
-  const win = bootApp();
-  const marks = h => [...chartDom(win, h).querySelectorAll(".lpc-sub")].map(n => n.textContent);
-  const m = marks(hist(["GOLD", "I", 40], ["PLATINUM", "II", 61]));
-  assert.ok(m.includes("G I"), "Gold I says it is Gold: " + m.join(", "));
-  assert.ok(m.some(t => /^P (II|III)$/.test(t)), m.join(", "));
-  assert.ok(m.every(t => /^[A-Z] (I|II|III|IV)$/.test(t)), "every numeral names its tier: " + m.join(", "));
-  // one tier in view: plain numerals, as before
-  assert.deepEqual(marks(hist(["PLATINUM", "IV", 5], ["PLATINUM", "I", 88])), ["III", "II", "I"]);
-});
-
-test("division numerals only appear when all four are marked, so no chart shows two IIs", () => {
-  const win = bootApp();
-  for (const h of [
-    hist(["SILVER", "II", 20], ["PLATINUM", "IV", 8]),
-    hist(["IRON", "IV", 0], ["CHALLENGER", null, 900]),
-    hist(["BRONZE", "I", 10], ["EMERALD", "III", 70]),
-  ]) {
-    const numerals = [...chartDom(win, h).querySelectorAll(".lpc-sub")]
-      .map(n => n.textContent).filter(t => /^(I|II|III|IV)$/.test(t));
-    assert.deepEqual([...new Set(numerals)].length, numerals.length, "duplicate numerals: " + numerals);
-  }
 });
 
 // ---- the rest of what the profile page carries ----
@@ -5604,7 +5573,7 @@ test("the sparkline survives a flat run, and needs two points to draw at all", (
 const chartLabels = (win, hist, cut) => {
   const d = win.document.createElement("div");
   d.innerHTML = win.rankChart(hist, cut || null, "d", "probe");
-  const out = [...d.querySelectorAll(".lpc-lab,.lpc-sub,.lpc-cut")].map(e => ({
+  const out = [...d.querySelectorAll(".lpc-lab,.lpc-cut")].map(e => ({
     kind: e.className, text: e.textContent, top: parseFloat(e.style.top),
   }));
   return out;
@@ -5640,18 +5609,24 @@ test("a band whose boundary is visible keeps its label on that boundary", () => 
   assert.ok(labs.every(l => l.top > 10), "both bands have a visible boundary to sit on");
 });
 
-// A plain LP numeral landing on the Grandmaster floor drew a second hairline a few
-// pixels from a dashed one and printed a number next to a label.
-test("an LP numeral is dropped where it would land on a cutoff floor", () => {
+// An LP step landing on the Grandmaster floor drew a second hairline a few pixels
+// from the dashed one
+test("an LP hairline is dropped where it would land on a cutoff floor", () => {
   const win = bootApp();
   const hist = Array.from({ length: 7 }, (_, i) => ({ t: days(6 - i), tier: "CHALLENGER", division: null, lp: 1830 + i * 15 }));
-
-  const clear = chartLabels(win, hist, { gm: 1500, chall: 2100 }).map(l => l.text);
-  assert.ok(clear.includes("1800 LP"), "with the floor elsewhere the numeral is drawn");
-
-  const onTop = chartLabels(win, hist, { gm: 1800, chall: 2100 });
-  assert.ok(!onTop.some(l => l.text === "1800 LP"), "with the floor on it, the floor wins");
-  assert.ok(onTop.some(l => l.text === "GM"));
+  const lines = cut => {
+    const d = win.document.createElement("div");
+    d.innerHTML = win.rankChart(hist, cut, "d", "probe");
+    return { steps: [...d.querySelectorAll('line[stroke="#ffffff"]')].map(l => +l.getAttribute("y1")),
+      floors: [...d.querySelectorAll('line[stroke-dasharray="3 3"]')].map(l => +l.getAttribute("y1")) };
+  };
+  const clear = lines({ gm: 1500, chall: 2100 });
+  assert.deepEqual(clear.floors, [], "with both floors out of view");
+  const onTop = lines({ gm: 1800, chall: 2100 });
+  assert.equal(onTop.floors.length, 1, "the Grandmaster floor is drawn");
+  assert.equal(onTop.steps.length, clear.steps.length - 1, "and the step it lands on is not");
+  assert.ok(onTop.steps.every(y => Math.abs(y - onTop.floors[0]) >= 11), "nothing beside it");
+  assert.ok(chartLabels(win, hist, { gm: 1800, chall: 2100 }).some(l => l.text === "GM"));
 });
 
 // The general version of the same complaint: whatever the data, two labels in the
@@ -10509,11 +10484,6 @@ test("no chart label is printed across the line or a dot; one with no clear spot
       const top = parseFloat(l.style.top);
       assert.ok(!hits(0, .2, top + 1, top + 9), `caption "${l.textContent}" on the line: ${where}`);
     }
-    for (const l of el.querySelectorAll(".lpc-sub")) {
-      labelled++;
-      const top = parseFloat(l.style.top);
-      assert.ok(!hits(.9, 1, top + 1, top + 9), `numeral "${l.textContent}" on the line: ${where}`);
-    }
     for (const l of el.querySelectorAll(".lpc-peak")) {
       const top = parseFloat(l.style.top), x = parseFloat(l.style.left) / 100;
       assert.ok(!hits(x - .04, x + .04, top + 1, top + 9), `Peak on the line: ${where}`);
@@ -10652,14 +10622,19 @@ test("the card's two times are set alike: plain text, no frame", () => {
   assert.match(src, /font-size:calc\(12px\*var\(--ts\)\);color:var\(--faint\)/);
 });
 
-// "P III" sat just under the newest point on most climbing cards
-test("a chart's division numerals show while it is being read, not at rest", () => {
+// "II" showed on whichever chart the pointer happened to rest on, and read as a
+// leftover; before that "P III" sat just under the newest point on most climbing cards
+test("a chart's division and LP steps are hairlines with no numerals, hovered or not", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-  assert.match(css, /\n  \.lpc-plot \.lpc-sub\{opacity:0;transition:opacity \.13s ease\}/, "hidden at rest");
-  assert.match(css, /\n  \.lpc-plot:hover \.lpc-sub,\.lpc-plot:focus-within \.lpc-sub\{opacity:\.5\}/, "shown on hover or focus, as before");
-  // still drawn, for the moment they are wanted
+  assert.doesNotMatch(css, /lpc-sub/, "nothing waits to appear on hover");
   const win = bootApp();
-  assert.ok(chartDom(win, hist(["GOLD", "I", 0], ["PLATINUM", "III", 74], ["PLATINUM", "II", 61])).querySelector(".lpc-sub"));
+  for (const h of [hist(["GOLD", "I", 0], ["PLATINUM", "III", 74], ["PLATINUM", "II", 61]),
+    hist(["PLATINUM", "IV", 5], ["PLATINUM", "I", 88]), hist(["MASTER", null, 800], ["MASTER", null, 1600])]) {
+    const el = chartDom(win, h);
+    assert.ok(el.querySelector('line[stroke="#ffffff"]'), "the steps are still drawn");
+    const said = [...el.querySelectorAll(".lpc-plot > span")].map(n => n.textContent);
+    assert.ok(said.every(t => !/^([A-Z] )?(I|II|III|IV)$|^\d+ LP$/.test(t)), "no numerals: " + said.join(", "));
+  }
 });
 
 // The Sync tab was written for whoever built it: "Pushes the encrypted vault blob to

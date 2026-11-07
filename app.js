@@ -1272,16 +1272,6 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
       for(let k=1;k<6;k++){const f=a+(b-a)*k/6;if(f<=LAB_W)leftYs.push(py(pts[i].v+(pts[i+1].v-pts[i].v)*k/6))}}
   }
   const labFree=y=>!leftYs.some(v=>v>=y-5&&v<=y+14);   // 9px of caption, and a point's own radius around it
-  // the same for the right edge, where the division numerals sit
-  const NUM_W=.12, rightYs=[];
-  for(let i=0;i<=last;i++){
-    const a=fx(i);if(a>=1-NUM_W)rightYs.push(py(pts[i].v));
-    if(i<last){const b=fx(i+1);
-      for(let k=1;k<6;k++){const f=a+(b-a)*k/6;if(f>=1-NUM_W)rightYs.push(py(pts[i].v+(pts[i+1].v-pts[i].v)*k/6))}}
-  }
-  // a numeral's box runs from 9.5px above its rule to the rule; a dot's colour is
-  // 4.5px each way, and its dark ring overlapping a letter's edge is not a collision
-  const numFree=v=>{const y=py(v);return !rightYs.some(r=>r>y-14&&r<y+4.5)};
 
   let bands="",lines="",labels="";
   for(let t=0;t<=mIdx;t++){
@@ -1308,46 +1298,29 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     const labY=spots.find(labFree);
     if(labY!=null&&yBot-yTop>=14)labels+=`<span class="lpc-lab" style="top:${labY.toFixed(1)}px;color:${c}">${t===mIdx?"Master+":name.charAt(0)+name.slice(1).toLowerCase()}</span>`;
   }
-  // Steps inside the bands. Below Master a step of 100 LP is exactly one division,
-  // so the numerals come for free — but a fixed 100 stops working the moment the
-  // view is wide (a Master account sliding 1600 -> 800 LP would draw dozens of
-  // lines). So the step grows with the range instead: the smallest one that keeps
-  // the chart at five marks or fewer. 100 is the floor, and MIN_SPAN guarantees
-  // nothing finer is ever picked, which is what keeps the numerals honest.
+  /* Steps inside the bands, as faint hairlines. Below Master a step of 100 LP is
+     exactly one division, but a fixed 100 stops working the moment the view is
+     wide (a Master account sliding 1600 -> 800 LP would draw dozens of lines), so
+     the step grows with the range instead.
+     They used to be labelled at the right edge: "II", "P III", "1200 LP". That is
+     where the newest point is, so a numeral kept landing beside or under it, and
+     later they showed only while the pointer was on the chart, which read as a
+     leftover on whichever chart the pointer happened to rest on. A point's tip
+     names its rank and LP, and the band's colour and caption say the tier. */
   const M_BASE=mIdx*TIER_SPAN;
-  /* Enough space to label it. The floor stays at 22 on purpose: raising it to
-     clear the range switcher in the top-right corner does stop the collision,
-     but it costs the topmost mark on a lot of charts — Platinum loses its "I",
-     a Master range loses "2000 LP". The marks are information and are on screen
-     always; the switcher is a control touched once in a while, so the switcher
-     is what gives way (see .lpc-range in the CSS). */
   const room=v=>{const y=py(v);return y>=22&&y<=LPC_H-3};
   const rule=v=>{const y=py(v).toFixed(1);
     lines+=`<line x1="0" x2="${LPC_W}" y1="${y}" y2="${y}" stroke="#ffffff" stroke-opacity=".07" stroke-width="1" vector-effect="non-scaling-stroke"/>`};
-  const mark=(v,txt)=>{labels+=`<span class="lpc-sub" style="top:${(py(v)-9.5).toFixed(1)}px">${esc(txt)}</span>`};
 
   // Two scales, because the two halves of the ladder want opposite things.
-  // Below Master the interesting unit is the division, which is always 100 LP —
+  // Below Master the interesting unit is the division, which is always 100 LP,
   // so that step is fixed and only disappears when there is genuinely no room.
-  const divs=[];
   if(LPC_H*100/span>=13){
     for(let v=Math.ceil(lo/100)*100;v<Math.min(hi,M_BASE);v+=100){
       if(v%TIER_SPAN===0)continue;        // already drawn as a tier boundary
-      if(!room(v))continue;
-      const t=TIER_ORDER[Math.floor(v/TIER_SPAN)]||"";
-      divs.push({v,t,n:["IV","III","II","I"][Math.round((v%TIER_SPAN)/100)]||""});
+      if(room(v))rule(v);
     }
   }
-  // "II" twice on one chart is right (Silver II and Gold II) but reads as a bug,
-  // so the tier initial is added when something repeats. And when the marks come
-  // from two tiers at all: a Gold-to-Platinum climb read II, III, I down the edge,
-  // the I being Gold I, which looked like a numbering mistake. "P II, P III, G I".
-  const mixed=new Set(divs.filter(d=>d.n).map(d=>d.t)).size>1;
-  const dupe=mixed||divs.some((d,i)=>divs.findIndex(o=>o.n===d.n)!==i);
-  // The numerals sit at the right edge, which is where the newest point is; one the
-  // point or the line lands on ("P II" under the dot) keeps its hairline and loses
-  // its label.
-  for(const d of divs){if(!d.n)continue;rule(d.v);if(numFree(d.v))mark(d.v,dupe?d.t.charAt(0)+" "+d.n:d.n)}
 
   // The Grandmaster and Challenger floors, where the view reaches them. These are
   // the current floors, so they are drawn as a reference against today's ladder —
@@ -1381,8 +1354,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
      the one number on the card the line cannot express — the highest this account
      ever got, from op.gg's badge, this app's own record or a manual override,
      whichever is genuinely highest. Drawn as a ceiling the line is climbing back
-     towards. Left lane, so it shares space with the band captions rather than the
-     LP numerals; skipped if a band caption is already sitting there. */
+     towards. Skipped if a band caption is already sitting there. */
   if(peakV!=null&&peakV>lo&&peakV<hi){
     const y=py(peakV);
     lines+=`<line x1="0" x2="${LPC_W}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--gold)" stroke-opacity=".6" stroke-width="1" stroke-dasharray="2 4" vector-effect="non-scaling-stroke"/>`;
@@ -1401,21 +1373,20 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     const lane=lanes.find(f=>clear(f)>=11);
     if(lane!=null&&!cutYs.some(cy=>Math.abs(y-cy)<11))
       labels+=`<span class="lpc-peak" style="top:${(y-9.5).toFixed(1)}px;left:${(lane*100).toFixed(1)}%" title="${esc(peakLabel||"Season peak")}">Peak</span>`;
-    cutYs.push(y);   // and an LP numeral must not land on it either
+    cutYs.push(y);   // and an LP hairline must not land on it either
   }
 
-  // Above Master there are no divisions left to name, only LP — and a fixed 100
-  // there is far too fine, so this step grows with the range. Chosen on the space
-  // a label needs rather than a mark count, so it stays right at any chart height.
+  // Above Master there are no divisions, only LP, and a fixed 100 there is far
+  // too fine, so this step grows with the range: at least 22px apart at any
+  // chart height.
   if(hi>M_BASE){
     const lpStep=[100,200,400,800,1600,3200,6400].find(s=>LPC_H*s/span>=22)||span/3;
     for(let v=Math.max(Math.ceil(lo/lpStep)*lpStep,M_BASE);v<hi;v+=lpStep){
       if(v===M_BASE||!room(v))continue;   // M_BASE is the "Master+" band boundary
-      // A plain LP numeral landing on top of the Grandmaster or Challenger floor
-      // draws a second hairline a few pixels from a dashed one and prints a number
-      // beside a label. The floor is the more useful of the two, so it wins.
+      // A hairline landing on the Grandmaster or Challenger floor is a second line
+      // a few pixels from a dashed one. The floor is the more useful of the two.
       if(cutYs.some(cy=>Math.abs(py(v)-cy)<11))continue;
-      rule(v);if(numFree(v))mark(v,(v-M_BASE)+" LP");
+      rule(v);
     }
   }
 

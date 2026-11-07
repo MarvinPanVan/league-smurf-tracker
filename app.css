@@ -1547,11 +1547,10 @@
      back as soon as you scroll up, which is when the top is what you want. */
   .to-top.away{opacity:0;pointer-events:none;transform:translateY(12px) scale(.9)}
   @media (prefers-reduced-motion:reduce){.to-top{transition:none}}
-  /* Top-right of the plot — which is also where a high division numeral or LP
-     mark lands, and where a point's tip opens. Three things wanting one corner.
-     The marks and the tip are information; this is a control used once in a
-     while, so it is the one that waits to be asked for. Visible on hovering the
-     chart, or when it has keyboard focus. */
+  /* Top-right of the plot, which is also where a point's tip opens. The tip is
+     information; this is a control used once in a while, so it is the one that
+     waits to be asked for. Visible on hovering the chart, or when it has
+     keyboard focus. */
   .lpc-one{margin:4px 0 2px;font-size:calc(12px*var(--ts));color:var(--faint)}
   .lpc-range{position:absolute;top:4px;right:5px;display:flex;gap:2px;z-index:3;
     opacity:0;pointer-events:none;transition:opacity .13s ease}
@@ -1570,7 +1569,7 @@
   /* The line passes under the captions wherever it climbs through a band's
      corner, and ran straight through them: "GOLD" read as a line with letters
      on it. A halo in the plot's own dark lifts the letters off it. */
-  .lpc-plot .lpc-lab,.lpc-plot .lpc-sub,.lpc-plot .lpc-peak{text-shadow:0 0 1px var(--bg),0 0 2px var(--bg),0 0 3px var(--bg),0 0 6px var(--bg)}
+  .lpc-plot .lpc-lab,.lpc-plot .lpc-peak{text-shadow:0 0 1px var(--bg),0 0 2px var(--bg),0 0 3px var(--bg),0 0 6px var(--bg)}
   /* Clear of the first point, which sits 1.6% in (X_IN in rankChart) with a 5px
      radius: at 6px flat the dot landed on the caption's first letter. */
   .lpc-plot .lpc-lab{position:absolute;left:calc(1.6% + 9px);font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.09em;
@@ -1580,18 +1579,6 @@
   .lpc-plot .lpc-peak{position:absolute;left:50%;transform:translateX(-50%);
     font-size:calc(11px*var(--ts));font-weight:700;letter-spacing:.12em;
     text-transform:uppercase;pointer-events:none;line-height:1;color:var(--gold-txt);opacity:.9}
-  /* division numerals below Master, LP marks above it — opposite side to the tier
-     names so the two never collide */
-  .lpc-plot .lpc-sub{position:absolute;right:6px;font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.06em;
-    color:#fff;opacity:.5;pointer-events:none;line-height:1;font-variant-numeric:tabular-nums}
-  /* The division numerals (P III, G I) and Master's LP marks are the chart's scale.
-     Standing at the line's end all the time, "P III" sat just under the newest point
-     on most climbing cards. They show while you read the chart (hover, or a point
-     focused), like the D/W/M switch; the band's colour says the tier meanwhile, and
-     a point's tip names its rank. */
-  .lpc-plot .lpc-sub{opacity:0;transition:opacity .13s ease}
-  .lpc-plot:hover .lpc-sub,.lpc-plot:focus-within .lpc-sub{opacity:.5}
-  @media (prefers-reduced-motion:reduce){.lpc-plot .lpc-sub{transition:none}}
   /* Each point owns the slice of the chart nearest to it, and the slices tile the
      chart exactly. The first version centred a fixed-width column on every point,
      which meant the outermost ones hung ~56 px past the edge of the chart — far
@@ -1615,8 +1602,8 @@
   .lpc-pt:hover i{transform:scale(1.55)}
   .lpc.dense .lpc-pt:not(.now):not(:hover) i{transform:scale(0)}
   /* Opaque, not glass. This is the one surface that is always read against a busy
-     background — the line, the band captions and the LP numerals all pass under
-     it — and at 96% the line showed straight through the text. */
+     background (the line and the band captions pass under it), and at 96% the
+     line showed straight through the text. */
   .lpc-tip{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;
     opacity:0;pointer-events:none;transition:opacity .13s ease;
     white-space:nowrap;font-size:calc(11px*var(--ts));font-weight:500;line-height:1.35;color:var(--text);
