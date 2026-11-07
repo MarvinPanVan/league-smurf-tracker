@@ -6048,7 +6048,7 @@ function openForm(acc,focus){
   $("fBirth").value=acc?acc.birthdate||"":"";
   $("fStatus").value=acc?(acc.status||"active"):"active";
   setPassShown(false);
-  $("fPass").placeholder=vaultPassword?"Encrypted at rest with your master password":"Stored unencrypted, locally";
+  renderPassNote();
   renderPwMeter();
   $("fTags").value=acc?(acc.tags||[]).join(", "):"";
   $("fNotes").value=acc?acc.notes||"":"";
@@ -6073,12 +6073,19 @@ function openForm(acc,focus){
   // The modal observer focuses the name, which carries data-autofocus — the first
   // field is the optional label, and the one you came here to type is the name.
   $("form").classList.remove("hidden");
+  formBase=formSnapshot();
   if(atNotes)requestAnimationFrame(()=>{const h=$("fNotesHead");if(h&&h.scrollIntoView)h.scrollIntoView({block:"start"})});
 }
 function setFormMore(on){
   $("fGrid").classList.toggle("more",on);
   const b=$("fMoreBtn");b.setAttribute("aria-expanded",String(on));
   b.firstChild.textContent=on?"Fewer details":"More details";
+}
+/* Everything the form holds, to tell whether leaving it would lose something */
+let formBase="";
+function formSnapshot(){
+  return JSON.stringify([[...$("form").querySelectorAll("input,select,textarea")].map(e=>e.type==="checkbox"?e.checked:e.value),
+    readInfoFields(formInfoBase)]);
 }
 /* A field that stops the save says why under itself. Typing in it clears that. */
 function fieldError(id,msg){
@@ -6092,6 +6099,15 @@ function clearFieldError(id){
   if(m)m.textContent="";
 }
 function clearFormErrors(){clearFieldError("fName");clearFieldError("fTag")}
+/* What happens to the password, under the box: it was the placeholder, in the
+   password's monospace, gone at the first letter. Without a master password the
+   line offers to set one; leaving a form with typing in it asks first. */
+function renderPassNote(){
+  const el=$("fPassNote");
+  el.classList.toggle("open",!vaultPassword);
+  setHTML(el,vaultPassword?`${icon("lock")}<span>Encrypted with your master password</span>`
+    :`<span>Saved in this browser without encryption.</span><button type="button" class="f-link" id="fSetMaster">Set a master password</button>`);
+}
 function closeForm(){$("form").classList.add("hidden");editingId=null}
 /* A Riot ID is copied as one string — "Hide on Bush#EUW" from op.gg, the client,
    a friend's message — and the form wanted it in two boxes, so a paste into the
@@ -6123,6 +6139,12 @@ $("fMoreBtn").addEventListener("click",()=>{
   const on=!$("fGrid").classList.contains("more");
   setFormMore(on);cfg.formMore=on;saveCfg();   // kept the way you leave it, for the next account
   if(on)$("fLabel").focus();
+});
+$("fPassNote").addEventListener("click",e=>{
+  if(!e.target.closest("#fSetMaster"))return;
+  if(formSnapshot()!==formBase&&!confirm("Leave this form? What you typed here isn't saved yet."))return;
+  openSettings("security");
+  setTimeout(()=>{const f=$("sVaultPass");if(f){f.scrollIntoView&&f.scrollIntoView({block:"center"});f.focus()}},60);
 });
 $("fTag").addEventListener("input",regionFromTagField);
 $("fRegion").addEventListener("change",()=>{$("fRegion").dataset.picked="1"});

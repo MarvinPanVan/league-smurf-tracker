@@ -548,15 +548,18 @@
         <select id="fRegion"></select>
       </div>
       <div class="fld"><label for="fLogin">Login username</label><input id="fLogin" placeholder="Riot client login" autocomplete="off"></div>
-      <div class="fld pw-fld"><label for="fPass">Password <span id="pwMeterLabel"></span></label><div style="display:flex;gap:6px">
+      <div class="fld pw-fld"><label for="fPass">Password <span id="pwMeterLabel"></span></label><div style="display:flex;gap:6px;position:relative">
         <div style="position:relative;flex:1;display:flex">
           <!-- Deliberately not type="password": see the .mask rule in the CSS. -->
-          <input type="text" id="fPass" class="mask" placeholder="Stored unencrypted, locally" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" style="width:100%;padding-right:34px">
+          <input type="text" id="fPass" class="mask" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" style="width:100%;padding-right:34px">
           <button id="fTogglePass" class="eye-btn" type="button" title="Show password" aria-label="Show password"><svg id="fToggleIco" class="ico" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
         <button id="fGen" type="button" title="Generate a new safe password (asks first if there's already one)"><svg class="ico" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg> Gen</button>
+        <div id="pwMeter"></div>
       </div>
-      <div id="pwMeter"></div>
+      <!-- was the field's placeholder, set in the password's monospace and gone
+           at the first letter typed: what happens to the password stays said -->
+      <p class="f-note" id="fPassNote"></p>
       </div>
       <div class="fw f-more-row">
         <button type="button" id="fMoreBtn" class="b-quiet f-more" aria-expanded="false" aria-controls="fGrid">More details<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>

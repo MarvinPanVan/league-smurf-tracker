@@ -8530,6 +8530,43 @@ test("a missing Riot name or tag is said under the field, not in a toast over th
   assert.ok(!bad("fName") && !bad("fTag"));
 });
 
+// "Stored unencrypted, locally" was the field's placeholder, set in the password's
+// monospace and gone at the first letter typed
+test("what happens to the password is a line under the box, with a way to set a master password", () => {
+  const win = bootApp();
+  const doc = win.document, $ = id => doc.getElementById(id);
+  $("bAdd").click();
+  assert.ok(!$("fPass").getAttribute("placeholder"), "no placeholder to vanish");
+  assert.ok($("fPassNote").closest(".pw-fld"), "under the password box");
+  assert.match($("fPassNote").textContent, /Saved in this browser without encryption/);
+  $("fPass").value = "hunter22!";
+  $("fPass").dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.match($("fPassNote").textContent, /without encryption/, "still said once there is a password");
+  // with something typed, the link asks before leaving the form; a no keeps it
+  let asked = 0;
+  win.confirm = () => { asked++; return false; };
+  $("fSetMaster").click();
+  assert.equal(asked, 1);
+  assert.ok(!$("form").classList.contains("hidden"), "the form and what's in it stay");
+  win.confirm = () => { asked++; return true; };
+  $("fSetMaster").click();
+  assert.ok($("form").classList.contains("hidden"));
+  assert.ok(!$("settings").classList.contains("hidden"));
+  assert.equal($("settings").dataset.tab, "security", "at the master password");
+  // an untouched form has nothing to lose, so it just goes
+  $("settings").querySelector("[data-close-panel]").click();
+  $("bAdd").click(); asked = 0;
+  $("fSetMaster").click();
+  assert.equal(asked, 0);
+  assert.equal($("settings").dataset.tab, "security");
+  // with a master password, the line says the password is encrypted, and offers nothing
+  runScript(win, "vaultPassword='correct horse'");
+  $("settings").querySelector("[data-close-panel]").click();
+  $("bAdd").click();
+  assert.match($("fPassNote").textContent, /^Encrypted with your master password$/);
+  assert.equal($("fSetMaster"), null);
+});
+
 // The ⋯ menu led with the plaintext export, put Delete all mid-list and Settings last
 test("the ⋯ menu opens on Settings, offers the encrypted backup first, and ends on Delete all", () => {
   const win = bootApp();

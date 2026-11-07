@@ -1776,7 +1776,9 @@
   .pw-fld{position:relative}
   .pw-fld label{display:flex;justify-content:space-between;gap:10px}
   #pwMeterLabel{font-size:calc(12px*var(--ts));color:var(--faint)}
-  #pwMeter{position:absolute;left:0;right:0;bottom:-9px;height:3px;display:flex;gap:4px}
+  /* in the gap under the box, out of the flow: the note under it stays put while
+     the meter fills */
+  #pwMeter{position:absolute;left:0;right:0;bottom:-5px;height:3px;display:flex;gap:4px}
 
   /* The account form showed all eleven fields and the notes at once, for an account
      that needs two. Six columns, so the Riot name, its tag and the region share the
@@ -1805,6 +1807,14 @@
   .fld.bad input,.fld.bad select{border-color:color-mix(in srgb,var(--danger) 70%,transparent)}
   .fld.bad input:focus{border-color:color-mix(in srgb,var(--danger) 80%,transparent);
     box-shadow:0 0 0 3px color-mix(in srgb,var(--danger) 16%,transparent)}
+  /* what happens to the password, said under it in the page's own type, and kept
+     once there is a password in the box */
+  .f-note{margin:0;font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
+  .f-note .ico{width:13px;height:13px;flex:0 0 auto}
+  .f-note.open{color:var(--warn-txt)}
+  .f-link{all:unset;cursor:pointer;color:var(--teal-txt);text-decoration:underline;text-underline-offset:2px}
+  .f-link:hover{color:var(--text)}
+  .f-link:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:2px}
   .hidden{display:none!important}
   .empty{padding:64px 24px;text-align:center;color:var(--muted);font-size:calc(14px*var(--ts));line-height:1.7}
   .empty .d{height:84px;margin-bottom:20px;display:flex;align-items:center;justify-content:center}
