@@ -1762,6 +1762,11 @@
     font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.55;text-align:left}
   .wl-note .ico{width:13px;height:13px;margin-top:2px;flex-shrink:0}
   @media (max-width:640px){.wl-steps{grid-template-columns:1fr}}
+  .skip-link{position:fixed;left:16px;top:-80px;z-index:100;padding:10px 16px;border-radius:var(--r-sm);
+    background:var(--panel2);border:1px solid var(--line2);color:var(--text);font-weight:600;text-decoration:none;
+    box-shadow:var(--sh-2);transition:top .15s ease}
+  .skip-link:focus{top:16px}
+  #grid:focus{outline:none}
   .count{margin-top:30px;text-align:center;font-size:calc(12px*var(--ts));color:var(--faint)}
   .count a{color:var(--gold-txt);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
   .count a:hover{border-bottom-color:currentColor}
@@ -2513,6 +2518,10 @@
   </div></div>
 
   <div id="appRoot" class="hidden">
+  <!-- Forty-seven Tab presses from the top of the page to the first account's Login:
+       the header bar, the tray, the stats, the toolbar and every filter come first.
+       One keystroke past all of it, visible only to the keyboard that reaches it. -->
+  <a href="#grid" id="skipLink" class="skip-link">Skip to your accounts</a>
   <div class="top">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"></span>
@@ -3102,7 +3111,7 @@
   </div>
 
   <!-- cards -->
-  <div id="grid" class="grid"></div>
+  <div id="grid" class="grid" tabindex="-1"></div>
 
   <!-- Filled from APP_VERSION at boot rather than typed in here, so the number in
        the footer can never disagree with the one the changelog toast announces. -->
@@ -10415,6 +10424,11 @@ function syncFilterCount(){
   badge.hidden=!n;badge.textContent=n?String(n):"";
   b.setAttribute("aria-label",n?"Filters, "+n+" on":"Filters");
 }
+$("skipLink").addEventListener("click",e=>{
+  e.preventDefault();
+  const g=$("grid");g.focus({preventScroll:true});
+  if(g.scrollIntoView)g.scrollIntoView({block:"start",behavior:prefersReducedMotion()?"auto":"smooth"});
+});
 $("tFilters").addEventListener("click",()=>{
   const t=document.querySelector(".tools"), open=!t.classList.contains("open");
   t.classList.toggle("open",open);$("tFilters").setAttribute("aria-expanded",String(open));

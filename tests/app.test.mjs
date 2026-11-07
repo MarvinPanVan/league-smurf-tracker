@@ -8196,6 +8196,18 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// 47 Tab presses from the top of the page to the first account's Login
+test("a skip link is the first stop for the keyboard and lands on the accounts", () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document, link = doc.getElementById("skipLink");
+  const app = doc.getElementById("appRoot");
+  assert.equal(app.querySelector("a,button,input,select,textarea,[tabindex]"), link, "the first thing Tab reaches in the app");
+  link.click();
+  assert.equal(doc.activeElement, doc.getElementById("grid"), "the accounts take focus");
+  assert.equal(win.location.hash, "", "and the address is untouched: a hash is what opens a shared snapshot");
+  assert.match(html, /\.skip-link:focus\{top:16px\}/, "out of sight until it is focused");
+});
+
 // Measured on a 390px touch screen: selection boxes 13-15px, D/W/M 17px, the Riot ID line 16px
 test("on a touch screen the small controls reach WCAG's 24px, and nothing changes for a mouse", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
