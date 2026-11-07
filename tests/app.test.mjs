@@ -8531,6 +8531,50 @@ test("a banned card shows no movement and no Refresh; a live one with the same r
   assert.ok(card("ban").querySelector('[data-act="login"]'), "its login is still there");
 });
 
+// Logins sat in plain text unless someone found Settings → Security: now it asks
+test("saving a password into an unencrypted vault asks for a master password, and can set one", async () => {
+  const win = bootApp();
+  win.check = async () => null;
+  const doc = win.document, open = () => !doc.getElementById("lockPrompt").classList.contains("hidden");
+  assert.equal(open(), false, "an empty vault has nothing to protect");
+  const add = (name, pass) => {
+    doc.getElementById("bAdd").click();
+    doc.getElementById("fName").value = name; doc.getElementById("fTag").value = "EUW";
+    doc.getElementById("fPass").value = pass; doc.getElementById("fSave").click();
+  };
+  add("NoPass", "");
+  assert.equal(open(), false, "no password saved, nothing to ask");
+  add("WithPass", "hunter22");
+  assert.ok(open(), "a password just went into plain-text storage");
+  doc.getElementById("lpPass").value = "correct horse"; doc.getElementById("lpPass2").value = "correct hose";
+  doc.getElementById("lpSet").click();
+  await new Promise(r => setTimeout(r, 30));
+  assert.equal(appGet(win, "!!vaultPassword"), false, "two different passwords set nothing");
+  assert.ok(open());
+  doc.getElementById("lpPass2").value = "correct horse";
+  doc.getElementById("lpSet").click();
+  // set first, then written encrypted, then the prompt closes: wait for the whole of it
+  await until(() => !open(), "the prompt closes once the encrypted vault is written");
+  assert.equal(appGet(win, "vaultPassword"), "correct horse", "the vault is encrypted with it");
+  assert.match(win.localStorage.getItem("smurf-tracker") || "", /"ct"|"iv"|cipher|"v":/i, "and what is stored is the encrypted envelope");
+});
+
+test("the master password prompt comes once a visit, and Don't ask again stops it on this device", () => {
+  const seed = [{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], stats: null, password: "pw1" }];
+  const win = bootApp(seed);
+  const open = w => !w.document.getElementById("lockPrompt").classList.contains("hidden");
+  assert.ok(open(win), "plain-text passwords at boot: it asks");
+  win.document.getElementById("lpOff").checked = true;
+  win.document.getElementById("lpLater").click();
+  assert.equal(open(win), false);
+  assert.equal(appGet(win, "cfg.lockPromptOff"), true, "remembered on this device");
+  const again = bootApp(seed, w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ lockPromptOff: true })));
+  assert.equal(open(again), false, "and not asked again");
+  // no passwords saved, or only the preview's: nothing to ask about
+  const none = bootApp([{ ...seed[0], password: "" }]);
+  assert.equal(open(none), false);
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
