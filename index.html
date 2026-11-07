@@ -2424,6 +2424,37 @@
     .tools>label{justify-content:center}
   }
   @media (max-width:440px){.cmd{gap:8px}.cmd>button{padding-inline:10px}}
+  /* On a phone the toolbar's filters were the whole first screen: search, two rows
+     of dropdowns, Favorites, Archived and Select all, before a single account. Only
+     search stays out; the rest fold behind Filters, whose badge counts what is on so
+     a filter is never on unseen (the chips under the toolbar name the rest). */
+  .t-filters{display:none}
+  .t-filters .t-n{margin-left:2px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:inline-flex;align-items:center;
+    justify-content:center;font-size:calc(11px*var(--ts));font-weight:700;color:var(--teal-ink);background:var(--teal)}
+  .t-filters .t-n[hidden]{display:none}
+  @media (max-width:560px){
+    .tools{display:flex;flex-wrap:wrap}
+    /* search and Filters share the first row (search takes all but Filters' width,
+       so the rest always starts a row of its own), the rest two to a row under it */
+    .tools>input[type=search]{flex:1 1 calc(100% - 128px);width:auto;min-width:0}
+    .tools>.t-filters{display:inline-flex;flex:0 0 auto;width:auto}
+    .tools>:not(input[type=search]):not(.t-filters){flex:1 1 calc(50% - 4px)}
+    /* !important: Select all is a label with an inline display of its own */
+    .tools:not(.open)>:not(input[type=search]):not(.t-filters){display:none!important}
+    .tools.open>.t-filters{background-color:var(--panel3);border-color:var(--line2)}
+    /* The figures wrapped two to a row, a third alone beneath them, and the champion
+       chips wrapped into a block of their own: together most of a screen. Each is
+       one row now that slides sideways, the next figure peeking in at the edge to
+       say there is more. */
+    #dash .dash,#dash .dash[style*="--cols"]{display:flex;overflow-x:auto;scroll-snap-type:x proximity;
+      overscroll-behavior-x:contain;scrollbar-width:none}
+    #dash .dash>.stat{flex:0 0 min(62%,220px);scroll-snap-align:start}
+    /* the edge fades, so a figure cut by it reads as "more this way", not as all there is */
+    #dash .dash{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent)}
+    #dash .dist{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-right:20px}
+    #dash .dist>*{flex-shrink:0}
+    #dash .dash::-webkit-scrollbar,#dash .dist::-webkit-scrollbar{display:none}
+  }
   @media (max-width:560px){.formgrid{grid-template-columns:1fr;padding:18px}.card{padding:15px}
     .c-drawer{margin:1px -15px -15px}
     /* a phone has ~150px a side: the tier word drops to its own size, the crest
@@ -2992,6 +3023,10 @@
   <div id="chips" class="chips"></div>
   <div class="tools">
     <input type="search" id="tSearch" placeholder="Search name, label, tag, email…">
+    <!-- a phone's whole first screen was filters; there they fold behind this -->
+    <button type="button" id="tFilters" class="t-filters" aria-expanded="false" title="Region, sort, status, favorites, archived">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
+      Filters<b class="t-n" hidden></b></button>
     <select id="tRegion">
       <option value="">All regions</option>
     </select>
@@ -6932,7 +6967,9 @@ function balanceDash(){
   if(!d)return;
   const tiles=[...d.children];
   const narrow=!!(window.matchMedia&&matchMedia("(max-width:720px)").matches); // the .dash rule's own minimum there
-  const cols=dashCols(tiles.length,d.clientWidth,narrow?140:158);
+  // a phone lays the figures in one sliding row: one row, so only the first has no rule before it
+  const strip=!!(window.matchMedia&&matchMedia("(max-width:560px)").matches);
+  const cols=strip?tiles.length:dashCols(tiles.length,d.clientWidth,narrow?140:158);
   if(!cols){d.style.removeProperty("--cols");return}
   d.style.setProperty("--cols",cols);
   // the hairline between tiles belongs inside a row, not down the left edge of one
@@ -6974,6 +7011,7 @@ function renderTagbar(){
 // mysteriously short.
 const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Needs attention",missing:"Not found",dup:"Duplicate IDs",rotate:"Due to rotate"};
 function renderChips(){
+  syncFilterCount();
   const out=[];
   if(ui.flag)out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
   if(ui.tier)out.push(["tier",ui.tier==="UNRANKED"?"Unranked":ui.tier.charAt(0)+ui.tier.slice(1).toLowerCase()]);
@@ -10325,7 +10363,20 @@ function syncToggles(){
     b.classList.toggle("on",!!on);
     b.setAttribute("aria-pressed",on?"true":"false");
   }
+  syncFilterCount();
 }
+// how many of the folded filters are on, on the phone's Filters button
+function syncFilterCount(){
+  const n=[ui.region,ui.status,ui.favOnly,ui.showArchived].filter(Boolean).length, b=$("tFilters");
+  if(!b)return;
+  const badge=b.querySelector(".t-n");
+  badge.hidden=!n;badge.textContent=n?String(n):"";
+  b.setAttribute("aria-label",n?"Filters, "+n+" on":"Filters");
+}
+$("tFilters").addEventListener("click",()=>{
+  const t=document.querySelector(".tools"), open=!t.classList.contains("open");
+  t.classList.toggle("open",open);$("tFilters").setAttribute("aria-expanded",String(open));
+});
 $("tFav").addEventListener("click",()=>{ui.favOnly=!ui.favOnly;syncToggles();renderFilters()});
 $("tArchived").addEventListener("click",()=>{ui.showArchived=!ui.showArchived;syncToggles();render()});
 $("bDashToggle").addEventListener("click",()=>{

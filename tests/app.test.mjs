@@ -8196,6 +8196,33 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// On a phone the filters and the stats were the whole first screen
+test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 10, losses: 8, updatedAt: Date.now() } },
+    { id: "b", gameName: "B", tagLine: "1", region: "NA", status: "active", tags: [], history: [], stats: null }]);
+  const doc = win.document, btn = doc.getElementById("tFilters"), tools = doc.querySelector(".tools");
+  const badge = () => btn.querySelector(".t-n");
+  assert.equal(btn.getAttribute("aria-expanded"), "false");
+  assert.ok(badge().hidden, "nothing on, nothing counted");
+  btn.click();
+  assert.ok(tools.classList.contains("open")); assert.equal(btn.getAttribute("aria-expanded"), "true");
+  const region = doc.getElementById("tRegion"); region.value = "EUW"; region.dispatchEvent(new win.Event("change", { bubbles: true }));
+  assert.equal(badge().textContent, "1", "a region filter counts");
+  doc.getElementById("tFav").click();
+  assert.equal(badge().textContent, "2", "and Favorites");
+  assert.match(btn.getAttribute("aria-label"), /2 on/);
+  btn.click();
+  assert.equal(tools.classList.contains("open"), false, "folds back");
+  // the layout half, which jsdom cannot lay out
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /\n  \.t-filters\{display:none\}/, "a wide screen never sees the button");
+  const phone = css.slice(css.indexOf(".t-filters{display:none}"));
+  assert.match(phone, /\.tools:not\(\.open\)>:not\(input\[type=search\]\):not\(\.t-filters\)\{display:none!important\}/,
+    "folded means everything but search, the inline-styled Select all too");
+  assert.match(phone, /#dash \.dash,#dash \.dash\[style\*="--cols"\]\{display:flex;overflow-x:auto/, "the figures in one sliding row");
+});
+
 // After the first account the panel was 0W 0L, Best —, Group climb —: a wall of nothing
 test("the stats panel shows a figure only once there is something behind it", () => {
   const tiles = win => [...win.document.querySelectorAll("#dash .stat .k")].map(k => k.textContent.trim());
