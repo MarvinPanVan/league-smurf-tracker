@@ -671,7 +671,8 @@ test("note fields stay legible: 12px, light words, visible empty pips", () => {
   assert.match(chip, /color:color-mix\(in srgb,var\(--text\) \d+%,var\(--muted\)\)/, "words a step under the figures, not the muted grey");
   const pip = rule(".ni-pips i");
   assert.ok(parseInt(pip.match(/background:#ffffff([0-9a-f]{2})/)[1], 16) >= 0x30, "an empty pip is still a pip");
-  assert.match(rule(".ni-skins span"), /color:var\(--star\)/, "skins in the bright gold");
+  // skins are facts like the rest: the plain chip, not a fourth style in the accent
+  assert.equal(rule(".ni-skins span"), "", "no colour of their own");
 });
 
 // On an iPad the ⋯ menu was grey words on a panel the card behind showed through.
@@ -736,9 +737,11 @@ test("a card's win-rate bar is drawn as a record, not as the goal rail's progres
   const wr = html.match(/\.wrbar\{[^}]*\}/)[0], goal = html.match(/\.goal-bar\{[^}]*\}/)[0];
   assert.match(wr, /--danger/, "the losses are the red remainder");
   assert.doesNotMatch(goal, /--danger/, "a goal's remainder is distance, not losses");
-  assert.match(html, /\.wrbar::after\{[^}]*left:50%/, "and even is marked");
+  // A notch at 50% cut through whichever side it fell in: 57% drew as two wins
+  // segments and a losses one. Wins, then losses, and nothing else across the bar.
+  assert.doesNotMatch(html, /\.wrbar::after\{/, "no notch splitting the record");
   assert.match(html.match(/\.rw-bar\{[^}]*\}/)[0], /--danger/, "the list row draws the same record");
-  assert.match(html, /\.rw-bar::after\{[^}]*left:50%/);
+  assert.doesNotMatch(html, /\.rw-bar::after\{/);
   const win = bootApp([{ id: "w1", region: "EUW", gameName: "W", tagLine: "1", status: "active",
     stats: { found: true, tier: "GOLD", division: "I", lp: 10, wins: 42, losses: 58, updatedAt: 1 }, history: [], tags: [] }]);
   assert.equal(win.document.querySelector(".card .wrbar i").style.width, "42%");
@@ -821,11 +824,14 @@ test("the header tray is a solid plate: nothing behind it can tint its edge", ()
 test("the page speaks in line icons, not emoji", () => {
   const h = n => ({ t: Date.now() - n * 86400000, tier: "GOLD", division: "II", lp: 10 + (3 - n) * 20 });
   const win = bootApp([{ id: "up", region: "EUW", gameName: "Up", tagLine: "1", status: "active",
-    stats: { found: true, tier: "GOLD", division: "II", lp: 70, updatedAt: Date.now() }, history: [h(3), h(2), h(1), h(0)], tags: [] }]);
-  const chip = [...win.document.querySelectorAll(".delta.d-up")].find(d => /Climbing/.test(d.textContent));
-  assert.ok(chip, "the climbing chip is drawn");
-  assert.ok(chip.querySelector("svg.ico.flame"), "with the flame, drawn rather than an emoji");
-  assert.doesNotMatch(chip.textContent, /\u{1F525}/u);
+    stats: { found: true, tier: "GOLD", division: "II", lp: 70, updatedAt: Date.now() - 6 * 86400000 }, history: [h(9), h(8), h(7), h(6)], tags: [] }]);
+  const upd = win.document.querySelector('.card[data-id="up"] .upd.stale');
+  assert.ok(upd && upd.querySelector("svg.ico"), "the out-of-date warning is drawn rather than an emoji");
+  assert.doesNotMatch(upd.textContent, /\u26A0/u);
+  // the flame "Climbing" chip was a fourth way of saying "going up" (the +LP chip,
+  // Climb and the chart say it), so it went, and its orange with it
+  assert.equal([...win.document.querySelectorAll(".delta")].find(d => /Climbing/.test(d.textContent)), undefined);
+  assert.doesNotMatch(html, /#ff8f2e/i, "no orange left in the palette");
   assert.ok(win.document.querySelector("#previewBanner svg.ico"), "the preview banner's eye is drawn too");
   // UI markup only: the Discord post is a chat message, where an emoji belongs
   const ui = html.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, "").replace(/postDiscord\([^\n]*/g, "");
@@ -924,7 +930,7 @@ test("the accent buttons add no gradient rim or glow of their own; the wordmark 
   assert.doesNotMatch(rule(".brand-mark::before"), /gradient|animation|box-shadow/, "the gem is a solid stone, still");
   assert.doesNotMatch(html, /@keyframes gemGlow/);
   // and the small things that still glittered: honor pips, the lit Tags handle, the skin chips, the empty-state gem
-  for (const sel of [".ni-pips i.on", ".tag-handle.lit", ".ni-skins span", ".empty-gem"])
+  for (const sel of [".ni-pips i.on", ".tag-handle.lit", ".empty-gem"])
     assert.doesNotMatch(rule(sel), /gradient|box-shadow:[^;]*0 0 \d+px/, sel + " is flat");
   // and the shared snapshot's title is plain white type, not haloed in the accent
   assert.doesNotMatch(html.match(/\n  \.sn-title\{([^}]*)\}/)[1], /text-shadow/, "the snapshot title has no glow");
@@ -954,7 +960,7 @@ test("every button, dropdown and switch wears the same satin; icons, links and m
   for (const sel of [".opt-seg"]) assert.match(rule(sel), /background:var\(--sheen\),var\(--panel2\)/, sel);
   assert.match(css, /\n  \.seg\{[^}]*background:var\(--sheen\),var\(--panel2\);box-shadow:var\(--sh-btn\)/);
   // what is not a plate clears both, so it does not pick up a lit edge and a shadow around nothing
-  for (const sel of [".rid,.star,.eye-btn,.panel-close", "#bMore,#bHelp", "#moreMenu button", ".fb-x", ".fchip-all",
+  for (const sel of [".rid,.star,.eye-btn,.panel-close,.c-ref", "#bMore,#bHelp", "#moreMenu button", ".fb-x", ".fchip-all",
       ".bk-note button", ".setup-x"]) {
     assert.match(rule(sel), /box-shadow:none/, sel);
     assert.match(rule(sel), /background:none/, sel);
@@ -1261,6 +1267,12 @@ test("Play next names the account to play: about to decay first, then the longes
   assert.equal(appGet(both, "ui.search"), "");
   const fresh = bootApp([acc("a", "GOLD", 0), acc("b", "GOLD", 1)]);
   assert.equal(tile(fresh), null, "nothing has sat long enough to suggest");
+  // "4 days since played" was printed when all the app knew was the last check
+  const checkedOnly = acc("c", "GOLD", 0, { lastPlayedAt: undefined });
+  checkedOnly.stats.updatedAt = now - 9 * D;
+  const known = bootApp([checkedOnly, acc("d", "GOLD", 1)]);
+  assert.match(tile(known).textContent, /9 days since its last check/, "it says what it counted from");
+  assert.doesNotMatch(tile(known).textContent, /played/);
 });
 
 test("a new vault gets four set-up steps, each a button, until they are done or hidden", async () => {
@@ -1318,7 +1330,8 @@ test("This week: LP and games over the last seven days, the best climber one cli
   assert.equal(w.moved, 3, "an account not checked this week is not counted as flat");
   assert.equal(w.best.a.id, "climber");
   const tile = win.document.getElementById("weekStat");
-  assert.match(tile.textContent, /This week\s*\+120\s*LP\s*10 games · best Climber \+60/);
+  // a total, and it says so: beside the group's per-account average it read as a contradiction
+  assert.match(tile.textContent, /This week\s*\+120\s*LP\s*total of 3 accounts · 10 games · best Climber \+60/);
   tile.click();
   assert.equal(appGet(win, "flashId"), "climber", "the tile takes you to the best climber");
 });
@@ -3511,8 +3524,10 @@ test("a point's hit area is a window around it, never a slab of the whole chart"
       assert.equal(p.style.transform, `translateX(-${anchor}%)`, `${n}[${i}]: anchor`);
       assert.ok(left >= -0.01 && left <= 100.01, `${n}[${i}]: stays inside the chart`);
     });
-    assert.equal(parseFloat(cols[0].style.left), 0, `${n}: first sits on the left edge`);
-    assert.ok(Math.abs(parseFloat(cols[n - 1].style.left) - 100) < 0.02, `${n}: last sits on the right edge`);
+    // held a dot's width in from the frame, so neither end dot hangs half outside it
+    const l0 = parseFloat(cols[0].style.left), l1 = parseFloat(cols[n - 1].style.left);
+    assert.ok(l0 > 0 && l0 <= 3, `${n}: first sits just inside the left edge (${l0})`);
+    assert.ok(l1 < 100 && l1 >= 97, `${n}: last sits just inside the right edge (${l1})`);
   }
 });
 
@@ -3535,8 +3550,20 @@ test("the line spans the full chart, with no pathLength for a dash pattern to di
   // gap before the newest point — the reveal is a clip wipe now, so neither exists
   assert.equal(line.getAttribute("pathLength"), null);
   const coords = line.getAttribute("points").split(" ");
-  assert.ok(coords[0].startsWith("0.0,"), "starts at the left edge: " + coords[0]);
-  assert.ok(coords[coords.length - 1].startsWith("200.0,"), "reaches the right edge: " + coords[coords.length - 1]);
+  // It spans the chart, held a dot's width in from each edge: at 0 and 200 the
+  // first and last dots sat on the frame with half of each outside it.
+  const x0 = parseFloat(coords[0]), x1 = parseFloat(coords[coords.length - 1]);
+  assert.ok(x0 > 0 && x0 <= 6, "starts just inside the left edge: " + coords[0]);
+  assert.ok(x1 < 200 && x1 >= 194, "ends just inside the right edge: " + coords[coords.length - 1]);
+  const dots = [...el.querySelectorAll(".lpc-pt")].map(p => parseFloat(p.style.left));
+  assert.ok(dots[0] > 0 && dots[dots.length - 1] < 100, "the dots sit inside the frame: " + dots.join(", "));
+  // the band captions start past the first dot, which used to sit on their first letter
+  const inset = +html.match(/const X_IN=([\d.]+)/)[1] * 100;
+  const capLeft = html.match(/\.lpc-plot \.lpc-lab\{position:absolute;left:calc\(([\d.]+)% \+ (\d+)px\)/);
+  assert.ok(capLeft && +capLeft[1] === inset && +capLeft[2] >= 8, "caption clears the first dot");
+  // and the fill still reaches both edges, so the inset leaves no bare strip
+  const fill = el.querySelector("polygon").getAttribute("points").split(" ");
+  assert.ok(fill[0].startsWith("0,") && fill[fill.length - 1].startsWith("200,"), fill.join(" "));
 });
 
 test("the two halves of the ladder get their own scale", () => {
@@ -3570,8 +3597,8 @@ test("the chart's x axis is real time, so a gap in the record shows as a gap", (
   ];
   const xs = chartDom(win, h).querySelector(".lpc-line").getAttribute("points")
     .split(" ").map(c => parseFloat(c.split(",")[0]));
-  assert.equal(xs[0], 0);
-  assert.equal(xs[2], 200);
+  assert.equal(xs[0], 3.2, "a dot's width in from the left edge");
+  assert.equal(xs[2], 196.8, "and from the right");
   // evenly spaced would put the middle point at 100; by time it belongs near the left
   assert.ok(xs[1] < 20, "the long silence must take up most of the width, got x=" + xs[1]);
 
@@ -3586,8 +3613,20 @@ test("a history with no usable timestamps still plots, evenly spaced", () => {
              { tier: "GOLD", division: "I", lp: 20 }];
   const el = chartDom(win, h);
   const xs = el.querySelector(".lpc-line").getAttribute("points").split(" ").map(c => parseFloat(c.split(",")[0]));
-  assert.deepEqual(xs, [0, 100, 200]);
+  assert.deepEqual(xs, [3.2, 100, 196.8]);
   assert.equal(el.querySelectorAll(".lpc-tick").length, 0, "no timestamps, no date axis");
+});
+
+// A Gold-to-Platinum climb read II, III, I down the chart's edge: the I was Gold I
+test("division marks from two tiers carry the tier's initial", () => {
+  const win = bootApp();
+  const marks = h => [...chartDom(win, h).querySelectorAll(".lpc-sub")].map(n => n.textContent);
+  const m = marks(hist(["GOLD", "I", 40], ["PLATINUM", "II", 61]));
+  assert.ok(m.includes("G I"), "Gold I says it is Gold: " + m.join(", "));
+  assert.ok(m.some(t => /^P (II|III)$/.test(t)), m.join(", "));
+  assert.ok(m.every(t => /^[A-Z] (I|II|III|IV)$/.test(t)), "every numeral names its tier: " + m.join(", "));
+  // one tier in view: plain numerals, as before
+  assert.deepEqual(marks(hist(["PLATINUM", "IV", 5], ["PLATINUM", "I", 88])), ["III", "II", "I"]);
 });
 
 test("division numerals only appear when all four are marked, so no chart shows two IIs", () => {
@@ -6748,13 +6787,14 @@ test("the card stacks LP under the tier name", () => {
   const win = bootApp([{
     id: "rk1", gameName: "RankLook", tagLine: "EUW", region: "EUW", status: "active",
     stats: { found: true, tier: "DIAMOND", division: "II", lp: 23, updatedAt: 1 },
-    history: [{ t: 1, tier: "DIAMOND", division: "II", lp: 23 }],
+    // a peak above today, since a peak equal to it is no longer printed twice
+    history: [{ t: 0, tier: "DIAMOND", division: "I", lp: 10 }, { t: 1, tier: "DIAMOND", division: "II", lp: 23 }],
   }]);
   const card = win.document.querySelector('.card[data-id="rk1"]');
   assert.ok(card.querySelector(".rk-main .rk-t"), "tier in the main stack");
   assert.match(card.querySelector(".rk-main .rk-lp").textContent, /23 LP/);
   assert.match(card.querySelector(".c-stats").textContent, /Peak/);
-  assert.match(card.querySelector(".c-stats").textContent, /Diamond II/);
+  assert.match(card.querySelector(".c-stats").textContent, /Diamond I\b/);
 });
 
 test("duplicate Riot IDs are detected per region", () => {
@@ -7496,7 +7536,9 @@ test("dash shows Group climb with a working spark tip target", () => {
       history: hist },
   ]);
   const dash = win.document.getElementById("dash").textContent;
-  assert.match(dash, /Group climb/);
+  // an average per account, named as one (next to This week's total it read as a contradiction)
+  assert.match(dash, /Average climb/);
+  assert.match(win.document.getElementById("ladderTrendStat").querySelector(".s-note").textContent, /^per account · /);
   assert.doesNotMatch(dash, /Pool LP|Ladder trend|hover points/);
   const trend = win.poolLpTrend([{ id: "a", history: hist }]);
   assert.ok(trend && trend.svg && trend.headline);
@@ -7950,10 +7992,20 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
   assert.equal(m.querySelectorAll(".cm-sep").length, 0, "and no leftover bare separators");
 });
 
-test("the card footer is two buttons and a ⋯, not five", () => {
+test("the card footer is Login and a ⋯, with Refresh on the timestamp it changes", () => {
   const win = bootApp(seededAccount());
   const acts = win.document.querySelector(".card .acts");
-  assert.deepEqual([...acts.children].map(el => el.textContent.trim()), ["Login", "Refresh", "⋯"]);
+  // Refresh weighed nearly as much as Login there; it sits by "Updated …" now
+  assert.deepEqual([...acts.children].map(el => el.textContent.trim()), ["Login", "⋯"]);
+  const ref = win.document.querySelector('.card .c-meta .c-ref[data-act="check"]');
+  assert.ok(ref && ref.previousElementSibling.classList.contains("upd"), "beside the timestamp");
+  assert.equal(ref.getAttribute("aria-label"), "Refresh rank", "an icon with a name");
+  const called = []; win.check = async id => { called.push(id); };
+  ref.click();
+  assert.deepEqual(called, ["seed1"], "and it still checks the account");
+  // a key, not a person: a person beside "Login" read as signing in to this app
+  const d = [...acts.querySelectorAll(".a-login svg path")].map(p => p.getAttribute("d"));
+  assert.ok(d.includes("m10.7 12.3 9.3-9.3"), "the key icon: " + d.join(" | "));
   // Neither profile link vanished — they are one kind of thing and now sit
   // together under Look up, rather than op.gg in the footer and dpm.lol in here.
   const links = [...cardMenu(win).querySelectorAll(".cm-link")];
@@ -8269,6 +8321,9 @@ test("out of date is amber like any warning; red stays for lost, banned and irre
   assert.match(win.document.querySelector('#dash [data-flag="unchecked"] .v').getAttribute("style"), /--warn-txt/,
     "never checked is a chore, not the user's accent");
   assert.match(rule(".b-danger"), /--danger/, "a destructive button is still red");
+  // the decay chip had an amber of its own, a shade off --warn: two yellows on one card
+  assert.match(rule(".d-warn"), /color:var\(--warn-txt\)/, "the decay chip is the warning colour");
+  assert.doesNotMatch(html, /#f0b45a/i, "and no second amber is left");
 });
 
 // Picking a theme and pressing Esc undid it without a word
@@ -8418,6 +8473,62 @@ test("a wide screen gets a wide page, and the list spreads its columns rather th
   assert.deepEqual(tracks.slice(0, 2), ["auto", "40px"], "the box and the picture stay put, beside the name");
   assert.ok(tracks.filter(t => /fr\)$/.test(t)).length >= 6, "the slack is shared, not one hole: " + wide[1]);
   assert.match(wide[2], /\.rw-d\{align-items:flex-start\}/, "the change pill keeps its size in a wider column");
+});
+
+// The preview's first card was a famous pro's real account, showed MMR and "Recent avg"
+// figures only the paid AI check can produce, and kept a Platinum account "out of decay"
+test("the preview uses invented names and shows only what a free vault would", () => {
+  const win = bootApp();
+  win.document.getElementById("bDemo").click();
+  const names = JSON.parse(appGet(win, "JSON.stringify(accounts.map(a => a.gameName + '#' + a.tagLine))"));
+  for (const n of names) assert.doesNotMatch(n, /hide on bush|faker/i, n);
+  assert.equal(appGet(win, "accounts.some(a => a.stats && (a.stats.mmr || a.stats.avgRecent))"), false, "no AI-only figures");
+  assert.doesNotMatch(win.document.getElementById("grid").textContent, /MMR est|Recent avg/);
+  const decayTalk = JSON.parse(appGet(win, "JSON.stringify(accounts.filter(a => /decay/i.test(a.notes || '')).map(a => a.stats && a.stats.tier))"));
+  for (const t of decayTalk) assert.ok(["DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER"].includes(t), "a note about decay on a " + t + " account");
+  // and no real player's name in what the app shows a new user
+  const shown = html.replace(/<script>[\s\S]*?<\/script>/, "") + JSON.stringify(appGet(win, "APP_CHANGELOG"));
+  assert.doesNotMatch(shown, /Hide on Bush|Faker/i);
+});
+
+// At the top of its climb a card said its rank twice: in the headline and as "Peak"
+test("a card shows Peak only when the peak is above today's rank", () => {
+  const now = Date.now();
+  const acc = (id, peak) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "PLATINUM", division: "II", lp: 61, wins: 38, losses: 29, updatedAt: now, peak } });
+  const win = bootApp([acc("top", { tier: "PLATINUM", division: "II", lp: 61 }), acc("fell", { tier: "DIAMOND", division: "IV", lp: 20 })]);
+  const stats = id => [...win.document.querySelectorAll(`.card[data-id="${id}"] .c-stats > *`)].map(e => e.textContent.replace(/\s+/g, " ").trim());
+  assert.ok(!stats("top").some(t => /^Peak/i.test(t)), "today is the peak: " + stats("top").join(" | "));
+  assert.ok(stats("fell").some(t => /^Peak\s*Diamond IV/i.test(t)), "a higher peak is shown: " + stats("fell").join(" | "));
+});
+
+// "Best champions" was sorted by games played (a 44% champion sat in it), and an 8-game 50% was green
+test("the champion strip is called Most played, and a win rate is green only from ten games", () => {
+  const now = Date.now();
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 30, losses: 20, updatedAt: now,
+      champs: [{ name: "Lux", games: 24, wins: 15, losses: 9 }, { name: "Syndra", games: 9, wins: 4, losses: 5 }, { name: "Lee Sin", games: 8, wins: 4, losses: 4 }] } }]);
+  const dist = [...win.document.querySelectorAll("#dash .dist")].find(d => d.querySelector(".cmb"));
+  assert.equal(dist.querySelector(".k").textContent, "Most played");
+  const wr = n => [...dist.querySelectorAll(".cmb")].find(c => c.querySelector(".n").textContent === n).querySelector("b");
+  assert.ok(wr("Lux").classList.contains("wr-good"), "63% over 24 games");
+  assert.equal(wr("Lee Sin").classList.contains("wr-good"), false, "4-4 is too few to call");
+  assert.equal(wr("Syndra").classList.contains("wr-good"), false);
+});
+
+// A permanently banned card wore a green "+82 LP" and a Refresh as if it were still climbing
+test("a banned card shows no movement and no Refresh; a live one with the same record does", () => {
+  const D = 86400000, now = Date.now();
+  const acc = (id, status) => ({ id, gameName: id, tagLine: "1", region: "EUW", status, tags: [],
+    history: [{ t: now - 3 * D, tier: "BRONZE", division: "II", lp: 30, w: 30, l: 40 }, { t: now - D, tier: "BRONZE", division: "I", lp: 12, w: 40, l: 52 }],
+    stats: { found: true, tier: "BRONZE", division: "I", lp: 12, wins: 40, losses: 52, updatedAt: now - D } });
+  const win = bootApp([acc("live", "active"), acc("ban", "banned")]);
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  assert.ok(card("live").querySelector(".delta.d-up"), "the live account's climb is news");
+  assert.ok(card("live").querySelector(".c-ref"), "and it can be refreshed");
+  assert.equal(card("ban").querySelector(".delta.d-up,.delta.d-down"), null, "a closed account does not climb");
+  assert.equal(card("ban").querySelector(".c-ref"), null, "nor get checked; checks skip it");
+  assert.ok(card("ban").querySelector('[data-act="login"]'), "its login is still there");
 });
 
 // On a phone the filters and the stats were the whole first screen
@@ -8613,11 +8724,18 @@ test("on is green and a warning amber in every theme; red is kept for what canno
 
 // Four micro-stats wrapped three and one, leaving "Recent avg" alone on a row
 test("a card's micro-stats pair up two by two when there are four of them", () => {
-  const win = bootApp();
-  win.document.getElementById("bDemo").click();
+  // four: a peak above today, a climb, and the two figures only the AI check brings
+  // (the preview no longer carries those, so the account is built here)
+  const D = 86400000, now = Date.now();
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [],
+    history: [{ t: now - 10 * D, tier: "GOLD", division: "III", lp: 40 }, { t: now - 3600000, tier: "GOLD", division: "II", lp: 40 }],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 40, wins: 20, losses: 18, updatedAt: now - 3600000,
+      peak: { tier: "PLATINUM", division: "IV", lp: 12 }, mmr: "~1700", avgRecent: "Gold I" } },
+    { id: "b", gameName: "B", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+      stats: { found: true, tier: "GOLD", division: "II", lp: 40, wins: 20, losses: 18, updatedAt: now - 3600000, mmr: "~1700" } }]);
   const sets = [...win.document.querySelectorAll(".card .c-stats")];
   const four = sets.find(s => s.children.length === 4);
-  assert.ok(four, "the example data has a card with four");
+  assert.ok(four, "a card with four: " + sets.map(s => s.textContent).join(" | "));
   assert.ok(four.classList.contains("n4"), "the block knows how many it holds");
   for (const s of sets) assert.ok(s.classList.contains("n" + s.children.length), "every block carries its count");
   const rule = html.match(/\n  ([^{\n]*\.c-stats\.n4[^{]*)\{([^}]*)\}/);

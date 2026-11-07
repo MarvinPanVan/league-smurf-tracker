@@ -949,11 +949,10 @@
   .rw-wr em,.rw-lv em{font-style:normal;font-size:calc(10px*var(--ts));color:var(--faint);letter-spacing:.02em}
   /* Sixty rows of "47%" are sixty identical grey blocks. Sixty bars of differing
      length are a shape you can run your eye down. */
-  /* drawn as a record, like the card's: wins, the losses as the remainder, even marked */
+  /* drawn as a record, like the card's: wins, then the losses as the remainder */
   .rw-bar{position:relative;display:block;height:3px;border-radius:1px;overflow:hidden;
     background:color-mix(in srgb,var(--danger) 34%,var(--panel2))}
   .rw-bar i{display:block;height:100%;border-radius:1px 0 0 1px;box-shadow:1px 0 0 var(--bg)}
-  .rw-bar::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--bg)}
   .rw-d .delta{font-size:calc(11px*var(--ts));padding:2px 6px}
   .rw-rg{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.09em;color:var(--faint);text-align:center}
   /* An unranked row has nothing to say in four of its columns, and at full
@@ -1089,7 +1088,13 @@
   @media (hover:none){.bulkchk{opacity:.5}}
 
   /* bare icon buttons — must beat the generic button rules */
-  .rid,.star,.eye-btn,.panel-close{background:none;border:1px solid transparent;box-shadow:none;padding:0}
+  .rid,.star,.eye-btn,.panel-close,.c-ref{background:none;border:1px solid transparent;box-shadow:none;padding:0}
+  /* the card's Refresh: an icon on the timestamp's line */
+  .c-ref{width:26px;height:26px;margin:-5px 0 -5px -5px;display:inline-flex;align-items:center;justify-content:center;
+    color:var(--teal-txt);border-radius:var(--r-xs)}
+  .c-ref .ico{width:13px;height:13px}
+  .c-ref:hover:not(:disabled){background:#ffffff0d;border-color:var(--line)}
+  .c-ref:disabled{opacity:.7;cursor:default}
   .rid:hover,.star:hover,.eye-btn:hover{background:none;border-color:transparent}
   .star{font-size:calc(18px*var(--ts));color:var(--line2);line-height:1;display:inline-flex;transition:color .15s ease,transform .15s ease}
   .star:hover{color:var(--star);transform:scale(1.12)}
@@ -1248,8 +1253,9 @@
   .ni-pips{display:inline-flex;gap:3px}
   .ni-pips i{width:7px;height:7px;transform:rotate(45deg);border-radius:1px;background:#ffffff38}
   .ni-pips i.on{background:var(--gold-txt)}
-  .ni-skins span{color:var(--star);border-color:color-mix(in srgb,var(--gold) 42%,transparent);
-    background:color-mix(in srgb,var(--gold) 11%,transparent)}
+  /* Skins wore the accent, a fourth chip style beside the plain facts, the green
+     and amber states and the tags, and in an accent colour they read as pressed
+     filters. They are facts like the others; their own row says what they are. */
   .ni-skins span.more{color:var(--muted);background:none;border-style:dashed}
   .ni-pen{display:flex;align-items:flex-start;gap:7px;padding:6px 9px;border-radius:var(--r-xs);font-size:calc(12px*var(--ts));line-height:1.45;
     color:#ffc4c4;background:#ff6b6b12;border:1px solid #ff6b6b2e}
@@ -1393,16 +1399,19 @@
   /* Wins against losses, the way op.gg draws a record — not a fill on an empty
      track. That was exactly the goal rail's picture two lines below, so a 42% win
      rate and a goal 42% of the way there looked the same. The losses are the red
-     remainder, and a notch marks even. */
+     remainder. There was a notch at 50% too, to mark even, but it cut through
+     whichever side it fell in, so a 57% record drew as two wins segments and a
+     losses one, a split nobody could read. The win rate beside the bar, green
+     from 50%, already says which side of even it is. */
   .wrbar{position:relative;height:4px;border-radius:1px;overflow:hidden;
     background:color-mix(in srgb,var(--danger) 34%,var(--panel2))}
   .wrbar i{display:block;height:100%;border-radius:1px 0 0 1px;box-shadow:1px 0 0 var(--bg)}
-  .wrbar::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--bg)}
   .delta{font-size:calc(11px*var(--ts));padding:2px 8px;border-radius:var(--r-xs);font-weight:600;display:inline-block;white-space:nowrap}
   .d-up{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
-  .delta .ico.flame{width:1.15em;height:1.15em;color:#ff8f2e;fill:#ff8f2e;stroke-width:1.4;vertical-align:-.2em}
   .d-down{color:var(--danger);background:color-mix(in srgb,var(--danger) 15%,transparent)}
-  .d-warn{color:#f0b45a;background:color-mix(in srgb,#f0b45a 15%,transparent)}
+  /* the warning colour, not an amber of its own: a hard-coded hex sat a shade off --warn,
+     so "Decay in ~7d" and "No 2-step" were two different yellows on one card */
+  .d-warn{color:var(--warn-txt);background:color-mix(in srgb,var(--warn) 15%,transparent)}
   .wl .ready{color:var(--teal-txt);font-weight:600}
   .goal.lvl .goal-t{color:var(--teal-txt)}
   .delta .ico{width:1em;height:1em;vertical-align:-.15em}
@@ -1516,7 +1525,9 @@
      corner, and ran straight through them: "GOLD" read as a line with letters
      on it. A halo in the plot's own dark lifts the letters off it. */
   .lpc-plot .lpc-lab,.lpc-plot .lpc-sub,.lpc-plot .lpc-peak{text-shadow:0 0 1px var(--bg),0 0 2px var(--bg),0 0 3px var(--bg),0 0 6px var(--bg)}
-  .lpc-plot .lpc-lab{position:absolute;left:6px;font-size:calc(9px*var(--ts));font-weight:600;letter-spacing:.09em;
+  /* Clear of the first point, which sits 1.6% in (X_IN in rankChart) with a 5px
+     radius: at 6px flat the dot landed on the caption's first letter. */
+  .lpc-plot .lpc-lab{position:absolute;left:calc(1.6% + 9px);font-size:calc(9px*var(--ts));font-weight:600;letter-spacing:.09em;
     text-transform:uppercase;pointer-events:none;opacity:.82;line-height:1}
   /* the ceiling the line is climbing back towards; left lane, with the band
      captions, and dropped rather than stacked when one is already there */
@@ -2431,6 +2442,7 @@
     html{scroll-behavior:auto}
   }
   @media (pointer:coarse){
+    .c-ref{width:36px;height:36px;margin-block:-11px}
     .acts button,.acts a,.lbtns button{font-size:calc(13px*var(--ts));padding:9px 13px}
     .star{font-size:calc(20px*var(--ts));padding:2px 6px 2px 0}
     button,.btn{padding:10px 15px}
@@ -2970,7 +2982,7 @@
     <div class="acc-prev-side">
       <div class="acc-prev-card">
         <div class="acc-prev-card-h">
-          <span class="acc-prev-nm">Hide on Bush</span>
+          <span class="acc-prev-nm">Moonlit Mid</span>
           <span class="acc-prev-star">★</span>
           <span class="acc-prev-rk">Diamond I<small>52 LP</small></span>
         </div>
@@ -2999,7 +3011,7 @@
     <div class="formgrid">
       <div class="fw hint">Paste <code>Name#TAG</code>s (one a line, or comma-separated), an <b>op.gg multi-search link</b>, or lines from the <b>lobby chat</b> ("Name #TAG joined the lobby"). A link brings its own region; the rest get the region below. Add logins and notes to each afterwards.</div>
       <div class="fld"><label>Region for all</label><select id="baRegion"></select></div>
-      <div class="fld fw"><label>Accounts</label><textarea id="baList" data-autofocus rows="6" placeholder="Hide on Bush#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
+      <div class="fld fw"><label>Accounts</label><textarea id="baList" data-autofocus rows="6" placeholder="Moonlit Mid#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
     </div>
     </div>
     <div class="mdl-f">
@@ -3381,8 +3393,15 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.8.1";
+const APP_VERSION="2.9.0";
 const APP_CHANGELOG=[
+  {v:"2.9.0",items:[
+    "Cards say each thing once: Peak only when it's above today, no flame chip, and no notch splitting the win bar",
+    "Login has the row to itself, with a key; Refresh is an icon beside \"Updated 2 h ago\"",
+    "Charts keep their end dots inside the frame, and marks from two tiers say which (P II, G I)",
+    "The stats say what they measure: a week's total, an average climb, Most played champions, days since a check",
+    "A banned card stays quiet (no LP chips, no Refresh); the preview uses invented names",
+  ]},
   {v:"2.8.1",items:[
     "Wide screens use their width: six cards to a row at 2560px, and the list spreads out like a table",
     "List rows are two lines instead of three, and hovering a row shows its select box",
@@ -3391,7 +3410,7 @@ const APP_CHANGELOG=[
   {v:"2.8.0",items:[
     "A new account's rank is checked right away, and a list row or Quick find (Ctrl+K) copies a login in one click",
     "Cleaner screens: the stats say each thing once, the list reads as a table, and a phone shows accounts on the first screen",
-    "A first visit opens on a short welcome; the region follows the tag (Faker#KR1 → Korea); out of date is amber, not red",
+    "A first visit opens on a short welcome; the region follows the tag (Name#KR1 → Korea); out of date is amber, not red",
     "Settings says when closing would drop a change; the ⋯ menu starts with Settings; bigger touch targets and a skip link",
   ]},
   {v:"2.7.0",items:[
@@ -3716,7 +3735,11 @@ function playNext(pool){
   if(urgent.length){const a=urgent[0],d=decayDays(a);return{a,why:d<0?"decaying — play a ranked game":"decay in "+decayIn(d)}}
   let best=null,days=-1;
   for(const a of live){const d=rotationDays(a);if(d!=null&&d>days){best=a;days=d}}
-  return best&&days>=3?{a:best,why:days+" days since played"}:null;
+  // Say what the days are counted from. rotationDays falls back from "played" to
+  // "opened here" to "last checked", and all three used to be printed as "played".
+  if(!best||days<3)return null;
+  const since=best.lastPlayedAt?"played":best.lastLoginAt?"you opened its login":"its last check";
+  return{a:best,why:days+" days since "+since};
 }
 function needsRotation(a){
   if(a.status==="banned"||a.archived)return false;
@@ -4123,7 +4146,6 @@ const ICON={
   /* A hot streak. It was a 🔥 emoji, and the flame is the right picture — it is the
      emoji part that was wrong: a cartoon on one phone, a flat glyph on another. Same
      flame, drawn, so it looks one way everywhere and still runs warm. */
-  flame:'<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
   chart:'<line x1="3" y1="21" x2="21" y2="21"/><rect x="5" y="11" width="4" height="7" rx="1"/><rect x="11" y="6" width="4" height="12" rx="1"/><rect x="17" y="14" width="4" height="4" rx="1"/>',
   /* The ⋯ menu's own set. Ten identical lines of grey text is a wall you read
      word by word; a mark in front of each one is what lets the eye group them
@@ -4409,6 +4431,10 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
   const timed=t1>t0&&ts.every(t=>t>0);
   // one point has no span to spread across, so it sits in the middle
   const fx=i=>last===0?.5:(timed?(ts[i]-t0)/(t1-t0):i/last); // 0..1
+  /* Where a point is drawn: the same, held a little in from both edges. At 0 and 1
+     the first and last dots sat on the frame, half of each outside it. The line's
+     colour stops still use fx, since a gradient runs across the line's own box. */
+  const X_IN=.016, fxi=i=>X_IN+(1-2*X_IN)*fx(i);
 
   /* The band captions sit at the left edge, which is also where the line starts,
      and a caption the line or its first point ran through read "DIAM●ND". Where
@@ -4477,8 +4503,11 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     }
   }
   // "II" twice on one chart is right (Silver II and Gold II) but reads as a bug,
-  // so the tier initial is added — and only when something actually repeats.
-  const dupe=divs.some((d,i)=>divs.findIndex(o=>o.n===d.n)!==i);
+  // so the tier initial is added when something repeats. And when the marks come
+  // from two tiers at all: a Gold-to-Platinum climb read II, III, I down the edge,
+  // the I being Gold I, which looked like a numbering mistake. "P II, P III, G I".
+  const mixed=new Set(divs.filter(d=>d.n).map(d=>d.t)).size>1;
+  const dupe=mixed||divs.some((d,i)=>divs.findIndex(o=>o.n===d.n)!==i);
   for(const d of divs){if(!d.n)continue;rule(d.v);mark(d.v,dupe?d.t.charAt(0)+" "+d.n:d.n)}
 
   // The Grandmaster and Challenger floors, where the view reaches them. These are
@@ -4542,7 +4571,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     }
   }
 
-  const coords=pts.map((p,i)=>(fx(i)*LPC_W).toFixed(1)+","+py(p.v).toFixed(1)).join(" ");
+  const coords=pts.map((p,i)=>(fxi(i)*LPC_W).toFixed(1)+","+py(p.v).toFixed(1)).join(" ");
   // Unique per chart, and — importantly — *stable* across renders. These used to
   // be Math.random(), which made every card's markup different on every single
   // render: the gradient ids and the url(#…) references pointing at them had to be
@@ -4556,7 +4585,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
   // passing through, so a promotion reads as a colour change, not just a step up
   const stops=(last?pts:[pts[0],pts[0]]).map((p,i)=>`<stop offset="${(last?fx(i)*100:i*100).toFixed(2)}%" stop-color="${tierColor(p.h.tier)}"/>`).join("");
   const overlay=pts.map((p,i)=>{
-    const xp=fx(i)*100;
+    const xp=fxi(i)*100;
     // A point claims at most the ground nearer to it than to its neighbours — but
     // no more than a target's width either way. Letting the columns tile the full
     // chart meant a handful of points split it into slabs, so pointing anywhere at
@@ -4564,7 +4593,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     // of the plot. The 40 px cap wins when points are sparse, the tiling wins when
     // they are dense, and neither ever overhangs onto the next card: the outermost
     // columns hang off their own dot instead of straddling it.
-    const cl=i===0?0:(fx(i-1)+fx(i))/2*100, cr=i===last?100:(fx(i)+fx(i+1))/2*100;
+    const cl=i===0?0:(fxi(i-1)+fxi(i))/2*100, cr=i===last?100:(fxi(i)+fxi(i+1))/2*100;
     // tooltips at the edges would hang off the card, so they anchor inwards there
     const side=xp<26?" l":xp>74?" r":"";
     // A two-line tip is about 42px plus its 10px gap. A dot higher than that has
@@ -4602,7 +4631,7 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
       if(txt===prev)continue;
       prev=txt;
       const align=k===0?" l":k===n-1?" r":"";
-      axis+=`<span class="lpc-tick${align}" style="left:${(f*100).toFixed(2)}%">${esc(txt)}</span>`;
+      axis+=`<span class="lpc-tick${align}" style="left:${((X_IN+(1-2*X_IN)*f)*100).toFixed(2)}%">${esc(txt)}</span>`;
     }
   }
 
@@ -4611,7 +4640,8 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     +`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="0">${stops}</linearGradient>`
     +`<linearGradient id="${aid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${cur}" stop-opacity=".3"/><stop offset="1" stop-color="${cur}" stop-opacity="0"/></linearGradient></defs>`
     +bands+lines
-    +(last?`<polygon points="0,${LPC_H} ${coords} ${LPC_W},${LPC_H}" fill="url(#${aid})"/>`
+    // the fill runs on flat to both edges, so the inset leaves no bare strip
+    +(last?`<polygon points="0,${LPC_H} 0,${py(pts[0].v).toFixed(1)} ${coords} ${LPC_W},${py(pts[last].v).toFixed(1)} ${LPC_W},${LPC_H}" fill="url(#${aid})"/>`
         +`<polyline class="lpc-line" points="${coords}" fill="none" stroke="url(#${gid})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`:"")
     +`</svg>${labels}${overlay}`
     +`<div class="lpc-range">${RANGES.map(([v,label])=>`<button data-act="range" data-r="${v}" class="${mode===v?"on":""}" title="${label}">${v.toUpperCase()}</button>`).join("")}</div>`
@@ -7016,17 +7046,21 @@ function renderDash(){
     rotN&&`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
       <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`,
     week&&(()=>{
-      const note=(week.games?week.games+" game"+(week.games===1?"":"s")+" · ":"")
-        +(week.best?"best "+nameOf(week.best.a)+" +"+week.best.d:week.moved+" account"+(week.moved===1?"":"s")+" checked");
+      /* Two LP figures sat side by side here, +286 this week and +246 for the group,
+         and read as a contradiction: this one is a total across the accounts, the
+         group's is an average per account over a longer stretch. Each says which. */
+      const note="total of "+week.moved+" account"+(week.moved===1?"":"s")
+        +(week.games?" · "+week.games+" game"+(week.games===1?"":"s"):"")
+        +(week.best?" · best "+nameOf(week.best.a)+" +"+week.best.d:"");
       const inner=`<div class="k">This week</div><div class="v">${week.lp>0?"+":week.lp<0?"−":""}${Math.abs(week.lp)} <small>LP</small></div><div class="s-note">${note}</div>`;
       return week.best?`<button class="stat stat-b" id="weekStat" data-next="${idAttr(week.best.a.id)}" title="The last seven days across the counted accounts — click to see the best climber">${inner}</button>`
         :`<div class="stat" id="weekStat" title="The last seven days across the counted accounts">${inner}</div>`;
     })(),
     poolTrend&&`<div class="stat" id="ladderTrendStat" title="${esc(poolTrend.note)}">
-      <div class="k">Group climb</div>
+      <div class="k">Average climb</div>
       <div class="v">${esc(poolTrend.headline)} <small>LP</small></div>
       <div class="v spark-wrap">${poolTrend.svg}</div>
-      <div class="s-note">${esc(poolTrend.span)}</div></div>`,
+      <div class="s-note">per account · ${esc(poolTrend.span)}</div></div>`,
   ].filter(Boolean);
   const bkNote=bk&&accounts.length&&!previewMode&&!(setupVisible()&&!cfg.lastExport)?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:"";
   // nothing to show: no panel, and no Hide stats button for an empty one
@@ -7042,10 +7076,12 @@ function renderDash(){
     </div>
   </div>`:""}
   ${cells.length?`<div class="dash">${cells.join("")}</div>`:""}
-  ${topChamps.length?`<div class="dist"${cells.length||ranked.length?' style="border-top:1px solid var(--line)"':""}><span class="k">Best champions</span>${
+  ${topChamps.length?`<div class="dist"${cells.length||ranked.length?' style="border-top:1px solid var(--line)"':""}><span class="k">Most played</span>${
+    // Sorted by games, so "Best" was the wrong word: a 44% champion sat in it.
+    // And 4-4 is not a good record yet; green waits for ten games.
     topChamps.map(c=>`<span class="gem cmb" title="${esc(c.games)} games across ${esc(c.accs)} account${c.accs===1?"":"s"}">`
       +`<span class="n">${esc(c.name)}</span>`
-      +`<b class="${c.wr>=50?"wr-good":""}">${esc(c.wr)}%</b>`
+      +`<b class="${c.wr>=50&&c.games>=10?"wr-good":""}">${esc(c.wr)}%</b>`
       +`<i class="g">${esc(c.wins)}<em>-</em>${esc(c.losses)}</i></span>`).join("")}</div>`:""}
   </div></div>
   ${bkNote}`);
@@ -8381,17 +8417,25 @@ function cardHTML(a,i){
   let peak=null,peakV=null;
   {const p=peakInfo(a);peak=p.peak;peakV=p.peakV}
   let deltaChip="";
+  /* A banned account's rank will never move again, so its last movement is not
+     news: a closed account wore a green "+82 LP" and a win-streak chip as if it
+     were climbing. It keeps the chips about the record itself (duplicate ID,
+     uncertain reading), and loses the Refresh beside its timestamp, since checks
+     skip it anyway. */
+  const dead=a.status==="banned";
   // Same rule as the list row: lastDelta() already knows about season breaks and
   // Unranked ends. Subtracting raw ladderLP() here invented crash chips the list
   // correctly suppressed.
   {
     const dv=lastDelta(a);
-    if(dv)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
+    if(dv&&!dead)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
   }
-  if(isClimbing(hist))deltaChip+='<span class="delta d-up" title="LP has gone up 3 checks in a row">'+icon("flame","flame")+' Climbing</span>';
-  {const st=streakOf(a);if(st)deltaChip+=`<span class="delta ${st.win?"d-up":"d-down"} streak" title="The last ${st.n} ranked games were all ${st.win?"wins":"losses"}">${st.n}${st.win?"W":"L"} streak</span>`}
+  /* There was a flame "Climbing" chip here too (LP up three checks running). It was
+     the fourth way the card said "going up", beside the +LP chip, the Climb figure
+     and the chart's own line, and the only orange anywhere in the app. */
+  {const st=!dead&&streakOf(a);if(st)deltaChip+=`<span class="delta ${st.win?"d-up":"d-down"} streak" title="The last ${st.n} ranked games were all ${st.win?"wins":"losses"}">${st.n}${st.win?"W":"L"} streak</span>`}
   {
-    const dd=decayDays(a);
+    const dd=dead?null:decayDays(a);
     if(dd!==null&&dd<=7){
       const r=DECAY_RULES[(a.stats.tier||"").toUpperCase()];
       const why=`Estimated from the games seen between checks. A ranked game banks ${r.per===1?"1 day":r.per+" days"}, up to ${r.cap}; past that the account loses ${r.lp} LP a day.`;
@@ -8406,7 +8450,7 @@ function cardHTML(a,i){
     if(needsRotation(a))deltaChip+='<span class="delta" title="No play/check in 14+ days">Rotate'+(d!=null?(" · "+d+"d"):"")+'</span>';
   }
   {
-    const tr=wrTrend(a);
+    const tr=!dead&&wrTrend(a);
     if(tr&&Math.abs(tr.d)>=3)deltaChip+='<span class="delta '+(tr.d>0?"d-up":"d-down")+'" title="Winrate vs ~4 checks ago">'+(tr.d>0?"▲":"▼")+" WR "+(tr.d>0?"+":"")+tr.d+'</span>';
   }
   const {w:wins,l:losses,total,wr}=winLoss(s);
@@ -8440,7 +8484,9 @@ function cardHTML(a,i){
   // together in one muted sentence.
   const microStats=[];
   if(s&&s.found!==false){
-    if(peak)microStats.push(["Peak",peak]);
+    // Only a peak above today's rank is news. At the top of its climb the card
+    // said "Platinum II · 61 LP" twice, a few lines apart.
+    if(peak&&peakV!=null)microStats.push(["Peak",peak]);
     // Level is no longer one of these — it belongs to the identity, not to the
     // performance figures, and it now rides on the portrait the way op.gg does it.
     // How far the climb still is, against today's floor. Only for Master+, where
@@ -8548,14 +8594,16 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
+      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}${a.status==="banned"?"":`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`}</span>
       <!-- Three buttons, not five, and the ⋯ no longer unfolds a second toolbar
            into the card: it opens one shared floating menu (see cardMenuHTML).
            DPM moved in there with the rest — it is an outbound link you follow
            occasionally, not one of the three things you do on a card. -->
       <div class="acts">
-        <button data-act="login" class="a-login" title="Show saved login">${icon("user")} ${loginOpen?"Hide login":"Login"}</button>
-        <button data-act="check" ${isChecking?"disabled":""} style="color:var(--teal-txt)">${isChecking?"…":icon("refresh")+" Refresh"}</button>
+        <!-- A key, not a person: a person beside "Login" read as "sign in to this
+             app". Refresh moved up beside "Updated 2 h ago", the thing it changes;
+             here it weighed nearly as much as Login, which is what a card is for. -->
+        <button data-act="login" class="a-login" title="Show saved login">${icon("key")} ${loginOpen?"Hide login":"Login"}</button>
         <button data-act="more" class="c-more${openMore.has(a.id)?" on":""}" aria-haspopup="menu" aria-expanded="${openMore.has(a.id)}" title="More actions" aria-label="More actions">⋯</button>
       </div>
     </div>
@@ -9800,9 +9848,13 @@ function loadDemo(){
   const now=Date.now(),D=86400000;
   const mk=o=>Object.assign({id:uid(),fav:false,status:"active",tags:[],history:[],login:"",password:"",email:"",notes:"",label:"",demo:true},o);
   accounts=[
-    mk({label:"Main smurf",gameName:"Hide on Bush",tagLine:"0001",region:"EUW",fav:true,tags:["mid","ranked-ready"],login:"demo_user1",password:"demo-pass-1",email:"smurf1@mail.gg",notes:"Climbing account — keep it out of decay",
+    /* Invented names only: the first one used to be a famous pro's real account.
+       No MMR or "recent average" either: those come only from the paid AI check,
+       so a free vault never shows them, and the preview shouldn't promise them.
+       And a note that fits the account: decay starts at Diamond, not Platinum. */
+    mk({label:"Main smurf",gameName:"Moonlit Mid",tagLine:"0001",region:"EUW",fav:true,tags:["mid","ranked-ready"],login:"demo_user1",password:"demo-pass-1",email:"smurf1@mail.gg",notes:"Push for Diamond before the split ends",
       info:{honor:3,owned:96,be:23400,twofa:true,skins:["Elementalist Lux","Star Guardian Ahri","Arcade Kai'Sa"]},
-      stats:{found:true,tier:"PLATINUM",division:"II",lp:61,wins:38,losses:29,level:214,icon:"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",mmr:"~2140",avgRecent:"Platinum II",asOf:"updated today",updatedAt:now-2*3600000,
+      stats:{found:true,tier:"PLATINUM",division:"II",lp:61,wins:38,losses:29,level:214,icon:"https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",asOf:"updated today",updatedAt:now-2*3600000,
         champs:[{name:"Lux",games:24,wins:15,losses:9,wr:63,kda:"3.4"},{name:"Ahri",games:18,wins:10,losses:8,wr:56,kda:"2.9"},{name:"Syndra",games:9,wins:4,losses:5,wr:44,kda:"2.1"}]},
       history:[
         {t:now-24*D,tier:"GOLD",division:"II",lp:40},{t:now-20*D,tier:"GOLD",division:"I",lp:15},{t:now-16*D,tier:"GOLD",division:"I",lp:78},
@@ -9810,11 +9862,11 @@ function loadDemo(){
         {t:now-3*D,tier:"PLATINUM",division:"III",lp:74},{t:now-2*3600000,tier:"PLATINUM",division:"II",lp:61}]}),
     mk({label:"ADC acc",gameName:"Bot Diff",tagLine:"EUW",region:"EUW",tags:["adc"],login:"demo_user2",password:"demo-pass-2",email:"smurf2@mail.gg",notes:"",
       info:{honor:2,owned:41,be:6150,twofa:false,skins:["Spirit Blossom Yasuo"]},
-      stats:{found:true,tier:"GOLD",division:"III",lp:22,wins:21,losses:24,level:167,mmr:"~1650",avgRecent:"Gold III",asOf:"updated 4 days ago",updatedAt:now-4*D,
+      stats:{found:true,tier:"GOLD",division:"III",lp:22,wins:21,losses:24,level:167,asOf:"updated 4 days ago",updatedAt:now-4*D,
         champs:[{name:"Jinx",games:20,wins:10,losses:10,wr:50,kda:"2.6"},{name:"Kai'Sa",games:15,wins:7,losses:8,wr:47,kda:"2.4"}]},
       history:[{t:now-14*D,tier:"GOLD",division:"II",lp:35},{t:now-10*D,tier:"GOLD",division:"II",lp:8},{t:now-7*D,tier:"GOLD",division:"III",lp:71},{t:now-4*D,tier:"GOLD",division:"III",lp:22}]}),
     mk({label:"EUNE fill acc",gameName:"Coinflip Queue",tagLine:"EUNE",region:"EUNE",tags:["fill"],login:"demo_user3",password:"demo-pass-3",
-      stats:{found:true,tier:"SILVER",division:"I",lp:89,wins:15,losses:11,level:98,mmr:"~1420",avgRecent:"Silver I",asOf:"updated yesterday",updatedAt:now-1*D,
+      stats:{found:true,tier:"SILVER",division:"I",lp:89,wins:15,losses:11,level:98,asOf:"updated yesterday",updatedAt:now-1*D,
         champs:[{name:"Thresh",games:14,wins:9,losses:5,wr:64,kda:"3.1"},{name:"Lee Sin",games:8,wins:4,losses:4,wr:50,kda:"2.2"}]},
       history:[{t:now-8*D,tier:"SILVER",division:"II",lp:60},{t:now-5*D,tier:"SILVER",division:"II",lp:95},{t:now-1*D,tier:"SILVER",division:"I",lp:89}]}),
     mk({label:"Fresh leveling acc",gameName:"NewSmurf",tagLine:"2026",region:"EUW",status:"resting",tags:["leveling"],login:"demo_user4",password:"demo-pass-4",
