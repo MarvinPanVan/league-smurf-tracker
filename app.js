@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.14.0";
+const APP_VERSION="2.15.0";
 const APP_CHANGELOG=[
+  {v:"2.15.0",items:[
+    "Flat buttons in three kinds, and every control in a toolbar row is the same height",
+    "The header shows your ranks as small emblems with counts; accounts not found are one warning with Show",
+    "A one-line footer, a plain bar to level 30 on levelling cards, and a count that leaves archived accounts out",
+  ]},
   {v:"2.14.0",items:[
     "Smurf Tracker now lives at smurf-tracker.pages.dev, an address of its own",
     "The old address moves your vault over in one click: Move my vault there",
@@ -471,17 +476,18 @@ function levelPace(a){
   return perDay>=1?"about "+Math.round(perDay)+" level"+(Math.round(perDay)===1?"":"s")+" a day"
     :"about "+Math.max(1,Math.round(perDay*7))+" level"+(Math.max(1,Math.round(perDay*7))===1?"":"s")+" a week";
 }
-/* Where a ranked card has its chart, a levelling one had a thin bar and half a card
-   of nothing. The way to ranked gets the chart's room instead: thirty steps, the
-   ones done lit, where it is now, how many are left and, once checks have seen the
-   level move, how fast it is going. */
+/* The way to ranked. A ranked card has its chart; a levelling one shows the one
+   number that matters, the level against 30, as one bar: ticks at 10 and 20, how
+   many levels are left and, once checks have seen the level move, how fast. (2.12
+   drew thirty separate steps, taller at every tenth and at the current one, which
+   read like a chart of something and said no more than the bar does.) */
 function levelTrackHTML(a){
   const lv=Math.max(0,Math.min(30,Math.floor(Number(a.stats.level)||0))), left=30-lv, pace=levelPace(a);
+  const pct=n=>(n/30*100).toFixed(1)+"%";
   return`<div class="lvt" title="Ranked opens at level 30 (and 20 champions owned)">`
-    +`<div class="lvt-h"><span class="k">To ranked</span><span class="lvt-r">${left} level${left===1?"":"s"} to go</span></div>`
-    +`<div class="lvt-track" role="img" aria-label="Level ${lv} of 30">${Array.from({length:30},(_,i)=>`<i class="${i<lv?"on":""}${i===lv-1?" now":""}${(i+1)%10===0?" m":""}"></i>`).join("")}</div>`
-    +`<div class="lvt-ax"><span style="grid-column:1/4">1</span><span style="grid-column:9/12;text-align:center">10</span><span style="grid-column:19/22;text-align:center">20</span><span style="grid-column:24/31;text-align:right">30 · ranked</span></div>`
-    +(pace?`<div class="lvt-pace">${esc(pace)}</div>`:"")+`</div>`;
+    +`<div class="lvt-h"><span class="lvt-r">${left} level${left===1?"":"s"} to ranked</span>${pace?`<span class="lvt-pace">${esc(pace)}</span>`:""}</div>`
+    +`<div class="lvt-bar" role="img" aria-label="Level ${lv} of 30"><i style="width:${pct(lv)}"></i><b style="left:${pct(10)}"></b><b style="left:${pct(20)}"></b></div>`
+    +`<div class="lvt-ax"><span>1</span><span style="left:${pct(10)}">10</span><span style="left:${pct(20)}">20</span><span>30</span></div></div>`;
 }
 function isReadyForRanked(a){const s=a.stats;return isLive(a)&&!!s&&s.found!==false&&!isRanked(a)&&Number(s.level)>=30}
 // days are floored, so 0 is "less than one left" — "~0d" read as already gone
@@ -928,11 +934,6 @@ const ICON={
 };
 function icon(name,cls){return `<svg class="ico${cls?" "+cls:""}" viewBox="0 0 24 24">${ICON[name]}</svg>`}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-// pieces of HTML (escaped by the caller) as "a · b · c" that wraps cleanly; see .dots
-function dotList(parts){
-  return`<span class="dots"><span class="dots-in">${parts.filter(Boolean).map((p,i)=>
-    `<span class="dot-i">${i?`<i class="dot-s"> · </i>`:""}${p}</span>`).join("")}</span></span>`;
-}
 // data-id and querySelector both need the id to be inert. esc() for attributes;
 // CSS.escape for selectors — a poisoned id in localStorage used to break out of
 // data-id="…" on first paint, and a quote in an id made querySelector throw.
@@ -3706,16 +3707,18 @@ function mergeChampions(pool){
     .map(c=>({name:c.name,games:c.games,accs:c.accs,wins:c.wins,losses:c.games-c.wins,
       wr:Math.round(c.wins/c.games*100)}));
 }
-/* How the whole vault spreads across the ladder, as one bar. The dashboard's gem
-   row already answers "how many are Platinum"; this answers the question nobody
-   could ask before, which is what shape the collection is — and it does it without
-   being opened, because it lives in space the header was wasting anyway.
-   Segments are ordered the way the list is, best first, so the two agree. */
+/* The vault at a glance, in the header: a small emblem and a count for each tier
+   (each one filters to it), the states that are not ranks as plain words, and "not
+   found" (a Riot ID op.gg doesn't know: not entered yet, renamed or mistyped) as
+   the one warning, with a way to see them. It was a bar of thick tier-coloured
+   blocks with the counts squeezed inside and a caption under it saying the same in
+   words: the loudest thing on the page and the least important, with the statuses
+   on the same scale as the ranks, so forty unfinished Riot IDs made a red block
+   that crushed the ladder beside it. Tiers run best first, the way the list does. */
 function renderRibbon(){
   const el=$("ribbon");
   const pool=accounts.filter(a=>!a.archived);
-  // Under two accounts there is no distribution to show, only a full-width block
-  // of one colour pretending to be information.
+  // Under two accounts there is no spread to show, only one emblem saying "1".
   if(pool.length<2){setHTML(el,"");return}
   const dist={};let unN=0,neverN=0,missN=0,bannedN=0;
   for(const a of pool){
@@ -3723,8 +3726,7 @@ function renderRibbon(){
        spread asks the same question and has always answered it with isLive(),
        so a banned Bronze account made the two disagree about how many tiers the
        vault spans — and gave the ribbon a Bronze segment the gem row did not
-       have. It gets its own tail segment instead of vanishing, so the segments
-       still add up to the total in the caption. */
+       have. It is counted on its own instead of vanishing ("1 banned"). */
     if(!isLive(a)){bannedN++;continue}
     // Same predicate as the dash "Never checked" tile / filter.
     if(neverChecked(a)){neverN++;continue}
@@ -3732,49 +3734,25 @@ function renderRibbon(){
     else if(isUnrankedAnswer(a))unN++;
     else if(a.stats&&a.stats.found===false)missN++;
   }
-  const segs=TIER_ORDER.slice().reverse().filter(t=>dist[t])
-    .map(t=>({k:t,n:dist[t],c:TIER_COLORS[t],label:groupLabel(t)}));
-  const tierN=segs.length;   // counted before the two tail segments join them
-  /* The tail was one segment reading "Unranked or never checked", which is two
-     different things: an answer, and a job not done yet. They have separate filters
-     behind them and the stats panel has always counted them apart, so the bar shows
-     them apart too — and either one now shows exactly what it counted when clicked. */
-  if(unN)segs.push({k:"UNRANKED",n:unN,c:TIER_COLORS.UNRANKED,label:"Unranked"});
-  // Dedicated flag — not "attention". Auto-flagging a missing profile also marks
-  // Needs attention, but the ribbon count is only found===false; filtering by
-  // attention would pull in every hand-flagged account and disagree with the N.
-  if(missN)segs.push({flag:"missing",n:missN,c:"var(--danger)",label:"Not found"});
-  if(neverN)segs.push({flag:"unchecked",n:neverN,c:"var(--faint)",label:"Never checked"});
-  // Filtered by status rather than by a chore flag — "banned" is a state of the
-  // account, and the toolbar's status dropdown is the control that already means it.
-  if(bannedN)segs.push({status:"banned",n:bannedN,c:STATUS.banned.color,label:"Banned"});
-  if(!segs.length){setHTML(el,"");return}
-  // Best of the accounts still in play: a banned Challenger is not the best
-  // account in the vault, it is a gravestone.
-  const best=pool.filter(a=>isLive(a)&&isRanked(a)).sort((x,y)=>rankValue(y.stats)-rankValue(x.stats))[0];
-  const segAttr=s=>s.flag?`data-flag="${s.flag}"`:s.status?`data-status="${s.status}"`:`data-tier="${s.k}"`;
-  const segOn=s=>s.flag?ui.flag===s.flag:s.status?ui.status===s.status:ui.tier===s.k;
-  /* A tier segment is a share of the ladder, so it scales with its count. "Not
-     found", "Never checked" and "Banned" are not positions on the ladder — and
-     scaled the same way they take the bar over: a vault with forty dead Riot IDs
-     gave 72% of a bar labelled "by tier" to something that is not a tier, and
-     squeezed the whole actual spread into 12%. They sit at the end at a fixed
-     size instead, big enough to read and click. The exact numbers are in the
-     caption either way. */
-  const isTail=s=>!!(s.flag||s.status);
-  // Five segments each printed "1" in a five-account vault: a number that only ever
-  // says "one" says nothing, and the caption under the bar counts them anyway.
-  const allOne=segs.every(s=>s.n===1);
-  setHTML(el,`<div class="rib-bar" role="group" aria-label="Accounts by tier">${segs.map(s=>{
-      const on=segOn(s);
-      return `<button class="rib-seg${on?" on":""}${isTail(s)?" tail":""}" ${segAttr(s)} style="--c:${s.c}${isTail(s)?"":";flex:"+s.n}"
-        aria-pressed="${on}" title="${esc(s.label)}: ${s.n} account${s.n===1?"":"s"}. Click to show only these."
-        aria-label="${esc(s.label)}, ${s.n}">${allOne?"":`<i>${s.n}</i>`}</button>`}).join("")}</div>
-    <div class="rib-cap">${dotList([`<b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}`,
-      unN&&`<b>${unN}</b> unranked`,missN&&`<b>${missN}</b> not found`,neverN&&`<b>${neverN}</b> never checked`,bannedN&&`<b>${bannedN}</b> banned`])}`
-    // with the name: the stats panel's Best account tile said who, and it is gone
-    +(best?`<span class="rib-best">best ${nameOf(best)} · <b style="color:${tierColor(best.stats.tier)}">${esc(shortRank(best.stats))}</b></span>`:"")
-    +`</div>`);
+  const tiers=TIER_ORDER.slice().reverse().filter(t=>dist[t]);
+  if(!tiers.length&&!unN&&!missN&&!neverN&&!bannedN){setHTML(el,"");return}
+  const plural=n=>n===1?"":"s";
+  const tierItem=t=>{const on=ui.tier===t, n=dist[t], name=groupLabel(t);
+    return`<button class="rib-i rib-t${on?" on":""}" data-tier="${t}" aria-pressed="${on}"`
+      +` title="${esc(name)}: ${n} account${plural(n)}. Click to show only these." aria-label="${esc(name)}, ${n}">${crest(t,"rib-crest")}<b>${n}</b></button>`};
+  const word=(attr,on,n,label,why)=>`<button class="rib-i rib-s${on?" on":""}" ${attr} aria-pressed="${on}" title="${esc(why)} Click to show them."`
+    +` aria-label="${esc(label.charAt(0).toUpperCase()+label.slice(1))}, ${n}">${n} ${label}</button>`;
+  const states=[
+    unN&&word('data-tier="UNRANKED"',ui.tier==="UNRANKED",unN,"unranked","Checked, and not ranked this season."),
+    neverN&&word('data-flag="unchecked"',ui.flag==="unchecked",neverN,"never checked","No rank read yet."),
+    bannedN&&word('data-status="banned"',ui.status==="banned",bannedN,"banned","Marked banned."),
+  ].filter(Boolean);
+  const missOn=ui.flag==="missing";
+  const warn=missN?`<button class="rib-i rib-warn${missOn?" on":""}" data-flag="missing" aria-pressed="${missOn}" aria-label="Not found, ${missN}"`
+    +` title="op.gg has no profile for these Riot IDs: not entered yet, renamed, or mistyped.">${icon("alert")}<span>${missN} not found</span><u>${missOn?"Shown":"Show"}</u></button>`:"";
+  setHTML(el,`<div class="rib-row" role="group" aria-label="Accounts by tier">${tiers.map(tierItem).join("")}`
+    +(states.length?`<span class="rib-states">${states.join('<i class="rib-dot" aria-hidden="true">·</i>')}</span>`:"")
+    +warn+`</div>`);
 }
 /* Collapsed until asked for on a phone: there the stats were the whole first
    screen, ahead of every account. A choice made with the toggle is kept on any
@@ -4646,7 +4624,7 @@ function snapHTML(s){
       :`<p class="sn-empty">This snapshot has no accounts in it.</p>`}
     <footer class="sn-foot">
       <p>A snapshot${s.at?" taken "+esc(snapDay(s.at)):""}. It doesn't update. Logins, emails and notes are never part of one.</p>
-      <a class="btn b-teal" href="${esc(home)}">Track your own accounts</a>
+      <a class="btn b-fill" href="${esc(home)}">Track your own accounts</a>
       <p class="sn-riot">${esc(RIOT_NOTICE)}</p>
     </footer>`;
 }
@@ -4658,7 +4636,7 @@ function snapErrorHTML(){
     <span class="brand-mark" aria-hidden="true"></span>
     <h1>This snapshot link is broken</h1>
     <p>Part of it may have been cut off when it was copied. Ask for the link again, and paste all of it.</p>
-    <a class="btn b-teal" href="${esc(snapBase())}">Open Smurf Tracker</a></div></div>`;
+    <a class="btn b-fill" href="${esc(snapBase())}">Open Smurf Tracker</a></div></div>`;
 }
 /* The viewer. It runs instead of the app, before anything has read this
    browser's storage, and switches storage off for the rest of the page's life:
@@ -5313,7 +5291,9 @@ function cardHTML(a,i){
   let rankBlock;
   if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
   else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">Never checked</div>`;
-  else if(s.found===false)rankBlock=`<div class="wl" style="color:var(--danger)">Not found. Check the name, tag and region</div>`;
+  // amber like the header's warning: a Riot ID op.gg doesn't know is usually one to
+  // correct, so the line is the way to correct it, not only the advice to
+  else if(s.found===false)rankBlock=`<div class="wl c-miss">${icon("alert")}<span>Not found on op.gg</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
     ${s.level>=30?`<div class="wl"><span class="ready" title="Level 30 reached. Ranked also needs 20 champions owned, which the app cannot see.">Ready for ranked</span></div>`:""}`;
   else if(!isRanked(a))rankBlock=`<div class="rk" style="color:${col}"><span class="rk-main"><span class="rk-t">Unranked</span></span></div>
@@ -5713,7 +5693,7 @@ function renderGrid(){
       +`<ol class="wl-steps"><li><span class="wl-n">1</span><b>Add an account</b><span>Its Riot ID and region. The login is optional.</span></li>`
       +`<li><span class="wl-n">2</span><b>Check its rank</b><span>Free and automatic, read from op.gg. No key needed.</span></li>`
       +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Login shows the username and password, each one click to copy.</span></li></ol>`
-      +`<div class="wl-acts"><button id="bEmptyAdd" class="b-teal">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div>`
+      +`<div class="wl-acts"><button id="bEmptyAdd" class="b-fill">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div>`
       +`<p class="wl-note">${icon("lock")}<span>Logins, passwords and notes stay in this browser. A rank check sends only the Riot ID to op.gg, through a public proxy. Clearing the browser's data clears the vault too, so keep a backup.</span></p></div></div>`);
   }else if(list.length===0){
     /* The zero-accounts state offers Add account and the demo; this one used to
@@ -5755,7 +5735,14 @@ function renderGrid(){
   const stale=accounts.filter(a=>!a.archived&&isStale(a)).length;
   // "21 need a refresh" was a red sentence you could not act on — the filter that
   // shows exactly those already existed, behind a stat tile in a collapsed panel.
-  setHTML($("count"),!accounts.length?"":`<span><b>${list.length}</b> of <b>${accounts.length}</b> shown</span>`
+  /* Out of what this view holds: archived accounts are a view of their own, so
+     counting them in ("53 of 61 shown" with nothing filtered) read as eight
+     accounts hidden by a filter nobody had set. Nothing filtered, it is just a
+     total. */
+  const held=accounts.filter(a=>!!a.archived===!!ui.showArchived).length;
+  const noun=ui.showArchived?"archived":"account"+(held===1?"":"s");
+  setHTML($("count"),!accounts.length?"":(list.length===held?`<span><b>${held}</b> ${noun}</span>`
+      :`<span><b>${list.length}</b> of <b>${held}</b>${ui.showArchived?" archived":""} shown</span>`)
     +(stale?`<button class="warn${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"
         title="Show only the accounts that are out of date">${stale} need${stale===1?"s":""} a refresh</button>`:""));
   syncCheckAll(list);
@@ -7296,6 +7283,9 @@ $("sVaultRemove").addEventListener("click",async()=>{
   toast("Password protection removed");
 });
 $("bHelp").addEventListener("click",()=>{const willShow=$("help").classList.contains("hidden");closeAllPanels();if(willShow)$("help").classList.remove("hidden")});
+// the footer's Terms: Help, at "Using this app", where the terms are written out
+$("footTerms").addEventListener("click",e=>{e.preventDefault();closeAllPanels();$("help").classList.remove("hidden");
+  const t=$("helpTerms");if(t&&t.scrollIntoView)t.scrollIntoView({block:"start"})});
 $("bHelpClose").addEventListener("click",()=>{$("help").classList.add("hidden");cfg.seenHelp=true;saveCfg()});
 $("bExport").addEventListener("click",doExport);
 $("sBackend").addEventListener("change",updateBackendStatus);
@@ -8465,7 +8455,7 @@ function renderMoveBand(waiting){
     ?`<span class="mv-t">${icon("external")}<span><b>Opening ${esc(host)}…</b> If no new tab appears, allow pop-ups for this page and try again.</span></span>`
       +`<span class="mv-acts"><button type="button" id="mvGo">Try again</button></span>`
     :`<span class="mv-t">${icon("external")}<span><b>Smurf Tracker has moved to ${esc(host)}.</b> Your vault is saved per address, so it stays here until you move it.</span></span>`
-      +`<span class="mv-acts"><button type="button" id="mvGo" class="b-teal">Move my vault there</button><a class="btn" href="${esc(APP_HOME)}">Open ${esc(host)}</a>`
+      +`<span class="mv-acts"><button type="button" id="mvGo" class="b-fill">Move my vault there</button><a class="btn" href="${esc(APP_HOME)}">Open ${esc(host)}</a>`
       // moved by hand already (Export, then Import there): the copy here still needs a way out
       +`<button type="button" id="mvRemove" class="mv-quiet" title="Only if your accounts are already at ${esc(host)}">Already moved? Remove it here</button></span>`);
   el.classList.remove("hidden");

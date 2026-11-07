@@ -725,7 +725,9 @@ test("dividers, control edges and faint text stay visible on a card", () => {
   assert.ok(ratio(tok("edge"), card) >= 1.9, "control edges at " + ratio(tok("edge"), card).toFixed(2));
   assert.ok(ratio(tok("line2"), card) > ratio(tok("edge"), card), "hover is a step above rest");
   assert.ok(ratio(tok("faint"), card) >= 5.3, "faint text at " + ratio(tok("faint"), card).toFixed(2));
-  assert.match(html, /button,\.btn\{[^}]*border:1px solid var\(--edge\)/, "buttons");
+  assert.match(html, /button,\.btn\{[^}]*border:1px solid var\(--btn-edge\)/, "buttons, on an edge of their own");
+  assert.ok(ratio(tok("btn-edge"), card) > ratio(tok("edge"), card), "a step lighter than a field's, so a flat button still has an outline");
+  assert.ok(ratio(tok("line2"), card) > ratio(tok("btn-edge"), card), "and hover a step lighter again");
   assert.match(html, /input,select,textarea\{[^}]*border:1px solid var\(--edge\)/, "fields");
   for (const sel of [".tag-handle", ".chip", ".ghost-toggle", ".thm", ".opt-seg"])
     assert.doesNotMatch(html.match(new RegExp("\\n  \\" + sel + "\\{([^}]*)\\}"))[1], /border[^;]*var\(--line\)/, sel + " is pressed, so it has an edge, not a divider");
@@ -825,12 +827,12 @@ test("the default background is one light from above, in the primary accent only
   assert.doesNotMatch(mini, /--teal/, "and its preview tile shows the same");
 });
 
-test("the header tray is a solid plate: nothing behind it can tint its edge", () => {
+// A framed tray round the header's quiet buttons undid the quiet
+test("the header's utilities sit bare at its right edge, with no tray round them", () => {
   const rule = html.match(/\n  \.top \.bar\{[^}]*\}/)[0];
-  assert.doesNotMatch(rule, /backdrop-filter/, "no blurred backdrop to mix with");
-  assert.match(rule, /background:var\(--panel\)/, "an opaque fill");
-  assert.doesNotMatch(rule, /border:1px/, "its edge is drawn inside the fill, not as a border over the page");
-  assert.doesNotMatch(html, /\.top \.bar:hover\{/, "and it does not change colour on hover");
+  assert.doesNotMatch(rule, /background|box-shadow|border|backdrop-filter/, "no plate, edge or blur");
+  assert.match(rule, /margin-left:auto/, "kept to the right edge");
+  assert.match(rule, /z-index:30/, "and above the page, so the ⋯ menu paints over it");
 });
 
 test("the page speaks in line icons, not emoji", () => {
@@ -903,10 +905,17 @@ test("the backup reminder carries the way to act on it", () => {
    so it is the same plate as every other button, filled. */
 // Mixed 62% into the page's near-black, every tier came out as its muddy version:
 // Gold as olive, Silver as slate. The bar is the tiers' own colours.
-test("the header's rank bar is drawn in the tiers' own colours, not darkened versions", () => {
-  const rule = html.match(/\n  \.rib-seg\{([^}]*)\}/)[1];
-  assert.match(rule, /background:var\(--c\)/);
-  assert.doesNotMatch(rule.replace(/\/\*[\s\S]*?\*\//g, ""), /color-mix/);
+test("the header's spread is small emblems with their counts, not blocks of colour", () => {
+  const win = bootApp(ladderSeed());
+  const tiers = [...win.document.querySelectorAll("#ribbon .rib-t")];
+  assert.ok(tiers.length > 1);
+  for (const el of tiers) {
+    assert.ok(el.querySelector("svg.crest.rib-crest"), "an emblem");
+    assert.match(el.querySelector("b").textContent, /^\d+$/, "and its count beside it, not squeezed inside a block");
+  }
+  assert.match(html.match(/\n  \.rib-i\{([^}]*)\}/)[1], /background:none/, "no block of colour behind it");
+  assert.doesNotMatch(html, /\.rib-bar|\.rib-seg|\.rib-cap/, "the bar is gone");
+  assert.equal(win.document.querySelector(".rib-cap"), null, "and so is the caption that said it all again");
 });
 
 test("a card's tier tint is a hint in its corner, not a wash over the art", () => {
@@ -915,16 +924,11 @@ test("a card's tier tint is a hint in its corner, not a wash over the art", () =
   assert.ok(pct <= 8, "at most 8% of the tier colour (" + pct + "%)");
 });
 
-test("Login stays the one filled control on a card, in the same material as every other button", () => {
+test("Login stays the one filled control on a card, flat like every other button", () => {
   const rule = html.match(/\n  \.a-login\{[^}]*\}/)[0];
   assert.match(rule, /background-color:var\(--teal\)/, "filled with the accent");
   assert.match(rule, /color:var\(--teal-ink\)/, "lettered in the ink that reads on it");
-  // the buttons' own satin, turned up for a bright fill; no gloss or glow of its own
-  assert.match(rule, /background-image:var\(--sheen-fill\)/);
-  assert.match(rule, /box-shadow:var\(--sh-fill\)/);
-  assert.doesNotMatch(rule, /gradient|box-shadow:0 /, "no finish of its own");
-  const fill = html.match(/--sh-fill:([^;]*);/)[1];
-  assert.doesNotMatch(fill, /(^|,)\s*0 0 \d+px/, "the fill's shadow is a lift, not a glow");
+  assert.doesNotMatch(rule, /gradient|background-image|box-shadow/, "flat: no gloss, rim or shadow");
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [] }]);
   const filled = [...win.document.querySelectorAll('.card[data-id="a"] .acts > *')]
     .filter(b => /var\(--teal\)/.test((html.match(new RegExp("\\n  \\." + b.className.split(" ")[0] + "\\{([^}]*)\\}")) || [])[1] || ""));
@@ -947,37 +951,42 @@ test("the accent buttons add no gradient rim or glow of their own; the wordmark 
   // and the shared snapshot's title is plain white type, not haloed in the accent
   assert.doesNotMatch(html.match(/\n  \.sn-title\{([^}]*)\}/)[1], /text-shadow/, "the snapshot title has no glow");
 });
-// Every raised control wears one finish, satin: lit from above, shaded at its foot.
-// The variants only recolour the plate, and what is not a plate stays bare.
-test("every button, dropdown and switch wears the same satin; icons, links and menu rows do not", () => {
+// Buttons wore "satin": a gloss from above, an inner rim top and bottom and a shadow,
+// which blurred their edges, on about ten kinds of button in five heights. Now they
+// are flat, of three kinds, and every control in a toolbar row is one height.
+test("buttons are flat, of three kinds, and every control in a toolbar row is one height", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-  const rule = sel => { const m = css.match(new RegExp("\\n  " + sel.replace(/[.#()*+?[\]^$|]/g, "\\$&") + "\\{([^}]*)\\}")); assert.ok(m, sel); return m[1]; };
-  // the finish: a broad, low light with no stop bright enough to read as chrome, and a lift, not a glow
-  const sheen = css.match(/--sheen:([^;]*);/)[1];
-  for (const [, a] of sheen.matchAll(/#ffffff([0-9a-f]{2})/g)) assert.ok(parseInt(a, 16) <= 0x26, "a soft light: " + sheen);
-  assert.doesNotMatch(css.match(/--sh-btn:([^;]*);/)[1], /(^|,)\s*0 0 \d+px/, "a lift, not a glow");
-  // the plate wears it...
+  const rule = sel => { const m = css.match(new RegExp("\\n  " + sel.replace(/[.#()*+?[\]^$|>]/g, "\\$&") + "\\{([^}]*)\\}")); assert.ok(m, sel); return m[1]; };
+  assert.doesNotMatch(css, /--sheen|--sh-btn|--sh-fill/, "the satin tokens are gone");
   const base = rule("button,.btn");
-  assert.match(base, /background-image:var\(--sheen\)/);
-  assert.match(base, /box-shadow:var\(--sh-btn\)/);
-  // ...and a variant recolours the plate without wiping it: the background shorthand would reset the image
-  for (const sel of ["button:hover,.btn:hover", ".b-teal", ".b-teal:hover", ".b-danger:hover",
-      ".a-login:hover", ".a-dpm", ".a-dpm:hover", ".c-more.on", ".ghost-toggle", ".ghost-toggle:hover"])
-    assert.doesNotMatch(rule(sel), /(^|[;{\s])background:/, sel + " sets background-color, keeping the sheen");
-  // a dropdown is a button that opens a list: the chevron sits on the same satin, hovered or not
-  assert.match(rule("select"), /background-image:url\([^)]*\),var\(--sheen\)/);
-  assert.match(rule("select"), /box-shadow:var\(--sh-btn\)/);
-  assert.match(rule("select:hover,select:focus"), /,var\(--sheen\)/);
-  // a switch is one plate split into options
-  for (const sel of [".opt-seg"]) assert.match(rule(sel), /background:var\(--sheen\),var\(--panel2\)/, sel);
-  assert.match(css, /\n  \.seg\{[^}]*background:var\(--sheen\),var\(--panel2\);box-shadow:var\(--sh-btn\)/);
-  // what is not a plate clears both, so it does not pick up a lit edge and a shadow around nothing
+  assert.doesNotMatch(base, /background-image|box-shadow:|gradient/, "the plate is a fill and an edge");
+  assert.match(base, /border:1px solid var\(--btn-edge\)/);
+  assert.match(rule("button:hover,.btn:hover"), /background-color:var\(--panel3\);border-color:var\(--line2\)/, "hover: one step lighter");
+  for (const sel of ["select", "select:hover,select:focus"]) assert.doesNotMatch(rule(sel), /,var\(|gradient|box-shadow:var/, sel + ": the chevron only");
+  for (const sel of [".seg", ".opt-seg"]) assert.doesNotMatch(rule(sel), /gradient|box-shadow/, sel);
+  // the three kinds
+  assert.match(rule(".b-fill"), /background-color:var\(--teal\);border-color:var\(--teal\);color:var\(--teal-ink\)/, "filled");
+  assert.match(rule(".b-teal"), /color:var\(--teal-txt\)[^}]*background-color:var\(--panel2\)/, "outlined in the accent");
+  const quiet = css.match(/\n  (\.b-quiet,[^{]*)\{([^}]*)\}/);
+  assert.match(quiet[2], /background:none;border-color:transparent;color:var\(--text\)/, "quiet: no fill until hovered, and text you can read");
+  assert.ok(quiet[1].split(",").includes(".ghost-toggle"), "Hide stats is quiet");
+  // the filter toggles sit beside boxed dropdowns: quiet, they read as plain text
+  for (const who of [".tools>button", ".tag-handle", ".t-select"]) assert.ok(!quiet[1].split(",").includes(who), who + " is outlined, like the dropdowns");
+  assert.match(rule("select"), /border-color:var\(--btn-edge\)/, "and the dropdowns wear the buttons' edge");
+  assert.match(rule("#bMore,#bHelp"), /color:var\(--text\)/, "⋯ and ? are not greyed out");
+  // one height, size and weight across a toolbar row
+  assert.match(css, /--ctl-h:36px/);
+  const row = css.match(/\n  (\.cmd>button,\.cmd \.seg,[^{]*)\{([^}]*)\}/);
+  for (const who of [".cmd>button", ".cmd .seg", ".tools>button", ".tools>select", ".tools>input[type=search]", ".tag-handle", "#bulkbar>button", "#bulkbar>select", ".bar>button"])
+    assert.ok(row[1].split(",").map(x => x.trim()).includes(who), who + " is in the row rule");
+  assert.match(row[2], /height:var\(--ctl-h\)[^}]*font-size:calc\(13px\*var\(--ts\)\);font-weight:500/);
+  assert.match(rule(".seg button"), /height:calc\(var\(--ctl-h\) - 2px\)/, "the layout switch, inside its 1px edge");
+  // what is not a plate at all still clears fill and shadow
   for (const sel of [".rid,.star,.eye-btn,.panel-close,.c-ref", "#bMore,#bHelp", "#moreMenu button", ".fb-x", ".fchip-all",
       ".bk-note button", ".setup-x"]) {
     assert.match(rule(sel), /box-shadow:none/, sel);
     assert.match(rule(sel), /background:none/, sel);
   }
-  for (const sel of [".stat-b", ".c-drawer", ".sec-h"]) assert.match(rule(sel), /background:none[^}]*box-shadow:none|box-shadow:none[^}]*background:none/, sel);
 });
 
 test("a stale card warns with a drawn mark, which a fresh card does not carry", () => {
@@ -1012,7 +1021,7 @@ test("a card is out of date by the toolbar's own rule: never a banned account, n
 
 test("actions and window titles are set in the text face; Cinzel is the wordmark's alone", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-  const rule = css.match(/\.cmd>button,\.acts>button:not\(\.c-more\)[^{]*\{[^}]*\}/)[0];
+  const rule = css.match(/\n  \.acts>button:not\(\.c-more\)[^{]*\{[^}]*\}/)[0];
   assert.match(rule, /font-weight:600/);
   assert.doesNotMatch(rule, /Cinzel|uppercase|letter-spacing/);
   // Cinzel is the wordmark's now, and the wordmark's only
@@ -1196,14 +1205,14 @@ test("a levelling account shows its way to ranked, and says when it is ready", (
     stats: { found: true, tier: "UNRANKED", level, wins: 0, losses: 0, updatedAt: Date.now() } });
   const win = bootApp([acc("lv24", 24), acc("lv30", 31)]);
   const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
-  // the way to ranked takes the room a ranked card gives its chart: thirty steps
+  // the way to ranked takes the room a ranked card gives its chart: one bar against 30
   const track = card("lv24").querySelector(".lvt");
-  assert.ok(track, "a track toward level 30");
-  assert.match(track.textContent, /To ranked\s*6 levels to go/);
-  assert.equal(track.querySelectorAll(".lvt-track i").length, 30);
-  assert.equal(win.getComputedStyle(track.querySelector(".lvt-h .k")).textTransform, "uppercase", "labelled like PEAK and NOTES");
-  assert.equal(track.querySelectorAll(".lvt-track i.on").length, 24, "the levels done, lit");
-  assert.ok(track.querySelectorAll(".lvt-track i")[23].classList.contains("now"), "and where it is now");
+  assert.ok(track, "a bar toward level 30");
+  assert.match(track.querySelector(".lvt-r").textContent, /^6 levels to ranked$/);
+  assert.equal(parseFloat(track.querySelector(".lvt-bar i").style.width), 80, "24 of 30");
+  assert.deepEqual([...track.querySelectorAll(".lvt-bar b")].map(b => parseFloat(b.style.left)), [33.3, 66.7], "ticks at 10 and 20");
+  assert.deepEqual([...track.querySelectorAll(".lvt-ax span")].map(x => x.textContent), ["1", "10", "20", "30"]);
+  assert.equal(track.querySelector(".lvt-bar").getAttribute("aria-label"), "Level 24 of 30");
   assert.ok(card("lv30").querySelector(".ready"), "level 30 and unranked: ready");
   assert.equal(card("lv30").querySelector(".lvt"), null, "no track once it is there");
   const search = q => { const el = win.document.getElementById("tSearch"); el.value = q; el.dispatchEvent(new win.Event("input", { bubbles: true })); };
@@ -2651,17 +2660,6 @@ test("Recent form: a Riot-read account's Details fetch its last five ranked game
 });
 
 // The stats panel's Best account tile repeated the header; the header now says who
-test("the header names the best account as well as its rank", () => {
-  const win = bootApp([{ id: "g", label: "Smurf10", region: "EUW", gameName: "g", tagLine: "1", status: "active", tags: [], history: [],
-    stats: { found: true, tier: "GRANDMASTER", division: null, lp: 874, wins: 1, losses: 1, updatedAt: Date.now() } },
-    { id: "s", label: "Other", region: "EUW", gameName: "s", tagLine: "2", status: "active", tags: [], history: [],
-    stats: { found: true, tier: "SILVER", division: "I", lp: 4, wins: 1, losses: 1, updatedAt: Date.now() } }]);
-  const best = win.document.querySelector(".rib-cap .rib-best");
-  assert.ok(best, "the caption carries the best account");
-  assert.match(best.textContent.replace(/\s+/g, " "), /best Smurf10 · Grandmaster · 874 LP/);
-  assert.equal([...win.document.querySelectorAll("#dash .stat .k")].some(k => /Best account/.test(k.textContent)), false,
-    "and the panel no longer says it a second time");
-});
 
 test("on a phone the set-up steps wrap their labels instead of cutting them off", () => {
   const css = html.slice(0, html.indexOf("</style>"));
@@ -3995,7 +3993,7 @@ test("rank spread gems are ordered highest tier first", () => {
       stats: { found: true, tier: "UNRANKED", division: null, lp: null, updatedAt: Date.now() } },
   ]);
   // the header bar is the spread now; the panel's gem row repeated it
-  const tiers = [...win.document.querySelectorAll("#ribbon .rib-seg[data-tier]")].map(g => g.dataset.tier);
+  const tiers = [...win.document.querySelectorAll("#ribbon .rib-i[data-tier]")].map(g => g.dataset.tier);
   assert.deepEqual(tiers, ["DIAMOND", "EMERALD", "PLATINUM", "GOLD", "UNRANKED"],
     "best rank on the left, Unranked last");
   assert.equal(win.document.querySelector("#dash .gem-b"), null, "and it is said once");
@@ -4973,7 +4971,7 @@ test("themes: one click sets both colours and the atmosphere, kept only on Save"
   assert.deepEqual(on(), []);
 });
 
-test("swatches draw cleanly: no border for a gradient to repeat under, a smoothed split, and an opaque tray frame", () => {
+test("swatches draw cleanly: no border for a gradient to repeat under, and a smoothed split", () => {
   const win = bootApp();
   const css = [...win.document.querySelectorAll("style")].map(s => s.textContent).join("\n");
   // A background repeats under its own border, so a gradient swatch with a border
@@ -4986,11 +4984,6 @@ test("swatches draw cleanly: no border for a gradient to repeat under, a smoothe
   win.document.getElementById("bSettings").click();
   const sw = win.document.querySelector('#sThemes [data-theme="noxus"] .thm-sw').getAttribute("style");
   assert.match(sw, /calc\(50% - \.6px\).*calc\(50% \+ \.6px\)/, "the diagonal blends over a pixel instead of stepping");
-  // the tray's edge cannot take on the colour of whatever wash is behind it: it is
-  // drawn inside an opaque fill (see "the header tray is a solid plate")
-  const tray = css.match(/\.top \.bar\{[^}]*\}/)[0];
-  assert.match(tray, /background:var\(--panel\)/);
-  assert.match(tray, /box-shadow:inset 0 0 0 1px/);
 });
 
 test("themes: My best rank follows the highest tier, and moves when you climb", () => {
@@ -5609,7 +5602,7 @@ test("no two chart labels in one lane land on the same line", () => {
 
 test("the ribbon shows the vault's spread and filters when a segment is clicked", () => {
   const win = bootApp(ladderSeed());
-  const segs = [...win.document.querySelectorAll(".rib-seg")];
+  const segs = [...win.document.querySelectorAll(".rib-i")];
   // "Unranked or never checked" was one band for two different things — an answer,
   // and a job not done yet — which is also the only band that could not show what it
   // counted when clicked
@@ -5617,23 +5610,22 @@ test("the ribbon shows the vault's spread and filters when a segment is clicked"
   assert.equal(segs[0].dataset.tier, "CHALLENGER", "best first, the same order the list sorts in");
   assert.equal(segs[10].dataset.tier, "UNRANKED");
   assert.equal(segs[11].dataset.flag, "unchecked", "and this one filters the way its stats tile does");
-  assert.match(win.document.querySelector(".rib-cap").textContent, /12 accounts across 10 tiers/);
-  assert.match(win.document.querySelector(".rib-cap").textContent, /1 unranked · 1 never checked/);
+  assert.match(win.document.querySelector(".rib-row").textContent, /1 unranked·1 never checked/, "the states as words");
 
   segs[10].click();
   assert.equal(win.document.querySelectorAll(".card").length, 1, "the unranked band shows the one it counted");
   segs[10].click();
-  win.document.querySelector('.rib-seg[data-flag="unchecked"]').click();
+  win.document.querySelector('.rib-i[data-flag="unchecked"]').click();
   assert.equal(win.document.querySelectorAll(".card").length, 1, "and so does the never-checked one");
-  win.document.querySelector('.rib-seg[data-flag="unchecked"]').click();
+  win.document.querySelector('.rib-i[data-flag="unchecked"]').click();
 
-  const master = win.document.querySelector('.rib-seg[data-tier="MASTER"]');
+  const master = win.document.querySelector('.rib-i[data-tier="MASTER"]');
   master.click();
   assert.equal(win.document.querySelectorAll(".card").length, 1, "the grid narrows to that tier");
-  assert.equal(win.document.querySelector('.rib-seg[data-tier="MASTER"]').getAttribute("aria-pressed"), "true");
-  assert.equal(win.document.querySelectorAll(".rib-seg.on").length, 1, "and only that one is lit");
+  assert.equal(win.document.querySelector('.rib-i[data-tier="MASTER"]').getAttribute("aria-pressed"), "true");
+  assert.equal(win.document.querySelectorAll(".rib-i.on").length, 1, "and only that one is lit");
 
-  win.document.querySelector('.rib-seg[data-tier="MASTER"]').click();
+  win.document.querySelector('.rib-i[data-tier="MASTER"]').click();
   assert.equal(win.document.querySelectorAll(".card").length, 12, "clicking it again clears the filter");
 });
 
@@ -5643,7 +5635,7 @@ test("the ribbon shows the vault's spread and filters when a segment is clicked"
    cards. Both now ask the same question. */
 test("the Unranked count and the filter behind it agree", () => {
   const win = bootApp(ladderSeed());
-  const gem = win.document.querySelector('#ribbon .rib-seg[data-tier="UNRANKED"]');
+  const gem = win.document.querySelector('#ribbon .rib-i[data-tier="UNRANKED"]');
   assert.ok(gem, "the vault has an unranked account, so the header has a segment for it");
   assert.match(gem.getAttribute("aria-label"), /, 1$/, "the never-checked account is not one of these");
 
@@ -5652,7 +5644,7 @@ test("the Unranked count and the filter behind it agree", () => {
   assert.equal(win.document.querySelector(".card").dataset.id, "un");
 
   // the never-checked account is still reachable, from the tile that counts it
-  win.document.querySelector('#ribbon .rib-seg[data-tier="UNRANKED"]').click();
+  win.document.querySelector('#ribbon .rib-i[data-tier="UNRANKED"]').click();
   win.document.querySelector('#dash [data-flag="unchecked"]').click();
   assert.equal(win.document.querySelectorAll(".card").length, 1);
   assert.equal(win.document.querySelector(".card").dataset.id, "nv");
@@ -5690,7 +5682,7 @@ test("the ribbon stays out of the way until there is a spread to show", () => {
   addRealAccount(win, "Only One", "1234");
   assert.equal(win.document.getElementById("ribbon").innerHTML, "", "one account, still nothing to compare");
   addRealAccount(win, "Second", "1234");
-  assert.ok(win.document.querySelectorAll(".rib-seg").length > 0, "two is a distribution");
+  assert.ok(win.document.querySelectorAll(".rib-i").length > 0, "two is a distribution");
 });
 
 // The stats toggle used to float alone on a row of its own above the console, and
@@ -6255,7 +6247,7 @@ test("quick find walks with the arrows and opens with Enter", () => {
 // whatever was filtering the grid gets cleared on the way.
 test("jumping to an account clears the filters that would have hidden it", () => {
   const win = bootApp(ladderSeed());
-  win.document.querySelector('.rib-seg[data-tier="MASTER"]').click();
+  win.document.querySelector('.rib-i[data-tier="MASTER"]').click();
   assert.equal(win.document.querySelectorAll(".card").length, 1);
 
   win.openPalette();
@@ -6265,7 +6257,7 @@ test("jumping to an account clears the filters that would have hidden it", () =>
   input.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
 
   assert.ok(win.document.querySelector('.card[data-id="t0"]'), "the Iron account is on screen");
-  assert.equal(win.document.querySelectorAll(".rib-seg.on").length, 0, "the tier filter is gone");
+  assert.equal(win.document.querySelectorAll(".rib-i.on").length, 0, "the tier filter is gone");
 });
 
 test("search operators filter the way the toolbar does, without leaving the keyboard", () => {
@@ -6757,8 +6749,8 @@ test("Not found on the ribbon filters missing profiles, not every flagged accoun
       stats: { found: true, tier: "SILVER", division: "I", lp: 20, updatedAt: 1 }, history: [] },
   ];
   const win = bootApp(seed);
-  const miss = win.document.querySelector('.rib-seg[data-flag="missing"]');
-  assert.ok(miss, "Not found is its own band");
+  const miss = win.document.querySelector('.rib-i[data-flag="missing"]');
+  assert.ok(miss, "Not found is its own warning");
   assert.match(miss.getAttribute("aria-label"), /, 1$/);
   miss.click();
   assert.equal(win.document.querySelectorAll(".card").length, 1);
@@ -8244,15 +8236,13 @@ test("the header bar leaves a banned account out of the tiers and counts it on i
       tags: [], history: [], stats: st("BRONZE", "I") },
   ]);
   const tiers = sel => [...win.document.querySelectorAll(sel)].map(b => b.dataset.tier);
-  assert.deepEqual(tiers("#ribbon .rib-seg[data-tier]"), ["GOLD"], "the banned Bronze is not a tier the vault spans");
-  assert.match(win.document.querySelector(".rib-cap").textContent, /across 1 tier\b/);
+  assert.deepEqual(tiers("#ribbon .rib-t[data-tier]"), ["GOLD"], "the banned Bronze is not a tier the vault spans");
 
-  // Not silently dropped either — it gets a segment of its own, so the segments
-  // still add up to the total the caption prints.
-  const banned = win.document.querySelector('#ribbon .rib-seg[data-status="banned"]');
-  assert.ok(banned, "banned accounts get their own segment");
-  assert.match(banned.getAttribute("aria-label"), /, 1$/); // (a bar of all-ones prints no numbers)
-  assert.match(win.document.querySelector(".rib-cap").textContent, /1<\/b> banned|1 banned/);
+  // Not silently dropped either: it is counted on its own, in words
+  const banned = win.document.querySelector('#ribbon .rib-i[data-status="banned"]');
+  assert.ok(banned, "banned accounts are counted on their own");
+  assert.match(banned.getAttribute("aria-label"), /, 1$/);
+  assert.equal(banned.textContent, "1 banned");
 
   // and clicking it shows exactly what it counted, through the status filter the
   // toolbar dropdown already drives
@@ -8267,7 +8257,7 @@ test("the header bar leaves a banned account out of the tiers and counts it on i
    there is. On a vault of 55 where 41 Riot IDs no longer resolve, that one
    segment took 72% of a bar labelled "by tier" and squeezed the entire actual
    spread into 12% — measured in the browser before this changed. */
-test("chore segments cannot take the tier bar over", () => {
+test("forty Riot IDs op.gg doesn't know are one warning beside the ranks, not a block that crushes them", () => {
   const now = Date.now();
   const seed = [];
   for (let i = 0; i < 3; i++) seed.push({ id: "g" + i, gameName: "G" + i, tagLine: "1", region: "EUW",
@@ -8276,36 +8266,16 @@ test("chore segments cannot take the tier bar over", () => {
   for (let i = 0; i < 40; i++) seed.push({ id: "n" + i, gameName: "N" + i, tagLine: "1", region: "EUW",
     status: "active", tags: [], history: [], stats: { found: false, updatedAt: now } });
   const win = bootApp(seed);
-
-  const segs = [...win.document.querySelectorAll("#ribbon .rib-seg")];
-  const tail = segs.filter(s => s.classList.contains("tail"));
-  const tiers = segs.filter(s => !s.classList.contains("tail"));
-  assert.deepEqual(tiers.map(s => s.dataset.tier), ["GOLD"]);
-  assert.deepEqual(tail.map(s => s.dataset.flag), ["missing"]);
-
-  // a rung on the ladder carries its count as flex; a state that is not a rung
-  // carries none, so it is sized by the CSS instead of by how many there are
-  assert.match(tiers[0].getAttribute("style"), /flex:\s*3\b/, "the tier scales");
-  assert.doesNotMatch(tail[0].getAttribute("style"), /flex/, "the chore does not");
-
-  // still a filter, and still says how many
-  assert.equal(tail[0].textContent.trim(), "40");
-  tail[0].click();
+  assert.deepEqual([...win.document.querySelectorAll("#ribbon .rib-t")].map(s => s.dataset.tier), ["GOLD"]);
+  const warn = win.document.querySelector("#ribbon .rib-warn");
+  assert.equal(warn.dataset.flag, "missing");
+  assert.match(warn.textContent, /^40 not foundShow$/, "one amber warning, with a way to see them");
+  assert.match(warn.title, /not entered yet, renamed, or mistyped/, "and what it usually means");
+  warn.click();
   assert.equal(win.document.querySelectorAll(".card").length, 40);
+  assert.match(win.document.querySelector("#ribbon .rib-warn").textContent, /Shown$/);
 });
 
-test("a banned Challenger is not the vault's best account", () => {
-  const st = (tier, division) => ({ found: true, tier, division, lp: 50, updatedAt: Date.now() });
-  const win = bootApp([
-    { id: "live1", gameName: "Alive", tagLine: "1", region: "EUW", status: "active",
-      tags: [], history: [], stats: st("GOLD", "II") },
-    { id: "dead1", gameName: "Perma", tagLine: "2", region: "EUW", status: "banned",
-      tags: [], history: [], stats: st("CHALLENGER", null) },
-  ]);
-  const cap = win.document.querySelector(".rib-cap").textContent;
-  assert.match(cap, /best\s*Alive · Gold/i);
-  assert.doesNotMatch(cap, /Challenger/i, "a gravestone is not a personal best");
-});
 
 /* Master and above have no divisions, so picking one in the ✎ Rank panel disables
    the division select through the change listener. rankPanelHTML is always built
@@ -8341,7 +8311,7 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   const dashNever = win.document.querySelector('#dash [data-flag="unchecked"] .v');
   assert.ok(dashNever);
   assert.equal(dashNever.textContent.trim(), "1", "CSV tier without updatedAt is not never-checked");
-  assert.match(win.document.querySelector(".rib-cap").textContent, /1 never checked/);
+  assert.match(win.document.querySelector(".rib-row").textContent, /1 never checked/);
   assert.equal(win.neverChecked({ status: "active", archived: false,
     stats: { found: true, tier: "GOLD", division: "II", lp: 10 } }), false);
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
@@ -8440,13 +8410,11 @@ test("on a touch screen the small controls reach WCAG's 24px, and nothing change
   const coarse = css.slice(at, css.indexOf("\n  }", at));
   const px = (sel, prop) => { const m = coarse.match(new RegExp(sel.replace(/[.#()[\]>*+]/g, "\\$&") + "[^{]*\\{[^}]*" + prop + ":(\\d+)px")); return m && +m[1]; };
   assert.ok(px(".bulkchk,#tSelectAll", "width") >= 24, "selection boxes");
-  assert.ok(px(".rib-bar", "height") >= 24, "the header bar's segments");
   assert.ok(px(".c-notes.blank>button,.c-notes.blank .nf-link", "min-height") >= 24, "Add a note");
   assert.match(coarse, /\.lpc-range button\{padding:[6-9]px/, "the chart's range buttons");
   assert.match(coarse, /\.rid\{padding-block:[4-9]px/, "the Riot ID's copy line");
   // a mouse keeps the sizes it had
   assert.match(css, /\n  \.bulkchk\{width:15px;height:15px/);
-  assert.match(css, /\n  \.rib-bar\{display:flex;gap:2px;height:16px\}/);
 });
 
 // The optional Label led the form; the required Riot name and tag were its second row
@@ -8533,8 +8501,6 @@ test("on a phone the toolbar's two count lines start at one edge, and the header
   const phone = html.match(/\.cmd-count\{flex-direction:column;[^}]*\}\s*\.cmd-count \.warn\{margin-left:-(\d+)px\}/);
   assert.ok(phone, "stacked, with the padding taken back out");
   assert.equal(phone[1], coarse[1], "the margin is the padding");
-  const gap = html.match(/\.rib-cap\{[^}]*gap:(\d+)px \d+px/);
-  assert.ok(gap && +gap[1] <= 4, "a wrapped caption is one block, not two: " + (gap && gap[0]));
 });
 
 // At 2560px the page stopped at 1640: 460px empty either side and four cards to a row
@@ -8761,21 +8727,14 @@ test("on a phone the toolbar has one ranks button: Refresh stale when there is a
 test("every main button wears one colour, the secondary (action) one", () => {
   assert.doesNotMatch(html, /b-gold/, "no button in the primary colour");
   const win = bootApp();
-  for (const id of ["bCheckAll", "bAdd", "sSave", "fSave", "baSave", "lpSet", "rankSave", "shCopy", "bExitPreview", "lockBtn", "bHelpClose"])
-    assert.ok(win.document.getElementById(id).classList.contains("b-teal"), id);
+  // a view's one main action is filled with it, a second action is outlined in it
+  for (const id of ["bAdd", "sSave", "fSave", "baSave", "lpSet", "rankSave", "shCopy", "lockBtn", "bHelpClose"])
+    assert.ok(win.document.getElementById(id).classList.contains("b-fill"), id + " is filled");
+  for (const id of ["bCheckAll", "bExitPreview"])
+    assert.ok(win.document.getElementById(id).classList.contains("b-teal"), id + " is outlined");
   assert.match(win.document.getElementById("settings").textContent, /Login and every main button, focus rings/, "Settings says so");
 });
 
-// Five segments each printing "1" in a five-account vault said nothing
-test("the rank bar prints its counts only when a tier holds more than one", () => {
-  const acc = (id, tier) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
-    stats: { found: true, tier, division: "II", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() } });
-  const ones = bootApp([acc("a", "GOLD"), acc("b", "SILVER"), acc("c", "BRONZE")]);
-  assert.equal(ones.document.querySelectorAll(".rib-seg i").length, 0, "all ones: no numbers");
-  assert.match(ones.document.querySelector(".rib-seg").getAttribute("aria-label"), /, 1$/, "still read out");
-  const some = bootApp([acc("a", "GOLD"), acc("b", "GOLD"), acc("c", "SILVER")]);
-  assert.deepEqual([...some.document.querySelectorAll(".rib-seg i")].map(i => i.textContent), ["2", "1"], "otherwise every count");
-});
 
 // Em dashes all through the labels, tooltips, Help and messages read as machine-written.
 // A lone "—" for an empty value is fine; a dash inside a sentence is not. The old
@@ -9068,6 +9027,55 @@ test("the new address takes a moved vault only when it has none, and only from t
   assert.match(full.__r, /refused/);
 });
 
+// The footer was three lines, one of them the terms in a tone that read as hostile
+// at full size. Now one line, the terms a click away in Help, Riot's notice small.
+test("the footer is one line with a Terms link into Help, and Riot's notice stays on the page", () => {
+  const win = bootApp();
+  const doc = win.document, foot = doc.querySelector("footer.foot");
+  const line = foot.querySelector(".foot-l").textContent.replace(/\s+/g, " ").trim();
+  assert.match(line, /^© 2026 MarvinPanVan · v\d+\.\d+\.\d+ · Terms · Discord: marvinpanvan$/);
+  assert.doesNotMatch(foot.textContent, /Do not resell/, "the terms are not shouted at the foot of every page");
+  assert.ok(foot.querySelector(".riot-notice"), "Riot's notice is on the page, where players can see it");
+  assert.match(html, /\.foot \.riot-notice\{[^}]*font-size:calc\(11px\*var\(--ts\)\)/, "small");
+  doc.getElementById("footTerms").click();
+  assert.equal(doc.getElementById("help").classList.contains("hidden"), false, "Terms opens Help");
+  assert.equal(doc.getElementById("helpTerms").textContent, "Using this app", "at the terms");
+  assert.match(doc.getElementById("helpTerms").nextElementSibling.textContent, /free for your own personal use/, "which are there in full, unchanged");
+  assert.ok(doc.querySelector('#help a[href$="/LICENSE"]'), "with the licence one more click away");
+});
+
+// "53 accounts" in the header beside "53 of 61 shown" in the toolbar, with nothing
+// filtered: the eight were archived, which is a view of its own, not a filter
+test("the toolbar counts what the view holds: a total when nothing is filtered, archived apart", async () => {
+  const acc = (id, extra) => Object.assign({ id, gameName: "N" + id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() } }, extra);
+  const win = bootApp([acc("a"), acc("b"), acc("c", { region: "NA" }), acc("x", { archived: true }), acc("y", { archived: true })]);
+  const count = () => win.document.getElementById("count").querySelector("span").textContent;
+  assert.equal(count(), "3 accounts", "nothing filtered: a total, without the archived two");
+  const region = win.document.getElementById("tRegion");
+  region.value = "EUW"; region.dispatchEvent(new win.Event("change", { bubbles: true }));
+  await until(() => count() === "2 of 3 shown", "a filter on: how many of the three");
+  region.value = ""; region.dispatchEvent(new win.Event("change", { bubbles: true }));
+  win.document.getElementById("tArchived").click();
+  await until(() => count() === "2 archived", "the archived view counts its own");
+});
+
+// "Not found. Check the name, tag and region" was red while the header's warning was
+// amber, and told you to check without a way to fix it
+test("a card whose Riot ID op.gg doesn't know says so in amber, with a button that fixes it", () => {
+  const win = bootApp([{ id: "nf", gameName: "Gone", tagLine: "EUW", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: false, updatedAt: Date.now() } }]);
+  const line = win.document.querySelector('.card[data-id="nf"] .c-miss');
+  assert.ok(line, "the line is there");
+  assert.match(html, /\n  \.c-miss\{[^}]*color:var\(--warn-txt\)/, "in the warning colour, like the header");
+  assert.doesNotMatch(line.outerHTML, /--danger/);
+  const fix = line.querySelector(".c-fix");
+  assert.equal(fix.textContent, "Fix Riot ID");
+  fix.click();
+  assert.equal(win.document.getElementById("form").classList.contains("hidden"), false, "it opens the account form");
+  assert.equal(win.document.getElementById("fName").value, "Gone", "on this account");
+});
+
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row
 // ended hundreds of pixels apart
 test("a card's notes keep to one row of two chips and +N more; Details shows them all", () => {
@@ -9238,7 +9246,8 @@ test("an empty vault says what the app does in three steps, with Add account and
   const steps = [...grid.querySelectorAll(".wl-steps li b")].map(b => b.textContent);
   assert.deepEqual(steps, ["Add an account", "Check its rank", "Log in fast"]);
   const add = win.document.getElementById("bEmptyAdd");
-  assert.ok(add && add.classList.contains("b-teal"), "Add account is a button here, dressed as the toolbar's");
+  assert.ok(add && add.classList.contains("b-fill"), "Add account is the filled button here, as in the toolbar, and the preview is not");
+  assert.equal(win.document.getElementById("bDemo").classList.contains("b-fill"), false);
   add.click();
   assert.equal(win.document.getElementById("form").classList.contains("hidden"), false, "and it opens the form");
   win.document.getElementById("fCancel").click();
@@ -9353,7 +9362,7 @@ test("the example data never says the same thing twice on one card", () => {
   win.document.getElementById("bDemo").click();
   const card = [...win.document.querySelectorAll(".card")].find(c => c.querySelector(".lvt"));
   assert.ok(card, "the preview still has an account below level 30");
-  assert.equal(card.textContent.match(/to go/g).length, 1, "the distance to 30 is said once");
+  assert.equal(card.textContent.match(/to ranked/g).length, 1, "the distance to 30 is said once");
   assert.equal(card.textContent.match(/Level \d/g).length, 1, "and so is the level");
 });
 
@@ -9670,22 +9679,13 @@ test("closing Add account or Bulk add hands focus back to what opened it", async
   assert.equal(doc.activeElement, more, "the ⋯ that the menu hangs off, since the item itself is hidden now");
 });
 
-/* The nowrap that stops "WR" being stranded on a line of its own applies to every
-   tile's caption, and the Accounts tile's is a list — "· 7 ★ · 5 banned · 5
-   archived" — far longer than a tile is wide, in a tile that is overflow:hidden.
-   So it was cut at "· 5 archiv" at every width from 1440 down to a phone. Its
-   pieces still never break inside; the list breaks between them. Breaking
-   between them then left "· 5 archived" starting a line of its own, so it is
-   now the tile's note, as a dotList (below). */
-// The panel's Accounts tile repeated the header caption; the caption is the count now
-test("the account count is the header caption's, in pieces that wrap between them", () => {
+// The panel's Accounts tile repeated the header caption, and the caption is gone too:
+// the toolbar's count is the one place the number lives
+test("the account count is the toolbar's, and the stats panel does not repeat it", () => {
   const acc = (id, extra) => Object.assign({ id, gameName: id, tagLine: "1", region: "EUW", status: "active",
     tags: [], history: [], stats: null }, extra);
   const win = bootApp([acc("a", { fav: true }), acc("b", { status: "banned" }), acc("c", { archived: true })]);
-  const note = win.document.querySelector(".rib-cap > .dots");
-  assert.ok(note, "the breakdown is a list of pieces");
-  assert.match(note.textContent, /^2 accounts across 0 tiers · 1 never checked · 1 banned$/);
-  assert.ok(note.querySelectorAll(".dot-i").length >= 3, "one element per piece, so a line can only break between them");
+  assert.match(win.document.getElementById("count").textContent, /^2 /, "the accounts in view, archived apart");
   assert.equal([...win.document.querySelectorAll("#dash .stat .k")].some(k => /^Accounts$/.test(k.textContent.trim())), false);
 });
 
@@ -9696,27 +9696,6 @@ test("the account count is the header caption's, in pieces that wrap between the
    is left of its edge, which is where the dot of a piece starting a line ends
    up. Measured in Chromium at 1440/1180/1024/820/390: no line starts or ends
    with a dot. */
-test("a dot list keeps its dots inside the line, and its text reads as it did", () => {
-  const acc = (id, region) => ({ id, gameName: id, tagLine: "1", region, status: "active", tags: [], history: [],
-    stats: { found: true, tier: "GOLD", division: "II", lp: 50, wins: 10, losses: 9, updatedAt: Date.now() } });
-  const win = bootApp(["EUW", "NA", "KR", "EUNE", "BR"].map((r, i) => acc("a" + i, r)));
-  const lists = [win.document.querySelector(".rib-cap > .dots")];
-  assert.ok(lists.every(Boolean), "the ribbon's caption is a dot list");
-  assert.equal(lists[0].textContent, "5 accounts across 1 tier");
-  for (const l of lists) {
-    const items = [...l.querySelectorAll(".dot-i")];
-    assert.ok(!items[0].querySelector(".dot-s"), "the first piece has no dot before it");
-    assert.ok(items.slice(1).every(i => i.firstElementChild && i.firstElementChild.matches(".dot-s")), "every other piece starts with its own");
-  }
-  const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
-  const em = (css, prop) => css.match(new RegExp("(?:^|;)" + prop + ":(-?[.\\d]+)em"))[1];
-  const gap = em(rule(".dot-i"), "margin-left");
-  assert.match(rule(".dot-i"), /white-space:nowrap/, "a piece never breaks inside");
-  assert.equal(em(rule(".dots-in"), "margin-left"), "-" + gap, "the list starts a gap early, so each line's first dot is past the edge");
-  assert.equal(em(rule(".dot-s"), "width"), gap, "the dot fills the gap before its piece");
-  assert.match(rule(".dot-s"), /position:absolute;right:100%/);
-  assert.match(rule(".dots"), /clip-path:inset\([^)]* 0\)/, "and the list clips at its left edge");
-});
 
 /* text-overflow only works on a block that holds the text itself. The wall tile's
    and the list row's name boxes are flex containers with the name as a bare text

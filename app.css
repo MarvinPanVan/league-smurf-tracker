@@ -53,15 +53,13 @@
     --ts:1; /* Settings → Text size: every font size in the app is multiplied by it */
     /* elevation */
     --sh-1:0 1px 2px #00000059;
-    /* Satin, the one finish every raised control wears: lit softly from above,
-       shaded at its foot, sitting a pixel proud of the page. A broad, low light
-       with no hard band in it, so it reads as satin rather than chrome, and it is
-       the same on every button in every accent. --sheen-fill is the same light on
-       a filled plate (Login), which takes a little more to show on a bright fill. */
-    --sheen:linear-gradient(180deg,#ffffff26 0%,#ffffff0d 45%,#ffffff00 62%,#00000024 100%);
-    --sheen-fill:linear-gradient(180deg,#ffffff59 0%,#ffffff17 46%,#ffffff00 62%,#0000001f 100%);
-    --sh-btn:inset 0 1px 0 #ffffff1a,inset 0 -1px 0 #00000040,0 1px 2px #00000066;
-    --sh-fill:inset 0 1px 0 #ffffff73,inset 0 -1px 0 #00000038,0 1px 3px #00000073;
+    /* Controls are flat: a fill and a 1px edge, and on hover both one step lighter.
+       They used to wear "satin", a gloss from above with an inner rim at the top and
+       the foot and a drop shadow, which blurred every edge at 13px, and with the
+       edge too dark to draw an outline the buttons read as mush. --btn-edge is that
+       edge, lighter than --edge; --ctl-h is the height of every control in a
+       toolbar row (search, dropdowns and buttons alike). */
+    --btn-edge:#4b5664; --ctl-h:36px;
     --sh-2:0 2px 4px #0000003d,0 8px 24px -10px #000000a8;
     --sh-3:0 4px 10px #0000004a,0 24px 56px -18px #000000cc;
     /* Cut metal, not moulded plastic: the client's frames are near-square, and
@@ -190,12 +188,11 @@
      read. "Never checked" and "Unranked" stay lighter, since they are not tiers. */
   .rk-t,.rw:not(.rw-quiet) .rw-rank b,.tile:not(.rw-quiet) .t-rk,.cmp-rk:not(.q),.pal-r:not(.q){
     font-weight:700;letter-spacing:-.01em}
-  /* The buttons that do something are a weight heavier than the ones that filter
-     or open a menu, and that is all the type does for them. Spaced Cinzel capitals
-     on every action ("REFRESH 20 STALE", "SAVE SETTINGS") were slow to read and
-     loud in a row; the metal rims of the gold and teal buttons are where the client
-     shows through now. */
-  .cmd>button,.acts>button:not(.c-more),.acts>.btn,.mdl-f>button,#lockBtn,#bExitPreview,#bDemo,#bClearFilters,
+  /* In a window or on a card, the buttons that do something are a weight heavier
+     than the ones that filter or open a menu. A toolbar row is the exception: there
+     every control is one height, size and weight (see --ctl-h), and the filled
+     button is what marks the main action. */
+  .acts>button:not(.c-more),.acts>.btn,.mdl-f>button,#lockBtn,#bExitPreview,#bDemo,#bClearFilters,
   #sSyncGen,#sSyncPush,#sSyncPull,#sVaultSet,#sVaultRemove,#sLockNow,#fGen,#cmpClear{font-weight:600}
 
   /* ---- surfaces: a hairline frame, lit from above ---- */
@@ -229,68 +226,42 @@
 
   /* ---- header ---- */
   .top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:22px;margin-bottom:16px}
-  /* Everything else on the page sits on a surface — cards, toolbar, stats. Left
-     bare, these four buttons floated in dead space at the far edge and read as
-     unrelated to each other. A tray makes them one deliberate cluster and ties
-     the header to the same visual language as the rest.
-     The account actions have since moved down to the console above the grid,
-     where the rest of the controls over those accounts live. What's left here is
-     what it should have been: two app-level utilities — settings/backup and help
-     — in a quiet tray, not a second, competing command centre.
-     It keeps to the right edge when the header wraps. Left-aligned on a row of its
-     own it read as a stray, and the ⋯ menu, which hangs leftward from its button,
-     opened off the left of a phone screen with "Export backup" cut to "ackup". */
-  /* A solid plate, its edge an inner line over its own fill. The tray used to
-     blur and saturate whatever was behind it inside a 1px border, and at a
-     display scale of 125% or 150% a 1px line falls between screen pixels: each
-     edge mixed with the boosted wash behind it by a different amount, so the
-     frame came out blue along one side, faint along another and gone on a
-     third. Over an opaque fill an edge can only mix with that fill. */
-  .top .bar{margin-left:auto;gap:3px;padding:5px;border-radius:var(--r-md);
-    background:var(--panel);box-shadow:inset 0 0 0 1px #ffffff12,var(--sh-1);
+  /* The header's utilities (Hide stats, ⋯, ?) are quiet buttons at its right edge,
+     with no tray round them: a framed box around buttons that are meant to stay out
+     of the way undid exactly that. They keep to the right edge when the header
+     wraps; on a row of their own at the left, the ⋯ menu, which hangs leftward from
+     its button, opened off a phone screen with "Export backup" cut to "ackup". */
+  .top .bar{margin-left:auto;gap:3px;
     /* lifted above what follows, so the ⋯ menu inside it paints over the page */
     position:relative;z-index:30}
-  .tray-sep{width:1px;align-self:stretch;margin:2px 3px;flex-shrink:0;
-    background:linear-gradient(180deg,transparent,var(--line2),transparent)}
   /* The old header stacked a pill, then the title, then a rule — three full-width
      bands of decreasing importance, all left-aligned, which is what made it read
      as flat and pasted into the corner. This is a lockup instead: a mark the
      wordmark sits against, with the descriptor tucked under it. */
-  /* The whole vault's spread across the ladder, in the band the header was
-     wasting. The dashboard's gem row already answers "how many are Platinum";
-     this answers what shape the collection is, and answers it without being
-     opened. Best on the left, the same order the list is sorted in. */
-  .ribbon{flex:1 1 260px;min-width:0;max-width:640px;display:flex;flex-direction:column;gap:6px}
+  /* The vault at a glance (see renderRibbon): an emblem and a count per tier, the
+     other states as words, "not found" as the one warning. Quiet like the filters:
+     no fill until hovered, a tint when it is the filter that is on. */
+  .ribbon{flex:1 1 260px;min-width:0;max-width:760px;display:flex;align-items:center}
   .ribbon:empty{display:none}
-  .rib-bar{display:flex;gap:2px;height:16px}
-  .rib-seg{flex-grow:1;flex-basis:0;min-width:20px;padding:0;border:0;border-radius:2px;
-    /* the tier's own colour. Mixed 62% into the near-black page it came out as the
-       muddy version of every tier: Gold as olive, Silver as slate, Platinum as
-       a dull teal, which is what made the top of the page read as murky */
-    background:var(--c);box-shadow:none;
-    display:flex;align-items:center;justify-content:center;overflow:hidden;
-    transform:none;transition:background .16s ease,box-shadow .16s ease,filter .16s ease}
-  /* The states that are not rungs on the ladder: sized to their own number so
-     they cannot take the bar over, and set slightly back so the ladder reads
-     first. */
-  .rib-seg.tail{flex:0 0 auto;padding:0 10px;min-width:28px;opacity:.82}
-  .rib-seg.tail:hover,.rib-seg.tail.on{opacity:1}
-  .rib-seg:first-child{border-radius:var(--r-xs) 2px 2px var(--r-xs)}
-  .rib-seg:last-child{border-radius:2px var(--r-xs) var(--r-xs) 2px}
-  .rib-seg:only-child{border-radius:var(--r-xs)}
-  .rib-seg i{font-style:normal;font-size:calc(10px*var(--ts));font-weight:700;letter-spacing:.02em;
-    color:var(--bg);opacity:.72;font-variant-numeric:tabular-nums}
-  .rib-seg:hover{background:var(--c);transform:none;border:0;filter:brightness(1.06)}
-  .rib-seg:active{transform:none}
-  .rib-seg:hover i{opacity:.95}
-  /* the selected tier reads as the only lit one, so the bar doubles as a readout
-     of which filter is on */
-  .rib-bar:has(.rib-seg.on) .rib-seg:not(.on){background:color-mix(in srgb,var(--c) 22%,var(--bg))}
-  .rib-bar:has(.rib-seg.on) .rib-seg:not(.on) i{opacity:.4}
-  .rib-seg.on{background:var(--c);box-shadow:0 0 0 1px var(--bg),0 0 14px -2px var(--c)}
-  .rib-cap{display:flex;justify-content:space-between;gap:3px 12px;flex-wrap:wrap;
-    font-size:calc(11px*var(--ts));letter-spacing:.02em;color:var(--faint)}
-  .rib-cap b{font-weight:600;color:var(--muted)}
+  .rib-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px 2px}
+  .rib-i{height:30px;padding:0 8px;gap:6px;border-radius:var(--r-sm);background:none;border:1px solid transparent;
+    color:var(--text);font-size:calc(13px*var(--ts));font-weight:500;font-variant-numeric:tabular-nums}
+  .rib-i:hover{background:#ffffff10;border-color:transparent;color:var(--text)}
+  .rib-i.on{background:color-mix(in srgb,var(--gold) 12%,transparent);border-color:color-mix(in srgb,var(--gold) 45%,transparent)}
+  .rib-crest{width:22px;height:22px;flex-shrink:0}
+  .rib-t b{font-weight:600}
+  /* while one is the filter, the others step back */
+  .rib-row:has(.rib-i.on) .rib-i:not(.on){opacity:.55}
+  .rib-row:has(.rib-i.on) .rib-i:not(.on):hover{opacity:1}
+  .rib-states{display:inline-flex;align-items:center;margin-left:8px}
+  .rib-s{color:var(--muted);padding:0 6px}
+  .rib-dot{font-style:normal;color:var(--faint)}
+  .rib-warn{margin-left:10px;color:var(--warn-txt);border-color:color-mix(in srgb,var(--warn) 38%,transparent);
+    background:color-mix(in srgb,var(--warn) 9%,transparent)}
+  .rib-warn:hover{color:var(--warn-txt);border-color:color-mix(in srgb,var(--warn) 60%,transparent);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+  .rib-warn.on{color:var(--warn-txt);border-color:var(--warn);background:color-mix(in srgb,var(--warn) 18%,transparent)}
+  .rib-warn .ico{width:14px;height:14px}
+  .rib-warn u{text-decoration:none;font-weight:600;padding-left:8px;border-left:1px solid color-mix(in srgb,var(--warn) 35%,transparent)}
   .brand{display:flex;align-items:center;gap:16px;min-width:0}
   /* A gem set in a turned gold frame, rather than a rounded app-icon tile. */
   /* Flat and still, like everything round it: a solid stone in a two-line frame.
@@ -322,14 +293,16 @@
     border-image:linear-gradient(180deg,color-mix(in srgb,var(--gold) 55%,transparent),transparent 88%) 1}
 
   /* ---- buttons ---- */
-  /* One material for every button: a plate in satin (--sheen). The accent ones
-     are the same plate in the accent's colour, and Login is the same again filled;
-     none adds a gloss or a glow of its own. Variants set background-COLOR only,
-     because the shorthand would wipe the sheen; a button that is not a plate
-     (an icon, a link, a menu row) clears it with background:none and box-shadow:none. */
+  /* Three kinds of button, all flat:
+     - filled (.b-fill, and Login): the one main action of a view, in the accent;
+     - outlined (every button by default; .b-teal for an action in the accent);
+      - quiet (.b-quiet: Hide stats and the header's ⋯ and ?): no fill and no edge
+       until hovered, its text the same as any other button's, not grey. The filter
+       toggles (Favorites, Archived, Tags) are outlined: quiet, beside the boxed
+       dropdowns, they read as plain text, and "Archived" as a heading. */
   button,.btn{font:inherit;font-size:calc(13px*var(--ts));font-weight:500;cursor:pointer;line-height:1.2;white-space:nowrap;
-    border:1px solid var(--edge);border-radius:var(--r-sm);background-color:var(--panel2);background-image:var(--sheen);
-    color:var(--text);box-shadow:var(--sh-btn);
+    border:1px solid var(--btn-edge);border-radius:var(--r-sm);background-color:var(--panel2);
+    color:var(--text);
     padding:8px 13px;display:inline-flex;align-items:center;justify-content:center;gap:7px;
     transition:background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease,transform .09s ease}
   button:hover,.btn:hover{background-color:var(--panel3);border-color:var(--line2)}
@@ -349,14 +322,23 @@
      and the rest wore the primary instead, so a toolbar showed two "this is the
      button" colours side by side. The primary keeps the title, favorites and what
      is selected. */
-  .b-teal{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 60%,var(--edge));
-    background-color:color-mix(in srgb,var(--teal) 9%,var(--panel2))}
-  .b-teal:hover{color:var(--text);border-color:var(--teal);background-color:color-mix(in srgb,var(--teal) 17%,var(--panel2))}
+  .b-teal{color:var(--teal-txt);border-color:color-mix(in srgb,var(--teal) 62%,var(--btn-edge));
+    background-color:var(--panel2)}
+  .b-teal:hover{color:var(--text);border-color:var(--teal);background-color:color-mix(in srgb,var(--teal) 13%,var(--panel2))}
+  .b-fill{background-color:var(--teal);border-color:var(--teal);color:var(--teal-ink);font-weight:650}
+  .b-fill:hover{background-color:color-mix(in srgb,var(--teal) 86%,#fff);border-color:color-mix(in srgb,var(--teal) 86%,#fff);color:var(--teal-ink)}
+  .b-quiet,.ghost-toggle{background:none;border-color:transparent;color:var(--text)}
+  .b-quiet:hover,.ghost-toggle:hover{background:#ffffff10;border-color:transparent;color:var(--text)}
+  /* every control in a toolbar row: one height, one size, one weight */
+  .cmd>button,.cmd .seg,.tools>button,.tools>select,.tools>input[type=search],.tag-handle,
+  #bulkbar>button,#bulkbar>select,#bulkbar>input,.bar>button,.bar #bMore,.bar #bHelp{
+    height:var(--ctl-h);padding-top:0;padding-bottom:0;font-size:calc(13px*var(--ts));font-weight:500}
+  .cmd>.b-fill{font-weight:600}
   .b-danger{color:var(--danger)}
   .b-danger:hover{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);
     background-color:color-mix(in srgb,var(--danger) 13%,var(--panel2))}
   /* utilities, not actions — no rim of their own inside the tray */
-  #bMore,#bHelp{width:34px;padding:8px 0;color:var(--muted);font-size:calc(16px*var(--ts));
+  #bMore,#bHelp{width:var(--ctl-h);padding:0;color:var(--text);font-size:calc(16px*var(--ts));
     background:none;border-color:transparent;box-shadow:none}
   #bMore:hover,#bHelp:hover{color:var(--text);background:#ffffff12;border-color:transparent}
   .bar{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
@@ -439,14 +421,12 @@
   }
   .spark-tip.on{opacity:1;transform:none}
   .dash-toggle{display:flex;justify-content:flex-end;margin-bottom:14px}
-  .ghost-toggle{font-size:calc(12px*var(--ts));padding:6px 13px;border-radius:var(--r-xs);color:var(--muted);
-    background-color:#ffffff09;border:1px solid var(--edge)}
-  .ghost-toggle:hover{background-color:#ffffff14;border-color:var(--line2);color:var(--text)}
+  .ghost-toggle{padding:0 12px;border-radius:var(--r-sm)}
   .ghost-toggle .ico{transition:transform .22s cubic-bezier(.22,1,.36,1)}
   .ghost-toggle.open .ico{transform:rotate(180deg)}
   .dash-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px 0}
   .dash-filter{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .dash-filter select{font-size:calc(12px*var(--ts));padding:5px 28px 5px 10px;background-color:#ffffff08}
+  .dash-filter select{font-size:calc(13px*var(--ts));height:var(--ctl-h);padding:0 30px 0 12px}
   .dash-ex{font-size:calc(11px*var(--ts));color:var(--faint)}
   /* Was a bare name, a percentage and a hanging "30G" all at different sizes with
      nothing holding them together — at eight across a row it read as debris. One
@@ -467,14 +447,6 @@
   .stat-b.on{background:color-mix(in srgb,var(--gold) 11%,transparent);border:0;
     box-shadow:inset 2px 0 0 var(--gold)}
   .s-note{font-size:calc(11px*var(--ts));color:var(--faint);margin-top:4px;line-height:1.4}
-  /* A "·" list (dotList) breaks between its pieces, never inside one, and never
-     leaves a dot at either end of a line: each dot sits in the gap before its
-     piece, so a piece that starts a line has its dot out past the left edge,
-     where the clip hides it. The dots stay real text for copying and tests. */
-  .dots{display:inline-flex;max-width:100%;clip-path:inset(-.5em -.5em -.5em 0)}
-  .dots-in{display:flex;flex-wrap:wrap;min-width:0;margin-left:-.8em}
-  .dot-i{position:relative;margin-left:.8em;white-space:nowrap}
-  .dot-s{position:absolute;right:100%;width:.8em;text-align:center;font-style:normal;white-space:pre}
   .gem.cmb b{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .gem.cmb b.wr-good{color:var(--good)}
   .gem.cmb i.g{font-style:normal;font-size:calc(11px*var(--ts));font-weight:600;color:var(--muted);
@@ -542,9 +514,9 @@
      button chrome — that rule transitions border-color + translateY on hover,
      which made the dividers flash and the icons look like they squeezed. */
   .seg{display:inline-flex;align-items:stretch;border:1px solid var(--edge);border-radius:var(--r-sm);
-    overflow:hidden;background:var(--sheen),var(--panel2);box-shadow:var(--sh-btn);flex-shrink:0}
+    overflow:hidden;background:var(--panel2);flex-shrink:0}
   .seg button{
-    box-sizing:border-box;width:36px;height:32px;padding:0;margin:0;gap:0;
+    box-sizing:border-box;width:36px;height:calc(var(--ctl-h) - 2px);padding:0;margin:0;gap:0;
     border:0;border-radius:0;border-color:transparent;
     background:transparent;color:var(--faint);
     box-shadow:none;transform:none;outline:none;-webkit-tap-highlight-color:transparent;
@@ -702,10 +674,10 @@
     box-shadow:0 0 0 3px color-mix(in srgb,var(--teal) 13%,transparent);background-color:var(--panel3)}
   select:focus{border-color:color-mix(in srgb,var(--teal) 55%,transparent)}
   textarea{resize:vertical;line-height:1.55}
-  /* A dropdown is a button that opens a list, so it wears the buttons' satin;
-     a text field is a well you type into and stays flat. */
-  select{appearance:none;-webkit-appearance:none;padding-right:32px;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b93a6' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"),var(--sheen);background-repeat:no-repeat;background-position:right 10px center,0 0;background-size:13px,100% 100%;box-shadow:var(--sh-btn)}
-  select:hover,select:focus{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e9edf5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"),var(--sheen)}
+  /* A dropdown is a button that opens a list: flat like the buttons, with its
+     edge and the chevron; a text field is a well you type into. */
+  select{appearance:none;-webkit-appearance:none;padding-right:32px;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b93a6' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center,0 0;background-size:13px,100% 100%;border-color:var(--btn-edge)}
+  select:hover,select:focus{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e9edf5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")}
   input::placeholder,textarea::placeholder{color:var(--faint)}
   .tools input[type=search]{flex:1;min-width:180px}
   /* Favorites and Archived are toggles, so their lit state is a class carrying
@@ -730,7 +702,7 @@
      Everything else waits for .lit. */
   .tag-handle{gap:7px;transition:color .16s ease,border-color .16s ease,background .16s ease}
   .tag-handle:hover{color:var(--text);border-color:color-mix(in srgb,var(--gold) 38%,var(--line2));
-    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 17%,var(--panel2)),var(--panel2))}
+    background:color-mix(in srgb,var(--gold) 9%,var(--panel2))}
   /* how many tags the vault has — a fact, not a filter, so it is not gold until one is */
   .tag-handle b{font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums;
     font-size:calc(10px*var(--ts));line-height:1.5;padding:0 6px;border-radius:var(--r-xs);
@@ -943,7 +915,7 @@
   /* A banned account said so five times (rail, badge, strikethrough, a red border,
      its notes) while its Login was the brightest thing on the card. The badge and
      the strikethrough say it; the rail is gone, and Login is a plain button. */
-  .card.dead .a-login{background-color:var(--panel2);background-image:var(--sheen);border-color:var(--line2);color:var(--muted);font-weight:600}
+  .card.dead .a-login{background-color:var(--panel2);border-color:var(--btn-edge);color:var(--muted);font-weight:600}
   .card.dead .a-login:hover{color:var(--text)}
   .card.dead .rk-crest,.rw.dead .rw-crest{filter:grayscale(.9);opacity:.55}
   .card.dead .rk .rk-t,.rw.dead .rw-rank b{text-decoration:line-through;
@@ -1163,18 +1135,18 @@
   .c-notes.capped .ni-row>.ni-f{min-width:0;flex-shrink:1}
   .c-notes.capped .ni-row>.ni-f.more{flex-shrink:0}
   .c-notes.capped .nt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .lvt{border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 12px 10px;background:linear-gradient(180deg,#ffffff06,transparent)}
-  .lvt-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
-  .lvt-h .k{color:var(--faint)}
-  .lvt-r{font-size:calc(12px*var(--ts));color:var(--muted);font-variant-numeric:tabular-nums}
-  .lvt-track{display:grid;grid-template-columns:repeat(30,minmax(0,1fr));gap:2px;height:22px;align-items:end}
-  .lvt-track i{height:70%;border-radius:1px;background:#ffffff14}
-  .lvt-track i.m{height:100%}
-  .lvt-track i.on{background:color-mix(in srgb,var(--teal) 70%,transparent)}
-  .lvt-track i.now{background:var(--teal);height:100%;box-shadow:0 0 0 1px var(--panel),0 0 0 2px color-mix(in srgb,var(--teal) 60%,transparent)}
-  /* on the track's own 30 columns, so 10 and 20 sit under their taller bars */
-  .lvt-ax{display:grid;grid-template-columns:repeat(30,minmax(0,1fr));gap:2px;font-size:calc(10px*var(--ts));color:var(--faint);margin-top:6px;letter-spacing:.02em;white-space:nowrap}
-  .lvt-pace{font-size:calc(11px*var(--ts));color:var(--muted);margin-top:7px}
+  .lvt{padding:4px 0 2px}
+  .lvt-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:9px;font-size:calc(13px*var(--ts))}
+  .lvt-r{color:var(--text);font-weight:500;font-variant-numeric:tabular-nums}
+  .lvt-pace{font-size:calc(12px*var(--ts));color:var(--muted)}
+  .lvt-bar{position:relative;height:8px;border-radius:2px;background:#ffffff14}
+  .lvt-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--teal)}
+  /* 10 and 20: a notch through the bar, so they show over the fill as well */
+  .lvt-bar b{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--panel)}
+  .lvt-ax{position:relative;height:15px;margin-top:6px;font-size:calc(11px*var(--ts));color:var(--faint);font-variant-numeric:tabular-nums}
+  .lvt-ax span{position:absolute;top:0;transform:translateX(-50%)}
+  .lvt-ax span:first-child{left:0;transform:none}
+  .lvt-ax span:last-child{right:0;transform:none}
   .d-cap{font-size:calc(10px*var(--ts));color:var(--faint);letter-spacing:.02em;white-space:nowrap;margin-top:-2px}
   /* Rank is the headline; LP is a labelled companion under it — not a smaller
      word jammed onto the same baseline with a leftover margin. */
@@ -1430,6 +1402,12 @@
      so "Decay in ~7d" and "No 2-step" were two different yellows on one card */
   .d-warn{color:var(--warn-txt);background:color-mix(in srgb,var(--warn) 15%,transparent)}
   .wl .ready{color:var(--teal-txt);font-weight:600}
+  /* a Riot ID op.gg doesn't know: amber like the header's warning, and the fix one click away */
+  .c-miss{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;color:var(--warn-txt)}
+  .c-miss .ico{width:14px;height:14px;flex-shrink:0}
+  .c-fix{padding:4px 10px;min-height:28px;font-size:calc(12px*var(--ts));font-weight:600;color:var(--warn-txt);
+    background:none;border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+  .c-fix:hover{color:var(--warn-txt);background:color-mix(in srgb,var(--warn) 14%,transparent);border-color:var(--warn)}
   .delta .ico{width:1em;height:1em;vertical-align:-.15em}
   /* ---- LP chart ----
      The old sparkline was a bare line with no scale: it told you the number went
@@ -1502,6 +1480,7 @@
   .help{display:grid;grid-template-columns:118px minmax(0,1fr);gap:0 22px;margin:0;padding:8px 24px 12px;
     font-size:calc(13px*var(--ts));line-height:1.7;color:var(--muted)}
   .help dt,.help dd{padding:13px 0;border-top:1px solid var(--line)}
+  .help-lic{margin:0;padding:0 24px 16px;font-size:calc(12px*var(--ts))}
   .help dt:first-of-type,.help dd:first-of-type{border-top:0}
   .help dt{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt);line-height:2.2}
   .help dd{margin:0}
@@ -1676,7 +1655,7 @@
      text happened to measure. */
   .acts{display:flex;gap:7px;flex-wrap:wrap}
   .acts button,.acts a{font-size:calc(12px*var(--ts));padding:7px 12px;min-height:32px;text-decoration:none}
-  .c-more{min-width:36px;padding:7px 10px;font-size:calc(16px*var(--ts));line-height:1;color:var(--muted);
+  .c-more{min-width:36px;padding:7px 10px;font-size:calc(16px*var(--ts));line-height:1;color:var(--text);
     letter-spacing:.08em}
   .c-more:hover{color:var(--text)}
   .c-more.on{background-color:var(--panel3);border-color:var(--line2);color:var(--text)}
@@ -1760,11 +1739,8 @@
      look the same. The gold tint implied a hierarchy that isn't there. */
   .a-dpm{border:1px solid var(--edge);color:var(--text);font-weight:500;background-color:var(--panel2)}
   .a-dpm:hover{color:var(--text);border-color:var(--line2);background-color:var(--panel3)}
-  /* The main action, and the one filled plate on a card: that is what makes it
-     stand out, not a gloss or a glow. It wears the same satin as every button,
-     the light turned up a little so it shows on a bright fill. */
-  .a-login{background-color:var(--teal);background-image:var(--sheen-fill);border-color:var(--teal);color:var(--teal-ink);font-weight:700;
-    box-shadow:var(--sh-fill)}
+  /* The main action, and the one filled button on a card (see .b-fill) */
+  .a-login{background-color:var(--teal);border-color:var(--teal);color:var(--teal-ink);font-weight:650}
   .a-login:hover{background-color:color-mix(in srgb,var(--teal) 86%,#fff);border-color:color-mix(in srgb,var(--teal) 86%,#fff);color:var(--teal-ink)}
 
   /* One eyebrow. The small uppercase label over a figure is the most repeated
@@ -1773,7 +1749,7 @@
      so neighbouring labels never quite lined up. Colour still says how loud each
      one is; the shape is now the same everywhere. */
   .stat .k,.dist .k,.dash-filter .k,.c-stats .k,.c-notes .k,.sec-n,.chp-h,.away-k,.pal-g,.login .k,.lrow .lk,
-  .goal-h .k,.lvt-h .k,.rankpanel .k,.grp-h,.cm-g,.c-drawer{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+  .goal-h .k,.rankpanel .k,.grp-h,.cm-g,.c-drawer{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase}
 
   /* ---- form + settings ---- */
   .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:22px}
@@ -1823,6 +1799,10 @@
   .count{margin-top:30px;text-align:center;font-size:calc(12px*var(--ts));color:var(--faint)}
   .count a{color:var(--gold-txt);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
   .count a:hover{border-bottom-color:currentColor}
+  .foot{margin-top:30px}
+  .foot .count{margin-top:0}
+  .foot-l{color:var(--muted)}
+  .foot .riot-notice{margin:6px auto 0;max-width:820px;font-size:calc(11px*var(--ts));line-height:1.5;color:var(--faint)}
   /* The version, hovering for what changed in it. Tabular figures so it doesn't
      jiggle between releases, and a help cursor because there is something to read. */
   .ver{font-variant-numeric:tabular-nums;letter-spacing:.02em}
@@ -1897,7 +1877,7 @@
   html[data-ts="small"]{--ts:.9}
   html[data-ts="large"]{--ts:1.15}
   /* a three-way choice in Settings: one row, the chosen one lit */
-  .opt-seg{display:inline-flex;border:1px solid var(--edge);border-radius:var(--r-sm);overflow:hidden;background:var(--sheen),var(--panel2);box-shadow:var(--sh-btn)}
+  .opt-seg{display:inline-flex;border:1px solid var(--edge);border-radius:var(--r-sm);overflow:hidden;background:var(--panel2)}
   #settings .opt-seg button{border:0;border-radius:0;background:none;box-shadow:none;padding:7px 16px;font-size:calc(13px*var(--ts));font-weight:600;color:var(--muted)}
   #settings .opt-seg button+button{border-left:1px solid var(--line)}
   #settings .opt-seg button:hover{color:var(--text);background:#ffffff0d}
@@ -2494,7 +2474,6 @@
     .bulkchk,#tSelectAll{width:24px;height:24px}
     .lpc-range button{padding:7px 9px}
     .rid{padding-block:5px;margin-block:-3px}
-    .rib-bar{height:24px}
     .cmd-count .warn{padding:6px 10px}
     .c-notes.blank>button,.c-notes.blank .nf-link{min-height:30px} /* matches the all:unset rule it has to beat */
   }
