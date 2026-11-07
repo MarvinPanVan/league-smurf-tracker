@@ -242,6 +242,8 @@
      gold edge was invisible in a row of cards, so it is a solid accent edge, a
      step brighter along the top. It used to add a warm halo and a yellowish fill
      as well, and against any accent but gold that read as a stain. */
+  /* The accent edge marks an open panel. Favourite cards wore it too, and an accent
+     frame round a card reads as "selected"; the star already says favourite. */
   .hx.gold{background:linear-gradient(180deg,var(--gold),color-mix(in srgb,var(--gold) 72%,var(--line)) 30%)}
   .hx.teal{background:linear-gradient(180deg,var(--teal),color-mix(in srgb,var(--teal) 62%,var(--line)) 30%)}
 
@@ -848,7 +850,6 @@
     font-variant-numeric:tabular-nums}
   .hx.row{padding:1px;background:#ffffff0d;border-radius:var(--r-md)}
   .hx.row:hover{background:#ffffff1c}
-  .hx.row.gold{background:color-mix(in srgb,var(--gold) 40%,transparent)}
   .hx.row.open{background:color-mix(in srgb,var(--teal) 34%,transparent)}
   .rw{border-radius:calc(var(--r-md) - 1px);background:var(--panel);overflow:hidden}
   /* Roughly 46px of row, of which about a third was padding: a 30px picture,
@@ -2394,7 +2395,6 @@
   .grid>.hx::after{content:"";position:absolute;inset:0;border-radius:inherit;z-index:0;
     pointer-events:none;opacity:0;transition:opacity .34s ease;
     background:linear-gradient(155deg,#ffffff3d,#ffffff12 38%,#ffffff06)}
-  .grid>.hx.gold::after{background:linear-gradient(155deg,color-mix(in srgb,var(--gold) 92%,transparent),color-mix(in srgb,var(--gold) 24%,transparent) 42%,#ffffff08)}
   /* Lift and glow only under a real pointer: on a touch screen the glow fading in
      is "something appeared", which Safari answers by swallowing the tap that
      caused it — and a lifted card that stays lifted after a tap says nothing. */
@@ -7878,7 +7878,7 @@ function snapCardHTML(a,i){
     total?`<span><i>Games</i>${esc(total)}</span>`:""].filter(Boolean).join("");
   const notes=(a.honor!=null?`<span class="ni-f"><span class="ni-pips" aria-hidden="true">${[1,2,3,4,5].map(n=>`<i${n<=a.honor?' class="on"':""}></i>`).join("")}</span>Honor <b>${a.honor}</b></span>`:"")
     +a.skins.map(s=>`<span class="ni-f sk">${esc(s)}</span>`).join("");
-  return`<article class="hx${a.fav?" gold":""} sn-card${a.status==="banned"?" dead":""}" style="--tier:${col};--i:${i}"><div class="hx-in sn-c">
+  return`<article class="hx sn-card${a.status==="banned"?" dead":""}" style="--tier:${col};--i:${i}"><div class="hx-in sn-c">
     <div class="sn-art">${a.art?`<img src="${splashUrl(a.art.champ,a.art.skin)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">`:""}</div>
     <div class="sn-head">
       <span class="sn-crest">${r?crest(r.tier,"sn-crest-i"):`<b>${esc(a.name.charAt(0).toUpperCase())}</b>`}</span>
@@ -8428,7 +8428,7 @@ function rowHTML(a,i){
   }else rank="Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
-  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${idAttr(a.id)}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx row${flashId===a.id?" flash":""}${open?" open":""}" data-id="${idAttr(a.id)}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     <div class="rw-main" data-act="info" role="button" tabindex="0" aria-expanded="${open}">
       <!-- No stopPropagation here: every click on a card is handled by one
            delegated listener on #grid, and closest("[data-act]") already stops at
@@ -8494,7 +8494,7 @@ function tileHTML(a){
     if(s.lp!=null)lp=s.lp+" LP";
   }else rank="Unranked";
   const st=STATUS[a.status]||STATUS.active;
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
@@ -8624,7 +8624,7 @@ function cardHTML(a,i){
   // worth spotting get one.
   const railed=a.status&&a.status!=="active"&&a.status!=="banned"; // banned says it with its badge and strikethrough
   const icon0=iconUrl(s);
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}${openInfo.has(a.id)?" info-open":""}" data-id="${idAttr(a.id)}"${railed?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}${openInfo.has(a.id)?" info-open":""}" data-id="${idAttr(a.id)}"${railed?` style="--st:${st.color}"`:""}>
     ${champArtHTML(a)}${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <div class="c-head">
       <div class="c-portrait">

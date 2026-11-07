@@ -682,7 +682,11 @@ test("frames are a neutral hairline; the accent edge is kept for a favourite and
   const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
   assert.doesNotMatch(rule(".hx"), /--gold|--teal/, "a plain frame carries no accent");
   assert.match(rule(".hx"), /var\(--line2\),var\(--line\)/, "a step lighter along the top");
-  assert.match(rule(".hx.gold"), /var\(--gold\)/, "a favourite's edge is the accent");
+  assert.match(rule(".hx.gold"), /var\(--gold\)/, "an open panel's edge is the accent");
+  // ...and only a panel's: on a favourite card it read as "selected", and the star says favourite
+  const win = bootApp([{ id: "f", gameName: "F", tagLine: "1", region: "EUW", status: "active", fav: true, tags: [], history: [], stats: null }]);
+  assert.equal(win.document.querySelector('.grid>.hx[data-id="f"]').classList.contains("gold"), false, "a favourite card has the plain frame");
+  assert.ok(win.document.querySelector('.card[data-id="f"] .star.on, .card[data-id="f"] [data-act="fav"]'), "and its star");
   assert.doesNotMatch(rule(".hx.gold"), /box-shadow/, "with no halo round it");
   assert.doesNotMatch(html, /\.hx\.gold \.hx-in\{/, "and no tint inside it");
   for (const sel of [".hx-in>.dist::before", ".hx-rule"]) assert.doesNotMatch(rule(sel), /--gold/, sel + " is a neutral line");
