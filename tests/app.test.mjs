@@ -1290,7 +1290,7 @@ test("a Copy button turns into a green Copied for a moment, and only when the co
   assert.match(html, /\n  \.lbtns button\.copied,button\.copied\{color:var\(--good\)/, "in the colour that means done");
 });
 
-test("Play next names the account to play: about to decay first, then the longest left", () => {
+test("Play next names the account to play: about to decay first, then one about to go up, then the longest left", () => {
   const D = 86400000, now = Date.now();
   const acc = (id, tier, playedAgo, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [],
     history: [], lastPlayedAt: now - playedAgo * D,
@@ -1298,7 +1298,7 @@ test("Play next names the account to play: about to decay first, then the longes
   const sitting = bootApp([acc("recent", "GOLD", 1), acc("old", "GOLD", 20), acc("resting", "GOLD", 60, { status: "resting" })]);
   const tile = w => w.document.querySelector("#dash [data-next]");
   assert.equal(tile(sitting).dataset.next, "old", "the active account left longest; resting ones are not suggested");
-  assert.match(tile(sitting).textContent, /20 days since played/);
+  assert.match(tile(sitting).textContent, /not played in 20 days/);
   const urgent = acc("dia", "DIAMOND", 2, { history: [{ t: now - 25 * D, tier: "DIAMOND", division: "II", lp: 20, w: 10, l: 10 }] });
   const both = bootApp([acc("old", "GOLD", 20), urgent]);
   assert.equal(tile(both).dataset.next, "dia", "an account about to decay comes before one that has merely sat");
@@ -1316,12 +1316,29 @@ test("Play next names the account to play: about to decay first, then the longes
   assert.equal(appGet(both, "ui.search"), "");
   const fresh = bootApp([acc("a", "GOLD", 0), acc("b", "GOLD", 1)]);
   assert.equal(tile(fresh), null, "nothing has sat long enough to suggest");
-  // "4 days since played" was printed when all the app knew was the last check
+  // A few days left alone is not yet a reason: a week is
+  assert.equal(tile(bootApp([acc("a", "GOLD", 5)])), null);
+  // "4 days since its last check" was offered as a reason to play: days since the app
+  // looked, which says nothing about playing. A check alone suggests nothing now.
   const checkedOnly = acc("c", "GOLD", 0, { lastPlayedAt: undefined });
   checkedOnly.stats.updatedAt = now - 9 * D;
-  const known = bootApp([checkedOnly, acc("d", "GOLD", 1)]);
-  assert.match(tile(known).textContent, /9 days since its last check/, "it says what it counted from");
-  assert.doesNotMatch(tile(known).textContent, /played/);
+  assert.equal(tile(bootApp([checkedOnly])), null, "no game or login seen, no suggestion");
+  // a game counted between two checks is a game played
+  const counted = acc("g", "GOLD", 0, { lastPlayedAt: undefined, history: [
+    { t: now - 30 * D, tier: "GOLD", division: "II", lp: 0, w: 9, l: 10 }, { t: now - 12 * D, tier: "GOLD", division: "II", lp: 20, w: 10, l: 10 },
+    { t: now - 2 * D, tier: "GOLD", division: "II", lp: 20, w: 10, l: 10 }] });
+  assert.match(tile(bootApp([counted])).textContent, /not played in 12 days/, "from the check that saw the game, not the last check");
+  // a login copied, and nothing played, says that
+  const login = acc("l", "GOLD", 0, { lastPlayedAt: undefined, lastLoginAt: now - 10 * D });
+  assert.match(tile(bootApp([login])).textContent, /login last used 10 days ago/);
+  // one a game or two from going up comes before one that has merely sat
+  const close = acc("up", "GOLD", 1); close.stats.lp = 88;
+  const top = acc("top", "SILVER", 1); Object.assign(top.stats, { division: "I", lp: 80 });
+  const w = bootApp([acc("old", "GOLD", 20), close, top]);
+  assert.equal(tile(w).dataset.next, "up", "the nearest to its next division");
+  assert.match(tile(w).textContent, /12 LP from Gold I/);
+  const w2 = bootApp([acc("old", "GOLD", 20), top]);
+  assert.match(tile(w2).textContent, /20 LP from Gold$/m, "division I goes up a tier");
 });
 
 test("a new vault gets four set-up steps, each a button, until they are done or hidden", async () => {

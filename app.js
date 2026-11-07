@@ -508,17 +508,44 @@ function decayRisk(a){const d=decayDays(a);return isLive(a)&&d!==null&&d<=7}
    without being played or opened. Resting, banned and archived accounts are out
    by definition, and so is anything never read. Nothing is suggested until some
    account has sat for 3 days: "play the one you played yesterday" is not advice. */
+/* When an account was last played, from what the app can actually see: a game
+   counted between two checks (its wins and losses went up), the last five games
+   a worker brought back, or Mark played. A check alone is not a game. */
+function lastPlayedOf(a){
+  let t=Number(a.lastPlayedAt)||0;
+  const r=normRecent(a.recent);if(r)for(const g of r.games)if(g.at>t)t=g.at;
+  const h=(a.history||[]).filter(p=>p.w!=null&&p.l!=null);
+  for(let i=1;i<h.length;i++)if((+h[i].w)+(+h[i].l)>(+h[i-1].w)+(+h[i-1].l)&&+h[i].t>t)t=+h[i].t;
+  return t||null;
+}
+// "Gold I" for a Gold II account, "Platinum" for a Gold I one
+function nextStep(s){
+  const t=(s.tier||"").toUpperCase(), D=["IV","III","II","I"], i=D.indexOf(normDivision(t,s.division));
+  return i<3?tierLabel({tier:t,division:D[i+1]}):tierLabel({tier:TIER_ORDER[TIER_ORDER.indexOf(t)+1],division:null});
+}
+/* What to play, and a reason that is a reason to play. It used to fall back on
+   "4 days since its last check", which counts days since the app looked, not since
+   anyone played. In order: an account about to decay; one a game or two from going
+   up a division; the one left longest, counted from a game or its login, and only
+   once that is a week. Nothing qualifies, nothing is suggested. */
 function playNext(pool){
   const live=(pool||accounts).filter(a=>isLive(a)&&(a.status||"active")==="active"&&isChecked(a)&&a.stats.found!==false);
   const urgent=live.filter(decayRisk).sort((x,y)=>decayDays(x)-decayDays(y));
   if(urgent.length){const a=urgent[0],d=decayDays(a);return{a,why:d<0?"decaying · play a ranked game":"decay in "+decayIn(d)}}
-  let best=null,days=-1;
-  for(const a of live){const d=rotationDays(a);if(d!=null&&d>days){best=a;days=d}}
-  // Say what the days are counted from. rotationDays falls back from "played" to
-  // "opened here" to "last checked", and all three used to be printed as "played".
-  if(!best||days<3)return null;
-  const since=best.lastPlayedAt?"played":best.lastLoginAt?"you opened its login":"its last check";
-  return{a:best,why:days+" days since "+since};
+  const MI=TIER_ORDER.indexOf("MASTER");
+  const near=live.filter(a=>{const s=a.stats,lp=Number(s.lp),t=TIER_ORDER.indexOf((s.tier||"").toUpperCase());
+    return isRanked(a)&&t>=0&&t<MI&&normDivision(s.tier.toUpperCase(),s.division)&&lp>=75&&lp<100})
+    .sort((x,y)=>y.stats.lp-x.stats.lp);
+  if(near.length){const a=near[0];return{a,why:(100-a.stats.lp)+" LP from "+nextStep(a.stats)}}
+  let best=null,days=-1,played=false;
+  for(const a of live){
+    const p=lastPlayedOf(a)||0, l=Number(a.lastLoginAt)||0, t=Math.max(p,l);
+    if(!t)continue;
+    const d=Math.floor((Date.now()-t)/86400000);
+    if(d>days){best=a;days=d;played=p>=l}
+  }
+  if(!best||days<7)return null;
+  return{a:best,why:played?"not played in "+days+" days":"login last used "+days+" days ago"};
 }
 // Said in words on hover and to a screen reader: unexplained, it was a mystery mark
 function flagMark(){return `<span class="flagmark" role="img" aria-label="Flagged for attention" title="Flagged for attention. Clear it in the ⋯ menu.">${icon("flag")}</span>`}
