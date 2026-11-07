@@ -8665,6 +8665,18 @@ test("on a phone a list row copies its login, and checkboxes come with Select", 
   assert.equal(appGet(win, "selected.size"), 0, "and drops the selection with it");
 });
 
+// "+87 LP" didn't say over what, and the pace took a row of its own ("Climb · +21 LP/day")
+test("the LP chip says it is since the last check, with the pace beside it, and no Climb row", () => {
+  const D = 864e5, now = Date.now();
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [],
+    history: [{ t: now - 20 * D, tier: "GOLD", division: "I", lp: 0 }, { t: now - 5 * D, tier: "PLATINUM", division: "III", lp: 74 }, { t: now - 3600000, tier: "PLATINUM", division: "II", lp: 61 }],
+    stats: { found: true, tier: "PLATINUM", division: "II", lp: 61, wins: 38, losses: 29, updatedAt: now - 3600000 } }]);
+  const card = win.document.querySelector('.card[data-id="a"]');
+  assert.match(card.querySelector(".c-deltas .delta").textContent, /\+87 LP/);
+  assert.match(card.querySelector(".c-deltas .d-cap").textContent, /^since last check · \+\d+ LP\/day$/);
+  assert.doesNotMatch(card.querySelector(".c-stats")?.textContent || "", /Climb/, "no row of its own");
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
@@ -8862,7 +8874,8 @@ test("a card's micro-stats pair up two by two when there are four of them", () =
   // (the preview no longer carries those, so the account is built here)
   const D = 86400000, now = Date.now();
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [],
-    history: [{ t: now - 10 * D, tier: "GOLD", division: "III", lp: 40 }, { t: now - 3600000, tier: "GOLD", division: "II", lp: 40 }],
+    // (the climb's pace moved under the LP chip; games since the last check is the fourth)
+    history: [{ t: now - 10 * D, tier: "GOLD", division: "III", lp: 40, w: 15, l: 15 }, { t: now - 3600000, tier: "GOLD", division: "II", lp: 40, w: 20, l: 18 }],
     stats: { found: true, tier: "GOLD", division: "II", lp: 40, wins: 20, losses: 18, updatedAt: now - 3600000,
       peak: { tier: "PLATINUM", division: "IV", lp: 12 }, mmr: "~1700", avgRecent: "Gold I" } },
     { id: "b", gameName: "B", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],

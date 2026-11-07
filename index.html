@@ -1183,6 +1183,7 @@
     background:radial-gradient(110% 64% at 0% 0%,
       color-mix(in srgb,var(--tier) 7%,transparent),transparent 58%)}
   .c-deltas{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+  .d-cap{font-size:calc(10px*var(--ts));color:var(--faint);letter-spacing:.02em;white-space:nowrap;margin-top:-2px}
   /* Rank is the headline; LP is a labelled companion under it — not a smaller
      word jammed onto the same baseline with a leftover margin. */
   .rk{display:flex;align-items:center;gap:11px;min-width:0;white-space:nowrap;
@@ -8514,6 +8515,12 @@ function cardHTML(a,i){
   {
     const dv=lastDelta(a);
     if(dv&&!dead)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
+    /* "+87 LP" over what? Said under the chip now, with the pace beside it: the
+       pace had a whole row of the card to itself ("Climb · +21 LP/day"), and
+       without "since last check" the two numbers read as a contradiction. */
+    const r=dead?null:climbRate(hist), pace=r&&Math.abs(r.lpPerDay)>=1?(r.lpPerDay>0?"+":"")+Math.round(r.lpPerDay)+" LP/day":"";
+    const cap=[dv&&!dead?"since last check":"",pace].filter(Boolean).join(" · ");
+    if(cap)deltaChip+=`<span class="d-cap" title="${pace?"The average pace over the chart's checks":"Since previous check"}">${esc(cap)}</span>`;
   }
   /* There was a flame "Climbing" chip here too (LP up three checks running). It was
      the fourth way the card said "going up", beside the +LP chip, the Climb figure
@@ -8591,9 +8598,7 @@ function cardHTML(a,i){
     {
       const g=gamesSince(hist);
       if(g)microStats.push(["Since last check",g.n+(g.n===1?" game · ":" games · ")+g.w+"W "+g.l+"L"]);
-      const r=climbRate(hist);
-      if(r&&Math.abs(r.lpPerDay)>=1)
-        microStats.push(["Climb",(r.lpPerDay>0?"+":"")+Math.round(r.lpPerDay)+" LP/day"]);
+      // the pace ("Climb") sits under the LP chip now, beside "since last check"
     }
     if(s.mmr)microStats.push(["MMR est.",s.mmr]);
     if(s.avgRecent)microStats.push(["Recent avg",s.avgRecent]);
