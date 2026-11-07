@@ -1791,6 +1791,9 @@
   .wl-steps b{font-size:calc(13px*var(--ts));font-weight:600;color:var(--text)}
   .wl-steps li>span:last-child{align-self:start;font-size:calc(12.5px*var(--ts));color:var(--faint);line-height:1.5}
   .wl-acts{margin-top:26px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .lp-p{margin:0;font-size:calc(13px*var(--ts));line-height:1.55;color:var(--muted)}
+  .lp-off{display:flex;align-items:center;gap:8px;font-size:calc(12px*var(--ts));color:var(--muted);cursor:pointer}
+  .lp-off input{width:auto}
   .wl-note{margin:22px auto 0;max-width:60ch;display:flex;gap:8px;align-items:flex-start;justify-content:center;
     font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.55;text-align:left}
   .wl-note .ico{width:13px;height:13px;margin-top:2px;flex-shrink:0}
@@ -2196,6 +2199,7 @@
   .sn-empty{text-align:center;color:var(--muted);margin-top:40px}
   .sn-foot{margin-top:clamp(44px,8vw,72px);text-align:center;font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.7}
   .sn-foot p{margin:0 auto 16px;max-width:52ch}
+  .sn-foot .sn-riot{margin:28px auto 0;font-size:calc(11px*var(--ts));max-width:68ch}
   .sn-foot .btn,.sn-err .btn{text-decoration:none;padding:10px 18px;font-weight:600}
   .sn-err{max-width:480px;margin:16vh auto 0;text-align:center}
   .sn-err .hx-in{padding:34px 28px 30px}
@@ -3021,6 +3025,27 @@
     </div>
   </div></div></div>
 
+  <!-- The vault keeps logins in plain text until a master password is set, and that
+       was one optional step in Settings. This asks, plainly, when it matters. -->
+  <div id="lockPrompt" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lockPromptTitle">
+  <div class="mdl narrow hx gold"><div class="hx-in mdl-in">
+    <div class="mdl-h">
+      <span class="t" id="lockPromptTitle">Protect your saved passwords</span>
+      <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+    </div>
+    <div class="mdl-b"><div class="formgrid">
+      <p class="fw lp-p">Your passwords are saved in this browser as plain text. Anyone who uses this browser, or a script running on this site, could read them.</p>
+      <p class="fw lp-p">A master password encrypts the whole vault. You enter it, or use Face ID or a fingerprint, when you open the app. It can't be recovered, so keep a backup too.</p>
+      <div class="fld"><label for="lpPass">Master password</label><input type="password" id="lpPass" data-autofocus autocomplete="new-password"></div>
+      <div class="fld"><label for="lpPass2">Type it again</label><input type="password" id="lpPass2" autocomplete="new-password"></div>
+      <label class="fw lp-off"><input type="checkbox" id="lpOff"> Don't ask again on this device</label>
+    </div></div>
+    <div class="mdl-f">
+      <button id="lpSet" class="b-gold">Encrypt the vault</button>
+      <button id="lpLater">Not now</button>
+    </div>
+  </div></div></div>
+
   <!-- add/edit form -->
   <div id="form" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="formTitle">
   <div class="mdl hx teal"><div class="hx-in mdl-in" style="position:relative">
@@ -3179,8 +3204,11 @@
 
   <!-- Filled from APP_VERSION at boot rather than typed in here, so the number in
        the footer can never disagree with the one the changelog toast announces. -->
-  <div class="count" style="margin-top:8px">© 2026 MarvinPanVan · Smurf Tracker — not affiliated with Riot Games · Discord: marvinpanvan · <span id="appVer" class="ver"></span></div>
+  <div class="count" style="margin-top:8px">© 2026 MarvinPanVan · Smurf Tracker · Discord: marvinpanvan · <span id="appVer" class="ver"></span></div>
   <div class="count" style="margin-top:4px;font-size:calc(11px*var(--ts))">Free for personal use. Do not resell, rebrand, publish modified versions, or use for anything malicious. <a href="https://github.com/MarvinPanVan/league-smurf-tracker/blob/main/LICENSE" target="_blank" rel="noreferrer" style="color:var(--gold-txt)">Terms</a></div>
+  <!-- Riot's own wording for projects that use its games and data (its developer
+       policy), in place of a bare "not affiliated with Riot Games" -->
+  <div class="count riot-notice" style="margin-top:4px;font-size:calc(11px*var(--ts))">Smurf Tracker isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</div>
 
   <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
   <input type="file" id="fileInCsv" accept=".csv,text/csv" class="hidden">
@@ -3393,8 +3421,12 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.9.0";
+const APP_VERSION="2.9.1";
 const APP_CHANGELOG=[
+  {v:"2.9.1",items:[
+    "Saved passwords in plain text? The app now asks you to set a master password, with Not now and Don't ask again",
+    "Riot's own disclaimer replaces \"not affiliated\", in the footer, on shared snapshots and in the README",
+  ]},
   {v:"2.9.0",items:[
     "Cards say each thing once: Peak only when it's above today, no flame chip, and no notch splitting the win bar",
     "Login has the row to itself, with a key; Refresh is an icon beside \"Updated 2 h ago\"",
@@ -7833,8 +7865,12 @@ function snapHTML(s){
     <footer class="sn-foot">
       <p>A snapshot${s.at?" taken "+esc(snapDay(s.at)):""} — it doesn't update. Logins, emails and notes are never part of one.</p>
       <a class="btn b-gold" href="${esc(home)}">Track your own accounts</a>
+      <p class="sn-riot">${esc(RIOT_NOTICE)}</p>
     </footer>`;
 }
+// Riot's wording for projects built on its games (its developer policy). The app's
+// footer carries the same sentence in the markup.
+const RIOT_NOTICE="Smurf Tracker isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.";
 function snapErrorHTML(){
   return`<div class="sn-err hx gold"><div class="hx-in">
     <span class="brand-mark" aria-hidden="true"></span>
@@ -9003,6 +9039,7 @@ function closeAllPanels(){
   $("settings").classList.add("hidden");
   $("help").classList.add("hidden");
   $("bulkAdd").classList.add("hidden");
+  $("lockPrompt").classList.add("hidden");
   $("moreMenu").classList.add("hidden");
   // Quick find is a modal like the other two, and every way out of a modal —
   // Escape, a click on the backdrop, the ✕ — goes through here. Leaving it off
@@ -9287,6 +9324,7 @@ function submitForm(){
      preview (nothing there is real), not for a banned one (checks skip those),
      and not under a Check all run that is already going through the vault. */
   if(newId&&!previewMode&&!run&&data.status!=="banned")check(newId);
+  if(data.password)maybeLockPrompt();
 }
 
 // ---------- settings ----------
@@ -9399,6 +9437,20 @@ function setupSteps(){
     {act:"lock",done:!!vaultPassword,label:"Set a master password"},
     {act:"backup",done:!!cfg.lastExport,label:"Back up"},
   ];
+}
+/* The prompt: when a password is saved into a vault with no master password, and
+   once a visit while passwords sit there in plain text. "Not now" asks again next
+   visit; "Don't ask again" stops it on this device (the setup step still says it). */
+let lockPromptShown=false;
+function wantsLockPrompt(){
+  return !previewMode&&!vaultPassword&&!cfg.lockPromptOff&&!lockPromptShown&&accounts.some(a=>a.password);
+}
+function maybeLockPrompt(){
+  if(!wantsLockPrompt())return false;
+  lockPromptShown=true;
+  $("lpPass").value="";$("lpPass2").value="";$("lpOff").checked=false;
+  $("lockPrompt").classList.remove("hidden");
+  return true;
 }
 function setupVisible(){return accounts.length>0&&!previewMode&&!cfg.setupHidden&&setupSteps().some(s=>!s.done)}
 function renderSetup(){
@@ -10379,14 +10431,25 @@ function resetAccent(which){
 }
 $("sAccentReset1").addEventListener("click",()=>resetAccent("primary"));
 $("sAccentReset2").addEventListener("click",()=>resetAccent("secondary"));
-$("sVaultSet").addEventListener("click",async()=>{
-  const pass=$("sVaultPass").value;
-  if(!pass||pass.length<4){toast("Choose a password with at least 4 characters");return}
+// Settings' Set / change and the first-run prompt both come through here, so
+// there is one way a vault becomes encrypted, with one set of checks.
+$("sVaultSet").addEventListener("click",async()=>{if(await setVaultPassword($("sVaultPass").value))$("sVaultPass").value=""});
+$("lpSet").addEventListener("click",async()=>{
+  const p=$("lpPass").value;
+  if(p!==$("lpPass2").value){toast("The two passwords don't match");$("lpPass2").focus();return}
+  if(await setVaultPassword(p)){$("lockPrompt").classList.add("hidden");render()}
+});
+$("lpLater").addEventListener("click",()=>{
+  if($("lpOff").checked){cfg.lockPromptOff=true;saveCfg()}
+  $("lockPrompt").classList.add("hidden");
+});
+async function setVaultPassword(pass){
+  if(!pass||pass.length<4){toast("Choose a password with at least 4 characters");return false}
   if(previewMode){previewMode=false;accounts=[]}
   const prev=vaultPassword;
   const changing=!!prev&&prev!==pass;
   if(changing&&cfg.syncToken&&cfg.backendUrl){
-    if(!confirm("You're changing the master password.\nThe cloud vault is still encrypted with the old one until you Push again from this device.\nOther devices must use the new password after that Push.\n\nContinue?"))return;
+    if(!confirm("You're changing the master password.\nThe cloud vault is still encrypted with the old one until you Push again from this device.\nOther devices must use the new password after that Push.\n\nContinue?"))return false;
   }
   vaultPassword=pass;
   // If the envelope never reached the disk then the vault there is still the old
@@ -10398,7 +10461,7 @@ $("sVaultSet").addEventListener("click",async()=>{
     vaultPassword=prev;
     updateVaultStatus();
     toast("Could not write the encrypted vault — the password has not been set");
-    return;
+    return false;
   }
   $("sVaultPass").value="";
   // the passkey holds the old password, which no longer opens anything
@@ -10407,7 +10470,8 @@ $("sVaultSet").addEventListener("click",async()=>{
   toast(changing
     ?"Password changed — Push to cloud so other devices get the new ciphertext"+(hadPk?". Set Face ID / fingerprint up again in Security":"")
     :"Vault password set — remember it, there's no way to recover it if lost");
-});
+  return true;
+}
 if($("sLockNow"))$("sLockNow").addEventListener("click",()=>{
   if(!vaultPassword){toast("Set a master password first — there's nothing to lock");return}
   if(vaultLocked()){toast("Already locked");return}
@@ -11311,6 +11375,7 @@ function startApp(){
      vault itself is the welcome now: what the app does, and the first step. */
   showChangelogIfNeeded();
   if(startAction)setTimeout(runStartAction,0); // after boot's own first paint
+  else maybeLockPrompt();
   if(cfg.watch)setTimeout(()=>syncWatch(false),1500); // at most every ten minutes
   if(cfg.autoCheck){
     const staleAccs=accounts.filter(autoCheckDue);
