@@ -8542,6 +8542,16 @@ test("a banned card shows no movement and no Refresh; a live one with the same r
   assert.equal(card("ban").querySelector(".delta.d-up,.delta.d-down"), null, "a closed account does not climb");
   assert.equal(card("ban").querySelector(".c-ref"), null, "nor get checked; checks skip it");
   assert.ok(card("ban").querySelector('[data-act="login"]'), "its login is still there");
+  // ...but as a plain button, and with no red rail: the badge and the strikethrough say banned
+  assert.match(html, /\n  \.card\.dead \.a-login\{background-color:var\(--panel2\)/, "Login is not the brightest thing on a dead card");
+  const hx = id => win.document.querySelector(`.grid>.hx[data-id="${id}"]`);
+  assert.doesNotMatch(hx("ban").getAttribute("style") || "", /--st/, "no status rail on the card");
+  // and the list says the same: no "+82" on a closed account
+  win.document.querySelector('[data-density="list"]').click();
+  const row = id => win.document.querySelector(`.rw[data-id="${id}"]`);
+  assert.ok(row("live").querySelector(".rw-d .delta"), "the live row shows its change");
+  assert.equal(row("ban").querySelector(".rw-d .delta"), null, "the banned row does not");
+  assert.doesNotMatch(row("ban").getAttribute("style") || "", /--st/, "nor a rail");
 });
 
 // Logins sat in plain text unless someone found Settings → Security: now it asks
@@ -8586,6 +8596,96 @@ test("the master password prompt comes once a visit, and Don't ask again stops i
   // no passwords saved, or only the preview's: nothing to ask about
   const none = bootApp([{ ...seed[0], password: "" }]);
   assert.equal(open(none), false);
+});
+
+// "Runs in your browser, nothing leaves it" and "nothing is uploaded": but a rank
+// check sends the Riot ID through a public proxy to op.gg
+test("what the app says leaves the browser is true: the Riot ID goes out for a rank check", () => {
+  const win = bootApp();
+  const desc = html.match(/<meta name="description" content="([^"]*)"/)[1];
+  assert.doesNotMatch(desc, /nothing leaves/i);
+  assert.match(desc, /Riot IDs? go(es)? out/i);
+  const note = win.document.querySelector(".wl-note").textContent;
+  assert.doesNotMatch(note, /nothing is uploaded/i);
+  assert.match(note, /Riot ID to op\.gg, through a public proxy/);
+  const help = win.document.getElementById("help").textContent;
+  for (const host of ["corsproxy.io", "allorigins.win", "r.jina.ai", "Google Fonts"]) assert.ok(help.includes(host), "Help names " + host);
+  for (const proxy of ["corsproxy.io", "allorigins.win", "r.jina.ai"]) assert.ok(html.includes(proxy + "/") || html.includes("//" + proxy), proxy + " is really used");
+  assert.doesNotMatch(html, /Everything here stays in this browser/, "the add forms say the Riot ID is looked up");
+});
+
+// The preview said "nothing is saved" twice: a two-line banner, and a toast over the cards
+test("the preview says it once, on one line", () => {
+  const win = bootApp();
+  win.document.getElementById("bDemo").click();
+  const banner = win.document.getElementById("previewBanner");
+  assert.equal(banner.querySelector("span").textContent.trim(), "Preview: example data, nothing is saved");
+  assert.doesNotMatch(win.document.getElementById("toast").textContent, /preview|example data/i, "no toast repeating it");
+  assert.match(html.match(/\n  #previewBanner>span\{([^}]*)\}/)[1], /white-space:nowrap/, "one line, clipped rather than wrapped");
+  assert.doesNotMatch(banner.textContent, /—/, "and no em dash");
+});
+
+// On a phone the stats were the first screen, ahead of every account
+test("a phone starts with the stats folded away, and keeps them open once you open them", () => {
+  const seed = [{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 10, losses: 8, updatedAt: Date.now() } }];
+  const phone = w => { w.matchMedia = q => ({ matches: /max-width:\s*560px/.test(q), addListener() {}, removeListener() {} }); };
+  const win = bootApp(seed, phone);
+  assert.equal(win.document.getElementById("dash").innerHTML, "", "folded on a phone");
+  assert.match(win.document.getElementById("bDashToggle").textContent, /Show/);
+  win.document.getElementById("bDashToggle").click();
+  assert.notEqual(win.document.getElementById("dash").innerHTML, "", "one tap opens them");
+  assert.equal(appGet(win, "cfg.dashCollapsed"), false, "and the choice is kept");
+  const again = bootApp(seed, w => { phone(w); w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ dashCollapsed: false })); });
+  assert.notEqual(again.document.getElementById("dash").innerHTML, "", "open next time too");
+  assert.notEqual(bootApp(seed).document.getElementById("dash").innerHTML, "", "a wider screen starts open");
+});
+
+// A phone list row showed a checkbox and hid the login: the reverse of what a phone is used for
+test("on a phone a list row copies its login, and checkboxes come with Select", () => {
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], login: "u", password: "p",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 10, losses: 8, updatedAt: Date.now() } }]);
+  const doc = win.document;
+  // the phone layout: name over rank, copy buttons on the right, no checkbox until Select
+  const phone = html.slice(html.indexOf("@media (max-width:720px){"), html.indexOf("@media (max-width:720px){") + 6000);
+  assert.match(phone, /\.grid\.list \.rw-main\{grid-template-columns:36px minmax\(0,1fr\) auto;grid-template-areas:"pic id keys" "pic rank keys"/);
+  assert.match(phone, /\.grid\.list \.rw-keys\{grid-area:keys;display:flex/, "the copy buttons show on a phone");
+  assert.match(phone, /\.grid\.list \.rw-key\{width:40px;height:40px\}/, "at a thumb's size");
+  assert.match(phone, /body:not\(\.selecting\) \.bulkchk\{display:none\}/, "checkboxes wait for Select");
+  doc.querySelector('[data-density="list"]').click();
+  const sel = doc.getElementById("tSelectMode");
+  assert.equal(doc.body.classList.contains("selecting"), false);
+  sel.click();
+  assert.ok(doc.body.classList.contains("selecting"), "Select shows the checkboxes");
+  assert.equal(sel.textContent, "Done");
+  doc.querySelector('.rw[data-id="a"] .bulkchk').click();
+  assert.equal(appGet(win, "selected.size"), 1);
+  doc.getElementById("tSelectMode").click();
+  assert.equal(doc.body.classList.contains("selecting"), false, "Done ends it");
+  assert.equal(appGet(win, "selected.size"), 0, "and drops the selection with it");
+});
+
+// "+87 LP" didn't say over what, and the pace took a row of its own ("Climb · +21 LP/day")
+test("the LP chip says it is since the last check, with the pace beside it, and no Climb row", () => {
+  const D = 864e5, now = Date.now();
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [],
+    history: [{ t: now - 20 * D, tier: "GOLD", division: "I", lp: 0 }, { t: now - 5 * D, tier: "PLATINUM", division: "III", lp: 74 }, { t: now - 3600000, tier: "PLATINUM", division: "II", lp: 61 }],
+    stats: { found: true, tier: "PLATINUM", division: "II", lp: 61, wins: 38, losses: 29, updatedAt: now - 3600000 } }]);
+  const card = win.document.querySelector('.card[data-id="a"]');
+  assert.match(card.querySelector(".c-deltas .delta").textContent, /\+87 LP/);
+  assert.match(card.querySelector(".c-deltas .d-cap").textContent, /^since last check · \+\d+ LP\/day$/);
+  assert.doesNotMatch(card.querySelector(".c-stats")?.textContent || "", /Climb/, "no row of its own");
+});
+
+// A phone's toolbar stacked Check all ranks over Refresh N stale: two buttons for one job
+test("on a phone the toolbar has one ranks button: Refresh stale when there is any, else Check all", () => {
+  const block = html.slice(html.indexOf("@media (max-width:560px){\n    .tools{display:flex;flex-wrap:wrap}"));
+  assert.match(block.slice(0, 3000), /\.cmd:has\(#bCheckStale:not\(\.hidden\)\) #bCheckAll\{display:none\}/);
+  const D = 864e5;
+  const acc = (id, ago) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() - ago } });
+  const win = bootApp([acc("old", 6 * D), acc("new", 3600000)]); // one stale, one fresh
+  assert.equal(win.document.getElementById("bCheckStale").classList.contains("hidden"), false, "the stale button is what shows");
 });
 
 // On a phone the filters and the stats were the whole first screen
@@ -8697,7 +8797,7 @@ test("a first visit opens on the welcome, not on How this works; the help is sti
   assert.ok(win.document.getElementById("help").classList.contains("hidden"), "no manual over the empty page");
   assert.ok(win.document.querySelector(".welcome"), "the welcome is the first thing");
   assert.equal(win.document.getElementById("intro"), null, "the intro paragraph it repeated is gone");
-  assert.match(win.document.querySelector(".wl-note").textContent, /stays in this browser/, "its point lives in the welcome");
+  assert.match(win.document.querySelector(".wl-note").textContent, /stay in this browser/, "its point lives in the welcome");
   assert.match(win.document.querySelector(".wl-note").textContent, /backup/);
   win.document.getElementById("bHelp").click();
   assert.equal(win.document.getElementById("help").classList.contains("hidden"), false, "the ? still opens it");
@@ -8785,7 +8885,8 @@ test("a card's micro-stats pair up two by two when there are four of them", () =
   // (the preview no longer carries those, so the account is built here)
   const D = 86400000, now = Date.now();
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [],
-    history: [{ t: now - 10 * D, tier: "GOLD", division: "III", lp: 40 }, { t: now - 3600000, tier: "GOLD", division: "II", lp: 40 }],
+    // (the climb's pace moved under the LP chip; games since the last check is the fourth)
+    history: [{ t: now - 10 * D, tier: "GOLD", division: "III", lp: 40, w: 15, l: 15 }, { t: now - 3600000, tier: "GOLD", division: "II", lp: 40, w: 20, l: 18 }],
     stats: { found: true, tier: "GOLD", division: "II", lp: 40, wins: 20, losses: 18, updatedAt: now - 3600000,
       peak: { tier: "PLATINUM", division: "IV", lp: 12 }, mmr: "~1700", avgRecent: "Gold I" } },
     { id: "b", gameName: "B", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
@@ -9369,3 +9470,65 @@ test("the dashboard reads as one row of figures", () => {
   const rule = html.match(/\.stat-b\{[^}]*\}/);
   assert.match(rule[0], /gap:0/, "a clickable tile does not inherit the button's flex gap");
 });
+
+// ---- frozen vaults: what released builds wrote has to keep opening ----
+// tests/fixtures holds the vault, both exports and a CSV exactly as 2.9.1 wrote them,
+// plus the older 150 000-round encrypted vault. Never regenerate them (see its README).
+const FIX = f => fs.readFileSync(path.join(__dirname, "fixtures", f), "utf8");
+const FIXED = JSON.parse(FIX("vault-2.9.json"));
+const fpOf = (list, csv) => list.map(a => {
+  const s = a.stats || {}, i = a.info || {};
+  const o = { name: a.gameName + "#" + a.tagLine, region: a.region, status: a.status || "active", fav: !!a.fav,
+    rank: [s.tier || null, s.division || null, s.lp ?? null, s.wins ?? null, s.losses ?? null],
+    login: a.login || "", password: a.password || "", email: a.email || "", notes: a.notes || "", tags: [...(a.tags || [])] };
+  if (!csv) Object.assign(o, { archived: !!a.archived, hist: (a.history || []).length,
+    info: [i.honor ?? null, i.owned ?? null, i.be ?? null, i.twofa ?? null, (i.skins || []).length, i.penalty || null] });
+  return o;
+}).sort((x, y) => x.name.localeCompare(y.name));
+const loaded = win => JSON.parse(appGet(win, "JSON.stringify(accounts)"));
+const unlockWith = async (win, pass) => {
+  win.document.getElementById("lockPass").value = pass;
+  win.document.getElementById("lockBtn").click();
+  await until(() => win.document.getElementById("lock").classList.contains("hidden"), "the vault to open");
+};
+
+test("frozen: the plain vault 2.9 wrote opens whole, and what the app writes back opens again", async () => {
+  const win = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker", FIX("vault-2.9.json")));
+  assert.equal(FIXED.length, 6);
+  assert.deepEqual(fpOf(loaded(win)), fpOf(FIXED), "every account, every field that matters");
+  assert.equal(win.document.querySelectorAll(".card").length, 5, "the archived one waits under Archived");
+  runScript(win, "saveDB()");
+  await until(() => win.localStorage.getItem("smurf-tracker") !== FIX("vault-2.9.json"), "the app's own write");
+  const again = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker", win.localStorage.getItem("smurf-tracker")));
+  assert.deepEqual(fpOf(loaded(again)), fpOf(FIXED), "and its own write opens the same");
+});
+
+test("frozen: the encrypted vault, current and 150 000-round, opens with its password", async () => {
+  for (const f of ["vault-2.9-encrypted.json", "vault-legacy-150k-encrypted.json"]) {
+    const win = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker", FIX(f)));
+    assert.equal(win.document.getElementById("lock").classList.contains("hidden"), false, f + " is locked");
+    await unlockWith(win, "fixture-pass");
+    assert.deepEqual(fpOf(loaded(win)), fpOf(FIXED), f);
+  }
+});
+
+test("frozen: both export files and the CSV import into an empty vault", async () => {
+  const plain = bootApp();
+  plain.doImport(new plain.File([FIX("export-v2-plain.json")], "backup.json", { type: "application/json" }));
+  await until(() => appGet(plain, "accounts.length") === 6, "the plain export");
+  assert.deepEqual(fpOf(loaded(plain)), fpOf(FIXED));
+
+  const enc = bootApp();
+  runScript(enc, 'vaultPassword = "fixture-pass"');
+  enc.doImport(new enc.File([FIX("export-v2-encrypted.json")], "backup.json", { type: "application/json" }));
+  await until(() => appGet(enc, "accounts.length") === 6, "the encrypted export");
+  assert.deepEqual(fpOf(loaded(enc)), fpOf(FIXED));
+
+  const csv = bootApp();
+  csv.doImportCSV(new csv.File([FIX("export.csv")], "export.csv", { type: "text/csv" }));
+  await until(() => appGet(csv, "accounts.length") === 6, "the CSV");
+  assert.deepEqual(fpOf(loaded(csv), true), fpOf(FIXED, true), "what a CSV carries: ids, ranks, logins, notes, tags");
+  const own = JSON.parse(appGet(csv, "JSON.stringify(accounts.find(a => a.gameName === 'Moonlit Mid').info || {})"));
+  assert.equal(own.honor, 3, "and the note fields at the end of each row");
+});
+

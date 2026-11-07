@@ -1,0 +1,8 @@
+label,gameName,tagLine,region,status,tier,division,lp,wins,losses,level,login,password,email,createdOn,birthdate,tags,notes,favorite,lastUpdated,Honor level,Champions owned,Blue Essence,2-step verification,Skins,Penalties / bans,Bought
+Main smurf,Moonlit Mid,0001,EUW,active,PLATINUM,II,61,38,29,214,demo_user1,demo-pass-1,smurf1@mail.gg,2021-03-14,2000-01-02,mid|ranked-ready,Push for Diamond before the split ends,yes,2026-11-07T09:59:59.863Z,3,96,23400,yes,Elementalist Lux|Star Guardian Ahri|Arcade Kai'Sa,,no
+ADC acc,Bot Diff,EUW,EUW,active,GOLD,III,22,21,24,167,demo_user2,demo-pass-2,smurf2@mail.gg,,,adc,,no,2026-11-03T11:59:59.863Z,2,41,6150,no,Spirit Blossom Yasuo,,
+EUNE fill acc,Coinflip Queue,EUNE,EUNE,active,SILVER,I,89,15,11,98,demo_user3,demo-pass-3,,,,fill,,no,2026-11-06T11:59:59.863Z,,,,,,,
+Fresh leveling acc,NewSmurf,2026,EUW,resting,UNRANKED,,,,,23,demo_user4,demo-pass-4,,,,leveling,,no,2026-11-01T11:59:59.863Z,,,,,,,
+RIP acc,Chat Restricted,4444,EUNE,banned,BRONZE,I,12,40,52,301,,,,,,dead,,no,2026-09-28T11:59:59.863Z,0,,,,Prestige K/DA Akali,Permanent ban for chat,
+Old one,Archived Acc,OLD,NA,active,SILVER,III,40,10,12,55,old_login,"p@ss ""quoted"", comma",,,,old,"Line one
+Line two",no,2025-10-03T12:00:00.000Z,,,,,,,

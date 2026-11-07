@@ -9,7 +9,7 @@
      a card. Sharing the link is how the licence asks for this to be passed on, and
      without them it arrived as a bare URL. Absolute URLs, because a scraper does
      not resolve relative ones. -->
-<meta name="description" content="Every League of Legends account in one place: ranks, LP history and logins. Runs in your browser — nothing leaves it.">
+<meta name="description" content="Every League of Legends account in one place: ranks, LP history and logins. Logins stay in your browser; only Riot IDs go out, to look up ranks.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Smurf Tracker">
 <meta property="og:title" content="Smurf Tracker — every League account in one place">
@@ -965,6 +965,11 @@
      rank will ever change again. It should read as finished from across the room. */
   .card.dead .c-portrait,.rw.dead .rw-pic{filter:grayscale(.9);opacity:.5}
   .card.dead .c-tint{opacity:.35}
+  /* A banned account said so five times (rail, badge, strikethrough, a red border,
+     its notes) while its Login was the brightest thing on the card. The badge and
+     the strikethrough say it; the rail is gone, and Login is a plain button. */
+  .card.dead .a-login{background-color:var(--panel2);background-image:var(--sheen);border-color:var(--line2);color:var(--muted);font-weight:600}
+  .card.dead .a-login:hover{color:var(--text)}
   .card.dead .rk-crest,.rw.dead .rw-crest{filter:grayscale(.9);opacity:.55}
   .card.dead .rk .rk-t,.rw.dead .rw-rank b{text-decoration:line-through;
     text-decoration-thickness:1.5px;text-decoration-color:currentColor;opacity:.62}
@@ -999,8 +1004,26 @@
   @media (max-width:720px){
     .grid.list{--rw-cols:auto 36px minmax(0,1fr) 106px 58px 16px;--rw-gap:10px}
     .rw-main{min-height:52px;padding:12px 12px;align-items:center}
-    /* a phone is not where a client gets logged into, and the name needs the room */
     .rw-spark,.rw-tags,.rw-keys,.rw-head{display:none}
+    /* A phone row is two lines: the name, the rank under it, and the login's copy
+       buttons on the right. It used to hide those buttons ("a phone is not where a
+       client gets logged into"), but a phone is exactly where people read a
+       password off while typing it into the PC, and the row showed a checkbox
+       instead, which is the thing you need least. Placed by area, so whatever is
+       hidden leaves no hole. The checkboxes come with Select. */
+    .grid.list .rw-main{grid-template-columns:36px minmax(0,1fr) auto;grid-template-areas:"pic id keys" "pic rank keys";
+      column-gap:12px;row-gap:1px;padding:10px 10px 10px 12px}
+    body.selecting .grid.list .rw-main{grid-template-columns:auto 36px minmax(0,1fr) auto;
+      grid-template-areas:"chk pic id keys" "chk pic rank keys"}
+    .grid.list .bulkchk{grid-area:chk}
+    .grid.list .rw-pic{grid-area:pic}
+    .grid.list .rw-id{grid-area:id;align-self:end}
+    .grid.list .rw-rank{grid-area:rank;flex-direction:row;align-items:baseline;gap:6px;align-self:start}
+    .grid.list .rw-keys{grid-area:keys;display:flex;gap:6px}
+    .grid.list .rw-key{width:40px;height:40px}
+    .grid.list .rw-sub,.grid.list .rw-d,.grid.list .rw-chev{display:none}
+    body:not(.selecting) .bulkchk{display:none}
+    .tools>.t-select{display:inline-flex}
     .rw-check{opacity:1} /* thumb-friendly: always show Refresh on phones */
     .rw-pic{width:36px;height:36px}
     .acts{flex-wrap:wrap;gap:6px}
@@ -1160,6 +1183,7 @@
     background:radial-gradient(110% 64% at 0% 0%,
       color-mix(in srgb,var(--tier) 7%,transparent),transparent 58%)}
   .c-deltas{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+  .d-cap{font-size:calc(10px*var(--ts));color:var(--faint);letter-spacing:.02em;white-space:nowrap;margin-top:-2px}
   /* Rank is the headline; LP is a labelled companion under it — not a smaller
      word jammed onto the same baseline with a leftover margin. */
   .rk{display:flex;align-items:center;gap:11px;min-width:0;white-space:nowrap;
@@ -2082,6 +2106,11 @@
   @keyframes dashIn{from{opacity:0;transform:translateY(-12px) scaleY(.94)}to{opacity:1;transform:none}}
   .hx.dash-in{transform-origin:top center;animation:dashIn .32s cubic-bezier(.22,1,.36,1) both}
   @keyframes barIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+  #previewBanner{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    border:1px solid color-mix(in srgb,var(--gold) 42%,transparent);background:color-mix(in srgb,var(--gold) 9%,transparent);
+    color:var(--text);padding:7px 8px 7px 14px;border-radius:var(--r-md);font-size:calc(13px*var(--ts));margin-bottom:14px}
+  #previewBanner>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #previewBanner>button{flex:0 0 auto;padding:5px 12px;min-height:30px}
   #bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show{animation:barIn .26s cubic-bezier(.22,1,.36,1) both}
 
   /* Card sections open by re-rendering the whole grid, so only the block flagged
@@ -2518,6 +2547,7 @@
   .t-filters .t-n{margin-left:2px;min-width:18px;height:18px;padding:0 5px;border-radius:var(--r-xs);display:inline-flex;align-items:center;
     justify-content:center;font-size:calc(11px*var(--ts));font-weight:700;color:var(--teal-ink);background:var(--teal)}
   .t-filters .t-n[hidden]{display:none}
+  .t-select{display:none}
   @media (max-width:560px){
     .tools{display:flex;flex-wrap:wrap}
     /* search and Filters share the first row (search takes all but Filters' width,
@@ -2527,6 +2557,9 @@
     .tools>:not(input[type=search]):not(.t-filters){flex:1 1 calc(50% - 4px)}
     /* !important: Select all is a label with an inline display of its own */
     .tools:not(.open)>:not(input[type=search]):not(.t-filters){display:none!important}
+    /* One ranks button, not two stacked: with accounts out of date, Refresh N stale
+       is the one a phone needs (the rest were read recently); with none, Check all. */
+    .cmd:has(#bCheckStale:not(.hidden)) #bCheckAll{display:none}
     .tools.open>.t-filters{background-color:var(--panel3);border-color:var(--line2)}
     /* The figures wrapped two to a row, a third alone beneath them, and the champion
        chips wrapped into a block of their own: together most of a screen. Each is
@@ -2629,8 +2662,10 @@
        grid and had to spot what moved. -->
   <div id="awayBand" class="away-band hidden"></div>
 
-  <div id="previewBanner" class="hidden" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border:1px solid color-mix(in srgb,var(--gold) 42%,transparent);background:color-mix(in srgb,var(--gold) 9%,transparent);color:var(--text);padding:13px 16px;border-radius:var(--r-md);font-size:calc(13px*var(--ts));margin-bottom:18px">
-    <span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> <b>Preview mode</b> — this is example data to show you the layout. Nothing here is saved.</span>
+  <!-- One line: a banner over two lines, plus a toast saying the same thing, plus
+       the page under it, was most of a phone's first screen in the preview. -->
+  <div id="previewBanner" class="hidden">
+    <span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> <b>Preview</b>: example data, nothing is saved</span>
     <button id="bExitPreview" class="b-gold">Exit preview</button>
   </div>
 
@@ -2646,7 +2681,7 @@
          reading the privacy notes first; operators and keys look like what you type. -->
     <div class="mdl-b"><dl class="help">
       <dt>Your data</dt>
-      <dd><b>Stays here by default.</b> Accounts are saved in this browser on this device. Optional Device sync (Settings) uploads only an encrypted vault blob to your own Worker; Discord/API/rank proxies leave the browser when you enable them. Clearing browser data wipes the vault, so use <b>Export</b> for backups and <b>Import</b> to restore or merge them.</dd>
+      <dd><b>Stays here, apart from the Riot ID.</b> Accounts, logins and notes are saved in this browser on this device. To read a rank, the Riot ID goes to op.gg through a public proxy (corsproxy.io, allorigins.win or r.jina.ai), or to your own Worker if you set one up. The page's fonts load from Google Fonts. The optional extras send only what they need: Device sync uploads an encrypted vault to your own Worker, Discord alerts go to your webhook, and the AI rank check goes to Anthropic. Clearing browser data wipes the vault, so use <b>Export</b> for backups and <b>Import</b> to restore or merge them.</dd>
       <dt>Rank checks</dt>
       <dd><b>Free.</b> Refresh pulls the current rank straight from op.gg — no account, no key. If the auto-fetch is ever blocked, use <b>Rank</b> in a card's ⋯ menu to enter it by hand — history, the chart and the stats all work the same either way.</dd>
       <dt>Layouts</dt>
@@ -3021,7 +3056,7 @@
     <div class="mdl-f">
       <button id="baSave" class="b-gold">Add all</button>
       <button id="baCancel">Cancel</button>
-      <span class="sp hint">Everything here stays in this browser.</span>
+      <span class="sp hint">The Riot IDs are looked up on op.gg; nothing else here leaves this browser.</span>
     </div>
   </div></div></div>
 
@@ -3107,7 +3142,7 @@
     <div class="mdl-f">
       <button id="fSave" class="b-gold">Add account</button>
       <button id="fCancel">Cancel</button>
-      <span class="sp hint">Everything here stays in this browser.</span>
+      <span class="sp hint">The login stays in this browser; the Riot ID is looked up on op.gg.</span>
     </div>
   </div></div></div>
 
@@ -3178,6 +3213,8 @@
     <label style="display:flex;align-items:center;gap:6px;font-size:calc(12px*var(--ts));color:var(--muted);cursor:pointer;padding:0 4px">
       <input type="checkbox" id="tSelectAll" style="width:auto">Select all shown
     </label>
+    <!-- phones only: a touch screen has no hover to reveal the checkboxes -->
+    <button type="button" id="tSelectMode" class="t-select" aria-pressed="false">Select</button>
   </div>
   </div>
   <!-- Hangs off the console's bottom-left corner rather than sitting in a band
@@ -3421,8 +3458,14 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.9.1";
+const APP_VERSION="2.10.0";
 const APP_CHANGELOG=[
+  {v:"2.10.0",items:[
+    "On a phone your accounts are on the first screen: stats fold away, one ranks button, a one-line preview banner",
+    "The phone list copies a login in one tap; checkboxes come with Select",
+    "\"+87 LP\" says it's since the last check, with the pace beside it; banned accounts stay quiet everywhere",
+    "The app says truthfully what leaves your browser: only the Riot ID, to look up a rank",
+  ]},
   {v:"2.9.1",items:[
     "Saved passwords in plain text? The app now asks you to set a master password, with Not now and Don't ask again",
     "Riot's own disclaimer replaces \"not affiliated\", in the footer, on shared snapshots and in the README",
@@ -6880,8 +6923,16 @@ function render(){
 }
 // `shown` is passed in by renderGrid, which has just built the same list — this
 // is called on every filter change and filtered() sorts.
+/* Phones show the bulk checkboxes only while selecting: tapping Select starts it,
+   Done (the same button) or the bar's Clear ends it and drops the selection. */
+function syncSelecting(){
+  const on=!!ui.selecting||selected.size>0;
+  document.body.classList.toggle("selecting",on);
+  const b=$("tSelectMode");if(b){b.setAttribute("aria-pressed",String(on));b.textContent=on?"Done":"Select"}
+}
 function renderBulkBar(shown){
   const n=selected.size;
+  syncSelecting();
   $("bulkbar").classList.toggle("hidden",n===0);
   $("bulkCount").textContent=n+" selected";
   // "Select all shown" stayed ticked after the filter under it changed, so it
@@ -7009,13 +7060,20 @@ function renderRibbon(){
     +(best?`<span class="rib-best">best ${nameOf(best)} · <b style="color:${tierColor(best.stats.tier)}">${esc(shortRank(best.stats))}</b></span>`:"")
     +`</div>`);
 }
+/* Collapsed until asked for on a phone: there the stats were the whole first
+   screen, ahead of every account. A choice made with the toggle is kept on any
+   screen; until then a phone starts closed and a wider screen open. */
+function dashCollapsed(){
+  if(typeof cfg.dashCollapsed==="boolean")return cfg.dashCollapsed;
+  return !!(window.matchMedia&&matchMedia("(max-width:560px)").matches);
+}
 function syncDashToggle(){
   const b=$("bDashToggle");
   const show=accounts.some(a=>!a.archived);
   b.classList.toggle("hidden",!show);
-  b.classList.toggle("open",!cfg.dashCollapsed);
+  b.classList.toggle("open",!dashCollapsed());
   // the verb is its own span so a phone, short of room, can say just "Stats"
-  setHTML(b,icon("chevron")+` <span class="dt-v">${cfg.dashCollapsed?"Show":"Hide"} </span><span class="dt-n">stats</span>`);
+  setHTML(b,icon("chevron")+` <span class="dt-v">${dashCollapsed()?"Show":"Hide"} </span><span class="dt-n">stats</span>`);
 }
 function renderDash(){
   applyRankTheme(); // a new best tier is news the dashboard already gets; the colours follow it
@@ -7028,7 +7086,7 @@ function renderDash(){
   const filterHint=[ui.region&&ui.region,ui.status&&ui.status,ui.tag&&("#"+ui.tag),ui.favOnly&&"★",ui.search&&("“"+ui.search+"”")].filter(Boolean).join(" · ");
   syncDashToggle();
   if(!allActive.length){hideSparkTip();el.innerHTML="";return}
-  if(cfg.dashCollapsed){hideSparkTip();el.innerHTML="";return}
+  if(dashCollapsed()){hideSparkTip();el.innerHTML="";return}
   const ranked=countPool.filter(a=>isLive(a)&&a.stats&&a.stats.found!==false&&a.stats.tier&&a.stats.tier.toUpperCase()!=="UNRANKED");
   const pool=ranked.filter(inCombined);
   const excludedN=ranked.length-pool.length;
@@ -8354,7 +8412,8 @@ function rowHTML(a,i){
   const st=STATUS[a.status]||STATUS.active;
   const open=openInfo.has(a.id);
   const {w:wins,l:losses,total,wr}=winLoss(s);
-  const dv=lastDelta(a);
+  // a banned account's rank will never move again: its last change is not news here either
+  const dv=a.status==="banned"?0:lastDelta(a);
   let rank="—",lp="";
   if(isChecking)rank="…";
   else if(!hasReading(s))rank="Never checked";
@@ -8365,7 +8424,7 @@ function rowHTML(a,i){
   }else rank="Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
-  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${idAttr(a.id)}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx row${a.fav?" gold":""}${flashId===a.id?" flash":""}${open?" open":""}" data-id="${idAttr(a.id)}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     <div class="rw-main" data-act="info" role="button" tabindex="0" aria-expanded="${open}">
       <!-- No stopPropagation here: every click on a card is handled by one
            delegated listener on #grid, and closest("[data-act]") already stops at
@@ -8431,7 +8490,7 @@ function tileHTML(a){
     if(s.lp!=null)lp=s.lp+" LP";
   }else rank="Unranked";
   const st=STATUS[a.status]||STATUS.active;
-  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"?` style="--st:${st.color}"`:""}>
+  return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" — "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
     <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
@@ -8465,6 +8524,12 @@ function cardHTML(a,i){
   {
     const dv=lastDelta(a);
     if(dv&&!dead)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
+    /* "+87 LP" over what? Said under the chip now, with the pace beside it: the
+       pace had a whole row of the card to itself ("Climb · +21 LP/day"), and
+       without "since last check" the two numbers read as a contradiction. */
+    const r=dead?null:climbRate(hist), pace=r&&Math.abs(r.lpPerDay)>=1?(r.lpPerDay>0?"+":"")+Math.round(r.lpPerDay)+" LP/day":"";
+    const cap=[dv&&!dead?"since last check":"",pace].filter(Boolean).join(" · ");
+    if(cap)deltaChip+=`<span class="d-cap" title="${pace?"The average pace over the chart's checks":"Since previous check"}">${esc(cap)}</span>`;
   }
   /* There was a flame "Climbing" chip here too (LP up three checks running). It was
      the fourth way the card said "going up", beside the +LP chip, the Climb figure
@@ -8542,9 +8607,7 @@ function cardHTML(a,i){
     {
       const g=gamesSince(hist);
       if(g)microStats.push(["Since last check",g.n+(g.n===1?" game · ":" games · ")+g.w+"W "+g.l+"L"]);
-      const r=climbRate(hist);
-      if(r&&Math.abs(r.lpPerDay)>=1)
-        microStats.push(["Climb",(r.lpPerDay>0?"+":"")+Math.round(r.lpPerDay)+" LP/day"]);
+      // the pace ("Climb") sits under the LP chip now, beside "since last check"
     }
     if(s.mmr)microStats.push(["MMR est.",s.mmr]);
     if(s.avgRecent)microStats.push(["Recent avg",s.avgRecent]);
@@ -8555,7 +8618,7 @@ function cardHTML(a,i){
   // Active is the default state of almost every account, so railing it green just
   // paints the same stripe down the whole grid and says nothing. Only the states
   // worth spotting get one.
-  const railed=a.status&&a.status!=="active";
+  const railed=a.status&&a.status!=="active"&&a.status!=="banned"; // banned says it with its badge and strikethrough
   const icon0=iconUrl(s);
   return `<div class="hx${a.fav?" gold":""}${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}" style="--d:${(i||0)*40}ms"><div class="hx-in card${a.status==="banned"?" dead":""}${isChecking?" scanning":""}${openInfo.has(a.id)?" info-open":""}" data-id="${idAttr(a.id)}"${railed?` style="--st:${st.color}"`:""}>
     ${champArtHTML(a)}${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
@@ -8916,7 +8979,7 @@ function renderGrid(){
       +`<li><span class="wl-n">2</span><b>Check its rank</b><span>Free and automatic, read from op.gg. No key needed.</span></li>`
       +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Login shows the username and password, each one click to copy.</span></li></ol>`
       +`<div class="wl-acts"><button id="bEmptyAdd" class="b-teal">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div>`
-      +`<p class="wl-note">${icon("lock")}<span>Everything stays in this browser; nothing is uploaded. Clearing the browser's data clears the vault too, so keep a backup.</span></p></div></div>`);
+      +`<p class="wl-note">${icon("lock")}<span>Logins, passwords and notes stay in this browser. A rank check sends only the Riot ID to op.gg, through a public proxy. Clearing the browser's data clears the vault too, so keep a backup.</span></p></div></div>`);
   }else if(list.length===0){
     /* The zero-accounts state offers Add account and the demo; this one used to
        be a sentence and nothing else — on a page where the filters are spread
@@ -9929,7 +9992,6 @@ function loadDemo(){
       history:[{t:now-50*D,tier:"BRONZE",division:"II",lp:30},{t:now-40*D,tier:"BRONZE",division:"I",lp:12}]})
   ];
   previewMode=true;render();
-  toast("Previewing example data — nothing is saved until you exit preview and add real accounts");
 }
 
 // ---------- events ----------
@@ -10642,7 +10704,7 @@ $("tFilters").addEventListener("click",()=>{
 $("tFav").addEventListener("click",()=>{ui.favOnly=!ui.favOnly;syncToggles();renderFilters()});
 $("tArchived").addEventListener("click",()=>{ui.showArchived=!ui.showArchived;syncToggles();render()});
 $("bDashToggle").addEventListener("click",()=>{
-  cfg.dashCollapsed=!cfg.dashCollapsed;
+  cfg.dashCollapsed=!dashCollapsed();
   // one-shot: renderDash also runs on every account change, and the panel must
   // not re-animate then — only when the user actually opened it
   dashJustOpened=!cfg.dashCollapsed;
@@ -10985,7 +11047,12 @@ $("bulkDelete").addEventListener("click",()=>{
   selected.clear();lastSelectedId=null;render();
   saveThen(n+" account"+(n===1?"":"s")+" deleted");
 });
-$("bulkClear").addEventListener("click",()=>{selected.clear();lastSelectedId=null;render()});
+$("bulkClear").addEventListener("click",()=>{selected.clear();lastSelectedId=null;ui.selecting=false;render()});
+$("tSelectMode").addEventListener("click",()=>{
+  if(ui.selecting||selected.size){ui.selecting=false;selected.clear();lastSelectedId=null}
+  else ui.selecting=true;
+  render();
+});
 
 // the note editor lives inside the grid, which re-renders from scratch — so its
 // two listeners are delegated like everything else on a card
