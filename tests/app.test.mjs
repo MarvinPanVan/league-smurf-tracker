@@ -8338,7 +8338,7 @@ test("on a phone the header is one app bar: the wordmark left, the tray right, t
   const r = css.slice(at, css.indexOf("\n  }", at));
   assert.match(r, /\.top>\.bar\{grid-column:2;grid-row:1/, "the tray beside the wordmark, not on a row of its own");
   assert.match(r, /\.top>\.ribbon\{grid-column:1\/-1;grid-row:2/);
-  assert.match(r, /\.brand-mark,\.top>\.brand \.brand-sub\{display:none\}/);
+  assert.match(r, /\.top>\.brand \.brand-mark\{display:none\}/);
   assert.match(r, /#bDashToggle \.dt-v\{display:none\}/, "the toggle says just Stats");
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
     stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 3, losses: 2, updatedAt: Date.now() } }]);
@@ -9094,6 +9094,15 @@ test("one type scale: nothing under 11px, 11px only inside charts and badges, sm
   assert.deepEqual([...sizes].filter(s => s < 24).sort((a, b) => a - b), [11, 12, 13, 14, 16, 18, 20, 22], "the scale below display sizes");
   assert.match(css, /\.stat \.k,\.dist \.k,\.dash-filter \.k,[^{]*\{font-size:calc\(12px\*var\(--ts\)\);font-weight:500;letter-spacing:0;text-transform:none\}/,
     "the shared label: a calm 12px in sentence case");
+});
+
+// The header carried two names and a slogan badge beside the rank emblems and buttons
+test("the header has one name, the wordmark, and no slogan badge", () => {
+  const win = bootApp();
+  const brand = win.document.querySelector(".top>.brand");
+  assert.equal(brand.textContent.trim(), "Smurf Tracker");
+  for (const sel of [".top", "#settings"])
+    assert.doesNotMatch(win.document.querySelector(sel).textContent, /Private by default|Summoner Vault/, sel + ", the Settings preview of the header included");
 });
 
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row
