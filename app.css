@@ -473,8 +473,13 @@
      opposite the grid they act on, while every other control over the same
      accounts lived down here. Joined onto the filter bar they read as what they
      are — the row you work the collection from — and being sticky as one unit
-     means the primary action stays reachable instead of scrolling off the top. */
-  .console{position:sticky;top:0;z-index:10;margin:0 0 18px;
+     means the primary action stays reachable instead of scrolling off the top.
+     Only the search row stays, though: pinned whole it held two rows, about 110px
+     of every screen, for buttons you use at the top of the page. The console sticks
+     at minus the command row's height (measured in app.js), so that row scrolls off
+     and the search row stops at the top, with nothing in the page changing size.
+     While a check runs it pins whole again, so Stop and the progress stay in reach. */
+  .console{position:sticky;top:calc(-1*var(--cmd-pin,0px));z-index:10;margin:0 0 18px;
     border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;
     /* glass, because it rides over the cards: blurred, but not saturated, which
        turned whatever scrolled under it into a smear of its brightest colour */
@@ -497,14 +502,11 @@
     border-color:color-mix(in srgb,var(--warn) 34%,transparent)}
   .cmd-count .warn.on{background:color-mix(in srgb,var(--warn) 18%,transparent);
     border-color:color-mix(in srgb,var(--warn) 46%,transparent)}
+  .console.running{top:0}
+  /* The rows used to lose some padding once the header scrolled away, which moved
+     every card under them up 16px at that moment. With one row pinned there is
+     little height to win back, so they keep their size. */
   .tools{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:12px}
-  /* Scrolled past the header the console is pure overhead on screen, so it gives
-     some of that height back. Controls stay put — only the air around them goes. */
-  body.scrolled .cmd{padding:7px 12px}
-  body.scrolled .tools{padding:8px 12px}
-  body.scrolled .console{border-radius:0 0 var(--r-md) var(--r-md)}
-  .cmd,.tools{transition:padding .18s cubic-bezier(.22,1,.36,1)}
-  @media (prefers-reduced-motion:reduce){.cmd,.tools{transition:none}}
   /* layout switch: segmented control. Kept fully isolated from the global
      button chrome — that rule transitions border-color + translateY on hover,
      which made the dividers flash and the icons look like they squeezed. */

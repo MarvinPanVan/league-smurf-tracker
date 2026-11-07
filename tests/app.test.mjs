@@ -10049,3 +10049,27 @@ test("frozen: both export files and the CSV import into an empty vault", async (
   assert.equal(own.honor, 3, "and the note fields at the end of each row");
 });
 
+
+// The console was pinned whole, two rows and about 110px of every screen, and its
+// rows lost padding as the header left, which moved every card 16px at that moment
+test("scrolled down, only the search row stays pinned, and nothing shifts on the way", async () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /\n  \.console\{position:sticky;top:calc\(-1\*var\(--cmd-pin,0px\)\)/, "it sticks at minus the command row");
+  assert.match(css, /\n  \.console\.running\{top:0\}/, "and whole while a check runs");
+  assert.doesNotMatch(css, /body\.scrolled/, "no row changes size once the header is gone");
+  // the offset is the command row's measured height, kept up to date as it wraps
+  const watched = [];
+  const win = bootApp(seededAccount(), w => {
+    w.ResizeObserver = class { constructor(cb) { this.cb = cb; } observe(el) { watched.push([el, this.cb]); this.cb([]); } };
+    Object.defineProperty(w.HTMLElement.prototype, "offsetHeight", { configurable: true, get() { return this.classList.contains("cmd") ? 59 : 0; } });
+    Object.defineProperty(w.HTMLElement.prototype, "clientTop", { configurable: true, get() { return this.classList.contains("console") ? 1 : 0; } });
+  });
+  const con = win.document.querySelector(".console");
+  assert.ok(watched.some(([el]) => el.classList.contains("cmd")), "the command row is watched");
+  assert.equal(con.style.getPropertyValue("--cmd-pin"), "60px", "its height and the console's top edge");
+  assert.ok(!con.classList.contains("running"));
+  win.fetch = () => new Promise(() => {});   // a check that never answers
+  win.document.getElementById("bCheckAll").click();
+  await until(() => con.classList.contains("running"), "the console to pin whole while checking");
+  assert.ok(!win.document.getElementById("bCancelCheck").classList.contains("hidden"), "with Stop in it");
+});

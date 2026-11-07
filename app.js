@@ -2895,6 +2895,7 @@ function renderRun(){
   const bar=$("runbar"), cancel=$("bCancelCheck");
   bar.classList.toggle("hidden",!run);
   cancel.classList.toggle("hidden",!run);
+  document.querySelector(".console").classList.toggle("running",!!run);   // Stop stays pinned
   if(!run)return;
   const pct=run.total?Math.round(run.done/run.total*100):0;
   bar.querySelector(".run-fill").style.width=pct+"%";
@@ -7483,13 +7484,15 @@ $("bDashToggle").addEventListener("click",()=>{
   if("IntersectionObserver"in window&&head){
     new IntersectionObserver(([e])=>{
       btn.classList.toggle("hidden",e.isIntersecting);
-      // The sticky console keeps two full rows pinned to the top of the viewport
-      // for the whole scroll. Once the header is gone it tightens up: same
-      // controls, less of the screen spent on them. One observer for both, so
-      // there is still no scroll listener anywhere in this file.
-      document.body.classList.toggle("scrolled",!e.isIntersecting);
     },{threshold:0}).observe(head);
   }
+  /* How far the console may scroll before it sticks: the height of its command
+     row, so only the search row stays pinned (see .console in app.css). Measured,
+     because the row wraps at some widths. Without ResizeObserver it stays 0 and the
+     whole console pins, as it always did. */
+  const con=document.querySelector(".console"), cmd=con&&con.querySelector(".cmd");
+  if(cmd&&"ResizeObserver"in window)
+    new ResizeObserver(()=>con.style.setProperty("--cmd-pin",cmd.offsetHeight+con.clientTop+"px")).observe(cmd);
   btn.addEventListener("click",()=>{
     window.scrollTo({top:0,behavior:prefersReducedMotion()?"auto":"smooth"});
     const first=document.querySelector("#tSearch");
