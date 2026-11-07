@@ -7296,6 +7296,9 @@ $("sVaultRemove").addEventListener("click",async()=>{
   toast("Password protection removed");
 });
 $("bHelp").addEventListener("click",()=>{const willShow=$("help").classList.contains("hidden");closeAllPanels();if(willShow)$("help").classList.remove("hidden")});
+// the footer's Terms: Help, at "Using this app", where the terms are written out
+$("footTerms").addEventListener("click",e=>{e.preventDefault();closeAllPanels();$("help").classList.remove("hidden");
+  const t=$("helpTerms");if(t&&t.scrollIntoView)t.scrollIntoView({block:"start"})});
 $("bHelpClose").addEventListener("click",()=>{$("help").classList.add("hidden");cfg.seenHelp=true;saveCfg()});
 $("bExport").addEventListener("click",doExport);
 $("sBackend").addEventListener("change",updateBackendStatus);

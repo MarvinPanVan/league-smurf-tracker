@@ -1506,6 +1506,7 @@
   .help{display:grid;grid-template-columns:118px minmax(0,1fr);gap:0 22px;margin:0;padding:8px 24px 12px;
     font-size:calc(13px*var(--ts));line-height:1.7;color:var(--muted)}
   .help dt,.help dd{padding:13px 0;border-top:1px solid var(--line)}
+  .help-lic{margin:0;padding:0 24px 16px;font-size:calc(12px*var(--ts))}
   .help dt:first-of-type,.help dd:first-of-type{border-top:0}
   .help dt{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt);line-height:2.2}
   .help dd{margin:0}
@@ -1824,6 +1825,10 @@
   .count{margin-top:30px;text-align:center;font-size:calc(12px*var(--ts));color:var(--faint)}
   .count a{color:var(--gold-txt);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
   .count a:hover{border-bottom-color:currentColor}
+  .foot{margin-top:30px}
+  .foot .count{margin-top:0}
+  .foot-l{color:var(--muted)}
+  .foot .riot-notice{margin:6px auto 0;max-width:820px;font-size:calc(11px*var(--ts));line-height:1.5;color:var(--faint)}
   /* The version, hovering for what changed in it. Tabular figures so it doesn't
      jiggle between releases, and a help cursor because there is something to read. */
   .ver{font-variant-numeric:tabular-nums;letter-spacing:.02em}

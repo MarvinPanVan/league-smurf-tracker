@@ -9070,6 +9070,23 @@ test("the new address takes a moved vault only when it has none, and only from t
   assert.match(full.__r, /refused/);
 });
 
+// The footer was three lines, one of them the terms in a tone that read as hostile
+// at full size. Now one line, the terms a click away in Help, Riot's notice small.
+test("the footer is one line with a Terms link into Help, and Riot's notice stays on the page", () => {
+  const win = bootApp();
+  const doc = win.document, foot = doc.querySelector("footer.foot");
+  const line = foot.querySelector(".foot-l").textContent.replace(/\s+/g, " ").trim();
+  assert.match(line, /^© 2026 MarvinPanVan · v\d+\.\d+\.\d+ · Terms · Discord: marvinpanvan$/);
+  assert.doesNotMatch(foot.textContent, /Do not resell/, "the terms are not shouted at the foot of every page");
+  assert.ok(foot.querySelector(".riot-notice"), "Riot's notice is on the page, where players can see it");
+  assert.match(html, /\.foot \.riot-notice\{[^}]*font-size:calc\(11px\*var\(--ts\)\)/, "small");
+  doc.getElementById("footTerms").click();
+  assert.equal(doc.getElementById("help").classList.contains("hidden"), false, "Terms opens Help");
+  assert.equal(doc.getElementById("helpTerms").textContent, "Using this app", "at the terms");
+  assert.match(doc.getElementById("helpTerms").nextElementSibling.textContent, /free for your own personal use/, "which are there in full, unchanged");
+  assert.ok(doc.querySelector('#help a[href$="/LICENSE"]'), "with the licence one more click away");
+});
+
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row
 // ended hundreds of pixels apart
 test("a card's notes keep to one row of two chips and +N more; Details shows them all", () => {
