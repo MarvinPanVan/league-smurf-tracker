@@ -2581,13 +2581,17 @@ test("Recent form: a Riot-read account's Details fetch its last five ranked game
   await until(() => /No ranked games yet this season/.test(card("r").textContent), "Retry to fetch again");
 });
 
-test("the Best account tile's rank can break between its pieces in a narrow column", () => {
+// The stats panel's Best account tile repeated the header; the header now says who
+test("the header names the best account as well as its rank", () => {
   const win = bootApp([{ id: "g", label: "Smurf10", region: "EUW", gameName: "g", tagLine: "1", status: "active", tags: [], history: [],
-    stats: { found: true, tier: "GRANDMASTER", division: null, lp: 874, wins: 1, losses: 1, updatedAt: Date.now() } }]);
-  const tile = [...win.document.querySelectorAll("#dash .stat")].find(s => s.querySelector(".k").textContent === "Best account");
-  const list = tile.querySelector(".v small .dots");
-  assert.ok(list, "a list that breaks between its pieces");
-  assert.deepEqual([...list.querySelectorAll(".dot-i")].map(s => s.textContent), ["Grandmaster", " · 874 LP"]);
+    stats: { found: true, tier: "GRANDMASTER", division: null, lp: 874, wins: 1, losses: 1, updatedAt: Date.now() } },
+    { id: "s", label: "Other", region: "EUW", gameName: "s", tagLine: "2", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "SILVER", division: "I", lp: 4, wins: 1, losses: 1, updatedAt: Date.now() } }]);
+  const best = win.document.querySelector(".rib-cap .rib-best");
+  assert.ok(best, "the caption carries the best account");
+  assert.match(best.textContent.replace(/\s+/g, " "), /best Smurf10 · Grandmaster · 874 LP/);
+  assert.equal([...win.document.querySelectorAll("#dash .stat .k")].some(k => /Best account/.test(k.textContent)), false,
+    "and the panel no longer says it a second time");
 });
 
 test("on a phone the set-up steps wrap their labels instead of cutting them off", () => {
@@ -3869,9 +3873,11 @@ test("rank spread gems are ordered highest tier first", () => {
     { id: "u", gameName: "u", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
       stats: { found: true, tier: "UNRANKED", division: null, lp: null, updatedAt: Date.now() } },
   ]);
-  const tiers = [...win.document.querySelectorAll("#dash .dist .gem[data-tier]")].map(g => g.dataset.tier);
+  // the header bar is the spread now; the panel's gem row repeated it
+  const tiers = [...win.document.querySelectorAll("#ribbon .rib-seg[data-tier]")].map(g => g.dataset.tier);
   assert.deepEqual(tiers, ["DIAMOND", "EMERALD", "PLATINUM", "GOLD", "UNRANKED"],
     "best rank on the left, Unranked last");
+  assert.equal(win.document.querySelector("#dash .gem-b"), null, "and it is said once");
 });
 
 test("an account with no rank leads with its level, not with the word Unranked", () => {
@@ -4959,21 +4965,21 @@ test("the settings body is grouped rather than one flat run of fields", () => {
 
 // ---- second review pass ----
 
-// "Needs refresh · N over 30d" counted never-checked accounts as 30 days old,
-// double-counting them against the "Never checked" tile right beside it.
-test("the over-30d figure only counts checks that actually happened", () => {
+// "Needs refresh" counted never-checked accounts as long-stale, double-counting them
+// against the "Never checked" figure right beside it. The panel's tile is gone (the
+// toolbar says it); the rule it guarded stands.
+test("a refresh is owed only on checks that actually happened; never checked is counted apart", () => {
   const now = Date.now(), D = 86400000;
   const acc = (n, updatedAt) => ({ id: "x" + n, gameName: "A" + n, tagLine: "1", region: "EUW",
     status: "active", tags: [], history: [],
     stats: updatedAt ? { found: true, tier: "GOLD", division: "II", lp: 10, updatedAt } : null });
 
   const win = bootApp([acc(1, now - 40 * D), acc(2, now - 5 * D), acc(3, null), acc(4, null)]);
-  const note = win.document.querySelector('[data-flag="stale"] .s-note').textContent;
-  assert.match(note, /over 30d/);
-  assert.match(note, /· 1 over 30d/, "only the one that was checked 40 days ago");
-
-  const never = win.document.querySelector('[data-flag="unchecked"] .v').textContent;
+  assert.match(win.document.querySelector('#count [data-flag="stale"]').textContent, /^2 need a refresh/,
+    "the two checked days ago");
+  const never = win.document.querySelector('#dash [data-flag="unchecked"] .v').textContent;
   assert.equal(never, "2", "the two unchecked ones are counted here, and only here");
+  assert.equal(win.document.querySelector('#dash [data-flag="stale"]'), null, "the toolbar says it, the panel does not repeat it");
 });
 
 // The duplicate guard only ran on add, so renaming one account onto another got
@@ -5042,9 +5048,11 @@ test("select-all tracks whatever the filters are showing", async () => {
 });
 
 test("every filter toggle reports its state, not just its colour", () => {
-  const now = Date.now();
+  const now = Date.now() - 5 * 86400000; // stale, so the toolbar's refresh filter is there
   const win = bootApp([{ id: "g1", gameName: "G", tagLine: "1", region: "EUW", status: "active",
-    tags: [], history: [], stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: now } }]);
+    tags: [], history: [], stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: now } },
+    { id: "s1", gameName: "S", tagLine: "1", region: "EUW", status: "active", // a second, so the header bar is there
+    tags: [], history: [], stats: { found: true, tier: "SILVER", division: "II", lp: 5, updatedAt: now } }]);
 
   const gem = () => win.document.querySelector('[data-tier="GOLD"]');
   assert.equal(gem().getAttribute("aria-pressed"), "false");
@@ -5509,16 +5517,16 @@ test("the ribbon shows the vault's spread and filters when a segment is clicked"
    cards. Both now ask the same question. */
 test("the Unranked count and the filter behind it agree", () => {
   const win = bootApp(ladderSeed());
-  const gem = win.document.querySelector('#dash .gem[data-tier="UNRANKED"]');
-  assert.ok(gem, "the vault has an unranked account, so the gem is there");
-  assert.match(gem.textContent, /×1/, "the never-checked account is not one of these");
+  const gem = win.document.querySelector('#ribbon .rib-seg[data-tier="UNRANKED"]');
+  assert.ok(gem, "the vault has an unranked account, so the header has a segment for it");
+  assert.equal(gem.textContent, "1", "the never-checked account is not one of these");
 
   gem.click();
   assert.equal(win.document.querySelectorAll(".card").length, 1, "and clicking it shows that one");
   assert.equal(win.document.querySelector(".card").dataset.id, "un");
 
   // the never-checked account is still reachable, from the tile that counts it
-  gem.click();
+  win.document.querySelector('#ribbon .rib-seg[data-tier="UNRANKED"]').click();
   win.document.querySelector('#dash [data-flag="unchecked"]').click();
   assert.equal(win.document.querySelectorAll(".card").length, 1);
   assert.equal(win.document.querySelector(".card").dataset.id, "nv");
@@ -8075,7 +8083,7 @@ test("bulk add opens over the page, focused on the list", async () => {
    spread has always used isLive(). A banned Bronze smurf therefore gave the
    header a Bronze segment the gem row underneath did not have, and made the
    caption claim a tier more than the vault actually spans. */
-test("the ribbon and the dash Rank spread agree about banned accounts", () => {
+test("the header bar leaves a banned account out of the tiers and counts it on its own", () => {
   const st = (tier, division) => ({ found: true, tier, division, lp: 50, wins: 10, losses: 8,
     level: 100, updatedAt: Date.now() });
   const win = bootApp([
@@ -8085,9 +8093,7 @@ test("the ribbon and the dash Rank spread agree about banned accounts", () => {
       tags: [], history: [], stats: st("BRONZE", "I") },
   ]);
   const tiers = sel => [...win.document.querySelectorAll(sel)].map(b => b.dataset.tier);
-  assert.deepEqual(tiers("#ribbon .rib-seg[data-tier]"), tiers("#dash .gem-b"),
-    "the header bar and the gem row answer the same question");
-  assert.deepEqual(tiers("#ribbon .rib-seg[data-tier]"), ["GOLD"]);
+  assert.deepEqual(tiers("#ribbon .rib-seg[data-tier]"), ["GOLD"], "the banned Bronze is not a tier the vault spans");
   assert.match(win.document.querySelector(".rib-cap").textContent, /across 1 tier\b/);
 
   // Not silently dropped either — it gets a segment of its own, so the segments
@@ -8146,7 +8152,7 @@ test("a banned Challenger is not the vault's best account", () => {
       tags: [], history: [], stats: st("CHALLENGER", null) },
   ]);
   const cap = win.document.querySelector(".rib-cap").textContent;
-  assert.match(cap, /best\s*Gold/i);
+  assert.match(cap, /best\s*Alive · Gold/i);
   assert.doesNotMatch(cap, /Challenger/i, "a gravestone is not a personal best");
 });
 
@@ -8188,6 +8194,27 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false,
     stats: { found: true, tier: "GOLD", division: "II", lp: 10 } }), false);
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
+});
+
+// After the first account the panel was 0W 0L, Best —, Group climb —: a wall of nothing
+test("the stats panel shows a figure only once there is something behind it", () => {
+  const tiles = win => [...win.document.querySelectorAll("#dash .stat .k")].map(k => k.textContent.trim());
+  // one account, never checked: the one thing worth saying is that
+  const fresh = bootApp([{ id: "n", gameName: "New", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], stats: null }]);
+  assert.deepEqual(tiles(fresh), ["Never checked"]);
+  assert.equal(fresh.document.querySelector("#dash .dash-head"), null, "no Counting picker with nothing ranked to count");
+  // a checked, unranked account with no games: nothing at all, and no Hide stats for an empty panel
+  const quiet = bootApp([{ id: "u", gameName: "Lvl", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "UNRANKED", division: null, lp: null, level: 12, updatedAt: Date.now() } }]);
+  assert.equal(quiet.document.querySelector("#dash .hx"), null, "no panel");
+  assert.ok(quiet.document.getElementById("bDashToggle").classList.contains("hidden"), "and no toggle for it");
+  // a ranked vault: the season, with nothing repeated from the header or the toolbar
+  const win = bootApp([{ id: "g", gameName: "G", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 10, losses: 8, updatedAt: Date.now() - 5 * 86400000 } }]);
+  const t = tiles(win);
+  assert.ok(t.includes("Season W/L"));
+  for (const gone of ["Accounts", "Best account", "Regions", "Needs refresh"]) assert.equal(t.includes(gone), false, gone);
+  assert.equal(win.document.querySelector("#dash .gem-b"), null, "no rank spread under it either");
 });
 
 // Every add started on EUW, and "Faker#KR1" stayed on EUW unless you changed it
@@ -8694,16 +8721,16 @@ test("closing Add account or Bulk add hands focus back to what opened it", async
    pieces still never break inside; the list breaks between them. Breaking
    between them then left "· 5 archived" starting a line of its own, so it is
    now the tile's note, as a dotList (below). */
-test("the Accounts tile's caption wraps between its pieces instead of being cut off", () => {
+// The panel's Accounts tile repeated the header caption; the caption is the count now
+test("the account count is the header caption's, in pieces that wrap between them", () => {
   const acc = (id, extra) => Object.assign({ id, gameName: id, tagLine: "1", region: "EUW", status: "active",
     tags: [], history: [], stats: null }, extra);
   const win = bootApp([acc("a", { fav: true }), acc("b", { status: "banned" }), acc("c", { archived: true })]);
-  const tile = [...win.document.querySelectorAll("#dash .stat")].find(s => /Accounts/i.test(s.querySelector(".k").textContent));
-  assert.equal(tile.querySelector(".v").textContent, "2", "the figure on its own, like the other tiles");
-  const note = tile.querySelector(".s-note .dots");
-  assert.ok(note, "the breakdown is the note, as a list of pieces");
-  assert.equal(note.textContent, "1 ★ · 1 banned · 1 archived");
-  assert.equal(note.querySelectorAll(".dot-i").length, 3, "one element per piece, so a line can only break between them");
+  const note = win.document.querySelector(".rib-cap > .dots");
+  assert.ok(note, "the breakdown is a list of pieces");
+  assert.match(note.textContent, /^2 accounts across 0 tiers · 1 never checked · 1 banned$/);
+  assert.ok(note.querySelectorAll(".dot-i").length >= 3, "one element per piece, so a line can only break between them");
+  assert.equal([...win.document.querySelectorAll("#dash .stat .k")].some(k => /^Accounts$/.test(k.textContent.trim())), false);
 });
 
 /* A "·" list that wraps put a dot at the end of one line or the start of the
@@ -8717,12 +8744,9 @@ test("a dot list keeps its dots inside the line, and its text reads as it did", 
   const acc = (id, region) => ({ id, gameName: id, tagLine: "1", region, status: "active", tags: [], history: [],
     stats: { found: true, tier: "GOLD", division: "II", lp: 50, wins: 10, losses: 9, updatedAt: Date.now() } });
   const win = bootApp(["EUW", "NA", "KR", "EUNE", "BR"].map((r, i) => acc("a" + i, r)));
-  const tile = name => [...win.document.querySelectorAll("#dash .stat")].find(s => s.querySelector(".k").textContent.trim() === name);
-  const lists = [tile("Regions").querySelector(".s-note .dots"), tile("Best account").querySelector(".v .dots"),
-    win.document.querySelector(".rib-cap > .dots")];
-  assert.ok(lists.every(Boolean), "Regions, Best account and the ribbon's caption are dot lists");
-  assert.equal(lists[0].textContent, "EUW 1 · NA 1 · KR 1 · EUNE 1 · BR 1");
-  assert.equal(lists[1].textContent, "Gold II · 50 LP");
+  const lists = [win.document.querySelector(".rib-cap > .dots")];
+  assert.ok(lists.every(Boolean), "the ribbon's caption is a dot list");
+  assert.equal(lists[0].textContent, "5 accounts across 1 tier");
   for (const l of lists) {
     const items = [...l.querySelectorAll(".dot-i")];
     assert.ok(!items[0].querySelector(".dot-s"), "the first piece has no dot before it");
@@ -8900,9 +8924,7 @@ test("the dashboard reads as one row of figures", () => {
   assert.match(wl.textContent.replace(/\s+/g, " "), /^3600W 3300L$/);
   assert.match(tile("Season W/L").querySelector(".s-note").textContent, /52% WR/, "the rate moves under it");
 
-  const reg = tile("Regions");
-  assert.match(reg.querySelector(".v").textContent.replace(/\s+/g, " "), /^2 regions$/, "a figure, like every other tile");
-  assert.match(reg.querySelector(".s-note").textContent, /EUW 2 · KR 1/, "the breakdown is the note");
+  assert.equal(tile("Regions"), undefined, "a count nobody acts on is not a figure here");
 
   const rule = html.match(/\.stat-b\{[^}]*\}/);
   assert.match(rule[0], /gap:0/, "a clickable tile does not inherit the button's flex gap");

@@ -6802,7 +6802,8 @@ function renderRibbon(){
         aria-label="${esc(s.label)}, ${s.n}"><i>${s.n}</i></button>`}).join("")}</div>
     <div class="rib-cap">${dotList([`<b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}`,
       unN&&`<b>${unN}</b> unranked`,missN&&`<b>${missN}</b> not found`,neverN&&`<b>${neverN}</b> never checked`,bannedN&&`<b>${bannedN}</b> banned`])}`
-    +(best?`<span>best <b style="color:${tierColor(best.stats.tier)}">${esc(shortRank(best.stats))}</b></span>`:"")
+    // with the name: the stats panel's Best account tile said who, and it is gone
+    +(best?`<span class="rib-best">best ${nameOf(best)} · <b style="color:${tierColor(best.stats.tier)}">${esc(shortRank(best.stats))}</b></span>`:"")
     +`</div>`);
 }
 function syncDashToggle(){
@@ -6830,24 +6831,10 @@ function renderDash(){
   let W=0,L=0;
   pool.forEach(a=>{W+=Number(a.stats.wins)||0;L+=Number(a.stats.losses)||0});
   const wr=(W+L)>0?Math.round(W/(W+L)*100)+"%":"—";
-  let best=null;
-  pool.forEach(a=>{if(rankValue(a.stats)>rankValue(best&&best.stats))best=a});
   const topChamps=mergeChampions(pool);
-  // the rank breaks between its pieces ("Grandmaster" / "· 874 LP") rather than
-  // running out of a narrow column as one unbreakable line
-  const bestTxt=best&&rankValue(best.stats)>=0?nameOf(best)+" <small>"+dotList(String(shortRank(best.stats)||"").split(" · ").map(esc))+"</small>":"—";
-  const regCount={};allActive.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
-  const regTxt=dotList(Object.entries(regCount).map(([r,n])=>esc(r+" "+n)));
-  const regN=Object.keys(regCount).length;
-  const dist={};ranked.forEach(a=>{const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1});
   const neverN=countPool.filter(neverChecked).length;
-  const un=countPool.filter(isUnrankedAnswer).length;
-  const staleN=countPool.filter(a=>isLive(a)&&isStale(a)).length;
-  const veryStaleN=countPool.filter(a=>isLive(a)&&isChecked(a)&&Date.now()-a.stats.updatedAt>30*24*3600*1000).length;
-  const bannedN=allActive.filter(a=>a.status==="banned").length;
   const attentionN=countPool.filter(needsAttention).length;
   const failedN=countPool.filter(a=>isLive(a)&&isFailed(a)).length;
-  const archivedN=accounts.length-allActive.length;
   let bk="";
   if(hasStorage){
     const remindDays=clampExportDays(cfg.exportRemindDays);
@@ -6859,80 +6846,77 @@ function renderDash(){
   const decayN=countPool.filter(decayRisk).length;
   const next=playNext(countPool);
   const poolTrend=poolLpTrend(pool), week=weekRecap(pool);
-  // These are filter toggles, not links — they say so to a screen reader as well
-  // as by lighting up.
-  const gem=(tier,label,n,colour)=>`<button class="gem gem-b${ui.tier===tier?" on":""}" data-tier="${tier}" aria-pressed="${ui.tier===tier}" title="Show only these">`
-    +`<i class="d" style="background:${colour}"></i>${label} <b>×${n}</b></button>`;
-  // Highest tier first — same order as the header ribbon and the default list sort.
-  const gems=TIER_ORDER.slice().reverse().filter(t=>dist[t]).map(t=>gem(t,t.charAt(0)+t.slice(1).toLowerCase(),dist[t],TIER_COLORS[t])).join("")
-    +(un>0?gem("UNRANKED","Unranked",un,TIER_COLORS.UNRANKED):"");
-  setHTML(el,`
-  <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
-  <div class="dash-head">
-    <div class="dash-filter">
-      <span class="k">Counting</span>
-      <select id="dashMin">${COMBINED_FLOORS.map(f=>`<option value="${f.v}"${(cfg.statsMinTier||"")===f.v?" selected":""}>${esc(f.label)}</option>`).join("")}</select>
-      <span class="dash-ex">${pool.length} of ${ranked.length} ranked${excludedN?" · "+excludedN+" left out":""}${filterHint?" · "+esc(filterHint):""}</span>
-    </div>
-  </div>
-  <div class="dash">
-    <div class="stat"><div class="k">Accounts</div><div class="v">${allActive.length}</div>
-      <div class="s-note">${dotList([allActive.filter(a=>a.fav).length+" ★",bannedN&&bannedN+" banned",archivedN&&archivedN+" archived"])}</div></div>
-    <div class="stat"><div class="k">Best account</div><div class="v" style="font-size:calc(14px*var(--ts))">${bestTxt}</div></div>
-    <div class="stat"><div class="k">Season W/L</div><div class="v nw">${W}<small>W</small> ${L}<small>L</small></div>
-      <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>
-    <div class="stat"><div class="k">Regions</div><div class="v">${regN||"—"}${regN?` <small>${regN===1?"region":"regions"}</small>`:""}</div>
-      ${regN?`<div class="s-note">${regTxt}</div>`:""}</div>
-    ${neverN?`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
-      <div class="v" style="color:var(--gold-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`:""}
-    ${attentionN?`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
-      <div class="v" style="color:var(--danger)">${attentionN}</div><div class="s-note">flagged by you, or the profile no longer exists</div></button>`:""}
-    ${failedN?`<button class="stat stat-b${ui.flag==="failed"?" on":""}" data-flag="failed" aria-pressed="${ui.flag==="failed"}"><div class="k">Last check failed</div>
-      <div class="v" style="color:var(--danger)">${failedN}</div><div class="s-note">auto-fetch failed — enter rank by hand or retry</div></button>`:""}
-    ${dupN?`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
-      <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`:""}
-    ${next?`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
-      <div class="v" style="font-size:calc(14px*var(--ts))">${nameOf(next.a)}</div><div class="s-note">${esc(next.why)}</div></button>`:""}
-    ${decayN?`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left — estimated from the games seen between checks"><div class="k">Decay risk</div>
-      <div class="v" style="color:#f0b45a">${decayN}</div><div class="s-note">a week or less banked — play a ranked game</div></button>`:""}
-    ${rotN?`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
-      <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`:""}
-    ${week?(()=>{
+  /* Said once, and only when there is something to say. The panel used to repeat
+     the header and the toolbar: Accounts (the header's caption says it), Best
+     account (so does the caption, now with the name), Rank spread (the header bar,
+     whose segments filter the same way) and Needs refresh (the toolbar's "N need
+     a refresh" and its Refresh stale button). Regions was a count nobody acts on.
+     What stays is the season, what to play, and what needs you — and a figure
+     with nothing behind it yet (0W 0L, a climb with one day of history) waits
+     until it has something. */
+  const cells=[
+    (W+L)>0&&`<div class="stat"><div class="k">Season W/L</div><div class="v nw">${W}<small>W</small> ${L}<small>L</small></div>
+      <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>`,
+    neverN&&`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
+      <div class="v" style="color:var(--gold-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`,
+    attentionN&&`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
+      <div class="v" style="color:var(--danger)">${attentionN}</div><div class="s-note">flagged by you, or the profile no longer exists</div></button>`,
+    failedN&&`<button class="stat stat-b${ui.flag==="failed"?" on":""}" data-flag="failed" aria-pressed="${ui.flag==="failed"}"><div class="k">Last check failed</div>
+      <div class="v" style="color:var(--danger)">${failedN}</div><div class="s-note">auto-fetch failed — enter rank by hand or retry</div></button>`,
+    dupN&&`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
+      <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`,
+    next&&`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
+      <div class="v" style="font-size:calc(14px*var(--ts))">${nameOf(next.a)}</div><div class="s-note">${esc(next.why)}</div></button>`,
+    decayN&&`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left — estimated from the games seen between checks"><div class="k">Decay risk</div>
+      <div class="v" style="color:var(--warn)">${decayN}</div><div class="s-note">a week or less banked — play a ranked game</div></button>`,
+    rotN&&`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
+      <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`,
+    week&&(()=>{
       const note=(week.games?week.games+" game"+(week.games===1?"":"s")+" · ":"")
         +(week.best?"best "+nameOf(week.best.a)+" +"+week.best.d:week.moved+" account"+(week.moved===1?"":"s")+" checked");
       const inner=`<div class="k">This week</div><div class="v">${week.lp>0?"+":week.lp<0?"−":""}${Math.abs(week.lp)} <small>LP</small></div><div class="s-note">${note}</div>`;
       return week.best?`<button class="stat stat-b" id="weekStat" data-next="${idAttr(week.best.a.id)}" title="The last seven days across the counted accounts — click to see the best climber">${inner}</button>`
         :`<div class="stat" id="weekStat" title="The last seven days across the counted accounts">${inner}</div>`;
-    })():""}
-    <div class="stat" id="ladderTrendStat"${poolTrend?` title="${esc(poolTrend.note)}"`:""}>
+    })(),
+    poolTrend&&`<div class="stat" id="ladderTrendStat" title="${esc(poolTrend.note)}">
       <div class="k">Group climb</div>
-      ${poolTrend
-        ?`<div class="v">${esc(poolTrend.headline)} <small>LP</small></div>
-          <div class="v spark-wrap">${poolTrend.svg}</div>
-          <div class="s-note">${esc(poolTrend.span)}</div>`
-        :`<div class="v">—</div><div class="s-note">needs ≥2 days of history on counted accounts</div>`}
+      <div class="v">${esc(poolTrend.headline)} <small>LP</small></div>
+      <div class="v spark-wrap">${poolTrend.svg}</div>
+      <div class="s-note">${esc(poolTrend.span)}</div></div>`,
+  ].filter(Boolean);
+  const bkNote=bk&&accounts.length&&!previewMode&&!(setupVisible()&&!cfg.lastExport)?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:"";
+  // nothing to show: no panel, and no Hide stats button for an empty one
+  $("bDashToggle").classList.toggle("hidden",!cells.length&&!topChamps.length);
+  if(!cells.length&&!topChamps.length){hideSparkTip();setHTML(el,bkNote);dashJustOpened=false;wireBkNow(el);return}
+  setHTML(el,`
+  <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
+  ${ranked.length?`<div class="dash-head">
+    <div class="dash-filter">
+      <span class="k">Counting</span>
+      <select id="dashMin">${COMBINED_FLOORS.map(f=>`<option value="${f.v}"${(cfg.statsMinTier||"")===f.v?" selected":""}>${esc(f.label)}</option>`).join("")}</select>
+      <span class="dash-ex">${pool.length} of ${ranked.length} ranked${excludedN?" · "+excludedN+" left out":""}${filterHint?" · "+esc(filterHint):""}</span>
     </div>
-    <button class="stat stat-b${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"><div class="k">Needs refresh</div>
-      <div class="v"${staleN?' style="color:var(--danger)"':""}>${staleN}</div>
-      <div class="s-note">older than 3 days${veryStaleN?" · "+veryStaleN+" over 30d":""}</div></button>
-  </div>
-  ${gems?`<div class="dist" style="border-top:1px solid var(--line)"><span class="k">Rank spread</span>${gems}</div>`:""}
-  ${topChamps.length?`<div class="dist" style="border-top:1px solid var(--line)"><span class="k">Best champions</span>${
+  </div>`:""}
+  ${cells.length?`<div class="dash">${cells.join("")}</div>`:""}
+  ${topChamps.length?`<div class="dist"${cells.length||ranked.length?' style="border-top:1px solid var(--line)"':""}><span class="k">Best champions</span>${
     topChamps.map(c=>`<span class="gem cmb" title="${esc(c.games)} games across ${esc(c.accs)} account${c.accs===1?"":"s"}">`
       +`<span class="n">${esc(c.name)}</span>`
       +`<b class="${c.wr>=50?"wr-good":""}">${esc(c.wr)}%</b>`
       +`<i class="g">${esc(c.wins)}<em>-</em>${esc(c.losses)}</i></span>`).join("")}</div>`:""}
   </div></div>
-  ${bk&&accounts.length&&!previewMode&&!(setupVisible()&&!cfg.lastExport)?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:""}`);
+  ${bkNote}`);
   dashJustOpened=false; // consumed by the render above
   bindSparkTip(el);
-  /* The reminder said "hit Export" — and Export lives two clicks away, inside the
-     ⋯ menu at the other end of the header. The way to act on it is now on it:
-     encrypted when there is a master password to encrypt with, plaintext (which
-     asks first whenever logins are in it) when there is not. */
+  wireBkNow(el);
+  balanceDash();
+}
+/* The reminder said "hit Export" — and Export lives two clicks away, inside the
+   ⋯ menu at the other end of the header. The way to act on it is now on it:
+   encrypted when there is a master password to encrypt with, plaintext (which
+   asks first whenever logins are in it) when there is not. */
+function wireBkNow(el){
   const bkNow=el.querySelector("#bkNow");
   if(bkNow)bkNow.onclick=()=>{vaultPassword?doExportEnc():doExport()};
-  balanceDash();
 }
 /* The figures are a grid that fits as many as it can per row, and how many there
    are depends on the vault (six to eleven). Eight at 1024px came out six and two:
