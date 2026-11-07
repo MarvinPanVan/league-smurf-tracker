@@ -3427,7 +3427,7 @@ function filtered(){
     rank:(x,y)=>rankValue(y.stats)-rankValue(x.stats),
     name:(x,y)=>(x.label||x.gameName).localeCompare(y.label||y.gameName),
     updated:(x,y)=>((y.stats&&y.stats.updatedAt)||0)-((x.stats&&x.stats.updatedAt)||0),
-    // the stamp the Login button leaves ("Opened 3 days ago"): the account you were
+    // the stamp the Login button leaves ("Last login 3 days ago"): the account you were
     // just on comes first, the ones you never open sink to the bottom
     opened:(x,y)=>openedAt(y)-openedAt(x),
     // the only number that matters on an account that isn't ranked yet
@@ -5439,7 +5439,7 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${isLive(a)&&isFailed(a)?`<span class="c-failed" title="${esc(s.note)}">${icon("alert")}Last check failed</span>`:""}${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}${a.status==="banned"?"":`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`}</span>
+      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.status==="banned"?"":`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`}${isLive(a)&&isFailed(a)?`<span class="c-failed" title="${esc(s.note)}">${icon("alert")}Last check failed</span>`:""}${a.lastLoginAt?`<span class="src" title="The last time you copied or looked at this account's login here">Last login ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
       <!-- Three buttons, not five, and the ⋯ no longer unfolds a second toolbar
            into the card: it opens one shared floating menu (see cardMenuHTML).
            DPM moved in there with the rest — it is an outbound link you follow

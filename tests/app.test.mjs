@@ -2114,7 +2114,7 @@ test("dates are where you are: backup and export file names, and the passkey's d
 test("Help names 2.4 and 2.5's features, and doesn't assume sixty accounts", () => {
   const win = bootApp();
   const help = win.document.getElementById("help").textContent;
-  for (const w of ["Password check-up", "Face ID", "Windows Hello", "Sort: Last opened", "Settings → Security"]) assert.ok(help.includes(w), w);
+  for (const w of ["Password check-up", "Face ID", "Windows Hello", "Sort: Last login", "Settings → Security"]) assert.ok(help.includes(w), w);
   assert.doesNotMatch(help, /sixty/);
 });
 
@@ -4063,7 +4063,7 @@ test("sorting by last opened: the account you were just on first, never-opened o
   const win = bootApp([mk("never"), mk("week", now - 7 * 864e5), mk("junk", "soon"), mk("now", now - 60000)]);
   const names = () => [...win.document.querySelectorAll(".c-name span")].map(n => n.textContent);
   const sort = win.document.getElementById("tSort");
-  assert.ok([...sort.options].some(o => o.value === "opened" && /Last opened/.test(o.textContent)));
+  assert.ok([...sort.options].some(o => o.value === "opened" && /Last login/.test(o.textContent)));
   sort.value = "opened"; sort.dispatchEvent(new win.Event("change"));
   assert.deepEqual(names().slice(0, 2), ["now", "week"], "most recently opened first");
   assert.deepEqual(names().slice(2).sort(), ["junk", "never"], "no stamp, or a broken one, sorts last");
@@ -6154,7 +6154,7 @@ test("copying a login, or looking at it, records that the account was reached fo
   assert.ok(at && Date.now() - at < 5000);
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.id === "t4").lastLoginAt, at,
     "and it survives the reload");
-  assert.match(card().querySelector(".c-foot").textContent, /Opened/);
+  assert.match(card().querySelector(".c-foot").textContent, /Last login just now/);
 
   card().querySelector('[data-act="login"]').click();   // the eye: looking stamps too
   const seen = stamp();
@@ -10341,4 +10341,18 @@ test("an account left alone says Idle and for how long, in words", () => {
   assert.doesNotMatch(win.document.getElementById("grid").textContent, /Rotate/);
   const tile = win.document.querySelector('[data-flag="rotate"]');
   if (tile) assert.match(tile.textContent, /Idle/);
+});
+
+// "Updated just now" beside "Opened 67 days ago" read as two clocks for one thing,
+// with Refresh between the second and nothing, far from the one it changes
+test("a card's footer says Updated, then Refresh, then Last login, each named for what it is", () => {
+  const seed = seededAccount();
+  Object.assign(seed[0], { lastLoginAt: Date.now() - 3 * 864e5 });
+  const win = bootApp(seed);
+  const meta = win.document.querySelector(".card .c-meta");
+  const kids = [...meta.children].map(el => el.className.split(" ")[0]);
+  assert.deepEqual(kids, ["upd", "c-ref", "src"], "Refresh beside the time it resets");
+  assert.match(meta.querySelector(".src").textContent, /^Last login 3 days ago$/);
+  assert.match(meta.querySelector(".src").title, /copied or looked at this account's login/);
+  assert.doesNotMatch(meta.textContent, /Opened/);
 });
