@@ -1537,6 +1537,7 @@
      The marks and the tip are information; this is a control used once in a
      while, so it is the one that waits to be asked for. Visible on hovering the
      chart, or when it has keyboard focus. */
+  .lpc-one{margin:4px 0 2px;font-size:calc(12px*var(--ts));color:var(--faint)}
   .lpc-range{position:absolute;top:4px;right:5px;display:flex;gap:2px;z-index:3;
     opacity:0;pointer-events:none;transition:opacity .13s ease}
   .lpc-plot:hover .lpc-range,.lpc-range:focus-within{opacity:1;pointer-events:auto}

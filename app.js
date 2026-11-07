@@ -1178,10 +1178,11 @@ function groupColor(k){
 // them to mean anything, and every check as its own hoverable point.
 function rankChart(hist,cut,mode,key,peakV,peakLabel){
   let pts=(hist||[]).map(h=>({h,v:ladderLP(h)})).filter(p=>p.v!==null);
-  // A brand new account has exactly one check, and showing it nothing at all was
-  // the least useful answer available — one point still says where on the ladder
-  // it sits, which is most of what the chart is for.
   if(!pts.length)return"";
+  // One check was drawn as a whole chart frame with a single dot in it, saying
+  // where on the ladder the account sits, which the card already says above it in
+  // large type. A line saying when the chart comes is more use, and smaller.
+  if(pts.length===1)return`<p class="lpc-one">One check so far. The chart starts after the next one.</p>`;
   pts=bucketHistory(pts,mode);
   const vals=pts.map(p=>p.v);
   let lo=Math.min(...vals), hi=Math.max(...vals);

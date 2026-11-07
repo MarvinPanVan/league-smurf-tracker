@@ -3225,13 +3225,16 @@ test("the chart's captions keep a dark halo, so the line crossing one doesn't cu
   assert.ok(layers.every(l => /^0 0 \d+px var\(--bg\)/.test(l.trim())), "centred, in the page's own dark");
 });
 
-test("one check still gets a chart — it says where on the ladder the account sits", () => {
+// One check was a whole chart frame with a single dot in it
+test("one check is a line saying when the chart comes, not a frame with one dot", () => {
   const win = bootApp();
   const el = chartDom(win, [{ t: Date.now(), tier: "GOLD", division: "I", lp: 10 }]);
-  assert.equal(el.querySelectorAll(".lpc-pt").length, 1);
-  assert.equal(el.querySelectorAll(".lpc-line").length, 0, "one point is not a line");
-  assert.match(el.querySelector(".lpc-tip").textContent, /Gold I · 10 LP/);
-  assert.doesNotMatch(el.innerHTML, /undefined|NaN/);
+  assert.equal(el.querySelectorAll(".lpc-pt, .lpc-plot").length, 0, "no frame, no dot");
+  assert.equal(el.textContent, "One check so far. The chart starts after the next one.");
+  // two checks are a chart again
+  const two = chartDom(win, [{ t: Date.now() - 864e5, tier: "GOLD", division: "I", lp: 10 }, { t: Date.now(), tier: "GOLD", division: "I", lp: 30 }]);
+  assert.equal(two.querySelectorAll(".lpc-pt").length, 2);
+  assert.doesNotMatch(two.innerHTML, /undefined|NaN/);
   // nothing rankable at all is still nothing to draw
   assert.equal(win.rankChart([]), "");
   assert.equal(win.rankChart([{ t: 1, tier: "UNRANKED", division: null, lp: null }]), "");
