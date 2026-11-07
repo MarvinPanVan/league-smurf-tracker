@@ -8940,6 +8940,22 @@ test("the page's security policy runs only its own script, and nothing in the ap
   assert.equal(win.document.querySelector(".c-avatar"), null, "and not asked for again");
 });
 
+// Cloudflare Pages reads _headers: the same policy as the page's own, plus what only a
+// header can say
+test("the new address sends the page's own security policy, and forbids framing", () => {
+  const raw = fs.readFileSync(path.join(ROOT, "_headers"), "utf8");
+  const lines = raw.split("\n").filter(l => l.trim() && !l.trim().startsWith("#"));
+  assert.equal(lines[0], "/*", "for every page and file");
+  const hdr = Object.fromEntries(lines.slice(1).map(l => { const i = l.indexOf(":"); return [l.slice(0, i).trim().toLowerCase(), l.slice(i + 1).trim()]; }));
+  const meta = pageHtml.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/)[1];
+  assert.equal(hdr["content-security-policy"], meta + "; frame-ancestors 'none'", "the meta policy, word for word, plus frame-ancestors");
+  assert.equal(hdr["x-frame-options"], "DENY");
+  assert.equal(hdr["x-content-type-options"], "nosniff");
+  assert.equal(hdr["referrer-policy"], "no-referrer");
+  assert.equal(hdr["cross-origin-opener-policy"], undefined, "it would cut the old address's window.opener, which the vault move uses");
+  for (const l of lines) assert.ok(l.length <= 2000, "Cloudflare's limit on a line");
+});
+
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row
 // ended hundreds of pixels apart
 test("a card's notes keep to one row of two chips and +N more; Details shows them all", () => {

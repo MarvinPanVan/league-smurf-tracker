@@ -1,0 +1,15 @@
+# Cloudflare Pages sends these headers with every page and file of the app
+# (https://smurf-tracker.pages.dev). The old address, GitHub Pages, ignores this file.
+#
+# The Content-Security-Policy is the one in index.html's <meta>, plus frame-ancestors,
+# which only a header can carry: no other site may show the app inside a frame, where
+# it could be dressed up to trick a click. The two must stay the same apart from that;
+# a test checks it.
+# No Cross-Origin-Opener-Policy: moving a vault from the old address works through
+# window.opener, which that header would cut.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
