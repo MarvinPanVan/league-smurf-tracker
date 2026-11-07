@@ -8458,15 +8458,44 @@ test("on a touch screen the small controls reach WCAG's 24px, and nothing change
   assert.match(css, /\n  \.bulkchk\{width:15px;height:15px/);
 });
 
-// The optional Label led the form; the required Riot name and tag were its second row
-test("the account form starts with what it needs, and every label names its field", () => {
-  const win = bootApp();
-  win.document.getElementById("bAdd").click();
-  const fields = [...win.document.querySelectorAll("#form .formgrid > .fld")].map(f => f.querySelector("input,select,textarea")).filter(Boolean).map(c => c.id);
-  assert.deepEqual(fields.slice(0, 4), ["fName", "fTag", "fRegion", "fLabel"]);
-  for (const l of win.document.querySelectorAll("#form .formgrid > .fld > label")) {
+// The optional Label led the form; the required Riot name and tag were its second row.
+// Then it showed all eleven fields and the notes at once, for an account that needs two.
+test("the account form starts with what it needs, folds the rest, and every label names its field", () => {
+  const win = bootApp([
+    { id: "plain", gameName: "Plain", tagLine: "1", region: "EUW", status: "active", tags: [], history: [] },
+    { id: "rich", gameName: "Rich", tagLine: "1", region: "EUW", status: "active", tags: ["jungle"], history: [] }]);
+  const doc = win.document;
+  doc.getElementById("bAdd").click();
+  const ids = sel => [...doc.querySelectorAll(sel)].map(f => f.querySelector("input,select,textarea")).filter(Boolean).map(c => c.id);
+  assert.deepEqual(ids("#fGrid > .fld:not(.f-x)"), ["fName", "fTag", "fRegion", "fLogin", "fPass"], "the Riot ID, its region, the login");
+  assert.deepEqual(ids("#fGrid > .fld.f-x"), ["fLabel", "fEmail", "fCreated", "fBirth", "fTags", "fStatus", "fNotes"], "the rest folds");
+  assert.ok(["fNotesHead", "fFieldsCfg", "fInfo"].every(id => doc.getElementById(id).classList.contains("f-x")), "the notes too");
+  assert.match(html, /\n  #fGrid:not\(\.more\)>\.f-x\{display:none\}/);
+  const grid = doc.getElementById("fGrid"), more = doc.getElementById("fMoreBtn");
+  assert.ok(!grid.classList.contains("more"));
+  assert.equal(more.getAttribute("aria-expanded"), "false");
+  assert.equal(more.textContent.trim(), "More details");
+  // Enter on the button opens the details; it does not try to save the empty form
+  more.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  assert.ok(!doc.getElementById("form").classList.contains("hidden"), "no save was tried");
+  more.click();
+  assert.ok(grid.classList.contains("more"));
+  assert.equal(more.getAttribute("aria-expanded"), "true");
+  assert.equal(more.textContent.trim(), "Fewer details");
+  assert.equal(doc.activeElement.id, "fLabel", "and the first of them is ready to type in");
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).formMore, true, "kept the way you leave it");
+  more.click();
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).formMore, false);
+  // editing an account that has some of the details opens with them showing; one without stays short
+  doc.getElementById("fCancel").click();
+  cardMenu(win, "rich").querySelector('[data-act="edit"]').click();
+  assert.ok(grid.classList.contains("more"), "an account with a tag shows it");
+  doc.getElementById("fCancel").click();
+  cardMenu(win, "plain").querySelector('[data-act="edit"]').click();
+  assert.ok(!grid.classList.contains("more"));
+  for (const l of doc.querySelectorAll("#form .formgrid > .fld > label")) {
     const f = l.getAttribute("for");
-    assert.ok(f && win.document.getElementById(f), "a label for: " + l.textContent.trim());
+    assert.ok(f && doc.getElementById(f), "a label for: " + l.textContent.trim());
   }
 });
 

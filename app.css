@@ -1777,6 +1777,27 @@
   .pw-fld label{display:flex;justify-content:space-between;gap:10px}
   #pwMeterLabel{font-size:calc(12px*var(--ts));color:var(--faint)}
   #pwMeter{position:absolute;left:0;right:0;bottom:-9px;height:3px;display:flex;gap:4px}
+
+  /* The account form showed all eleven fields and the notes at once, for an account
+     that needs two. Six columns, so the Riot name, its tag and the region share the
+     first row and the login the second; the rest folds under More details. */
+  #fGrid{grid-template-columns:repeat(6,minmax(0,1fr))}
+  #fGrid>*{grid-column:span 3}
+  #fGrid>.f-3{grid-column:span 2}
+  #fGrid>.fw{grid-column:1/-1}
+  #fGrid:not(.more)>.f-x{display:none}
+  .f-more-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line)}
+  .f-more{display:inline-flex;align-items:center;gap:6px;margin-left:-10px;padding:6px 10px;font-size:calc(13px*var(--ts));font-weight:500}
+  .f-more .ico{width:15px;height:15px;transition:transform .16s ease}
+  #fGrid.more .f-more .ico{transform:rotate(180deg)}
+  #fGrid.more .f-more-row .hint{display:none}
+  /* the notes heading drew its own rule; under More details' rule it would be two */
+  #fGrid .nf-head{border-top:0;padding-top:4px}
+  @media (prefers-reduced-motion:reduce){.f-more .ico{transition:none}}
+  @media (max-width:560px){
+    #fGrid>*,#fGrid>.f-3:first-child{grid-column:1/-1}
+    #fGrid>.f-3{grid-column:span 3}
+  }
   .hidden{display:none!important}
   .empty{padding:64px 24px;text-align:center;color:var(--muted);font-size:calc(14px*var(--ts));line-height:1.7}
   .empty .d{height:84px;margin-bottom:20px;display:flex;align-items:center;justify-content:center}

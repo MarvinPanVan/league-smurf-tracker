@@ -6060,6 +6060,10 @@ function openForm(acc,focus){
   $("fLogin").toggleAttribute("data-autofocus",atLogin);   // from a card's Add login
   $("fPass").toggleAttribute("data-autofocus",atPw);   // from the password check-up
   renderInfoFields(formInfoBase,atNotes);
+  // Folded unless you keep it open, the account already has some of it, or you came
+  // for the notes. Opening the ones an account has hides nothing it holds.
+  setFormMore(!!cfg.formMore||atNotes||!!(acc&&(acc.label||acc.email||acc.createdOn||acc.birthdate
+    ||(acc.tags||[]).length||(acc.status&&acc.status!=="active")||acc.notes||normInfo(acc.info))));
   $("fSave").textContent=acc?"Save changes":"Add account";
   $("formTitle").textContent=acc?"Edit account":"Add account";
   // Which one, in the header: over the page the card being edited is behind the
@@ -6069,6 +6073,11 @@ function openForm(acc,focus){
   // field is the optional label, and the one you came here to type is the name.
   $("form").classList.remove("hidden");
   if(atNotes)requestAnimationFrame(()=>{const h=$("fNotesHead");if(h&&h.scrollIntoView)h.scrollIntoView({block:"start"})});
+}
+function setFormMore(on){
+  $("fGrid").classList.toggle("more",on);
+  const b=$("fMoreBtn");b.setAttribute("aria-expanded",String(on));
+  b.firstChild.textContent=on?"Fewer details":"More details";
 }
 function closeForm(){$("form").classList.add("hidden");editingId=null}
 /* A Riot ID is copied as one string — "Hide on Bush#EUW" from op.gg, the client,
@@ -6092,6 +6101,11 @@ function regionFromTagField(){
   if(r)sel.value=r;
 }
 $("fName").addEventListener("input",splitRiotId);
+$("fMoreBtn").addEventListener("click",()=>{
+  const on=!$("fGrid").classList.contains("more");
+  setFormMore(on);cfg.formMore=on;saveCfg();   // kept the way you leave it, for the next account
+  if(on)$("fLabel").focus();
+});
 $("fTag").addEventListener("input",regionFromTagField);
 $("fRegion").addEventListener("change",()=>{$("fRegion").dataset.picked="1"});
 function submitForm(){
@@ -6745,7 +6759,8 @@ $("fCancel").addEventListener("click",closeForm);
 // still means a newline.
 $("form").addEventListener("keydown",e=>{
   if(e.key!=="Enter")return;
-  if(e.target&&e.target.tagName==="TEXTAREA")return;
+  // a button (More details, Fields…, Gen) does its own thing on Enter
+  if(e.target&&(e.target.tagName==="TEXTAREA"||e.target.tagName==="BUTTON"))return;
   e.preventDefault();
   submitForm();
 });
