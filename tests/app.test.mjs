@@ -671,7 +671,8 @@ test("note fields stay legible: 12px, light words, visible empty pips", () => {
   assert.match(chip, /color:color-mix\(in srgb,var\(--text\) \d+%,var\(--muted\)\)/, "words a step under the figures, not the muted grey");
   const pip = rule(".ni-pips i");
   assert.ok(parseInt(pip.match(/background:#ffffff([0-9a-f]{2})/)[1], 16) >= 0x30, "an empty pip is still a pip");
-  assert.match(rule(".ni-skins span"), /color:var\(--star\)/, "skins in the bright gold");
+  // skins are facts like the rest: the plain chip, not a fourth style in the accent
+  assert.equal(rule(".ni-skins span"), "", "no colour of their own");
 });
 
 // On an iPad the ⋯ menu was grey words on a panel the card behind showed through.
@@ -929,7 +930,7 @@ test("the accent buttons add no gradient rim or glow of their own; the wordmark 
   assert.doesNotMatch(rule(".brand-mark::before"), /gradient|animation|box-shadow/, "the gem is a solid stone, still");
   assert.doesNotMatch(html, /@keyframes gemGlow/);
   // and the small things that still glittered: honor pips, the lit Tags handle, the skin chips, the empty-state gem
-  for (const sel of [".ni-pips i.on", ".tag-handle.lit", ".ni-skins span", ".empty-gem"])
+  for (const sel of [".ni-pips i.on", ".tag-handle.lit", ".empty-gem"])
     assert.doesNotMatch(rule(sel), /gradient|box-shadow:[^;]*0 0 \d+px/, sel + " is flat");
   // and the shared snapshot's title is plain white type, not haloed in the accent
   assert.doesNotMatch(html.match(/\n  \.sn-title\{([^}]*)\}/)[1], /text-shadow/, "the snapshot title has no glow");
