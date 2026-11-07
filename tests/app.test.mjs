@@ -10186,3 +10186,20 @@ test("Help lists what a card does, one thing a line, and says Login copies", () 
   // and the empty page's third step says the same
   assert.match(win.document.getElementById("grid").textContent, /Login copies the username, then the password, one click each/);
 });
+
+// "Remove protection" was red and pressable with nothing protected
+test("Remove protection shows only when there is a master password to remove", async () => {
+  const win = bootApp(seededAccount());
+  const $ = id => win.document.getElementById(id);
+  $("bSettings").click();
+  assert.ok($("sVaultRemove").classList.contains("hidden"), "nothing protected, nothing to remove");
+  assert.equal($("sVaultSet").textContent, "Set password");
+  $("sVaultPass").value = "correct horse battery";
+  $("sVaultSet").click();
+  await until(() => appGet(win, "vaultPassword") === "correct horse battery", "the vault to be encrypted");
+  await until(() => !$("sVaultRemove").classList.contains("hidden"), "Remove protection to appear");
+  assert.equal($("sVaultSet").textContent, "Change password");
+  $("sVaultRemove").click();   // confirm() is stubbed to yes
+  await until(() => $("sVaultRemove").classList.contains("hidden"), "it to go again with the password");
+  assert.equal($("sVaultSet").textContent, "Set password");
+});

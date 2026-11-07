@@ -6261,7 +6261,15 @@ $("sPwList").addEventListener("click",e=>{
   const b=e.target.closest("[data-pwedit]");if(!b)return;
   const acc=accounts.find(a=>a.id===b.dataset.pwedit);if(acc)openForm(acc,"password");
 });
-function updateVaultStatus(){$("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted.";updatePkStatus();renderSetup()}
+/* Remove protection was red and pressable with nothing protected, where all it could
+   do was say so in a toast. It shows once there is a password to remove, and the
+   button beside it says which of the two it will do. */
+function updateVaultStatus(){
+  $("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted.";
+  $("sVaultRemove").classList.toggle("hidden",!vaultPassword);
+  $("sVaultSet").textContent=vaultPassword?"Change password":"Set password";
+  updatePkStatus();renderSetup();
+}
 function updatePkStatus(){
   const r=pkRecord(), ok=pkAvailable();
   $("sPkSet").classList.toggle("hidden",!!r);$("sPkOff").classList.toggle("hidden",!r);
@@ -7301,7 +7309,7 @@ function resetAccent(which){
 }
 $("sAccentReset1").addEventListener("click",()=>resetAccent("primary"));
 $("sAccentReset2").addEventListener("click",()=>resetAccent("secondary"));
-// Settings' Set / change and the first-run prompt both come through here, so
+// Settings' Set password and the first-run prompt both come through here, so
 // there is one way a vault becomes encrypted, with one set of checks.
 $("sVaultSet").addEventListener("click",async()=>{if(await setVaultPassword($("sVaultPass").value))$("sVaultPass").value=""});
 $("lpSet").addEventListener("click",async()=>{
