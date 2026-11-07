@@ -4742,7 +4742,7 @@ test("a narrowed grid always says what narrowed it", async () => {
   await until(() => win.document.querySelectorAll(".card").length === 1, "the search to narrow the grid");
   // the box says what is in it; a chip repeating it appeared above the box mid-typing
   assert.deepEqual(chips(), [], "no chip repeats the search");
-  assert.equal(win.document.querySelector(".tools").nextElementSibling.id, "chips", "and chips sit under the search row, never over it");
+  assert.ok(win.document.getElementById("chips").parentElement.classList.contains("cmd-r"), "and chips sit beside the count, in no row of their own");
 
   win.document.getElementById("tFav").click();
   assert.deepEqual(chips(), ["Favorites"]);
@@ -8240,6 +8240,7 @@ test("folding the tag list away never hides a live tag filter", () => {
   handle().click();                                       // fold it away again
   assert.equal(bar().querySelectorAll("[data-tag]").length, 0, "no chips out here any more");
   assert.ok(handle().classList.contains("lit"), "but the handle says a tag is filtering");
+  assert.match(handle().textContent, /^#jungle$/, "and which one");
 
   const chip = [...win.document.querySelectorAll("#chips [data-clear]")]
     .find(c => /jungle/.test(c.textContent));
@@ -10528,4 +10529,26 @@ test("the Average climb line is drawn near the shape of its box, with one dot, o
   const dot = el.querySelector(".pool-dot"), hits = [...el.querySelectorAll(".pool-hit")];
   assert.equal(dot.getAttribute("cx"), hits.at(-1).getAttribute("cx"), "on the latest day");
   assert.equal(hits.length, 7, "every day still answers on hover");
+});
+
+// Clicking "40 not found → Show" or a rank emblem added a row of filter chips under
+// the search, which moved everything below it down about 45px
+test("a filter's chip sits beside the count it explains, so turning one on moves nothing", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.doesNotMatch(css, /\.chips:not\(:empty\)\{padding/, "no padding that grows a row when the first chip arrives");
+  assert.match(css, /\n  \.chips:empty\{display:none\}/);
+  const win = bootApp(ladderSeed());
+  const doc = win.document, chips = () => [...doc.querySelectorAll("#chips .fchip")].map(c => c.textContent.replace("✕", "").trim());
+  const cmdR = doc.querySelector(".cmd-r");
+  assert.equal(doc.getElementById("chips").parentElement, cmdR, "in the command row's count area");
+  assert.equal(doc.getElementById("chips").previousElementSibling.id, "count", "right after the count");
+  assert.ok(!doc.querySelector(".tools ~ .chips, .console > .chips"), "not a row of the console");
+  doc.querySelector('#ribbon [data-tier="GOLD"]').click();
+  assert.deepEqual(chips(), ["Gold"]);
+  assert.match(doc.getElementById("count").textContent, /1 of \d+ shown/, "beside the count it explains");
+  doc.getElementById("tFav").click();
+  assert.deepEqual(chips(), ["Gold", "Favorites"], "two say themselves, with no Clear all yet");
+  // "need a refresh" is pressed in the same row already, so it gets no chip of its own
+  runScript(win, "ui.tier=''; ui.favOnly=false; ui.flag='stale'; render()");
+  assert.deepEqual(chips(), []);
 });

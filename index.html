@@ -665,7 +665,10 @@
     <button id="bCheckStale" class="b-teal hidden" title="Accounts last read over 3 days ago (not the never-checked or not-found ones)">Refresh stale</button>
     <button id="bCancelCheck" class="b-danger hidden">Stop</button>
     <button id="bAdd" class="b-fill">+ Add account</button>
-    <div class="cmd-r"><span id="count" class="cmd-count"></span>
+    <!-- What narrowed the grid, beside the count it explains. They had a row of
+         their own under the search, which appeared with the first filter and moved
+         everything under it down 45px; in this row they take no new space. -->
+    <div class="cmd-r"><span id="count" class="cmd-count"></span><span id="chips" class="chips"></span>
     <div id="density" class="seg" role="group" aria-label="Layout">
       <button data-density="cards" title="Cards" aria-label="Card view"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
       <button data-density="list" title="List" aria-label="List view"><svg class="ico" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
@@ -707,9 +710,6 @@
     <!-- phones only: a touch screen has no hover to reveal the checkboxes -->
     <button type="button" id="tSelectMode" class="t-select" aria-pressed="false">Select</button>
   </div>
-  <!-- under the search row, never above it: a row appearing over the box you are
-       typing in moved it while you typed -->
-  <div id="chips" class="chips"></div>
   </div>
   <div id="bulkbar" class="hidden" style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--teal) 38%,transparent);border-radius:var(--r-md);background:color-mix(in srgb,var(--teal) 7%,var(--panel));box-shadow:var(--sh-1)">
     <span id="bulkCount" style="font-size:calc(12px*var(--ts));color:var(--teal-txt);font-weight:600;letter-spacing:.02em"></span>

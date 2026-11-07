@@ -4021,7 +4021,8 @@ function renderTagbar(){
   // reading as a grey rectangle.
   setHTML(el,`<button class="tag-handle${open?" open":""}${ui.tag?" lit":""}" data-k="tagtoggle" data-tagtoggle
       aria-expanded="${open}" title="${open?"Hide the tag list":"Show every tag in the vault"}">`
-    +icon("tag","tag-ico")+`<span>Tags</span><b>${all.length}</b>`+icon("chevron","tag-chev")+`</button>`
+    // with a tag picked it names it: "Tags 6" lit up said a tag was on, not which
+    +icon("tag","tag-ico")+(ui.tag?`<span>#${esc(ui.tag)}</span>`:`<span>Tags</span><b>${all.length}</b>`)+icon("chevron","tag-chev")+`</button>`
     +(open?`<div class="tag-list" data-k="taglist">${all.map(chip).join("")}</div>`:""));
 }
 // A number in a dashboard always raises "which ones?", so the stats panel sets
@@ -4031,14 +4032,16 @@ const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last c
 function renderChips(){
   syncFilterCount();
   const out=[];
-  if(ui.flag)out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
+  // "Needs refresh" has its own pressed button in the same row, the count's
+  if(ui.flag&&ui.flag!=="stale")out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
   if(ui.tier)out.push(["tier",ui.tier==="UNRANKED"?"Unranked":ui.tier.charAt(0)+ui.tier.slice(1).toLowerCase()]);
   if(ui.tag)out.push(["tag","Tag: "+ui.tag]);
   if(ui.favOnly)out.push(["favOnly","Favorites"]);
   // no chip for the search: the box already says what is in it
   setHTML($("chips"),!out.length?"":out.map(([k,label])=>
     `<button class="fchip" data-clear="${k}">${esc(label)}<span aria-hidden="true">✕</span></button>`).join("")
-    +(out.length>1?`<button class="fchip fchip-all" data-clear="all">Clear all</button>`:""));
+    // two have a ✕ each; Clear all earns its room from three
+    +(out.length>2?`<button class="fchip fchip-all" data-clear="all">Clear all</button>`:""));
 }
 
 // Everything the profile page carries that isn't the current rank: how the account
