@@ -14,8 +14,16 @@ import { JSDOM } from "jsdom";
 import { deflateRawSync } from "node:zlib";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const htmlPath = path.join(__dirname, "..", "index.html");
-const html = fs.readFileSync(htmlPath, "utf8");
+// The app is index.html (the markup), app.css and app.js. `html` is the page as a
+// browser assembles it: the stylesheet and the script in the places index.html loads
+// them, so a test that reads the page, its styles or its code reads the shipped files.
+const ROOT = path.join(__dirname, "..");
+const pageHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+const appCss = fs.readFileSync(path.join(ROOT, "app.css"), "utf8");
+const appJs = fs.readFileSync(path.join(ROOT, "app.js"), "utf8");
+const CSS_TAG = /<link rel="stylesheet" href="app\.css\?v=[^"]+">/, JS_TAG = /<script src="app\.js\?v=[^"]+"><\/script>/;
+if (!CSS_TAG.test(pageHtml) || !JS_TAG.test(pageHtml)) throw new Error("index.html no longer loads app.css and app.js the way these tests expect");
+const html = pageHtml.replace(CSS_TAG, () => `<style>\n${appCss}</style>`).replace(JS_TAG, () => `<script>\n${appJs}</script>`);
 
 const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/);
 if (!scriptMatch) throw new Error("Could not find the app's <script> block — did the file structure change?");
@@ -8884,6 +8892,23 @@ test("a snapshot link built by someone else shows their text as text", async () 
   assert.ok(win.document.querySelector(".sn-card"), "it opened");
   pwned(win, "a snapshot");
   assert.equal(win.document.documentElement.style.getPropertyValue("--gold"), "", "a colour that is not #rrggbb is not applied");
+});
+
+// One 600 KB file of markup, styles and script was hard to review and could not carry a
+// security policy that forbids inline script. Now: the page, app.css and app.js.
+test("index.html is markup only, and loads this version's app.css and app.js", () => {
+  assert.doesNotMatch(pageHtml, /<style[\s>]/, "no style block left in the page");
+  const scripts = [...pageHtml.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)];
+  assert.deepEqual(scripts.map(m => m[2].trim()), [""], "one script element, and it has no code in it");
+  const win = bootApp();
+  runScript(win, "window.__v = APP_VERSION");
+  for (const f of ["app.css", "app.js"])
+    assert.ok(pageHtml.includes(`${f}?v=${win.__v}`), `${f} is asked for as this version, so no browser pairs a new page with an old ${f}`);
+  const sw = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  for (const f of ["./index.html", "./app.css", "./app.js"]) assert.ok(sw.includes(`"${f}"`), "kept for offline: " + f);
+  assert.match(sw, /cache: "reload"/, "fetched fresh when a new version installs");
+  assert.match(sw, /ignoreSearch: true/, "and found offline whatever ?v= the page asks for");
+  assert.ok(appJs.startsWith('"use strict";'), "the script is still strict from its first line");
 });
 
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row

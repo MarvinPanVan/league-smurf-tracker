@@ -1,6 +1,6 @@
 # Runs the jsdom suite in tests/ on every push and pull request. It boots the
-# real index.html, so a red run here means the file GitHub Pages is about to
-# serve is wrong.
+# real index.html with its app.css and app.js, so a red run here means the
+# files GitHub Pages is about to serve are wrong.
 name: tests
 
 on:
@@ -27,10 +27,13 @@ jobs:
       - run: npm ci
       - run: npm test
       # index.html has been committed as binary/CRLF before, which turns every
-      # diff into a full-file rewrite. Fail loudly if it happens again.
-      - name: index.html is UTF-8 text with LF endings and no NUL bytes
+      # diff into a full-file rewrite. Fail loudly if it, or the app's other two
+      # files, ever are again.
+      - name: index.html, app.css and app.js are UTF-8 text with LF endings and no NUL bytes
         working-directory: .
         run: |
-          if [ "$(tr -cd '\000' < index.html | wc -c)" -ne 0 ]; then echo "index.html contains NUL bytes"; exit 1; fi
-          if grep -q $'\r' index.html; then echo "index.html contains CR line endings"; exit 1; fi
-          file index.html | grep -q 'UTF-8 text\|ASCII text' || { file index.html; exit 1; }
+          for f in index.html app.css app.js; do
+            if [ "$(tr -cd '\000' < "$f" | wc -c)" -ne 0 ]; then echo "$f contains NUL bytes"; exit 1; fi
+            if grep -q $'\r' "$f"; then echo "$f contains CR line endings"; exit 1; fi
+            file "$f" | grep -q 'UTF-8 text\|ASCII text\|JavaScript' || { file "$f"; exit 1; }
+          done

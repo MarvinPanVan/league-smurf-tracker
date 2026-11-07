@@ -4,8 +4,13 @@
 // Bump SW cache so each release reaches hosted installs.
 const CACHE = "smurf-tracker-cache-v101";
 // index.html is the shell; "./" was a redundant second cache of the same document.
+// The page loads app.css and app.js as "?v=<version>", so a browser never pairs a
+// new page with last release's script out of its HTTP cache; offline, the copies
+// fetched here answer for any version (ignoreSearch, below).
 const ASSETS = [
   "./index.html",
+  "./app.css",
+  "./app.js",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -20,7 +25,8 @@ self.addEventListener("install", e => {
   // missing icon never leaves the shell uncached.
   e.waitUntil(
     caches.open(CACHE).then(c =>
-      Promise.all(ASSETS.map(u => c.add(u).catch(() => undefined)))
+      // "reload": straight from the server, not an HTTP-cached copy of the last release
+      Promise.all(ASSETS.map(u => c.add(new Request(u, { cache: "reload" })).catch(() => undefined)))
     )
   );
   self.skipWaiting();
@@ -53,7 +59,7 @@ self.addEventListener("fetch", e => {
         }
         return res;
       })
-      .catch(() => caches.match(e.request).then(cached =>
+      .catch(() => caches.match(e.request).then(cached => cached || caches.match(e.request, { ignoreSearch: true })).then(cached =>
         cached || caches.match("./index.html").then(shell => shell || Promise.reject(new Error("offline and not cached")))))
   );
 });

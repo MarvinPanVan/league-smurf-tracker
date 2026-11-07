@@ -91,7 +91,7 @@ master password to open. Treat a plaintext export like the passwords themselves.
 - **No master password.** As above: plain text on disk.
 - **The hosted page changing.** The [live version](https://marvinpanvan.github.io/league-smurf-tracker/)
   is served from this repository's `main` branch. If you would rather trust a copy
-  you control, run your own (open `index.html` from a download, or host a private
+  you control, run your own (download the repository and open `index.html`, or host a private
   copy for yourself, as the [licence](LICENSE) allows).
 - **Public CORS proxies.** Without your own worker, rank checks go through third-party
   proxies, which see which Riot IDs you look up. Deploy the worker to avoid that.

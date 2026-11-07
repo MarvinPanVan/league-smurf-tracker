@@ -96,7 +96,7 @@ Once a day your worker re-reads your Diamond+ accounts and posts when one is abo
 
 ## Development
 
-`index.html` is the whole app: one file, no build step. The test suite in [`tests/`](tests/) boots that exact file in jsdom with Node's built-in runner, so nothing is copied into the tests and a red test means the shipped page is wrong. It covers the op.gg parsers against real markup, the ladder maths, escaping, the vault encryption, the worker, and a regression test for every bug fixed so far.
+The app is three files with no build step: `index.html` (the markup), `app.css` and `app.js`, plus its fonts in `fonts/`. The test suite in [`tests/`](tests/) boots those exact files in jsdom with Node's built-in runner, so nothing is copied into the tests and a red test means the shipped page is wrong. It covers the op.gg parsers against real markup, the ladder maths, escaping, the vault encryption, the worker, and a regression test for every bug fixed so far.
 
 ```bash
 cd tests
