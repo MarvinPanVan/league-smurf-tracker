@@ -3595,6 +3595,18 @@ test("a history with no usable timestamps still plots, evenly spaced", () => {
   assert.equal(el.querySelectorAll(".lpc-tick").length, 0, "no timestamps, no date axis");
 });
 
+// A Gold-to-Platinum climb read II, III, I down the chart's edge: the I was Gold I
+test("division marks from two tiers carry the tier's initial", () => {
+  const win = bootApp();
+  const marks = h => [...chartDom(win, h).querySelectorAll(".lpc-sub")].map(n => n.textContent);
+  const m = marks(hist(["GOLD", "I", 40], ["PLATINUM", "II", 61]));
+  assert.ok(m.includes("G I"), "Gold I says it is Gold: " + m.join(", "));
+  assert.ok(m.some(t => /^P (II|III)$/.test(t)), m.join(", "));
+  assert.ok(m.every(t => /^[A-Z] (I|II|III|IV)$/.test(t)), "every numeral names its tier: " + m.join(", "));
+  // one tier in view: plain numerals, as before
+  assert.deepEqual(marks(hist(["PLATINUM", "IV", 5], ["PLATINUM", "I", 88])), ["III", "II", "I"]);
+});
+
 test("division numerals only appear when all four are marked, so no chart shows two IIs", () => {
   const win = bootApp();
   for (const h of [

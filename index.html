@@ -4476,8 +4476,11 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     }
   }
   // "II" twice on one chart is right (Silver II and Gold II) but reads as a bug,
-  // so the tier initial is added — and only when something actually repeats.
-  const dupe=divs.some((d,i)=>divs.findIndex(o=>o.n===d.n)!==i);
+  // so the tier initial is added when something repeats. And when the marks come
+  // from two tiers at all: a Gold-to-Platinum climb read II, III, I down the edge,
+  // the I being Gold I, which looked like a numbering mistake. "P II, P III, G I".
+  const mixed=new Set(divs.filter(d=>d.n).map(d=>d.t)).size>1;
+  const dupe=mixed||divs.some((d,i)=>divs.findIndex(o=>o.n===d.n)!==i);
   for(const d of divs){if(!d.n)continue;rule(d.v);mark(d.v,dupe?d.t.charAt(0)+" "+d.n:d.n)}
 
   // The Grandmaster and Challenger floors, where the view reaches them. These are
