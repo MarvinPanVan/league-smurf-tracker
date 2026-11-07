@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.12.0";
+const APP_VERSION="2.13.0";
 const APP_CHANGELOG=[
+  {v:"2.13.0",items:[
+    "The fonts come with the app: opening it no longer asks Google Fonts for anything",
+    "A security policy lets only the app's own script run on the page",
+    "The app is now index.html, app.css, app.js and a fonts folder: a downloaded copy needs all of them",
+  ]},
   {v:"2.12.0",items:[
     "Cards in a row end closer together: notes show two chips and \"+N more\", and Details has the rest",
     "A levelling account shows its way to ranked as 30 steps, with how fast it is going once checks see the level move",
