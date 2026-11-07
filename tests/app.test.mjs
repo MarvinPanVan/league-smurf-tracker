@@ -1235,6 +1235,8 @@ test("a card's Login copies the username, then the password, without opening any
   const main = id => card(id).querySelector(".acts .a-login");
   assert.equal(main("L").dataset.act, "copyseq", "the main button copies; it no longer opens a panel");
   assert.match(main("L").textContent, /^\s*Copy username$/);
+  // the "what's new" toast may be up already, and may well say "copied" itself
+  const toastBefore = win.document.getElementById("toast").textContent;
   main("L").click();
   await until(() => copied.length === 1, "the username to be copied");
   assert.equal(copied[0], "riotuser");
@@ -1242,7 +1244,7 @@ test("a card's Login copies the username, then the password, without opening any
   // the button says it, in place of a toast over the rest of the page
   await until(() => /Username copied/.test(main("L").textContent), "the button to say it copied");
   assert.ok(main("L").classList.contains("copied"));
-  assert.doesNotMatch(win.document.getElementById("toast").textContent, /copied/i, "no toast");
+  assert.equal(win.document.getElementById("toast").textContent, toastBefore, "no toast");
   await until(() => /^\s*Copy password$/.test(main("L").textContent), "the button to move on to the password", 3000);
   main("L").click();
   await until(() => copied.length === 2, "the password to be copied");
@@ -4081,7 +4083,7 @@ test("a compact select keeps room for its arrow", () => {
   assert.ok(html.indexOf(rule[0]) > html.indexOf(".sub-fld.inline select,.sub-fld.inline input[type=number]{"), "after the shorthand that took it");
 });
 
-test("sorting by last opened: the account you were just on first, never-opened ones last", () => {
+test("sorting by last opened: the account you were just on first, never-opened ones last", async () => {
   const now = Date.now();
   const mk = (id, lastLoginAt) => ({ id, gameName: id, tagLine: "EUW", region: "EUW", status: "active", lastLoginAt,
     login: id + "user", password: "pw-" + id,
@@ -4094,7 +4096,9 @@ test("sorting by last opened: the account you were just on first, never-opened o
   assert.deepEqual(names().slice(0, 2), ["now", "week"], "most recently opened first");
   assert.deepEqual(names().slice(2).sort(), ["junk", "never"], "no stamp, or a broken one, sorts last");
   // copying a login doesn't make the card jump while you're using it
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async () => {} } });
   win.document.querySelector('.card[data-id="never"] .a-login').click();
+  await until(() => appGet(win, 'accounts.find(a => a.id === "never").lastLoginAt'), "the copy to be recorded");
   assert.deepEqual(names().slice(0, 2), ["now", "week"]);
   sort.dispatchEvent(new win.Event("change"));
   assert.equal(names()[0], "never", "it moves up on the next sort");
@@ -6190,15 +6194,17 @@ test("a check records the season totals so the next one can subtract them", () =
 });
 
 // "Status: resting" was a label you had to keep up by hand.
-test("copying a login, or looking at it, records that the account was reached for", () => {
+test("copying a login, or looking at it, records that the account was reached for", async () => {
   const seed = ladderSeed();
   Object.assign(seed[4], { login: "riotuser", password: "hunter22!" });
   const win = bootApp(seed);
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async () => {} } });
   const card = () => win.document.querySelector('.card[data-id="t4"]');
   const stamp = () => win.filtered().find(a => a.id === "t4").lastLoginAt;
   assert.ok(!stamp());
 
   card().querySelector(".a-login").click();   // Copy username
+  await until(() => stamp(), "the copy to be recorded");
   const at = stamp();
   assert.ok(at && Date.now() - at < 5000);
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker")).find(a => a.id === "t4").lastLoginAt, at,
@@ -9429,6 +9435,33 @@ test("the stats panel shows a figure only once there is something behind it", ()
   assert.equal(win.document.querySelector("#dash .gem-b"), null, "no rank spread under it either");
 });
 
+// The Backend URL and the worker guide moved into Rank checks' Advanced fold; the
+// worker's own header and the "older worker" toast still sent you to the old places
+test("everything that points to the Backend URL or the worker guide names the Advanced fold", () => {
+  const doc = new JSDOM(pageHtml).window.document;
+  const fold = doc.getElementById("sChecksAdv");
+  assert.match(fold.querySelector("summary").textContent, /^Advanced/);
+  assert.ok(fold.querySelector("#sBackend") && fold.querySelector("#sDeployHelp"), "the field and the guide are in it");
+  assert.equal(fold.closest("[data-tab]").dataset.tab, "checks");
+  assert.equal(doc.getElementById("stab-checks").textContent, "Rank checks");
+  const worker = fs.readFileSync(path.join(ROOT, "cloudflare-worker.js"), "utf8").split("\n").slice(0, 5).join("\n");
+  assert.ok(worker.includes("Settings → Rank checks → Advanced → Backend URL"), "the worker's header");
+  const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+  const said = [...readme.matchAll(/\*\*Settings → ([^*]+)\*\*/g)].map(m => m[1]).filter(t => /Backend URL/.test(t));
+  assert.ok(said.length >= 2 && said.every(t => t === "Rank checks → Advanced → Backend URL"), "the README: " + said.join(" | "));
+  const toast = appJs.match(/older version without decay alerts\. Redeploy it \(([^)]+)\)/)[1];
+  assert.equal(toast, "Settings → Rank checks → Advanced", "and the toast");
+});
+
+// The README still promised a "Needs refresh" tile after it moved to the toolbar
+test("the README names only stats tiles the panel still has, and the toolbar's Refresh stale", () => {
+  const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+  const tiles = [...readme.matchAll(/\*\*(Play next|Decay risk|This week|Needs refresh|Accounts|Best account|Regions)\*\*/g)].map(m => m[1]);
+  assert.ok(tiles.length >= 3, "it does describe the panel");
+  for (const t of tiles) assert.ok(appJs.includes(`<div class="k">${t}</div>`), t + " is a tile the panel can show");
+  assert.ok(readme.includes("**Refresh stale**") && />Refresh stale</.test(pageHtml), "and the stale count's button by its name");
+});
+
 // Every add started on EUW, and "Faker#KR1" stayed on EUW unless you changed it
 test("a new account starts on the vault's usual region, and a server's own tag picks its region", () => {
   const acc = (id, region) => ({ id, region, gameName: id, tagLine: "1", status: "active", tags: [], history: [], stats: null });
@@ -10573,9 +10606,10 @@ test("a copy made from a button says so on the button, and to a screen reader, n
   const doc = win.document, card = () => doc.querySelector('.card[data-id="L"]');
   card().querySelector('.c-lgn[data-act="login"]').click();
   for (const act of ["copylogin", "copypw", "copymail"]) {
+    const before = doc.getElementById("toast").textContent; // "what's new" may be up, and may say "copied"
     card().querySelector(`[data-act="${act}"]`).click();
     await until(() => card().querySelector(`[data-act="${act}"]`).classList.contains("copied"), act + " to flash");
-    assert.doesNotMatch(doc.getElementById("toast").textContent, /copied/i, act + ": no toast");
+    assert.equal(doc.getElementById("toast").textContent, before, act + ": no toast");
   }
   await until(() => /Email copied/.test(doc.getElementById("srSay").textContent), "a screen reader to hear it");
   assert.equal(doc.getElementById("srSay").getAttribute("aria-live"), "polite");
@@ -10694,4 +10728,71 @@ test("an empty vault opens on the app's own gem, over a sentence that breaks eve
   assert.equal(win.document.querySelector(".empty-gem"), null);
   assert.match(html, /\n  \.empty \.brand-mark\{width:56px;height:56px/);
   assert.match(html.match(/\n  \.wl-s\{([^}]*)\}/)[1], /text-wrap:balance/);
+});
+
+// Copies stopped putting up a toast because the button says so; the list row's own
+// "Copy username, then password" button had no such flash, so it said nothing at all
+test("in the list, the login panel's one-button copy says it copied, as the card's does", async () => {
+  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [],
+    login: "riotuser", password: "hunter22!", stats: null }]);
+  const copied = [];
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async v => { copied.push(v); } } });
+  const doc = win.document;
+  doc.querySelector('[data-density="list"]').click();
+  doc.querySelector('.rw[data-id="L"] .rw-main').click();   // the row opens
+  doc.querySelector('.rw[data-id="L"] .rw-open [data-act="login"]').click();
+  const seq = () => doc.querySelector('.rw[data-id="L"] .lseq');
+  seq().click();
+  await until(() => copied[0] === "riotuser" && /Username copied/.test(seq().textContent), "the row to say it copied");
+  assert.ok(seq().classList.contains("copied"));
+  await until(() => /Copy password/.test(seq().textContent), "and move on", 3000);
+});
+
+// ".card.dead .lpc-wrap" greyed a banned account's chart until the chart stopped being
+// wrapped in .lpc-wrap; then it matched nothing and the chart stayed in full colour
+test("every class the stylesheet styles is one the app still uses, and a banned card's chart is grey", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>")).replace(/\/\*[\s\S]*?\*\//g, "");
+  const src = appJs + pageHtml;
+  const classes = new Set();
+  for (const m of css.matchAll(/([^{}]+)\{/g)) if (!m[1].trim().startsWith("@")) for (const c of m[1].matchAll(/\.([A-Za-z][\w-]*)/g)) classes.add(c[1]);
+  // built in code: "hide-"+part for the card parts, "n"+count for the stat grid
+  const dynamic = c => /^hide-/.test(c) || /^n\d$/.test(c);
+  const dead = [...classes].filter(c => !dynamic(c) && !new RegExp("(?<![\\w-])" + c.replace(/[-]/g, "\\-") + "(?![\\w-])").test(src));
+  assert.deepEqual(dead, [], "styled but never used");
+  const win = bootApp([{ id: "b", gameName: "B", tagLine: "1", region: "EUW", status: "banned", tags: [],
+    history: [{ t: Date.now() - 864e5 * 3, tier: "BRONZE", division: "II", lp: 30 }, { t: Date.now() - 864e5, tier: "BRONZE", division: "I", lp: 12 }],
+    stats: { found: true, tier: "BRONZE", division: "I", lp: 12, wins: 4, losses: 5, updatedAt: Date.now() - 864e5 } }]);
+  assert.ok(win.document.querySelector(".card.dead .lpc"), "the selector meets a real chart");
+  assert.match(css, /\.card\.dead \.lpc,\.rw\.dead \.spk\{filter:grayscale/);
+});
+
+// A failed copy still moved the card's Login on to "Copy password", so the username
+// was never copied and the next click skipped it
+test("a Login copy that fails stays on the step it failed, and records nothing", async () => {
+  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [],
+    login: "riotuser", password: "hunter22!", stats: null }]);
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async () => { throw new Error("denied"); } } });
+  win.document.execCommand = () => false;
+  const main = () => win.document.querySelector('.card[data-id="L"] .a-login');
+  main().click();
+  await until(() => /Copy failed/.test(win.document.getElementById("toast").textContent), "the failure to be said");
+  assert.match(main().textContent, /^\s*Copy username$/, "still on the username");
+  assert.equal(appGet(win, 'accounts[0].lastLoginAt'), undefined, "and no Last login stamped");
+});
+
+// A spreadsheet's "gold" and "2" were stored as typed: the chart read division "2" as IV
+// and the card printed "Gold 2"
+test("CSV import reads a tier and division however a spreadsheet wrote them", async () => {
+  const win = bootApp();
+  const csv = "gameName,tagLine,region,tier,division,lp\n"
+    + "Digit,1,EUW,gold,2,40\n" + "Lower,2,EUW,Platinum,iii,10\n" + "Roman,3,EUW,SILVER,I,5\n" + "Junk,4,EUW,GOLD,7,5\n";
+  win.doImportCSV(new win.File([csv], "t.csv", { type: "text/csv" }));
+  await until(() => win.document.querySelectorAll(".card").length === 4, "the import");
+  const st = name => appGet(win, `JSON.stringify((({tier,division})=>({tier,division}))(accounts.find(a => a.gameName === ${JSON.stringify(name)}).stats))`);
+  assert.equal(st("Digit"), JSON.stringify({ tier: "GOLD", division: "II" }));
+  assert.equal(st("Lower"), JSON.stringify({ tier: "PLATINUM", division: "III" }));
+  assert.equal(st("Roman"), JSON.stringify({ tier: "SILVER", division: "I" }));
+  assert.equal(JSON.parse(st("Junk")).division, null, "a division that does not exist is none, not a guess");
+  assert.match(win.document.getElementById("grid").textContent, /Gold II/);
+  assert.doesNotMatch(win.document.getElementById("grid").textContent, /Gold 2/);
 });

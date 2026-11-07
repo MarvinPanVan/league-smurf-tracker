@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.19.0";
+const APP_VERSION="2.20.0";
 const APP_CHANGELOG=[
+  {v:"2.20.0",items:[
+    "Login in the list says it copied, the same way the card does",
+    "A copy the browser refuses no longer moves Login on to the password",
+    "CSV import reads tiers and divisions however a spreadsheet wrote them, and a banned account's chart is grey again",
+  ]},
   {v:"2.19.0",items:[
     "Turning a filter on no longer moves the page: its chip sits beside the count it explains",
     "Copying says so on the button you pressed, not in a message over the next card",
@@ -1528,7 +1533,7 @@ async function syncWatch(force){
     const d=await res.json().catch(()=>null);
     if(res.ok){cfg.watchSyncedAt=Date.now();saveCfg();return true}
     if(res.status===409&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker already sends decay alerts for another browser. Turn them off there first")}
-    else if((res.status===405||res.status===404&&!d)&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker is an older version without decay alerts. Redeploy it (Settings → Rank checks → the guide)")}
+    else if((res.status===405||res.status===404&&!d)&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker is an older version without decay alerts. Redeploy it (Settings → Rank checks → Advanced)")}
     else if(d&&d.code==="no_kv")toast("Decay alerts need sync storage on your worker (a KV namespace bound as VAULT)");
   }catch(e){}
   return false;
@@ -5297,7 +5302,8 @@ function rowHTML(a,i){
         <button data-act="del" class="b-danger">${armedDelete===a.id?"Sure?":"Delete"}</button>
       </div>
       ${openLogin.has(a.id)?`<div class="login">
-        ${a.login&&a.password?`<button class="lseq" data-act="copyseq">${loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`:""}
+        ${a.login&&a.password?(()=>{const fl=loginFlash.get(a.id);   // copies say so on the button, here as on the card
+          return`<button class="lseq${fl?" copied":""}" data-act="copyseq">${fl?icon("check")+(fl.pw?" Copied, clears in 30s":" Username copied"):loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`})():""}
       <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
         <div class="lrow"><span class="val mono ${a.password?"":"none"}">${a.password?(shownPw.has(a.id)?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${shownPw.has(a.id)?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
         ${pwWarnHTML(a)}
@@ -6852,14 +6858,17 @@ function doImportCSV(file){
         };
         const gameName=get("gameName"),tagLine=get("tagLine");
         if(!gameName||!tagLine)return null;
-        const tier=get("tier");
+        /* As typed in a spreadsheet: "gold", "Gold 2", "ii". A division of "2" was
+           stored as written, read by the chart as IV and shown as "Gold 2". */
+        const tier=get("tier").trim().toUpperCase();
+        const dv=get("division").trim().toUpperCase(), div={"1":"I","2":"II","3":"III","4":"IV"}[dv]||(dv in DIV_ORDER?dv:null);
         return sanitizeAccount({
           id:uid(),tags:get("tags")?get("tags").split("|").filter(Boolean):[],history:[],
           label:get("label"),region:normRegion(get("region")),gameName,tagLine,status:normStatus(get("status")),
           login:get("login"),password:get("password"),email:get("email"),notes:get("notes"),
           createdOn:get("createdOn"),birthdate:get("birthdate"),
           fav:get("favorite")==="yes",info:ownExport?csvNoteInfo(header,get):null,
-          stats:tier?{found:true,tier,division:normDivision(tier,get("division")||null),lp:get("lp")?+get("lp"):null,wins:get("wins")?+get("wins"):null,losses:get("losses")?+get("losses"):null,level:get("level")?+get("level"):null,mmr:null,avgRecent:null,asOf:"CSV import",note:null,updatedAt:get("lastUpdated")?new Date(get("lastUpdated")).getTime()||null:null}:null
+          stats:tier?{found:true,tier,division:normDivision(tier,div),lp:get("lp")?+get("lp"):null,wins:get("wins")?+get("wins"):null,losses:get("losses")?+get("losses"):null,level:get("level")?+get("level"):null,mmr:null,avgRecent:null,asOf:"CSV import",note:null,updatedAt:get("lastUpdated")?new Date(get("lastUpdated")).getTime()||null:null}:null
         });
       }).filter(Boolean)
         .filter(a=>{const k=key(a);if(fileSeen.has(k))return false;fileSeen.add(k);return true});
@@ -8202,11 +8211,15 @@ async function onCardClick(e){
   else if(act==="copyseq"){
     const both=acc.login&&acc.password;
     const pw=!(acc.login&&(!both||!loginSeq.has(id)));
-    if(!pw){if(both)loginSeq.add(id)}else loginSeq.delete(id);
-    copyText(pw?acc.password:acc.login,pw?"Password":"Username",pw,true).then(ok=>{if(ok)flashLogin(id,pw)});
-    // copying the login is the closest thing to playing on it this app can see
-    acc.lastLoginAt=Date.now();saveDB();
-    renderCard(id);
+    copyText(pw?acc.password:acc.login,pw?"Password":"Username",pw,true).then(ok=>{
+      // only a copy that worked moves on to the next step: a failed one (the toast
+      // says so) left the button on "Copy password" with the username never copied
+      if(!ok)return;
+      if(!pw){if(both)loginSeq.add(id)}else loginSeq.delete(id);
+      // copying the login is the closest thing to playing on it this app can see
+      acc.lastLoginAt=Date.now();saveDB();
+      flashLogin(id,pw);
+    });
   }
   else if(act==="addlogin")openForm(acc,"login");
   else if(act==="copylogin")copyText(acc.login,"Username",false,true).then(ok=>{if(ok)flashCopied(btn)});
