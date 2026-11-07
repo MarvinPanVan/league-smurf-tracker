@@ -8196,6 +8196,22 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// A vault left alone for a weekend lit the page red: "out of date" took the colour of a ban
+test("out of date is amber like any warning; red stays for lost, banned and irreversible", () => {
+  const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
+  for (const sel of [".upd.stale", ".stale", ".rw-up.stale", ".cmd-count .warn"]) {
+    assert.match(rule(sel), /var\(--warn/, sel + " is amber");
+    assert.doesNotMatch(rule(sel), /--danger/, sel);
+  }
+  const win = bootApp([{ id: "s", gameName: "S", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() - 6 * 86400000 } },
+    { id: "n", gameName: "N", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], stats: null }]);
+  assert.ok(win.document.querySelector('.card[data-id="s"] .upd.stale'), "the stale card is marked");
+  assert.match(win.document.querySelector('#dash [data-flag="unchecked"] .v').getAttribute("style"), /--warn-txt/,
+    "never checked is a chore, not the user's accent");
+  assert.match(rule(".b-danger"), /--danger/, "a destructive button is still red");
+});
+
 // Picking a theme and pressing Esc undid it without a word
 test("once a setting changes, Settings says Save keeps it and closing puts it back", () => {
   const win = bootApp(seededAccount());

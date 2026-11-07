@@ -540,12 +540,15 @@
   .cmd-count{padding-right:3px;font-size:calc(12px*var(--ts));color:var(--faint);
     display:inline-flex;align-items:center;gap:9px;letter-spacing:.015em}
   .cmd-count b{font-weight:600;color:var(--muted)}
-  .cmd-count .warn{color:var(--danger);font-weight:600;font-size:calc(12px*var(--ts));letter-spacing:.015em;
+  /* Out of date is "worth a look", not lost: amber, the warning colour, like
+     every other state that a click puts right (see --warn). In red it was the
+     loudest thing on the page in any vault left alone for a weekend. */
+  .cmd-count .warn{color:var(--warn-txt);font-weight:600;font-size:calc(12px*var(--ts));letter-spacing:.015em;
     padding:3px 9px;border-radius:var(--r-xs);background:none;border:1px solid transparent;box-shadow:none}
-  .cmd-count .warn:hover{background:color-mix(in srgb,var(--danger) 13%,transparent);
-    border-color:color-mix(in srgb,var(--danger) 34%,transparent)}
-  .cmd-count .warn.on{background:color-mix(in srgb,var(--danger) 18%,transparent);
-    border-color:color-mix(in srgb,var(--danger) 46%,transparent)}
+  .cmd-count .warn:hover{background:color-mix(in srgb,var(--warn) 13%,transparent);
+    border-color:color-mix(in srgb,var(--warn) 34%,transparent)}
+  .cmd-count .warn.on{background:color-mix(in srgb,var(--warn) 18%,transparent);
+    border-color:color-mix(in srgb,var(--warn) 46%,transparent)}
   .tools{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:12px}
   /* Scrolled past the header the console is pure overhead on screen, so it gives
      some of that height back. Controls stay put — only the air around them goes. */
@@ -957,7 +960,7 @@
   .card.dead .wrbar,.rw.dead .rw-bar{filter:grayscale(.9);opacity:.5}
   .rw-up{font-size:calc(11px*var(--ts));color:var(--faint);text-align:right;white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis}
-  .rw-up.stale{color:var(--danger)}
+  .rw-up.stale{color:var(--warn-txt)}
   .rw-chev{width:14px;height:14px;color:var(--faint);transition:transform .24s cubic-bezier(.22,1,.36,1)}
   .hx.row.open .rw-chev{transform:rotate(180deg)}
   .rw-open{display:flex;flex-direction:column;gap:11px;padding:4px 13px 13px;
@@ -1545,7 +1548,7 @@
      straight over D/W/M. */
   .lpc-tip.hi{bottom:auto;top:12px}
   .lpc-pt:hover .lpc-tip{opacity:1}
-  .stale{color:var(--danger)}
+  .stale{color:var(--warn-txt)}
   #toast button{margin-left:12px;font-size:calc(12px*var(--ts));padding:3px 10px;color:var(--teal-txt)}
   .meta{font-size:calc(13px*var(--ts));color:var(--muted);line-height:1.65}
   .meta b{color:var(--text);font-weight:500}
@@ -1612,9 +1615,10 @@
      with the source as its own tag, so it reads as a deliberate meta line */
   .upd{font-size:calc(11px*var(--ts));color:var(--faint);letter-spacing:.015em;display:inline-flex;align-items:center;gap:7px;min-width:0}
   .upd::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.55;flex-shrink:0}
-  .upd.stale{color:var(--danger)}
-  /* Out of date: red, with a warning mark in place of the dot. It was a ⚠
-     character, which some systems draw as a yellow emoji; this one is drawn. */
+  .upd.stale{color:var(--warn-txt)}
+  /* Out of date: amber (it used to be red; see .cmd-count .warn), with a warning
+     mark in place of the dot. It was a ⚠ character, which some systems draw as a
+     yellow emoji; this one is drawn. */
   .upd.stale::before{display:none}
   .upd .ico{width:12px;height:12px;flex-shrink:0}
   /* asOf is sometimes a source ("backend", a proxy name) and sometimes a date
@@ -6937,7 +6941,7 @@ function renderDash(){
     (W+L)>0&&`<div class="stat"><div class="k">Season W/L</div><div class="v nw">${W}<small>W</small> ${L}<small>L</small></div>
       <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>`,
     neverN&&`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
-      <div class="v" style="color:var(--gold-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`,
+      <div class="v" style="color:var(--warn-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`,
     attentionN&&`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
       <div class="v" style="color:var(--danger)">${attentionN}</div><div class="s-note">flagged by you, or the profile no longer exists</div></button>`,
     failedN&&`<button class="stat stat-b${ui.flag==="failed"?" on":""}" data-flag="failed" aria-pressed="${ui.flag==="failed"}"><div class="k">Last check failed</div>
