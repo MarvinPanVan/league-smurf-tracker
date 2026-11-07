@@ -1183,6 +1183,18 @@
   .c-notes.capped .ni-row>.ni-f{min-width:0;flex-shrink:1}
   .c-notes.capped .ni-row>.ni-f.more{flex-shrink:0}
   .c-notes.capped .nt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .lvt{border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 12px 10px;background:linear-gradient(180deg,#ffffff06,transparent)}
+  .lvt-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+  .lvt-h .k{color:var(--faint)}
+  .lvt-r{font-size:calc(12px*var(--ts));color:var(--muted);font-variant-numeric:tabular-nums}
+  .lvt-track{display:grid;grid-template-columns:repeat(30,minmax(0,1fr));gap:2px;height:22px;align-items:end}
+  .lvt-track i{height:70%;border-radius:1px;background:#ffffff14}
+  .lvt-track i.m{height:100%}
+  .lvt-track i.on{background:color-mix(in srgb,var(--teal) 70%,transparent)}
+  .lvt-track i.now{background:var(--teal);height:100%;box-shadow:0 0 0 1px var(--panel),0 0 0 2px color-mix(in srgb,var(--teal) 60%,transparent)}
+  /* on the track's own 30 columns, so 10 and 20 sit under their taller bars */
+  .lvt-ax{display:grid;grid-template-columns:repeat(30,minmax(0,1fr));gap:2px;font-size:calc(10px*var(--ts));color:var(--faint);margin-top:6px;letter-spacing:.02em;white-space:nowrap}
+  .lvt-pace{font-size:calc(11px*var(--ts));color:var(--muted);margin-top:7px}
   .d-cap{font-size:calc(10px*var(--ts));color:var(--faint);letter-spacing:.02em;white-space:nowrap;margin-top:-2px}
   /* Rank is the headline; LP is a labelled companion under it — not a smaller
      word jammed onto the same baseline with a leftover margin. */
@@ -1223,6 +1235,7 @@
   /* Settings → On each card: a part left under Details is hidden on a closed card */
   body.hide-chart .card:not(.info-open) .lpc,body.hide-stats .card:not(.info-open) .c-stats,
   body.hide-wl .card:not(.info-open) .wrbar,body.hide-goal .card:not(.info-open) .goal,
+  body.hide-goal .card:not(.info-open) .lvt,
   body.hide-tags .card:not(.info-open) .ctags,body.hide-notes .card:not(.info-open) .c-notes:not(.editing){display:none}
   .c-stats>div{display:flex;flex-direction:column;gap:2px;min-width:0}
   .c-stats .k{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
@@ -1437,7 +1450,6 @@
      so "Decay in ~7d" and "No 2-step" were two different yellows on one card */
   .d-warn{color:var(--warn-txt);background:color-mix(in srgb,var(--warn) 15%,transparent)}
   .wl .ready{color:var(--teal-txt);font-weight:600}
-  .goal.lvl .goal-t{color:var(--teal-txt)}
   .delta .ico{width:1em;height:1em;vertical-align:-.15em}
   /* ---- LP chart ----
      The old sparkline was a bare line with no scale: it told you the number went
@@ -1781,7 +1793,7 @@
      so neighbouring labels never quite lined up. Colour still says how loud each
      one is; the shape is now the same everywhere. */
   .stat .k,.dist .k,.dash-filter .k,.c-stats .k,.c-notes .k,.sec-n,.chp-h,.away-k,.pal-g,.login .k,.lrow .lk,
-  .goal-h .k,.rankpanel .k,.grp-h,.cm-g,.c-drawer{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+  .goal-h .k,.lvt-h .k,.rankpanel .k,.grp-h,.cm-g,.c-drawer{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase}
 
   /* ---- form + settings ---- */
   .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:22px}
@@ -3798,6 +3810,27 @@ function decayState(a){
    source shows). Until then the level is the account's progress; at 30 and still
    unranked it is ready to place. */
 function isLeveling(a){const s=a.stats;return isLive(a)&&!!s&&s.found!==false&&!isRanked(a)&&s.level!=null&&Number(s.level)<30}
+// "about 2 levels a day" from the levels seen at checks, once there is a day of them
+function levelPace(a){
+  const L=Array.isArray(a.lvls)?a.lvls:[];if(L.length<2)return"";
+  const f=L[0],l=L[L.length-1],days=(l.t-f.t)/86400000,gain=l.v-f.v;
+  if(days<1||gain<=0)return"";
+  const perDay=gain/days;
+  return perDay>=1?"about "+Math.round(perDay)+" level"+(Math.round(perDay)===1?"":"s")+" a day"
+    :"about "+Math.max(1,Math.round(perDay*7))+" level"+(Math.max(1,Math.round(perDay*7))===1?"":"s")+" a week";
+}
+/* Where a ranked card has its chart, a levelling one had a thin bar and half a card
+   of nothing. The way to ranked gets the chart's room instead: thirty steps, the
+   ones done lit, where it is now, how many are left and, once checks have seen the
+   level move, how fast it is going. */
+function levelTrackHTML(a){
+  const lv=Math.max(0,Math.min(30,Math.floor(Number(a.stats.level)||0))), left=30-lv, pace=levelPace(a);
+  return`<div class="lvt" title="Ranked opens at level 30 (and 20 champions owned)">`
+    +`<div class="lvt-h"><span class="k">To ranked</span><span class="lvt-r">${left} level${left===1?"":"s"} to go</span></div>`
+    +`<div class="lvt-track" role="img" aria-label="Level ${lv} of 30">${Array.from({length:30},(_,i)=>`<i class="${i<lv?"on":""}${i===lv-1?" now":""}${(i+1)%10===0?" m":""}"></i>`).join("")}</div>`
+    +`<div class="lvt-ax"><span style="grid-column:1/4">1</span><span style="grid-column:9/12;text-align:center">10</span><span style="grid-column:19/22;text-align:center">20</span><span style="grid-column:24/31;text-align:right">30 · ranked</span></div>`
+    +(pace?`<div class="lvt-pace">${esc(pace)}</div>`:"")+`</div>`;
+}
 function isReadyForRanked(a){const s=a.stats;return isLive(a)&&!!s&&s.found!==false&&!isRanked(a)&&Number(s.level)>=30}
 // days are floored, so 0 is "less than one left" — "~0d" read as already gone
 function decayIn(d){return d<1?"<1d":"~"+d+"d"}
@@ -4275,6 +4308,10 @@ function sanitizeAccount(a){
   if(a.art!=null){a.art=normArt(a.art);if(!a.art)delete a.art}
   if("artOp" in a){const n=normArtOp(a.artOp);if(n==null)delete a.artOp;else a.artOp=n}
   if("info" in a){a.info=normInfo(a.info);if(!a.info)delete a.info}
+  if("lvls" in a){
+    a.lvls=(Array.isArray(a.lvls)?a.lvls:[]).filter(p=>p&&Number.isFinite(+p.t)&&+p.t>0&&Number.isFinite(+p.v)).map(p=>({t:+p.t,v:+p.v})).slice(-30);
+    if(!a.lvls.length)delete a.lvls;
+  }
   if(a.stats&&a.stats.seasons&&typeof a.stats.seasons==="object"){
     if(!Array.isArray(a.stats.seasons.solo))a.stats.seasons.solo=[];
     if(!Array.isArray(a.stats.seasons.flex))a.stats.seasons.flex=[];
@@ -6057,6 +6094,12 @@ function applyStats(acc,s){
       hist.push(row);
       if(hist.length>60)hist.splice(0,hist.length-60);
     }
+  }
+  // A levelling account has no LP to chart, but its level moves: kept as its own
+  // short series (lvls, additive and optional), so its card can say the pace.
+  if(s&&s.found!==false&&!isRanked(acc)&&s.level!=null&&Number(s.level)<=30){
+    const L=acc.lvls=Array.isArray(acc.lvls)?acc.lvls:[], v=Number(s.level), last=L[L.length-1];
+    if(!last||last.v!==v){L.push({t:s.updatedAt||Date.now(),v});if(L.length>30)L.splice(0,L.length-30)}
   }
   return rankedUp;
 }
@@ -8680,9 +8723,7 @@ function cardHTML(a,i){
       ${deltaChip?`<div class="c-deltas">${deltaChip}</div>`:""}
     </div>
     ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
-    ${levelLed&&s.level<30?`<div class="goal lvl" title="Ranked opens at level 30 (and 20 champions owned)">
-      <div class="goal-h"><span class="k">Ranked</span><span class="goal-t">at level 30</span><span class="goal-r">${30-s.level} level${30-s.level===1?"":"s"} to go</span></div>
-      <div class="goal-bar"><i style="width:${Math.max(3,Math.round(s.level/30*100))}%;background:var(--teal)"></i></div></div>`:""}
+    ${levelLed&&s.level<30?levelTrackHTML(a):""}
     ${(()=>{
       // The goal rail. Only drawn once there is a goal — an account with nothing to
       // climb towards should not be shown an empty progress bar.

@@ -1184,12 +1184,16 @@ test("a levelling account shows its way to ranked, and says when it is ready", (
     stats: { found: true, tier: "UNRANKED", level, wins: 0, losses: 0, updatedAt: Date.now() } });
   const win = bootApp([acc("lv24", 24), acc("lv30", 31)]);
   const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
-  const rail = card("lv24").querySelector(".goal.lvl");
-  assert.ok(rail, "a rail toward level 30");
-  assert.match(rail.textContent, /at level 30\s*6 levels to go/);
-  assert.equal(rail.querySelector(".goal-bar i").style.width, "80%");
+  // the way to ranked takes the room a ranked card gives its chart: thirty steps
+  const track = card("lv24").querySelector(".lvt");
+  assert.ok(track, "a track toward level 30");
+  assert.match(track.textContent, /To ranked\s*6 levels to go/);
+  assert.equal(track.querySelectorAll(".lvt-track i").length, 30);
+  assert.equal(win.getComputedStyle(track.querySelector(".lvt-h .k")).textTransform, "uppercase", "labelled like PEAK and NOTES");
+  assert.equal(track.querySelectorAll(".lvt-track i.on").length, 24, "the levels done, lit");
+  assert.ok(track.querySelectorAll(".lvt-track i")[23].classList.contains("now"), "and where it is now");
   assert.ok(card("lv30").querySelector(".ready"), "level 30 and unranked: ready");
-  assert.equal(card("lv30").querySelector(".goal.lvl"), null, "no rail once it is there");
+  assert.equal(card("lv30").querySelector(".lvt"), null, "no track once it is there");
   const search = q => { const el = win.document.getElementById("tSearch"); el.value = q; el.dispatchEvent(new win.Event("input", { bubbles: true })); };
   search("is:ready");
   return until(() => win.document.querySelectorAll(".card").length === 1, "is:ready to narrow").then(() => {
@@ -8780,6 +8784,21 @@ test("a card's notes keep to one row of two chips and +N more; Details shows the
   assert.ok(notes().querySelector(".ni-kv"), "your own fields too");
 });
 
+// A levelling account had no chart, so its card was half the height of the rest
+test("a levelling account's level is kept at each check, and its track says the pace", () => {
+  const D = 864e5, now = Date.now();
+  const win = bootApp([{ id: "lv", gameName: "Lv", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    lvls: [{ t: now - 4 * D, v: 16 }, { t: "bad", v: 3 }, { t: now - D, v: 22 }],
+    stats: { found: true, tier: "UNRANKED", level: 24, wins: 0, losses: 0, updatedAt: now - D } }]);
+  assert.equal(appGet(win, "accounts[0].lvls.length"), 2, "a malformed reading is dropped on load");
+  runScript(win, 'applyStats(accounts[0], { found: true, tier: "UNRANKED", division: null, lp: null, level: 24, wins: 0, losses: 0, updatedAt: Date.now() }); render()');
+  assert.equal(appGet(win, "accounts[0].lvls.length"), 3, "a check that reads a new level keeps it");
+  runScript(win, 'applyStats(accounts[0], { found: true, tier: "UNRANKED", division: null, lp: null, level: 24, wins: 0, losses: 0, updatedAt: Date.now() }); render()');
+  assert.equal(appGet(win, "accounts[0].lvls.length"), 3, "the same level twice is one reading");
+  assert.match(win.document.querySelector('.card[data-id="lv"] .lvt-pace').textContent, /^about 2 levels a day$/);
+  assert.match(html, /body\.hide-goal \.card:not\(\.info-open\) \.lvt\b/, "Settings' Goal switch hides it, as it hid the old bar");
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
@@ -9028,7 +9047,7 @@ test("a status chip says its piece without crowding out the account name", () =>
 test("the example data never says the same thing twice on one card", () => {
   const win = bootApp();
   win.document.getElementById("bDemo").click();
-  const card = [...win.document.querySelectorAll(".card")].find(c => c.querySelector(".goal.lvl"));
+  const card = [...win.document.querySelectorAll(".card")].find(c => c.querySelector(".lvt"));
   assert.ok(card, "the preview still has an account below level 30");
   assert.equal(card.textContent.match(/to go/g).length, 1, "the distance to 30 is said once");
   assert.equal(card.textContent.match(/Level \d/g).length, 1, "and so is the level");
