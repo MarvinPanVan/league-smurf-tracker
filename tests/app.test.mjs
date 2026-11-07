@@ -9433,6 +9433,15 @@ test("the stats panel shows a figure only once there is something behind it", ()
   assert.equal(win.document.querySelector("#dash .gem-b"), null, "no rank spread under it either");
 });
 
+// The README still promised a "Needs refresh" tile after it moved to the toolbar
+test("the README names only stats tiles the panel still has, and the toolbar's Refresh stale", () => {
+  const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+  const tiles = [...readme.matchAll(/\*\*(Play next|Decay risk|This week|Needs refresh|Accounts|Best account|Regions)\*\*/g)].map(m => m[1]);
+  assert.ok(tiles.length >= 3, "it does describe the panel");
+  for (const t of tiles) assert.ok(appJs.includes(`<div class="k">${t}</div>`), t + " is a tile the panel can show");
+  assert.ok(readme.includes("**Refresh stale**") && />Refresh stale</.test(pageHtml), "and the stale count's button by its name");
+});
+
 // Every add started on EUW, and "Faker#KR1" stayed on EUW unless you changed it
 test("a new account starts on the vault's usual region, and a server's own tag picks its region", () => {
   const acc = (id, region) => ({ id, region, gameName: id, tagLine: "1", status: "active", tags: [], history: [], stats: null });
