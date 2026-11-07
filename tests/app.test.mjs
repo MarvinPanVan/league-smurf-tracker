@@ -9046,6 +9046,22 @@ test("the footer is one line with a Terms link into Help, and Riot's notice stay
   assert.ok(doc.querySelector('#help a[href$="/LICENSE"]'), "with the licence one more click away");
 });
 
+// "53 accounts" in the header beside "53 of 61 shown" in the toolbar, with nothing
+// filtered: the eight were archived, which is a view of its own, not a filter
+test("the toolbar counts what the view holds: a total when nothing is filtered, archived apart", async () => {
+  const acc = (id, extra) => Object.assign({ id, gameName: "N" + id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() } }, extra);
+  const win = bootApp([acc("a"), acc("b"), acc("c", { region: "NA" }), acc("x", { archived: true }), acc("y", { archived: true })]);
+  const count = () => win.document.getElementById("count").querySelector("span").textContent;
+  assert.equal(count(), "3 accounts", "nothing filtered: a total, without the archived two");
+  const region = win.document.getElementById("tRegion");
+  region.value = "EUW"; region.dispatchEvent(new win.Event("change", { bubbles: true }));
+  await until(() => count() === "2 of 3 shown", "a filter on: how many of the three");
+  region.value = ""; region.dispatchEvent(new win.Event("change", { bubbles: true }));
+  win.document.getElementById("tArchived").click();
+  await until(() => count() === "2 archived", "the archived view counts its own");
+});
+
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row
 // ended hundreds of pixels apart
 test("a card's notes keep to one row of two chips and +N more; Details shows them all", () => {

@@ -5728,7 +5728,14 @@ function renderGrid(){
   const stale=accounts.filter(a=>!a.archived&&isStale(a)).length;
   // "21 need a refresh" was a red sentence you could not act on — the filter that
   // shows exactly those already existed, behind a stat tile in a collapsed panel.
-  setHTML($("count"),!accounts.length?"":`<span><b>${list.length}</b> of <b>${accounts.length}</b> shown</span>`
+  /* Out of what this view holds: archived accounts are a view of their own, so
+     counting them in ("53 of 61 shown" with nothing filtered) read as eight
+     accounts hidden by a filter nobody had set. Nothing filtered, it is just a
+     total. */
+  const held=accounts.filter(a=>!!a.archived===!!ui.showArchived).length;
+  const noun=ui.showArchived?"archived":"account"+(held===1?"":"s");
+  setHTML($("count"),!accounts.length?"":(list.length===held?`<span><b>${held}</b> ${noun}</span>`
+      :`<span><b>${list.length}</b> of <b>${held}</b>${ui.showArchived?" archived":""} shown</span>`)
     +(stale?`<button class="warn${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"
         title="Show only the accounts that are out of date">${stale} need${stale===1?"s":""} a refresh</button>`:""));
   syncCheckAll(list);
