@@ -303,7 +303,7 @@
   .rib-bar:has(.rib-seg.on) .rib-seg:not(.on){background:color-mix(in srgb,var(--c) 22%,var(--bg))}
   .rib-bar:has(.rib-seg.on) .rib-seg:not(.on) i{opacity:.4}
   .rib-seg.on{background:var(--c);box-shadow:0 0 0 1px var(--bg),0 0 14px -2px var(--c)}
-  .rib-cap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  .rib-cap{display:flex;justify-content:space-between;gap:3px 12px;flex-wrap:wrap;
     font-size:calc(11px*var(--ts));letter-spacing:.02em;color:var(--faint)}
   .rib-cap b{font-weight:600;color:var(--muted)}
   .brand{display:flex;align-items:center;gap:16px;min-width:0}
@@ -2502,6 +2502,11 @@
        chips wrapped into a block of their own: together most of a screen. Each is
        one row now that slides sideways, the next figure peeking in at the edge to
        say there is more. */
+    /* On a phone the count and "N need a refresh" stack; the button's padding (its
+       hit area) pushed its words in from the count's, so the second line started
+       10px right of the first. The margin takes the padding back out. */
+    .cmd-count{flex-direction:column;align-items:flex-start;gap:0}
+    .cmd-count .warn{margin-left:-10px}
     #dash .dash,#dash .dash[style*="--cols"]{display:flex;overflow-x:auto;scroll-snap-type:x proximity;
       overscroll-behavior-x:contain;scrollbar-width:none}
     #dash .dash>.stat{flex:0 0 min(62%,220px);scroll-snap-align:start}

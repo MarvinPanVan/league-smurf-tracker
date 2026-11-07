@@ -8376,6 +8376,18 @@ test("the select box shows on hovering a list row, as it does on a card", () => 
   assert.ok(sel.includes(".rw:hover .bulkchk"), "and on a list row: " + sel.join(", "));
 });
 
+// On a phone "12 need a refresh" started 10px right of "25 of 25 shown" above it
+// (its padding is its touch target), and the header's two caption lines sat 12px apart
+test("on a phone the toolbar's two count lines start at one edge, and the header caption is one block", () => {
+  const coarse = html.match(/\.cmd-count \.warn\{padding:6px (\d+)px\}/);
+  assert.ok(coarse, "the touch padding");
+  const phone = html.match(/\.cmd-count\{flex-direction:column;[^}]*\}\s*\.cmd-count \.warn\{margin-left:-(\d+)px\}/);
+  assert.ok(phone, "stacked, with the padding taken back out");
+  assert.equal(phone[1], coarse[1], "the margin is the padding");
+  const gap = html.match(/\.rib-cap\{[^}]*gap:(\d+)px \d+px/);
+  assert.ok(gap && +gap[1] <= 4, "a wrapped caption is one block, not two: " + (gap && gap[0]));
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
