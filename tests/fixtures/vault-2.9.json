@@ -1,0 +1,403 @@
+[
+ {
+  "id": "fx1",
+  "fav": true,
+  "status": "active",
+  "tags": [
+   "mid",
+   "ranked-ready"
+  ],
+  "history": [
+   {
+    "t": 1791979199863,
+    "tier": "GOLD",
+    "division": "II",
+    "lp": 40
+   },
+   {
+    "t": 1792324799863,
+    "tier": "GOLD",
+    "division": "I",
+    "lp": 15
+   },
+   {
+    "t": 1792670399863,
+    "tier": "GOLD",
+    "division": "I",
+    "lp": 78
+   },
+   {
+    "t": 1793015999863,
+    "tier": "PLATINUM",
+    "division": "IV",
+    "lp": 12
+   },
+   {
+    "t": 1793275199863,
+    "tier": "PLATINUM",
+    "division": "IV",
+    "lp": 55
+   },
+   {
+    "t": 1793534399863,
+    "tier": "PLATINUM",
+    "division": "III",
+    "lp": 31
+   },
+   {
+    "t": 1793793599863,
+    "tier": "PLATINUM",
+    "division": "III",
+    "lp": 74
+   },
+   {
+    "t": 1794045599863,
+    "tier": "PLATINUM",
+    "division": "II",
+    "lp": 61
+   }
+  ],
+  "login": "demo_user1",
+  "password": "demo-pass-1",
+  "email": "smurf1@mail.gg",
+  "notes": "Push for Diamond before the split ends",
+  "label": "Main smurf",
+  "gameName": "Moonlit Mid",
+  "tagLine": "0001",
+  "region": "EUW",
+  "info": {
+   "honor": 3,
+   "owned": 96,
+   "be": 23400,
+   "twofa": true,
+   "skins": [
+    "Elementalist Lux",
+    "Star Guardian Ahri",
+    "Arcade Kai'Sa"
+   ],
+   "rp": 650,
+   "own": {
+    "Bought": "no"
+   }
+  },
+  "stats": {
+   "found": true,
+   "tier": "PLATINUM",
+   "division": "II",
+   "lp": 61,
+   "wins": 38,
+   "losses": 29,
+   "level": 214,
+   "icon": "https://opgg-static.akamaized.net/meta/images/profile_icons/profileIcon1.jpg",
+   "asOf": "updated today",
+   "updatedAt": 1794045599863,
+   "champs": [
+    {
+     "name": "Lux",
+     "games": 24,
+     "wins": 15,
+     "losses": 9,
+     "wr": 63,
+     "kda": "3.4"
+    },
+    {
+     "name": "Ahri",
+     "games": 18,
+     "wins": 10,
+     "losses": 8,
+     "wr": 56,
+     "kda": "2.9"
+    },
+    {
+     "name": "Syndra",
+     "games": 9,
+     "wins": 4,
+     "losses": 5,
+     "wr": 44,
+     "kda": "2.1"
+    }
+   ]
+  },
+  "goal": {
+   "tier": "DIAMOND",
+   "division": "IV",
+   "lp": 0
+  },
+  "lastPlayedAt": 1793880000000,
+  "lastLoginAt": 1793793600000,
+  "createdOn": "2021-03-14",
+  "birthdate": "2000-01-02",
+  "art": {
+   "champ": "Lux",
+   "skin": 7
+  },
+  "artOp": 40
+ },
+ {
+  "id": "fx2",
+  "fav": false,
+  "status": "active",
+  "tags": [
+   "adc"
+  ],
+  "history": [
+   {
+    "t": 1792843199863,
+    "tier": "GOLD",
+    "division": "II",
+    "lp": 35
+   },
+   {
+    "t": 1793188799863,
+    "tier": "GOLD",
+    "division": "II",
+    "lp": 8
+   },
+   {
+    "t": 1793447999863,
+    "tier": "GOLD",
+    "division": "III",
+    "lp": 71
+   },
+   {
+    "t": 1793707199863,
+    "tier": "GOLD",
+    "division": "III",
+    "lp": 22
+   }
+  ],
+  "login": "demo_user2",
+  "password": "demo-pass-2",
+  "email": "smurf2@mail.gg",
+  "notes": "",
+  "label": "ADC acc",
+  "gameName": "Bot Diff",
+  "tagLine": "EUW",
+  "region": "EUW",
+  "info": {
+   "honor": 2,
+   "owned": 41,
+   "be": 6150,
+   "twofa": false,
+   "skins": [
+    "Spirit Blossom Yasuo"
+   ]
+  },
+  "stats": {
+   "found": true,
+   "tier": "GOLD",
+   "division": "III",
+   "lp": 22,
+   "wins": 21,
+   "losses": 24,
+   "level": 167,
+   "asOf": "updated 4 days ago",
+   "updatedAt": 1793707199863,
+   "champs": [
+    {
+     "name": "Jinx",
+     "games": 20,
+     "wins": 10,
+     "losses": 10,
+     "wr": 50,
+     "kda": "2.6"
+    },
+    {
+     "name": "Kai'Sa",
+     "games": 15,
+     "wins": 7,
+     "losses": 8,
+     "wr": 47,
+     "kda": "2.4"
+    }
+   ]
+  },
+  "peakManual": {
+   "tier": "PLATINUM",
+   "division": "IV",
+   "lp": 10
+  },
+  "flagged": true
+ },
+ {
+  "id": "fx3",
+  "fav": false,
+  "status": "active",
+  "tags": [
+   "fill"
+  ],
+  "history": [
+   {
+    "t": 1793361599863,
+    "tier": "SILVER",
+    "division": "II",
+    "lp": 60
+   },
+   {
+    "t": 1793620799863,
+    "tier": "SILVER",
+    "division": "II",
+    "lp": 95
+   },
+   {
+    "t": 1793966399863,
+    "tier": "SILVER",
+    "division": "I",
+    "lp": 89
+   }
+  ],
+  "login": "demo_user3",
+  "password": "demo-pass-3",
+  "email": "",
+  "notes": "",
+  "label": "EUNE fill acc",
+  "gameName": "Coinflip Queue",
+  "tagLine": "EUNE",
+  "region": "EUNE",
+  "stats": {
+   "found": true,
+   "tier": "SILVER",
+   "division": "I",
+   "lp": 89,
+   "wins": 15,
+   "losses": 11,
+   "level": 98,
+   "asOf": "updated yesterday",
+   "updatedAt": 1793966399863,
+   "champs": [
+    {
+     "name": "Thresh",
+     "games": 14,
+     "wins": 9,
+     "losses": 5,
+     "wr": 64,
+     "kda": "3.1"
+    },
+    {
+     "name": "Lee Sin",
+     "games": 8,
+     "wins": 4,
+     "losses": 4,
+     "wr": 50,
+     "kda": "2.2"
+    }
+   ]
+  }
+ },
+ {
+  "id": "fx4",
+  "fav": false,
+  "status": "resting",
+  "tags": [
+   "leveling"
+  ],
+  "history": [],
+  "login": "demo_user4",
+  "password": "demo-pass-4",
+  "email": "",
+  "notes": "",
+  "label": "Fresh leveling acc",
+  "gameName": "NewSmurf",
+  "tagLine": "2026",
+  "region": "EUW",
+  "stats": {
+   "found": true,
+   "tier": "UNRANKED",
+   "division": null,
+   "lp": null,
+   "wins": null,
+   "losses": null,
+   "level": 23,
+   "mmr": null,
+   "avgRecent": null,
+   "asOf": "updated 6 days ago",
+   "note": null,
+   "updatedAt": 1793534399863
+  }
+ },
+ {
+  "id": "fx5",
+  "fav": false,
+  "status": "banned",
+  "tags": [
+   "dead"
+  ],
+  "history": [
+   {
+    "t": 1789732799863,
+    "tier": "BRONZE",
+    "division": "II",
+    "lp": 30
+   },
+   {
+    "t": 1790596799863,
+    "tier": "BRONZE",
+    "division": "I",
+    "lp": 12
+   }
+  ],
+  "login": "",
+  "password": "",
+  "email": "",
+  "notes": "",
+  "label": "RIP acc",
+  "gameName": "Chat Restricted",
+  "tagLine": "4444",
+  "region": "EUNE",
+  "info": {
+   "honor": 0,
+   "skins": [
+    "Prestige K/DA Akali"
+   ],
+   "penalty": "Permanent ban for chat"
+  },
+  "stats": {
+   "found": true,
+   "tier": "BRONZE",
+   "division": "I",
+   "lp": 12,
+   "wins": 40,
+   "losses": 52,
+   "level": 301,
+   "asOf": "before the ban",
+   "updatedAt": 1790596799863
+  }
+ },
+ {
+  "id": "fx6",
+  "label": "Old one",
+  "gameName": "Archived Acc",
+  "tagLine": "OLD",
+  "region": "NA",
+  "status": "active",
+  "archived": true,
+  "fav": false,
+  "tags": [
+   "old"
+  ],
+  "history": [
+   {
+    "t": 1759492800000,
+    "tier": "SILVER",
+    "division": "III",
+    "lp": 40,
+    "w": 10,
+    "l": 12
+   }
+  ],
+  "login": "old_login",
+  "password": "p@ss \"quoted\", comma",
+  "email": "",
+  "notes": "Line one\nLine two",
+  "stats": {
+   "found": true,
+   "tier": "SILVER",
+   "division": "III",
+   "lp": 40,
+   "wins": 10,
+   "losses": 12,
+   "level": 55,
+   "updatedAt": 1759492800000
+  }
+ }
+]

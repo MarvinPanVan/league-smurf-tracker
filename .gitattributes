@@ -1,0 +1,2 @@
+# Frozen test vaults: byte for byte, whatever the platform line-ending settings say
+tests/fixtures/** -text

@@ -9369,3 +9369,65 @@ test("the dashboard reads as one row of figures", () => {
   const rule = html.match(/\.stat-b\{[^}]*\}/);
   assert.match(rule[0], /gap:0/, "a clickable tile does not inherit the button's flex gap");
 });
+
+// ---- frozen vaults: what released builds wrote has to keep opening ----
+// tests/fixtures holds the vault, both exports and a CSV exactly as 2.9.1 wrote them,
+// plus the older 150 000-round encrypted vault. Never regenerate them (see its README).
+const FIX = f => fs.readFileSync(path.join(__dirname, "fixtures", f), "utf8");
+const FIXED = JSON.parse(FIX("vault-2.9.json"));
+const fpOf = (list, csv) => list.map(a => {
+  const s = a.stats || {}, i = a.info || {};
+  const o = { name: a.gameName + "#" + a.tagLine, region: a.region, status: a.status || "active", fav: !!a.fav,
+    rank: [s.tier || null, s.division || null, s.lp ?? null, s.wins ?? null, s.losses ?? null],
+    login: a.login || "", password: a.password || "", email: a.email || "", notes: a.notes || "", tags: [...(a.tags || [])] };
+  if (!csv) Object.assign(o, { archived: !!a.archived, hist: (a.history || []).length,
+    info: [i.honor ?? null, i.owned ?? null, i.be ?? null, i.twofa ?? null, (i.skins || []).length, i.penalty || null] });
+  return o;
+}).sort((x, y) => x.name.localeCompare(y.name));
+const loaded = win => JSON.parse(appGet(win, "JSON.stringify(accounts)"));
+const unlockWith = async (win, pass) => {
+  win.document.getElementById("lockPass").value = pass;
+  win.document.getElementById("lockBtn").click();
+  await until(() => win.document.getElementById("lock").classList.contains("hidden"), "the vault to open");
+};
+
+test("frozen: the plain vault 2.9 wrote opens whole, and what the app writes back opens again", async () => {
+  const win = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker", FIX("vault-2.9.json")));
+  assert.equal(FIXED.length, 6);
+  assert.deepEqual(fpOf(loaded(win)), fpOf(FIXED), "every account, every field that matters");
+  assert.equal(win.document.querySelectorAll(".card").length, 5, "the archived one waits under Archived");
+  runScript(win, "saveDB()");
+  await until(() => win.localStorage.getItem("smurf-tracker") !== FIX("vault-2.9.json"), "the app's own write");
+  const again = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker", win.localStorage.getItem("smurf-tracker")));
+  assert.deepEqual(fpOf(loaded(again)), fpOf(FIXED), "and its own write opens the same");
+});
+
+test("frozen: the encrypted vault, current and 150 000-round, opens with its password", async () => {
+  for (const f of ["vault-2.9-encrypted.json", "vault-legacy-150k-encrypted.json"]) {
+    const win = bootApp(undefined, w => w.localStorage.setItem("smurf-tracker", FIX(f)));
+    assert.equal(win.document.getElementById("lock").classList.contains("hidden"), false, f + " is locked");
+    await unlockWith(win, "fixture-pass");
+    assert.deepEqual(fpOf(loaded(win)), fpOf(FIXED), f);
+  }
+});
+
+test("frozen: both export files and the CSV import into an empty vault", async () => {
+  const plain = bootApp();
+  plain.doImport(new plain.File([FIX("export-v2-plain.json")], "backup.json", { type: "application/json" }));
+  await until(() => appGet(plain, "accounts.length") === 6, "the plain export");
+  assert.deepEqual(fpOf(loaded(plain)), fpOf(FIXED));
+
+  const enc = bootApp();
+  runScript(enc, 'vaultPassword = "fixture-pass"');
+  enc.doImport(new enc.File([FIX("export-v2-encrypted.json")], "backup.json", { type: "application/json" }));
+  await until(() => appGet(enc, "accounts.length") === 6, "the encrypted export");
+  assert.deepEqual(fpOf(loaded(enc)), fpOf(FIXED));
+
+  const csv = bootApp();
+  csv.doImportCSV(new csv.File([FIX("export.csv")], "export.csv", { type: "text/csv" }));
+  await until(() => appGet(csv, "accounts.length") === 6, "the CSV");
+  assert.deepEqual(fpOf(loaded(csv), true), fpOf(FIXED, true), "what a CSV carries: ids, ranks, logins, notes, tags");
+  const own = JSON.parse(appGet(csv, "JSON.stringify(accounts.find(a => a.gameName === 'Moonlit Mid').info || {})"));
+  assert.equal(own.honor, 3, "and the note fields at the end of each row");
+});
+
