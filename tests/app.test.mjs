@@ -4395,7 +4395,7 @@ test("the stats say which accounts they are from, as a footnote whose choices gi
   sel().value = "";
   sel().dispatchEvent(new win.Event("change", { bubbles: true }));
   runScript(win, "accounts.find(a => a.stats && a.stats.tier === 'GOLD').excludeStats = true; renderDash()");
-  assert.match(scope().querySelector(".dash-ex").textContent, /^1 left out from their cards$/);
+  assert.match(scope().querySelector(".dash-ex").textContent, /^1 left out in their account settings$/);
   assert.equal(sel().selectedOptions[0].textContent, "all 2 ranked accounts");
 });
 
@@ -8128,10 +8128,10 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
   const win = bootApp(seededAccount());
   const m = cardMenu(win);
   assert.deepEqual([...m.querySelectorAll(".cm-g")].map(g => g.textContent.trim()),
-    ["Edit", "Look up", "Mark", "Vault", "Remove"],
+    ["Edit", "Look up", "Mark", "Vault"],
     "named groups — a hairline never says what either side of it is");
   const items = [...m.querySelectorAll("button,.cm-link")];
-  assert.equal(items.length, 12, "every action still reachable");
+  assert.equal(items.length, 10, "ten, now that Season reset and the stats setting live where they belong");
   for (const b of items) assert.ok(b.querySelector("svg.ico"), `"${b.textContent.trim()}" carries a mark`);
   // The account name used to sit at the top as the one row that was not an item,
   // which is exactly the row that got clipped once the list had to scroll.
@@ -10652,4 +10652,35 @@ test("Sync says what it does in plain words, and what it still needs with a link
   runScript(win, "cfg.backendUrl='https://w.example.workers.dev'; updateSyncStatus()");
   assert.ok($("sSyncStatus").querySelector('[data-sync-go="security"]'), "then the master password");
   assert.match($("sSyncStatus").textContent, /only the encrypted copy is sent/);
+});
+
+// The card's ⋯ menu had twelve actions under five headings
+test("the card menu keeps what you reach for; Season reset is in the Rank window, the stats setting in the form", async () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document, id = doc.querySelector(".card").dataset.id;
+  const acts = [...cardMenu(win).querySelectorAll("button[data-act]")].map(b => b.dataset.act);
+  assert.ok(!acts.includes("seasonreset") && !acts.includes("exstats"), acts.join(","));
+  win.closeAllPanels();
+  // Season reset, at the foot of the Rank window, for an account with a rank to move
+  const rank = rankWindow(win, id);
+  const reset = rank.querySelector('.rk-season [data-act="seasonreset"]');
+  assert.ok(reset, "in the Rank window");
+  reset.click();   // confirm() is stubbed to yes
+  assert.equal(appGet(win, `accounts.find(a => a.id === ${JSON.stringify(id)}).stats.tier`), "UNRANKED", "the rank moved into Past seasons");
+  assert.equal(doc.querySelector("#rankModal .rk-season"), null, "and the window shows the account as it is now");
+  win.closeAllPanels();
+  // the stats setting, in the account form under More details
+  cardMenu(win, id).querySelector('[data-act="edit"]').click();
+  const box = doc.getElementById("fExStats");
+  assert.ok(box.closest(".f-x"), "under More details");
+  assert.equal(box.checked, false);
+  box.checked = true;
+  doc.getElementById("fSave").click();
+  assert.equal(appGet(win, `accounts.find(a => a.id === ${JSON.stringify(id)}).excludeStats`), true);
+  cardMenu(win, id).querySelector('[data-act="edit"]').click();
+  assert.ok(doc.getElementById("fGrid").classList.contains("more"), "a form whose account is left out opens on it");
+  assert.equal(doc.getElementById("fExStats").checked, true);
+  doc.getElementById("fExStats").checked = false;
+  doc.getElementById("fSave").click();
+  assert.equal(appGet(win, `"excludeStats" in accounts.find(a => a.id === ${JSON.stringify(id)})`), false, "unticked leaves no field behind");
 });

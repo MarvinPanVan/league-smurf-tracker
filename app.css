@@ -1392,6 +1392,8 @@
   .fm-retry{margin-left:8px;padding:2px 8px;font-size:calc(12px*var(--ts))}
   /* Settings → Rank checks: the free path said first, the rest under one fold with
      no box of its own, so the guides inside it are the only boxes */
+  .rk-season{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .rk-season button{display:inline-flex;align-items:center;gap:7px;margin-left:-10px}
   .s-lead{margin:0 0 18px;font-size:calc(13px*var(--ts));color:var(--muted)}
   .adv-fold>summary{display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;cursor:pointer;list-style:none;
     font-size:calc(13px*var(--ts));font-weight:600;color:var(--text)}

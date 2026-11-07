@@ -3964,7 +3964,7 @@ function renderDash(){
   ${scopeShown?`<div class="dash-scope"><label for="dashMin">Figures from</label>
     <select id="dashMin">${floors.map(f=>{const n=floorN(f.v);
       return`<option value="${f.v}"${curFloor===f.v?" selected":""}>${f.v?esc(f.label)+" ("+n+")":"all "+n+" ranked account"+(n===1?"":"s")}</option>`}).join("")}</select>
-    ${handOutN||filterHint?`<span class="dash-ex">${[handOutN?handOutN+" left out from their cards":"",filterHint?esc(filterHint):""].filter(Boolean).join(" · ")}</span>`:""}
+    ${handOutN||filterHint?`<span class="dash-ex">${[handOutN?handOutN+" left out in their account settings":"",filterHint?esc(filterHint):""].filter(Boolean).join(" · ")}</span>`:""}
   </div>`:""}
   </div></div>
   ${bkNote}`);
@@ -5160,6 +5160,8 @@ function rankPanelHTML(a,s,rev){
     </div></div>
     ${secHTML(a,"rkpeak","Season peak","",tint(pm),peakBody)}
     ${secHTML(a,"rkgoal","Goal","",tint(gm),goalBody)}
+    ${s&&isRanked(a)?`<div class="rk-season"><button type="button" class="b-quiet" data-act="seasonreset">${icon("reset")}<span>Start a new season for this account…</span></button>
+      <span class="hint">Moves today's rank into Past seasons.</span></div>`:""}
   </div>`;
 }
 /* Opened from the ⋯ menu, beside Account — which has always opened a window.
@@ -5596,11 +5598,11 @@ function cardMenuHTML(a){
     +it("played","check","Played today",' title="Mark that you played on this account today"')
     +it("flag","flag",a.flagged?"Clear the flag":"Flag for attention")
     +it("compare","compare",compareIds.includes(a.id)?"Unselect compare":"Compare…")
+    /* Twelve actions under five headings. "Season reset…" is about the rank and
+       lives at the foot of the Rank window now; "Exclude from stats" is a setting
+       of the account and is in its form, under More details. */
     +grp("Vault")
     +it(a.archived?"unarchive":"archive","archive",a.archived?"Unarchive":"Archive")
-    +it("exstats","chart",a.excludeStats?"Count in stats":"Exclude from stats")
-    +it("seasonreset","reset","Season reset…")
-    +grp("Remove")
     +`<button data-act="del" class="b-danger" role="menuitem">${icon("trash")}<span>${armedDelete===a.id?"Sure? Click again":"Delete account"}</span></button>`
   +`</div>`;
 }
@@ -6146,6 +6148,7 @@ function openForm(acc,focus){
   $("fCreated").value=acc?acc.createdOn||"":"";
   $("fBirth").value=acc?acc.birthdate||"":"";
   $("fStatus").value=acc?(acc.status||"active"):"active";
+  $("fExStats").checked=!!(acc&&acc.excludeStats);
   setPassShown(false);
   renderPassNote();
   renderPwMeter();
@@ -6163,7 +6166,7 @@ function openForm(acc,focus){
   // Folded unless you keep it open, the account already has some of it, or you came
   // for the notes. Opening the ones an account has hides nothing it holds.
   setFormMore(!!cfg.formMore||atNotes||!!(acc&&(acc.label||acc.email||acc.createdOn||acc.birthdate
-    ||(acc.tags||[]).length||(acc.status&&acc.status!=="active")||acc.notes||normInfo(acc.info))));
+    ||(acc.tags||[]).length||(acc.status&&acc.status!=="active")||acc.excludeStats||acc.notes||normInfo(acc.info))));
   $("fSave").textContent=acc?"Save changes":"Add account";
   $("formTitle").textContent=acc?"Edit account":"Add account";
   // Which one, in the header: over the page the card being edited is behind the
@@ -6274,11 +6277,12 @@ function submitForm(){
     // and survive a JSON round trip without a timezone deciding to shift them by a
     // day — which a Date object serialised to UTC absolutely will.
     createdOn:$("fCreated").value||"",birthdate:$("fBirth").value||"",
-    tags:parseTags($("fTags").value),notes:$("fNotes").value.trim(),info:readInfoFields(formInfoBase)};
+    tags:parseTags($("fTags").value),notes:$("fNotes").value.trim(),info:readInfoFields(formInfoBase),
+    excludeStats:$("fExStats").checked};
   if(editingId){
-    const a=accounts.find(x=>x.id===editingId);if(a){Object.assign(a,data);if(!a.info)delete a.info}
+    const a=accounts.find(x=>x.id===editingId);if(a){Object.assign(a,data);if(!a.info)delete a.info;if(!a.excludeStats)delete a.excludeStats}
   }else{
-    const a=Object.assign({id:uid(),fav:false,stats:null},data);if(!a.info)delete a.info;
+    const a=Object.assign({id:uid(),fav:false,stats:null},data);if(!a.info)delete a.info;if(!a.excludeStats)delete a.excludeStats;
     accounts.push(a);
     newId=a.id;
   }
@@ -8208,7 +8212,8 @@ async function onCardClick(e){
   else if(act==="compare"){openMore.delete(id);openCompare(id)}
   else if(act==="seasonreset"){
     if(!confirm("Reset this account for a new season? Current rank moves into Past seasons."))return;
-    seasonReset(id)}
+    seasonReset(id);
+    if(e.target.closest("#rankModal"))renderRankBody(id)}
   else if(act==="flag"){
     acc.flagged=!acc.flagged;
     if(ui.flag==="attention")render();
@@ -8228,7 +8233,6 @@ async function onCardClick(e){
   else if(act==="edit")openForm(acc);
   else if(act==="art")openArtPicker(id);
   else if(act==="notefields"){commitNote();openForm(acc,"notes")}
-  else if(act==="exstats"){acc.excludeStats=!acc.excludeStats;renderCard(id);renderDash();saveThen(acc.excludeStats?"Left out of the combined stats":"Counted in the combined stats again")}
   else if(act==="archive"){acc.archived=true;render();saveThen("Archived. Turn on \"Archived\" in the toolbar to see it again")}
   else if(act==="unarchive"){acc.archived=false;render();saveThen("Restored to active accounts")}
   else if(act==="noteedit"){
