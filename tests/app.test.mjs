@@ -1235,6 +1235,8 @@ test("a card's Login copies the username, then the password, without opening any
   const main = id => card(id).querySelector(".acts .a-login");
   assert.equal(main("L").dataset.act, "copyseq", "the main button copies; it no longer opens a panel");
   assert.match(main("L").textContent, /^\s*Copy username$/);
+  // the "what's new" toast may be up already, and may well say "copied" itself
+  const toastBefore = win.document.getElementById("toast").textContent;
   main("L").click();
   await until(() => copied.length === 1, "the username to be copied");
   assert.equal(copied[0], "riotuser");
@@ -1242,7 +1244,7 @@ test("a card's Login copies the username, then the password, without opening any
   // the button says it, in place of a toast over the rest of the page
   await until(() => /Username copied/.test(main("L").textContent), "the button to say it copied");
   assert.ok(main("L").classList.contains("copied"));
-  assert.doesNotMatch(win.document.getElementById("toast").textContent, /copied/i, "no toast");
+  assert.equal(win.document.getElementById("toast").textContent, toastBefore, "no toast");
   await until(() => /^\s*Copy password$/.test(main("L").textContent), "the button to move on to the password", 3000);
   main("L").click();
   await until(() => copied.length === 2, "the password to be copied");
@@ -10604,9 +10606,10 @@ test("a copy made from a button says so on the button, and to a screen reader, n
   const doc = win.document, card = () => doc.querySelector('.card[data-id="L"]');
   card().querySelector('.c-lgn[data-act="login"]').click();
   for (const act of ["copylogin", "copypw", "copymail"]) {
+    const before = doc.getElementById("toast").textContent; // "what's new" may be up, and may say "copied"
     card().querySelector(`[data-act="${act}"]`).click();
     await until(() => card().querySelector(`[data-act="${act}"]`).classList.contains("copied"), act + " to flash");
-    assert.doesNotMatch(doc.getElementById("toast").textContent, /copied/i, act + ": no toast");
+    assert.equal(doc.getElementById("toast").textContent, before, act + ": no toast");
   }
   await until(() => /Email copied/.test(doc.getElementById("srSay").textContent), "a screen reader to hear it");
   assert.equal(doc.getElementById("srSay").getAttribute("aria-live"), "polite");
