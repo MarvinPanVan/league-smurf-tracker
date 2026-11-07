@@ -196,7 +196,10 @@
   /* 1220px is a reading measure, and this page stopped being prose a long time
      ago. On a wide screen it forced a sixty-card grid into three columns with
      390 px of empty margin either side. Prose still gets the narrow measure. */
-  .wrap{position:relative;z-index:1;max-width:1640px;margin:0 auto;padding:clamp(26px,5vw,58px) clamp(16px,3vw,30px) 90px}
+  /* The same reasoning again, one screen size up: at 2560px the 1640px cap left
+     460px empty either side and four cards to a row. 2240px is six on a 2560
+     screen and five on a 1920 one; a laptop never reaches either cap. */
+  .wrap{position:relative;z-index:1;max-width:2240px;margin:0 auto;padding:clamp(26px,5vw,58px) clamp(16px,3vw,30px) 90px}
   .measure{max-width:1220px}
   .hex-display{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em}
   /* Ranks are set in the text face, bold, in their tier's colour beside the gem
@@ -865,6 +868,17 @@
      the slack is all after the name, like any table, and the figures sit together
      as one block under their headings. The heading row uses the same columns. */
   .grid.list{--rw-cols:auto 40px minmax(160px,1fr) 124px 124px 60px 94px 38px 72px 62px 16px;--rw-gap:13px}
+  /* Up to a point: on a page wider than about 1800px, "all the slack after the
+     name" was a thousand-pixel hole between a name and its own rank. There every
+     column after the picture takes a share, more for the name and the climb, the
+     way a full-width table spreads; the picture stays beside the name. */
+  @media (min-width:1800px){
+    .grid.list{--rw-cols:auto 40px minmax(160px,2.4fr) minmax(124px,1.4fr) minmax(124px,1fr) minmax(60px,.6fr) minmax(94px,1fr) minmax(38px,.5fr) minmax(72px,.8fr) minmax(62px,.5fr) 16px}
+    /* a wider column is room around the change pill and the record bar, not a
+       longer pill or a bar whose length stops meaning the same thing row to row */
+    .rw-d{align-items:flex-start}
+    .rw-wr{max-width:150px}
+  }
   .rw-main{display:grid;align-items:center;gap:var(--rw-gap);padding:11px 14px;cursor:pointer;
     grid-template-columns:var(--rw-cols);
     transition:background .14s ease}

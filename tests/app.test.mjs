@@ -8404,6 +8404,22 @@ test("on a phone the toolbar's two count lines start at one edge, and the header
   assert.ok(gap && +gap[1] <= 4, "a wrapped caption is one block, not two: " + (gap && gap[0]));
 });
 
+// At 2560px the page stopped at 1640: 460px empty either side and four cards to a row
+test("a wide screen gets a wide page, and the list spreads its columns rather than opening a hole after the name", () => {
+  const max = +html.match(/\n  \.wrap\{[^}]*max-width:(\d+)px/)[1];
+  const minCard = +html.match(/\n  \.grid\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\((\d+)px/)[1];
+  const cols = w => Math.floor((Math.min(w, max) - 60 + 16) / (minCard + 16));
+  assert.ok(cols(2560) >= 6, "six cards to a row at 2560: " + cols(2560));
+  assert.ok(cols(1920) >= 5, "five at 1920: " + cols(1920));
+  // the list, on a page that wide: every column after the picture takes a share
+  const wide = html.match(/@media \(min-width:1800px\)\{\s*\.grid\.list\{--rw-cols:([^}]+)\}([^@]*?)\n  \}/);
+  assert.ok(wide, "a wide-screen list template");
+  const tracks = wide[1].match(/minmax\([^)]*\)|[^\s]+/g);
+  assert.deepEqual(tracks.slice(0, 2), ["auto", "40px"], "the box and the picture stay put, beside the name");
+  assert.ok(tracks.filter(t => /fr\)$/.test(t)).length >= 6, "the slack is shared, not one hole: " + wide[1]);
+  assert.match(wide[2], /\.rw-d\{align-items:flex-start\}/, "the change pill keeps its size in a wider column");
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
