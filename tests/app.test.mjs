@@ -8196,6 +8196,19 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
   assert.equal(win.neverChecked({ status: "active", archived: false, stats: null }), true);
 });
 
+// "Only worth it for power users", by its own words — three fields everyone read past
+test("the paid AI rank check waits under Advanced, and opens by itself when a key is set", () => {
+  const win = bootApp(seededAccount());
+  win.openSettings("checks");
+  const adv = win.document.getElementById("sAdvanced");
+  assert.ok(adv && adv.tagName === "DETAILS", "folded");
+  assert.ok(adv.contains(win.document.getElementById("sKey")) && adv.contains(win.document.getElementById("sModel")));
+  assert.equal(adv.open, false, "closed for everyone who has not set one up");
+  const keyed = bootApp(seededAccount(), w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, apiKey: "sk-ant-test" })));
+  keyed.openSettings("checks");
+  assert.equal(keyed.document.getElementById("sAdvanced").open, true, "open when it is in use");
+});
+
 // A phone's header was four rows: gem and wordmark, strapline, rank bar, then the tray alone
 test("on a phone the header is one app bar: the wordmark left, the tray right, the rank bar under both", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
