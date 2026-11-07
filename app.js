@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.18.0";
+const APP_VERSION="2.19.0";
 const APP_CHANGELOG=[
+  {v:"2.19.0",items:[
+    "Turning a filter on no longer moves the page: its chip sits beside the count it explains",
+    "Copying says so on the button you pressed, not in a message over the next card",
+    "Calmer charts, theme dots, a shorter card menu, Sync in plain words, and Level 23 in the list",
+  ]},
   {v:"2.18.0",items:[
     "Play next gives a reason to play: about to decay, a game or two from the next division, or not played in a week or more",
     "The stats end with \"Figures from all 3 ranked accounts\" instead of opening on a Counting control",
