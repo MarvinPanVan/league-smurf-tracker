@@ -553,8 +553,12 @@
      (not a floating box) — absolute tips overflowed the settings body by a few
      pixels and painted a useless horizontal scrollbar, and they also sat on top
      of neighbouring labels. */
-  .atm-block{margin-top:18px}
-  .atm-block .atm-h,.grp>.atm-h{font-size:calc(12px*var(--ts));font-weight:600;color:var(--text);margin-bottom:8px}
+  .atm-block{margin-top:22px}
+  /* one kind of sub-heading in every Settings tab: Appearance had its own, Rank
+     checks a ruled one, and Security used field labels */
+  .s-h{font-size:calc(13px*var(--ts));font-weight:600;color:var(--text);margin:0 0 8px;line-height:1.4}
+  .fld>.s-h{margin:0}
+  .s-gap{margin-top:22px}
   /* themes: two colours side by side is the whole idea, so that is the tile */
   .thm-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
   .thm{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:6px 6px 7px;min-width:0;

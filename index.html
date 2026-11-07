@@ -195,9 +195,9 @@
 
       <div class="grp" data-tab="look">
         <div class="grp-h tab-same">Appearance</div>
-        <div class="atm-h">Theme</div>
+        <div class="s-h">Theme</div>
         <div id="sThemes" class="thm-grid" role="radiogroup" aria-label="Theme"></div>
-        <div class="atm-h" style="margin-top:18px">Your own colours</div>
+        <div class="s-h s-gap">Your own colours</div>
         <div class="hint" style="margin-bottom:12px">Pick a colour and a preview of the homepage opens beside it. Everything here changes live; close without saving to put it back.</div>
         <div class="acc-swatches">
           <div class="acc-swatch">
@@ -212,7 +212,7 @@
           </div>
         </div>
         <div class="atm-block">
-          <div class="atm-h">Atmosphere</div>
+          <div class="s-h">Atmosphere</div>
           <div id="sAtmosphere" class="atm-grid" role="radiogroup" aria-label="Page atmosphere">
             <button type="button" role="radio" data-atmosphere="spotlight" class="atm-tile on" aria-checked="true">
               <span class="atm-mini" data-atm="spotlight" aria-hidden="true"></span>
@@ -247,7 +247,7 @@
           </div>
         </div>
         <div class="atm-block">
-          <div class="atm-h">Effects</div>
+          <div class="s-h">Effects</div>
           <div id="sEffects" class="opt-seg" role="radiogroup" aria-label="Effects">
             <button type="button" role="radio" data-v="full">Full</button>
             <button type="button" role="radio" data-v="subtle">Subtle</button>
@@ -256,7 +256,7 @@
           <div class="hint" style="margin-top:7px">Full: cards lift and glow under the pointer. Subtle: nothing moves under the pointer and the glow is quieter. Off: no animation and no glow. Your system's "reduce motion" setting is always respected.</div>
         </div>
         <div class="atm-block">
-          <div class="atm-h">Text size</div>
+          <div class="s-h">Text size</div>
           <div id="sTextSize" class="opt-seg" role="radiogroup" aria-label="Text size">
             <button type="button" role="radio" data-v="small">Small</button>
             <button type="button" role="radio" data-v="default">Default</button>
@@ -265,7 +265,7 @@
           <div class="hint" style="margin-top:7px">Only the type changes size; the layout stays put. Small fits more on a screen, Large reads easier from further away.</div>
         </div>
         <div class="atm-block">
-          <div class="atm-h">On each card</div>
+          <div class="s-h">On each card</div>
           <div id="sCardParts" class="part-chks"></div>
           <div class="hint" style="margin-top:7px">What you untick waits under each card's <b>Details</b>, so cards get shorter and more fit on a screen.
             <button type="button" id="sCompact" class="link-btn">Compact: chart and stats under Details</button></div>
@@ -283,7 +283,7 @@
              that needs none of it. That is said first now; the worker and the API
              key fold under Advanced, open on their own once either is set. -->
         <p class="hint s-lead" id="sChecksLead">Ranks are read from op.gg for free. There is nothing to set up.</p>
-        <div class="grp-h">Automatic refresh</div>
+        <div class="s-h">Automatic refresh</div>
         <div class="chk">
           <input type="checkbox" id="sAuto" style="width:auto">
           <label for="sAuto">Auto-check stale accounts when opening the app</label>
@@ -304,7 +304,7 @@
           <p class="hint">A Cloudflare worker of your own reads ranks straight from Riot, and is what Device sync and Discord decay alerts run on.</p>
           <div class="formgrid">
           <div class="fld fw">
-            <label>Backend URL (optional: your own rank server, e.g. a Cloudflare Worker)</label>
+            <label for="sBackend">Backend URL (optional: your own rank server, e.g. a Cloudflare Worker)</label>
             <input id="sBackend" placeholder="https://... (leave empty for the free auto-fetch)" autocomplete="off">
             <div id="sBackendStatus" class="hint" style="margin-top:2px" aria-live="polite"></div>
           </div>
@@ -362,7 +362,7 @@
           <label for="sNotify">Browser notifications for tier-ups and finished "Check all" runs</label>
         </div>
         <div class="fld fw" style="margin-top:14px">
-          <label>Discord webhook URL (optional, posts tier-ups to a channel)</label>
+          <label for="sDiscord">Discord webhook URL (optional, posts tier-ups to a channel)</label>
           <input id="sDiscord" placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
         </div>
         <div class="chk" style="margin-top:16px">
@@ -375,31 +375,36 @@
 
       <div class="grp" data-tab="security">
         <div class="grp-h tab-same">Security</div>
-        <div class="fld fw" style="margin-bottom:14px">
-          <label>Storage</label>
+        <!-- Its headings were field labels ("Master password. It encrypts the whole
+             vault…" was one), in a third style beside Appearance's and Rank checks'.
+             One kind of heading in every tab now, .s-h, with what it means under it. -->
+        <div class="fld fw">
+          <div class="s-h">Storage</div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <span id="sStorageStatus" class="hint" style="margin:0;flex:1;min-width:200px"></span>
             <button type="button" id="sStorageProtect" class="hidden">Protect</button>
           </div>
         </div>
-        <div class="fld fw">
-          <label>Master password. It encrypts the whole vault at rest with AES-256. There is no recovery: if you lose the password, the vault is gone.</label>
+        <div class="fld fw s-gap">
+          <div class="s-h">Master password</div>
+          <div class="hint">Encrypts the whole vault at rest with AES-256. There is no recovery: if you lose the password, the vault is gone.</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <input type="password" id="sVaultPass" placeholder="New master password" autocomplete="new-password" style="flex:1;min-width:170px">
+            <input type="password" id="sVaultPass" placeholder="New master password" aria-label="New master password" autocomplete="new-password" style="flex:1;min-width:170px">
             <button id="sVaultSet">Set password</button>
             <button id="sVaultRemove" class="b-danger hidden">Remove protection</button>
           </div>
           <div id="sVaultStatus" class="hint" style="margin-top:2px"></div>
         </div>
-        <div class="fld fw" style="margin-top:14px">
-          <label>Unlock with Face ID, fingerprint or Windows Hello</label>
+        <div class="fld fw s-gap">
+          <div class="s-h">Unlock with Face ID, fingerprint or Windows Hello</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button type="button" id="sPkSet">Set up</button>
             <button type="button" id="sPkOff" class="hidden">Turn off</button>
           </div>
           <div id="sPkStatus" class="hint" style="margin-top:2px"></div>
         </div>
-        <div class="sub-fld inline" style="padding-left:0;margin-top:14px">
+        <div class="s-h s-gap">Locking</div>
+        <div class="sub-fld inline" style="padding-left:0">
           <label for="sAutoLock">Auto-lock after</label>
           <select id="sAutoLock" aria-describedby="sAutoLockHint"></select>
         </div>
@@ -408,8 +413,8 @@
           <button type="button" id="sLockNow" title="Lock the vault now. The master password opens it again.">Lock now</button>
           <div class="hint" style="margin-top:6px">Locks this tab immediately. Other open tabs keep their own unlock state until you reload them.</div>
         </div>
-        <div class="fld fw" style="margin-top:22px">
-          <label>Password check-up</label>
+        <div class="fld fw s-gap">
+          <div class="s-h">Password check-up</div>
           <div id="sPwSum" class="hint" style="margin:0"></div>
           <div id="sPwList" class="pwc-list"></div>
           <div class="pwc-leak">
@@ -427,7 +432,7 @@
           There is no scrape cache, so don't hammer op.gg.
         </div>
         <div class="fld fw">
-          <label>Sync token (the same on every device; treat it like a password)</label>
+          <label for="sSyncToken">Sync token (the same on every device; treat it like a password)</label>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <input type="text" id="sSyncToken" class="mask" placeholder="Generate or paste a long token" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="flex:1;min-width:170px">
             <button type="button" id="sSyncGen">Generate</button>

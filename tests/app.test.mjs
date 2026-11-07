@@ -5090,7 +5090,7 @@ test("the settings body is grouped rather than one flat run of fields", () => {
   const groups = [...win.document.querySelectorAll("#settings .grp-h")].map(g => g.textContent.trim());
   // in the order of the tab row, which is one click to any of them; sync still
   // comes after both of the things it needs (a master password and a worker)
-  assert.deepEqual(groups, ["Appearance", "Rank checks", "Automatic refresh", "Alerts", "Security", "Device sync", "Backup"]);
+  assert.deepEqual(groups, ["Appearance", "Rank checks", "Alerts", "Security", "Device sync", "Backup"]);
   const tabOrder = [...win.document.querySelectorAll("#settings [data-stab]")].map(b => b.dataset.stab);
   const grpOrder = [...new Set([...win.document.querySelectorAll("#settings .grp")].map(g => g.dataset.tab))];
   assert.deepEqual(grpOrder, tabOrder, "the groups run in the tabs' order");
@@ -10228,4 +10228,24 @@ test("Rank checks says the free path first, with the worker and API key folded u
   // and the other tabs point to where the worker is now
   assert.match(win.document.querySelector('#settings .grp[data-tab="sync"]').textContent, /Rank checks, Advanced/);
   assert.match(win.document.querySelector('#settings .grp[data-tab="alerts"]').textContent, /Rank checks, Advanced/);
+});
+
+// Appearance had one kind of sub-heading, Rank checks a ruled one, and Security used
+// field labels, one of them a whole sentence
+test("Settings uses one kind of sub-heading in every tab, and every label names a field", () => {
+  const win = bootApp();
+  const doc = win.document;
+  const heads = tab => [...doc.querySelectorAll(`#settings .grp[data-tab="${tab}"] .s-h`)].map(h => h.textContent.trim());
+  assert.equal(doc.querySelectorAll("#settings .atm-h").length, 0, "Appearance's own kind is gone");
+  assert.deepEqual(heads("look").slice(0, 2), ["Theme", "Your own colours"]);
+  assert.deepEqual(heads("checks"), ["Automatic refresh"], "no ruled heading");
+  assert.deepEqual(heads("security"), ["Storage", "Master password", "Unlock with Face ID, fingerprint or Windows Hello", "Locking", "Password check-up"]);
+  assert.match(doc.querySelector('#settings .grp[data-tab="security"]').textContent, /Encrypts the whole vault at rest with AES-256/, "what it means, under it");
+  assert.equal(doc.getElementById("sVaultPass").getAttribute("aria-label"), "New master password");
+  // a label is for a field: it names one, or holds one
+  for (const l of doc.querySelectorAll("#settings .mdl-b label")) {
+    const f = l.getAttribute("for");
+    assert.ok((f && doc.getElementById(f)) || l.querySelector("input,select,textarea"), "a label for nothing: " + l.textContent.trim().slice(0, 40));
+  }
+  assert.match(html, /\n  \.s-h\{font-size:calc\(13px\*var\(--ts\)\);font-weight:600;color:var\(--text\)/);
 });
