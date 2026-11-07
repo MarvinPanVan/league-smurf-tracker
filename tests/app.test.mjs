@@ -827,12 +827,12 @@ test("the default background is one light from above, in the primary accent only
   assert.doesNotMatch(mini, /--teal/, "and its preview tile shows the same");
 });
 
-test("the header tray is a solid plate: nothing behind it can tint its edge", () => {
+// A framed tray round the header's quiet buttons undid the quiet
+test("the header's utilities sit bare at its right edge, with no tray round them", () => {
   const rule = html.match(/\n  \.top \.bar\{[^}]*\}/)[0];
-  assert.doesNotMatch(rule, /backdrop-filter/, "no blurred backdrop to mix with");
-  assert.match(rule, /background:var\(--panel\)/, "an opaque fill");
-  assert.doesNotMatch(rule, /border:1px/, "its edge is drawn inside the fill, not as a border over the page");
-  assert.doesNotMatch(html, /\.top \.bar:hover\{/, "and it does not change colour on hover");
+  assert.doesNotMatch(rule, /background|box-shadow|border|backdrop-filter/, "no plate, edge or blur");
+  assert.match(rule, /margin-left:auto/, "kept to the right edge");
+  assert.match(rule, /z-index:30/, "and above the page, so the ⋯ menu paints over it");
 });
 
 test("the page speaks in line icons, not emoji", () => {
@@ -969,7 +969,10 @@ test("buttons are flat, of three kinds, and every control in a toolbar row is on
   assert.match(rule(".b-teal"), /color:var\(--teal-txt\)[^}]*background-color:var\(--panel2\)/, "outlined in the accent");
   const quiet = css.match(/\n  (\.b-quiet,[^{]*)\{([^}]*)\}/);
   assert.match(quiet[2], /background:none;border-color:transparent;color:var\(--text\)/, "quiet: no fill until hovered, and text you can read");
-  for (const who of [".ghost-toggle", ".tools>button", ".tag-handle"]) assert.ok(quiet[1].split(",").includes(who), who + " is quiet");
+  assert.ok(quiet[1].split(",").includes(".ghost-toggle"), "Hide stats is quiet");
+  // the filter toggles sit beside boxed dropdowns: quiet, they read as plain text
+  for (const who of [".tools>button", ".tag-handle", ".t-select"]) assert.ok(!quiet[1].split(",").includes(who), who + " is outlined, like the dropdowns");
+  assert.match(rule("select"), /border-color:var\(--btn-edge\)/, "and the dropdowns wear the buttons' edge");
   assert.match(rule("#bMore,#bHelp"), /color:var\(--text\)/, "⋯ and ? are not greyed out");
   // one height, size and weight across a toolbar row
   assert.match(css, /--ctl-h:36px/);
@@ -4968,7 +4971,7 @@ test("themes: one click sets both colours and the atmosphere, kept only on Save"
   assert.deepEqual(on(), []);
 });
 
-test("swatches draw cleanly: no border for a gradient to repeat under, a smoothed split, and an opaque tray frame", () => {
+test("swatches draw cleanly: no border for a gradient to repeat under, and a smoothed split", () => {
   const win = bootApp();
   const css = [...win.document.querySelectorAll("style")].map(s => s.textContent).join("\n");
   // A background repeats under its own border, so a gradient swatch with a border
@@ -4981,11 +4984,6 @@ test("swatches draw cleanly: no border for a gradient to repeat under, a smoothe
   win.document.getElementById("bSettings").click();
   const sw = win.document.querySelector('#sThemes [data-theme="noxus"] .thm-sw').getAttribute("style");
   assert.match(sw, /calc\(50% - \.6px\).*calc\(50% \+ \.6px\)/, "the diagonal blends over a pixel instead of stepping");
-  // the tray's edge cannot take on the colour of whatever wash is behind it: it is
-  // drawn inside an opaque fill (see "the header tray is a solid plate")
-  const tray = css.match(/\.top \.bar\{[^}]*\}/)[0];
-  assert.match(tray, /background:var\(--panel\)/);
-  assert.match(tray, /box-shadow:inset 0 0 0 1px/);
 });
 
 test("themes: My best rank follows the highest tier, and moves when you climb", () => {
@@ -9060,6 +9058,22 @@ test("the toolbar counts what the view holds: a total when nothing is filtered, 
   region.value = ""; region.dispatchEvent(new win.Event("change", { bubbles: true }));
   win.document.getElementById("tArchived").click();
   await until(() => count() === "2 archived", "the archived view counts its own");
+});
+
+// "Not found. Check the name, tag and region" was red while the header's warning was
+// amber, and told you to check without a way to fix it
+test("a card whose Riot ID op.gg doesn't know says so in amber, with a button that fixes it", () => {
+  const win = bootApp([{ id: "nf", gameName: "Gone", tagLine: "EUW", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: false, updatedAt: Date.now() } }]);
+  const line = win.document.querySelector('.card[data-id="nf"] .c-miss');
+  assert.ok(line, "the line is there");
+  assert.match(html, /\n  \.c-miss\{[^}]*color:var\(--warn-txt\)/, "in the warning colour, like the header");
+  assert.doesNotMatch(line.outerHTML, /--danger/);
+  const fix = line.querySelector(".c-fix");
+  assert.equal(fix.textContent, "Fix Riot ID");
+  fix.click();
+  assert.equal(win.document.getElementById("form").classList.contains("hidden"), false, "it opens the account form");
+  assert.equal(win.document.getElementById("fName").value, "Gone", "on this account");
 });
 
 // The notes box was 200px on one card and 28px on the next: most of why cards in a row

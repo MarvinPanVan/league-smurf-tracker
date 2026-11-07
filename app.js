@@ -5291,7 +5291,9 @@ function cardHTML(a,i){
   let rankBlock;
   if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
   else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">Never checked</div>`;
-  else if(s.found===false)rankBlock=`<div class="wl" style="color:var(--danger)">Not found. Check the name, tag and region</div>`;
+  // amber like the header's warning: a Riot ID op.gg doesn't know is usually one to
+  // correct, so the line is the way to correct it, not only the advice to
+  else if(s.found===false)rankBlock=`<div class="wl c-miss">${icon("alert")}<span>Not found on op.gg</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
     ${s.level>=30?`<div class="wl"><span class="ready" title="Level 30 reached. Ranked also needs 20 champions owned, which the app cannot see.">Ready for ranked</span></div>`:""}`;
   else if(!isRanked(a))rankBlock=`<div class="rk" style="color:${col}"><span class="rk-main"><span class="rk-t">Unranked</span></span></div>

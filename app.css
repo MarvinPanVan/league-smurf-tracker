@@ -226,29 +226,14 @@
 
   /* ---- header ---- */
   .top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:22px;margin-bottom:16px}
-  /* Everything else on the page sits on a surface — cards, toolbar, stats. Left
-     bare, these four buttons floated in dead space at the far edge and read as
-     unrelated to each other. A tray makes them one deliberate cluster and ties
-     the header to the same visual language as the rest.
-     The account actions have since moved down to the console above the grid,
-     where the rest of the controls over those accounts live. What's left here is
-     what it should have been: two app-level utilities — settings/backup and help
-     — in a quiet tray, not a second, competing command centre.
-     It keeps to the right edge when the header wraps. Left-aligned on a row of its
-     own it read as a stray, and the ⋯ menu, which hangs leftward from its button,
-     opened off the left of a phone screen with "Export backup" cut to "ackup". */
-  /* A solid plate, its edge an inner line over its own fill. The tray used to
-     blur and saturate whatever was behind it inside a 1px border, and at a
-     display scale of 125% or 150% a 1px line falls between screen pixels: each
-     edge mixed with the boosted wash behind it by a different amount, so the
-     frame came out blue along one side, faint along another and gone on a
-     third. Over an opaque fill an edge can only mix with that fill. */
-  .top .bar{margin-left:auto;gap:3px;padding:5px;border-radius:var(--r-md);
-    background:var(--panel);box-shadow:inset 0 0 0 1px #ffffff12,var(--sh-1);
+  /* The header's utilities (Hide stats, ⋯, ?) are quiet buttons at its right edge,
+     with no tray round them: a framed box around buttons that are meant to stay out
+     of the way undid exactly that. They keep to the right edge when the header
+     wraps; on a row of their own at the left, the ⋯ menu, which hangs leftward from
+     its button, opened off a phone screen with "Export backup" cut to "ackup". */
+  .top .bar{margin-left:auto;gap:3px;
     /* lifted above what follows, so the ⋯ menu inside it paints over the page */
     position:relative;z-index:30}
-  .tray-sep{width:1px;align-self:stretch;margin:2px 3px;flex-shrink:0;
-    background:linear-gradient(180deg,transparent,var(--line2),transparent)}
   /* The old header stacked a pill, then the title, then a rule — three full-width
      bands of decreasing importance, all left-aligned, which is what made it read
      as flat and pasted into the corner. This is a lockup instead: a mark the
@@ -263,7 +248,7 @@
     color:var(--text);font-size:calc(13px*var(--ts));font-weight:500;font-variant-numeric:tabular-nums}
   .rib-i:hover{background:#ffffff10;border-color:transparent;color:var(--text)}
   .rib-i.on{background:color-mix(in srgb,var(--gold) 12%,transparent);border-color:color-mix(in srgb,var(--gold) 45%,transparent)}
-  .rib-crest{width:18px;height:18px;flex-shrink:0}
+  .rib-crest{width:22px;height:22px;flex-shrink:0}
   .rib-t b{font-weight:600}
   /* while one is the filter, the others step back */
   .rib-row:has(.rib-i.on) .rib-i:not(.on){opacity:.55}
@@ -311,8 +296,10 @@
   /* Three kinds of button, all flat:
      - filled (.b-fill, and Login): the one main action of a view, in the accent;
      - outlined (every button by default; .b-teal for an action in the accent);
-     - quiet (.b-quiet: filters, toggles, the header's ⋯ and ?): no fill and no
-       edge until hovered, its text the same as any other button's, not grey. */
+      - quiet (.b-quiet: Hide stats and the header's ⋯ and ?): no fill and no edge
+       until hovered, its text the same as any other button's, not grey. The filter
+       toggles (Favorites, Archived, Tags) are outlined: quiet, beside the boxed
+       dropdowns, they read as plain text, and "Archived" as a heading. */
   button,.btn{font:inherit;font-size:calc(13px*var(--ts));font-weight:500;cursor:pointer;line-height:1.2;white-space:nowrap;
     border:1px solid var(--btn-edge);border-radius:var(--r-sm);background-color:var(--panel2);
     color:var(--text);
@@ -340,8 +327,8 @@
   .b-teal:hover{color:var(--text);border-color:var(--teal);background-color:color-mix(in srgb,var(--teal) 13%,var(--panel2))}
   .b-fill{background-color:var(--teal);border-color:var(--teal);color:var(--teal-ink);font-weight:650}
   .b-fill:hover{background-color:color-mix(in srgb,var(--teal) 86%,#fff);border-color:color-mix(in srgb,var(--teal) 86%,#fff);color:var(--teal-ink)}
-  .b-quiet,.ghost-toggle,.tools>button,.tag-handle,.t-select{background:none;border-color:transparent;color:var(--text)}
-  .b-quiet:hover,.ghost-toggle:hover,.tools>button:hover,.tag-handle:hover,.t-select:hover{background:#ffffff10;border-color:transparent;color:var(--text)}
+  .b-quiet,.ghost-toggle{background:none;border-color:transparent;color:var(--text)}
+  .b-quiet:hover,.ghost-toggle:hover{background:#ffffff10;border-color:transparent;color:var(--text)}
   /* every control in a toolbar row: one height, one size, one weight */
   .cmd>button,.cmd .seg,.tools>button,.tools>select,.tools>input[type=search],.tag-handle,
   #bulkbar>button,#bulkbar>select,#bulkbar>input,.bar>button,.bar #bMore,.bar #bHelp{
@@ -439,7 +426,7 @@
   .ghost-toggle.open .ico{transform:rotate(180deg)}
   .dash-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px 0}
   .dash-filter{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .dash-filter select{font-size:calc(13px*var(--ts));height:32px;padding:0 28px 0 10px}
+  .dash-filter select{font-size:calc(13px*var(--ts));height:var(--ctl-h);padding:0 30px 0 12px}
   .dash-ex{font-size:calc(11px*var(--ts));color:var(--faint)}
   /* Was a bare name, a percentage and a hanging "30G" all at different sizes with
      nothing holding them together — at eight across a row it read as debris. One
@@ -689,7 +676,7 @@
   textarea{resize:vertical;line-height:1.55}
   /* A dropdown is a button that opens a list: flat like the buttons, with its
      edge and the chevron; a text field is a well you type into. */
-  select{appearance:none;-webkit-appearance:none;padding-right:32px;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b93a6' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center,0 0;background-size:13px,100% 100%}
+  select{appearance:none;-webkit-appearance:none;padding-right:32px;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b93a6' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center,0 0;background-size:13px,100% 100%;border-color:var(--btn-edge)}
   select:hover,select:focus{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e9edf5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")}
   input::placeholder,textarea::placeholder{color:var(--faint)}
   .tools input[type=search]{flex:1;min-width:180px}
@@ -715,7 +702,7 @@
      Everything else waits for .lit. */
   .tag-handle{gap:7px;transition:color .16s ease,border-color .16s ease,background .16s ease}
   .tag-handle:hover{color:var(--text);border-color:color-mix(in srgb,var(--gold) 38%,var(--line2));
-    background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 17%,var(--panel2)),var(--panel2))}
+    background:color-mix(in srgb,var(--gold) 9%,var(--panel2))}
   /* how many tags the vault has — a fact, not a filter, so it is not gold until one is */
   .tag-handle b{font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums;
     font-size:calc(10px*var(--ts));line-height:1.5;padding:0 6px;border-radius:var(--r-xs);
@@ -1415,6 +1402,12 @@
      so "Decay in ~7d" and "No 2-step" were two different yellows on one card */
   .d-warn{color:var(--warn-txt);background:color-mix(in srgb,var(--warn) 15%,transparent)}
   .wl .ready{color:var(--teal-txt);font-weight:600}
+  /* a Riot ID op.gg doesn't know: amber like the header's warning, and the fix one click away */
+  .c-miss{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;color:var(--warn-txt)}
+  .c-miss .ico{width:14px;height:14px;flex-shrink:0}
+  .c-fix{padding:4px 10px;min-height:28px;font-size:calc(12px*var(--ts));font-weight:600;color:var(--warn-txt);
+    background:none;border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+  .c-fix:hover{color:var(--warn-txt);background:color-mix(in srgb,var(--warn) 14%,transparent);border-color:var(--warn)}
   .delta .ico{width:1em;height:1em;vertical-align:-.15em}
   /* ---- LP chart ----
      The old sparkline was a bare line with no scale: it told you the number went
