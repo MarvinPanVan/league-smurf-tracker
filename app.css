@@ -1120,7 +1120,13 @@
      and on a real iPad it nearly vanished, so it is back at 28%. */
   .c-art{position:absolute;left:0;right:0;top:0;width:100%;height:230px;z-index:-2;pointer-events:none;
     object-fit:cover;object-position:center 18%;opacity:var(--art-op,.28);
-    -webkit-mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%);mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%)}
+    -webkit-mask-image:linear-gradient(180deg,#000,#0007 38%,transparent 78%);mask-image:linear-gradient(180deg,#000,#0007 38%,transparent 78%)}
+  /* On a bright splash the small grey text over it ("since last check", the Riot ID,
+     the LP) all but disappeared. It gets a soft halo in the card's own dark, which
+     lifts the letters off the picture without boxing them in, and the art fades out
+     sooner, by the win-rate bar rather than the chart. */
+  .card:has(.c-art) :is(.rid,.d-cap,.rk-lp,.c-rank .wl){text-shadow:0 0 2px var(--panel),0 0 4px var(--panel),0 0 9px var(--panel)}
+  .card:has(.c-art) :is(.rid,.d-cap){color:var(--muted)}
   /* --art-op: Card art… → Strength. Set on the root for every card, or on one
      card's own picture; a banned card keeps its art at about a third of that. */
   .card.dead .c-art{filter:grayscale(1);opacity:calc(var(--art-op,.28) * .36)}
@@ -2377,7 +2383,7 @@
      drawn over that height on a card, so squeezing it into the strip's 76px made
      every strength look weaker here than it is on the card */
   .ap-prev img{position:absolute;left:0;right:0;top:0;width:100%;height:230px;z-index:-1;object-fit:cover;object-position:center 18%;
-    -webkit-mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%);mask-image:linear-gradient(180deg,#000,#0008 45%,transparent 92%)}
+    -webkit-mask-image:linear-gradient(180deg,#000,#0007 38%,transparent 78%);mask-image:linear-gradient(180deg,#000,#0007 38%,transparent 78%)}
   .ap-prev-t{position:absolute;left:12px;right:12px;top:11px;display:flex;flex-direction:column;gap:3px;min-width:0}
   .ap-prev-t b{font-size:calc(14px*var(--ts));font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ap-prev-t span{font-size:calc(13px*var(--ts));font-weight:600}

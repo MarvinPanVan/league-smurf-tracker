@@ -10441,3 +10441,15 @@ test("no chart label is printed across the line or a dot; one with no clear spot
   }
   assert.ok(labelled > 60, "most charts still carry their labels (" + labelled + ")");
 });
+
+// On a bright splash the small grey text over the art all but disappeared
+test("the small text over a card's champion art gets a dark halo, and the art fades out sooner", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const halo = css.match(/\n  \.card:has\(\.c-art\) :is\(([^)]*)\)\{text-shadow:([^}]*)\}/);
+  assert.ok(halo, "a halo rule for cards with art");
+  for (const sel of [".rid", ".d-cap", ".rk-lp"]) assert.ok(halo[1].split(",").includes(sel), sel);
+  assert.ok(halo[2].split(/,(?![^(]*\))/).every(l => /^0 0 \d+px var\(--panel\)$/.test(l.trim())), "in the card's own dark");
+  assert.match(css, /\n  \.card:has\(\.c-art\) :is\(\.rid,\.d-cap\)\{color:var\(--muted\)\}/, "a step lighter than faint");
+  const mask = css.match(/\n  \.c-art\{[^}]*mask-image:linear-gradient\(180deg,#000,#000?7 (\d+)%,transparent (\d+)%\)\}/);
+  assert.ok(mask && +mask[2] <= 80, "gone by the win-rate bar, not the chart");
+});
