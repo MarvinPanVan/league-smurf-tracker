@@ -8516,6 +8516,21 @@ test("the champion strip is called Most played, and a win rate is green only fro
   assert.equal(wr("Syndra").classList.contains("wr-good"), false);
 });
 
+// A permanently banned card wore a green "+82 LP" and a Refresh as if it were still climbing
+test("a banned card shows no movement and no Refresh; a live one with the same record does", () => {
+  const D = 86400000, now = Date.now();
+  const acc = (id, status) => ({ id, gameName: id, tagLine: "1", region: "EUW", status, tags: [],
+    history: [{ t: now - 3 * D, tier: "BRONZE", division: "II", lp: 30, w: 30, l: 40 }, { t: now - D, tier: "BRONZE", division: "I", lp: 12, w: 40, l: 52 }],
+    stats: { found: true, tier: "BRONZE", division: "I", lp: 12, wins: 40, losses: 52, updatedAt: now - D } });
+  const win = bootApp([acc("live", "active"), acc("ban", "banned")]);
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  assert.ok(card("live").querySelector(".delta.d-up"), "the live account's climb is news");
+  assert.ok(card("live").querySelector(".c-ref"), "and it can be refreshed");
+  assert.equal(card("ban").querySelector(".delta.d-up,.delta.d-down"), null, "a closed account does not climb");
+  assert.equal(card("ban").querySelector(".c-ref"), null, "nor get checked; checks skip it");
+  assert.ok(card("ban").querySelector('[data-act="login"]'), "its login is still there");
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],

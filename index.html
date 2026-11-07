@@ -8416,19 +8416,25 @@ function cardHTML(a,i){
   let peak=null,peakV=null;
   {const p=peakInfo(a);peak=p.peak;peakV=p.peakV}
   let deltaChip="";
+  /* A banned account's rank will never move again, so its last movement is not
+     news: a closed account wore a green "+82 LP" and a win-streak chip as if it
+     were climbing. It keeps the chips about the record itself (duplicate ID,
+     uncertain reading), and loses the Refresh beside its timestamp, since checks
+     skip it anyway. */
+  const dead=a.status==="banned";
   // Same rule as the list row: lastDelta() already knows about season breaks and
   // Unranked ends. Subtracting raw ladderLP() here invented crash chips the list
   // correctly suppressed.
   {
     const dv=lastDelta(a);
-    if(dv)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
+    if(dv&&!dead)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
   }
   /* There was a flame "Climbing" chip here too (LP up three checks running). It was
      the fourth way the card said "going up", beside the +LP chip, the Climb figure
      and the chart's own line, and the only orange anywhere in the app. */
-  {const st=streakOf(a);if(st)deltaChip+=`<span class="delta ${st.win?"d-up":"d-down"} streak" title="The last ${st.n} ranked games were all ${st.win?"wins":"losses"}">${st.n}${st.win?"W":"L"} streak</span>`}
+  {const st=!dead&&streakOf(a);if(st)deltaChip+=`<span class="delta ${st.win?"d-up":"d-down"} streak" title="The last ${st.n} ranked games were all ${st.win?"wins":"losses"}">${st.n}${st.win?"W":"L"} streak</span>`}
   {
-    const dd=decayDays(a);
+    const dd=dead?null:decayDays(a);
     if(dd!==null&&dd<=7){
       const r=DECAY_RULES[(a.stats.tier||"").toUpperCase()];
       const why=`Estimated from the games seen between checks. A ranked game banks ${r.per===1?"1 day":r.per+" days"}, up to ${r.cap}; past that the account loses ${r.lp} LP a day.`;
@@ -8443,7 +8449,7 @@ function cardHTML(a,i){
     if(needsRotation(a))deltaChip+='<span class="delta" title="No play/check in 14+ days">Rotate'+(d!=null?(" · "+d+"d"):"")+'</span>';
   }
   {
-    const tr=wrTrend(a);
+    const tr=!dead&&wrTrend(a);
     if(tr&&Math.abs(tr.d)>=3)deltaChip+='<span class="delta '+(tr.d>0?"d-up":"d-down")+'" title="Winrate vs ~4 checks ago">'+(tr.d>0?"▲":"▼")+" WR "+(tr.d>0?"+":"")+tr.d+'</span>';
   }
   const {w:wins,l:losses,total,wr}=winLoss(s);
@@ -8587,7 +8593,7 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button></span>
+      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.lastLoginAt?`<span class="src" title="The last time you opened this account's login here">Opened ${esc(timeAgo(a.lastLoginAt))}</span>`:""}${a.status==="banned"?"":`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`}</span>
       <!-- Three buttons, not five, and the ⋯ no longer unfolds a second toolbar
            into the card: it opens one shared floating menu (see cardMenuHTML).
            DPM moved in there with the rest — it is an outbound link you follow
