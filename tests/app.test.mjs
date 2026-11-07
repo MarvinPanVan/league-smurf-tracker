@@ -8366,6 +8366,16 @@ test("a list row is two lines: the tags ride on the Riot ID's line", () => {
   assert.doesNotMatch(html.match(/\.rw-tags\{[^}]*\}/)[0], /margin-top/, "no gap left over from a line of their own");
 });
 
+// The select box is hidden until hovered, and only a card's hover showed it: in the
+// list, with a mouse, it was never seen at all unless already ticked
+test("the select box shows on hovering a list row, as it does on a card", () => {
+  const rule = html.match(/@media \(hover:hover\)\{([^{}]*\.bulkchk[^{}]*)\{opacity:1\}\}/);
+  assert.ok(rule, "the hover rule");
+  const sel = rule[1].split(",").map(x => x.trim());
+  assert.ok(sel.includes(".card:hover .bulkchk"), sel.join(", "));
+  assert.ok(sel.includes(".rw:hover .bulkchk"), "and on a list row: " + sel.join(", "));
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
