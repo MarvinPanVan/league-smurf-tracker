@@ -1528,7 +1528,7 @@ async function syncWatch(force){
     const d=await res.json().catch(()=>null);
     if(res.ok){cfg.watchSyncedAt=Date.now();saveCfg();return true}
     if(res.status===409&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker already sends decay alerts for another browser. Turn them off there first")}
-    else if((res.status===405||res.status===404&&!d)&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker is an older version without decay alerts. Redeploy it (Settings → Rank checks → the guide)")}
+    else if((res.status===405||res.status===404&&!d)&&!watchTakenSaid){watchTakenSaid=true;toast("Your worker is an older version without decay alerts. Redeploy it (Settings → Rank checks → Advanced)")}
     else if(d&&d.code==="no_kv")toast("Decay alerts need sync storage on your worker (a KV namespace bound as VAULT)");
   }catch(e){}
   return false;

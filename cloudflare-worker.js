@@ -1,5 +1,5 @@
 // Smurf Tracker — Cloudflare Worker backend
-// Deploy this, paste the worker's URL into the app's Settings > "Backend URL".
+// Deploy this, paste the worker's URL into the app's Settings → Rank checks → Advanced → Backend URL.
 //
 // GET /?name=<gameName>&tag=<tagLine>&region=<euw|eune|na|kr|...>
 // -> {"found":true,"tier":"GOLD","division":"II","lp":45,...,"uncertain":false,"source":"meta"}

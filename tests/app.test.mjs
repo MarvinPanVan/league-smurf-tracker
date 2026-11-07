@@ -9433,6 +9433,24 @@ test("the stats panel shows a figure only once there is something behind it", ()
   assert.equal(win.document.querySelector("#dash .gem-b"), null, "no rank spread under it either");
 });
 
+// The Backend URL and the worker guide moved into Rank checks' Advanced fold; the
+// worker's own header and the "older worker" toast still sent you to the old places
+test("everything that points to the Backend URL or the worker guide names the Advanced fold", () => {
+  const doc = new JSDOM(pageHtml).window.document;
+  const fold = doc.getElementById("sChecksAdv");
+  assert.match(fold.querySelector("summary").textContent, /^Advanced/);
+  assert.ok(fold.querySelector("#sBackend") && fold.querySelector("#sDeployHelp"), "the field and the guide are in it");
+  assert.equal(fold.closest("[data-tab]").dataset.tab, "checks");
+  assert.equal(doc.getElementById("stab-checks").textContent, "Rank checks");
+  const worker = fs.readFileSync(path.join(ROOT, "cloudflare-worker.js"), "utf8").split("\n").slice(0, 5).join("\n");
+  assert.ok(worker.includes("Settings → Rank checks → Advanced → Backend URL"), "the worker's header");
+  const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+  const said = [...readme.matchAll(/\*\*Settings → ([^*]+)\*\*/g)].map(m => m[1]).filter(t => /Backend URL/.test(t));
+  assert.ok(said.length >= 2 && said.every(t => t === "Rank checks → Advanced → Backend URL"), "the README: " + said.join(" | "));
+  const toast = appJs.match(/older version without decay alerts\. Redeploy it \(([^)]+)\)/)[1];
+  assert.equal(toast, "Settings → Rank checks → Advanced", "and the toast");
+});
+
 // The README still promised a "Needs refresh" tile after it moved to the toolbar
 test("the README names only stats tiles the panel still has, and the toolbar's Refresh stale", () => {
   const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
