@@ -413,6 +413,19 @@ function isFailed(a){
   // Transport failure note only — "failed (" alone matched too many informational notes.
   return /auto-fetch failed/i.test(String(a.stats.note||""));
 }
+/* Why the last check failed, in words a player can act on. The note keeps the
+   browser's own error ("Failed to fetch", "HTTP 503", "backend: timeout"), which
+   says something to whoever debugs it and nothing to anyone else. */
+function failReason(note){
+  const m=/auto-fetch failed \((.*)\)/i.exec(String(note||"")), e=(m?m[1]:"").toLowerCase();
+  const why=/timeout|abort/.test(e)?"The rank source took too long to answer."
+    :/\b429\b/.test(e)?"The rank source had too many requests at once."
+    :/no rank found|missing rank|incomplete/.test(e)?"The profile page had no rank on it. Check the Riot ID and region."
+    :/^backend:/.test(e)?"Your own worker (Backend URL) did not answer."
+    :/^api:/.test(e)?"The AI lookup did not work."
+    :"Could not reach the rank source. Your connection or the free lookup service may be down.";
+  return why+" Refresh to try again, or enter the rank by hand under ⋯ → Rank…";
+}
 /* "Never checked" = no reading yet. A CSV tier without updatedAt is a reading
    (hasReading), not a chore — isChecked alone wrongly counted those as never. */
 function neverChecked(a){return isLive(a)&&!hasReading(a.stats)}
@@ -5495,7 +5508,7 @@ function cardHTML(a,i){
     })()}
     ${rankChart(hist,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(hist),a.id,peakV,peak)}
     ${microStats.length?`<div class="c-stats n${microStats.length}">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
-    ${s&&s.note?`<div class="meta">${esc(s.note)}</div>`:""}
+    ${s&&s.note&&!isFailed(a)?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(()=>{const role=mainRole(a),tags=a.tags||[];
       return role||tags.length?`<div class="ctags">${role?`<span class="role-tag" title="Played in 3 or more of the last 5 ranked games">${esc(role)}</span>`:""}${tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""})()}
     ${loginOpen?`<div class="login${rv("login")}">
@@ -5513,7 +5526,7 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.status==="banned"?"":`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`}${isLive(a)&&isFailed(a)?`<span class="c-failed" title="${esc(s.note)}">${icon("alert")}Last check failed</span>`:""}${a.lastLoginAt?`<span class="src" title="The last time you copied or looked at this account's login here">Last login ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
+      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.status==="banned"?"":`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`}${isLive(a)&&isFailed(a)?`<span class="c-failed" title="${esc(failReason(s.note))}">${icon("alert")}Last check failed</span>`:""}${a.lastLoginAt?`<span class="src" title="The last time you copied or looked at this account's login here">Last login ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
       <!-- Three buttons, not five, and the ⋯ no longer unfolds a second toolbar
            into the card: it opens one shared floating menu (see cardMenuHTML).
            DPM moved in there with the rest — it is an outbound link you follow

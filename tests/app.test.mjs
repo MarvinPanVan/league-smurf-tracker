@@ -6586,7 +6586,8 @@ test("a first check that failed leaves the account never checked, not unranked",
   const card = win.document.querySelector('.card[data-id="f1"]');
   assert.match(card.textContent, /Never checked/);
   assert.doesNotMatch(card.textContent, /Unranked|No ranked games found/);
-  assert.match(card.textContent, /Auto-fetch failed/, "and it still says why");
+  assert.match(card.textContent, /Last check failed/, "and it says the check failed");
+  assert.match(card.querySelector(".c-failed").title, /took too long/, "and why, on the mark");
 
   // the panel was right all along; the card is what disagreed with it
   const tile = win.document.querySelector('#dash [data-flag="unchecked"]');
@@ -7580,6 +7581,37 @@ test("check returns null when the account was deleted mid-flight", async () => {
   assert.equal(await win.check("gone"), null);
 });
 
+// A failed card said it twice: "Auto-fetch failed (Failed to fetch). Enter it by hand
+// with ✎ Rank" in red, then "Last check failed" under it. "Failed to fetch" is the
+// browser's own error and means nothing to a player.
+test("a failed check is said once on its card, in plain words", () => {
+  const win = bootApp([
+    { id: "f", region: "EUW", gameName: "F", tagLine: "1", status: "active", tags: [], history: [],
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: Date.now(),
+        note: "Auto-fetch failed (Failed to fetch). Enter it by hand with ✎ Rank" } },
+    { id: "b", region: "EUW", gameName: "B", tagLine: "1", status: "banned", tags: [], history: [],
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: Date.now(),
+        note: "Auto-fetch failed (backend: HTTP 404). Enter it by hand with ✎ Rank" } },
+    { id: "n", region: "EUW", gameName: "N", tagLine: "1", status: "active", tags: [], history: [],
+      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: Date.now(), note: "Read by hand from the client" } },
+  ]);
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  const t = card("f").textContent;
+  assert.equal(t.match(/failed/gi).length, 1, "once: " + t.replace(/\s+/g, " "));
+  assert.doesNotMatch(t, /Failed to fetch|Auto-fetch/, "without the browser's error");
+  const mark = card("f").querySelector(".c-failed");
+  assert.match(mark.textContent, /Last check failed/);
+  assert.match(mark.title, /Could not reach the rank source.*Refresh to try again, or enter the rank by hand under ⋯ → Rank…/);
+  assert.doesNotMatch(card("b").textContent, /Auto-fetch|HTTP 404/, "a banned card keeps no old failure either");
+  assert.match(card("n").textContent, /Read by hand from the client/, "a note that is not a failure still shows");
+  const why = n => win.failReason("Auto-fetch failed (" + n + "). Enter it by hand with ✎ Rank");
+  assert.match(why("timeout"), /^The rank source took too long to answer\./);
+  assert.match(why("HTTP 429"), /^The rank source had too many requests at once\./);
+  assert.match(why("page loaded but no rank found; check the name, tag and region"), /^The profile page had no rank on it\. Check the Riot ID and region\./);
+  assert.match(why("backend: HTTP 502"), /^Your own worker \(Backend URL\) did not answer\./);
+  assert.match(win.failReason("Auto-fetch failed (timeout) — enter it by hand with ✎ Rank"), /too long/, "and notes written by older versions");
+});
+
 // One failed check was said four times (a stats tile, which also pushed the panel to
 // five columns, a banner, a toast and the run's counter) and not at all on the card
 test("a failed check shows on its card and in one banner, whose Show takes only transport failures", () => {
@@ -7593,7 +7625,7 @@ test("a failed check shows on its card and in one banner, whose Show takes only 
   const on = doc.querySelector('.card[data-id="fail"] .c-failed');
   assert.ok(on, "the card that failed says so");
   assert.match(on.textContent, /Last check failed/);
-  assert.match(on.title, /Auto-fetch failed \(x\)/, "with what went wrong");
+  assert.match(on.title, /^Could not reach the rank source\./, "with what went wrong, in plain words");
   assert.equal(doc.querySelector('.card[data-id="miss"] .c-failed'), null, "not found is not a failed check");
   assert.equal(doc.querySelector('#dash [data-flag="failed"]'), null, "no stats tile");
   runScript(win, 'lastFails = [{ id: "fail", name: "F" }]; renderFailbar()');
