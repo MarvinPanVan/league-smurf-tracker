@@ -376,7 +376,7 @@
 
   /* ---- dropdown menu ---- */
   #moreMenu button{width:100%;justify-content:flex-start;padding:8px 11px;border-radius:var(--r-sm);
-    background:none;border-color:transparent;box-shadow:none;color:var(--muted);font-weight:450}
+    background:none;border-color:transparent;box-shadow:none;color:var(--text);font-weight:450}
   #moreMenu button:hover{background:#ffffff0f;border-color:transparent;color:var(--text)}
   #moreMenu button.b-danger{color:var(--danger)}
   #moreMenu button.b-danger:hover{background:color-mix(in srgb,var(--danger) 14%,transparent)}
@@ -467,13 +467,6 @@
   .gem.cmb{gap:7px;padding:3px 4px 3px 10px;border-radius:var(--r-xs);
     background:#ffffff08;border:1px solid #ffffff1c}
   .gem.cmb .n{font-weight:500}
-  /* every count in here answers "how many"; clicking it answers "which ones" */
-  .gem-b{border:1px solid transparent;border-radius:var(--r-xs);padding:4px 11px;background:none;box-shadow:none;font-size:calc(12px*var(--ts))}
-  .gem-b b{font-weight:600;color:var(--faint)}
-  .gem-b:hover{background:#ffffff0f;border-color:var(--line2)}
-  .gem-b.on{background:color-mix(in srgb,var(--gold) 16%,transparent);
-    border-color:color-mix(in srgb,var(--gold) 52%,transparent);color:var(--gold-txt)}
-  .gem-b.on b{color:var(--gold-txt)}
   /* flex, not block. A <button> centres its content box vertically, so the two
      tiles that are buttons sat 24 and 31 px lower than the five that are not —
      three baselines in one row of seven, which reads as a broken grid. */
@@ -540,12 +533,15 @@
   .cmd-count{padding-right:3px;font-size:calc(12px*var(--ts));color:var(--faint);
     display:inline-flex;align-items:center;gap:9px;letter-spacing:.015em}
   .cmd-count b{font-weight:600;color:var(--muted)}
-  .cmd-count .warn{color:var(--danger);font-weight:600;font-size:calc(12px*var(--ts));letter-spacing:.015em;
+  /* Out of date is "worth a look", not lost: amber, the warning colour, like
+     every other state that a click puts right (see --warn). In red it was the
+     loudest thing on the page in any vault left alone for a weekend. */
+  .cmd-count .warn{color:var(--warn-txt);font-weight:600;font-size:calc(12px*var(--ts));letter-spacing:.015em;
     padding:3px 9px;border-radius:var(--r-xs);background:none;border:1px solid transparent;box-shadow:none}
-  .cmd-count .warn:hover{background:color-mix(in srgb,var(--danger) 13%,transparent);
-    border-color:color-mix(in srgb,var(--danger) 34%,transparent)}
-  .cmd-count .warn.on{background:color-mix(in srgb,var(--danger) 18%,transparent);
-    border-color:color-mix(in srgb,var(--danger) 46%,transparent)}
+  .cmd-count .warn:hover{background:color-mix(in srgb,var(--warn) 13%,transparent);
+    border-color:color-mix(in srgb,var(--warn) 34%,transparent)}
+  .cmd-count .warn.on{background:color-mix(in srgb,var(--warn) 18%,transparent);
+    border-color:color-mix(in srgb,var(--warn) 46%,transparent)}
   .tools{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:12px}
   /* Scrolled past the header the console is pure overhead on screen, so it gives
      some of that height back. Controls stay put — only the air around them goes. */
@@ -863,9 +859,24 @@
      13.5px type, and six hundred pixels of nothing between the name and the rank.
      Taller, and with that gap given to the two things the list had been throwing
      away — the shape of the climb, and how the wins and losses actually sit. */
-  .rw-main{display:grid;align-items:center;gap:13px;padding:11px 14px;cursor:pointer;
-    grid-template-columns:auto 40px minmax(140px,1.35fr) 124px minmax(102px,1fr) 60px 94px 38px 72px 16px;
+  /* The name is the one column that stretches. It used to share the slack with the
+     rank (1.35fr and 1fr), so a wide screen opened two empty bands — one after the
+     name and one after the rank — and the figures crowded at the right edge. Now
+     the slack is all after the name, like any table, and the figures sit together
+     as one block under their headings. The heading row uses the same columns. */
+  .grid.list{--rw-cols:auto 40px minmax(160px,1fr) 124px 124px 60px 94px 38px 72px 62px 16px;--rw-gap:13px}
+  .rw-main{display:grid;align-items:center;gap:var(--rw-gap);padding:11px 14px;cursor:pointer;
+    grid-template-columns:var(--rw-cols);
     transition:background .14s ease}
+  .rw-head{display:grid;grid-template-columns:var(--rw-cols);gap:var(--rw-gap);align-items:end;padding:2px 15px 8px;
+    font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+  .rw-head .h-chk{width:15px}
+  .rw-head .h-r{text-align:right}.rw-head .h-c{text-align:center}
+  /* copy the login straight from the row, the way a password manager's list does */
+  .rw-keys{display:flex;gap:4px;justify-content:flex-end}
+  .rw-key{width:28px;height:28px;padding:0;color:var(--muted)}
+  .rw-key .ico{width:14px;height:14px}
+  .rw-key:hover{color:var(--text)}
   .rw-main:hover{background:#ffffff07}
   .rw-main:focus-visible{outline-offset:-2px}
   .rw{position:relative}
@@ -942,7 +953,7 @@
   .card.dead .wrbar,.rw.dead .rw-bar{filter:grayscale(.9);opacity:.5}
   .rw-up{font-size:calc(11px*var(--ts));color:var(--faint);text-align:right;white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis}
-  .rw-up.stale{color:var(--danger)}
+  .rw-up.stale{color:var(--warn-txt)}
   .rw-chev{width:14px;height:14px;color:var(--faint);transition:transform .24s cubic-bezier(.22,1,.36,1)}
   .hx.row.open .rw-chev{transform:rotate(180deg)}
   .rw-open{display:flex;flex-direction:column;gap:11px;padding:4px 13px 13px;
@@ -953,12 +964,12 @@
      The sparkline outranks the region code and the timestamp: it is the only
      column that says anything a glance can't already get from the rank. */
   @media (max-width:1180px){
-    .rw-main{grid-template-columns:auto 40px minmax(130px,1.35fr) 104px minmax(96px,1fr) 58px 88px 72px 16px;gap:11px}
-    .rw-rg{display:none}
+    .grid.list{--rw-cols:auto 40px minmax(130px,1fr) 104px 112px 58px 88px 72px 62px 16px;--rw-gap:11px}
+    .rw-rg,.h-rg{display:none}
   }
   @media (max-width:980px){
-    .rw-main{grid-template-columns:auto 40px minmax(120px,1.4fr) 92px minmax(92px,1fr) 56px 16px;gap:10px}
-    .rw-wr,.rw-up{display:none}
+    .grid.list{--rw-cols:auto 40px minmax(120px,1fr) 92px 104px 56px 62px 16px;--rw-gap:10px}
+    .rw-wr,.rw-up,.h-wr,.h-up{display:none}
   }
   /* Fixed minimums here — 110px of name, 90px of rank, 54px of change — came to 36px
      more than a 390px row holds, so every row overflowed: "Diamond IV" was cut to
@@ -967,9 +978,10 @@
      figure drop), fixed so they still line up from row to row; the name takes what
      is left and ellipsises. */
   @media (max-width:720px){
-    .rw-main{grid-template-columns:auto 36px minmax(0,1fr) 106px 58px 16px;gap:10px;
-      min-height:52px;padding:12px 12px;align-items:center}
-    .rw-spark,.rw-tags{display:none}
+    .grid.list{--rw-cols:auto 36px minmax(0,1fr) 106px 58px 16px;--rw-gap:10px}
+    .rw-main{min-height:52px;padding:12px 12px;align-items:center}
+    /* a phone is not where a client gets logged into, and the name needs the room */
+    .rw-spark,.rw-tags,.rw-keys,.rw-head{display:none}
     .rw-check{opacity:1} /* thumb-friendly: always show Refresh on phones */
     .rw-pic{width:36px;height:36px}
     .acts{flex-wrap:wrap;gap:6px}
@@ -988,7 +1000,7 @@
     /* a 360 phone's card has ~190px beside the crest and the LP chip, and
        "Grandmaster" at full size wants most of it */
     .card .rk-t{font-size:calc(20px*var(--ts))} /* .card: the base rule comes later in the sheet */
-    .rw-main{grid-template-columns:auto 36px minmax(0,1fr) 106px 16px;gap:8px}
+    .grid.list{--rw-cols:auto 36px minmax(0,1fr) 106px 16px;--rw-gap:8px}
     .rw-d{display:none}
   }
   @supports (padding:max(0px)){
@@ -1085,9 +1097,11 @@
     color:var(--muted);z-index:2;font-size:calc(13px*var(--ts))}
   .panel-close:hover{color:var(--danger);background:color-mix(in srgb,var(--danger) 13%,transparent);border-color:transparent}
 
+  /* A label, not an action, so it is not in the action colour: tinted with the
+     secondary accent, every card carried a second chip of Login's colour right
+     beside the star, and the one button meant to stand out had company. */
   .regiontag{font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:var(--r-xs);flex-shrink:0;
-    background:color-mix(in srgb,var(--teal) 12%,transparent);color:var(--teal-txt);
-    border:1px solid color-mix(in srgb,var(--teal) 24%,transparent)}
+    background:#ffffff0a;color:var(--muted);border:1px solid var(--line)}
   /* the rank is why the card exists, so it gets the card's largest type */
   /* The tier as an emblem rather than only as a coloured word. It sits in the
      rank line itself rather than watermarked behind it: faint behind the type it
@@ -1342,6 +1356,9 @@
   /* Settings → the worker guide */
   .guide{margin-top:8px;border:1px solid var(--line);border-radius:var(--r-md);background:#ffffff05;font-size:calc(12.5px*var(--ts));color:var(--muted);line-height:1.55}
   .guide summary{cursor:pointer;padding:10px 13px;font-weight:600;color:var(--text);list-style-position:inside}
+  .adv-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px 16px;padding:4px 13px 13px}
+  .adv-grid>.fld:first-child,.adv-grid>.hint{grid-column:1/-1}
+  @media (max-width:560px){.adv-grid{grid-template-columns:1fr}}
   .guide[open] summary{border-bottom:1px solid var(--line)}
   .guide ol{margin:0;padding:10px 14px 4px 32px}
   .guide li{margin-bottom:9px}
@@ -1529,7 +1546,7 @@
      straight over D/W/M. */
   .lpc-tip.hi{bottom:auto;top:12px}
   .lpc-pt:hover .lpc-tip{opacity:1}
-  .stale{color:var(--danger)}
+  .stale{color:var(--warn-txt)}
   #toast button{margin-left:12px;font-size:calc(12px*var(--ts));padding:3px 10px;color:var(--teal-txt)}
   .meta{font-size:calc(13px*var(--ts));color:var(--muted);line-height:1.65}
   .meta b{color:var(--text);font-weight:500}
@@ -1596,9 +1613,10 @@
      with the source as its own tag, so it reads as a deliberate meta line */
   .upd{font-size:calc(11px*var(--ts));color:var(--faint);letter-spacing:.015em;display:inline-flex;align-items:center;gap:7px;min-width:0}
   .upd::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.55;flex-shrink:0}
-  .upd.stale{color:var(--danger)}
-  /* Out of date: red, with a warning mark in place of the dot. It was a ⚠
-     character, which some systems draw as a yellow emoji; this one is drawn. */
+  .upd.stale{color:var(--warn-txt)}
+  /* Out of date: amber (it used to be red; see .cmd-count .warn), with a warning
+     mark in place of the dot. It was a ⚠ character, which some systems draw as a
+     yellow emoji; this one is drawn. */
   .upd.stale::before{display:none}
   .upd .ico{width:12px;height:12px;flex-shrink:0}
   /* asOf is sometimes a source ("backend", a proxy name) and sometimes a date
@@ -1742,7 +1760,16 @@
   .wl-steps b{font-size:calc(13px*var(--ts));font-weight:600;color:var(--text)}
   .wl-steps li>span:last-child{align-self:start;font-size:calc(12.5px*var(--ts));color:var(--faint);line-height:1.5}
   .wl-acts{margin-top:26px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .wl-note{margin:22px auto 0;max-width:60ch;display:flex;gap:8px;align-items:flex-start;justify-content:center;
+    font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.55;text-align:left}
+  .wl-note .ico{width:13px;height:13px;margin-top:2px;flex-shrink:0}
   @media (max-width:640px){.wl-steps{grid-template-columns:1fr}}
+  .skip-link{position:fixed;left:16px;top:-80px;z-index:100;padding:10px 16px;border-radius:var(--r-sm);
+    background:var(--panel2);border:1px solid var(--line2);color:var(--text);font-weight:600;text-decoration:none;
+    box-shadow:var(--sh-2);transition:top .15s ease}
+  .skip-link:focus{top:16px}
+  #grid:focus{outline:none}
+  #sFootHint.dirty{color:var(--warn-txt)}
   .count{margin-top:30px;text-align:center;font-size:calc(12px*var(--ts));color:var(--faint)}
   .count a{color:var(--gold-txt);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
   .count a:hover{border-bottom-color:currentColor}
@@ -2291,7 +2318,7 @@
   .c-portrait{transition:transform .24s cubic-bezier(.22,1,.36,1)}
   .card:hover .c-portrait{transform:scale(1.05)}
   .regiontag{transition:background .2s,border-color .2s}
-  .card:hover .regiontag{background:color-mix(in srgb,var(--teal) 19%,transparent);border-color:color-mix(in srgb,var(--teal) 40%,transparent)}
+  .card:hover .regiontag{color:var(--text);border-color:var(--line2)}
 
   /* ---- motion ---- */
   /* The lit border used to be a `background` transition between two gradients,
@@ -2393,6 +2420,16 @@
        smaller fields with rules of their own (the note editor, the compact
        selects) are held to it too. */
     :is(input:not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea){font-size:max(16px,calc(16px*var(--ts)))!important}
+    /* A thumb against controls sized for a mouse: the selection boxes were 13 and
+       15px, the chart's D/W/M 17px tall, the Riot ID's copy line 16px, the header
+       bar's segments 16px. Each is at least WCAG's 24px now — on touch screens
+       only; with a mouse nothing changes size. */
+    .bulkchk,#tSelectAll{width:24px;height:24px}
+    .lpc-range button{padding:7px 9px}
+    .rid{padding-block:5px;margin-block:-3px}
+    .rib-bar{height:24px}
+    .cmd-count .warn{padding:6px 10px}
+    .c-notes.blank>button,.c-notes.blank .nf-link{min-height:30px} /* matches the all:unset rule it has to beat */
   }
   @media (max-width:760px){
     .top{align-items:flex-start;gap:16px}
@@ -2421,6 +2458,53 @@
     .tools>label{justify-content:center}
   }
   @media (max-width:440px){.cmd{gap:8px}.cmd>button{padding-inline:10px}}
+  /* A phone's header was four rows before anything else: the gem and the wordmark,
+     "Summoner Vault" and its badge, the rank bar, then the tray alone on a row of
+     its own — 230px. It is an app bar now: the wordmark on the left, the tray on
+     the right, the rank bar under both. The gem and the strapline stand down;
+     the wordmark is the brand at this size. */
+  @media (max-width:560px){
+    .top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px 10px}
+    .top>.brand{grid-column:1;grid-row:1;gap:0;min-width:0}
+    .top>.brand .brand-mark,.top>.brand .brand-sub{display:none}
+    .top>.bar{grid-column:2;grid-row:1;margin-left:0}
+    .top>.ribbon{grid-column:1/-1;grid-row:2;max-width:none}
+    .top h1{font-size:calc(20px*var(--ts));white-space:nowrap}
+    #bDashToggle .dt-v{display:none}
+    #bDashToggle .dt-n{text-transform:capitalize}
+  }
+  @media (max-width:400px){.top h1{font-size:calc(18px*var(--ts))}}
+  /* On a phone the toolbar's filters were the whole first screen: search, two rows
+     of dropdowns, Favorites, Archived and Select all, before a single account. Only
+     search stays out; the rest fold behind Filters, whose badge counts what is on so
+     a filter is never on unseen (the chips under the toolbar name the rest). */
+  .t-filters{display:none}
+  .t-filters .t-n{margin-left:2px;min-width:18px;height:18px;padding:0 5px;border-radius:var(--r-xs);display:inline-flex;align-items:center;
+    justify-content:center;font-size:calc(11px*var(--ts));font-weight:700;color:var(--teal-ink);background:var(--teal)}
+  .t-filters .t-n[hidden]{display:none}
+  @media (max-width:560px){
+    .tools{display:flex;flex-wrap:wrap}
+    /* search and Filters share the first row (search takes all but Filters' width,
+       so the rest always starts a row of its own), the rest two to a row under it */
+    .tools>input[type=search]{flex:1 1 calc(100% - 128px);width:auto;min-width:0}
+    .tools>.t-filters{display:inline-flex;flex:0 0 auto;width:auto}
+    .tools>:not(input[type=search]):not(.t-filters){flex:1 1 calc(50% - 4px)}
+    /* !important: Select all is a label with an inline display of its own */
+    .tools:not(.open)>:not(input[type=search]):not(.t-filters){display:none!important}
+    .tools.open>.t-filters{background-color:var(--panel3);border-color:var(--line2)}
+    /* The figures wrapped two to a row, a third alone beneath them, and the champion
+       chips wrapped into a block of their own: together most of a screen. Each is
+       one row now that slides sideways, the next figure peeking in at the edge to
+       say there is more. */
+    #dash .dash,#dash .dash[style*="--cols"]{display:flex;overflow-x:auto;scroll-snap-type:x proximity;
+      overscroll-behavior-x:contain;scrollbar-width:none}
+    #dash .dash>.stat{flex:0 0 min(62%,220px);scroll-snap-align:start}
+    /* the edge fades, so a figure cut by it reads as "more this way", not as all there is */
+    #dash .dash{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent)}
+    #dash .dist{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-right:20px}
+    #dash .dist>*{flex-shrink:0}
+    #dash .dash::-webkit-scrollbar,#dash .dist::-webkit-scrollbar{display:none}
+  }
   @media (max-width:560px){.formgrid{grid-template-columns:1fr;padding:18px}.card{padding:15px}
     .c-drawer{margin:1px -15px -15px}
     /* a phone has ~150px a side: the tier word drops to its own size, the crest
@@ -2453,6 +2537,10 @@
   </div></div>
 
   <div id="appRoot" class="hidden">
+  <!-- Forty-seven Tab presses from the top of the page to the first account's Login:
+       the header bar, the tray, the stats, the toolbar and every filter come first.
+       One keystroke past all of it, visible only to the keyboard that reaches it. -->
+  <a href="#grid" id="skipLink" class="skip-link">Skip to your accounts</a>
   <div class="top">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"></span>
@@ -2471,29 +2559,27 @@
       <div style="position:relative">
         <button id="bMore" title="Export, import, settings">⋯</button>
         <div id="moreMenu" class="hx teal hidden" style="position:absolute;right:0;top:calc(100% + 8px);z-index:20;min-width:206px"><div class="hx-in" style="padding:7px;display:flex;flex-direction:column;gap:1px">
-          <button id="bExport" style="justify-content:flex-start;width:100%" title="Downloads plaintext JSON — includes login passwords">Export backup (JSON, plaintext)</button>
+          <!-- Settings first, the way every app's own menu opens; the safe export
+               before the plaintext one; the one that deletes everything last. -->
+          <button id="bSettings" style="justify-content:flex-start;width:100%"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</button>
+          <div class="cm-g">Accounts</div>
+          <button id="bBulkAdd" style="justify-content:flex-start;width:100%">Bulk add accounts…</button>
+          <button id="bShare" style="justify-content:flex-start;width:100%" title="A read-only page of your ranks, in a link — no logins, ever">Share a snapshot…</button>
+          <button id="bNewSeason" style="justify-content:flex-start;width:100%" title="Move every ranked account's current rank into its Past seasons">New season…</button>
+          <button id="bStreamer" style="justify-content:flex-start;width:100%" title="Hide Riot IDs, logins, emails and notes while you stream or share your screen (H)">Streamer mode</button>
+          <div class="cm-g">Backup</div>
           <button id="bExportEnc" style="justify-content:flex-start;width:100%" title="AES-encrypted backup — needs your master password to open">Export encrypted backup…</button>
+          <button id="bExport" style="justify-content:flex-start;width:100%" title="Downloads plaintext JSON — includes login passwords">Export backup (JSON, plaintext)</button>
           <button id="bExportCsv" style="justify-content:flex-start;width:100%">Export as CSV</button>
           <button id="bImport" style="justify-content:flex-start;width:100%">Import backup</button>
           <button id="bImportCsv" style="justify-content:flex-start;width:100%">Import CSV</button>
           <div style="border-top:1px solid var(--line);margin:2px 0"></div>
-          <button id="bShare" style="justify-content:flex-start;width:100%" title="A read-only page of your ranks, in a link — no logins, ever">Share a snapshot…</button>
-          <button id="bBulkAdd" style="justify-content:flex-start;width:100%">Bulk add accounts…</button>
-          <button id="bNewSeason" style="justify-content:flex-start;width:100%" title="Move every ranked account's current rank into its Past seasons">New season…</button>
-          <button id="bStreamer" style="justify-content:flex-start;width:100%" title="Hide Riot IDs, logins, emails and notes while you stream or share your screen (H)">Streamer mode</button>
-          <div style="border-top:1px solid var(--line);margin:2px 0"></div>
           <button id="bDeleteAll" class="b-danger" style="justify-content:flex-start;width:100%" title="Wipe every account — useful for clearing out demo/test data">Delete all accounts</button>
-          <div style="border-top:1px solid var(--line);margin:2px 0"></div>
-          <button id="bSettings" style="justify-content:flex-start;width:100%"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</button>
         </div></div>
       </div>
       <button id="bHelp" title="How this works">?</button>
     </div>
   </div>
-  <!-- Onboarding, not chrome: true the first time, a wall you scroll past every
-       time after that. It also says the same thing as the help panel. Hidden once
-       there are accounts in the vault, which is exactly when it stops being news. -->
-  <p class="sub measure" id="intro">Everything is stored locally in this browser on this PC (localStorage). Export a backup now and then — clearing browser data wipes the vault. Rank checks are free and automatic (pulled from op.gg) — no account, no key needed.</p>
 
   <div id="banner" class="banner">Persistent storage is not available in this environment — data will be lost when you close the page. Download the file and open it locally on your PC.</div>
 
@@ -2676,12 +2762,18 @@
               <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>,
               bind a KV namespace named <code>VAULT</code> for sync, and add the Cron Trigger <code>17 9 * * *</code> for Discord alerts.</div>
           </details>
-          <div class="fld fw">
-            <label>Advanced: Anthropic API key (optional, stored only in this browser)</label>
+          <!-- Paid and for power users, by its own description — three fields every
+               visitor had to read past to find the free path above. Folded, and open
+               on its own when a key is already set. -->
+          <details class="fw guide" id="sAdvanced">
+            <summary>Advanced: rank checks with your own Anthropic API key (paid)</summary>
+            <div class="adv-grid">
+          <div class="fld">
+            <label for="sKey">Anthropic API key (optional, stored only in this browser)</label>
             <input type="text" id="sKey" class="mask" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
           </div>
           <div class="fld">
-            <label>Model for rank checks</label>
+            <label for="sModel">Model for rank checks</label>
             <select id="sModel">
               <option value="claude-sonnet-5">Sonnet — more reliable (~1–2 ct/check)</option>
               <option value="claude-haiku-4-5">Haiku — cheaper, may miss data</option>
@@ -2690,6 +2782,8 @@
           <div class="fw hint">
             Check order: <b>backend URL → API key → free op.gg auto-fetch</b>. A worker with a Riot API key reads ranks from Riot directly, the most reliable source there is. With all three empty, checks use the free auto-fetch and cost nothing. The API key path (console.anthropic.com, ~1–2 ct per check) is the most reliable, but only worth it for power users.
           </div>
+            </div>
+          </details>
         </div>
       </div>
 
@@ -2817,7 +2911,7 @@
     <div class="mdl-f">
       <button id="sSave" class="b-gold">Save settings</button>
       <button id="sClose">Close</button>
-      <span class="sp hint">Stays in this browser unless you use Device sync.</span>
+      <span class="sp hint" id="sFootHint" aria-live="polite">Stays in this browser unless you use Device sync.</span>
     </div>
   </div></div>
   <!-- Floated beside the browser's colour popup, not inside the scrolling body —
@@ -2900,14 +2994,18 @@
     </div>
     <div class="mdl-b">
     <div class="formgrid">
-      <div class="fld"><label>Label (optional)</label><input id="fLabel" placeholder="e.g. ADC smurf"></div>
-      <div class="fld"><label>Region</label>
+      <!-- The two fields the account cannot be added without come first, then where
+           it lives, then the login; the label, which is optional, used to lead the
+           form and pushed the required pair to its second row. Every label names its
+           field (for=), so clicking one lands in it and a screen reader reads it. -->
+      <div class="fld"><label for="fName">Riot name *</label><input id="fName" placeholder="Game name, or paste Name#TAG" data-autofocus></div>
+      <div class="fld"><label for="fTag">Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234 (no #)"></div>
+      <div class="fld"><label for="fRegion">Region</label>
         <select id="fRegion"></select>
       </div>
-      <div class="fld"><label>Riot name *</label><input id="fName" placeholder="Game name, or paste Name#TAG" data-autofocus></div>
-      <div class="fld"><label>Tag *</label><input id="fTag" placeholder="e.g. EUW or 1234 (no #)"></div>
-      <div class="fld"><label>Login username</label><input id="fLogin" placeholder="Riot client login" autocomplete="off"></div>
-      <div class="fld pw-fld"><label>Password <span id="pwMeterLabel"></span></label><div style="display:flex;gap:6px">
+      <div class="fld"><label for="fLabel">Label (optional)</label><input id="fLabel" placeholder="e.g. ADC smurf"></div>
+      <div class="fld"><label for="fLogin">Login username</label><input id="fLogin" placeholder="Riot client login" autocomplete="off"></div>
+      <div class="fld pw-fld"><label for="fPass">Password <span id="pwMeterLabel"></span></label><div style="display:flex;gap:6px">
         <div style="position:relative;flex:1;display:flex">
           <!-- Deliberately not type="password": see the .mask rule in the CSS. -->
           <input type="text" id="fPass" class="mask" placeholder="Stored unencrypted, locally" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" style="width:100%;padding-right:34px">
@@ -2917,15 +3015,15 @@
       </div>
       <div id="pwMeter"></div>
       </div>
-      <div class="fld"><label>Email on the account</label><input id="fEmail" placeholder="mail the account is registered to" autocomplete="off"></div>
+      <div class="fld"><label for="fEmail">Email on the account</label><input id="fEmail" placeholder="mail the account is registered to" autocomplete="off"></div>
       <!-- These two were being kept in the Notes box by hand — "birthdate 8/1/1987,
            created 4/2/2022" — which means they could not be searched, sorted or
            shown anywhere in particular. They are facts about the account, so they
            get fields. -->
-      <div class="fld"><label>Account created</label><input type="date" id="fCreated" title="When the account itself was made"></div>
-      <div class="fld"><label>Date of birth on file</label><input type="date" id="fBirth" title="The date of birth the account was registered with — Riot asks for it on recovery"></div>
-      <div class="fld"><label>Tags (comma-separated)</label><input id="fTags" placeholder="e.g. ranked-ready, jungle, honor3"></div>
-      <div class="fld"><label>Status</label>
+      <div class="fld"><label for="fCreated">Account created</label><input type="date" id="fCreated" title="When the account itself was made"></div>
+      <div class="fld"><label for="fBirth">Date of birth on file</label><input type="date" id="fBirth" title="The date of birth the account was registered with — Riot asks for it on recovery"></div>
+      <div class="fld"><label for="fTags">Tags (comma-separated)</label><input id="fTags" placeholder="e.g. ranked-ready, jungle, honor3"></div>
+      <div class="fld"><label for="fStatus">Status</label>
         <select id="fStatus">
           <option value="active">Active</option>
           <option value="resting">Resting / unused</option>
@@ -2993,6 +3091,10 @@
   <div id="chips" class="chips"></div>
   <div class="tools">
     <input type="search" id="tSearch" placeholder="Search name, label, tag, email…">
+    <!-- a phone's whole first screen was filters; there they fold behind this -->
+    <button type="button" id="tFilters" class="t-filters" aria-expanded="false" title="Region, sort, status, favorites, archived">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
+      Filters<b class="t-n" hidden></b></button>
     <select id="tRegion">
       <option value="">All regions</option>
     </select>
@@ -3036,7 +3138,7 @@
   </div>
 
   <!-- cards -->
-  <div id="grid" class="grid"></div>
+  <div id="grid" class="grid" tabindex="-1"></div>
 
   <!-- Filled from APP_VERSION at boot rather than typed in here, so the number in
        the footer can never disagree with the one the changelog toast announces. -->
@@ -3254,8 +3356,14 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.7.0";
+const APP_VERSION="2.8.0";
 const APP_CHANGELOG=[
+  {v:"2.8.0",items:[
+    "A new account's rank is checked right away, and a list row or Quick find (Ctrl+K) copies a login in one click",
+    "Cleaner screens: the stats say each thing once, the list reads as a table, and a phone shows accounts on the first screen",
+    "A first visit opens on a short welcome; the region follows the tag (Faker#KR1 → Korea); out of date is amber, not red",
+    "Settings says when closing would drop a change; the ⋯ menu starts with Settings; bigger touch targets and a skip link",
+  ]},
   {v:"2.7.0",items:[
     "Copy buttons say Copied right where you clicked, and windows and menus fade out instead of vanishing",
     "On is green and a warning amber in every theme — 2-step on and No 2-step no longer look the same",
@@ -3997,6 +4105,10 @@ const ICON={
   compare:'<rect x="3" y="5" width="7" height="14" rx="1.5"/><rect x="14" y="5" width="7" height="14" rx="1.5"/>',
   archive:'<rect x="3" y="4" width="18" height="4.5" rx="1"/><path d="M5 8.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><line x1="10" y1="13" x2="14" y2="13"/>',
   reset:'<path d="M3.5 12a8.5 8.5 0 1 0 2.9-6.4"/><polyline points="3 4 3 9.5 8.5 9.5"/>',
+  // a list row's copy-password button
+  key:'<circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.3-9.3"/><path d="m15.5 7.5 3 3"/><path d="m13 10 2 2"/>',
+  // the welcome's privacy line: a padlock, for "stays here"
+  lock:'<rect x="4.5" y="11" width="15" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>',
   trash:'<line x1="3.5" y1="6" x2="20.5" y2="6"/><path d="M18.5 6l-.9 13.1A2 2 0 0 1 15.6 21H8.4a2 2 0 0 1-2-1.9L5.5 6"/><line x1="10" y1="10.5" x2="10" y2="17"/><line x1="14" y1="10.5" x2="14" y2="17"/><path d="M9 6V4.2A1.2 1.2 0 0 1 10.2 3h3.6A1.2 1.2 0 0 1 15 4.2V6"/>'
 };
 function icon(name,cls){return `<svg class="ico${cls?" "+cls:""}" viewBox="0 0 24 24">${ICON[name]}</svg>`}
@@ -4805,7 +4917,7 @@ async function copyText(v,label,sensitive){
 function flashCopied(btn){
   if(!btn||!btn.isConnected)return;
   if(btn._copied)clearTimeout(btn._copied);else btn._copyHTML=btn.innerHTML;
-  btn.innerHTML=icon("check")+"Copied";btn.classList.add("copied");
+  btn.innerHTML=icon("check")+(btn.classList.contains("rw-key")?"":"Copied");btn.classList.add("copied");
   btn._copied=setTimeout(()=>{btn._copied=null;if(!btn.isConnected)return;btn.innerHTML=btn._copyHTML;btn.classList.remove("copied")},1400);
 }
 let lastCopiedSecret=null;
@@ -4836,6 +4948,22 @@ function parseTags(str){return String(str||"").split(",").map(t=>t.trim()).filte
 // up, so an unknown one only survives as a wrong label on the card and a filter
 // entry that matches nothing — pin it to something real on the way in.
 function normRegion(r){const k=String(r||"").toUpperCase().trim();return REGIONS[k]?k:"EUW"}
+/* Where a new account most likely lives: where most of this vault does. Every add
+   used to start on EUW, so someone with a vault of NA accounts changed the region
+   by hand on every single one. */
+function usualRegion(){
+  const n={};for(const a of accounts)if(a.region)n[a.region]=(n[a.region]||0)+1;
+  let best="EUW",most=0;for(const r of Object.keys(n))if(n[r]>most){most=n[r];best=r}
+  return normRegion(best);
+}
+/* A tag nobody chose is the server's own id: KR1, NA1, EUW, BR1, OC1… so
+   "Faker#KR1" is almost certainly Korea. Only a guess — a tag survives a server
+   transfer — so it fills a region the user has not picked, on the form where the
+   change is in plain sight, and never decides one on its own anywhere else. */
+const TAG_REGION={NA:"NA",NA1:"NA",EUW:"EUW",EUW1:"EUW",EUNE:"EUNE",EUN1:"EUNE",KR:"KR",KR1:"KR",JP:"JP",JP1:"JP",
+  BR:"BR",BR1:"BR",LAN:"LAN",LA1:"LAN",LAS:"LAS",LA2:"LAS",OCE:"OCE",OC1:"OCE",TR:"TR",TR1:"TR",RU:"RU",RU1:"RU",
+  ME:"ME",ME1:"ME",SG:"SG",SG2:"SG",PH2:"SG",TH2:"SG",TW:"TW",TW2:"TW",VN:"VN",VN2:"VN"};
+function regionFromTag(tag){const r=TAG_REGION[String(tag||"").trim().toUpperCase()];return r&&REGIONS[r]?r:null}
 // Same for the status: an unrecognised one renders as "Active" everywhere while
 // still filtering as its own value, so the status dropdown grows a second entry
 // reading "Active" that matches a different set of accounts.
@@ -6645,7 +6773,6 @@ function pruneCardState(){
 }
 function render(){
   pruneCardState();
-  $("intro").classList.toggle("hidden",accounts.length>0);
   $("previewBanner").classList.toggle("hidden",!previewMode);
   $("bDeleteAll").disabled=accounts.length===0;
   // No renderBulkBar() after renderGrid(): it ends with one, against the list it
@@ -6786,7 +6913,8 @@ function renderRibbon(){
         aria-label="${esc(s.label)}, ${s.n}"><i>${s.n}</i></button>`}).join("")}</div>
     <div class="rib-cap">${dotList([`<b>${pool.length}</b> accounts across <b>${tierN}</b> tier${tierN===1?"":"s"}`,
       unN&&`<b>${unN}</b> unranked`,missN&&`<b>${missN}</b> not found`,neverN&&`<b>${neverN}</b> never checked`,bannedN&&`<b>${bannedN}</b> banned`])}`
-    +(best?`<span>best <b style="color:${tierColor(best.stats.tier)}">${esc(shortRank(best.stats))}</b></span>`:"")
+    // with the name: the stats panel's Best account tile said who, and it is gone
+    +(best?`<span class="rib-best">best ${nameOf(best)} · <b style="color:${tierColor(best.stats.tier)}">${esc(shortRank(best.stats))}</b></span>`:"")
     +`</div>`);
 }
 function syncDashToggle(){
@@ -6794,7 +6922,8 @@ function syncDashToggle(){
   const show=accounts.some(a=>!a.archived);
   b.classList.toggle("hidden",!show);
   b.classList.toggle("open",!cfg.dashCollapsed);
-  setHTML(b,icon("chevron")+" "+(cfg.dashCollapsed?"Show stats":"Hide stats"));
+  // the verb is its own span so a phone, short of room, can say just "Stats"
+  setHTML(b,icon("chevron")+` <span class="dt-v">${cfg.dashCollapsed?"Show":"Hide"} </span><span class="dt-n">stats</span>`);
 }
 function renderDash(){
   applyRankTheme(); // a new best tier is news the dashboard already gets; the colours follow it
@@ -6814,24 +6943,10 @@ function renderDash(){
   let W=0,L=0;
   pool.forEach(a=>{W+=Number(a.stats.wins)||0;L+=Number(a.stats.losses)||0});
   const wr=(W+L)>0?Math.round(W/(W+L)*100)+"%":"—";
-  let best=null;
-  pool.forEach(a=>{if(rankValue(a.stats)>rankValue(best&&best.stats))best=a});
   const topChamps=mergeChampions(pool);
-  // the rank breaks between its pieces ("Grandmaster" / "· 874 LP") rather than
-  // running out of a narrow column as one unbreakable line
-  const bestTxt=best&&rankValue(best.stats)>=0?nameOf(best)+" <small>"+dotList(String(shortRank(best.stats)||"").split(" · ").map(esc))+"</small>":"—";
-  const regCount={};allActive.forEach(a=>regCount[a.region]=(regCount[a.region]||0)+1);
-  const regTxt=dotList(Object.entries(regCount).map(([r,n])=>esc(r+" "+n)));
-  const regN=Object.keys(regCount).length;
-  const dist={};ranked.forEach(a=>{const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1});
   const neverN=countPool.filter(neverChecked).length;
-  const un=countPool.filter(isUnrankedAnswer).length;
-  const staleN=countPool.filter(a=>isLive(a)&&isStale(a)).length;
-  const veryStaleN=countPool.filter(a=>isLive(a)&&isChecked(a)&&Date.now()-a.stats.updatedAt>30*24*3600*1000).length;
-  const bannedN=allActive.filter(a=>a.status==="banned").length;
   const attentionN=countPool.filter(needsAttention).length;
   const failedN=countPool.filter(a=>isLive(a)&&isFailed(a)).length;
-  const archivedN=accounts.length-allActive.length;
   let bk="";
   if(hasStorage){
     const remindDays=clampExportDays(cfg.exportRemindDays);
@@ -6843,80 +6958,77 @@ function renderDash(){
   const decayN=countPool.filter(decayRisk).length;
   const next=playNext(countPool);
   const poolTrend=poolLpTrend(pool), week=weekRecap(pool);
-  // These are filter toggles, not links — they say so to a screen reader as well
-  // as by lighting up.
-  const gem=(tier,label,n,colour)=>`<button class="gem gem-b${ui.tier===tier?" on":""}" data-tier="${tier}" aria-pressed="${ui.tier===tier}" title="Show only these">`
-    +`<i class="d" style="background:${colour}"></i>${label} <b>×${n}</b></button>`;
-  // Highest tier first — same order as the header ribbon and the default list sort.
-  const gems=TIER_ORDER.slice().reverse().filter(t=>dist[t]).map(t=>gem(t,t.charAt(0)+t.slice(1).toLowerCase(),dist[t],TIER_COLORS[t])).join("")
-    +(un>0?gem("UNRANKED","Unranked",un,TIER_COLORS.UNRANKED):"");
-  setHTML(el,`
-  <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
-  <div class="dash-head">
-    <div class="dash-filter">
-      <span class="k">Counting</span>
-      <select id="dashMin">${COMBINED_FLOORS.map(f=>`<option value="${f.v}"${(cfg.statsMinTier||"")===f.v?" selected":""}>${esc(f.label)}</option>`).join("")}</select>
-      <span class="dash-ex">${pool.length} of ${ranked.length} ranked${excludedN?" · "+excludedN+" left out":""}${filterHint?" · "+esc(filterHint):""}</span>
-    </div>
-  </div>
-  <div class="dash">
-    <div class="stat"><div class="k">Accounts</div><div class="v">${allActive.length}</div>
-      <div class="s-note">${dotList([allActive.filter(a=>a.fav).length+" ★",bannedN&&bannedN+" banned",archivedN&&archivedN+" archived"])}</div></div>
-    <div class="stat"><div class="k">Best account</div><div class="v" style="font-size:calc(14px*var(--ts))">${bestTxt}</div></div>
-    <div class="stat"><div class="k">Season W/L</div><div class="v nw">${W}<small>W</small> ${L}<small>L</small></div>
-      <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>
-    <div class="stat"><div class="k">Regions</div><div class="v">${regN||"—"}${regN?` <small>${regN===1?"region":"regions"}</small>`:""}</div>
-      ${regN?`<div class="s-note">${regTxt}</div>`:""}</div>
-    ${neverN?`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
-      <div class="v" style="color:var(--gold-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`:""}
-    ${attentionN?`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
-      <div class="v" style="color:var(--danger)">${attentionN}</div><div class="s-note">flagged by you, or the profile no longer exists</div></button>`:""}
-    ${failedN?`<button class="stat stat-b${ui.flag==="failed"?" on":""}" data-flag="failed" aria-pressed="${ui.flag==="failed"}"><div class="k">Last check failed</div>
-      <div class="v" style="color:var(--danger)">${failedN}</div><div class="s-note">auto-fetch failed — enter rank by hand or retry</div></button>`:""}
-    ${dupN?`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
-      <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`:""}
-    ${next?`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
-      <div class="v" style="font-size:calc(14px*var(--ts))">${nameOf(next.a)}</div><div class="s-note">${esc(next.why)}</div></button>`:""}
-    ${decayN?`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left — estimated from the games seen between checks"><div class="k">Decay risk</div>
-      <div class="v" style="color:#f0b45a">${decayN}</div><div class="s-note">a week or less banked — play a ranked game</div></button>`:""}
-    ${rotN?`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
-      <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`:""}
-    ${week?(()=>{
+  /* Said once, and only when there is something to say. The panel used to repeat
+     the header and the toolbar: Accounts (the header's caption says it), Best
+     account (so does the caption, now with the name), Rank spread (the header bar,
+     whose segments filter the same way) and Needs refresh (the toolbar's "N need
+     a refresh" and its Refresh stale button). Regions was a count nobody acts on.
+     What stays is the season, what to play, and what needs you — and a figure
+     with nothing behind it yet (0W 0L, a climb with one day of history) waits
+     until it has something. */
+  const cells=[
+    (W+L)>0&&`<div class="stat"><div class="k">Season W/L</div><div class="v nw">${W}<small>W</small> ${L}<small>L</small></div>
+      <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>`,
+    neverN&&`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
+      <div class="v" style="color:var(--warn-txt)">${neverN}</div><div class="s-note">no rank pulled yet — click to see them</div></button>`,
+    attentionN&&`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
+      <div class="v" style="color:var(--danger)">${attentionN}</div><div class="s-note">flagged by you, or the profile no longer exists</div></button>`,
+    failedN&&`<button class="stat stat-b${ui.flag==="failed"?" on":""}" data-flag="failed" aria-pressed="${ui.flag==="failed"}"><div class="k">Last check failed</div>
+      <div class="v" style="color:var(--danger)">${failedN}</div><div class="s-note">auto-fetch failed — enter rank by hand or retry</div></button>`,
+    dupN&&`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
+      <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`,
+    next&&`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
+      <div class="v" style="font-size:calc(14px*var(--ts))">${nameOf(next.a)}</div><div class="s-note">${esc(next.why)}</div></button>`,
+    decayN&&`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left — estimated from the games seen between checks"><div class="k">Decay risk</div>
+      <div class="v" style="color:var(--warn)">${decayN}</div><div class="s-note">a week or less banked — play a ranked game</div></button>`,
+    rotN&&`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
+      <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`,
+    week&&(()=>{
       const note=(week.games?week.games+" game"+(week.games===1?"":"s")+" · ":"")
         +(week.best?"best "+nameOf(week.best.a)+" +"+week.best.d:week.moved+" account"+(week.moved===1?"":"s")+" checked");
       const inner=`<div class="k">This week</div><div class="v">${week.lp>0?"+":week.lp<0?"−":""}${Math.abs(week.lp)} <small>LP</small></div><div class="s-note">${note}</div>`;
       return week.best?`<button class="stat stat-b" id="weekStat" data-next="${idAttr(week.best.a.id)}" title="The last seven days across the counted accounts — click to see the best climber">${inner}</button>`
         :`<div class="stat" id="weekStat" title="The last seven days across the counted accounts">${inner}</div>`;
-    })():""}
-    <div class="stat" id="ladderTrendStat"${poolTrend?` title="${esc(poolTrend.note)}"`:""}>
+    })(),
+    poolTrend&&`<div class="stat" id="ladderTrendStat" title="${esc(poolTrend.note)}">
       <div class="k">Group climb</div>
-      ${poolTrend
-        ?`<div class="v">${esc(poolTrend.headline)} <small>LP</small></div>
-          <div class="v spark-wrap">${poolTrend.svg}</div>
-          <div class="s-note">${esc(poolTrend.span)}</div>`
-        :`<div class="v">—</div><div class="s-note">needs ≥2 days of history on counted accounts</div>`}
+      <div class="v">${esc(poolTrend.headline)} <small>LP</small></div>
+      <div class="v spark-wrap">${poolTrend.svg}</div>
+      <div class="s-note">${esc(poolTrend.span)}</div></div>`,
+  ].filter(Boolean);
+  const bkNote=bk&&accounts.length&&!previewMode&&!(setupVisible()&&!cfg.lastExport)?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:"";
+  // nothing to show: no panel, and no Hide stats button for an empty one
+  $("bDashToggle").classList.toggle("hidden",!cells.length&&!topChamps.length);
+  if(!cells.length&&!topChamps.length){hideSparkTip();setHTML(el,bkNote);dashJustOpened=false;wireBkNow(el);return}
+  setHTML(el,`
+  <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
+  ${ranked.length?`<div class="dash-head">
+    <div class="dash-filter">
+      <span class="k">Counting</span>
+      <select id="dashMin">${COMBINED_FLOORS.map(f=>`<option value="${f.v}"${(cfg.statsMinTier||"")===f.v?" selected":""}>${esc(f.label)}</option>`).join("")}</select>
+      <span class="dash-ex">${pool.length} of ${ranked.length} ranked${excludedN?" · "+excludedN+" left out":""}${filterHint?" · "+esc(filterHint):""}</span>
     </div>
-    <button class="stat stat-b${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"><div class="k">Needs refresh</div>
-      <div class="v"${staleN?' style="color:var(--danger)"':""}>${staleN}</div>
-      <div class="s-note">older than 3 days${veryStaleN?" · "+veryStaleN+" over 30d":""}</div></button>
-  </div>
-  ${gems?`<div class="dist" style="border-top:1px solid var(--line)"><span class="k">Rank spread</span>${gems}</div>`:""}
-  ${topChamps.length?`<div class="dist" style="border-top:1px solid var(--line)"><span class="k">Best champions</span>${
+  </div>`:""}
+  ${cells.length?`<div class="dash">${cells.join("")}</div>`:""}
+  ${topChamps.length?`<div class="dist"${cells.length||ranked.length?' style="border-top:1px solid var(--line)"':""}><span class="k">Best champions</span>${
     topChamps.map(c=>`<span class="gem cmb" title="${esc(c.games)} games across ${esc(c.accs)} account${c.accs===1?"":"s"}">`
       +`<span class="n">${esc(c.name)}</span>`
       +`<b class="${c.wr>=50?"wr-good":""}">${esc(c.wr)}%</b>`
       +`<i class="g">${esc(c.wins)}<em>-</em>${esc(c.losses)}</i></span>`).join("")}</div>`:""}
   </div></div>
-  ${bk&&accounts.length&&!previewMode&&!(setupVisible()&&!cfg.lastExport)?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:""}`);
+  ${bkNote}`);
   dashJustOpened=false; // consumed by the render above
   bindSparkTip(el);
-  /* The reminder said "hit Export" — and Export lives two clicks away, inside the
-     ⋯ menu at the other end of the header. The way to act on it is now on it:
-     encrypted when there is a master password to encrypt with, plaintext (which
-     asks first whenever logins are in it) when there is not. */
+  wireBkNow(el);
+  balanceDash();
+}
+/* The reminder said "hit Export" — and Export lives two clicks away, inside the
+   ⋯ menu at the other end of the header. The way to act on it is now on it:
+   encrypted when there is a master password to encrypt with, plaintext (which
+   asks first whenever logins are in it) when there is not. */
+function wireBkNow(el){
   const bkNow=el.querySelector("#bkNow");
   if(bkNow)bkNow.onclick=()=>{vaultPassword?doExportEnc():doExport()};
-  balanceDash();
 }
 /* The figures are a grid that fits as many as it can per row, and how many there
    are depends on the vault (six to eleven). Eight at 1024px came out six and two:
@@ -6932,7 +7044,9 @@ function balanceDash(){
   if(!d)return;
   const tiles=[...d.children];
   const narrow=!!(window.matchMedia&&matchMedia("(max-width:720px)").matches); // the .dash rule's own minimum there
-  const cols=dashCols(tiles.length,d.clientWidth,narrow?140:158);
+  // a phone lays the figures in one sliding row: one row, so only the first has no rule before it
+  const strip=!!(window.matchMedia&&matchMedia("(max-width:560px)").matches);
+  const cols=strip?tiles.length:dashCols(tiles.length,d.clientWidth,narrow?140:158);
   if(!cols){d.style.removeProperty("--cols");return}
   d.style.setProperty("--cols",cols);
   // the hairline between tiles belongs inside a row, not down the left edge of one
@@ -6974,6 +7088,7 @@ function renderTagbar(){
 // mysteriously short.
 const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Needs attention",missing:"Not found",dup:"Duplicate IDs",rotate:"Due to rotate"};
 function renderChips(){
+  syncFilterCount();
   const out=[];
   if(ui.flag)out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
   if(ui.tier)out.push(["tier",ui.tier==="UNRANKED"?"Unranked":ui.tier.charAt(0)+ui.tier.slice(1).toLowerCase()]);
@@ -8170,6 +8285,7 @@ function rowHTML(a,i){
         :total>0?`<em>${wins!=null?wins+"W":losses+"L"}</em>`:""}</span>
       <span class="rw-rg">${esc(a.region)}</span>
       <span class="rw-up${isStale(a)||!hasReading(s)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
+      <span class="rw-keys">${a.login?`<button class="rw-key" data-act="copylogin" title="Copy username" aria-label="Copy username for ${esc(plainName(a))}">${icon("user")}</button>`:""}${a.password?`<button class="rw-key" data-act="copypw" title="Copy password" aria-label="Copy password for ${esc(plainName(a))}">${icon("key")}</button>`:""}</span>
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     ${open?`<div class="rw-open">
@@ -8633,6 +8749,11 @@ function withGroups(list){
   }
   return out;
 }
+function listHeadHTML(){
+  return `<div class="rw-head" data-id="rw:head" aria-hidden="true"><span class="h-chk"></span><span></span>`
+    +`<span>Account</span><span>Trend</span><span>Rank</span><span>Change</span><span class="h-wr">Win rate</span>`
+    +`<span class="h-rg h-c">Region</span><span class="h-up h-r">Updated</span><span class="h-r">Copy</span><span></span></div>`;
+}
 function groupHTML(g){
   const c=groupColor(g.group);
   const mark=g.group==="FAV"?icon("star","lgrp-star")
@@ -8671,7 +8792,8 @@ function renderGrid(){
       +`<ol class="wl-steps"><li><span class="wl-n">1</span><b>Add an account</b><span>Its Riot ID and region. The login is optional.</span></li>`
       +`<li><span class="wl-n">2</span><b>Check its rank</b><span>Free and automatic, read from op.gg. No key needed.</span></li>`
       +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Login shows the username and password, each one click to copy.</span></li></ol>`
-      +`<div class="wl-acts"><button id="bEmptyAdd" class="b-teal">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div></div></div>`);
+      +`<div class="wl-acts"><button id="bEmptyAdd" class="b-teal">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div>`
+      +`<p class="wl-note">${icon("lock")}<span>Everything stays in this browser; nothing is uploaded. Clearing the browser's data clears the vault too, so keep a backup.</span></p></div></div>`);
   }else if(list.length===0){
     /* The zero-accounts state offers Add account and the demo; this one used to
        be a sentence and nothing else — on a page where the filters are spread
@@ -8691,8 +8813,10 @@ function renderGrid(){
     if(grid.dataset.layout!==layout){closeCardMenu();grid.textContent="";cardCache.clear();grid.dataset.layout=layout}
     // Grouped only when the list is actually in rank order — under any other sort
     // the headings would be scattered through the list and mean nothing.
-    const items=asList&&ui.sort==="rank"?withGroups(list):list;
-    syncGrid(grid,items,items.map((it,i)=>it.group?groupHTML(it)
+    const grouped=asList&&ui.sort==="rank"?withGroups(list):list;
+    // the list's column headings, so a figure says what it is without a hover
+    const items=asList?[{id:"rw:head",head:true},...grouped]:grouped;
+    syncGrid(grid,items,items.map((it,i)=>it.head?listHeadHTML():it.group?groupHTML(it)
       :layout==="wall"?tileHTML(it):asList?rowHTML(it,i):cardHTML(it,i)));
   }
   reveal=null; // consumed by the render above — the next one must not replay it
@@ -8985,7 +9109,7 @@ function openForm(acc,focus){
   closeAllPanels();
   editingId=acc?acc.id:null;
   $("fLabel").value=acc?acc.label||"":"";
-  $("fRegion").value=acc?normRegion(acc.region):"EUW";
+  $("fRegion").value=acc?normRegion(acc.region):usualRegion();delete $("fRegion").dataset.picked;
   $("fName").value=acc?acc.gameName:"";
   $("fTag").value=acc?acc.tagLine:"";
   $("fLogin").value=acc?acc.login||"":"";
@@ -9027,11 +9151,21 @@ function splitRiotId(){
   if(i<0)return;
   const tag=v.slice(i+1).trim();
   f.value=v.slice(0,i).trim();
-  if(tag)$("fTag").value=tag;
+  if(tag){$("fTag").value=tag;regionFromTagField()}
   else $("fTag").focus();
 }
+// New accounts only, and only until the user picks a region themselves
+function regionFromTagField(){
+  const sel=$("fRegion");
+  if(editingId||sel.dataset.picked)return;
+  const r=regionFromTag($("fTag").value);
+  if(r)sel.value=r;
+}
 $("fName").addEventListener("input",splitRiotId);
+$("fTag").addEventListener("input",regionFromTagField);
+$("fRegion").addEventListener("change",()=>{$("fRegion").dataset.picked="1"});
 function submitForm(){
+  let newId=null;
   splitRiotId();
   const gameName=$("fName").value.trim(), tagLine=$("fTag").value.trim().replace(/^#/,"");
   if(!gameName||!tagLine){toast("Riot name and tag are required");return}
@@ -9057,8 +9191,15 @@ function submitForm(){
   }else{
     const a=Object.assign({id:uid(),fav:false,stats:null},data);if(!a.info)delete a.info;
     accounts.push(a);
+    newId=a.id;
   }
   saveDB();closeForm();render();
+  /* A new account came in as "Never checked" and stayed that way until somebody
+     found Refresh, on an app that says rank checks are free and automatic. It is
+     read straight away now, the same check its own Refresh runs. Not in the
+     preview (nothing there is real), not for a banned one (checks skip those),
+     and not under a Check all run that is already going through the vault. */
+  if(newId&&!previewMode&&!run&&data.status!=="banned")check(newId);
 }
 
 // ---------- settings ----------
@@ -9094,7 +9235,7 @@ function openSettings(tab){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();renderPwCheck();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sDeployHelp").open=!cfg.backendUrl;$("settings").classList.remove("hidden");centreSettingsTab()
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();renderPwCheck();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sDeployHelp").open=!cfg.backendUrl;$("sAdvanced").open=!!cfg.apiKey;$("settings").classList.remove("hidden");centreSettingsTab();settingsDirty(false)
 }
 function renderPwMeter(){
   const p=$("fPass").value;
@@ -9880,6 +10021,23 @@ function revertLookPreviews(){
   if(pendingCardHide||pendingChampArt!==null){pendingCardHide=null;pendingChampArt=null;applyCompact();renderGrid()}
 }
 function closeSettings(){revertLookPreviews();settingsSaveGen++;$("settings").classList.add("hidden")}
+/* Every change here shows live and waits for Save: closing puts it back, so a
+   colour can be tried and walked away from. Picking a theme and pressing Esc
+   undid it without a word, though. Once something has changed, the footer says
+   what Save and closing each do. */
+const S_FOOT="Stays in this browser unless you use Device sync.";
+function settingsDirty(on){
+  const h=$("sFootHint");if(!h)return;
+  h.classList.toggle("dirty",!!on);
+  h.textContent=on?"Not saved yet — Save keeps it, closing puts it back.":S_FOOT;
+}
+// fields that act on their own button, not on Save
+const S_SELF=new Set(["sVaultPass"]);
+$("settings").addEventListener("input",e=>{if(e.target.closest(".mdl-b")&&!S_SELF.has(e.target.id))settingsDirty(true)});
+$("settings").addEventListener("change",e=>{if(e.target.closest(".mdl-b")&&!S_SELF.has(e.target.id))settingsDirty(true)});
+$("settings").addEventListener("click",e=>{
+  if(e.target.closest("[data-theme],[data-atmosphere],#sEffects [data-v],#sTextSize [data-v],#sCompact,.acc-reset"))settingsDirty(true);
+});
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
 $("bNewSeason").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");newSeasonAll()});
 $("bStreamer").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");setStreamer(!streamerOn())});
@@ -10212,6 +10370,7 @@ $("bBulkAdd").addEventListener("click",()=>{
   if(previewMode){previewMode=false;accounts=[];render()}
   closeAllPanels();
   $("baList").value="";
+  $("baRegion").value=usualRegion(); // it started on NA, the first in the list, for everyone
   // The list carries data-autofocus: the first field is the region select, and
   // the one you came here to fill is the list.
   $("bulkAdd").classList.remove("hidden");
@@ -10266,15 +10425,19 @@ function parseBulk(text,fallbackRegion){
 $("baSave").addEventListener("click",()=>{
   const parsed=parseBulk($("baList").value,$("baRegion").value);
   if(!parsed.entries.length&&!parsed.bad){toast("Paste at least one Name#TAG, an op.gg link or the lobby chat");return}
-  let added=0,skipped=0,bad=parsed.bad;
+  let added=0,skipped=0,bad=parsed.bad;const newIds=[];
   for(const{gameName,tagLine,region}of parsed.entries){
     const dup=accounts.find(a=>a.gameName.toLowerCase()===gameName.toLowerCase()&&a.tagLine.toLowerCase()===tagLine.toLowerCase()&&a.region===region);
     if(dup){skipped++;continue}
-    accounts.push({id:uid(),fav:false,stats:null,label:"",region,gameName,tagLine,status:"active",login:"",password:"",email:"",tags:[],notes:"",history:[]});
+    const id=uid();newIds.push(id);
+    accounts.push({id,fav:false,stats:null,label:"",region,gameName,tagLine,status:"active",login:"",password:"",email:"",tags:[],notes:"",history:[]});
     added++;
   }
   render();$("bulkAdd").classList.add("hidden");
-  saveThen(added+" added"+(skipped?", "+skipped+" duplicate"+(skipped===1?"":"s")+" skipped":"")+(bad?", "+bad+" line"+(bad===1?"":"s")+" couldn't be parsed":""));
+  const msg=added+" added"+(skipped?", "+skipped+" duplicate"+(skipped===1?"":"s")+" skipped":"")+(bad?", "+bad+" line"+(bad===1?"":"s")+" couldn't be parsed":"");
+  // The new ones are read straight away, through the same paced run as Check all
+  // ranks: its progress bar, its Stop, its summary at the end.
+  saveThen(msg).then(()=>{if(newIds.length&&!previewMode&&!run)checkAll(newIds)});
 });
 // Wrapped, not passed directly: addEventListener hands the listener a MouseEvent,
 // which checkAll would take as its `ids` list and immediately call .map() on — so
@@ -10302,7 +10465,25 @@ function syncToggles(){
     b.classList.toggle("on",!!on);
     b.setAttribute("aria-pressed",on?"true":"false");
   }
+  syncFilterCount();
 }
+// how many of the folded filters are on, on the phone's Filters button
+function syncFilterCount(){
+  const n=[ui.region,ui.status,ui.favOnly,ui.showArchived].filter(Boolean).length, b=$("tFilters");
+  if(!b)return;
+  const badge=b.querySelector(".t-n");
+  badge.hidden=!n;badge.textContent=n?String(n):"";
+  b.setAttribute("aria-label",n?"Filters, "+n+" on":"Filters");
+}
+$("skipLink").addEventListener("click",e=>{
+  e.preventDefault();
+  const g=$("grid");g.focus({preventScroll:true});
+  if(g.scrollIntoView)g.scrollIntoView({block:"start",behavior:prefersReducedMotion()?"auto":"smooth"});
+});
+$("tFilters").addEventListener("click",()=>{
+  const t=document.querySelector(".tools"), open=!t.classList.contains("open");
+  t.classList.toggle("open",open);$("tFilters").setAttribute("aria-expanded",String(open));
+});
 $("tFav").addEventListener("click",()=>{ui.favOnly=!ui.favOnly;syncToggles();renderFilters()});
 $("tArchived").addEventListener("click",()=>{ui.showArchived=!ui.showArchived;syncToggles();render()});
 $("bDashToggle").addEventListener("click",()=>{
@@ -10472,7 +10653,12 @@ function palResults(q){
   // palette never disagrees with the page behind it.
   accs.sort((x,y)=>(y.fav?1:0)-(x.fav?1:0)||rankValue(y.stats)-rankValue(x.stats));
   const cmds=palCommands().filter(c=>!s||(c.k+" "+c.n).toLowerCase().includes(s));
-  return accs.slice(0,8).map(a=>({type:"acc",a})).concat(cmds.slice(0,6).map(c=>({type:"cmd",c})));
+  /* The top match's login, one Enter away. Landing on the card was half the trip:
+     the password was then Login, Copy — the clicks this window exists to save. */
+  const top=s&&accs[0], keys=[];
+  if(top&&top.login)keys.push({type:"key",c:{n:"Copy username",s:plainName(top),i:"user",run:()=>copyText(top.login,"Username")}});
+  if(top&&top.password)keys.push({type:"key",c:{n:"Copy password",s:plainName(top)+" · clears from the clipboard in 30s",i:"key",run:()=>copyText(top.password,"Password",true)}});
+  return accs.slice(0,8).map(a=>({type:"acc",a})).concat(keys,cmds.slice(0,6).map(c=>({type:"cmd",c})));
 }
 function renderPalette(){
   palItems=palResults($("palInput").value);
@@ -10484,7 +10670,7 @@ function renderPalette(){
   let html="",lastType=null;
   palItems.forEach((it,i)=>{
     if(it.type!==lastType){
-      html+=`<div class="pal-g">${it.type==="acc"?"Accounts":"Commands"}</div>`;
+      html+=`<div class="pal-g">${it.type==="acc"?"Accounts":it.type==="key"?"Log in":"Commands"}</div>`;
       lastType=it.type;
     }
     const sel=i===palSel?" sel":"";
@@ -10523,7 +10709,7 @@ function closePalette(){$("palette").classList.add("hidden")}
 function runPalette(i){
   const it=palItems[i];if(!it)return;
   closePalette();
-  if(it.type==="cmd"){it.c.run();return}
+  if(it.type==="cmd"||it.type==="key"){it.c.run();return}
   // An account is a place, not an action: go there, in the layout that can
   // actually show it, and light it up so it is obvious which one you landed on.
   const id=it.a.id;
@@ -11028,7 +11214,10 @@ function startApp(){
   render();
   renderAwayBand();
   setTimeout(()=>$("grid").classList.remove("boot"),1200);
-  if(!cfg.seenHelp&&accounts.length===0)$("help").classList.remove("hidden");
+  /* A first visit used to open on "How this works": eleven sections of search
+     operators, keyboard keys and privacy notes, over a page with nothing on it
+     yet. That is a reference, and it stays one click away on the ?. The empty
+     vault itself is the welcome now: what the app does, and the first step. */
   showChangelogIfNeeded();
   if(startAction)setTimeout(runStartAction,0); // after boot's own first paint
   if(cfg.watch)setTimeout(()=>syncWatch(false),1500); // at most every ten minutes
