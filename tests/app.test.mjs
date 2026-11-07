@@ -1195,14 +1195,14 @@ test("a levelling account shows its way to ranked, and says when it is ready", (
     stats: { found: true, tier: "UNRANKED", level, wins: 0, losses: 0, updatedAt: Date.now() } });
   const win = bootApp([acc("lv24", 24), acc("lv30", 31)]);
   const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
-  // the way to ranked takes the room a ranked card gives its chart: thirty steps
+  // the way to ranked takes the room a ranked card gives its chart: one bar against 30
   const track = card("lv24").querySelector(".lvt");
-  assert.ok(track, "a track toward level 30");
-  assert.match(track.textContent, /To ranked\s*6 levels to go/);
-  assert.equal(track.querySelectorAll(".lvt-track i").length, 30);
-  assert.equal(win.getComputedStyle(track.querySelector(".lvt-h .k")).textTransform, "uppercase", "labelled like PEAK and NOTES");
-  assert.equal(track.querySelectorAll(".lvt-track i.on").length, 24, "the levels done, lit");
-  assert.ok(track.querySelectorAll(".lvt-track i")[23].classList.contains("now"), "and where it is now");
+  assert.ok(track, "a bar toward level 30");
+  assert.match(track.querySelector(".lvt-r").textContent, /^6 levels to ranked$/);
+  assert.equal(parseFloat(track.querySelector(".lvt-bar i").style.width), 80, "24 of 30");
+  assert.deepEqual([...track.querySelectorAll(".lvt-bar b")].map(b => parseFloat(b.style.left)), [33.3, 66.7], "ticks at 10 and 20");
+  assert.deepEqual([...track.querySelectorAll(".lvt-ax span")].map(x => x.textContent), ["1", "10", "20", "30"]);
+  assert.equal(track.querySelector(".lvt-bar").getAttribute("aria-label"), "Level 24 of 30");
   assert.ok(card("lv30").querySelector(".ready"), "level 30 and unranked: ready");
   assert.equal(card("lv30").querySelector(".lvt"), null, "no track once it is there");
   const search = q => { const el = win.document.getElementById("tSearch"); el.value = q; el.dispatchEvent(new win.Event("input", { bubbles: true })); };
@@ -9373,7 +9373,7 @@ test("the example data never says the same thing twice on one card", () => {
   win.document.getElementById("bDemo").click();
   const card = [...win.document.querySelectorAll(".card")].find(c => c.querySelector(".lvt"));
   assert.ok(card, "the preview still has an account below level 30");
-  assert.equal(card.textContent.match(/to go/g).length, 1, "the distance to 30 is said once");
+  assert.equal(card.textContent.match(/to ranked/g).length, 1, "the distance to 30 is said once");
   assert.equal(card.textContent.match(/Level \d/g).length, 1, "and so is the level");
 });
 

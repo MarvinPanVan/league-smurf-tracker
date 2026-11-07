@@ -1167,18 +1167,18 @@
   .c-notes.capped .ni-row>.ni-f{min-width:0;flex-shrink:1}
   .c-notes.capped .ni-row>.ni-f.more{flex-shrink:0}
   .c-notes.capped .nt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .lvt{border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 12px 10px;background:linear-gradient(180deg,#ffffff06,transparent)}
-  .lvt-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
-  .lvt-h .k{color:var(--faint)}
-  .lvt-r{font-size:calc(12px*var(--ts));color:var(--muted);font-variant-numeric:tabular-nums}
-  .lvt-track{display:grid;grid-template-columns:repeat(30,minmax(0,1fr));gap:2px;height:22px;align-items:end}
-  .lvt-track i{height:70%;border-radius:1px;background:#ffffff14}
-  .lvt-track i.m{height:100%}
-  .lvt-track i.on{background:color-mix(in srgb,var(--teal) 70%,transparent)}
-  .lvt-track i.now{background:var(--teal);height:100%;box-shadow:0 0 0 1px var(--panel),0 0 0 2px color-mix(in srgb,var(--teal) 60%,transparent)}
-  /* on the track's own 30 columns, so 10 and 20 sit under their taller bars */
-  .lvt-ax{display:grid;grid-template-columns:repeat(30,minmax(0,1fr));gap:2px;font-size:calc(10px*var(--ts));color:var(--faint);margin-top:6px;letter-spacing:.02em;white-space:nowrap}
-  .lvt-pace{font-size:calc(11px*var(--ts));color:var(--muted);margin-top:7px}
+  .lvt{padding:4px 0 2px}
+  .lvt-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:9px;font-size:calc(13px*var(--ts))}
+  .lvt-r{color:var(--text);font-weight:500;font-variant-numeric:tabular-nums}
+  .lvt-pace{font-size:calc(12px*var(--ts));color:var(--muted)}
+  .lvt-bar{position:relative;height:8px;border-radius:2px;background:#ffffff14}
+  .lvt-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--teal)}
+  /* 10 and 20: a notch through the bar, so they show over the fill as well */
+  .lvt-bar b{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--panel)}
+  .lvt-ax{position:relative;height:15px;margin-top:6px;font-size:calc(11px*var(--ts));color:var(--faint);font-variant-numeric:tabular-nums}
+  .lvt-ax span{position:absolute;top:0;transform:translateX(-50%)}
+  .lvt-ax span:first-child{left:0;transform:none}
+  .lvt-ax span:last-child{right:0;transform:none}
   .d-cap{font-size:calc(10px*var(--ts));color:var(--faint);letter-spacing:.02em;white-space:nowrap;margin-top:-2px}
   /* Rank is the headline; LP is a labelled companion under it — not a smaller
      word jammed onto the same baseline with a leftover margin. */
@@ -1775,7 +1775,7 @@
      so neighbouring labels never quite lined up. Colour still says how loud each
      one is; the shape is now the same everywhere. */
   .stat .k,.dist .k,.dash-filter .k,.c-stats .k,.c-notes .k,.sec-n,.chp-h,.away-k,.pal-g,.login .k,.lrow .lk,
-  .goal-h .k,.lvt-h .k,.rankpanel .k,.grp-h,.cm-g,.c-drawer{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+  .goal-h .k,.rankpanel .k,.grp-h,.cm-g,.c-drawer{font-size:calc(10px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase}
 
   /* ---- form + settings ---- */
   .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:22px}

@@ -471,17 +471,18 @@ function levelPace(a){
   return perDay>=1?"about "+Math.round(perDay)+" level"+(Math.round(perDay)===1?"":"s")+" a day"
     :"about "+Math.max(1,Math.round(perDay*7))+" level"+(Math.max(1,Math.round(perDay*7))===1?"":"s")+" a week";
 }
-/* Where a ranked card has its chart, a levelling one had a thin bar and half a card
-   of nothing. The way to ranked gets the chart's room instead: thirty steps, the
-   ones done lit, where it is now, how many are left and, once checks have seen the
-   level move, how fast it is going. */
+/* The way to ranked. A ranked card has its chart; a levelling one shows the one
+   number that matters, the level against 30, as one bar: ticks at 10 and 20, how
+   many levels are left and, once checks have seen the level move, how fast. (2.12
+   drew thirty separate steps, taller at every tenth and at the current one, which
+   read like a chart of something and said no more than the bar does.) */
 function levelTrackHTML(a){
   const lv=Math.max(0,Math.min(30,Math.floor(Number(a.stats.level)||0))), left=30-lv, pace=levelPace(a);
+  const pct=n=>(n/30*100).toFixed(1)+"%";
   return`<div class="lvt" title="Ranked opens at level 30 (and 20 champions owned)">`
-    +`<div class="lvt-h"><span class="k">To ranked</span><span class="lvt-r">${left} level${left===1?"":"s"} to go</span></div>`
-    +`<div class="lvt-track" role="img" aria-label="Level ${lv} of 30">${Array.from({length:30},(_,i)=>`<i class="${i<lv?"on":""}${i===lv-1?" now":""}${(i+1)%10===0?" m":""}"></i>`).join("")}</div>`
-    +`<div class="lvt-ax"><span style="grid-column:1/4">1</span><span style="grid-column:9/12;text-align:center">10</span><span style="grid-column:19/22;text-align:center">20</span><span style="grid-column:24/31;text-align:right">30 · ranked</span></div>`
-    +(pace?`<div class="lvt-pace">${esc(pace)}</div>`:"")+`</div>`;
+    +`<div class="lvt-h"><span class="lvt-r">${left} level${left===1?"":"s"} to ranked</span>${pace?`<span class="lvt-pace">${esc(pace)}</span>`:""}</div>`
+    +`<div class="lvt-bar" role="img" aria-label="Level ${lv} of 30"><i style="width:${pct(lv)}"></i><b style="left:${pct(10)}"></b><b style="left:${pct(20)}"></b></div>`
+    +`<div class="lvt-ax"><span>1</span><span style="left:${pct(10)}">10</span><span style="left:${pct(20)}">20</span><span>30</span></div></div>`;
 }
 function isReadyForRanked(a){const s=a.stats;return isLive(a)&&!!s&&s.found!==false&&!isRanked(a)&&Number(s.level)>=30}
 // days are floored, so 0 is "less than one left" — "~0d" read as already gone
