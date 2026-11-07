@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.17.0";
+const APP_VERSION="2.18.0";
 const APP_CHANGELOG=[
+  {v:"2.18.0",items:[
+    "Play next gives a reason to play: about to decay, a game or two from the next division, or not played in a week or more",
+    "The stats end with \"Figures from all 3 ranked accounts\" instead of opening on a Counting control",
+    "The Average climb line keeps its shape instead of lying flat",
+  ]},
   {v:"2.17.0",items:[
     "Details opens straight onto its contents, and each card's corner keeps the LP change and one signal",
     "Charts leave out a label that would sit on the line, say \"One check so far\" instead of drawing one dot, and have a bigger D/W/M switch",
