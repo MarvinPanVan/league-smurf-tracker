@@ -2706,14 +2706,14 @@ test("Settings is six tabs, one section at a time, and a step that needs a field
   const tabs = [...m.querySelectorAll('[role="tab"]')];
   assert.deepEqual(tabs.map(t => t.textContent.trim()), ["Appearance", "Rank checks", "Alerts", "Security", "Sync", "Backup"]);
   const shown = () => [...m.querySelectorAll(".grp")].filter(g => win.getComputedStyle(g).display !== "none")
-    .map(g => g.querySelector(".grp-h").textContent.trim());
+    .map(g => g.querySelector(".grp-h, .adv-fold > summary").textContent.trim());
   doc.getElementById("bSettings").click();
   assert.deepEqual(shown(), ["Appearance"], "opens on Appearance, alone");
   const panel = doc.getElementById("settingsPanel");
   assert.equal(panel.getAttribute("role"), "tabpanel");
   assert.ok(tabs.every(t => t.getAttribute("aria-controls") === "settingsPanel"), "each tab names the panel it controls");
   tabs[1].click();
-  assert.deepEqual(shown(), ["Rank checks", "Automatic refresh"], "the backend first, then when it runs");
+  assert.deepEqual(shown(), ["Rank checks", "Advanced: your own worker or API key"], "when checks run first, then the worker, folded");
   assert.equal(tabs[1].getAttribute("aria-selected"), "true");
   assert.equal(panel.getAttribute("aria-labelledby"), tabs[1].id, "and the panel is read as that tab's");
   assert.equal(tabs[0].getAttribute("aria-selected"), "false");
@@ -10202,4 +10202,30 @@ test("Remove protection shows only when there is a master password to remove", a
   $("sVaultRemove").click();   // confirm() is stubbed to yes
   await until(() => $("sVaultRemove").classList.contains("hidden"), "it to go again with the password");
   assert.equal($("sVaultSet").textContent, "Set password");
+});
+
+// The tab opened on a Backend URL field and a Cloudflare tutorial, ahead of the one
+// setting most people want, for a free path that needs none of it
+test("Rank checks says the free path first, with the worker and API key folded under Advanced", () => {
+  const win = bootApp();
+  const $ = id => win.document.getElementById(id);
+  $("bSettings").click();
+  win.document.querySelector('[data-stab="checks"]').click();
+  const groups = [...win.document.querySelectorAll('#settings .grp[data-tab="checks"]')];
+  assert.match(groups[0].textContent, /Ranks are read from op\.gg for free\. There is nothing to set up\./, "said first");
+  assert.ok(groups[0].contains($("sAuto")), "with Automatic refresh in the first group");
+  const adv = $("sChecksAdv");
+  assert.equal(adv.tagName, "DETAILS");
+  for (const id of ["sBackend", "sDeployHelp", "sAdvanced", "sKey"]) assert.ok(adv.contains($(id)), id + " is under Advanced");
+  assert.equal(adv.open, false, "folded while nothing there is set");
+  win.document.querySelector("#settings [data-close-panel]").click();
+  // with a worker set it opens on its own, and the lead says where ranks come from now
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev'");
+  win.fetch = async () => ({ ok: true, status: 200, json: async () => ({ ok: true, riot: true, vault: true }) });
+  $("bSettings").click();
+  assert.equal(adv.open, true);
+  assert.match($("sChecksLead").textContent, /your own worker.*op\.gg when it can't answer/);
+  // and the other tabs point to where the worker is now
+  assert.match(win.document.querySelector('#settings .grp[data-tab="sync"]').textContent, /Rank checks, Advanced/);
+  assert.match(win.document.querySelector('#settings .grp[data-tab="alerts"]').textContent, /Rank checks, Advanced/);
 });

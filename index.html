@@ -277,8 +277,32 @@
       </div>
 
       <div class="grp" data-tab="checks">
-        <div class="grp-h">Rank checks</div>
-        <div class="formgrid">
+        <div class="grp-h tab-same">Rank checks</div>
+        <!-- The tab opened on a Backend URL field and a five-minute Cloudflare
+             tutorial, ahead of the one setting most people want, for a free path
+             that needs none of it. That is said first now; the worker and the API
+             key fold under Advanced, open on their own once either is set. -->
+        <p class="hint s-lead" id="sChecksLead">Ranks are read from op.gg for free. There is nothing to set up.</p>
+        <div class="grp-h">Automatic refresh</div>
+        <div class="chk">
+          <input type="checkbox" id="sAuto" style="width:auto">
+          <label for="sAuto">Auto-check stale accounts when opening the app</label>
+        </div>
+        <div class="sub-fld inline">
+          <label for="sAutoEvery">Refresh at most</label>
+          <select id="sAutoEvery"></select>
+        </div>
+        <div class="sub-fld">
+          <input type="checkbox" id="sAutoRanked" style="width:auto">
+          <label for="sAutoRanked" style="font-size:calc(13px*var(--ts));color:var(--muted);max-width:560px">Ranked accounts only. Unranked and never-placed ones give the same answer every time, so they are skipped</label>
+        </div>
+      </div>
+
+      <div class="grp" data-tab="checks">
+        <details class="adv-fold" id="sChecksAdv">
+          <summary>Advanced: your own worker or API key</summary>
+          <p class="hint">A Cloudflare worker of your own reads ranks straight from Riot, and is what Device sync and Discord decay alerts run on.</p>
+          <div class="formgrid">
           <div class="fld fw">
             <label>Backend URL (optional: your own rank server, e.g. a Cloudflare Worker)</label>
             <input id="sBackend" placeholder="https://... (leave empty for the free auto-fetch)" autocomplete="off">
@@ -306,11 +330,10 @@
               <a href="https://raw.githubusercontent.com/MarvinPanVan/league-smurf-tracker/main/cloudflare-worker.js" target="_blank" rel="noreferrer">cloudflare-worker.js</a>,
               bind a KV namespace named <code>VAULT</code> for sync, and add the Cron Trigger <code>17 9 * * *</code> for Discord alerts.</div>
           </details>
-          <!-- Paid and for power users, by its own description — three fields every
-               visitor had to read past to find the free path above. Folded, and open
-               on its own when a key is already set. -->
+          <!-- Paid and for power users, by its own description. Folded, and open on
+               its own when a key is already set. -->
           <details class="fw guide" id="sAdvanced">
-            <summary>Advanced: rank checks with your own Anthropic API key (paid)</summary>
+            <summary>Rank checks with your own Anthropic API key (paid)</summary>
             <div class="adv-grid">
           <div class="fld">
             <label for="sKey">Anthropic API key (optional, stored only in this browser)</label>
@@ -328,25 +351,9 @@
           </div>
             </div>
           </details>
-        </div>
+          </div>
+        </details>
       </div>
-
-      <div class="grp" data-tab="checks">
-        <div class="grp-h">Automatic refresh</div>
-        <div class="chk">
-          <input type="checkbox" id="sAuto" style="width:auto">
-          <label for="sAuto">Auto-check stale accounts when opening the app</label>
-        </div>
-        <div class="sub-fld inline">
-          <label for="sAutoEvery">Refresh at most</label>
-          <select id="sAutoEvery"></select>
-        </div>
-        <div class="sub-fld">
-          <input type="checkbox" id="sAutoRanked" style="width:auto">
-          <label for="sAutoRanked" style="font-size:calc(13px*var(--ts));color:var(--muted);max-width:560px">Ranked accounts only. Unranked and never-placed ones give the same answer every time, so they are skipped</label>
-        </div>
-      </div>
-
 
       <div class="grp" data-tab="alerts">
         <div class="grp-h tab-same">Alerts</div>
@@ -363,7 +370,7 @@
           <label for="sWatch">Decay alerts on Discord, even with the app closed: once a day your worker checks your Diamond+ accounts and posts to the webhook above when one is about to decay</label>
         </div>
         <div id="sWatchStatus" class="hint" style="margin-top:6px" aria-live="polite"></div>
-        <div class="hint" style="margin-top:4px">Needs your worker (Rank checks) and the webhook above. Your worker then keeps a short list: those accounts' Riot IDs, labels and decay estimates, never logins.</div>
+        <div class="hint" style="margin-top:4px">Needs your own worker (Rank checks, Advanced) and the webhook above. Your worker then keeps a short list: those accounts' Riot IDs, labels and decay estimates, never logins.</div>
       </div>
 
       <div class="grp" data-tab="security">
@@ -416,7 +423,7 @@
         <div class="grp-h tab-same">Device sync</div>
         <div class="fw hint" style="margin-bottom:10px">
           Pushes the <b>encrypted</b> vault blob to your worker (KV). Same sync token on phone and PC.
-          Last write wins. Needs a master password (Security) and a Backend URL with a KV binding (Rank checks), both above.
+          Last write wins. Needs a master password (Security) and your own worker with sync storage (Rank checks, Advanced).
           There is no scrape cache, so don't hammer op.gg.
         </div>
         <div class="fld fw">
