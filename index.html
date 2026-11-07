@@ -196,7 +196,10 @@
   /* 1220px is a reading measure, and this page stopped being prose a long time
      ago. On a wide screen it forced a sixty-card grid into three columns with
      390 px of empty margin either side. Prose still gets the narrow measure. */
-  .wrap{position:relative;z-index:1;max-width:1640px;margin:0 auto;padding:clamp(26px,5vw,58px) clamp(16px,3vw,30px) 90px}
+  /* The same reasoning again, one screen size up: at 2560px the 1640px cap left
+     460px empty either side and four cards to a row. 2240px is six on a 2560
+     screen and five on a 1920 one; a laptop never reaches either cap. */
+  .wrap{position:relative;z-index:1;max-width:2240px;margin:0 auto;padding:clamp(26px,5vw,58px) clamp(16px,3vw,30px) 90px}
   .measure{max-width:1220px}
   .hex-display{font-family:'Cinzel',Georgia,serif;letter-spacing:.1em}
   /* Ranks are set in the text face, bold, in their tier's colour beside the gem
@@ -303,7 +306,7 @@
   .rib-bar:has(.rib-seg.on) .rib-seg:not(.on){background:color-mix(in srgb,var(--c) 22%,var(--bg))}
   .rib-bar:has(.rib-seg.on) .rib-seg:not(.on) i{opacity:.4}
   .rib-seg.on{background:var(--c);box-shadow:0 0 0 1px var(--bg),0 0 14px -2px var(--c)}
-  .rib-cap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  .rib-cap{display:flex;justify-content:space-between;gap:3px 12px;flex-wrap:wrap;
     font-size:calc(11px*var(--ts));letter-spacing:.02em;color:var(--faint)}
   .rib-cap b{font-weight:600;color:var(--muted)}
   .brand{display:flex;align-items:center;gap:16px;min-width:0}
@@ -865,6 +868,17 @@
      the slack is all after the name, like any table, and the figures sit together
      as one block under their headings. The heading row uses the same columns. */
   .grid.list{--rw-cols:auto 40px minmax(160px,1fr) 124px 124px 60px 94px 38px 72px 62px 16px;--rw-gap:13px}
+  /* Up to a point: on a page wider than about 1800px, "all the slack after the
+     name" was a thousand-pixel hole between a name and its own rank. There every
+     column after the picture takes a share, more for the name and the climb, the
+     way a full-width table spreads; the picture stays beside the name. */
+  @media (min-width:1800px){
+    .grid.list{--rw-cols:auto 40px minmax(160px,2.4fr) minmax(124px,1.4fr) minmax(124px,1fr) minmax(60px,.6fr) minmax(94px,1fr) minmax(38px,.5fr) minmax(72px,.8fr) minmax(62px,.5fr) 16px}
+    /* a wider column is room around the change pill and the record bar, not a
+       longer pill or a bar whose length stops meaning the same thing row to row */
+    .rw-d{align-items:flex-start}
+    .rw-wr{max-width:150px}
+  }
   .rw-main{display:grid;align-items:center;gap:var(--rw-gap);padding:11px 14px;cursor:pointer;
     grid-template-columns:var(--rw-cols);
     transition:background .14s ease}
@@ -905,7 +919,13 @@
   .rw-star{color:var(--star);display:inline-flex;flex-shrink:0}
   .rw-star .ico{width:11px;height:11px;fill:var(--star)}
   .rw-tag{font-size:calc(11px*var(--ts));color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .rw-tags{display:flex;gap:4px;margin-top:3px;overflow:hidden}
+  /* The tags ride on the Riot ID's line. On a line of their own they made every
+     tagged row three lines tall: 85px a row, eight rows to a laptop screen, in the
+     layout that exists to scan a long vault. The Riot ID keeps its width; the tags
+     take what is left and are clipped first. */
+  .rw-sub{display:flex;align-items:center;gap:8px;min-width:0}
+  .rw-sub .rw-tag{flex:0 1 auto;min-width:40px}
+  .rw-tags{display:flex;gap:4px;overflow:hidden;flex:0 1 auto;min-width:0}
   .rw-tags i{font-style:normal;font-size:calc(10px*var(--ts));letter-spacing:.02em;color:var(--muted);
     padding:1px 6px;border-radius:var(--r-xs);background:#ffffff0f;white-space:nowrap}
   /* the shape of the climb, which the list used to leave out entirely */
@@ -1065,7 +1085,7 @@
      that makes something appear as "show me", not as a click: Login, Refresh,
      anything on the card took a second tap, the first one only lifting the card.
      There the box is simply shown, faintly, and a tap is a tap. */
-  @media (hover:hover){.card:hover .bulkchk{opacity:1}}
+  @media (hover:hover){.card:hover .bulkchk,.rw:hover .bulkchk{opacity:1}}
   @media (hover:none){.bulkchk{opacity:.5}}
 
   /* bare icon buttons — must beat the generic button rules */
@@ -2496,6 +2516,11 @@
        chips wrapped into a block of their own: together most of a screen. Each is
        one row now that slides sideways, the next figure peeking in at the edge to
        say there is more. */
+    /* On a phone the count and "N need a refresh" stack; the button's padding (its
+       hit area) pushed its words in from the count's, so the second line started
+       10px right of the first. The margin takes the padding back out. */
+    .cmd-count{flex-direction:column;align-items:flex-start;gap:0}
+    .cmd-count .warn{margin-left:-10px}
     #dash .dash,#dash .dash[style*="--cols"]{display:flex;overflow-x:auto;scroll-snap-type:x proximity;
       overscroll-behavior-x:contain;scrollbar-width:none}
     #dash .dash>.stat{flex:0 0 min(62%,220px);scroll-snap-align:start}
@@ -3356,8 +3381,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.8.0";
+const APP_VERSION="2.8.1";
 const APP_CHANGELOG=[
+  {v:"2.8.1",items:[
+    "Wide screens use their width: six cards to a row at 2560px, and the list spreads out like a table",
+    "List rows are two lines instead of three, and hovering a row shows its select box",
+    "An empty vault opens on the welcome alone; a banned card no longer warns that it is out of date",
+  ]},
   {v:"2.8.0",items:[
     "A new account's rank is checked right away, and a list row or Quick find (Ctrl+K) copies a login in one click",
     "Cleaner screens: the stats say each thing once, the list reads as a table, and a phone shows accounts on the first screen",
@@ -6979,7 +7009,9 @@ function renderDash(){
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`,
     next&&`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
       <div class="v" style="font-size:calc(14px*var(--ts))">${nameOf(next.a)}</div><div class="s-note">${esc(next.why)}</div></button>`,
-    decayN&&`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left — estimated from the games seen between checks"><div class="k">Decay risk</div>
+    // Play next already names the one account at decay risk and when it decays;
+    // a tile saying "1" beside it only says it again. Two or more, and it filters.
+    decayN&&!(decayN===1&&next&&decayRisk(next.a))&&`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left — estimated from the games seen between checks"><div class="k">Decay risk</div>
       <div class="v" style="color:var(--warn)">${decayN}</div><div class="s-note">a week or less banked — play a ranked game</div></button>`,
     rotN&&`<button class="stat stat-b${ui.flag==="rotate"?" on":""}" data-flag="rotate" aria-pressed="${ui.flag==="rotate"}"><div class="k">Due to rotate</div>
       <div class="v">${rotN}</div><div class="s-note">14+ days since play/check</div></button>`,
@@ -8272,8 +8304,7 @@ function rowHTML(a,i){
       <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" onerror="markIconDead(this)">`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
       <span class="rw-id">
         <span class="rw-nm" title="${esc(plainName(a))}"><span class="nm-t">${nameOf(a)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?`<span class="flagmark" title="Flagged — needs a look">${icon("flag")}</span>`:""}</span>
-        <span class="rw-tag sens">${esc(a.gameName)}#${esc(a.tagLine)}</span>
-        ${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}
+        <span class="rw-sub"><span class="rw-tag sens">${esc(a.gameName)}#${esc(a.tagLine)}</span>${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}</span>
       </span>
       <span class="rw-spark">${sparkline(a.history,col)
         // Nothing to plot yet, so the slot offers the one thing that would change
@@ -8340,7 +8371,11 @@ function tileHTML(a){
 }
 function cardHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
-  const stale=!!(s&&s.updatedAt&&Date.now()-s.updatedAt>STALE_MS);
+  /* The toolbar's "N need a refresh", Refresh stale and the list all go by isStale.
+     The card had a rule of its own, so a banned account (never checked again, so it
+     ages forever) and a Riot ID that came back not found wore an amber "out of
+     date" warning the toolbar didn't count and Refresh stale wouldn't touch. */
+  const stale=isStale(a);
   const hist=a.history||[];
   const st=STATUS[a.status]||STATUS.active;
   let peak=null,peakV=null;
@@ -8782,6 +8817,10 @@ function renderGrid(){
     if(selected.size!==before)lastSelectedId=null;
   }
   const grid=$("grid");
+  /* An empty vault has nothing to search, sort, filter, select or check, and the
+     toolbar's Add account was the welcome's own button said a second time. The
+     welcome is the whole first screen; the toolbar arrives with the first account. */
+  document.querySelector(".console").classList.toggle("hidden",accounts.length===0);
   if(accounts.length===0){
     /* The first screen anyone sees. It was one grey sentence pointing at a button
        somewhere else on the page, with the demo as the only thing to press here.

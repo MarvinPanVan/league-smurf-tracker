@@ -976,6 +976,22 @@ test("a stale card warns with a drawn mark, which a fresh card does not carry", 
   assert.equal(upd("f1").querySelector("svg"), null, "a fresh card has nothing to warn about");
 });
 
+// A banned card wore an amber "Updated 40 days ago" warning the toolbar did not count
+test("a card is out of date by the toolbar's own rule: never a banned account, never a not-found one", () => {
+  const D = 86400000, old = Date.now() - 40 * D;
+  const acc = (id, status, stats) => ({ id, region: "EUW", gameName: id, tagLine: "1", status, history: [], tags: [], stats });
+  const win = bootApp([
+    acc("live", "active", { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: old }),
+    acc("ban", "banned", { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: old }),
+    acc("gone", "active", { found: false, updatedAt: old })]);
+  const upd = id => win.document.querySelector(`.card[data-id="${id}"] .upd`);
+  assert.ok(upd("live").classList.contains("stale"));
+  assert.equal(upd("ban").classList.contains("stale"), false, "a banned account is never checked again, so never out of date");
+  assert.equal(upd("ban").querySelector("svg"), null);
+  assert.equal(upd("gone").classList.contains("stale"), false, "not found is its own state, not a stale one");
+  assert.match(win.document.getElementById("count").textContent, /1 needs? a refresh/, "and the count agrees: one");
+});
+
 test("actions and window titles are set in the text face; Cinzel is the wordmark's alone", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
   const rule = css.match(/\.cmd>button,\.acts>button:not\(\.c-more\)[^{]*\{[^}]*\}/)[0];
@@ -1232,6 +1248,11 @@ test("Play next names the account to play: about to decay first, then the longes
   const both = bootApp([acc("old", "GOLD", 20), urgent]);
   assert.equal(tile(both).dataset.next, "dia", "an account about to decay comes before one that has merely sat");
   assert.match(tile(both).textContent, /decay in ~\dd/);
+  // Play next already names the one account at risk: a "Decay risk 1" tile beside it said it twice
+  assert.equal(both.document.querySelector('#dash [data-flag="decay"]'), null, "one at risk is said once, by Play next");
+  const dia2 = acc("dia2", "DIAMOND", 2, { history: [{ t: now - 24 * D, tier: "DIAMOND", division: "II", lp: 20, w: 10, l: 10 }] });
+  const two = bootApp([acc("old", "GOLD", 20), urgent, dia2]);
+  assert.equal(two.document.querySelector('#dash [data-flag="decay"] .v').textContent, "2", "two at risk: the tile counts and filters them");
   tile(both).click();
   assert.equal(appGet(both, "flashId"), "dia", "clicking it brings that account into view");
   // and the jump gets there even through a filter that hides the account
@@ -8347,6 +8368,58 @@ test("the list is a table: headings over aligned columns, and a row copies its l
   assert.ok(rows.some(r => /^Copy username/.test(r)) && rows.some(r => /^Copy password/.test(r)), rows.join(" | "));
 });
 
+// A tagged row was three lines (name, Riot ID, tags): 85px, eight rows to a laptop screen
+test("a list row is two lines: the tags ride on the Riot ID's line", () => {
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: ["mid", "duo"], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 10, losses: 8, updatedAt: Date.now() } }]);
+  const doc = win.document;
+  doc.querySelector('[data-density="list"]').click();
+  const id = doc.querySelector('.rw[data-id="a"] .rw-id');
+  assert.deepEqual([...id.children].map(c => c.className), ["rw-nm", "rw-sub"], "a name line and one line under it");
+  const sub = id.querySelector(".rw-sub");
+  assert.equal(sub.querySelector(".rw-tag").textContent, "A#1");
+  assert.deepEqual([...sub.querySelectorAll(".rw-tags i")].map(i => i.textContent), ["mid", "duo"]);
+  assert.doesNotMatch(html.match(/\.rw-tags\{[^}]*\}/)[0], /margin-top/, "no gap left over from a line of their own");
+});
+
+// The select box is hidden until hovered, and only a card's hover showed it: in the
+// list, with a mouse, it was never seen at all unless already ticked
+test("the select box shows on hovering a list row, as it does on a card", () => {
+  const rule = html.match(/@media \(hover:hover\)\{([^{}]*\.bulkchk[^{}]*)\{opacity:1\}\}/);
+  assert.ok(rule, "the hover rule");
+  const sel = rule[1].split(",").map(x => x.trim());
+  assert.ok(sel.includes(".card:hover .bulkchk"), sel.join(", "));
+  assert.ok(sel.includes(".rw:hover .bulkchk"), "and on a list row: " + sel.join(", "));
+});
+
+// On a phone "12 need a refresh" started 10px right of "25 of 25 shown" above it
+// (its padding is its touch target), and the header's two caption lines sat 12px apart
+test("on a phone the toolbar's two count lines start at one edge, and the header caption is one block", () => {
+  const coarse = html.match(/\.cmd-count \.warn\{padding:6px (\d+)px\}/);
+  assert.ok(coarse, "the touch padding");
+  const phone = html.match(/\.cmd-count\{flex-direction:column;[^}]*\}\s*\.cmd-count \.warn\{margin-left:-(\d+)px\}/);
+  assert.ok(phone, "stacked, with the padding taken back out");
+  assert.equal(phone[1], coarse[1], "the margin is the padding");
+  const gap = html.match(/\.rib-cap\{[^}]*gap:(\d+)px \d+px/);
+  assert.ok(gap && +gap[1] <= 4, "a wrapped caption is one block, not two: " + (gap && gap[0]));
+});
+
+// At 2560px the page stopped at 1640: 460px empty either side and four cards to a row
+test("a wide screen gets a wide page, and the list spreads its columns rather than opening a hole after the name", () => {
+  const max = +html.match(/\n  \.wrap\{[^}]*max-width:(\d+)px/)[1];
+  const minCard = +html.match(/\n  \.grid\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\((\d+)px/)[1];
+  const cols = w => Math.floor((Math.min(w, max) - 60 + 16) / (minCard + 16));
+  assert.ok(cols(2560) >= 6, "six cards to a row at 2560: " + cols(2560));
+  assert.ok(cols(1920) >= 5, "five at 1920: " + cols(1920));
+  // the list, on a page that wide: every column after the picture takes a share
+  const wide = html.match(/@media \(min-width:1800px\)\{\s*\.grid\.list\{--rw-cols:([^}]+)\}([^@]*?)\n  \}/);
+  assert.ok(wide, "a wide-screen list template");
+  const tracks = wide[1].match(/minmax\([^)]*\)|[^\s]+/g);
+  assert.deepEqual(tracks.slice(0, 2), ["auto", "40px"], "the box and the picture stay put, beside the name");
+  assert.ok(tracks.filter(t => /fr\)$/.test(t)).length >= 6, "the slack is shared, not one hole: " + wide[1]);
+  assert.match(wide[2], /\.rw-d\{align-items:flex-start\}/, "the change pill keeps its size in a wider column");
+});
+
 // On a phone the filters and the stats were the whole first screen
 test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
@@ -8460,6 +8533,18 @@ test("a first visit opens on the welcome, not on How this works; the help is sti
   assert.match(win.document.querySelector(".wl-note").textContent, /backup/);
   win.document.getElementById("bHelp").click();
   assert.equal(win.document.getElementById("help").classList.contains("hidden"), false, "the ? still opens it");
+});
+
+// An empty vault showed a full toolbar of search, sort, filters, Select all and a
+// disabled Check all over the welcome, plus a second Add account button
+test("an empty vault shows the welcome without a toolbar; the toolbar comes with the first account", () => {
+  const win = bootApp();
+  const bar = () => win.document.querySelector(".console");
+  assert.ok(bar().classList.contains("hidden"), "nothing to search or filter yet");
+  assert.ok(win.document.getElementById("bEmptyAdd"), "the welcome keeps its own Add account");
+  win.check = async () => null;
+  addRealAccount(win, "Faker", "KR1");
+  assert.equal(bar().classList.contains("hidden"), false, "one account, and the toolbar is back");
 });
 
 // The first screen anyone sees: what the app does, and both ways in as buttons
