@@ -7755,7 +7755,7 @@ test("pushVaultSync sends content vaultRev, not a fresh Date.now stamp", async (
   assert.equal(puts, 1);
   assert.equal(body.updatedAt, 1234567890000, "must not stamp Date.now() over the content rev");
   assert.ok(body.envelope && body.envelope.__enc);
-  assert.match(win.document.getElementById("toast").textContent, /pushed/i);
+  assert.match(win.document.getElementById("toast").textContent, /uploaded/i);
 });
 
 test("pushVaultSync aborts when GET sees a newer remote vault", async () => {
@@ -7831,7 +7831,7 @@ test("a pull adopts the cloud revision instead of stamping a newer local one", a
   };
 
   await win.pullVaultSync(false);
-  await until(() => /pulled/i.test(win.document.getElementById("toast").textContent), "the pull to land");
+  await until(() => /downloaded/i.test(win.document.getElementById("toast").textContent), "the pull to land");
   assert.match(win.document.querySelector(".card").textContent, /FromCloud/);
   runScript(win, "window.__rev = cfg.vaultRev; window.__sync = cfg.lastSyncAt;");
   assert.equal(win.__rev, REMOTE, "the local revision is the cloud's, not a fresh Date.now()");
@@ -10071,12 +10071,12 @@ test("a pull from a device whose clock runs ahead does not make this one look ed
   const toast = () => win.document.getElementById("toast").textContent;
 
   await win.pullVaultSync(false);
-  await until(() => /pulled/i.test(toast()), "the first pull to land");
+  await until(() => /downloaded/i.test(toast()), "the first pull to land");
   record = { updatedAt: AHEAD + 5000, envelope: await vault("CloudTwo") };   // the other device pushes again
   await win.pullVaultSync(false);
   await until(() => /CloudTwo/.test(win.document.querySelector(".card").textContent)
-    || /changed after last sync/i.test(toast()), "the second pull to answer");
-  assert.doesNotMatch(toast(), /changed after last sync/i, "nothing was edited here, so there is nothing to lose");
+    || /changed since the last sync/i.test(toast()), "the second pull to answer");
+  assert.doesNotMatch(toast(), /changed since the last sync/i, "nothing was edited here, so there is nothing to lose");
   assert.match(win.document.querySelector(".card").textContent, /CloudTwo/);
 
   // and a real edit made here after that is still caught before a pull drops it
@@ -10084,7 +10084,7 @@ test("a pull from a device whose clock runs ahead does not make this one look ed
   await until(() => appGet(win, "cfg.vaultRev") > AHEAD + 5000, "the star to save");
   record = { updatedAt: AHEAD + 9000, envelope: await vault("CloudThree") };
   await win.pullVaultSync(false);
-  assert.match(toast(), /changed after last sync/i, "a local change still asks first");
+  assert.match(toast(), /changed since the last sync/i, "a local change still asks first");
   assert.match(win.document.querySelector(".card").textContent, /CloudTwo/, "and nothing was replaced");
 });
 
@@ -10276,7 +10276,8 @@ test("Rank checks says the free path first, with the worker and API key folded u
   assert.equal(adv.open, true);
   assert.match($("sChecksLead").textContent, /your own worker.*op\.gg when it can't answer/);
   // and the other tabs point to where the worker is now
-  assert.match(win.document.querySelector('#settings .grp[data-tab="sync"]').textContent, /Rank checks, Advanced/);
+  assert.equal(win.document.querySelector('#sSyncStatus [data-sync-go="checks"]'), null, "Sync no longer asks for a worker");
+  assert.ok(win.document.querySelector('#sSyncStatus [data-sync-go="security"]'), "it moves on to the master password");
   assert.match(win.document.querySelector('#settings .grp[data-tab="alerts"]').textContent, /Rank checks, Advanced/);
 });
 
@@ -10625,4 +10626,30 @@ test("a chart's division numerals show while it is being read, not at rest", () 
   // still drawn, for the moment they are wanted
   const win = bootApp();
   assert.ok(chartDom(win, hist(["GOLD", "I", 0], ["PLATINUM", "III", 74], ["PLATINUM", "II", 61])).querySelector(".lpc-sub"));
+});
+
+// The Sync tab was written for whoever built it: "Pushes the encrypted vault blob to
+// your worker (KV)", "Last write wins", "There is no scrape cache", "Set a Backend URL first"
+test("Sync says what it does in plain words, and what it still needs with a link to it", async () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document, $ = id => doc.getElementById(id);
+  $("bSettings").click();
+  doc.querySelector('[data-stab="sync"]').click();
+  const tab = doc.querySelector('#settings .grp[data-tab="sync"]').textContent;
+  for (const jargon of [/blob/i, /\bKV\b/, /Last write wins/i, /scrape cache/i, /Backend URL/, /ciphertext/i, /\btoken\b/i])
+    assert.doesNotMatch(tab, jargon, "no " + jargon);
+  assert.match(tab, /Keeps this vault the same on your phone and your PC/);
+  assert.equal($("sSyncPush").textContent, "Upload this vault");
+  assert.equal($("sSyncPull").textContent, "Download the synced copy");
+  // no worker yet: it says so, and the link goes to where one is set up
+  const link = $("sSyncStatus").querySelector('[data-sync-go="checks"]');
+  assert.ok(link, "a link to set up the worker");
+  link.click();
+  assert.equal($("settings").dataset.tab, "checks");
+  assert.equal($("sChecksAdv").open, true, "with Advanced open on it");
+  await until(() => doc.activeElement === $("sBackend"), "the Backend URL field focused");
+  // with a worker but no master password, it asks for that next
+  runScript(win, "cfg.backendUrl='https://w.example.workers.dev'; updateSyncStatus()");
+  assert.ok($("sSyncStatus").querySelector('[data-sync-go="security"]'), "then the master password");
+  assert.match($("sSyncStatus").textContent, /only the encrypted copy is sent/);
 });

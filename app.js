@@ -1600,25 +1600,24 @@ function genSyncToken(){
   return b64(b).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 }
 let syncBusy=false;
+/* What sync still needs, in the order it needs it, with a link to where that is set */
 function updateSyncStatus(){
   const el=$("sSyncStatus"); if(!el)return;
-  const parts=[];
-  if(!cfg.backendUrl)parts.push("Set a Backend URL first.");
-  else if(!cfg.syncToken)parts.push("Generate or paste a sync token.");
-  else if(!vaultPassword)parts.push("Set a master password first. Only ciphertext is synced.");
-  else parts.push("Ready to push/pull.");
-  if(cfg.lastSyncAt)parts.push("Last sync "+timeAgo(cfg.lastSyncAt)+".");
-  if(cfg.vaultRev)parts.push("Local rev "+new Date(cfg.vaultRev).toLocaleString()+".");
-  el.textContent=parts.join(" ");
+  const go=(tab,label)=>`<button type="button" class="link-btn" data-sync-go="${tab}">${label}</button>`;
+  const need=!cfg.backendUrl?`It needs your own worker first: ${go("checks","set one up")}.`
+    :!vaultPassword?`It needs a master password first, since only the encrypted copy is sent: ${go("security","set one")}.`
+    :!cfg.syncToken?"Generate a sync key, then paste the same key on your other devices."
+    :"Ready.";
+  setHTML(el,need+(cfg.lastSyncAt?" Last synced "+esc(timeAgo(cfg.lastSyncAt))+".":""));
 }
 async function pushVaultSync(){
   if(syncBusy){toast("Sync already in progress");return}
   const token=($("sSyncToken")&&$("sSyncToken").value.trim())||cfg.syncToken||"";
   if(token)cfg.syncToken=token;
   const url=vaultSyncUrl();
-  if(!url){toast("Set a Backend URL in Settings first");return}
-  if(!cfg.syncToken||cfg.syncToken.length<16){toast("Sync token must be at least 16 characters");return}
-  if(!vaultPassword){toast("Set a master password first. Sync only stores ciphertext");return}
+  if(!url){toast("Set up your own worker first: Settings, Rank checks, Advanced");return}
+  if(!cfg.syncToken||cfg.syncToken.length<16){toast("The sync key needs at least 16 characters");return}
+  if(!vaultPassword){toast("Set a master password first: only the encrypted copy is sent");return}
   if(vaultLocked()){toast("Unlock the vault first");return}
   syncBusy=true;
   try{
@@ -1634,8 +1633,8 @@ async function pushVaultSync(){
         let remote=null; try{remote=await peek.json()}catch(e){}
         const remoteAt=Number(remote&&remote.updatedAt)||0;
         if(remoteAt>updatedAt){
-          toast("Remote vault is newer. Pull first, or Push again after resolving","Pull…",()=>{
-            if(confirm("Replace this device's vault with the newer cloud copy?\nLocal changes since your last sync may be lost."))
+          toast("The synced copy is newer. Download it first, or upload again once you have sorted it out","Download…",()=>{
+            if(confirm("Replace this device's vault with the newer synced copy?\nChanges made here since your last sync may be lost."))
               pullVaultSync(true);
           });
           return;
@@ -1652,8 +1651,8 @@ async function pushVaultSync(){
     const text=await res.text();
     let data=null; try{data=JSON.parse(text)}catch(e){}
     if(res.status===409){
-      toast("Remote vault is newer. Pull first, or Push again after resolving","Pull…",()=>{
-        if(confirm("Replace this device's vault with the newer cloud copy?\nLocal changes since your last sync may be lost."))
+      toast("The synced copy is newer. Download it first, or upload again once you have sorted it out","Download…",()=>{
+        if(confirm("Replace this device's vault with the newer synced copy?\nChanges made here since your last sync may be lost."))
           pullVaultSync(true);
       });
       return;
@@ -1662,12 +1661,12 @@ async function pushVaultSync(){
       toast("Worker has no KV. Bind a namespace as VAULT and redeploy");
       return;
     }
-    if(!res.ok){toast("Push failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
+    if(!res.ok){toast("Upload failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
     currentEnvelope=envelope;
     markSynced(updatedAt);
     updateSyncStatus();
-    toast("Vault pushed to cloud");
-  }catch(e){toast("Push failed: "+(e.message||"network"))}
+    toast("Vault uploaded");
+  }catch(e){toast("Upload failed: "+(e.message||"network"))}
   finally{syncBusy=false;updateSyncStatus()}
 }
 async function pullVaultSync(force){
@@ -1675,21 +1674,21 @@ async function pullVaultSync(force){
   const token=($("sSyncToken")&&$("sSyncToken").value.trim())||cfg.syncToken||"";
   if(token)cfg.syncToken=token;
   const url=vaultSyncUrl();
-  if(!url){toast("Set a Backend URL in Settings first");return}
-  if(!cfg.syncToken||cfg.syncToken.length<16){toast("Sync token must be at least 16 characters");return}
-  if(!vaultPassword){toast("Set a master password first. It decrypts the cloud vault");return}
+  if(!url){toast("Set up your own worker first: Settings, Rank checks, Advanced");return}
+  if(!cfg.syncToken||cfg.syncToken.length<16){toast("The sync key needs at least 16 characters");return}
+  if(!vaultPassword){toast("Set a master password first: it unlocks the synced copy");return}
   if(vaultLocked()){toast("Unlock the vault first");return}
   syncBusy=true;
   try{
     const res=await fetch(url,{headers:{"Authorization":"Bearer "+cfg.syncToken}});
     const text=await res.text();
     let data=null; try{data=JSON.parse(text)}catch(e){}
-    if(res.status===404){toast("No cloud vault for this token yet. Push first");return}
+    if(res.status===404){toast("Nothing synced with this key yet. Upload from a device first");return}
     if(res.status===503&&data&&data.code==="no_kv"){
       toast("Worker has no KV. Bind a namespace as VAULT and redeploy");
       return;
     }
-    if(!res.ok){toast("Pull failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
+    if(!res.ok){toast("Download failed"+(data&&data.error?": "+data.error:(" (HTTP "+res.status+")")));return}
     if(!data||!data.envelope||!data.envelope.__enc){toast("Cloud record is not an encrypted vault");return}
     const remoteAt=Number(data.updatedAt)||0;
     const localAt=Number(cfg.vaultRev)||0;
@@ -1703,21 +1702,21 @@ async function pullVaultSync(force){
     if(!force&&remoteAt>0&&remoteAt===localAt&&accounts.length){
       markSynced(remoteAt);
       updateSyncStatus();
-      toast("Already in sync with cloud");
+      toast("Already in sync");
       return;
     }
     if(!force&&accounts.length){
       if(localAt>remoteAt){
-        toast("Local vault is newer than cloud. Pull would overwrite it","Pull…",()=>{
-          if(confirm("Replace this device's vault with the older cloud copy?\nThis cannot be undone from here. Export first if unsure."))
+        toast("This vault is newer than the synced copy. Downloading would replace it","Download…",()=>{
+          if(confirm("Replace this device's vault with the older synced copy?\nThis cannot be undone from here. Export first if unsure."))
             pullVaultSync(true);
         });
         return;
       }
       // Remote newer, but this device also saved after the last successful sync.
       if(remoteAt>localAt&&localAt>lastSync){
-        toast("Cloud is newer, but this device changed after last sync","Pull…",()=>{
-          if(confirm("Replace this device's vault with the cloud copy?\nLocal changes since last sync will be lost."))
+        toast("The synced copy is newer, but this device changed since the last sync","Download…",()=>{
+          if(confirm("Replace this device's vault with the synced copy?\nChanges made here since the last sync will be lost."))
             pullVaultSync(true);
         });
         return;
@@ -1725,7 +1724,7 @@ async function pullVaultSync(force){
     }
     let next;
     try{next=await decryptData(vaultPassword,data.envelope)}
-    catch(e){toast("Wrong master password for this cloud vault (or corrupt data)");return}
+    catch(e){toast("Wrong master password for the synced copy (or it is damaged)");return}
     if(vaultLocked())return;
     if(!Array.isArray(next)){toast("Cloud vault did not contain an account list");return}
     accounts=next.map(sanitizeAccount).filter(Boolean);
@@ -1737,11 +1736,11 @@ async function pullVaultSync(force){
     // just performed.
     const ok=await saveDB({keepRev:true});
     if(vaultLocked())return;
-    if(!ok){toast("Pulled into memory but could not write to storage");render();updateSyncStatus();return}
+    if(!ok){toast("Downloaded, but could not save it in this browser");render();updateSyncStatus();return}
     render();
     updateSyncStatus();
-    toast("Vault pulled ("+accounts.length+" accounts)");
-  }catch(e){toast("Pull failed: "+(e.message||"network"))}
+    toast("Vault downloaded ("+accounts.length+" accounts)");
+  }catch(e){toast("Download failed: "+(e.message||"network"))}
   finally{syncBusy=false;updateSyncStatus()}
 }
 function celebrate(id,acc){
@@ -7255,9 +7254,16 @@ let settingsSaveGen=0;
 $("sClose").addEventListener("click",closeSettings);
 if($("sSyncGen"))$("sSyncGen").addEventListener("click",()=>{
   const t=genSyncToken();
-  $("sSyncToken").value=t;cfg.syncToken=t;saveCfg();updateSyncStatus();toast("Sync token generated. Copy it to your other devices");
+  $("sSyncToken").value=t;cfg.syncToken=t;saveCfg();updateSyncStatus();toast("Sync key made. Paste the same key on your other devices");
 });
 if($("sSyncPush"))$("sSyncPush").addEventListener("click",()=>pushVaultSync());
+// the status line's links: to the worker under Rank checks, Advanced, or the master password
+$("sSyncStatus").addEventListener("click",e=>{
+  const b=e.target.closest("[data-sync-go]");if(!b)return;
+  const tab=b.dataset.syncGo;settingsTab(tab,true);
+  const f=tab==="checks"?(($("sChecksAdv").open=true),$("sBackend")):$("sVaultPass");
+  setTimeout(()=>{if(f){f.scrollIntoView&&f.scrollIntoView({block:"center"});f.focus()}},60);
+});
 if($("sSyncPull"))$("sSyncPull").addEventListener("click",()=>pullVaultSync(false));
 if($("sSyncToken"))$("sSyncToken").addEventListener("change",()=>{cfg.syncToken=$("sSyncToken").value.trim();saveCfg();updateSyncStatus()});
 $("sAtmosphere").addEventListener("click",e=>{
@@ -7436,7 +7442,7 @@ async function setVaultPassword(pass){
   const prev=vaultPassword;
   const changing=!!prev&&prev!==pass;
   if(changing&&cfg.syncToken&&cfg.backendUrl){
-    if(!confirm("You're changing the master password.\nThe cloud vault is still encrypted with the old one until you Push again from this device.\nOther devices must use the new password after that Push.\n\nContinue?"))return false;
+    if(!confirm("You're changing the master password.\nThe synced copy stays locked with the old one until you upload again from this device.\nOther devices need the new password after that upload.\n\nContinue?"))return false;
   }
   vaultPassword=pass;
   // If the envelope never reached the disk then the vault there is still the old
@@ -7455,7 +7461,7 @@ async function setVaultPassword(pass){
   const hadPk=changing&&!!pkRecord();if(hadPk)pkForget();
   updateVaultStatus();syncLockTimer();
   toast(changing
-    ?"Password changed. Push to cloud so other devices get the new ciphertext"+(hadPk?". Set Face ID / fingerprint up again in Security":"")
+    ?"Password changed. Upload the vault in Sync so other devices get it"+(hadPk?". Set Face ID / fingerprint up again in Security":"")
     :"Vault password set. Remember it: there's no way to recover it if lost");
   return true;
 }

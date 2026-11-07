@@ -428,23 +428,23 @@
 
       <div class="grp" data-tab="sync">
         <div class="grp-h tab-same">Device sync</div>
-        <div class="fw hint" style="margin-bottom:10px">
-          Pushes the <b>encrypted</b> vault blob to your worker (KV). Same sync token on phone and PC.
-          Last write wins. Needs a master password (Security) and your own worker with sync storage (Rank checks, Advanced).
-          There is no scrape cache, so don't hammer op.gg.
-        </div>
+        <!-- It was written for whoever built it: "Pushes the encrypted vault blob to
+             your worker (KV)", "Last write wins", "There is no scrape cache". The same
+             facts, for someone with a phone and a PC. -->
+        <p class="hint s-lead">Keeps this vault the same on your phone and your PC, through a worker of your own. Only an encrypted copy leaves this browser.</p>
         <div class="fld fw">
-          <label for="sSyncToken">Sync token (the same on every device; treat it like a password)</label>
+          <label for="sSyncToken">Sync key: the same on every device. Keep it private, like a password.</label>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <input type="text" id="sSyncToken" class="mask" placeholder="Generate or paste a long token" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="flex:1;min-width:170px">
+            <input type="text" id="sSyncToken" class="mask" placeholder="Generate one, or paste the key from your other device" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="flex:1;min-width:170px">
             <button type="button" id="sSyncGen">Generate</button>
           </div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-          <button type="button" id="sSyncPush">Push to cloud</button>
-          <button type="button" id="sSyncPull">Pull from cloud</button>
+          <button type="button" id="sSyncPush">Upload this vault</button>
+          <button type="button" id="sSyncPull">Download the synced copy</button>
         </div>
         <div id="sSyncStatus" class="hint" style="margin-top:8px"></div>
+        <p class="hint" style="margin:6px 0 0">The newest upload wins, so download on a device before you change things there. You are warned when the synced copy is newer than this one.</p>
       </div>
 
       <div class="grp" data-tab="backup">
