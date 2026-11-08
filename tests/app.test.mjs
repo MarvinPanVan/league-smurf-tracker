@@ -119,6 +119,13 @@ function cardMenu(win, target) {
   assert.ok(menu && !menu.classList.contains("hidden"), "the ⋯ menu is open");
   return menu;
 }
+// Opens the note editor the way a person would: on the note itself if there is one
+// (or an open list row's prompt), otherwise through the card's ⋯ menu, Add note.
+function noteEdit(win) {
+  const direct = win.document.querySelector('#grid [data-act="noteedit"]');
+  if (direct) { direct.click(); return; }
+  cardMenu(win).querySelector('[data-act="noteedit"]').click();
+}
 
 test("boots clean with an empty vault, no accounts", () => {
   const win = bootApp();
@@ -1046,7 +1053,7 @@ test("a stale card warns with a drawn mark, which a fresh card does not carry", 
   assert.ok(upd("s1").classList.contains("stale"));
   assert.ok(upd("s1").querySelector("svg.ico"), "the warning is an icon, drawn the same everywhere");
   assert.equal(upd("s1").textContent, "Updated 6 days ago", "not a \u26A0 character in the text");
-  assert.equal(upd("f1").querySelector("svg"), null, "a fresh card has nothing to warn about");
+  assert.equal(upd("f1"), null, "a fresh card has nothing to warn about, and says nothing about its time");
 });
 
 // A banned card wore an amber "Updated 40 days ago" warning the toolbar did not count
@@ -2291,7 +2298,7 @@ test("note fields: shown on the card as facts, skins and a penalty line, searcha
   assert.ok(card("a").querySelector(".ni-kv .v2 .sens"), "your own text is hidden in streamer mode too");
   assert.match(card("a").querySelector(".nt").textContent, /duo only/, "and the free note is still there under them");
   assert.equal(card("b").querySelector(".ni"), null, "nothing in b's fields was a real value");
-  assert.match(card("b").querySelector(".c-notes.blank").textContent, /Add a note/);
+  assert.equal(card("b").querySelector(".c-notes"), null, "an empty note says nothing on the card: Add note is in its ⋯ menu");
   assert.deepEqual([...card("c").querySelectorAll(".ni-skins .ni-f")].map(f => f.textContent).slice(-2), ["Skin 5", "+3 more"], "nine skins: six and a count");
   runScript(win, "window.__s = JSON.stringify(accounts.map(a => a.info || null))");
   const mem = JSON.parse(win.__s);
@@ -2328,12 +2335,15 @@ test("note fields: a click on them opens the account form at Notes, and saving k
   assert.equal(JSON.stringify(JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].info),
     JSON.stringify({ honor: 2, owned: 999, rp: 500, twofa: true, skins: ["Elementalist Lux", "Arcade Ahri"] }),
     "a number past the field's top is kept at the top; an emptied field is gone; RP, switched off, keeps its value");
-  // an empty card offers the fields as a second way in, and opening the form for a
-  // name edit still starts at the name
-  doc.querySelector('.card[data-id="z"] .c-notes.blank [data-act="notefields"]').click();
+  // an empty account's open list row offers the fields as a second way in, and
+  // opening the form for a name edit still starts at the name
+  doc.querySelector('[data-density="list"]').click();
+  doc.querySelector('.hx.row[data-id="z"] .rw-main').click();
+  doc.querySelector('.hx.row[data-id="z"] .c-notes.blank [data-act="notefields"]').click();
   assert.equal($("form").classList.contains("hidden"), false);
   assert.ok(doc.querySelector("#fInfo [data-autofocus]"));
   doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  doc.querySelector('[data-density="cards"]').click();
   cardMenu(win, "z").querySelector('[data-act="edit"]').click();
   assert.equal($("fName").hasAttribute("data-autofocus"), true, "Account… starts at the name as before");
   assert.equal(doc.querySelector("#fInfo [data-autofocus]"), null);
@@ -2592,7 +2602,8 @@ test("On each card: any part can wait under Details, Compact is chart and stats,
   doc.getElementById("bSettings").click(); await tick();
   const box = k => doc.querySelector(`#sCardParts [data-part="${k}"]`);
   assert.deepEqual([...doc.querySelectorAll("#sCardParts [data-part]")].map(b => b.dataset.part), ["chart", "stats", "wl", "goal", "tags", "notes"]);
-  assert.ok([...doc.querySelectorAll("#sCardParts [data-part]")].every(b => b.checked), "everything shows by default");
+  assert.deepEqual([...doc.querySelectorAll("#sCardParts [data-part]")].filter(b => !b.checked).map(b => b.dataset.part), ["wl"],
+    "everything shows by default but the win/loss bar, which repeats the win rate printed above it");
   box("tags").checked = false; box("tags").dispatchEvent(new win.Event("change", { bubbles: true }));
   assert.ok(body.classList.contains("hide-tags"), "previews at once");
   assert.ok(card().querySelector('[data-act="info"]'), "and the card grows a Details handle to find them under");
@@ -2605,12 +2616,12 @@ test("On each card: any part can wait under Details, Compact is chart and stats,
   assert.equal(box("stats").checked, false);
   assert.equal(box("notes").checked, true, "Compact is the chart and the stats, nothing else");
   doc.getElementById("sSave").click();
-  assert.deepEqual(cfg().cardHide, ["chart", "stats"]);
+  assert.deepEqual(cfg().cardHide, ["wl", "chart", "stats"]);
   const css = [...doc.querySelectorAll("style")].map(s => s.textContent).join("\n");
   for (const [cls, part] of [["chart", ".lpc"], ["stats", ".c-stats"], ["wl", ".wrbar"], ["goal", ".goal"], ["tags", ".ctags"], ["notes", ".c-notes"]])
     assert.ok(css.includes(`body.hide-${cls} .card:not(.info-open) ${part}`), `${cls} hides ${part} on a closed card`);
   const drawer = card().querySelector('[data-act="info"]');
-  assert.match(drawer.title, /^LP chart, Peak & stats, past seasons/, "the handle says what is under it");
+  assert.match(drawer.title, /^LP chart, Peak & stats, Win\/loss bar, past seasons/, "the handle says what is under it");
   drawer.click();
   assert.ok(card().classList.contains("info-open"), "an opened card gets them back");
   // a vault that turned Compact on in 2.1 opens looking the same
@@ -3362,7 +3373,7 @@ test("a note saves itself as you type — there is no Save button to miss", () =
   addRealAccount(win, "NoteGuy", "1234");
 
   // an empty note is still a click target, so there is no separate "add" action
-  win.document.querySelector('[data-act="noteedit"]').click();
+  noteEdit(win);
   const ta = win.document.querySelector('[data-f="notetext"]');
   assert.ok(ta, "editor must open");
 
@@ -3378,7 +3389,7 @@ test("a note saves itself as you type — there is no Save button to miss", () =
 test("clicking away commits the note and collapses the editor", () => {
   const win = bootApp();
   addRealAccount(win, "NoteGuy", "1234");
-  win.document.querySelector('[data-act="noteedit"]').click();
+  noteEdit(win);
   typeNote(win, "original");
 
   // pointerdown outside the note block is the whole gesture
@@ -3388,12 +3399,12 @@ test("clicking away commits the note and collapses the editor", () => {
   assert.match(win.document.querySelector(".c-notes").textContent, /original/);
 
   // reopening shows what was saved, and clearing it puts the blank state back
-  win.document.querySelector('[data-act="noteedit"]').click();
+  noteEdit(win);
   assert.equal(win.document.querySelector('[data-f="notetext"]').value, "original");
   typeNote(win, "   ");
   win.document.body.dispatchEvent(new win.Event("pointerdown", { bubbles: true }));
   assert.equal(storedNote(win), undefined, "whitespace is not a note");
-  assert.ok(win.document.querySelector(".c-notes.blank"), "back to the quiet invitation");
+  assert.equal(win.document.querySelector(".card .c-notes"), null, "back to saying nothing");
 });
 
 test("the paste-a-whole-page fallback is gone; manual rank entry replaces it", () => {
@@ -4315,7 +4326,7 @@ test("a card is patched in place, not rebuilt, so nothing blinks", () => {
 
 test("typing a note survives a background re-render of the grid", () => {
   const win = bootApp(seededAccount());
-  win.document.querySelector('[data-act="noteedit"]').click();
+  noteEdit(win);
   const ta = win.document.querySelector('[data-f="notetext"]');
   ta.focus();
   ta.value = "half-typed thought";
@@ -4558,7 +4569,7 @@ test("the note editor closes after clicking away, in either layout", () => {
       win.document.querySelector('[data-density="list"]').click();
       win.document.querySelector(".rw-main").click();
     }
-    win.document.querySelector('[data-act="noteedit"]').click();
+    noteEdit(win);
     const ta = win.document.querySelector('[data-f="notetext"]');
     assert.ok(ta, `editor opens (list: ${asList})`);
     ta.value = "written in the " + (asList ? "list" : "cards");
@@ -4751,7 +4762,7 @@ test("locking clears every scrap of per-card state", async () => {
   win.document.getElementById("sVaultSet").click();
   await until(() => encrypted(win), "the vault to be written encrypted");
 
-  win.document.querySelector('[data-act="noteedit"]').click();
+  noteEdit(win);
   const ta = win.document.querySelector('[data-f="notetext"]');
   ta.value = "half-written secret";
   ta.dispatchEvent(new win.Event("input", { bubbles: true }));
@@ -5801,7 +5812,7 @@ test("the ribbon stays out of the way until there is a spread to show", () => {
 
 // The stats toggle used to float alone on a row of its own above the console, and
 // was rebuilt by renderDash on every account change.
-test("the stats toggle lives in the header tray and survives a re-render", () => {
+test("the stats toggle lives in the header tray and survives a re-render", async () => {
   const win = bootApp(ladderSeed());
   const btn = win.document.querySelector(".bar #bDashToggle");
   assert.ok(btn, "it sits with the rest of the header chrome");
@@ -5812,7 +5823,7 @@ test("the stats toggle lives in the header tray and survives a re-render", () =>
 
   btn.click();
   assert.match(win.document.querySelector("#bDashToggle").textContent, /Show stats/);
-  assert.equal(win.document.querySelectorAll(".dash .stat").length, 0, "the panel closes");
+  await until(() => win.document.querySelectorAll(".dash .stat").length === 0, "the panel closes");
 
   win.render();
   assert.equal(win.document.querySelector(".bar #bDashToggle"), btn, "the same button, not a rebuilt one");
@@ -5879,8 +5890,10 @@ test("the refresh count is the button that filters to those accounts", () => {
 // Which proxy answered is developer detail: it never changes what you would do
 // next, and it took a slot on every card in the vault.
 test("the source of the numbers hangs off the timestamp instead of taking its own pill", () => {
-  const win = bootApp(ladderSeed());
-  const foot = win.document.querySelector(".c-foot");
+  const seed = ladderSeed();
+  seed[0].stats.updatedAt = Date.now() - 2 * 864e5;   // old enough for the timestamp to show
+  const win = bootApp(seed);
+  const foot = win.document.querySelector(`.card[data-id="${seed[0].id}"] .c-foot`);
   assert.equal(foot.querySelector(".src"), null, "no pill");
   const upd = foot.querySelector(".upd");
   assert.match(upd.textContent, /Updated/);
@@ -8281,7 +8294,7 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
     ["Edit", "Look up", "Mark", "Vault"],
     "named groups — a hairline never says what either side of it is");
   const items = [...m.querySelectorAll("button,.cm-link")];
-  assert.equal(items.length, 10, "ten, now that Season reset and the stats setting live where they belong");
+  assert.equal(items.length, 12, "twelve: Season reset and the stats setting live where they belong; Refresh rank and Add note came in");
   for (const b of items) assert.ok(b.querySelector("svg.ico"), `"${b.textContent.trim()}" carries a mark`);
   // The account name used to sit at the top as the one row that was not an item,
   // which is exactly the row that got clipped once the list had to scroll.
@@ -8289,8 +8302,10 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
   assert.equal(m.querySelectorAll(".cm-sep").length, 0, "and no leftover bare separators");
 });
 
-test("the card footer is Login and a ⋯, with Refresh on the timestamp it changes", () => {
-  const win = bootApp(seededAccount());
+test("the card footer is Login and a ⋯, with Refresh on an old timestamp and in the ⋯", () => {
+  const seed = seededAccount();
+  seed[0].stats.updatedAt = Date.now() - 2 * 864e5;
+  const win = bootApp(seed);
   const acts = win.document.querySelector(".card .acts");
   // Refresh weighed nearly as much as Login there; it sits by "Updated …" now.
   // This account has no login saved yet, so the Login button offers to add one.
@@ -8301,6 +8316,8 @@ test("the card footer is Login and a ⋯, with Refresh on the timestamp it chang
   const called = []; win.check = async id => { called.push(id); };
   ref.click();
   assert.deepEqual(called, ["seed1"], "and it still checks the account");
+  cardMenu(win).querySelector('[data-act="check"]').click();
+  assert.deepEqual(called, ["seed1", "seed1"], "as does the ⋯ menu's Refresh rank");
   // a key, not a person: a person beside "Login" read as signing in to this app
   const d = [...acts.querySelectorAll(".a-login svg path")].map(p => p.getAttribute("d"));
   assert.ok(d.includes("m10.7 12.3 9.3-9.3"), "the key icon: " + d.join(" | "));
@@ -9027,17 +9044,20 @@ test("on a phone a list row copies its login, and checkboxes come with Select", 
 });
 
 // "+87 LP" didn't say over what, and the pace took a row of its own ("Climb · +21 LP/day")
-test("the LP chip says it is since the last check, with the pace beside it, and no Climb row", () => {
+test("the LP chip says it is since the last check; the pace is in the chart's newest tip, not on the card", () => {
   const D = 864e5, now = Date.now();
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [],
     history: [{ t: now - 20 * D, tier: "GOLD", division: "I", lp: 0 }, { t: now - 5 * D, tier: "PLATINUM", division: "III", lp: 74 }, { t: now - 3600000, tier: "PLATINUM", division: "II", lp: 61 }],
     stats: { found: true, tier: "PLATINUM", division: "II", lp: 61, wins: 38, losses: 29, updatedAt: now - 3600000 } }]);
   const card = win.document.querySelector('.card[data-id="a"]');
   assert.match(card.querySelector(".c-deltas .delta").textContent, /\+87 LP/);
-  assert.match(card.querySelector(".c-deltas .d-cap").textContent, /^since last check · \+\d+ LP\/day$/);
-  // at 12px the caption pushed "Platinum II" to "Platinu…" on a phone: the rank keeps
-  // its width, and the caption wraps at its "·", never inside a piece
-  assert.equal(card.querySelectorAll(".d-cap>span").length, 2);
+  assert.equal(card.querySelector(".c-deltas .d-cap").textContent, "since last check",
+    "the pace was a fourth way of saying going up, beside the chip, the chart and the goal");
+  const tips = [...card.querySelectorAll(".lpc-pt .lpc-tip")];
+  assert.match(tips.at(-1).textContent, /\+\d+ LP\/day lately$/, "it answers on the newest point instead");
+  assert.ok(tips.slice(0, -1).every(t => !/LP\/day/.test(t.textContent)), "and only there");
+  // at 12px the caption pushed "Platinum II" to "Platinu…" on a phone: the rank keeps its width
+  assert.equal(card.querySelectorAll(".d-cap>span").length, 1);
   assert.match(html, /\n  \.c-rk-l\{min-width:0;flex:0 0 auto;max-width:100%\}/);
   assert.match(html, /\n  \.d-cap>span\{white-space:nowrap\}/);
   assert.doesNotMatch(card.querySelector(".c-stats")?.textContent || "", /Climb/, "no row of its own");
@@ -9634,19 +9654,21 @@ test("the link preview names a fresh image, at the size the page says it is", ()
 test("a window opened straight after another closed still has its back step", async () => {
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
   const doc = win.document, open = id => !doc.getElementById(id).classList.contains("hidden");
-  const settle = () => new Promise(r => setTimeout(r, 40));
+  // The app's own step back lands when the browser gets to it. This waited a fixed
+  // 40ms, and on a loaded CI runner pressed back again before that step had landed,
+  // so the two traversals stacked. It waits for the step itself now.
+  const landed = () => !appGet(win, "backSkip");
   for (let i = 0; i < 4; i++) {
     doc.getElementById("bSettings").click(); await tick();
     doc.querySelector("#settings [data-close-panel]").click();
     await tick();   // the close is seen, and its step back asked for...
     doc.getElementById("bAdd").click();   // ...and the next window opens before it has happened
-    await settle();
+    await until(() => landed() && win.history.state && win.history.state.smurfWindow === 1,
+      "round " + i + ": the step back to land, and the open form to take its own entry");
     assert.ok(open("form"));
-    assert.equal(win.history.state && win.history.state.smurfWindow, 1, "round " + i + ": the open form has its entry");
     win.history.back();
     await until(() => !open("form"), "back to close the form, round " + i);
-    await settle();
-    assert.equal(win.history.state, null, "and nothing is left behind");
+    await until(() => landed() && win.history.state === null, "round " + i + ": nothing left behind");
   }
 });
 
@@ -10302,6 +10324,130 @@ test("need a refresh is a header state, and its view keeps its accounts while th
   assert.deepEqual(shown(), ["new", "old1", "old2"]);
   runScript(win, "ui.flag='stale'; render()");
   assert.deepEqual(shown(), [], "opened again, it starts from what is out of date now");
+});
+
+// A win bar under "57% WR" drew the same number twice, and with a goal it was one of
+// two bars in a row that meant different things
+test("the win/loss bar is hidden until asked for; a saved choice, even showing everything, is kept", () => {
+  const acc = { id: "w", region: "EUW", gameName: "W", tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 30, wins: 30, losses: 20, updatedAt: Date.now() } };
+  const win = bootApp([acc]);
+  assert.ok(win.document.body.classList.contains("hide-wl"), "hidden by default");
+  assert.match(win.document.querySelector('.card[data-id="w"]').textContent, /60% WR/, "the rate itself stays");
+  assert.equal(win.document.querySelector('.card[data-id="w"] [data-act="info"]'), null, "and a hidden bar alone grows no Details handle");
+  const all = bootApp([acc], w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, cardHide: [] })));
+  assert.equal(all.document.body.classList.contains("hide-wl"), false, "someone who chose to show everything still sees it");
+  // and choosing it is saved as a choice, not as "no preference"
+  all.document.getElementById("bSettings").click();
+  const box = all.document.querySelector('#sCardParts [data-part="tags"]');
+  box.checked = false; box.dispatchEvent(new all.Event("change", { bubbles: true }));
+  box.checked = true; box.dispatchEvent(new all.Event("change", { bubbles: true }));
+  all.document.getElementById("sSave").click();
+  assert.deepEqual(JSON.parse(all.localStorage.getItem("smurf-tracker-cfg")).cardHide, []);
+});
+
+// "Updated 4 h ago" and its Refresh sat on every card although the time only
+// matters once a reading is old
+test("a fresh card says nothing about when it was read; past a day it does, with Refresh beside it", () => {
+  const H = 36e5;
+  const acc = (id, ago, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() - ago } }, extra || {});
+  const win = bootApp([acc("fresh", 4 * H), acc("day", 30 * H), acc("old", 100 * H), acc("seen", 4 * H, { lastLoginAt: Date.now() - H })]);
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  assert.equal(card("fresh").querySelector(".c-meta"), null, "nothing: a normal reading goes unsaid");
+  assert.match(card("day").querySelector(".upd").textContent, /^Updated 1 day ago$/);
+  assert.equal(card("day").querySelector(".upd").classList.contains("stale"), false, "neutral under three days");
+  assert.ok(card("day").querySelector('.c-meta .c-ref[data-act="check"]'), "with its Refresh");
+  assert.ok(card("old").querySelector(".upd.stale"), "amber past three, as the header counts it");
+  assert.deepEqual([...card("seen").querySelector(".c-meta").children].map(e => e.className), ["src"], "a last login still says itself");
+  // a check that failed is an exception, so it shows, with a way to try again
+  runScript(win, `accounts.find(a => a.id === "fresh").stats.note = "auto-fetch failed (rate limited)"; render()`);
+  assert.deepEqual([...card("fresh").querySelector(".c-meta").children].map(e => e.className.split(" ")[0]), ["c-ref", "c-failed"]);
+});
+
+// "Add a note" and "Honor, skins…" sat on nearly every card: twenty cards, forty prompts
+test("an empty note says nothing on a card; Add note is in its ⋯ menu and opens the editor on the card", () => {
+  const win = bootApp([{ id: "e", region: "EUW", gameName: "E", tagLine: "1", status: "active", tags: [], history: [], stats: null },
+    { id: "n", region: "EUW", gameName: "N", tagLine: "1", status: "active", tags: [], history: [], stats: null, notes: "duo only" }]);
+  const doc = win.document, card = id => doc.querySelector(`.card[data-id="${id}"]`);
+  assert.equal(card("e").querySelector(".c-notes"), null, "no prompt");
+  assert.match(card("n").querySelector(".c-notes").textContent, /duo only/, "a written note still shows");
+  const item = cardMenu(win, "e").querySelector('[data-act="noteedit"]');
+  assert.equal(item.textContent.trim(), "Add note");
+  item.click();
+  assert.ok(card("e").querySelector('.c-notes.editing [data-f="notetext"]'), "the editor opens on the card itself");
+  assert.equal(doc.querySelector('#cardMenu [data-f="notetext"]'), null, "not inside the menu");
+  assert.equal(cardMenu(win, "n").querySelector('[data-act="noteedit"]').textContent.trim(), "Edit note");
+});
+
+// Ten tags made a two-row block of chips on a card; the note chips were already one row
+test("a card's tags stay on one row, the rest behind +N, which opens Details where they all show", () => {
+  const tags = ["main", "adc", "duo", "ranked-ready", "do not use", "jonas", "flex"];
+  const win = bootApp([{ id: "t", region: "EUW", gameName: "T", tagLine: "1", status: "active", tags, history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() } }]);
+  assert.match(html, /\n  \.card:not\(\.info-open\) \.ctags\{flex-wrap:nowrap;overflow:hidden\}/, "one line even before it is measured");
+  // jsdom has no layout: a 200px row, 60px chips 6px apart
+  win.Element.prototype.getBoundingClientRect = function () {
+    if (this.classList.contains("ctags")) return { left: 0, right: 200, width: 200, top: 0, bottom: 20, height: 20 };
+    if (this.parentElement && this.parentElement.classList.contains("ctags")) {
+      let x = 0;
+      for (const sib of this.parentElement.children) { if (sib === this) break; if (!sib.hidden) x += 66; }
+      return { left: x, right: x + 60, width: 60, top: 0, bottom: 20, height: 20 };
+    }
+    return { left: 0, right: 0, width: 0, top: 0, bottom: 0, height: 0 };
+  };
+  runScript(win, "render()");
+  const row = () => win.document.querySelector('.card[data-id="t"] .ctags');
+  const shown = () => [...row().children].filter(c => !c.hidden).map(c => c.textContent);
+  assert.deepEqual(shown(), ["main", "adc", "+5"], "what fits, and a count of the rest that fits beside it");
+  const more = row().querySelector(".ct-more");
+  assert.equal(more.dataset.act, "info", "the count opens Details");
+  more.click();
+  assert.ok(win.document.querySelector('.card[data-id="t"]').classList.contains("info-open"));
+  assert.deepEqual(shown(), tags, "where every tag shows");
+});
+
+// Cards lifted and glowed under the pointer, though a click on one does nothing
+test("a card does not lift under the pointer, since it is not a button; a wall tile, which opens, does", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const hover = css.slice(css.indexOf("@media (hover:hover){\n    .grid>.hx:hover::after"));
+  const block = hover.slice(0, hover.indexOf("\n  }"));
+  assert.doesNotMatch(block, /\.grid>\.hx:hover\{[^}]*transform/, "no lift on a card");
+  assert.match(block, /\.grid>\.hx:hover::after\{opacity:\.4/, "a quiet sheen instead");
+  assert.match(css, /\n  \.grid\.wall>\.hx:hover\{transform:translateY\(-2px\)\}/, "a wall tile still lifts");
+  assert.match(css, /\n  \.tile\{[^}]*cursor:pointer/, "because it is clickable");
+});
+
+// The stats panel folded open and snapped shut
+test("the stats panel folds shut the way it opened, and goes at once with motion reduced", async () => {
+  const seed = ladderSeed();
+  const win = bootApp(seed);
+  const doc = win.document, box = () => doc.querySelector("#dash > .hx");
+  assert.ok(box(), "open to begin with");
+  doc.getElementById("bDashToggle").click();
+  assert.ok(box() && box().classList.contains("dash-out"), "it plays its way out");
+  assert.match(doc.getElementById("bDashToggle").getAttribute("aria-label"), /^Show stats$/, "the button already says what the next click does");
+  await until(() => !box(), "then the panel is gone");
+  assert.match(html, /\.hx\.dash-out\{transform-origin:top center;animation:dashOut \.22s/);
+  const calm = bootApp(seed, w => { w.matchMedia = q => ({ matches: /reduce/.test(q), addListener() {}, removeListener() {}, addEventListener() {} }); });
+  calm.document.getElementById("bDashToggle").click();
+  assert.equal(calm.document.querySelector("#dash > .hx"), null, "with motion reduced it goes at once");
+});
+
+// Switching Cards / List / Wall replaced the page in a hard cut
+test("switching layout fades the new one in; filtering and sorting stay instant", () => {
+  const win = bootApp(ladderSeed());
+  const doc = win.document, grid = doc.getElementById("grid");
+  doc.querySelector('[data-density="list"]').click();
+  assert.ok(grid.classList.contains("view-in"), "the new layout fades in");
+  grid.dispatchEvent(new win.Event("animationend"));
+  assert.equal(grid.classList.contains("view-in"), false, "and the class goes when it has");
+  doc.querySelector('[data-density="list"]').click();
+  assert.equal(grid.classList.contains("view-in"), false, "the same layout again: nothing to fade");
+  doc.getElementById("tFav").click();
+  assert.equal(grid.classList.contains("view-in"), false, "a filter is instant");
+  assert.match(html, /\n  \.grid\.view-in\{animation:viewIn \.15s ease-out both\}/);
+  assert.match(html, /\.hx\.dash-out,\.grid\.view-in,\.sec-b,/, "and it is off with motion reduced");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
@@ -11446,6 +11592,7 @@ test("an account left alone says Idle and for how long, in words", () => {
 test("a card's footer says Updated, then Refresh, then Last login, each named for what it is", () => {
   const seed = seededAccount();
   Object.assign(seed[0], { lastLoginAt: Date.now() - 3 * 864e5 });
+  seed[0].stats.updatedAt = Date.now() - 2 * 864e5;
   const win = bootApp(seed);
   const meta = win.document.querySelector(".card .c-meta");
   const kids = [...meta.children].map(el => el.className.split(" ")[0]);

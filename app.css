@@ -1659,6 +1659,13 @@
   .meta b{color:var(--text);font-weight:500}
   .meta .g{color:var(--gold-txt)}
   .ctags{display:flex;gap:6px;flex-wrap:wrap}
+  /* one row on a closed card; fitTags hides what does not fit behind "+N" */
+  .card:not(.info-open) .ctags{flex-wrap:nowrap;overflow:hidden}
+  .ctags>*{flex-shrink:0}
+  .ctags>[hidden]{display:none}
+  .ctags .ct-more{font:inherit;font-size:calc(12px*var(--ts));padding:3px 9px;border-radius:var(--r-xs);background:#ffffff12;
+    border:1px solid transparent;color:var(--muted);height:auto;box-shadow:none}
+  .ctags .ct-more:hover{color:var(--text);background:#ffffff1c;border-color:transparent}
   .ctags span{font-size:calc(12px*var(--ts));padding:3px 9px;border-radius:var(--r-xs);background:#ffffff12;border:1px solid transparent;color:var(--muted)}
   /* the role is read from recent games, not typed by you, so it is set apart from your tags */
   .ctags .role-tag{color:var(--teal-txt);background:color-mix(in srgb,var(--teal) 12%,transparent)}
@@ -2249,6 +2256,10 @@
   }
   @keyframes dashIn{from{opacity:0;transform:translateY(-12px) scaleY(.94)}to{opacity:1;transform:none}}
   .hx.dash-in{transform-origin:top center;animation:dashIn .32s cubic-bezier(.22,1,.36,1) both}
+  @keyframes viewIn{from{opacity:0}to{opacity:1}}
+  .grid.view-in{animation:viewIn .15s ease-out both}
+  @keyframes dashOut{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-12px) scaleY(.94)}}
+  .hx.dash-out{transform-origin:top center;animation:dashOut .22s cubic-bezier(.4,0,1,1) both;pointer-events:none}
   @keyframes barIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
   #previewBanner{display:flex;align-items:center;justify-content:space-between;gap:10px;
     border:1px solid color-mix(in srgb,var(--gold) 42%,transparent);background:color-mix(in srgb,var(--gold) 9%,transparent);
@@ -2559,9 +2570,14 @@
   /* Lift and glow only under a real pointer: on a touch screen the glow fading in
      is "something appeared", which Safari answers by swallowing the tap that
      caused it — and a lifted card that stays lifted after a tap says nothing. */
+  /* A card is not a button: clicking one does nothing and the cursor stays an arrow,
+     so lifting it said "click me" and then didn't, and a pointer crossing the grid
+     set the cards bobbing one after another. A card gets a quiet sheen and stays
+     put; a wall tile, which does open on a click, still lifts. */
   @media (hover:hover){
-    .grid>.hx:hover{transform:translateY(-3px);box-shadow:var(--sh-3);transition-duration:.22s}
-    .grid>.hx:hover::after{opacity:1;transition-duration:.22s}
+    .grid>.hx:hover::after{opacity:.4;transition-duration:.22s}
+    .grid.wall>.hx:hover{box-shadow:var(--sh-3);transition-duration:.22s}
+    .grid.wall>.hx:hover::after{opacity:1}
     body[data-fx="subtle"] .grid>.hx:hover::after{opacity:.4}
   }
   /* the inner pane has to paint over the glow layer, not under it */
@@ -2617,7 +2633,7 @@
     .spin,.brand-mark::before,.grid.boot>.hx,.grid.boot .lpc,.hx.flash .lpc,.hx.flash,#toast,.confetti i,
     #bulkAdd:not(.hidden),#lock:not(.hidden),
     #moreMenu:not(.hidden),#bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show,
-    .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in,.sec-b,
+    .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in,.hx.dash-out,.grid.view-in,.sec-b,
     .modal::before,.modal:not(.hidden) .mdl,.acc-prev.show{animation:none!important}
     .hx-in.scanning::after{animation:none!important;content:none}
     .grid>.hx{transition:none}

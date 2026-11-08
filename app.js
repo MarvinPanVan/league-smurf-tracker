@@ -110,8 +110,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.25.0";
+const APP_VERSION="2.26.0";
 const APP_CHANGELOG=[
+  {v:"2.26.0",items:[
+    "Calmer cards: no win bar under the win rate, no \"Updated\" line until a rank is a day old, no empty note prompts, and tags on one row",
+    "Refresh rank and Add note are in each card's ⋯ menu, and the LP-per-day pace is on the chart's newest point",
+    "Cards no longer lift under the pointer, the stats panel closes as smoothly as it opens, and switching layout fades in",
+  ]},
   {v:"2.25.0",items:[
     "On a phone the app opens in the list view, so more accounts fit on a screen, each with its copy buttons",
     "The search box shows Ctrl K: open Quick find, type a name, and copy the login",
@@ -1298,6 +1303,7 @@ function groupColor(k){
 // a coloured band per tier, division hairlines when the view is tight enough for
 // them to mean anything, and every check as its own hoverable point.
 function rankChart(hist,cut,mode,key,peakV,peakLabel){
+  const pace=paceText(hist);
   let pts=(hist||[]).map(h=>({h,v:ladderLP(h)})).filter(p=>p.v!==null);
   if(!pts.length)return"";
   // One check was drawn as a whole chart frame with a single dot in it, saying
@@ -1492,7 +1498,8 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     // A two-line tip is about 42px plus its 10px gap. A dot higher than that has
     // no room above it, so the tip goes underneath instead of over the chart's
     // top edge — and out of the range switcher's corner.
-    const hi=py(p.v)<52?" hi":"";
+    const paceHere=i===last?pace:"";
+    const hi=py(p.v)<(paceHere?66:52)?" hi":"";
     const when=p.h.t?timeAgo(p.h.t):null;
     const w=cr-cl;
     const anchor=last===0?50:(i===0?0:i===last?100:50); // where the dot sits in its column
@@ -1508,7 +1515,8 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     return `<div class="lpc-pt${i===last?" now":""}" style="left:${xp.toFixed(2)}%;width:min(${w.toFixed(2)}%,28px);transform:translateX(-${anchor}%);--x:${anchor}%;--y:${py(p.v).toFixed(1)}px;--hl:${hl}px;--hr:${hr}px">`
       +`<span class="lpc-hit"></span>`
       +`<b style="top:${py(p.v).toFixed(1)}px"><i style="background:${tierColor(p.h.tier)}"></i>`
-      +`<span class="lpc-tip${side}${hi}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(dateLabel(p.h.t,"year"))} · ${esc(when)}</em>`:""}</span></b></div>`;
+      +`<span class="lpc-tip${side}${hi}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(dateLabel(p.h.t,"year"))} · ${esc(when)}</em>`:""}`
+      +`${paceHere?`<em>${esc(paceHere)} lately</em>`:""}</span></b></div>`;
   }).join("");
 
   // Date axis. Ticks sit at the ends and at even time fractions between them, and
@@ -1978,6 +1986,8 @@ function gamesSince(hist){
    "which way is this account actually going", which is the one you sort by.
    A season break inside the window is a new baseline: measuring Diamond→Silver
    across one would call a reset "−200 LP/day". */
+// "+20 LP/day", or "" when the account is not really moving (under 1 LP a day)
+function paceText(hist){const r=climbRate(hist);return r&&Math.abs(r.lpPerDay)>=1?(r.lpPerDay>0?"+":"")+Math.round(r.lpPerDay)+" LP/day":""}
 function climbRate(hist){
   if(!hist||hist.length<2)return null;
   // Trailing Unranked means the account is off the ladder — a rate built on the
@@ -5193,7 +5203,7 @@ function noteFactsHTML(a,clickable,cap){
 }
 // Split out of cardHTML so opening the editor can swap this one block instead of
 // rebuilding the card around it — see syncNoteBlock.
-function noteBlockHTML(a,rev){
+function noteBlockHTML(a,rev,blank){
   // The fields stay in view above the text being written, but only the text
   // edits here: they open the account form, which a click inside an open editor
   // must not do — it would take the focus the editor saves on losing.
@@ -5204,6 +5214,10 @@ function noteBlockHTML(a,rev){
   // capped on the card face; whole once Details is open
   const cap=!openInfo.has(a.id), facts=noteFactsHTML(a,true,cap);
   if(a.notes||facts)return`<div class="c-notes${cap?" capped":""}" data-act="noteedit" title="Click to edit the note"><span class="k">Notes ${icon("pencil")}</span>${facts}${a.notes?`<div class="nt">${sens(esc(a.notes))}</div>`:""}</div>`;
+  /* An empty note was two invitations, "Add a note" and "Honor, skins…", on nearly
+     every card: twenty cards, forty prompts. A card says nothing now (Add note is in
+     its ⋯ menu); an open list row, which is the detail view, still offers it. */
+  if(!blank)return"";
   return`<div class="c-notes blank"><button type="button" data-act="noteedit" title="Click to write a note">${icon("pencil")} Add a note</button>`
     +`<button type="button" class="nf-link" data-act="notefields" title="Honor, skins, Blue Essence and more">Honor, skins…</button></div>`;
 }
@@ -5212,7 +5226,7 @@ function noteBlockHTML(a,rev){
 // to open one textarea, which is why the portrait, the select checkbox and the
 // rest of the card blinked out and came back.
 function syncNoteBlock(card,a){
-  const html=noteBlockHTML(a);
+  const html=noteBlockHTML(a,"",!!card.closest(".row"));
   const cur=card.querySelector(".c-notes");
   if(!html){if(cur)cur.remove();return}
   const tmp=document.createElement("div");
@@ -5429,7 +5443,7 @@ function rowHTML(a,i){
     ${open?`<div class="rw-open">
       ${(()=>{const p=peakInfo(a);return rankChart(a.history||[],cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(a.history||[]),a.id,p.peakV,p.peak)})()}
       ${infoBlockHTML(a)||""}
-      ${noteBlockHTML(a)}
+      ${noteBlockHTML(a,"",true)}
       <div class="acts">
         <button data-act="login" class="a-login">${icon("user")} ${openLogin.has(a.id)?"Hide login":"Login"}</button>
         <a class="btn" href="https://op.gg/lol/summoners/${(REGIONS[a.region]||REGIONS.EUW).opgg}/${encodeURIComponent(a.gameName)}-${encodeURIComponent(a.tagLine)}" target="_blank" rel="noreferrer">OP.GG ↗</a>
@@ -5505,11 +5519,9 @@ function cardHTML(a,i){
     /* "+87 LP" over what? Said under the chip now, with the pace beside it: the
        pace had a whole row of the card to itself ("Climb · +21 LP/day"), and
        without "since last check" the two numbers read as a contradiction. */
-    const r=dead?null:climbRate(hist), pace=r&&Math.abs(r.lpPerDay)>=1?(r.lpPerDay>0?"+":"")+Math.round(r.lpPerDay)+" LP/day":"";
-    // each piece unbroken, so a narrow card wraps at the "·" and the rank name beside
-    // it keeps its width ("Platinum II" was cut to "Platinu…" on a phone)
-    const cap=[dv&&!dead?"since last check":"",pace].filter(Boolean).map(t=>`<span>${esc(t)}</span>`).join(" · ");
-    if(cap)deltaChip+=`<span class="d-cap" title="${pace?"The average pace over the chart's checks":"Since previous check"}">${cap}</span>`;
+    // The pace ("+20 LP/day") was a fourth way of saying "going up", beside this chip,
+    // the chart and the goal: it is in the chart's tip on the newest point now (paceText).
+    if(dv&&!dead)deltaChip+=`<span class="d-cap" title="Since previous check"><span>since last check</span></span>`;
   }
   /* There was a flame "Climbing" chip here too (LP up three checks running). It was
      the fourth way the card said "going up", beside the +LP chip, the Climb figure
@@ -5680,7 +5692,19 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.status==="banned"?"":`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`}${isLive(a)&&isFailed(a)?`<span class="c-failed" title="${esc(failReason(s.note))}">${icon("alert")}Last check failed</span>`:""}${a.lastLoginAt?`<span class="src" title="The last time you copied or looked at this account's login here">Last login ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
+      ${(()=>{
+        /* What is normal goes unsaid. "Updated 4 h ago" sat on every card in the vault
+           and only matters once a reading is old: it shows past a day, in amber past
+           three (the header counts those). Refresh sits beside it then, and beside a
+           failed check; otherwise it is in the ⋯ menu, with Check all and auto-check
+           covering the rest. */
+        const old=!!(s&&s.updatedAt&&Date.now()-s.updatedAt>864e5), failed=isLive(a)&&isFailed(a);
+        const parts=(old?`<span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt)}</span>`:"")
+          +((old||failed)&&a.status!=="banned"?`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`:"")
+          +(failed?`<span class="c-failed" title="${esc(failReason(s.note))}">${icon("alert")}Last check failed</span>`:"")
+          +(a.lastLoginAt?`<span class="src" title="The last time you copied or looked at this account's login here">Last login ${esc(timeAgo(a.lastLoginAt))}</span>`:"");
+        return parts?`<span class="c-meta">${parts}</span>`:"";
+      })()}
       <!-- Three buttons, not five, and the ⋯ no longer unfolds a second toolbar
            into the card: it opens one shared floating menu (see cardMenuHTML).
            DPM moved in there with the rest — it is an outbound link you follow
@@ -5694,7 +5718,7 @@ function cardHTML(a,i){
       </div>
     </div>
     ${openInfo.has(a.id)&&(hasInfo(a)||canForm(a))?infoBlockHTML(a,rv("info")):""}
-    ${hasInfo(a)||cardHidden().length||canForm(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${esc(drawerTitle())}">
+    ${hasInfo(a)||cardHidden().some(k=>k!=="wl")||canForm(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${esc(drawerTitle())}">
       <span class="c-dl" aria-hidden="true"></span>
       <span class="c-dt">${open?"Close":"Details"}</span>
       <svg class="ico" viewBox="0 0 26 12" aria-hidden="true"><polyline points="2 3 13 10 24 3"/></svg>
@@ -5737,10 +5761,13 @@ function cardMenuHTML(a){
     +grp("Edit")
     +it("rank","pencil","Rank…")
     +it("edit","user","Account…")
+    +it("noteedit","pencil",a.notes?"Edit note":"Add note")
     +it("art","image","Card art…")
     // Both profile links together. op.gg used to sit in the footer while dpm.lol
     // sat in here, which split one kind of thing across two places.
     +grp("Look up")
+    // the card shows its own Refresh only once a reading is old or a check failed
+    +(a.status==="banned"?"":it("check","refresh","Refresh rank"))
     +`<a class="cm-link" href="${opgg}" target="_blank" rel="noreferrer" role="menuitem">${icon("external")}<span>op.gg</span></a>`
     +`<a class="cm-link" href="${dpm}" target="_blank" rel="noreferrer" role="menuitem">${icon("external")}<span>dpm.lol</span></a>`
     +grp("Mark")
@@ -6010,6 +6037,7 @@ function renderGrid(){
   setHTML($("count"),!accounts.length?"":(list.length===held?`<span><b>${held}</b> ${noun}</span>`
       :`<span><b>${list.length}</b> of <b>${held}</b>${ui.showArchived?" archived":""} shown</span>`));
   syncCheckAll(list);
+  fitTags(grid);
 }
 // Called on its own during a run, where re-rendering the grid to flip one button
 // would undo the point of rendering a single card.
@@ -6057,6 +6085,7 @@ function renderCard(id){
   const tmp=document.createElement("div");
   tmp.innerHTML=html;
   morph(el,tmp.firstElementChild);
+  fitTags(el);
   cardCache.set(id,html); // keep the skip-check honest about what this node holds
   reveal=null; // consumed, exactly as renderGrid does
   if(editingNote)focusNoteEditor(grid);
@@ -6644,14 +6673,48 @@ const TEXT_SIZES=["small","default","large"];
 function applyTextSize(v){
   const t=TEXT_SIZES.includes(v)?v:"default";
   if(t==="default")delete document.documentElement.dataset.ts;else document.documentElement.dataset.ts=t;
-  syncOptSeg("sTextSize",t);return t;
+  syncOptSeg("sTextSize",t);fitTags();return t;
+}
+/* A card's tags stay on one row, the way its note chips do: ten tags made a
+   two-row block of chips on every card that had them. What does not fit hides
+   behind "+N", which opens Details, where they all show. Measured rather than
+   counted, since "do not use" and "2fa" are not the same width; the CSS keeps the
+   row to one line even before this runs. */
+let fitTagsRaf=0;
+addEventListener("resize",()=>{cancelAnimationFrame(fitTagsRaf);fitTagsRaf=requestAnimationFrame(()=>fitTags())});
+function fitTags(root){
+  const scope=root||$("grid");if(!scope)return;
+  const rows=scope.matches&&scope.matches(".ctags")?[scope]:scope.querySelectorAll(".card:not(.info-open) .ctags");
+  for(const row of rows){
+    for(const m of row.querySelectorAll(".ct-more"))m.remove();
+    const chips=[...row.children];
+    for(const c of chips)c.hidden=false;
+    const R=row.getBoundingClientRect();
+    if(!R.width)continue;
+    const out=el=>el.getBoundingClientRect().right>R.right+.5;
+    const cut=chips.findIndex(out);
+    if(cut<0)continue;
+    const more=document.createElement("button");
+    more.type="button";more.className="ct-more";more.dataset.act="info";more.title="Show every tag in Details";
+    row.appendChild(more);
+    let n=Math.max(1,cut);
+    const show=()=>{chips.forEach((c,i)=>{c.hidden=i>=n});more.textContent="+"+(chips.length-n)};
+    show();
+    while(n>1&&out(more)){n--;show()}
+  }
 }
 function applyEffects(v){const f=EFFECTS.includes(v)?v:"full";document.body.dataset.fx=f;syncOptSeg("sEffects",f);return f}
 const CARD_PARTS=[["chart","LP chart"],["stats","Peak & stats"],["wl","Win/loss bar"],["goal","Goal & level bar"],["tags","Tags"],["notes","Notes"]];
 let pendingCardHide=null; // Settings' choice before Save
+/* Hidden until asked for: the win/loss bar. It drew the win rate printed just above
+   it a second time, and on a card with a goal it was one of two bars in a row that
+   meant different things. A choice saved in Settings, even "show everything" ([]),
+   is kept as it is. */
+const DEFAULT_CARD_HIDE=["wl"];
+// (the win rate stays printed, so a hidden bar alone is no reason for a Details handle)
 function cardHidden(){
   const list=pendingCardHide||cfg.cardHide;
-  return Array.isArray(list)?list.filter(k=>CARD_PARTS.some(p=>p[0]===k)):[];
+  return Array.isArray(list)?list.filter(k=>CARD_PARTS.some(p=>p[0]===k)):DEFAULT_CARD_HIDE.slice();
 }
 function applyCompact(){const h=new Set(cardHidden());for(const[k]of CARD_PARTS)document.body.classList.toggle("hide-"+k,h.has(k))}
 function renderCardParts(){
@@ -7554,7 +7617,7 @@ $("sSave").addEventListener("click",async()=>{
   }
   // the Details handle depends on it, so the cards are redrawn when it changes
   if(pendingChampArt!==null){cfg.champArt=pendingChampArt?null:false;pendingChampArt=null;renderGrid()}
-  if(pendingCardHide){cfg.cardHide=pendingCardHide.length?pendingCardHide:null;delete cfg.compactCards;pendingCardHide=null;applyCompact();renderGrid()}
+  if(pendingCardHide){cfg.cardHide=pendingCardHide.slice();delete cfg.compactCards;pendingCardHide=null;applyCompact();renderGrid()}
   cfg.effects=applyEffects(document.body.dataset.fx);if(cfg.effects==="full")cfg.effects=null;
   cfg.textSize=applyTextSize(document.documentElement.dataset.ts);if(cfg.textSize==="default")cfg.textSize=null;
   cfg.atmosphere=applyAtmosphere(document.body.dataset.atmosphere||DEFAULT_ATMOSPHERE);
@@ -7974,7 +8037,21 @@ $("bDashToggle").addEventListener("click",()=>{
   // not re-animate then — only when the user actually opened it
   dashJustOpened=!cfg.dashCollapsed;
   if(cfg.dashCollapsed)hideSparkTip();
-  saveCfg();renderDash();
+  saveCfg();
+  /* It opened with a fold-down and snapped shut. Closing plays the same move the
+     other way, a little quicker, then the panel goes; with motion reduced or
+     effects off it goes at once, as before. */
+  const box=$("dash").querySelector(":scope>.hx");
+  if(cfg.dashCollapsed&&box&&!prefersReducedMotion()&&document.body.dataset.fx!=="off"){
+    syncDashToggle();
+    box.classList.remove("dash-in");box.classList.add("dash-out");
+    let t=0;
+    const done=()=>{clearTimeout(t);box.removeEventListener("animationend",done);if(dashCollapsed())renderDash()};
+    box.addEventListener("animationend",done);
+    t=setTimeout(done,320);   // in case no animation runs to say it ended
+    return;
+  }
+  renderDash();
 });
 // The ribbon filters by tier exactly the way the dashboard's gem row does, so it
 // hands the click to the same place rather than growing its own idea of filtering.
@@ -8127,7 +8204,7 @@ function palCommands(){
     {k:"cards list wall layout",n:"Switch layout",s:"Cards, list, wall",i:"chart",run:()=>{
       const order=["cards","list","wall"];
       ui.density=order[(order.indexOf(ui.density)+1)%order.length];
-      cfg.density=ui.density;saveCfg();openInfo.clear();render();
+      cfg.density=ui.density;saveCfg();openInfo.clear();render();fadeInGrid();
     }},
     {k:"settings",n:"Settings",s:"Rank checks, alerts, security, appearance",i:"user",run:()=>openSettings()},
     {k:"password check security reused weak leak pwned",n:"Password check-up",s:"Passwords used twice, weak, or in a data leak",i:"alert",run:()=>openSettings("security")},
@@ -8286,10 +8363,21 @@ $("chips").addEventListener("click",e=>{
 });
 $("density").addEventListener("click",e=>{
   const b=e.target.closest("[data-density]");if(!b)return;
+  const changed=ui.density!==b.dataset.density;
   ui.density=b.dataset.density;cfg.density=ui.density;saveCfg();
   openInfo.clear(); // "expanded" means different things across the three layouts
   render();
+  if(changed)fadeInGrid();
 });
+/* A new layout replaces the whole page at once, and a hard cut there read as a
+   flicker. 150ms of fade, for this only: filtering and sorting stay instant,
+   since there speed is the point. (Reduced motion and Effects: Off skip it.) */
+function fadeInGrid(){
+  const g=$("grid");
+  g.classList.remove("view-in");void g.offsetWidth;g.classList.add("view-in");
+  const off=()=>{g.classList.remove("view-in");g.removeEventListener("animationend",off)};
+  g.addEventListener("animationend",off);
+}
 /* There was a Refresh N stale button beside Check all ranks, and "N need a refresh"
    beside both: three controls for one job. The header's count shows those accounts,
    and Check all ranks then says "Check N shown". Quick find keeps the one-step
@@ -8602,7 +8690,9 @@ async function onCardClick(e){
     if(editingNote===id)return;
     commitNote();            // only one editor open at a time
     editingNote=id;noteDraft=acc.notes||"";
-    syncNoteBlock(card,acc);
+    // from the ⋯ menu, "card" is the menu: the editor opens on the card itself
+    const host=card.closest("#cardMenu")?$("grid").querySelector(`[data-id="${idSel(id)}"]`):card;
+    if(host)syncNoteBlock(host,acc);
   }
 
   else if(act==="range"){chartRange.set(id,btn.dataset.r);renderCard(id)}
