@@ -9616,6 +9616,28 @@ test("the link preview names a fresh image, at the size the page says it is", ()
   assert.equal(String(h), pageHtml.match(/og:image:height" content="(\d+)"/)[1]);
 });
 
+// A window closed and another opened before the browser had taken the step back: the
+// app's own flag said there was a history entry, the history said there was not, and
+// the next back press left the app with the window still open
+test("a window opened straight after another closed still has its back step", async () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const doc = win.document, open = id => !doc.getElementById(id).classList.contains("hidden");
+  const settle = () => new Promise(r => setTimeout(r, 40));
+  for (let i = 0; i < 4; i++) {
+    doc.getElementById("bSettings").click(); await tick();
+    doc.querySelector("#settings [data-close-panel]").click();
+    await tick();   // the close is seen, and its step back asked for...
+    doc.getElementById("bAdd").click();   // ...and the next window opens before it has happened
+    await settle();
+    assert.ok(open("form"));
+    assert.equal(win.history.state && win.history.state.smurfWindow, 1, "round " + i + ": the open form has its entry");
+    win.history.back();
+    await until(() => !open("form"), "back to close the form, round " + i);
+    await settle();
+    assert.equal(win.history.state, null, "and nothing is left behind");
+  }
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

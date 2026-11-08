@@ -7186,22 +7186,27 @@ function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains
    open there is one history entry for it: back takes it and closes the window,
    the way Escape does. A window closed any other way takes the entry back out,
    so the next back press means what it always meant. */
-let backStep=false, backSkip=false;
+/* Read off the history itself, not a flag of our own: a window that closes and
+   another that opens before the browser has carried out the step back left a
+   flag saying "there is an entry" over an entry that was already gone. */
+let backSkip=false;
+function onWindowEntry(){try{return !!(history.state&&history.state.smurfWindow)}catch(e){return false}}
 function syncBackStep(open){
-  if(snapMode)return;
-  if(open&&!backStep){try{history.pushState({smurfWindow:1},"");backStep=true}catch(e){}}
-  else if(!open&&backStep){backStep=false;backSkip=true;try{history.back()}catch(e){backSkip=false}}
+  if(snapMode||backSkip)return;   // our own step back is on its way; popstate settles it
+  if(open&&!onWindowEntry()){try{history.pushState({smurfWindow:1},"")}catch(e){}}
+  else if(!open&&onWindowEntry()){backSkip=true;try{history.back()}catch(e){backSkip=false}}
 }
 addEventListener("popstate",()=>{
-  if(backSkip){backSkip=false;return}
-  if(!backStep)return;
-  backStep=false;
-  if(askDone){askDone(false);return}   // a question goes, the window that asked it stays
-  // the window in front goes first, as with Escape; one still open behind it asks
-  // for a new entry of its own through syncModals
+  if(backSkip){backSkip=false;syncBackStep(openModals().length>0);return}
+  if(!openModals().length)return;
+  // the window in front goes first, as with Escape; whatever stays open behind it
+  // (or a form you chose to keep editing) takes a new entry through syncModals
+  if(askDone){askDone(false);return}
   if(!$("palette").classList.contains("hidden")){closePalette();return}
   closeAllPanels();editingId=null;
 });
+// a reload keeps the history entry a window had taken; with nothing open it is ours to clear
+try{if(onWindowEntry())history.replaceState(null,"")}catch(e){}
 function syncModals(){
   const open=openModals();
   document.body.classList.toggle("modal-open",open.length>0);
