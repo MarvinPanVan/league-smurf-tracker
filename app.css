@@ -1574,6 +1574,7 @@
   .help dt{font-size:calc(13px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--gold-txt);line-height:2.2}
   .help dd{margin:0}
   .help-ul{margin:0;padding:0 0 0 18px;display:grid;gap:5px}
+  .help-lead{margin:0 0 5px}
   .help-ul li::marker{color:var(--faint)}
   .help-ul.keys{list-style:none;padding:0}
   .help dd.terms::first-letter{text-transform:uppercase}

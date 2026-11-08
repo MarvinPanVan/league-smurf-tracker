@@ -10564,6 +10564,28 @@ test("a never-checked card has a Check rank button of its own; banned and failed
   assert.match(html, /\n  \.c-check\{[^}]*color:var\(--teal-txt\)/, "in the colour of checking");
 });
 
+// Help's Search was one 56-word sentence and More one of 53, the two run-ons left
+// after Cards and Keys became lists
+test("Help's Search and More are short lines, not run-on sentences", () => {
+  const win = bootApp();
+  const dd = label => [...win.document.querySelectorAll("#help dl.help dt")].find(d => d.textContent === label).nextElementSibling;
+  for (const label of ["Search", "More"]) {
+    const items = [...dd(label).querySelectorAll(":scope > ul.help-ul > li")];
+    assert.ok(items.length >= 5, label + " is a list");
+    for (const li of items) for (const sentence of li.textContent.trim().split(/(?<=\.)\s+/))
+      assert.ok(sentence.split(/\s+/).length <= 20, `${label}: "${sentence}" is a short sentence`);
+  }
+  // nothing was lost on the way
+  const search = dd("Search").textContent;
+  for (const w of ["tier:diamond", "region:euw", "champ:yasuo", "role:mid", ">plat", "<gold", "<=gold", ">diamond is:stale"]) assert.ok(search.includes(w), w);
+  for (const w of ["stale", "never", "flagged", "banned", "fav", "goal", "decay", "ready", "leveling"]) assert.match(search, new RegExp("\\b" + w + "\\b"), w);
+  const more = dd("More").textContent;
+  for (const w of ["Bulk add accounts", "Import CSV", "New season", "Undo", "Share a snapshot", "Streamer mode", "Settings → Appearance"]) assert.ok(more.includes(w), w);
+  assert.match(dd("More").querySelector(":scope > .help-lead").textContent, /^In the ⋯ menu at the top:$/, "where all of them are");
+  assert.match(dd("Cards").textContent, /Archive in a card's ⋯ menu hides it without deleting it\. Archived in the toolbar shows them\./,
+    "archiving is a card's, so it moved to Cards");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
