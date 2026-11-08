@@ -479,7 +479,7 @@
      at minus the command row's height (measured in app.js), so that row scrolls off
      and the search row stops at the top, with nothing in the page changing size.
      While a check runs it pins whole again, so Stop and the progress stay in reach. */
-  .console{position:sticky;top:calc(-1*var(--cmd-pin,0px));z-index:10;margin:0 0 18px;
+  .console{position:sticky;top:calc(env(safe-area-inset-top,0px) - var(--cmd-pin,0px));z-index:10;margin:0 0 18px;
     border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;
     /* glass, because it rides over the cards: blurred, but not saturated, which
        turned whatever scrolled under it into a smear of its brightest colour */
@@ -502,7 +502,7 @@
     border-color:color-mix(in srgb,var(--warn) 34%,transparent)}
   .cmd-count .warn.on{background:color-mix(in srgb,var(--warn) 18%,transparent);
     border-color:color-mix(in srgb,var(--warn) 46%,transparent)}
-  .console.running{top:0}
+  .console.running{top:env(safe-area-inset-top,0px)}
   /* The rows used to lose some padding once the header scrolled away, which moved
      every card under them up 16px at that moment. With one row pinned there is
      little height to win back, so they keep their size. */
@@ -1006,6 +1006,13 @@
   @supports (padding:max(0px)){
     body{padding-bottom:max(12px,env(safe-area-inset-bottom))}
   }
+  /* The installed iPhone app draws under a see-through status bar
+     (black-translucent), so the page starts where the clock is: without room
+     for it, "Stats ⋯ ?" sat under the time and the battery. viewport-fit=cover
+     makes iOS report the notch and the home bar, and everything that meets an
+     edge of the screen keeps clear of them. Elsewhere these are all 0. */
+  body{padding-top:env(safe-area-inset-top,0px);
+    padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
   .card{position:relative;padding:17px;display:flex;flex-direction:column;gap:11px;
     overflow:hidden;isolation:isolate}
   /* status as a left edge rail — scannable down a column of 60 cards in a way a
@@ -1543,7 +1550,7 @@
     box-shadow:inset 0 0 0 1px var(--line2),inset 0 -2px 0 var(--line2)}
   @media (max-width:560px){.help{grid-template-columns:1fr;padding:4px 18px 10px}
     .help dt{padding:14px 0 2px}.help dd{border-top:0;padding-top:0}}
-  .to-top{position:fixed;right:clamp(14px,3vw,28px);bottom:clamp(14px,3vw,28px);z-index:55;
+  .to-top{position:fixed;right:calc(clamp(14px,3vw,28px) + env(safe-area-inset-right,0px));bottom:calc(clamp(14px,3vw,28px) + env(safe-area-inset-bottom,0px));z-index:55;
     width:40px;height:40px;padding:0;border-radius:50%;
     background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
     border:1px solid var(--line2);box-shadow:var(--sh-2);color:var(--muted);
@@ -1939,6 +1946,8 @@
     #askModal .ask-b{padding:14px 16px}
   }
   .modal{position:fixed;inset:0;z-index:60;overflow:auto;overscroll-behavior:contain;
+    /* a window on a phone is the whole screen, header first: keep it below the clock */
+    border-top:env(safe-area-inset-top,0px) solid transparent;
     display:flex;align-items:flex-start;justify-content:center;
     padding:clamp(14px,5vh,60px) clamp(12px,4vw,32px)}
   .modal::before{content:"";position:fixed;inset:0;background:#05070bd1;
@@ -2124,7 +2133,7 @@
     .modal{padding:0;align-items:stretch}
     .mdl{max-width:none;margin:0}
     .mdl.hx{border-radius:0;padding:0;box-shadow:none}
-    .mdl-in{max-height:none;min-height:100vh;min-height:100dvh;border-radius:0}
+    .mdl-in{max-height:none;min-height:100vh;min-height:calc(100dvh - env(safe-area-inset-top,0px));border-radius:0}
     .mdl-h .s{display:none}
     /* …except in the rank window, where that line is not a caption: it is which
        account you are editing. Hiding it put the phone back in the state the
@@ -2146,7 +2155,7 @@
      put "Marked played today" or "Streamer mode on" over the buttons of whichever
      card sat in the middle. It also lets clicks through: only its own button
      (Undo, Show) takes them, so a message is never in the way of what it covers. */
-  #toast{position:fixed;bottom:clamp(14px,3vw,28px);left:clamp(14px,3vw,28px);z-index:80;display:none;
+  #toast{position:fixed;bottom:calc(clamp(14px,3vw,28px) + env(safe-area-inset-bottom,0px));left:calc(clamp(14px,3vw,28px) + env(safe-area-inset-left,0px));z-index:80;display:none;
     width:max-content;max-width:min(460px,calc(100vw - 32px));pointer-events:none;
     background:color-mix(in srgb,var(--panel2) 95%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
     border:1px solid var(--line2);border-radius:var(--r-md);color:var(--text);

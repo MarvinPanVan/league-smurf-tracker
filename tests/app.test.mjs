@@ -9445,7 +9445,7 @@ test("every form control a screen reader can reach has a name of its own", () =>
 test("a passing message sits bottom left and lets clicks through to what it covers", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
   const rule = css.match(/\n  #toast\{([^}]*)\}/)[1];
-  assert.match(rule, /left:clamp\(14px,3vw,28px\)/, "on the left: " + rule);
+  assert.match(rule, /left:calc\(clamp\(14px,3vw,28px\) \+ env\(safe-area-inset-left,0px\)\)/, "on the left: " + rule);
   assert.doesNotMatch(rule, /left:50%|translateX\(-50%\)/, "not centred");
   assert.match(rule, /pointer-events:none/, "a click on it reaches the card underneath");
   assert.match(css, /\n  #toast button\{pointer-events:auto;/, "except on its own Undo or Show");
@@ -9810,6 +9810,20 @@ test("every theme's main buttons are readable, and none of them is red", () => {
   // and a colour picked by hand gets the better ink too
   for (const hex of ["#1fae8a", "#3f9cff", "#e04fd0", "#7a1fd1", "#ffe066", "#204060"])
     assert.ok(ratio(win.inkOn(hex), hex) >= ratio("#ffffff", hex) - 1e-9, hex + ": never worse than plain white");
+});
+
+// The installed iPhone app draws under a see-through status bar, and nothing made room
+// for it: "Stats ⋯ ?" would sit under the clock
+test("the installed iPhone app keeps the page, the pinned toolbar and windows clear of the clock", () => {
+  assert.match(pageHtml, /<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">/);
+  assert.match(pageHtml, /<meta name="viewport" content="[^"]*viewport-fit=cover/, "so iOS reports the notch at all");
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /\n  body\{padding-top:env\(safe-area-inset-top,0px\);/, "the page starts below it");
+  assert.match(css, /\.console\{position:sticky;top:calc\(env\(safe-area-inset-top,0px\) - var\(--cmd-pin,0px\)\)/, "the toolbar pins below it");
+  assert.match(css, /\.console\.running\{top:env\(safe-area-inset-top,0px\)\}/);
+  assert.match(css, /\.modal\{[^}]*border-top:env\(safe-area-inset-top,0px\) solid transparent/, "a phone's full-screen window too");
+  assert.match(css, /#toast\{position:fixed;bottom:calc\([^;]*env\(safe-area-inset-bottom,0px\)\)/, "and the home bar at the bottom");
+  assert.match(css, /\.to-top\{position:fixed;[^}]*env\(safe-area-inset-bottom,0px\)/);
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
@@ -10754,8 +10768,8 @@ test("frozen: both export files and the CSV import into an empty vault", async (
 // rows lost padding as the header left, which moved every card 16px at that moment
 test("scrolled down, only the search row stays pinned, and nothing shifts on the way", async () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-  assert.match(css, /\n  \.console\{position:sticky;top:calc\(-1\*var\(--cmd-pin,0px\)\)/, "it sticks at minus the command row");
-  assert.match(css, /\n  \.console\.running\{top:0\}/, "and whole while a check runs");
+  assert.match(css, /\n  \.console\{position:sticky;top:calc\(env\(safe-area-inset-top,0px\) - var\(--cmd-pin,0px\)\)/, "it sticks at minus the command row (below an iPhone's clock)");
+  assert.match(css, /\n  \.console\.running\{top:env\(safe-area-inset-top,0px\)\}/, "and whole while a check runs");
   assert.doesNotMatch(css, /body\.scrolled/, "no row changes size once the header is gone");
   // the offset is the command row's measured height, kept up to date as it wraps
   const watched = [];
