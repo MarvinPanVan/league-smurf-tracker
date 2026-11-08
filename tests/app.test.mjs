@@ -9329,6 +9329,21 @@ test("one type scale: nothing under 11px, 11px only inside charts and badges, sm
     "the shared label: a calm 12px in sentence case");
 });
 
+// An accessibility check found the region, sort and status filters read out as just
+// "combo box". A placeholder is not a name: it goes the moment you type.
+test("every form control a screen reader can reach has a name of its own", () => {
+  const doc = new JSDOM(pageHtml).window.document;
+  const unnamed = [...doc.querySelectorAll("select,textarea,input:not([type=hidden]):not([type=file])")]
+    .filter(el => !el.closest("[aria-hidden=true],[inert]"))
+    .filter(el => !(el.id && doc.querySelector(`label[for="${el.id}"]`)) && !el.closest("label")
+      && !el.getAttribute("aria-label") && !el.getAttribute("aria-labelledby"))
+    .map(el => el.id || el.outerHTML.slice(0, 60));
+  assert.deepEqual(unnamed, []);
+  assert.equal(doc.getElementById("tRegion").getAttribute("aria-label"), "Region");
+  assert.equal(doc.getElementById("tSort").getAttribute("aria-label"), "Sort by");
+  assert.equal(doc.getElementById("tStatus").getAttribute("aria-label"), "Status");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

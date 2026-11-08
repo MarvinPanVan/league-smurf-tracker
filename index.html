@@ -529,8 +529,8 @@
     <div class="mdl-b">
     <div class="formgrid">
       <div class="fw hint">Paste <code>Name#TAG</code>s (one a line, or comma-separated), an <b>op.gg multi-search link</b>, or lines from the <b>lobby chat</b> ("Name #TAG joined the lobby"). A link brings its own region; the rest get the region below. Add logins and notes to each afterwards.</div>
-      <div class="fld"><label>Region for all</label><select id="baRegion"></select></div>
-      <div class="fld fw"><label>Accounts</label><textarea id="baList" data-autofocus rows="6" placeholder="Moonlit Mid#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
+      <div class="fld"><label for="baRegion">Region for all</label><select id="baRegion"></select></div>
+      <div class="fld fw"><label for="baList">Accounts</label><textarea id="baList" data-autofocus rows="6" placeholder="Moonlit Mid#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
     </div>
     </div>
     <div class="mdl-f">
@@ -680,15 +680,15 @@
   <div id="runbar" class="runbar hidden"><div class="run-fill"></div><span class="run-txt"></span></div>
   <div id="failbar" class="failbar hidden"></div>
   <div class="tools">
-    <input type="search" id="tSearch" placeholder="Search name, label, tag, email…">
+    <input type="search" id="tSearch" placeholder="Search name, label, tag, email…" aria-label="Search accounts">
     <!-- a phone's whole first screen was filters; there they fold behind this -->
     <button type="button" id="tFilters" class="t-filters" aria-expanded="false" title="Region, sort, status, favorites, archived">
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
       Filters<b class="t-n" hidden></b></button>
-    <select id="tRegion">
+    <select id="tRegion" aria-label="Region">
       <option value="">All regions</option>
     </select>
-    <select id="tSort">
+    <select id="tSort" aria-label="Sort by">
       <option value="rank">Sort: Rank</option>
       <option value="name">Sort: Name</option>
       <option value="level">Sort: Level</option>
@@ -698,7 +698,7 @@
       <option value="updated">Sort: Last updated</option>
       <option value="opened">Sort: Last login</option>
     </select>
-    <select id="tStatus">
+    <select id="tStatus" aria-label="Status">
       <option value="">All statuses</option>
     </select>
     <button id="tFav" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Favorites</button>
@@ -715,14 +715,14 @@
   </div>
   <div id="bulkbar" class="hidden" style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--teal) 38%,transparent);border-radius:var(--r-md);background:color-mix(in srgb,var(--teal) 7%,var(--panel));box-shadow:var(--sh-1)">
     <span id="bulkCount" style="font-size:calc(12px*var(--ts));color:var(--teal-txt);font-weight:600;letter-spacing:.02em"></span>
-    <select id="bulkStatus">
+    <select id="bulkStatus" aria-label="Set status of the selected accounts">
       <option value="">Set status…</option>
       <option value="active">Active</option>
       <option value="resting">Resting / unused</option>
       <option value="restricted">Chat/ranked restricted</option>
       <option value="banned">Banned</option>
     </select>
-    <input id="bulkTag" placeholder="Add tag…" style="width:130px">
+    <input id="bulkTag" placeholder="Add tag…" aria-label="Add a tag to the selected accounts" style="width:130px">
     <button id="bulkTagBtn">Add tag</button>
     <button id="bulkDelete" class="b-danger">Delete selected</button>
     <button id="bulkClear">Clear selection</button>
@@ -760,7 +760,7 @@
     <div class="mdl narrow hx pal"><div class="hx-in mdl-in">
       <div class="pal-h">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-        <input id="palInput" type="text" placeholder="Jump to an account, or start typing a command…"
+        <input id="palInput" type="text" aria-label="Jump to an account or run a command" placeholder="Jump to an account, or start typing a command…"
           autocomplete="off" autocorrect="off" spellcheck="false" role="combobox"
           aria-expanded="true" aria-controls="palList" aria-autocomplete="list">
       </div>
