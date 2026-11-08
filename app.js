@@ -3538,11 +3538,18 @@ function setStatusFilter(status){
   }
   render();
 }
+/* The out-of-date view keeps the accounts it opened with until you leave it. Checked
+   from there ("Check 2 shown"), each one stopped being out of date and vanished as
+   its new rank landed, and the run ended on an empty page; now they stay, updated
+   in place. */
+let staleHeld=null;
 function filtered(){
   const Q=parseQuery(ui.search);
+  if(ui.flag!=="stale")staleHeld=null;
+  else if(!staleHeld)staleHeld=new Set(accounts.filter(a=>isLive(a)&&isStale(a)).map(a=>a.id));
   let list=accounts.filter(a=>{
     if(!passesBaseFilters(a,Q))return false;
-    if(ui.flag==="stale"&&(!isLive(a)||!isStale(a)))return false;
+    if(ui.flag==="stale"&&!staleHeld.has(a.id)&&(!isLive(a)||!isStale(a)))return false;
     if(ui.flag==="unchecked"&&!neverChecked(a))return false;
     if(ui.flag==="failed"&&(!isLive(a)||!isFailed(a)))return false;
     if(ui.flag==="attention"&&!needsAttention(a))return false;
@@ -3934,7 +3941,11 @@ function renderRibbon(){
     else if(a.stats&&a.stats.found===false)missN++;
   }
   const tiers=TIER_ORDER.slice().reverse().filter(t=>dist[t]);
-  if(!tiers.length&&!unN&&!missN&&!neverN&&!bannedN){setHTML(el,"");return}
+  // a state of its own, across tiers: a Diamond account can be out of date too.
+  // It sat in the toolbar beside Check all; with the others here, the header holds
+  // what is wrong and the toolbar what to do about it.
+  const staleN=pool.filter(a=>isLive(a)&&isStale(a)).length;
+  if(!tiers.length&&!unN&&!missN&&!neverN&&!bannedN&&!staleN){setHTML(el,"");return}
   const plural=n=>n===1?"":"s";
   const tierItem=t=>{const on=ui.tier===t, n=dist[t], name=groupLabel(t);
     return`<button class="rib-i rib-t${on?" on":""}" data-tier="${t}" aria-pressed="${on}"`
@@ -3945,6 +3956,8 @@ function renderRibbon(){
     unN&&word('data-tier="UNRANKED"',ui.tier==="UNRANKED",unN,"unranked","Checked, and not ranked this season."),
     neverN&&word('data-flag="unchecked"',ui.flag==="unchecked",neverN,"never checked","No rank read yet."),
     bannedN&&word('data-status="banned"',ui.status==="banned",bannedN,"banned","Marked banned."),
+    staleN&&word('data-flag="stale"',ui.flag==="stale",staleN,staleN===1?"needs a refresh":"need a refresh","Last read over 3 days ago.")
+      .replace('class="rib-i rib-s','class="rib-i rib-s rib-stale'),
   ].filter(Boolean);
   const missOn=ui.flag==="missing";
   const warn=missN?`<button class="rib-i rib-warn${missOn?" on":""}" data-flag="missing" aria-pressed="${missOn}" aria-label="Not found, ${missN}"`
@@ -4158,8 +4171,7 @@ const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last c
 function renderChips(){
   syncFilterCount();
   const out=[];
-  // "Needs refresh" has its own pressed button in the same row, the count's
-  if(ui.flag&&ui.flag!=="stale")out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
+  if(ui.flag)out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
   if(ui.tier)out.push(["tier",ui.tier==="UNRANKED"?"Unranked":ui.tier.charAt(0)+ui.tier.slice(1).toLowerCase()]);
   if(ui.tag)out.push(["tag","Tag: "+ui.tag]);
   if(ui.favOnly)out.push(["favOnly","Favorites"]);
@@ -5982,12 +5994,8 @@ function renderGrid(){
   // only matters if the note block was structurally replaced rather than patched
   if(editingNote)focusNoteEditor(grid);
   document.title=accounts.length?"Smurf Tracker ("+accounts.length+")":"Smurf Tracker";
-  // isStale(), not a second hand-rolled version of it: this one required an
-  // updatedAt, so never-checked accounts were left out and the readout disagreed
-  // with both the "Refresh N stale" button and the stats panel beside it.
-  const stale=accounts.filter(a=>!a.archived&&isStale(a)).length;
-  // "21 need a refresh" was a red sentence you could not act on — the filter that
-  // shows exactly those already existed, behind a stat tile in a collapsed panel.
+  // "N need a refresh" is in the header's status line now (renderRibbon), with the
+  // other states; the toolbar keeps the count and the actions.
   /* Out of what this view holds: archived accounts are a view of their own, so
      counting them in ("53 of 61 shown" with nothing filtered) read as eight
      accounts hidden by a filter nobody had set. Nothing filtered, it is just a
@@ -5995,9 +6003,7 @@ function renderGrid(){
   const held=accounts.filter(a=>!!a.archived===!!ui.showArchived).length;
   const noun=ui.showArchived?"archived":"account"+(held===1?"":"s");
   setHTML($("count"),!accounts.length?"":(list.length===held?`<span><b>${held}</b> ${noun}</span>`
-      :`<span><b>${list.length}</b> of <b>${held}</b>${ui.showArchived?" archived":""} shown</span>`)
-    +(stale?`<button class="warn${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"
-        title="Show only the accounts that are out of date">${stale} need${stale===1?"s":""} a refresh</button>`:""));
+      :`<span><b>${list.length}</b> of <b>${held}</b>${ui.showArchived?" archived":""} shown</span>`));
   syncCheckAll(list);
 }
 // Called on its own during a run, where re-rendering the grid to flip one button

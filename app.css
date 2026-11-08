@@ -255,6 +255,7 @@
   .rib-row:has(.rib-i.on) .rib-i:not(.on):hover{opacity:1}
   .rib-states{display:inline-flex;align-items:center;margin-left:8px}
   .rib-s{color:var(--muted);padding:0 6px}
+  .rib-s.rib-stale{color:var(--warn-txt)}   /* amber, as the card's own out-of-date line */
   .rib-dot{font-style:normal;color:var(--faint)}
   .rib-warn{margin-left:10px;color:var(--warn-txt);border-color:color-mix(in srgb,var(--warn) 38%,transparent);
     background:color-mix(in srgb,var(--warn) 9%,transparent)}
@@ -493,15 +494,6 @@
   .cmd-count{padding-right:3px;font-size:calc(12px*var(--ts));color:var(--faint);
     display:inline-flex;align-items:center;gap:9px;letter-spacing:.015em}
   .cmd-count b{font-weight:600;color:var(--muted)}
-  /* Out of date is "worth a look", not lost: amber, the warning colour, like
-     every other state that a click puts right (see --warn). In red it was the
-     loudest thing on the page in any vault left alone for a weekend. */
-  .cmd-count .warn{color:var(--warn-txt);font-weight:600;font-size:calc(12px*var(--ts));letter-spacing:.015em;
-    padding:3px 9px;border-radius:var(--r-xs);background:none;border:1px solid transparent;box-shadow:none}
-  .cmd-count .warn:hover{background:color-mix(in srgb,var(--warn) 13%,transparent);
-    border-color:color-mix(in srgb,var(--warn) 34%,transparent)}
-  .cmd-count .warn.on{background:color-mix(in srgb,var(--warn) 18%,transparent);
-    border-color:color-mix(in srgb,var(--warn) 46%,transparent)}
   .console.running{top:env(safe-area-inset-top,0px)}
   /* The rows used to lose some padding once the header scrolled away, which moved
      every card under them up 16px at that moment. With one row pinned there is
@@ -1730,7 +1722,7 @@
   .upd{font-size:calc(12px*var(--ts));color:var(--faint);letter-spacing:.015em;display:inline-flex;align-items:center;gap:7px;min-width:0}
   .upd::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.55;flex-shrink:0}
   .upd.stale{color:var(--warn-txt)}
-  /* Out of date: amber (it used to be red; see .cmd-count .warn), with a warning
+  /* Out of date: amber (it used to be red), with a warning
      mark in place of the dot. It was a ⚠ character, which some systems draw as a
      yellow emoji; this one is drawn. */
   .upd.stale::before{display:none}
@@ -2657,7 +2649,6 @@
     .lpc-axis{height:32px}   /* room for them in the date row */
     .tools>.t-kbd{display:none}.tools>#tSearch:placeholder-shown{padding-right:12px}   /* no Ctrl on a touch screen */
     .rid{padding-block:5px;margin-block:-3px}
-    .cmd-count .warn{padding:6px 10px}
     .c-notes.blank>button,.c-notes.blank .nf-link{min-height:30px} /* matches the all:unset rule it has to beat */
   }
   @media (max-width:760px){
@@ -2749,11 +2740,6 @@
        chips wrapped into a block of their own: together most of a screen. Each is
        one row now that slides sideways, the next figure peeking in at the edge to
        say there is more. */
-    /* On a phone the count and "N need a refresh" stack; the button's padding (its
-       hit area) pushed its words in from the count's, so the second line started
-       10px right of the first. The margin takes the padding back out. */
-    .cmd-count{flex-direction:column;align-items:flex-start;gap:0}
-    .cmd-count .warn{margin-left:-10px}
     #dash .dash,#dash .dash[style*="--cols"]{display:flex;overflow-x:auto;scroll-snap-type:x proximity;
       overscroll-behavior-x:contain;scrollbar-width:none}
     #dash .dash>.stat{flex:0 0 min(62%,220px);scroll-snap-align:start}
