@@ -3240,7 +3240,9 @@ function poolLpTrend(pool){
   });
   const poly=coords.map(c=>c.x.toFixed(1)+","+c.y.toFixed(1)).join(" ");
   const delta=Math.round(pts[pts.length-1]-pts[0]);
-  const fmtDay=t=>new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  // day before month, as on the charts' axes: the tile read "Oct 19 → Nov 8" above
+  // a chart marked "8 Nov"
+  const fmtDay=t=>dateLabel(t,"year");
   const from=fmtDay(days[0].t), to=fmtDay(days[days.length-1].t);
   const dots=coords.map((c,i)=>{
     const ch=Math.round(c.v-pts[0]);

@@ -9967,6 +9967,18 @@ test("the sort list offers While you were away only while that sort is on", () =
   assert.equal(opts(win).includes("away"), false, "and it goes once another sort is picked");
 });
 
+// "Oct 19 → Nov 8" in the stats, "8 Nov" on the charts: one app, two date orders
+test("the Average climb dates read day before month, as the charts do", () => {
+  const win = bootApp();
+  const y = new Date().getFullYear();
+  const t1 = new Date(y, 9, 19, 12).getTime(), t2 = new Date(y, 10, 8, 12).getTime();
+  const tr = win.poolLpTrend([{ id: "a", history: [
+    { t: t1, tier: "GOLD", division: "II", lp: 10 }, { t: t2, tier: "GOLD", division: "II", lp: 40 }] }]);
+  assert.equal(tr.span, "19 Oct → 8 Nov");
+  assert.match(tr.svg, /\+30 LP since 19 Oct/);
+  assert.equal(win.dateLabel(t2), "8 Nov", "the chart axis says the same");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
