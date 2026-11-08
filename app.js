@@ -34,8 +34,13 @@ const crestScale=(pts,f)=>pts.map(([x,y])=>[+(12+(x-12)*f).toFixed(2),+(12+(y-12
 const crestRing=(outer,f,tones)=>{const inner=crestScale(outer,f);
   return [...outer.map((o,k)=>{const n=(k+1)%outer.length;return [tones[k],crestPoly([o,outer[n],inner[n],inner[k]])]}),["T",crestPoly(inner)]]};
 // the apex body: a hexagon cut into six facets from its centre
-const crestHex=(cy,r)=>{const h=r*.866,c=[12,cy],pts=[[12,cy-r],[12+h,cy-r/2],[12+h,cy+r/2],[12,cy+r],[12-h,cy+r/2],[12-h,cy-r/2]];
-  return pts.map((p,k)=>[["L","M","D","D","M","L"][k],crestPoly([c,p,pts[(k+1)%6]])])};
+const crestHex=(cy,r,tones=["L","M","D","D","M","L"])=>{const h=r*.866,c=[12,cy],pts=[[12,cy-r],[12+h,cy-r/2],[12+h,cy+r/2],[12,cy+r],[12-h,cy+r/2],[12-h,cy-r/2]];
+  return pts.map((p,k)=>[tones[k],crestPoly([c,p,pts[(k+1)%6]])])};
+// Challenger's gem is ice blue (the lower-case tones), so beside Gold it is not
+// one more yellow crest; its crown and wings stay gold.
+const CREST_ICE="#a9dcf5", ICE=["l","m","d","d","m","l"];
+const crestStar=(cx,cy,R,r)=>"M"+Array.from({length:10},(_,k)=>{const a=-Math.PI/2+k*Math.PI/5,q=k%2?r:R;
+  return (+(cx+q*Math.cos(a)).toFixed(2))+" "+(+(cy+q*Math.sin(a)).toFixed(2))}).join("L")+"Z";
 const CREST_HEX=[[12,2.5],[20,7.1],[20,16.9],[12,21.5],[4,16.9],[4,7.1]];
 const CREST_OCT=[[8.4,3],[15.6,3],[20,7.4],[20,16.6],[15.6,21],[8.4,21],[4,16.6],[4,7.4]];
 const CRESTS={
@@ -56,7 +61,7 @@ const CRESTS={
   GRANDMASTER:[["M","M6 12.6L.5 9.4l.4 6.4z"],["D","M18 12.6l5.5-3.2-.4 6.4z"],
     ["L","M5.2 10 4 4.2l3.9 2.9L12 2.2V10z"],["M","M18.8 10 20 4.2l-3.9 2.9L12 2.2V10z"],...crestHex(15.5,6.3)],
   CHALLENGER:[["M","M5.8 13 0 9.6l.4 6.8z"],["D","M18.2 13 24 9.6l-.4 6.8z"],
-    ["L","M5.4 10.6 4.2 5.2 7.9 8 12 3.4v7.2z"],["M","M18.6 10.6l1.2-5.4L16.1 8 12 3.4v7.2z"],...crestHex(15.6,5.8),
+    ["L","M5.4 10.6 4.2 5.2 7.9 8 12 3.4v7.2z"],["M","M18.6 10.6l1.2-5.4L16.1 8 12 3.4v7.2z"],...crestHex(15.6,5.8,ICE),
     ["W","M12 0l.9 2 2.1.3-1.55 1.5.4 2.1L12 4.9l-1.85 1 .4-2.1L9 2.3l2.1-.3z"]]
 };
 const DIV_ORDER={IV:0,III:1,II:2,I:3};
@@ -1103,24 +1108,38 @@ function timeAgo(ts){
   return ago(Math.floor(h/24),"day");
 }
 function tierColor(t){return TIER_COLORS[(t||"UNRANKED").toUpperCase()]||TIER_COLORS.UNRANKED}
-// Sized by CSS through `cls`, never by attributes — the same markup is the 13px
-// mark on a row, the 20px badge on a portrait and the 80px watermark on a card.
+// Sized by CSS through `cls`, never by attributes. `cls` also picks the drawing:
+// the top three tiers have a chunkier one for 24px and under (CRESTS_SMALL).
 function crestMix(hex,to,amt){
   const n=parseInt(hex.slice(1),16),t=to==="w"?255:0;
   return "#"+[16,8,0].map(sh=>Math.round(((n>>sh)&255)*(1-amt)+t*amt).toString(16).padStart(2,"0")).join("");
 }
-// Built once per tier and reused: the same tier is the same markup on every render,
-// which is what lets the grid's "has this card changed?" check skip it.
+/* At 24px and under (a list row, a tile, the header's row, Quick find) the top three
+   crests' thin spikes and wing tips turned to crumbs: there they are drawn chunkier.
+   Master keeps its crown with blunter points; Grandmaster is a broad gem with wings;
+   Challenger a gem with wings under a big star. The other seven read at any size. */
+const CRESTS_SMALL={
+  MASTER:[["L","M4 10.4 2.8 2.4l4.9 3.4L12 .4v10z"],["M","M20 10.4l1.2-8-4.9 3.4L12 .4v10z"],...crestHex(15.6,7.6)],
+  GRANDMASTER:[["M","M5.6 12.5 0 7.2v10.6z"],["D","M18.4 12.5 24 7.2v10.6z"],...crestHex(12.5,8.4)],
+  CHALLENGER:[["M","M6 15.8 0 10.8v10z"],["D","M18 15.8 24 10.8v10z"],...crestHex(15.9,6.9,ICE),
+    ["W",crestStar(12,4.7,4.7,2.05)]],
+};
+// the sizes that keep the full drawing: the card's 28px crest and the share page's
+const CREST_FULL=new Set(["rk-crest","sn-crest-i","sn-best-c"]);
+// Built once per tier and size and reused: the same tier is the same markup on every
+// render, which is what lets the grid's "has this card changed?" check skip it.
 const crestCache={};
 function crest(tier,cls){
-  const t=(tier||"").toUpperCase(), c=CRESTS[t];
+  const t=(tier||"").toUpperCase(), small=!CREST_FULL.has(cls)&&CRESTS_SMALL[t], c=small||CRESTS[t];
   if(!c)return "";
-  if(!crestCache[t]){
+  const key=t+(small?"/s":"");
+  if(!crestCache[key]){
     const col=TIER_COLORS[t];
-    const tone={L:crestMix(col,"w",.38),T:crestMix(col,"w",.2),M:col,D:crestMix(col,"k",.34),W:"#fff"};
-    crestCache[t]=c.map(([k,d])=>`<path d="${d}" fill="${tone[k]}"/>`).join("");
+    const tone={L:crestMix(col,"w",.38),T:crestMix(col,"w",.2),M:col,D:crestMix(col,"k",.34),W:"#fff",
+      l:crestMix(CREST_ICE,"w",.42),m:CREST_ICE,d:crestMix(CREST_ICE,"k",.3)};
+    crestCache[key]=c.map(([k,d])=>`<path d="${d}" fill="${tone[k]}"/>`).join("");
   }
-  return `<svg class="crest${cls?" "+cls:""}" viewBox="0 0 24 24" aria-hidden="true">${crestCache[t]}</svg>`;
+  return `<svg class="crest${cls?" "+cls:""}" viewBox="0 0 24 24" aria-hidden="true">${crestCache[key]}</svg>`;
 }
 /* Below the ladder there are three more states, and they all used to tie at -1 —
    so an account that came back Unranked sat mixed in with ones nobody had ever

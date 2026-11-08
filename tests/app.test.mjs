@@ -10215,6 +10215,34 @@ test("D/W/M sit at the end of the date row, off the line, and the last date step
   assert.equal(bare.querySelector(".lpc-range"), null);
 });
 
+// At 16px the top three crests' thin spikes and wing tips turned to crumbs, and
+// Challenger's gold gem read as one more Gold
+test("Master, Grandmaster and Challenger get chunkier crests at 24px and under; Challenger's gem is ice blue", () => {
+  const win = bootApp(ladderSeed());
+  const paths = (t, cls) => { runScript(win, `window.__s = crest("${t}"${cls ? `, "${cls}"` : ""})`); return (win.__s.match(/<path /g) || []).length; };
+  const fills = (t, cls) => { runScript(win, `window.__s = crest("${t}"${cls ? `, "${cls}"` : ""})`); return [...win.__s.matchAll(/fill="(#[0-9a-f]{3,6})"/g)].map(m => m[1]); };
+  assert.equal(paths("GRANDMASTER"), 8, "small: a broad gem (six facets) with two wings, no crown");
+  assert.equal(paths("GRANDMASTER", "rk-crest"), 10, "the card's 28px crest keeps the crown");
+  for (const cls of ["rk-crest", "sn-crest-i", "sn-best-c"]) {
+    runScript(win, `window.__a = crest("CHALLENGER", "${cls}").replace(/class="[^"]*"/, ""); window.__b = crest("CHALLENGER", "rib-crest").replace(/class="[^"]*"/, "")`);
+    assert.notEqual(win.__a, win.__b, cls + " draws the full crest");
+  }
+  for (const cls of [undefined, "rib-crest", "cmp-crest", "lgrp-crest", "sn-t-c"]) {
+    runScript(win, `window.__a = crest("MASTER", ${cls ? `"${cls}"` : "undefined"}).replace(/class="[^"]*"/, ""); window.__b = crest("MASTER", "rk-crest").replace(/class="[^"]*"/, "")`);
+    assert.notEqual(win.__a, win.__b, (cls || "a row, a tile, Quick find") + " draws the small one");
+  }
+  // the rest of the ladder is one drawing at every size
+  runScript(win, `window.__a = crest("GOLD", "rib-crest").replace(/class="[^"]*"/, ""); window.__b = crest("GOLD", "rk-crest").replace(/class="[^"]*"/, "")`);
+  assert.equal(win.__a, win.__b, "Gold is unchanged");
+  for (const cls of [undefined, "rk-crest"]) {
+    const f = fills("CHALLENGER", cls);
+    assert.ok(f.includes("#a9dcf5"), "an ice-blue gem" + (cls ? " at full size" : ""));
+    assert.ok(f.includes("#f4d688"), "with gold wings");
+    assert.ok(f.includes("#fff"), "and a white star");
+  }
+  assert.ok(win.document.querySelectorAll(".rk-crest").length >= 10, "the cards still draw theirs");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
