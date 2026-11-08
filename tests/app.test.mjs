@@ -9685,6 +9685,27 @@ test("every way out of a form with typing in it asks first, and Keep editing kee
   assert.ok(open("form") && $("fLabel").value === "Renamed");
 });
 
+// "Lunar" found the account and "Lunar Echo#EUW", pasted from the client, found nothing
+test("search finds an account by its whole Riot ID, however it was pasted", async () => {
+  const acc = (id, n, t) => ({ id, region: "EUW", gameName: n, tagLine: t, status: "active", tags: [], history: [], stats: null });
+  const win = bootApp([acc("e", "Lunar Echo", "EUW"), acc("t", "Lunar Tide", "NA1"), acc("x", "Echo Chamber", "EUW")]);
+  const shown = async q => { win.document.getElementById("tSearch").value = q;
+    win.document.getElementById("tSearch").dispatchEvent(new win.Event("input", { bubbles: true }));
+    await new Promise(r => setTimeout(r, 180));   // the search waits for a pause in typing
+    return [...win.document.querySelectorAll(".card")].map(c => c.dataset.id).sort().join(","); };
+  assert.equal(await shown("Lunar Echo#EUW"), "e", "as the client copies it");
+  assert.equal(await shown("lunar echo #euw"), "e", "as the lobby chat prints it");
+  assert.equal(await shown("Echo#EUW"), "e", "the end of a name with its tag");
+  assert.equal(await shown("Lunar Echo#NA1"), "", "and not with someone else's tag");
+  assert.equal(await shown("Lunar"), "e,t", "a part of a name still finds every match");
+  // Quick find too, where the word order had to match as well
+  const pal = q => win.palResults(q).filter(it => it.type === "acc").map(it => it.a.id).sort().join(",");
+  assert.equal(pal("Lunar Echo#EUW"), "e");
+  assert.equal(pal("lunar echo #euw"), "e");
+  assert.equal(pal("echo lunar"), "e", "words in any order");
+  assert.equal(pal("Lunar Echo#NA1"), "");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

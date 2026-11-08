@@ -3443,7 +3443,9 @@ function passesBaseFilters(a,Q,{forceActive=false}={}){
     if(f==="leveling"&&!isLeveling(a))return false;
   }
   if(Q.terms.length){
-    const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,noteFieldsText(a),a.createdOn,a.birthdate,
+    // the Riot ID whole as well: "Lunar Echo#EUW", pasted from the client, found nothing
+    // while the name and the tag were only ever in here apart
+    const hay=[a.label,a.gameName,a.tagLine,a.gameName+"#"+a.tagLine,a.email,a.login,a.notes,noteFieldsText(a),a.createdOn,a.birthdate,
       a.flagged?"flagged attention":"",(a.tags||[]).join(" "),a.stats?(a.stats.tier||"")+" "+(shortRank(a.stats)||""):"",(STATUS[a.status]||STATUS.active).label].join(" ").toLowerCase();
     if(!Q.terms.every(t=>hay.includes(t)))return false;
   }
@@ -7977,11 +7979,14 @@ function palCommands(){
   ];
 }
 function palResults(q){
-  const s=q.trim().toLowerCase();
+  const s=q.trim().toLowerCase(), words=s.split(/\s+/).filter(Boolean);
+  // each word anywhere, like the search box, and the Riot ID whole: "Lunar Echo#EUW"
+  // and "lunar echo #euw" both find it
   const accs=accounts.filter(a=>!a.archived).filter(a=>{
     if(!s)return true;
-    return [a.label,a.gameName,a.tagLine,a.email,a.login,(a.tags||[]).join(" "),
-      a.stats?shortRank(a.stats)||"":""].join(" ").toLowerCase().includes(s);
+    const hay=[a.label,a.gameName,a.tagLine,a.gameName+"#"+a.tagLine,a.email,a.login,(a.tags||[]).join(" "),
+      a.stats?shortRank(a.stats)||"":""].join(" ").toLowerCase();
+    return words.every(w=>hay.includes(w));
   });
   // Favourites first, then the best ranks — the same order the grid uses, so the
   // palette never disagrees with the page behind it.
