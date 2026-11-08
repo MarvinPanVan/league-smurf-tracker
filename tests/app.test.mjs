@@ -10541,6 +10541,29 @@ test("the header's status words carry their dots in the gaps, and a line's start
   assert.match(html, /\n  \.rib-s:focus-visible\{outline-offset:-2px\}/, "and the focus ring stays clear of that edge");
 });
 
+// A never-checked card, the one that most needs a check, could only get one from its
+// ⋯ menu
+test("a never-checked card has a Check rank button of its own; banned and failed ones do not", async () => {
+  const now = Date.now(), acc = (id, extra, stats) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [], stats }, extra);
+  const win = bootApp([acc("nv", {}, null), acc("bn", { status: "banned" }, null),
+    acc("fl", {}, { found: true, note: "auto-fetch failed (rate limited)", updatedAt: now }),
+    acc("gd", {}, { found: true, tier: "GOLD", division: "I", lp: 5, wins: 1, losses: 1, updatedAt: now })]);
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  const btn = card("nv").querySelector(".rk.c-unchecked + .wl > .c-check");
+  assert.ok(btn, "under Never checked");
+  assert.equal(btn.dataset.act, "check");
+  assert.equal(btn.textContent.trim(), "Check rank");
+  assert.equal(card("bn").querySelector(".c-check"), null, "checks skip banned accounts, so the card offers none");
+  assert.equal(card("fl").querySelector(".c-check"), null, "a failed check has its Refresh on the meta line already");
+  assert.ok(card("fl").querySelector('.c-meta .c-ref[data-act="check"]'));
+  assert.equal(card("gd").querySelector(".c-check"), null);
+  runScript(win, "check = id => { window.__checked = id; return Promise.resolve(false) }");
+  btn.click();
+  await tick();
+  assert.equal(win.__checked, "nv", "it checks that account");
+  assert.match(html, /\n  \.c-check\{[^}]*color:var\(--teal-txt\)/, "in the colour of checking");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

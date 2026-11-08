@@ -5577,7 +5577,10 @@ function cardHTML(a,i){
   const levelLed=!!(s&&s.found!==false&&!isRanked(a)&&s.level);
   let rankBlock;
   if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
-  else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">${noRankLabel(a)}</div>`;
+  // A card never checked had no way to check it but the ⋯ menu, the one card that
+  // most needs it. A failed one has its Refresh on the meta line; banned ones are skipped.
+  else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">${noRankLabel(a)}</div>`
+    +(!dead&&!isFailed(a)?`<div class="wl"><button type="button" class="c-check" data-act="check" title="Check this account's rank now">${icon("refresh")}Check rank</button></div>`:"");
   // amber like the header's warning: a Riot ID op.gg doesn't know is usually one to
   // correct, so the line is the way to correct it, not only the advice to
   else if(s.found===false)rankBlock=`<div class="wl c-miss">${icon("alert")}<span>Not found on op.gg</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;

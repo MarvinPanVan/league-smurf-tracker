@@ -1489,6 +1489,11 @@
   .c-fix{padding:4px 10px;min-height:28px;font-size:calc(12px*var(--ts));font-weight:600;color:var(--warn-txt);
     background:none;border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
   .c-fix:hover{color:var(--warn-txt);background:color-mix(in srgb,var(--warn) 14%,transparent);border-color:var(--warn)}
+  /* the same small outlined button, in the colour of checking */
+  .c-check{padding:4px 10px;min-height:28px;gap:6px;font-size:calc(12px*var(--ts));font-weight:600;color:var(--teal-txt);
+    background:none;border-color:color-mix(in srgb,var(--teal) 40%,transparent)}
+  .c-check:hover{color:var(--teal-txt);background:color-mix(in srgb,var(--teal) 12%,transparent);border-color:var(--teal)}
+  .c-check .ico{width:13px;height:13px}
   .delta .ico{width:1em;height:1em;vertical-align:-.15em}
   /* ---- LP chart ----
      The old sparkline was a bare line with no scale: it told you the number went
