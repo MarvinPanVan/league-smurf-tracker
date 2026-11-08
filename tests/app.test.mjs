@@ -5037,8 +5037,8 @@ test("themes: one click sets both colours and the atmosphere, kept only on Save"
   assert.deepEqual(tiles().map(t => t.dataset.theme), ["hextech", "shadowisles", "noxus", "piltover", "freljord", "ionia", "void", "rank"]);
   assert.deepEqual(on(), ["hextech"], "the defaults are the Hextech theme");
   doc.querySelector('#sThemes [data-theme="noxus"]').click();
-  assert.equal(root.getPropertyValue("--gold"), "#b8c0c8");
-  assert.equal(root.getPropertyValue("--teal"), "#d33b3b");
+  assert.equal(root.getPropertyValue("--gold"), "#d9434a");
+  assert.equal(root.getPropertyValue("--teal"), "#b8c0c8");
   assert.deepEqual(on(), ["noxus"]);
   doc.getElementById("sClose").click();
   assert.equal(root.getPropertyValue("--gold"), "#c8aa6e", "closing without saving puts it back");
@@ -9791,6 +9791,25 @@ test("a new account is scrolled to and lit up, even past a filter that would hid
   doc.getElementById("baList").value = "Omega One#EUW\nOmega Two#EUW";
   doc.getElementById("baSave").click();
   assert.equal(scrolled.at(-1), appGet(win, "accounts.find(a => a.gameName === 'Omega One').id"));
+});
+
+// White text on the main buttons was 2.8:1 on Shadow Isles and Piltover and 3.4:1 on Void;
+// and Noxus filled every main button red, so "Copy username" looked like Delete
+test("every theme's main buttons are readable, and none of them is red", () => {
+  const win = bootApp();
+  const lum = hex => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const ratio = (x, y) => { const [a, b] = [lum(x), lum(y)].sort((p, q) => q - p); return (a + 0.05) / (b + 0.05); };
+  const themes = appGet(win, "JSON.stringify(THEMES)");
+  for (const t of JSON.parse(themes)) {
+    const ink = win.inkOn(t.b);
+    assert.ok(ratio(ink, t.b) >= 4.5, `${t.n}: ${ink} on ${t.b} is ${ratio(ink, t.b).toFixed(2)}:1`);
+    const hue = win.hexToHsl(t.b)[0];
+    assert.ok(Math.min(hue, 360 - hue) > 25 || win.hexToHsl(t.b)[1] < 25, t.n + "'s buttons are not the colour of Delete");
+  }
+  // and a colour picked by hand gets the better ink too
+  for (const hex of ["#1fae8a", "#3f9cff", "#e04fd0", "#7a1fd1", "#ffe066", "#204060"])
+    assert.ok(ratio(win.inkOn(hex), hex) >= ratio("#ffffff", hex) - 1e-9, hex + ": never worse than plain white");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

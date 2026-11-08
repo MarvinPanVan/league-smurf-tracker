@@ -6597,7 +6597,9 @@ function revertAtmosphere(){applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE)}
 const THEMES=[
   {k:"hextech",n:"Hextech",a:"#c8aa6e",b:"#0ac8b9",atm:"spotlight"},
   {k:"shadowisles",n:"Shadow Isles",a:"#7fe8c9",b:"#1fae8a",atm:"noir"},
-  {k:"noxus",n:"Noxus",a:"#b8c0c8",b:"#d33b3b",atm:"spotlight"},
+  // red on the wordmark and headings, steel on the buttons: as the button colour, red
+  // made "Copy username" look like Delete
+  {k:"noxus",n:"Noxus",a:"#d9434a",b:"#b8c0c8",atm:"spotlight"},
   {k:"piltover",n:"Piltover",a:"#e0a458",b:"#3f9cff",atm:"lattice"},
   {k:"freljord",n:"Freljord",a:"#d6ecff",b:"#5bb8f5",atm:"stardust"},
   {k:"ionia",n:"Ionia",a:"#f0a6c4",b:"#4fcf9f",atm:"spotlight"},
@@ -6702,7 +6704,16 @@ function applyAccent2(hex){
   // Anything filled with --teal prints its label in --teal-ink. A fixed dark ink
   // vanishes on a deep secondary and a fixed light one vanishes on a pale one,
   // so the ink follows the colour instead of being hardcoded.
-  root.setProperty("--teal-ink",relLuminance(hex)>0.42?hslToHex(h,Math.min(s+15,100),9):"#ffffff");
+  root.setProperty("--teal-ink",inkOn(hex));
+}
+/* Whichever of the two inks reads better on it, by contrast ratio. A luminance
+   cut-off at 0.42 put white on mid-bright accents where dark was far better:
+   white on Shadow Isles and Piltover was 2.8:1, on Void 3.4:1, all under the
+   4.5:1 small text needs. */
+function inkOn(hex){
+  const[h,s]=hexToHsl(hex), dark=hslToHex(h,Math.min(s+15,100),9);
+  const L=relLuminance(hex), cWhite=1.05/(L+0.05), cDark=(L+0.05)/(relLuminance(dark)+0.05);
+  return cDark>=cWhite?dark:"#ffffff";
 }
 // Dragging the colour picker fires `input` continuously, and one accent change is
 // not cheap: setting a custom property on :root makes the browser re-resolve
