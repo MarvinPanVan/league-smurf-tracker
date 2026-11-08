@@ -6330,8 +6330,9 @@ async function leaveForm(){
 // With nothing at stake the window closes there and then; only a question waits.
 function requestClose(){
   const go=()=>{closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}return true};
-  if(!formDirty())return Promise.resolve(go());
-  return leaveForm().then(ok=>ok?go():false);
+  if(formDirty())return leaveForm().then(ok=>ok?go():false);
+  if(settingsUnsaved())return leaveSettings().then(ok=>ok?go():false);
+  return Promise.resolve(go());
 }
 function cancelForm(){
   if(!formDirty()){closeForm();return}
@@ -7411,13 +7412,32 @@ function closeSettings(){revertLookPreviews();settingsSaveGen++;$("settings").cl
    undid it without a word, though. Once something has changed, the footer says
    what Save and closing each do. */
 const S_FOOT="Stays in this browser unless you use Device sync.";
+let sUnsaved=false;
 function settingsDirty(on){
+  sUnsaved=!!on;
   const h=$("sFootHint");if(!h)return;
   h.classList.toggle("dirty",!!on);
-  h.textContent=on?"Not saved yet. Save keeps it; closing puts it back.":S_FOOT;
+  h.textContent=on?"Not saved yet. Save keeps it; closing asks first.":S_FOOT;
 }
-// fields that act on their own button, not on Save
-const S_SELF=new Set(["sVaultPass"]);
+// fields that act on their own button, or save the moment they change, not on Save
+const S_SELF=new Set(["sVaultPass","sSyncToken"]);
+/* Closing put back whatever Save had not kept, which is right for a theme being
+   tried on and wrong for a Backend URL or a webhook just pasted in: that was gone
+   with one Escape, the way the account form used to lose what you typed. Now a
+   change that would be lost is asked about, as the form does. */
+function settingsUnsaved(){return sUnsaved&&!$("settings").classList.contains("hidden")}
+async function leaveSettings(){
+  if(!settingsUnsaved())return true;
+  // the same question as the account form's, with Save beside it
+  const r=await ask({title:"Discard your changes to Settings?",body:"They aren't saved yet. Discarding puts them back the way they were.",
+    ok:"Discard",danger:true,alt:"Save",cancel:"Keep editing"});
+  if(r==="alt"){$("sSave").click();return false}  // Save closes the window itself, once the links check out
+  return r==="ok";
+}
+function requestCloseSettings(){
+  if(!settingsUnsaved()){closeSettings();return}
+  leaveSettings().then(ok=>{if(ok)closeSettings()});
+}
 $("settings").addEventListener("input",e=>{if(e.target.closest(".mdl-b")&&!S_SELF.has(e.target.id))settingsDirty(true)});
 $("settings").addEventListener("change",e=>{if(e.target.closest(".mdl-b")&&!S_SELF.has(e.target.id))settingsDirty(true)});
 $("settings").addEventListener("click",e=>{
@@ -7428,7 +7448,7 @@ $("settings").addEventListener("click",e=>{
   if(hit&&e.currentTarget.contains(hit))settingsDirty(true);
 });
 $("bFind").addEventListener("click",openPalette);
-$("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
+$("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():requestCloseSettings());
 $("bNewSeason").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");newSeasonAll()});
 $("bStreamer").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");setStreamer(!streamerOn())});
 $("streamerPill").addEventListener("click",()=>setStreamer(false));
@@ -7507,7 +7527,7 @@ $("sSave").addEventListener("click",async()=>{
   saveCfg();syncLockTimer();hideAccPrev();$("settings").classList.add("hidden");toast("Settings saved"+notifyNote)
 });
 let settingsSaveGen=0;
-$("sClose").addEventListener("click",closeSettings);
+$("sClose").addEventListener("click",requestCloseSettings);
 if($("sSyncGen"))$("sSyncGen").addEventListener("click",()=>{
   const t=genSyncToken();
   $("sSyncToken").value=t;cfg.syncToken=t;saveCfg();updateSyncStatus();toast("Sync key made. Paste the same key on your other devices");

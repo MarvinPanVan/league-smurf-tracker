@@ -2571,7 +2571,7 @@ test("share window: not for example data, and not for an empty vault", () => {
   assert.match(win.document.getElementById("toast").textContent, /Exit preview/);
 });
 
-test("On each card: any part can wait under Details, Compact is chart and stats, and 2.1's switch carries over", () => {
+test("On each card: any part can wait under Details, Compact is chart and stats, and 2.1's switch carries over", async () => {
   const now = Date.now(), D = 86400000;
   const acc = { id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: ["mid"], notes: "honor 3",
     history: [1, 2, 3].map(k => ({ t: now - (4 - k) * D, tier: "GOLD", division: "II", lp: 10 * k, w: k, l: 0 })),
@@ -2581,17 +2581,17 @@ test("On each card: any part can wait under Details, Compact is chart and stats,
   const card = () => doc.querySelector('.card[data-id="c"]');
   const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
   assert.equal(card().querySelector('[data-act="info"]'), null, "nothing hidden and nothing to show: no Details handle");
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   const box = k => doc.querySelector(`#sCardParts [data-part="${k}"]`);
   assert.deepEqual([...doc.querySelectorAll("#sCardParts [data-part]")].map(b => b.dataset.part), ["chart", "stats", "wl", "goal", "tags", "notes"]);
   assert.ok([...doc.querySelectorAll("#sCardParts [data-part]")].every(b => b.checked), "everything shows by default");
   box("tags").checked = false; box("tags").dispatchEvent(new win.Event("change", { bubbles: true }));
   assert.ok(body.classList.contains("hide-tags"), "previews at once");
   assert.ok(card().querySelector('[data-act="info"]'), "and the card grows a Details handle to find them under");
-  doc.getElementById("sClose").click();
+  doc.getElementById("sClose").click(); await tick();
   assert.equal(body.classList.contains("hide-tags"), false, "Close puts it back");
   assert.equal(card().querySelector('[data-act="info"]'), null);
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   doc.getElementById("sCompact").click();
   assert.equal(box("chart").checked, false);
   assert.equal(box("stats").checked, false);
@@ -3412,11 +3412,11 @@ test("the secondary accent drives --teal, and its ink flips with the colour's lu
   assert.equal(read("--teal-ink"), "#ffffff");
 });
 
-test("both accents persist, and leaving Settings unsaved puts the previewed colours back", () => {
+test("both accents persist, and leaving Settings unsaved puts the previewed colours back", async () => {
   const win = bootApp();
   const read = v => win.document.documentElement.style.getPropertyValue(v).trim().toLowerCase();
 
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   win.document.getElementById("sAccent").value = "#ff0000";
   win.document.getElementById("sAccent2").value = "#00ff00";
   win.document.getElementById("sSave").click();
@@ -3424,23 +3424,23 @@ test("both accents persist, and leaving Settings unsaved puts the previewed colo
   assert.equal(read("--teal"), "#00ff00");
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).accent2, "#00ff00");
 
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   const picker = win.document.getElementById("sAccent2");
   picker.value = "#0000ff";
   picker.dispatchEvent(new win.Event("input", { bubbles: true }));
   assert.equal(read("--teal"), "#0000ff", "the picker previews live");
-  win.document.getElementById("sClose").click();
+  win.document.getElementById("sClose").click(); await tick();
   assert.equal(read("--teal"), "#00ff00", "closing without saving reverts");
 
   // the ⋯ menu's Settings entry toggles the panel shut, which is a close as well —
   // it used to only hide it, leaving an unsaved colour applied to the whole page
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   picker.value = "#123456";
   // change rather than input: releasing the picker skips the rate-limit queue that
   // the preview above has just opened
   picker.dispatchEvent(new win.Event("change", { bubbles: true }));
   assert.equal(read("--teal"), "#123456", "the colour is applied but not saved");
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   assert.equal(win.document.getElementById("settings").classList.contains("hidden"), true);
   assert.equal(read("--teal"), "#00ff00", "and closing it from the menu reverts too");
 });
@@ -3451,20 +3451,20 @@ const DEFAULT_ACCENT = "#c8aa6e", DEFAULT_ACCENT2 = "#0ac8b9";
 /* Each colour gets its own way back. They preview like the pickers do rather than
    saving on the spot — a reset that wrote cfg immediately would be the one control
    in the panel Close could not undo. */
-test("each accent resets on its own, and a reset is only kept by Save", () => {
+test("each accent resets on its own, and a reset is only kept by Save", async () => {
   const win = bootApp();
   const read = v => win.document.documentElement.style.getPropertyValue(v).trim().toLowerCase();
   const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg"));
   const $ = id => win.document.getElementById(id);
 
-  $("bSettings").click();
+  $("bSettings").click(); await tick();
   $("sAccent").value = "#ff0000";
   $("sAccent2").value = "#00ff00";
   $("sSave").click();
   assert.equal(read("--gold"), "#ff0000");
 
   // one colour back, the other left exactly where it was
-  $("bSettings").click();
+  $("bSettings").click(); await tick();
   $("sAccentReset1").click();
   assert.equal(read("--gold"), DEFAULT_ACCENT, "the primary is back to default");
   assert.equal(read("--teal"), "#00ff00", "and the secondary was not touched");
@@ -3472,11 +3472,11 @@ test("each accent resets on its own, and a reset is only kept by Save", () => {
   assert.equal(cfg().accent, "#ff0000", "nothing is saved yet");
   assert.equal($("accPrev").classList.contains("show"), false, "reset does not open the colour miniature");
 
-  $("sClose").click();
+  $("sClose").click(); await tick();
   assert.equal(read("--gold"), "#ff0000", "so closing puts the old colour back");
 
   // the same for the secondary, and this time keep it
-  $("bSettings").click();
+  $("bSettings").click(); await tick();
   $("sAccentReset2").click();
   assert.equal(read("--teal"), DEFAULT_ACCENT2);
   assert.equal(read("--gold"), "#ff0000", "the primary stays where it was");
@@ -4940,7 +4940,7 @@ test("the modal panels keep every control the app talks to", () => {
   assert.ok(win.document.getElementById("help").contains(win.document.getElementById("bHelpClose")));
 });
 
-test("leaving Settings by Escape, its ✕ or the backdrop puts every Appearance preview back, not just the colours", () => {
+test("leaving Settings by Escape, its ✕ or the backdrop puts every Appearance preview back, not just the colours", async () => {
   const now = Date.now();
   const acc = { id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: [], history: [],
     stats: { found: true, tier: "GOLD", division: "II", lp: 30, wins: 3, losses: 0, updatedAt: now, champs: [{ name: "Ahri", games: 5, wr: 60 }] } };
@@ -4968,27 +4968,27 @@ test("leaving Settings by Escape, its ✕ or the backdrop puts every Appearance 
     assert.equal(html.style.getPropertyValue("--gold"), "#c8aa6e", how + ": colours");
   };
   preview();
-  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await tick();
   reverted("Escape");
   preview();
-  doc.querySelector("#settings [data-close-panel]").click();
+  doc.querySelector("#settings [data-close-panel]").click(); await tick();
   reverted("the ✕");
 });
 
-test("Effects: Full, Subtle or Off — previewed live, kept on Save, honoured on the next visit", () => {
+test("Effects: Full, Subtle or Off — previewed live, kept on Save, honoured on the next visit", async () => {
   const win = bootApp();
   const doc = win.document;
   const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
   assert.equal(doc.body.dataset.fx, "full", "full by default");
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   const seg = doc.getElementById("sEffects");
   const checked = () => [...seg.querySelectorAll("[data-v]")].filter(b => b.getAttribute("aria-checked") === "true").map(b => b.dataset.v);
   assert.deepEqual(checked(), ["full"]);
   seg.querySelector('[data-v="off"]').click();
   assert.equal(doc.body.dataset.fx, "off", "previews at once");
-  doc.getElementById("sClose").click();
+  doc.getElementById("sClose").click(); await tick();
   assert.equal(doc.body.dataset.fx, "full", "Close puts it back");
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   seg.querySelector('[data-v="subtle"]').click();
   doc.getElementById("sSave").click();
   assert.equal(cfg().effects, "subtle");
@@ -5009,7 +5009,7 @@ test("on touch screens no field is ever under 16px, whatever the text size (iOS 
     "a floor of 16px that Small cannot scale under, and that beats the fields' own smaller rules");
 });
 
-test("Text size: every font size scales with one setting, and nothing else moves", () => {
+test("Text size: every font size scales with one setting, and nothing else moves", async () => {
   const win = bootApp();
   const doc = win.document, html = doc.documentElement;
   const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
@@ -5020,12 +5020,12 @@ test("Text size: every font size scales with one setting, and nothing else moves
   assert.match(all, /--ts:1;/);
   assert.match(all, /html\[data-ts="large"\]\{--ts:1\.15\}/);
   assert.equal(html.dataset.ts, undefined, "default: no attribute at all");
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   doc.querySelector('#sTextSize [data-v="large"]').click();
   assert.equal(html.dataset.ts, "large", "previews at once");
-  doc.getElementById("sClose").click();
+  doc.getElementById("sClose").click(); await tick();
   assert.equal(html.dataset.ts, undefined, "Close puts it back");
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   doc.querySelector('#sTextSize [data-v="small"]').click();
   doc.getElementById("sSave").click();
   assert.equal(cfg().textSize, "small");
@@ -5033,30 +5033,30 @@ test("Text size: every font size scales with one setting, and nothing else moves
   assert.equal(again.document.documentElement.dataset.ts, "large", "applied on boot");
 });
 
-test("themes: one click sets both colours and the atmosphere, kept only on Save", () => {
+test("themes: one click sets both colours and the atmosphere, kept only on Save", async () => {
   const win = bootApp();
   const doc = win.document, root = doc.documentElement.style;
   const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
   const tiles = () => [...doc.querySelectorAll("#sThemes [data-theme]")];
   const on = () => tiles().filter(t => t.getAttribute("aria-checked") === "true").map(t => t.dataset.theme);
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   assert.deepEqual(tiles().map(t => t.dataset.theme), ["hextech", "shadowisles", "noxus", "piltover", "freljord", "ionia", "void", "rank"]);
   assert.deepEqual(on(), ["hextech"], "the defaults are the Hextech theme");
   doc.querySelector('#sThemes [data-theme="noxus"]').click();
   assert.equal(root.getPropertyValue("--gold"), "#d9434a");
   assert.equal(root.getPropertyValue("--teal"), "#b8c0c8");
   assert.deepEqual(on(), ["noxus"]);
-  doc.getElementById("sClose").click();
+  doc.getElementById("sClose").click(); await tick();
   assert.equal(root.getPropertyValue("--gold"), "#c8aa6e", "closing without saving puts it back");
   assert.equal(doc.body.dataset.atmosphere, "spotlight");
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   doc.querySelector('#sThemes [data-theme="piltover"]').click();
   assert.equal(doc.body.dataset.atmosphere, "lattice", "a theme brings its atmosphere");
   doc.getElementById("sSave").click();
   assert.equal(cfg().accent, "#e0a458");
   assert.equal(cfg().accent2, "#3f9cff");
   assert.equal(cfg().atmosphere, "lattice");
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   assert.deepEqual(on(), ["piltover"], "reopening shows the theme in force");
   // a picker of your own is no theme at all
   const pick = doc.getElementById("sAccent");
@@ -5109,7 +5109,7 @@ test("themes: My best rank follows the highest tier, and moves when you climb", 
   assert.equal(root.getPropertyValue("--teal"), "#c8aa6e");
 });
 
-test("atmosphere previews live and only sticks after Save", () => {
+test("atmosphere previews live and only sticks after Save", async () => {
   const win = bootApp();
   const body = win.document.body;
   const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
@@ -5128,30 +5128,30 @@ test("atmosphere previews live and only sticks after Save", () => {
     "atmosphere comes after the colour swatches"
   );
 
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   win.document.querySelector('#sAtmosphere [data-atmosphere="aurora"]').click();
   assert.equal(body.dataset.atmosphere, "aurora", "switches for a live compare");
   assert.equal(cfg().atmosphere, undefined, "nothing written yet");
 
-  win.document.getElementById("sClose").click();
+  win.document.getElementById("sClose").click(); await tick();
   assert.equal(body.dataset.atmosphere, "spotlight", "Close puts the saved choice back");
 
   // Escape / ✕ go through closeAllPanels, which used to keep the preview while
   // only the dedicated Close button reverted it — Save then persisted the wrong one.
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   win.document.querySelector('#sAtmosphere [data-atmosphere="aurora"]').click();
   assert.equal(body.dataset.atmosphere, "aurora");
   win.closeAllPanels();
   assert.equal(body.dataset.atmosphere, "spotlight", "Escape must put the saved choice back too");
 
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   win.document.querySelector('#sAtmosphere [data-atmosphere="noir"]').click();
   win.document.getElementById("sSave").click();
   assert.equal(body.dataset.atmosphere, "noir");
   assert.equal(cfg().atmosphere, "noir");
 
   // default is stored as no preference, same idea as the accent resets
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   win.document.querySelector('#sAtmosphere [data-atmosphere="spotlight"]').click();
   win.document.getElementById("sSave").click();
   assert.equal(body.dataset.atmosphere, "spotlight");
@@ -8604,15 +8604,15 @@ test("out of date is amber like any warning; red stays for lost, banned and irre
 });
 
 // Picking a theme and pressing Esc undid it without a word
-test("once a setting changes, Settings says Save keeps it and closing puts it back", () => {
+test("once a setting changes, Settings says Save keeps it and closing asks first", async () => {
   const win = bootApp(seededAccount());
   const doc = win.document, hint = () => doc.getElementById("sFootHint");
   win.openSettings("look");
   assert.equal(hint().classList.contains("dirty"), false);
   doc.querySelector('#sEffects [data-v="subtle"]').click();
   assert.ok(hint().classList.contains("dirty"), "a change is flagged");
-  assert.match(hint().textContent, /Not saved yet\. Save keeps it; closing puts it back\./);
-  doc.getElementById("sClose").click();
+  assert.match(hint().textContent, /Not saved yet\. Save keeps it; closing asks first\./);
+  doc.getElementById("sClose").click(); await tick();
   win.openSettings("security");
   assert.equal(hint().classList.contains("dirty"), false, "a fresh open starts clean");
   const pw = doc.getElementById("sVaultPass");
@@ -10119,6 +10119,57 @@ test("What's new waits for the master password prompt, then opens in a window of
   assert.equal(doc.getElementById("askCancel").hidden, false);
   doc.getElementById("askCancel").click();
   assert.equal(await p, false);
+});
+
+// Closing Settings put back whatever Save had not kept: right for a theme being
+// tried on, wrong for an API key just pasted in, gone with one Escape
+test("closing Settings with unsaved changes asks first, with Save beside Discard", async () => {
+  const win = bootApp();
+  win.ask = win.__ask;
+  const doc = win.document, $ = id => doc.getElementById(id);
+  const open = id => !$(id).classList.contains("hidden");
+  const type = (id, v) => { $(id).value = v; $(id).dispatchEvent(new win.Event("input", { bubbles: true })); };
+  // nothing changed: Close just closes
+  $("bSettings").click();
+  $("sClose").click();
+  assert.equal(open("settings"), false, "nothing to lose, nothing asked");
+  assert.equal(open("askModal"), false);
+  // a pasted key, then Escape: asked, and Keep editing keeps it
+  $("bSettings").click();
+  type("sKey", "sk-test-123");
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await tick();
+  assert.ok(open("askModal"), "asked");
+  assert.equal($("askTitle").textContent, "Discard your changes to Settings?");
+  assert.equal($("askAlt").textContent, "Save");
+  assert.ok(open("settings"), "Settings stays behind the question");
+  $("askCancel").click();
+  await tick();
+  assert.ok(open("settings"));
+  assert.equal($("sKey").value, "sk-test-123", "Keep editing keeps what was typed");
+  // Close, then Save from the question
+  $("sClose").click();
+  await tick();
+  $("askAlt").click();
+  await tick();
+  assert.equal(open("settings"), false, "Save closes it");
+  assert.equal(appGet(win, "cfg.apiKey"), "sk-test-123", "and keeps the key");
+  // the ✕, then Discard
+  $("bSettings").click();
+  type("sKey", "sk-other");
+  doc.querySelector("#settings [data-close-panel]").click();
+  await tick();
+  $("askOk").click();
+  await tick();
+  assert.equal(open("settings"), false);
+  assert.equal(appGet(win, "cfg.apiKey"), "sk-test-123", "Discard keeps the saved one");
+  // the sync key saves itself the moment it changes, so it is nothing to lose
+  $("bSettings").click();
+  $("sSyncToken").value = "a".repeat(40);
+  $("sSyncToken").dispatchEvent(new win.Event("change", { bubbles: true }));
+  $("sClose").click();
+  assert.equal(open("settings"), false);
+  assert.equal(open("askModal"), false);
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
