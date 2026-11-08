@@ -1046,7 +1046,7 @@ test("a stale card warns with a drawn mark, which a fresh card does not carry", 
   assert.ok(upd("s1").classList.contains("stale"));
   assert.ok(upd("s1").querySelector("svg.ico"), "the warning is an icon, drawn the same everywhere");
   assert.equal(upd("s1").textContent, "Updated 6 days ago", "not a \u26A0 character in the text");
-  assert.equal(upd("f1").querySelector("svg"), null, "a fresh card has nothing to warn about");
+  assert.equal(upd("f1"), null, "a fresh card has nothing to warn about, and says nothing about its time");
 });
 
 // A banned card wore an amber "Updated 40 days ago" warning the toolbar did not count
@@ -5880,8 +5880,10 @@ test("the refresh count is the button that filters to those accounts", () => {
 // Which proxy answered is developer detail: it never changes what you would do
 // next, and it took a slot on every card in the vault.
 test("the source of the numbers hangs off the timestamp instead of taking its own pill", () => {
-  const win = bootApp(ladderSeed());
-  const foot = win.document.querySelector(".c-foot");
+  const seed = ladderSeed();
+  seed[0].stats.updatedAt = Date.now() - 2 * 864e5;   // old enough for the timestamp to show
+  const win = bootApp(seed);
+  const foot = win.document.querySelector(`.card[data-id="${seed[0].id}"] .c-foot`);
   assert.equal(foot.querySelector(".src"), null, "no pill");
   const upd = foot.querySelector(".upd");
   assert.match(upd.textContent, /Updated/);
@@ -8282,7 +8284,7 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
     ["Edit", "Look up", "Mark", "Vault"],
     "named groups — a hairline never says what either side of it is");
   const items = [...m.querySelectorAll("button,.cm-link")];
-  assert.equal(items.length, 10, "ten, now that Season reset and the stats setting live where they belong");
+  assert.equal(items.length, 11, "eleven: Season reset and the stats setting live where they belong, and Refresh rank came in");
   for (const b of items) assert.ok(b.querySelector("svg.ico"), `"${b.textContent.trim()}" carries a mark`);
   // The account name used to sit at the top as the one row that was not an item,
   // which is exactly the row that got clipped once the list had to scroll.
@@ -8290,8 +8292,10 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
   assert.equal(m.querySelectorAll(".cm-sep").length, 0, "and no leftover bare separators");
 });
 
-test("the card footer is Login and a ⋯, with Refresh on the timestamp it changes", () => {
-  const win = bootApp(seededAccount());
+test("the card footer is Login and a ⋯, with Refresh on an old timestamp and in the ⋯", () => {
+  const seed = seededAccount();
+  seed[0].stats.updatedAt = Date.now() - 2 * 864e5;
+  const win = bootApp(seed);
   const acts = win.document.querySelector(".card .acts");
   // Refresh weighed nearly as much as Login there; it sits by "Updated …" now.
   // This account has no login saved yet, so the Login button offers to add one.
@@ -8302,6 +8306,8 @@ test("the card footer is Login and a ⋯, with Refresh on the timestamp it chang
   const called = []; win.check = async id => { called.push(id); };
   ref.click();
   assert.deepEqual(called, ["seed1"], "and it still checks the account");
+  cardMenu(win).querySelector('[data-act="check"]').click();
+  assert.deepEqual(called, ["seed1", "seed1"], "as does the ⋯ menu's Refresh rank");
   // a key, not a person: a person beside "Login" read as signing in to this app
   const d = [...acts.querySelectorAll(".a-login svg path")].map(p => p.getAttribute("d"));
   assert.ok(d.includes("m10.7 12.3 9.3-9.3"), "the key icon: " + d.join(" | "));
@@ -10328,6 +10334,25 @@ test("the win/loss bar is hidden until asked for; a saved choice, even showing e
   assert.deepEqual(JSON.parse(all.localStorage.getItem("smurf-tracker-cfg")).cardHide, []);
 });
 
+// "Updated 4 h ago" and its Refresh sat on every card although the time only
+// matters once a reading is old
+test("a fresh card says nothing about when it was read; past a day it does, with Refresh beside it", () => {
+  const H = 36e5;
+  const acc = (id, ago, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() - ago } }, extra || {});
+  const win = bootApp([acc("fresh", 4 * H), acc("day", 30 * H), acc("old", 100 * H), acc("seen", 4 * H, { lastLoginAt: Date.now() - H })]);
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  assert.equal(card("fresh").querySelector(".c-meta"), null, "nothing: a normal reading goes unsaid");
+  assert.match(card("day").querySelector(".upd").textContent, /^Updated 1 day ago$/);
+  assert.equal(card("day").querySelector(".upd").classList.contains("stale"), false, "neutral under three days");
+  assert.ok(card("day").querySelector('.c-meta .c-ref[data-act="check"]'), "with its Refresh");
+  assert.ok(card("old").querySelector(".upd.stale"), "amber past three, as the header counts it");
+  assert.deepEqual([...card("seen").querySelector(".c-meta").children].map(e => e.className), ["src"], "a last login still says itself");
+  // a check that failed is an exception, so it shows, with a way to try again
+  runScript(win, `accounts.find(a => a.id === "fresh").stats.note = "auto-fetch failed (rate limited)"; render()`);
+  assert.deepEqual([...card("fresh").querySelector(".c-meta").children].map(e => e.className.split(" ")[0]), ["c-ref", "c-failed"]);
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
@@ -11470,6 +11495,7 @@ test("an account left alone says Idle and for how long, in words", () => {
 test("a card's footer says Updated, then Refresh, then Last login, each named for what it is", () => {
   const seed = seededAccount();
   Object.assign(seed[0], { lastLoginAt: Date.now() - 3 * 864e5 });
+  seed[0].stats.updatedAt = Date.now() - 2 * 864e5;
   const win = bootApp(seed);
   const meta = win.document.querySelector(".card .c-meta");
   const kids = [...meta.children].map(el => el.className.split(" ")[0]);

@@ -5683,7 +5683,19 @@ function cardHTML(a,i){
       <!-- Where the numbers came from used to sit here as its own pill. It is
            developer detail: it never changes what you would do next, and it took a
            slot on every card in the vault. It hangs off the timestamp instead. -->
-      <span class="c-meta"><span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${s&&s.updatedAt?(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt):"Never updated"}</span>${a.status==="banned"?"":`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`}${isLive(a)&&isFailed(a)?`<span class="c-failed" title="${esc(failReason(s.note))}">${icon("alert")}Last check failed</span>`:""}${a.lastLoginAt?`<span class="src" title="The last time you copied or looked at this account's login here">Last login ${esc(timeAgo(a.lastLoginAt))}</span>`:""}</span>
+      ${(()=>{
+        /* What is normal goes unsaid. "Updated 4 h ago" sat on every card in the vault
+           and only matters once a reading is old: it shows past a day, in amber past
+           three (the header counts those). Refresh sits beside it then, and beside a
+           failed check; otherwise it is in the ⋯ menu, with Check all and auto-check
+           covering the rest. */
+        const old=!!(s&&s.updatedAt&&Date.now()-s.updatedAt>864e5), failed=isLive(a)&&isFailed(a);
+        const parts=(old?`<span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt)}</span>`:"")
+          +((old||failed)&&a.status!=="banned"?`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`:"")
+          +(failed?`<span class="c-failed" title="${esc(failReason(s.note))}">${icon("alert")}Last check failed</span>`:"")
+          +(a.lastLoginAt?`<span class="src" title="The last time you copied or looked at this account's login here">Last login ${esc(timeAgo(a.lastLoginAt))}</span>`:"");
+        return parts?`<span class="c-meta">${parts}</span>`:"";
+      })()}
       <!-- Three buttons, not five, and the ⋯ no longer unfolds a second toolbar
            into the card: it opens one shared floating menu (see cardMenuHTML).
            DPM moved in there with the rest — it is an outbound link you follow
@@ -5744,6 +5756,8 @@ function cardMenuHTML(a){
     // Both profile links together. op.gg used to sit in the footer while dpm.lol
     // sat in here, which split one kind of thing across two places.
     +grp("Look up")
+    // the card shows its own Refresh only once a reading is old or a check failed
+    +(a.status==="banned"?"":it("check","refresh","Refresh rank"))
     +`<a class="cm-link" href="${opgg}" target="_blank" rel="noreferrer" role="menuitem">${icon("external")}<span>op.gg</span></a>`
     +`<a class="cm-link" href="${dpm}" target="_blank" rel="noreferrer" role="menuitem">${icon("external")}<span>dpm.lol</span></a>`
     +grp("Mark")
