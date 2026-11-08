@@ -418,6 +418,10 @@ function isStale(a){
   return a.status!=="banned"&&isChecked(a)&&s.found!==false&&!!(s.tier||s.level!=null)&&Date.now()-s.updatedAt>STALE_MS;
 }
 function isRanked(a){const t=a.stats&&a.stats.found!==false&&(a.stats.tier||"").toUpperCase();return !!(t&&t!=="UNRANKED")}
+/* An account with no rank yet. "Never checked" is right until a check has been
+   tried; after one that failed it sat over "Last check failed" on the same card,
+   one line saying the check never happened and the next that it did. */
+function noRankLabel(a){return isFailed(a)?"No rank yet":"Never checked"}
 function isFailed(a){
   if(!a.stats||a.stats.found===false)return false;
   // Transport failure note only — "failed (" alone matched too many informational notes.
@@ -5294,7 +5298,7 @@ function rowHTML(a,i){
   const dv=a.status==="banned"?0:lastDelta(a);
   let rank="—",lp="";
   if(isChecking)rank="…";
-  else if(!hasReading(s))rank="Never checked";
+  else if(!hasReading(s))rank=noRankLabel(a);
   else if(s.found===false)rank="Not found";
   else if(isRanked(a)){
     rank=tierLabel(s);
@@ -5365,7 +5369,7 @@ function tileHTML(a){
   const icon0=iconUrl(s);
   let rank="Never checked",lp="";
   if(checking.has(a.id))rank="…";
-  else if(!hasReading(s))rank="Never checked";
+  else if(!hasReading(s))rank=noRankLabel(a);
   else if(s.found===false)rank="Not found";
   else if(isRanked(a)){
     rank=tierLabel(s);
@@ -5465,7 +5469,7 @@ function cardHTML(a,i){
   const levelLed=!!(s&&s.found!==false&&!isRanked(a)&&s.level);
   let rankBlock;
   if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
-  else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">Never checked</div>`;
+  else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">${noRankLabel(a)}</div>`;
   // amber like the header's warning: a Riot ID op.gg doesn't know is usually one to
   // correct, so the line is the way to correct it, not only the advice to
   else if(s.found===false)rankBlock=`<div class="wl c-miss">${icon("alert")}<span>Not found on op.gg</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;

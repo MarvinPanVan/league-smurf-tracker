@@ -6629,7 +6629,8 @@ test("a first check that failed leaves the account never checked, not unranked",
     stats: { note: "Auto-fetch failed (timeout) — enter it by hand with ✎ Rank" },
   }]);
   const card = win.document.querySelector('.card[data-id="f1"]');
-  assert.match(card.textContent, /Never checked/);
+  assert.match(card.textContent, /No rank yet/);
+  assert.doesNotMatch(card.textContent, /Never checked/, "a check was tried: \"Never checked\" beside \"Last check failed\" contradicted it");
   assert.doesNotMatch(card.textContent, /Unranked|No ranked games found/);
   assert.match(card.textContent, /Last check failed/, "and it says the check failed");
   assert.match(card.querySelector(".c-failed").title, /took too long/, "and why, on the mark");
@@ -6642,8 +6643,8 @@ test("a first check that failed leaves the account never checked, not unranked",
   for (const layout of ["list", "wall"]) {
     win.document.querySelector(`[data-density="${layout}"]`).click();
     const el = win.document.querySelector('[data-id="f1"] .hx-in');
-    assert.match(el.textContent, /Never checked/, layout);
-    assert.doesNotMatch(el.textContent, /Unranked/, layout);
+    assert.match(el.textContent, /No rank yet/, layout + " says the same");
+    assert.doesNotMatch(el.textContent, /Unranked|Never checked/, layout);
   }
 });
 
