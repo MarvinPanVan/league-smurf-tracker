@@ -10471,6 +10471,20 @@ test("the header's status words wrap onto a second line instead of widening a ph
   assert.match(html.match(/\n  \.rib-row\{([^}]*)\}/)[1], /flex-wrap:wrap/, "as the row around them does");
 });
 
+// A banned account's card mutes its Login; its list row still offered both copy keys
+// at full strength
+test("a banned row's copy keys step back like the banned card's Login, and still work", () => {
+  const rule = html.match(/\n  \.rw\.dead \.rw-key\{([^}]*)\}/);
+  assert.ok(rule, "a rule for them");
+  assert.match(rule[1], /color:var\(--faint\)/);
+  const win = bootApp([{ id: "b", region: "EUW", gameName: "B", tagLine: "1", status: "banned", tags: [], history: [], login: "old", password: "pw",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() } }]);
+  win.document.querySelector('[data-density="list"]').click();
+  const row = win.document.querySelector('.rw[data-id="b"]');
+  assert.ok(row.classList.contains("dead"), "the row is marked");
+  assert.equal(row.querySelectorAll(".rw-key").length, 2, "both keys are still there, for an appeal");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

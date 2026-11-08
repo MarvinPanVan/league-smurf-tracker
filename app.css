@@ -932,6 +932,10 @@
      the strikethrough say it; the rail is gone, and Login is a plain button. */
   .card.dead .a-login{background-color:var(--panel2);border-color:var(--btn-edge);color:var(--muted);font-weight:600}
   .card.dead .a-login:hover{color:var(--text)}
+  /* the list's copy keys step back on a banned row the way the card's Login does:
+     still there (a login is wanted for an appeal), no longer an invitation */
+  .rw.dead .rw-key{color:var(--faint);opacity:.6}
+  .rw.dead .rw-key:hover{color:var(--text);opacity:1}
   .card.dead .rk-crest,.rw.dead .rw-crest{filter:grayscale(.9);opacity:.55}
   .card.dead .rk .rk-t,.rw.dead .rw-rank b{text-decoration:line-through;
     text-decoration-thickness:1.5px;text-decoration-color:currentColor;opacity:.62}
