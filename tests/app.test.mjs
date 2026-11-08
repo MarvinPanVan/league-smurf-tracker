@@ -65,6 +65,9 @@ function bootApp(seed, tweak, url = "https://example.com/index.html") {
   window.fetch = async () => { throw new Error("network disabled in tests"); };
   window.confirm = () => true;
   window.alert = () => {};
+  // jsdom has no object URLs; an export that runs on after its test would throw for lack of one
+  window.URL.createObjectURL = () => "blob:test";
+  window.URL.revokeObjectURL = () => {};
   if (seed) window.localStorage.setItem("smurf-tracker", JSON.stringify(seed));
   if (tweak) tweak(window);
   runScript(window, appScript); // runs the app's boot() at the end, exactly like a real page load
@@ -2167,6 +2170,7 @@ test("dates are where you are: backup and export file names, and the passkey's d
     runScript(win, "doExport()");
     await tick();   // the plain-text question is answered first
     win.document.getElementById("bExportCsv").click();
+    await tick();   // its own plain-text question first
     assert.deepEqual([...win.__names], ["smurf-backup-plaintext-2026-10-29.json", "smurf-export-2026-10-29.csv"]);
     win.localStorage.setItem("smurf-tracker-passkey", JSON.stringify({ v: 1, id: "AAAA", salt: "AAAA", iv: "AAAA", ct: "AAAA", at: Date.UTC(2026, 9, 28, 12, 0) }));
     runScript(win, "updatePkStatus()");
@@ -9704,6 +9708,30 @@ test("search finds an account by its whole Riot ID, however it was pasted", asyn
   assert.equal(pal("lunar echo #euw"), "e");
   assert.equal(pal("echo lunar"), "e", "words in any order");
   assert.equal(pal("Lunar Echo#NA1"), "");
+});
+
+// The plain-text JSON export warned; the CSV, with the same passwords in it, did not
+test("exporting a spreadsheet with logins in it says so first, like the JSON backup", async () => {
+  const win = bootApp([pwAcc("a", "Zt7#q!Lm2pWx")]);
+  let asked = null, saved = 0;
+  win.ask = async o => { asked = o; return false; };
+  const catchSaves = w => runScript(w, `URL.createObjectURL = () => "blob:x"; URL.revokeObjectURL = () => {};
+    downloadBlob = () => { window.__saved = (window.__saved || 0) + 1 };
+    HTMLAnchorElement.prototype.click = function () { if (this.download) window.__saved = (window.__saved || 0) + 1 }`);
+  catchSaves(win);
+  win.document.getElementById("bExportCsv").click(); await tick();
+  assert.match(asked.title, /spreadsheet with your logins/);
+  assert.match(asked.body, /passwords and emails are in the file as plain text/);
+  assert.equal(win.__saved, undefined, "and No exports nothing");
+  win.ask = async () => "ok";
+  win.document.getElementById("bExportCsv").click(); await tick();
+  assert.equal(win.__saved, 1, "Yes exports it");
+  // an account with no login at all has nothing to warn about
+  const bare = bootApp([{ id: "b", region: "EUW", gameName: "B", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  let bareAsked = 0; bare.ask = async () => { bareAsked++; return "ok"; };
+  catchSaves(bare);
+  bare.document.getElementById("bExportCsv").click(); await tick();
+  assert.equal(bareAsked, 0);
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

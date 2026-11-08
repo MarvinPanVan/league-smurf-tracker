@@ -6790,8 +6790,12 @@ function csvCell(v){
   if(/^['=+\-@\t\r]/.test(s))s="'"+s;
   return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
 }
-function doExportCSV(){
+async function doExportCSV(){
   if(previewMode){toast("Exit preview before exporting. This is example data, not your vault");return}
+  // The JSON backup warned that its passwords are readable; the spreadsheet, the file
+  // most likely to be opened, shared or synced somewhere, said nothing.
+  if(accounts.some(a=>a.password||a.login||a.email)&&!await ask({title:"Export a spreadsheet with your logins in it?",
+    body:"Usernames, passwords and emails are in the file as plain text, readable by anyone who opens it.",ok:"Export"}))return;
   // The note fields go on the end, so every column a spreadsheet already reads by
   // position stays where it was.
   const nf=noteFields();
