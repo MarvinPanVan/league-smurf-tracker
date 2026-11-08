@@ -2592,7 +2592,8 @@ test("On each card: any part can wait under Details, Compact is chart and stats,
   doc.getElementById("bSettings").click(); await tick();
   const box = k => doc.querySelector(`#sCardParts [data-part="${k}"]`);
   assert.deepEqual([...doc.querySelectorAll("#sCardParts [data-part]")].map(b => b.dataset.part), ["chart", "stats", "wl", "goal", "tags", "notes"]);
-  assert.ok([...doc.querySelectorAll("#sCardParts [data-part]")].every(b => b.checked), "everything shows by default");
+  assert.deepEqual([...doc.querySelectorAll("#sCardParts [data-part]")].filter(b => !b.checked).map(b => b.dataset.part), ["wl"],
+    "everything shows by default but the win/loss bar, which repeats the win rate printed above it");
   box("tags").checked = false; box("tags").dispatchEvent(new win.Event("change", { bubbles: true }));
   assert.ok(body.classList.contains("hide-tags"), "previews at once");
   assert.ok(card().querySelector('[data-act="info"]'), "and the card grows a Details handle to find them under");
@@ -2605,12 +2606,12 @@ test("On each card: any part can wait under Details, Compact is chart and stats,
   assert.equal(box("stats").checked, false);
   assert.equal(box("notes").checked, true, "Compact is the chart and the stats, nothing else");
   doc.getElementById("sSave").click();
-  assert.deepEqual(cfg().cardHide, ["chart", "stats"]);
+  assert.deepEqual(cfg().cardHide, ["wl", "chart", "stats"]);
   const css = [...doc.querySelectorAll("style")].map(s => s.textContent).join("\n");
   for (const [cls, part] of [["chart", ".lpc"], ["stats", ".c-stats"], ["wl", ".wrbar"], ["goal", ".goal"], ["tags", ".ctags"], ["notes", ".c-notes"]])
     assert.ok(css.includes(`body.hide-${cls} .card:not(.info-open) ${part}`), `${cls} hides ${part} on a closed card`);
   const drawer = card().querySelector('[data-act="info"]');
-  assert.match(drawer.title, /^LP chart, Peak & stats, past seasons/, "the handle says what is under it");
+  assert.match(drawer.title, /^LP chart, Peak & stats, Win\/loss bar, past seasons/, "the handle says what is under it");
   drawer.click();
   assert.ok(card().classList.contains("info-open"), "an opened card gets them back");
   // a vault that turned Compact on in 2.1 opens looking the same
@@ -10302,6 +10303,26 @@ test("need a refresh is a header state, and its view keeps its accounts while th
   assert.deepEqual(shown(), ["new", "old1", "old2"]);
   runScript(win, "ui.flag='stale'; render()");
   assert.deepEqual(shown(), [], "opened again, it starts from what is out of date now");
+});
+
+// A win bar under "57% WR" drew the same number twice, and with a goal it was one of
+// two bars in a row that meant different things
+test("the win/loss bar is hidden until asked for; a saved choice, even showing everything, is kept", () => {
+  const acc = { id: "w", region: "EUW", gameName: "W", tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 30, wins: 30, losses: 20, updatedAt: Date.now() } };
+  const win = bootApp([acc]);
+  assert.ok(win.document.body.classList.contains("hide-wl"), "hidden by default");
+  assert.match(win.document.querySelector('.card[data-id="w"]').textContent, /60% WR/, "the rate itself stays");
+  assert.equal(win.document.querySelector('.card[data-id="w"] [data-act="info"]'), null, "and a hidden bar alone grows no Details handle");
+  const all = bootApp([acc], w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, cardHide: [] })));
+  assert.equal(all.document.body.classList.contains("hide-wl"), false, "someone who chose to show everything still sees it");
+  // and choosing it is saved as a choice, not as "no preference"
+  all.document.getElementById("bSettings").click();
+  const box = all.document.querySelector('#sCardParts [data-part="tags"]');
+  box.checked = false; box.dispatchEvent(new all.Event("change", { bubbles: true }));
+  box.checked = true; box.dispatchEvent(new all.Event("change", { bubbles: true }));
+  all.document.getElementById("sSave").click();
+  assert.deepEqual(JSON.parse(all.localStorage.getItem("smurf-tracker-cfg")).cardHide, []);
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

@@ -5694,7 +5694,7 @@ function cardHTML(a,i){
       </div>
     </div>
     ${openInfo.has(a.id)&&(hasInfo(a)||canForm(a))?infoBlockHTML(a,rv("info")):""}
-    ${hasInfo(a)||cardHidden().length||canForm(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${esc(drawerTitle())}">
+    ${hasInfo(a)||cardHidden().some(k=>k!=="wl")||canForm(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${esc(drawerTitle())}">
       <span class="c-dl" aria-hidden="true"></span>
       <span class="c-dt">${open?"Close":"Details"}</span>
       <svg class="ico" viewBox="0 0 26 12" aria-hidden="true"><polyline points="2 3 13 10 24 3"/></svg>
@@ -6649,9 +6649,15 @@ function applyTextSize(v){
 function applyEffects(v){const f=EFFECTS.includes(v)?v:"full";document.body.dataset.fx=f;syncOptSeg("sEffects",f);return f}
 const CARD_PARTS=[["chart","LP chart"],["stats","Peak & stats"],["wl","Win/loss bar"],["goal","Goal & level bar"],["tags","Tags"],["notes","Notes"]];
 let pendingCardHide=null; // Settings' choice before Save
+/* Hidden until asked for: the win/loss bar. It drew the win rate printed just above
+   it a second time, and on a card with a goal it was one of two bars in a row that
+   meant different things. A choice saved in Settings, even "show everything" ([]),
+   is kept as it is. */
+const DEFAULT_CARD_HIDE=["wl"];
+// (the win rate stays printed, so a hidden bar alone is no reason for a Details handle)
 function cardHidden(){
   const list=pendingCardHide||cfg.cardHide;
-  return Array.isArray(list)?list.filter(k=>CARD_PARTS.some(p=>p[0]===k)):[];
+  return Array.isArray(list)?list.filter(k=>CARD_PARTS.some(p=>p[0]===k)):DEFAULT_CARD_HIDE.slice();
 }
 function applyCompact(){const h=new Set(cardHidden());for(const[k]of CARD_PARTS)document.body.classList.toggle("hide-"+k,h.has(k))}
 function renderCardParts(){
@@ -7554,7 +7560,7 @@ $("sSave").addEventListener("click",async()=>{
   }
   // the Details handle depends on it, so the cards are redrawn when it changes
   if(pendingChampArt!==null){cfg.champArt=pendingChampArt?null:false;pendingChampArt=null;renderGrid()}
-  if(pendingCardHide){cfg.cardHide=pendingCardHide.length?pendingCardHide:null;delete cfg.compactCards;pendingCardHide=null;applyCompact();renderGrid()}
+  if(pendingCardHide){cfg.cardHide=pendingCardHide.slice();delete cfg.compactCards;pendingCardHide=null;applyCompact();renderGrid()}
   cfg.effects=applyEffects(document.body.dataset.fx);if(cfg.effects==="full")cfg.effects=null;
   cfg.textSize=applyTextSize(document.documentElement.dataset.ts);if(cfg.textSize==="default")cfg.textSize=null;
   cfg.atmosphere=applyAtmosphere(document.body.dataset.atmosphere||DEFAULT_ATMOSPHERE);
