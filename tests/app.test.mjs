@@ -9765,6 +9765,34 @@ test("offline, Check all and Refresh say so instead of failing every account", a
   assert.equal(win.document.querySelectorAll(".c-failed").length, 0, "and no card marked as failed for it");
 });
 
+// A new account was sorted in somewhere below while the page stayed at the top, so it
+// looked as if nothing had been added
+test("a new account is scrolled to and lit up, even past a filter that would hide it", async () => {
+  const ranked = (id, n, tier) => ({ id, region: "EUW", gameName: n, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier, division: "I", lp: 1, updatedAt: Date.now() } });
+  const win = bootApp([ranked("a", "Alpha", "DIAMOND"), ranked("b", "Beta", "GOLD"), ranked("c", "Gamma", "SILVER")]);
+  const doc = win.document, scrolled = [];
+  win.Element.prototype.scrollIntoView = function () { scrolled.push(this.dataset.id) };
+  // a search that the new account will not match
+  doc.getElementById("tSearch").value = "Alpha";
+  doc.getElementById("tSearch").dispatchEvent(new win.Event("input", { bubbles: true }));
+  await new Promise(r => setTimeout(r, 180));
+  doc.getElementById("bAdd").click();
+  doc.getElementById("fName").value = "Zeta New"; doc.getElementById("fTag").value = "EUW";
+  doc.getElementById("fSave").click();
+  const id = appGet(win, "accounts.find(a => a.gameName === 'Zeta New').id");
+  const card = doc.querySelector(`.card[data-id="${id}"]`);
+  assert.ok(card, "the filter that would hide it is gone");
+  assert.equal(doc.getElementById("tSearch").value, "");
+  assert.ok(card.closest(".hx").classList.contains("flash"), "lit up");
+  assert.equal(scrolled.at(-1), id, "and brought into view");
+  // Bulk add takes you to the first of what it added
+  doc.getElementById("bBulkAdd").click();
+  doc.getElementById("baList").value = "Omega One#EUW\nOmega Two#EUW";
+  doc.getElementById("baSave").click();
+  assert.equal(scrolled.at(-1), appGet(win, "accounts.find(a => a.gameName === 'Omega One').id"));
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

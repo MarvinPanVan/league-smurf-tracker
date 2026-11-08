@@ -6379,6 +6379,7 @@ function submitForm(){
     newId=a.id;
   }
   saveDB();closeForm();render();
+  if(newId)revealAccount(newId);
   /* A new account came in as "Never checked" and stayed that way until somebody
      found Refresh, on an app that says rank checks are free and automatic. It is
      read straight away now, the same check its own Refresh runs. Not in the
@@ -7770,6 +7771,7 @@ $("baSave").addEventListener("click",()=>{
     added++;
   }
   render();$("bulkAdd").classList.add("hidden");
+  if(newIds.length)revealAccount(newIds[0]);
   const msg=added+" added"+(skipped?", "+skipped+" duplicate"+(skipped===1?"":"s")+" skipped":"")+(bad?", "+bad+" line"+(bad===1?"":"s")+" couldn't be parsed":"");
   // The new ones are read straight away, through the same paced run as Check all
   // ranks: its progress bar, its Stop, its summary at the end.
@@ -8064,17 +8066,25 @@ function runPalette(i){
   if(it.type==="cmd"||it.type==="key"){it.c.run();return}
   // An account is a place, not an action: go there, in the layout that can
   // actually show it, and light it up so it is obvious which one you landed on.
-  const id=it.a.id;
   if(ui.density==="wall"){ui.density="cards";cfg.density="cards";saveCfg()}
-  ui.search="";ui.tier="";ui.flag="";ui.tag=null;ui.favOnly=false;
-  ui.region="";ui.status="";
-  // Palette results are the live vault only — jumping from the Archived view
-  // still has to leave that view, or the card it landed on is filtered out.
-  ui.showArchived=!!it.a.archived;
+  revealAccount(it.a.id,true);
+}
+/* Go to an account and light it up. Quick find did this; a new account did not:
+   the page stayed at the top and the card was sorted in somewhere below, so it
+   looked as if nothing had been added. `clear` drops every filter on the way
+   (Quick find); otherwise filters go only if they hide the account. */
+function clearFilters(a){
+  ui.search="";ui.tier="";ui.flag="";ui.tag=null;ui.favOnly=false;ui.region="";ui.status="";
+  // the Archived view is a view of its own: leave it for a live account, enter it for an archived one
+  ui.showArchived=!!(a&&a.archived);
   $("tSearch").value="";syncToggles();
+}
+function revealAccount(id,clear){
+  const a=accounts.find(x=>x.id===id);if(!a)return;
+  if(clear||!filtered().some(x=>x.id===id))clearFilters(a);
   flashId=id;render();
-  const card=$("grid").querySelector(`[data-id="${idSel(id)}"]`);
-  if(card&&card.scrollIntoView)card.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
+  const el=$("grid").querySelector(`[data-id="${idSel(id)}"]`);
+  if(el&&el.scrollIntoView)el.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
   setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1600);
 }
 $("palInput").addEventListener("input",()=>{palSel=0;renderPalette()});
