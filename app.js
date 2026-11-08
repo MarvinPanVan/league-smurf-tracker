@@ -110,12 +110,12 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.26.2";
+const APP_VERSION="2.27.0";
 const APP_CHANGELOG=[
-  {v:"2.26.2",items:[
-    "A card opened from \"+N more\" has a Close button, and its skins are all listed",
+  {v:"2.27.0",items:[
+    "Play next is now Suggested game, and says why first: \"Decays in 3 days\", then the account",
     "On a phone, Check all ranks and + Add account share one row, and the status line no longer ends in a stray dot",
-    "A never-checked card has its own Check rank button, and Help is shorter and up to date",
+    "Cards opened from \"+N more\" can be closed, never-checked cards have a Check rank button, and a picture that won't load leaves the initial",
   ]},
   {v:"2.26.1",items:[
     "On a phone, the header's status line wraps instead of making the whole page wider",
