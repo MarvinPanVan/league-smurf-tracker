@@ -9028,17 +9028,20 @@ test("on a phone a list row copies its login, and checkboxes come with Select", 
 });
 
 // "+87 LP" didn't say over what, and the pace took a row of its own ("Climb · +21 LP/day")
-test("the LP chip says it is since the last check, with the pace beside it, and no Climb row", () => {
+test("the LP chip says it is since the last check; the pace is in the chart's newest tip, not on the card", () => {
   const D = 864e5, now = Date.now();
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [],
     history: [{ t: now - 20 * D, tier: "GOLD", division: "I", lp: 0 }, { t: now - 5 * D, tier: "PLATINUM", division: "III", lp: 74 }, { t: now - 3600000, tier: "PLATINUM", division: "II", lp: 61 }],
     stats: { found: true, tier: "PLATINUM", division: "II", lp: 61, wins: 38, losses: 29, updatedAt: now - 3600000 } }]);
   const card = win.document.querySelector('.card[data-id="a"]');
   assert.match(card.querySelector(".c-deltas .delta").textContent, /\+87 LP/);
-  assert.match(card.querySelector(".c-deltas .d-cap").textContent, /^since last check · \+\d+ LP\/day$/);
-  // at 12px the caption pushed "Platinum II" to "Platinu…" on a phone: the rank keeps
-  // its width, and the caption wraps at its "·", never inside a piece
-  assert.equal(card.querySelectorAll(".d-cap>span").length, 2);
+  assert.equal(card.querySelector(".c-deltas .d-cap").textContent, "since last check",
+    "the pace was a fourth way of saying going up, beside the chip, the chart and the goal");
+  const tips = [...card.querySelectorAll(".lpc-pt .lpc-tip")];
+  assert.match(tips.at(-1).textContent, /\+\d+ LP\/day lately$/, "it answers on the newest point instead");
+  assert.ok(tips.slice(0, -1).every(t => !/LP\/day/.test(t.textContent)), "and only there");
+  // at 12px the caption pushed "Platinum II" to "Platinu…" on a phone: the rank keeps its width
+  assert.equal(card.querySelectorAll(".d-cap>span").length, 1);
   assert.match(html, /\n  \.c-rk-l\{min-width:0;flex:0 0 auto;max-width:100%\}/);
   assert.match(html, /\n  \.d-cap>span\{white-space:nowrap\}/);
   assert.doesNotMatch(card.querySelector(".c-stats")?.textContent || "", /Climb/, "no row of its own");

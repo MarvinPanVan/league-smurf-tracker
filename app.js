@@ -1298,6 +1298,7 @@ function groupColor(k){
 // a coloured band per tier, division hairlines when the view is tight enough for
 // them to mean anything, and every check as its own hoverable point.
 function rankChart(hist,cut,mode,key,peakV,peakLabel){
+  const pace=paceText(hist);
   let pts=(hist||[]).map(h=>({h,v:ladderLP(h)})).filter(p=>p.v!==null);
   if(!pts.length)return"";
   // One check was drawn as a whole chart frame with a single dot in it, saying
@@ -1492,7 +1493,8 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     // A two-line tip is about 42px plus its 10px gap. A dot higher than that has
     // no room above it, so the tip goes underneath instead of over the chart's
     // top edge — and out of the range switcher's corner.
-    const hi=py(p.v)<52?" hi":"";
+    const paceHere=i===last?pace:"";
+    const hi=py(p.v)<(paceHere?66:52)?" hi":"";
     const when=p.h.t?timeAgo(p.h.t):null;
     const w=cr-cl;
     const anchor=last===0?50:(i===0?0:i===last?100:50); // where the dot sits in its column
@@ -1508,7 +1510,8 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     return `<div class="lpc-pt${i===last?" now":""}" style="left:${xp.toFixed(2)}%;width:min(${w.toFixed(2)}%,28px);transform:translateX(-${anchor}%);--x:${anchor}%;--y:${py(p.v).toFixed(1)}px;--hl:${hl}px;--hr:${hr}px">`
       +`<span class="lpc-hit"></span>`
       +`<b style="top:${py(p.v).toFixed(1)}px"><i style="background:${tierColor(p.h.tier)}"></i>`
-      +`<span class="lpc-tip${side}${hi}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(dateLabel(p.h.t,"year"))} · ${esc(when)}</em>`:""}</span></b></div>`;
+      +`<span class="lpc-tip${side}${hi}">${esc(shortRank(p.h)||"—")}${when?`<em>${esc(dateLabel(p.h.t,"year"))} · ${esc(when)}</em>`:""}`
+      +`${paceHere?`<em>${esc(paceHere)} lately</em>`:""}</span></b></div>`;
   }).join("");
 
   // Date axis. Ticks sit at the ends and at even time fractions between them, and
@@ -1978,6 +1981,8 @@ function gamesSince(hist){
    "which way is this account actually going", which is the one you sort by.
    A season break inside the window is a new baseline: measuring Diamond→Silver
    across one would call a reset "−200 LP/day". */
+// "+20 LP/day", or "" when the account is not really moving (under 1 LP a day)
+function paceText(hist){const r=climbRate(hist);return r&&Math.abs(r.lpPerDay)>=1?(r.lpPerDay>0?"+":"")+Math.round(r.lpPerDay)+" LP/day":""}
 function climbRate(hist){
   if(!hist||hist.length<2)return null;
   // Trailing Unranked means the account is off the ladder — a rate built on the
@@ -5505,11 +5510,9 @@ function cardHTML(a,i){
     /* "+87 LP" over what? Said under the chip now, with the pace beside it: the
        pace had a whole row of the card to itself ("Climb · +21 LP/day"), and
        without "since last check" the two numbers read as a contradiction. */
-    const r=dead?null:climbRate(hist), pace=r&&Math.abs(r.lpPerDay)>=1?(r.lpPerDay>0?"+":"")+Math.round(r.lpPerDay)+" LP/day":"";
-    // each piece unbroken, so a narrow card wraps at the "·" and the rank name beside
-    // it keeps its width ("Platinum II" was cut to "Platinu…" on a phone)
-    const cap=[dv&&!dead?"since last check":"",pace].filter(Boolean).map(t=>`<span>${esc(t)}</span>`).join(" · ");
-    if(cap)deltaChip+=`<span class="d-cap" title="${pace?"The average pace over the chart's checks":"Since previous check"}">${cap}</span>`;
+    // The pace ("+20 LP/day") was a fourth way of saying "going up", beside this chip,
+    // the chart and the goal: it is in the chart's tip on the newest point now (paceText).
+    if(dv&&!dead)deltaChip+=`<span class="d-cap" title="Since previous check"><span>since last check</span></span>`;
   }
   /* There was a flame "Climbing" chip here too (LP up three checks running). It was
      the fourth way the card said "going up", beside the +LP chip, the Climb figure
