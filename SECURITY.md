@@ -97,7 +97,7 @@ Treat a plaintext export like the passwords themselves.
   account shares that origin and its storage, so another project published there could
   have read the vault. The old address still serves the app, to hand vaults over.
   If you would rather trust a copy you control, run your own (download the repository
-  and open `index.html`, or host a private copy for yourself, as the [licence](LICENSE)
+  and open `index.html`, or host a private copy for yourself, as the [license](LICENSE)
   allows).
 - **Public CORS proxies.** Without your own worker, rank checks go through third-party
   proxies, which see which Riot IDs you look up. Deploy the worker to avoid that.

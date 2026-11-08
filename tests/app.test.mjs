@@ -2110,7 +2110,7 @@ test("passkey unlock: a cancel leaves the password box, and the typed password s
   fakePasskeys(win, { cancelGet: true });
   doc.getElementById("lockPk").click();
   await until(() => doc.getElementById("lockErr").style.display === "block", "the cancel to be said");
-  assert.match(doc.getElementById("lockErr").textContent, /^Cancelled\./);
+  assert.match(doc.getElementById("lockErr").textContent, /^Canceled\./);
   assert.equal(doc.getElementById("lock").classList.contains("hidden"), false);
   assert.equal(doc.getElementById("lockPk").disabled, false, "and can be tried again");
   doc.getElementById("lockPass").value = "master-pass-123";
@@ -2246,7 +2246,7 @@ test("passkey unlock: says when it can't be used, and never makes a passkey the 
   btn.click();
   await until(() => btn.textContent === "Finish set-up", "the second step");
   btn.click();
-  await until(() => /^Cancelled\. Tap Finish set-up to try again/.test(half.document.getElementById("toast").textContent), "the cancel");
+  await until(() => /^Canceled\. Tap Finish set-up to try again/.test(half.document.getElementById("toast").textContent), "the cancel");
   assert.equal(btn.textContent, "Finish set-up");
   assert.equal(gone.length, 0);
   fakePasskeys(half, { noPrfGet: true });
@@ -10001,6 +10001,28 @@ test("times ago use whole words for every unit, and the list column fits them", 
   for (const c of [base, wide, mid]) assert.ok(updCol(c) >= 88, "the Updated column: " + c);
 });
 
+// "colour" and "licence" beside "Favorites" and "Honor", and a screen reader saying
+// "color" for the button the eye reads as "colour". Riot writes American English.
+test("the page's words are spelled one way, American, as Riot's are", () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], fav: true,
+    stats: { found: true, tier: "GOLD", division: "II", lp: 50, wins: 10, losses: 10, updatedAt: Date.now() } }]);
+  const doc = win.document;
+  const terms = doc.querySelector("#help .terms");
+  if (terms) terms.remove(); // the terms are left word for word
+  doc.querySelectorAll("script,style").forEach(e => e.remove()); // the inlined code and its comments
+  const said = [doc.body.textContent, doc.title,
+    ...[...doc.querySelectorAll("[title],[aria-label],[placeholder]")].flatMap(e => ["title", "aria-label", "placeholder"].map(k => e.getAttribute(k) || ""))].join("\n");
+  const british = said.match(/\b(colour|licence|favourite|honour|behaviour|centre|grey|organis|recognis|customis|cancell)\w*/gi);
+  assert.equal(british, null, "British spellings: " + (british || []).join(", "));
+  // and the messages the code writes later: the code with its comments taken out,
+  // past releases' notes left as written, and one function name allowed
+  const code = appJs.slice(appJs.indexOf("];", appJs.indexOf("const APP_CHANGELOG")))
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").replace(/\s\/\/ .*$/gm, "");
+  const inCode = (code.match(/\b(colour|licence|favourite|honour|behaviour|centre|grey|cancelled)\w*/gi) || [])
+    .filter(w => w !== "centreSettingsTab");
+  assert.deepEqual(inCode, [], "in the app's messages");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
@@ -11031,7 +11053,7 @@ test("Settings uses one kind of sub-heading in every tab, and every label names 
   const doc = win.document;
   const heads = tab => [...doc.querySelectorAll(`#settings .grp[data-tab="${tab}"] .s-h`)].map(h => h.textContent.trim());
   assert.equal(doc.querySelectorAll("#settings .atm-h").length, 0, "Appearance's own kind is gone");
-  assert.deepEqual(heads("look").slice(0, 2), ["Theme", "Your own colours"]);
+  assert.deepEqual(heads("look").slice(0, 2), ["Theme", "Your own colors"]);
   assert.deepEqual(heads("checks"), ["Automatic refresh"], "no ruled heading");
   assert.deepEqual(heads("security"), ["Storage", "Master password", "Unlock with Face ID, fingerprint or Windows Hello", "Locking", "Password check-up"]);
   assert.match(doc.querySelector('#settings .grp[data-tab="security"]').textContent, /Encrypts the whole vault at rest with AES-256/, "what it means, under it");

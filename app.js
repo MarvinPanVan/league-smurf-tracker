@@ -6518,7 +6518,7 @@ $("sPkSet").addEventListener("click",async()=>{
     toast(done?"Face ID / fingerprint unlock is on for this browser":"Passkey made. Tap Finish set-up and confirm it once more");
   }catch(e){
     toast(e.name==="NoPrf"?"This browser or device can't unlock with a passkey yet. Recent Chrome, Edge and Safari can."
-      :e.name==="NotAllowedError"?(pkPending?"Cancelled. Tap Finish set-up to try again":"Cancelled. Nothing was set up")
+      :e.name==="NotAllowedError"?(pkPending?"Canceled. Tap Finish set-up to try again":"Canceled. Nothing was set up")
       :"Couldn't set it up: "+(e.message||e.name||"unknown error"));
   }finally{updatePkStatus()}
 });
@@ -8758,7 +8758,7 @@ async function pkUnlock(){
   try{pass=await pkOpen(r)}
   catch(e){
     $("lockPk").disabled=false;
-    lockError(e&&e.name==="NotAllowedError"?"Cancelled. Try Face ID / fingerprint again, or type the master password."
+    lockError(e&&e.name==="NotAllowedError"?"Canceled. Try Face ID / fingerprint again, or type the master password."
       :"This browser couldn't use the passkey. Type the master password instead.");
     return;
   }
