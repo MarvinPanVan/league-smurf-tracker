@@ -8759,6 +8759,10 @@ function startApp(){
   syncLockTimer();
   migrateStats();
   if(cfg.density==="list"||cfg.density==="cards"||cfg.density==="wall")ui.density=cfg.density;
+  /* Until a layout is picked, a phone starts in the list: cards there are one or
+     two accounts a screen (twenty accounts, ten screens of scrolling), rows six to
+     eleven, each with its copy buttons. A wider screen starts in cards. */
+  else if(phoneLayout())ui.density="list";
   refreshCutoffs(); // fire and forget; redraws only if a floor actually arrived
   $("grid").classList.add("boot");
   render();

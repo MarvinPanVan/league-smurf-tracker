@@ -10243,6 +10243,21 @@ test("Master, Grandmaster and Challenger get chunkier crests at 24px and under; 
   assert.ok(win.document.querySelectorAll(".rk-crest").length >= 10, "the cards still draw theirs");
 });
 
+// On a phone the cards showed one or two accounts a screen: twenty accounts were
+// ten screens of scrolling, the list two and a half
+test("a phone starts in the list until a layout is picked; a wider screen in cards", () => {
+  const seed = seededAccount();
+  const phone = w => { w.matchMedia = q => ({ matches: /max-width:\s*560px/.test(q), addListener() {}, removeListener() {}, addEventListener() {} }); };
+  const pressed = w => w.document.querySelector("[data-density][aria-pressed='true'], [data-density].on")?.dataset.density;
+  const p = bootApp(seed, phone);
+  assert.equal(appGet(p, "ui.density"), "list");
+  assert.ok(p.document.querySelector("#grid .rw"), "rows, not cards");
+  assert.equal(pressed(p), "list", "and the layout switch says so");
+  assert.equal(appGet(bootApp(seed), "ui.density"), "cards", "a desk keeps cards");
+  const picked = bootApp(seed, w => { phone(w); w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, density: "cards" })); });
+  assert.equal(appGet(picked, "ui.density"), "cards", "a layout someone picked is kept on a phone too");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
