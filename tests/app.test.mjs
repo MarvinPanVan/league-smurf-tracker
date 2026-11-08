@@ -9546,7 +9546,7 @@ test("every confirmation is the app's own window, and answering it leaves the wi
   assert.equal($("askOk").className, "b-danger", "a destructive answer is red");
   assert.equal($("askAlt").hidden, true, "one way forward, one button");
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-  assert.match(css, /#askAlt\[hidden\]\{display:none\}/, "which a button's own display rule must not bring back");
+  assert.match(css, /#askAlt\[hidden\],#askCancel\[hidden\]\{display:none\}/, "which a button's own display rule must not bring back");
   assert.match(css, /#askModal \.mdl\{max-width:460px\}/, "a small card, not a full window");
   assert.match(css, /#askModal \.mdl-in\{min-height:0;/, "on a phone too, where other windows fill the screen");
   await tick();
@@ -10082,6 +10082,43 @@ test("the share page counts tiers with the header's emblems, and says how many a
   const none = await page([{ n: "A" }, { n: "B" }]);
   assert.deepEqual(none.ranked, ["None", "no ranked games yet"]);
   assert.equal(none.doc.querySelector(".sn-tiers"), null, "one kind of account is not a spread");
+});
+
+// The update note came up together with the master password prompt, and it was two
+// release notes cut off at "…" in a toast, gone after two seconds
+test("What's new waits for the master password prompt, then opens in a window of its own", async () => {
+  const seed = [{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], stats: null, password: "pw1" }];
+  const win = bootApp(seed, w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, lastChangelog: "1.0.0" })));
+  win.ask = win.__ask;
+  const doc = win.document, toastEl = doc.getElementById("toast");
+  const prompt = doc.getElementById("lockPrompt"), askM = doc.getElementById("askModal");
+  assert.equal(prompt.classList.contains("hidden"), false, "the prompt asks first");
+  assert.doesNotMatch(toastEl.textContent, /Updated/, "and nothing talks over it");
+  assert.equal(appGet(win, "cfg.lastChangelog"), "1.0.0", "the note is still owed");
+  doc.getElementById("lpLater").click();
+  const v = appGet(win, "APP_VERSION");
+  assert.match(toastEl.textContent, new RegExp("^Updated to v" + v.replace(/\./g, "\\.") + " What's new$"), "once it closes, the note");
+  assert.equal(appGet(win, "cfg.lastChangelog"), v);
+  doc.getElementById("toastBtn").click();
+  await tick();
+  assert.equal(askM.classList.contains("hidden"), false, "What's new opens the app's window");
+  assert.equal(doc.getElementById("askTitle").textContent, "What's new in v" + v);
+  const list = JSON.parse(appGet(win, "JSON.stringify(APP_CHANGELOG.find(e => e.v === APP_VERSION).items)"));
+  assert.equal(doc.getElementById("askBody").textContent, "• " + list.join("\n• "), "every item, none cut off");
+  assert.equal(doc.getElementById("askCancel").hidden, true, "nothing to cancel: it only tells you something");
+  doc.getElementById("askOk").click();
+  await tick();
+  assert.equal(askM.classList.contains("hidden"), true);
+  doc.getElementById("appVer").click();
+  await tick();
+  assert.equal(askM.classList.contains("hidden"), false, "the footer's version number opens it again");
+  doc.getElementById("askOk").click();
+  await tick();
+  // a window that asks something still has its Cancel
+  const p = win.ask({ title: "Sure?", body: "" });
+  assert.equal(doc.getElementById("askCancel").hidden, false);
+  doc.getElementById("askCancel").click();
+  assert.equal(await p, false);
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
@@ -10842,12 +10879,12 @@ test("the lock screen has no back-to-top button", async () => {
    visit records the version quietly; an update still announces itself. */
 test("a first visit is not shown a changelog; an update still is", () => {
   const first = bootApp();
-  assert.doesNotMatch(first.document.getElementById("toast").textContent, /^v\d/, "nothing to compare against yet");
+  assert.doesNotMatch(first.document.getElementById("toast").textContent, /^Updated to v\d/, "nothing to compare against yet");
   assert.equal(appGet(first, "cfg.lastChangelog"), appGet(first, "APP_VERSION"), "but the version is recorded, so the next one is news");
 
   const returning = bootApp(seededAccount(), w => w.localStorage.setItem("smurf-tracker-cfg",
     JSON.stringify({ seenHelp: true, lastChangelog: "1.0.0" })));
-  assert.match(returning.document.getElementById("toast").textContent, /^v\d/, "someone on an older version hears what changed");
+  assert.match(returning.document.getElementById("toast").textContent, /^Updated to v\d/, "someone on an older version hears what changed");
 });
 
 /* Until something is saved, the vault key still holds what could not be read — so
@@ -10920,7 +10957,7 @@ test("a pull from a device whose clock runs ahead does not make this one look ed
    its owner is exactly who the changelog is for. */
 test("a vault with no saved settings still hears what changed", () => {
   const win = bootApp(seededAccount());   // accounts on disk, no cfg key at all
-  assert.match(win.document.getElementById("toast").textContent, /^v\d/);
+  assert.match(win.document.getElementById("toast").textContent, /^Updated to v\d/);
 });
 
 /* A box positioned at left:50% with no width of its own shrinks to fit the space

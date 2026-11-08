@@ -6046,7 +6046,7 @@ function closeAllPanels(){
   $("settings").classList.add("hidden");
   $("help").classList.add("hidden");
   $("bulkAdd").classList.add("hidden");
-  $("lockPrompt").classList.add("hidden");
+  closeLockPrompt();
   $("moreMenu").classList.add("hidden");
   // Quick find is a modal like the other two, and every way out of a modal —
   // Escape, a click on the backdrop, the ✕ — goes through here. Leaving it off
@@ -7264,7 +7264,8 @@ function ask(o){
   }:null;
   ok.textContent=o.ok||"OK";ok.className=o.danger?"b-danger":"b-fill";
   alt.hidden=!o.alt;alt.textContent=o.alt||"";alt.className=o.altDanger?"b-danger":"";
-  cancel.textContent=o.cancel||"Cancel";
+  // cancel:false for a window that only tells you something
+  cancel.hidden=o.cancel===false;cancel.textContent=o.cancel||"Cancel";
   for(const b of[ok,alt,cancel])b.removeAttribute("data-autofocus");
   if(!fields)(o.danger||o.altDanger?cancel:ok).setAttribute("data-autofocus","");
   return new Promise(res=>{
@@ -7685,11 +7686,11 @@ $("sVaultSet").addEventListener("click",async()=>{if(await setVaultPassword($("s
 $("lpSet").addEventListener("click",async()=>{
   const p=$("lpPass").value;
   if(p!==$("lpPass2").value){toast("The two passwords don't match");$("lpPass2").focus();return}
-  if(await setVaultPassword(p)){$("lockPrompt").classList.add("hidden");render()}
+  if(await setVaultPassword(p)){closeLockPrompt();render()}
 });
 $("lpLater").addEventListener("click",()=>{
   if($("lpOff").checked){cfg.lockPromptOff=true;saveCfg()}
-  $("lockPrompt").classList.add("hidden");
+  closeLockPrompt();
 });
 async function setVaultPassword(pass){
   if(!pass||pass.length<4){toast("Choose a password with at least 4 characters");return false}
@@ -7748,6 +7749,7 @@ $("sVaultRemove").addEventListener("click",async()=>{
 });
 $("bHelp").addEventListener("click",()=>{const willShow=$("help").classList.contains("hidden");closeAllPanels();if(willShow)$("help").classList.remove("hidden")});
 // the footer's Terms: Help, at "Using this app", where the terms are written out
+$("appVer").addEventListener("click",e=>{e.preventDefault();showWhatsNew()});
 $("footTerms").addEventListener("click",e=>{e.preventDefault();closeAllPanels();$("help").classList.remove("hidden");
   const t=$("helpTerms");if(t&&t.scrollIntoView)t.scrollIntoView({block:"start"})});
 $("bHelpClose").addEventListener("click",()=>{$("help").classList.add("hidden");cfg.seenHelp=true;saveCfg()});
@@ -8667,12 +8669,27 @@ function renderVersion(){
   if(items.length)el.title="New in v"+APP_VERSION+":\n• "+items.join("\n• ");
   else el.removeAttribute("title");
 }
+/* After an update: one short line with a way to read more, not two release notes
+   cut off at "…" in a toast. And never at the same time as the master password
+   prompt, which asks for something: the note waits until that window closes. */
 function showChangelogIfNeeded(){
-  if(cfg.lastChangelog===APP_VERSION)return;
+  if(cfg.lastChangelog===APP_VERSION)return false;
+  if(!$("lockPrompt").classList.contains("hidden"))return false;
   const entry=APP_CHANGELOG.find(e=>e.v===APP_VERSION);
   cfg.lastChangelog=APP_VERSION;saveCfg();
-  if(!entry||!entry.items||!entry.items.length)return;
-  toast("v"+entry.v+": "+entry.items.slice(0,2).join(" · ")+(entry.items.length>2?"…":""));
+  if(!entry||!entry.items||!entry.items.length)return false;
+  toast("Updated to v"+entry.v,"What's new",showWhatsNew);
+  return true;
+}
+function showWhatsNew(){
+  const entry=APP_CHANGELOG.find(e=>e.v===APP_VERSION);
+  if(!entry||!entry.items)return;
+  ask({title:"What's new in v"+APP_VERSION,body:"• "+entry.items.join("\n• "),ok:"Got it",cancel:false});
+}
+function closeLockPrompt(){
+  const m=$("lockPrompt"), was=!m.classList.contains("hidden");
+  m.classList.add("hidden");
+  if(was)showChangelogIfNeeded();
 }
 // The installed app's icon shortcuts (manifest.json) open the page with
 // ?action=…. It is read once and wiped from the address bar, so a reload or a
@@ -8699,14 +8716,15 @@ function startApp(){
      operators, keyboard keys and privacy notes, over a page with nothing on it
      yet. That is a reference, and it stays one click away on the ?. The empty
      vault itself is the welcome now: what the app does, and the first step. */
-  showChangelogIfNeeded();
   if(startAction)setTimeout(runStartAction,0); // after boot's own first paint
   else maybeLockPrompt();
+  const told=showChangelogIfNeeded(); // waits, if the prompt just opened
   if(cfg.watch)setTimeout(()=>syncWatch(false),1500); // at most every ten minutes
   if(cfg.autoCheck&&!isOffline()){   // offline it waits for the next visit, quietly
     const staleAccs=accounts.filter(autoCheckDue);
     if(staleAccs.length){
-      toast("Auto-checking "+staleAccs.length+" stale account"+(staleAccs.length===1?"":"s")+"…");
+      // the run bar shows the check either way; the update note is not covered by it
+      if(!told)toast("Auto-checking "+staleAccs.length+" stale account"+(staleAccs.length===1?"":"s")+"…");
       // Through checkAll rather than its own loop: this ran as an invisible second
       // runner, so it got no progress bar and no Stop button, and pressing Check
       // all ranks while it was going started a *parallel* pass over the same
