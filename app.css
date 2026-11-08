@@ -255,10 +255,16 @@
   .rib-row:has(.rib-i.on) .rib-i:not(.on):hover{opacity:1}
   /* wraps: with four states at once ("1 unranked · 1 never checked · 1 banned ·
      2 need a refresh") one unbroken line was 403px, and a phone's page grew to fit it */
-  .rib-states{display:inline-flex;align-items:center;flex-wrap:wrap;row-gap:2px;min-width:0;max-width:100%;margin-left:8px}
-  .rib-s{color:var(--muted);padding:0 6px}
+  .rib-states{display:inline-flex;align-items:center;flex-wrap:wrap;gap:2px 6px;min-width:0;max-width:100%;margin-left:8px;clip-path:inset(-8px -8px -8px 0)}
+  .rib-s{position:relative;color:var(--muted);padding:0 6px}
+  /* The dot between two words was an item of its own, and on a phone the line broke
+     after it: "1 unranked · 1 never checked ·". Each word after the first carries
+     its dot in the gap before it, and the left edge above clips the dot of a word
+     that starts a line, wherever the line breaks. The focus ring sits inside the
+     button so the same edge cannot clip it. */
+  .rib-s+.rib-s::before{content:"·";position:absolute;right:100%;width:6px;text-align:center;color:var(--faint);pointer-events:none}
+  .rib-s:focus-visible{outline-offset:-2px}
   .rib-s.rib-stale{color:var(--warn-txt)}   /* amber, as the card's own out-of-date line */
-  .rib-dot{font-style:normal;color:var(--faint)}
   .rib-warn{margin-left:10px;color:var(--warn-txt);border-color:color-mix(in srgb,var(--warn) 38%,transparent);
     background:color-mix(in srgb,var(--warn) 9%,transparent)}
   .rib-warn:hover{color:var(--warn-txt);border-color:color-mix(in srgb,var(--warn) 60%,transparent);background:color-mix(in srgb,var(--warn) 15%,transparent)}

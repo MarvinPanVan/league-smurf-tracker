@@ -3983,7 +3983,7 @@ function renderRibbon(){
   const warn=missN?`<button class="rib-i rib-warn${missOn?" on":""}" data-flag="missing" aria-pressed="${missOn}" aria-label="Not found, ${missN}"`
     +` title="op.gg has no profile for these Riot IDs: not entered yet, renamed, or mistyped.">${icon("alert")}<span>${missN} not found</span><u>${missOn?"Shown":"Show"}</u></button>`:"";
   setHTML(el,`<div class="rib-row" role="group" aria-label="Accounts by tier">${tiers.map(tierItem).join("")}`
-    +(states.length?`<span class="rib-states">${states.join('<i class="rib-dot" aria-hidden="true">·</i>')}</span>`:"")
+    +(states.length?`<span class="rib-states">${states.join("")}</span>`:"")
     +warn+`</div>`);
 }
 /* Collapsed until asked for on a phone: there the stats were the whole first

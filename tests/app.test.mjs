@@ -5735,7 +5735,7 @@ test("the ribbon shows the vault's spread and filters when a segment is clicked"
   assert.equal(segs[0].dataset.tier, "CHALLENGER", "best first, the same order the list sorts in");
   assert.equal(segs[10].dataset.tier, "UNRANKED");
   assert.equal(segs[11].dataset.flag, "unchecked", "and this one filters the way its stats tile does");
-  assert.match(win.document.querySelector(".rib-row").textContent, /1 unranked·1 never checked/, "the states as words");
+  assert.deepEqual([...win.document.querySelectorAll(".rib-row .rib-states > *")].map(e => e.textContent), ["1 unranked", "1 never checked"], "the states as words");
 
   segs[10].click();
   assert.equal(win.document.querySelectorAll(".card").length, 1, "the unranked band shows the one it counted");
@@ -10520,6 +10520,23 @@ test("a card opened from \"+N more\" shows Close, and every skin", async () => {
   await tick();
   assert.ok(!appGet(win, 'openInfo.has("c")'), "Close closes it");
   assert.equal(card().querySelector(".c-drawer"), null);
+});
+
+// On a phone the status line broke after a dot: "1 unranked · 1 never checked ·"
+test("the header's status words carry their dots in the gaps, and a line's start clips its dot", () => {
+  const now = Date.now(), acc = (id, extra, stats) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [], stats }, extra);
+  const win = bootApp([acc("u", {}, { found: true, tier: "UNRANKED", level: 40, updatedAt: now }), acc("n", {}, null),
+    acc("b", { status: "banned" }, { found: true, tier: "SILVER", division: "I", lp: 5, updatedAt: now })]);
+  const doc = win.document;
+  assert.deepEqual([...doc.querySelectorAll("#ribbon .rib-states > *")].map(e => e.textContent), ["1 unranked", "1 never checked", "1 banned"],
+    "only the words: no dot of its own to land at the end of a line");
+  assert.equal(doc.querySelector("#ribbon .rib-dot"), null);
+  const st = html.match(/\n  \.rib-states\{([^}]*)\}/)[1];
+  assert.match(st, /gap:2px 6px/);
+  assert.match(st, /clip-path:inset\(-8px -8px -8px 0\)/, "the left edge clips a dot in front of a line's first word");
+  assert.match(html, /\n  \.rib-s\+\.rib-s::before\{content:"·";position:absolute;right:100%;width:6px;/, "the dot fills the gap before its word");
+  assert.match(html, /\n  \.rib-s\{position:relative;/);
+  assert.match(html, /\n  \.rib-s:focus-visible\{outline-offset:-2px\}/, "and the focus ring stays clear of that edge");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
