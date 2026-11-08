@@ -110,8 +110,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.23.0";
+const APP_VERSION="2.24.0";
 const APP_CHANGELOG=[
+  {v:"2.24.0",items:[
+    "Calmer cards: the Login button is tinted instead of bright, so the ranks stand out",
+    "The chart's D/W/M switch sits in the date row instead of on your newest point",
+    "Master, Grandmaster and Challenger emblems are clearer at small sizes, Challenger is ice blue, and the tab icon is easy to spot",
+  ]},
   {v:"2.23.0",items:[
     "Closing the account form or Settings asks before it throws away what you typed, and search finds a full Riot ID like Name#EUW",
     "A new account scrolls into view, Undo covers archiving and bulk delete, and phones get the selection bar at the bottom of the screen",
