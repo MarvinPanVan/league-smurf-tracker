@@ -965,15 +965,20 @@ test("a card's tier tint is a hint in its corner, not a wash over the art", () =
   assert.ok(pct <= 8, "at most 8% of the tier colour (" + pct + "%)");
 });
 
-test("Login stays the one filled control on a card, flat like every other button", () => {
-  const rule = html.match(/\n  \.a-login\{[^}]*\}/)[0];
-  assert.match(rule, /background-color:var\(--teal\)/, "filled with the accent");
-  assert.match(rule, /color:var\(--teal-ink\)/, "lettered in the ink that reads on it");
+// It was the one filled control on a card, until twenty cards meant twenty bright
+// bars outshining the ranks (and matching a Platinum rank's own color)
+test("Login is tinted on a card, flat, and nothing on a card is filled", () => {
+  const rule = html.match(/\n  \.a-login\{([^}]*)\}/)[1];
+  const tint = +rule.match(/background-color:color-mix\(in srgb,var\(--teal\) (\d+)%/)[1];
+  assert.ok(tint >= 10 && tint <= 18, "a tint of the accent, not a fill (" + tint + "%)");
+  assert.match(rule, /color:var\(--teal-txt\)/, "lettered in the accent's readable text color");
   assert.doesNotMatch(rule, /gradient|background-image|box-shadow/, "flat: no gloss, rim or shadow");
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [] }]);
   const filled = [...win.document.querySelectorAll('.card[data-id="a"] .acts > *')]
-    .filter(b => /var\(--teal\)/.test((html.match(new RegExp("\\n  \\." + b.className.split(" ")[0] + "\\{([^}]*)\\}")) || [])[1] || ""));
-  assert.deepEqual(filled.map(b => b.className), ["a-login"], "and the only filled one");
+    .filter(b => /background-color:var\(--teal\)/.test((html.match(new RegExp("\\n  \\." + b.className.split(" ")[0] + "\\{([^}]*)\\}")) || [])[1] || ""));
+  assert.deepEqual(filled.map(b => b.className), [], "no filled button on a card");
+  assert.ok(win.document.querySelector("#settings .acc-prev-card .a-login"), "and the Appearance preview's card draws it the same way");
+  assert.equal(win.document.querySelector("#settings .acc-prev-card .b-fill"), null);
 });
 // and every accent button is the same plate, edged and lettered in the accent, never metal
 test("the accent buttons add no gradient rim or glow of their own; the wordmark and gem are solid", () => {

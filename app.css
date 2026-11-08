@@ -1819,9 +1819,13 @@
   .rankpanel .sec-h{padding:12px 22px}
   .rankpanel .sec-b{padding:2px 22px 14px}
   .rankpanel .sec:last-child{border-bottom:1px solid var(--line)}
-  /* The main action, and the one filled button on a card (see .b-fill) */
-  .a-login{background-color:var(--teal);border-color:var(--teal);color:var(--teal-ink);font-weight:650}
-  .a-login:hover{background-color:color-mix(in srgb,var(--teal) 86%,#fff);border-color:color-mix(in srgb,var(--teal) 86%,#fff);color:var(--teal-ink)}
+  /* The main action on a card, tinted rather than filled. Twenty filled bars were
+     the brightest things on the page, so the eye went to the buttons and not the
+     ranks, and on a Platinum card the bar was the rank's own color. The one filled
+     button left is + Add account, once per screen (see .b-fill). */
+  .a-login{background-color:color-mix(in srgb,var(--teal) 13%,var(--panel2));border-color:color-mix(in srgb,var(--teal) 50%,var(--panel2));
+    color:var(--teal-txt);font-weight:650}
+  .a-login:hover{background-color:color-mix(in srgb,var(--teal) 24%,var(--panel2));border-color:var(--teal);color:var(--teal-txt)}
   /* just copied: the same filled plate in the green that means done, hovered or not
      (the pointer is still on it the moment it changes) */
   .a-login.copied,.a-login.copied:hover{color:var(--teal-ink);background-color:var(--good);border-color:var(--good)}
