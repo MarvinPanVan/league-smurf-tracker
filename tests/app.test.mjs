@@ -10405,6 +10405,17 @@ test("a card's tags stay on one row, the rest behind +N, which opens Details whe
   assert.deepEqual(shown(), tags, "where every tag shows");
 });
 
+// Cards lifted and glowed under the pointer, though a click on one does nothing
+test("a card does not lift under the pointer, since it is not a button; a wall tile, which opens, does", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const hover = css.slice(css.indexOf("@media (hover:hover){\n    .grid>.hx:hover::after"));
+  const block = hover.slice(0, hover.indexOf("\n  }"));
+  assert.doesNotMatch(block, /\.grid>\.hx:hover\{[^}]*transform/, "no lift on a card");
+  assert.match(block, /\.grid>\.hx:hover::after\{opacity:\.4/, "a quiet sheen instead");
+  assert.match(css, /\n  \.grid\.wall>\.hx:hover\{transform:translateY\(-2px\)\}/, "a wall tile still lifts");
+  assert.match(css, /\n  \.tile\{[^}]*cursor:pointer/, "because it is clickable");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

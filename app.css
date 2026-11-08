@@ -2566,9 +2566,14 @@
   /* Lift and glow only under a real pointer: on a touch screen the glow fading in
      is "something appeared", which Safari answers by swallowing the tap that
      caused it — and a lifted card that stays lifted after a tap says nothing. */
+  /* A card is not a button: clicking one does nothing and the cursor stays an arrow,
+     so lifting it said "click me" and then didn't, and a pointer crossing the grid
+     set the cards bobbing one after another. A card gets a quiet sheen and stays
+     put; a wall tile, which does open on a click, still lifts. */
   @media (hover:hover){
-    .grid>.hx:hover{transform:translateY(-3px);box-shadow:var(--sh-3);transition-duration:.22s}
-    .grid>.hx:hover::after{opacity:1;transition-duration:.22s}
+    .grid>.hx:hover::after{opacity:.4;transition-duration:.22s}
+    .grid.wall>.hx:hover{box-shadow:var(--sh-3);transition-duration:.22s}
+    .grid.wall>.hx:hover::after{opacity:1}
     body[data-fx="subtle"] .grid>.hx:hover::after{opacity:.4}
   }
   /* the inner pane has to paint over the glow layer, not under it */
