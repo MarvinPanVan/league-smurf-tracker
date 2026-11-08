@@ -2299,7 +2299,7 @@ test("note fields: shown on the card as facts, skins and a penalty line, searcha
   assert.match(card("a").querySelector(".nt").textContent, /duo only/, "and the free note is still there under them");
   assert.equal(card("b").querySelector(".ni"), null, "nothing in b's fields was a real value");
   assert.equal(card("b").querySelector(".c-notes"), null, "an empty note says nothing on the card: Add note is in its ⋯ menu");
-  assert.deepEqual([...card("c").querySelectorAll(".ni-skins .ni-f")].map(f => f.textContent).slice(-2), ["Skin 5", "+3 more"], "nine skins: six and a count");
+  assert.equal(card("c").querySelectorAll(".ni-skins .ni-f").length, 9, "nine skins, all of them: Details is where \"+N more\" leads");
   runScript(win, "window.__s = JSON.stringify(accounts.map(a => a.info || null))");
   const mem = JSON.parse(win.__s);
   assert.equal(mem[1], null, "b's fields are dropped in memory");
@@ -10497,6 +10497,29 @@ test("Quick find's key hints are left off on a touch screen", () => {
   const coarse = css.slice(css.indexOf("@media (pointer:coarse){"));
   assert.match(coarse.slice(0, 3000), /\.pal-f\{display:none\}/);
   assert.match(pageHtml, /<div class="pal-f">/, "a keyboard still gets them");
+});
+
+// A card with only note fields had no drawer handle, so once "+N more" opened it the
+// only way to close it again was Escape, and its skins still ended in a "+2 more"
+// that did nothing.
+test("a card opened from \"+N more\" shows Close, and every skin", async () => {
+  const win = bootApp([fieldsAcc("c", { honor: 3, skins: Array.from({ length: 8 }, (_, i) => "Skin " + i) })]);
+  const doc = win.document, card = () => doc.querySelector('.card[data-id="c"]');
+  assert.equal(card().querySelector(".c-drawer"), null, "nothing folded away, so no handle while closed");
+  const more = card().querySelector('.c-notes .ni-f.more[data-act="info"]');
+  assert.ok(more, "the card face caps the fields");
+  more.click();
+  await tick();
+  assert.ok(appGet(win, 'openInfo.has("c")'), "the chip opened it");
+  const drawer = card().querySelector(".c-drawer");
+  assert.ok(drawer, "an open card always has a handle");
+  assert.equal(drawer.querySelector(".c-dt").textContent, "Close");
+  assert.equal(card().querySelectorAll(".ni-skins .ni-f").length, 8, "every skin");
+  assert.equal(card().querySelector(".ni-skins .more"), null, "no count that leads nowhere");
+  drawer.click();
+  await tick();
+  assert.ok(!appGet(win, 'openInfo.has("c")'), "Close closes it");
+  assert.equal(card().querySelector(".c-drawer"), null);
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

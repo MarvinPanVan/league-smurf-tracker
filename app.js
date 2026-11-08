@@ -5184,9 +5184,9 @@ function noteFactsHTML(a,clickable,cap){
     else if(f.k==="rp")facts.push(`<span class="ni-f"><b>${fmtN(v)}</b> RP</span>`);
     else if(f.k==="skins"){
       skinList=v;
-      const shown=v.slice(0,6);
-      skins=`<div class="ni-row ni-skins" title="${esc(v.join(", "))}">${shown.map(s=>`<span class="ni-f">${esc(s)}</span>`).join("")}`
-        +(v.length>6?`<span class="ni-f more">+${v.length-6} more</span>`:"")+`</div>`;
+      // all of them: this is the open view, where "+N more" on the card face leads,
+      // and a second "+2 more" here led nowhere
+      skins=`<div class="ni-row ni-skins">${v.map(s=>`<span class="ni-f">${esc(s)}</span>`).join("")}</div>`;
     }
     else if(f.k==="penalty")pen=`<div class="ni-pen">${icon("alert")}<span>${sens(esc(v))}</span></div>`;
     // your own fields are shown by what the value is, not by what the list says it
@@ -5723,7 +5723,7 @@ function cardHTML(a,i){
       </div>
     </div>
     ${openInfo.has(a.id)&&(hasInfo(a)||canForm(a))?infoBlockHTML(a,rv("info")):""}
-    ${hasInfo(a)||cardHidden().some(k=>k!=="wl")||canForm(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${esc(drawerTitle())}">
+    ${openInfo.has(a.id)||hasInfo(a)||cardHidden().some(k=>k!=="wl")||canForm(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${esc(drawerTitle())}">
       <span class="c-dl" aria-hidden="true"></span>
       <span class="c-dt">${open?"Close":"Details"}</span>
       <svg class="ico" viewBox="0 0 26 12" aria-hidden="true"><polyline points="2 3 13 10 24 3"/></svg>
