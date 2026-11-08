@@ -10177,6 +10177,24 @@ test("closing Settings with unsaved changes asks first, with Save beside Discard
   assert.equal(open("askModal"), false);
 });
 
+// At 16px in a browser tab, the detailed 192px icon shrank to a dark square with a dot
+test("the tab icon is a bold diamond drawn for small sizes, with a 32px PNG beside it", () => {
+  const svg = fs.readFileSync(path.join(ROOT, "icons", "favicon.svg"), "utf8");
+  assert.match(svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 32 32">/, "an SVG drawn on a 32 grid");
+  assert.doesNotMatch(svg, /<script|on\w+=|href=/i, "nothing in it but shapes");
+  assert.ok(svg.length < 1024, "a few hundred bytes");
+  assert.match(svg, /fill="#c8aa6e"/, "in the app's gold");
+  const png = fs.readFileSync(path.join(ROOT, "icons", "favicon-32.png"));
+  assert.equal(png.subarray(1, 4).toString("latin1"), "PNG");
+  assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [32, 32], "32 by 32");
+  assert.match(pageHtml, /<link rel="icon" href="icons\/favicon-32\.png" sizes="32x32" type="image\/png">\n<link rel="icon" href="icons\/favicon\.svg" type="image\/svg\+xml">/,
+    "the PNG first and the SVG after it, which a browser that draws SVG prefers");
+  assert.doesNotMatch(pageHtml, /rel="icon" href="icons\/icon-192/, "the detailed icon is not shrunk into a tab any more");
+  assert.match(pageHtml, /rel="apple-touch-icon" href="icons\/apple-touch-icon\.png"/, "the home-screen icon keeps the detailed design");
+  const sw = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  for (const f of ["./icons/favicon.svg", "./icons/favicon-32.png"]) assert.ok(sw.includes(`"${f}"`), "offline too: " + f);
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
