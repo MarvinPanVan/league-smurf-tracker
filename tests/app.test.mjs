@@ -9734,6 +9734,21 @@ test("exporting a spreadsheet with logins in it says so first, like the JSON bac
   assert.equal(bareAsked, 0);
 });
 
+// Lock now showed "VAULT LOCKED" on the lock screen and a "Vault locked" message with it
+test("Lock now says it once: the lock screen, with no message under it", async () => {
+  const win = bootApp();
+  addRealAccount(win, "First", "1");
+  win.document.getElementById("sVaultPass").value = "lockme123";
+  win.document.getElementById("sVaultSet").click();
+  await until(() => encrypted(win), "encrypted");
+  win.document.getElementById("toast").textContent = "";
+  win.openSettings("security");
+  win.document.getElementById("sLockNow").click(); await tick();
+  assert.equal(win.document.getElementById("lock").classList.contains("hidden"), false, "locked");
+  assert.match(win.document.getElementById("lock").textContent, /Vault locked/);
+  assert.doesNotMatch(win.document.getElementById("toast").textContent, /Vault locked/, "and said once");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

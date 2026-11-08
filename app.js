@@ -7639,8 +7639,7 @@ if($("sLockNow"))$("sLockNow").addEventListener("click",async()=>{
   if(vaultLocked()){toast("Already locked");return}
   if(!await ask({title:"Lock the vault now?",body:"You'll need the master password to open it again.",ok:"Lock"}))return;
   $("settings").classList.add("hidden");
-  relock();
-  toast("Vault locked");
+  relock();   // the lock screen says "Vault locked"; a message saying it again under it did not
 });
 $("sVaultRemove").addEventListener("click",async()=>{
   if(!vaultPassword){toast("No password is set");return}
