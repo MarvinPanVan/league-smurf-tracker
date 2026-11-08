@@ -6797,18 +6797,29 @@ async function doExport(){
   cfg.lastExport=Date.now();saveCfg();renderDash();renderSetup();
   toast("Plaintext backup exported. Keep it private");
 }
+/* With no master password the encrypted backup, the first and highlighted button,
+   only sent you off to set one. It asks for a password for this backup instead,
+   twice, since a typo would make the file unopenable. Import asks for it back. */
+function askBackupPassword(){
+  return ask({title:"Choose a password for this backup",
+    body:"You have no master password, so the backup gets a password of its own. You need it to import the file, and it can't be recovered.",
+    fields:[{label:"Backup password",type:"password",ac:"new-password"},{label:"The same again",type:"password",ac:"new-password"}],
+    check:v=>v[0].length<4?"At least 4 characters":v[0]!==v[1]?"The two passwords don't match":"",ok:"Export"})
+    .then(v=>v?v[0]:null);
+}
 async function doExportEnc(){
   if(previewMode){toast("Exit preview before exporting. This is example data, not your vault");return}
-  if(!vaultPassword){toast("Set a master password in Settings first. Encrypted export needs it");return}
   if(vaultLocked()){toast("Unlock the vault first");return}
+  const pass=vaultPassword||await askBackupPassword();
+  if(!pass)return;
   try{
-    const envelope=await encryptData(vaultPassword,accounts);
+    const envelope=await encryptData(pass,accounts);
     if(vaultLocked())return;
     const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),encrypted:true,envelope};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
     downloadBlob(blob,"smurf-backup-encrypted-"+localDay()+".json");
     cfg.lastExport=Date.now();saveCfg();renderDash();renderSetup();
-    toast("Encrypted backup exported. Your master password opens it");
+    toast(pass===vaultPassword?"Encrypted backup exported. Your master password opens it":"Encrypted backup exported. Its password opens it");
   }catch(e){toast("Encrypted export failed: "+(e.message||"error"))}
 }
 function csvCell(v){
@@ -6862,9 +6873,15 @@ function doImport(file){
       const envelope=(p&&p.envelope&&p.envelope.__enc)?p.envelope
         :(p&&p.__enc)?p:null;
       if(envelope){
-        if(!vaultPassword){toast("Set a master password first. This backup is encrypted");return}
-        try{list=await decryptData(vaultPassword,envelope)}
-        catch(e){toast("Wrong master password for this encrypted backup");return}
+        // the master password first; a backup made with a password of its own asks for it
+        if(vaultPassword){try{list=await decryptData(vaultPassword,envelope)}catch(e){list=null}}
+        for(let tries=0;!list;tries++){
+          const v=await ask({title:"This backup is encrypted",
+            body:tries?"That password didn't open it. Try again.":"Type the password it was exported with.",
+            fields:[{label:"Backup password",type:"password",ac:"current-password"}],check:v=>v[0]?"":"Type the password",ok:"Open"});
+          if(!v)return;
+          try{list=await decryptData(v[0],envelope)}catch(e){list=null}
+        }
       }else{
         list=Array.isArray(p)?p:p.accounts;
       }
@@ -7201,19 +7218,30 @@ document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListene
    ways forward, adding or replacing on import) and to false on Cancel, Escape,
    a click outside or the back button. A destructive answer is red, and focus
    starts on Cancel for those, so Enter alone never deletes anything. */
-let askDone=null;
+let askDone=null, askCheck=null;
+/* `fields` makes it a question that needs something typed ([{label,type,ac}]); it
+   then resolves to the values, once `check` (values => an error, or "") passes. */
 function ask(o){
   if(askDone)askDone(false);
-  const m=$("askModal"), ok=$("askOk"), alt=$("askAlt"), cancel=$("askCancel");
+  const m=$("askModal"), ok=$("askOk"), alt=$("askAlt"), cancel=$("askCancel"), box=$("askFields");
   $("askTitle").textContent=o.title;
   $("askBody").textContent=o.body||"";
+  const fields=o.fields||null;
+  setHTML(box,fields?fields.map((f,i)=>`<label><span>${esc(f.label)}</span><input id="askF${i}" type="${esc(f.type||"text")}" autocomplete="${esc(f.ac||"off")}"${i===0?" data-autofocus":""}></label>`).join("")
+    +`<p class="ask-err" id="askErr" role="alert"></p>`:"");
+  box.hidden=!fields;
+  askCheck=fields?()=>{
+    const v=fields.map((_,i)=>$("askF"+i).value), err=o.check?o.check(v):"";
+    $("askErr").textContent=err||"";return err?null:v;
+  }:null;
   ok.textContent=o.ok||"OK";ok.className=o.danger?"b-danger":"b-fill";
   alt.hidden=!o.alt;alt.textContent=o.alt||"";alt.className=o.altDanger?"b-danger":"";
   cancel.textContent=o.cancel||"Cancel";
   for(const b of[ok,alt,cancel])b.removeAttribute("data-autofocus");
-  (o.danger||o.altDanger?cancel:ok).setAttribute("data-autofocus","");
+  if(!fields)(o.danger||o.altDanger?cancel:ok).setAttribute("data-autofocus","");
   return new Promise(res=>{
-    askDone=v=>{askDone=null;m.classList.add("hidden");res(v)};
+    // what was typed leaves the page with the answer: a password is not left in a hidden field
+    askDone=v=>{askDone=null;askCheck=null;m.classList.add("hidden");box.textContent="";res(v)};
     m.classList.remove("hidden");
   });
 }
@@ -7227,7 +7255,12 @@ function askMergeOrReplace(what,n){
     ok:"Add the new ones",alt:"Replace everything",altDanger:true})
     .then(v=>v==="ok"?"merge":v==="alt"?"replace":false);
 }
-$("askOk").addEventListener("click",()=>{if(askDone)askDone("ok")});
+$("askOk").addEventListener("click",()=>{
+  if(!askDone)return;
+  if(askCheck){const v=askCheck();if(v)askDone(v);return}
+  askDone("ok");
+});
+$("askFields").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("askOk").click()}});
 $("askAlt").addEventListener("click",()=>{if(askDone)askDone("alt")});
 $("askCancel").addEventListener("click",()=>{if(askDone)askDone(false)});
 // Escape answers the question and nothing else: the window behind stays open
@@ -7377,13 +7410,8 @@ $("settings").querySelector(".stabs").addEventListener("keydown",e=>{
   if(to===null)return;
   e.preventDefault();settingsTab(SETTINGS_TABS[(to+SETTINGS_TABS.length)%SETTINGS_TABS.length],true);
 });
+// the backup buttons in Settings do what their twins in the ⋯ menu do
 for(const b of document.querySelectorAll("#settings [data-proxy]"))b.addEventListener("click",()=>{
-  // An encrypted backup needs the master password, and its field is one tab
-  // away: go there rather than saying "in Settings" to someone already in it.
-  if(b.dataset.proxy==="bExportEnc"&&!vaultPassword&&!previewMode){
-    settingsTab("security");$("sVaultPass").focus();
-    toast("Set a master password here first. The encrypted backup is locked with it");return;
-  }
   const t=$(b.dataset.proxy);if(t)t.click();setTimeout(updateBackupLast,0);
 });
 $("sSave").addEventListener("click",async()=>{

@@ -80,8 +80,10 @@ settings stored in that browser, and the page treats everything in the link as
 untrusted input: each value is checked before it is shown.
 
 **Exports.** *Export backup (JSON, plaintext)* writes every password into the file
-in plain text, and the app asks before it does. *Export encrypted backup* needs your
-master password to open. Treat a plaintext export like the passwords themselves.
+in plain text, and the app asks before it does, as it does for *Export as CSV*.
+*Export encrypted backup* is locked with your master password, or, if you have none,
+with a password you choose for that backup; importing it asks for that password.
+Treat a plaintext export like the passwords themselves.
 
 ## What this does not protect against
 

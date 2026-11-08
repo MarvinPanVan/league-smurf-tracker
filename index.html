@@ -91,7 +91,7 @@
           <button id="bNewSeason" style="justify-content:flex-start;width:100%" title="Move every ranked account's current rank into its Past seasons">New season…</button>
           <button id="bStreamer" style="justify-content:flex-start;width:100%" title="Hide Riot IDs, logins, emails and notes while you stream or share your screen (H)">Streamer mode</button>
           <div class="cm-g">Backup</div>
-          <button id="bExportEnc" style="justify-content:flex-start;width:100%" title="AES-encrypted backup. Your master password opens it.">Export encrypted backup…</button>
+          <button id="bExportEnc" style="justify-content:flex-start;width:100%" title="AES-encrypted backup, opened by your master password or one you choose for it">Export encrypted backup…</button>
           <button id="bExport" style="justify-content:flex-start;width:100%" title="Plaintext JSON, login passwords included">Export backup (JSON, plaintext)</button>
           <button id="bExportCsv" style="justify-content:flex-start;width:100%">Export as CSV</button>
           <button id="bImport" style="justify-content:flex-start;width:100%">Import backup</button>
@@ -786,7 +786,7 @@
   <div id="askModal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="askTitle" aria-describedby="askBody">
     <div class="mdl narrow hx"><div class="hx-in mdl-in">
       <div class="mdl-h"><span class="t" id="askTitle"></span></div>
-      <div class="mdl-b"><p id="askBody" class="ask-b"></p></div>
+      <div class="mdl-b"><p id="askBody" class="ask-b"></p><div id="askFields" class="ask-fields" hidden></div></div>
       <div class="mdl-f"><button id="askCancel" type="button">Cancel</button><span class="sp"></span>
         <button id="askAlt" type="button" hidden></button><button id="askOk" type="button"></button></div>
     </div></div>

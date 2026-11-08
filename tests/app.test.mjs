@@ -2766,7 +2766,7 @@ test("Escape closes Quick find first, even with a card's login open behind it", 
   assert.ok(doc.querySelector('.card[data-id="a"] .login'), "the card behind it is left as it was");
 });
 
-test("Settings is five tabs, one section at a time, and a step that needs a field opens its tab", () => {
+test("Settings is five tabs, one section at a time, and a step that needs a field opens its tab", async () => {
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
   const doc = win.document, m = doc.getElementById("settings");
   const tabs = [...m.querySelectorAll('[role="tab"]')];
@@ -2799,10 +2799,14 @@ test("Settings is five tabs, one section at a time, and a step that needs a fiel
   doc.getElementById("bExportCsv").addEventListener("click", () => exported++);
   backup.querySelector('[data-proxy="bExportCsv"]').click();
   assert.equal(exported, 1, "a backup button does what its ⋯ menu twin does");
-  // the encrypted backup needs a master password, whose field is a tab away
+  // the encrypted backup with no master password asks for one of its own, right there
+  // (the harness answers its questions; the real window is tested on its own)
+  let askedFor = null; win.ask = async o => { askedFor = o; return false; };
   backup.querySelector('[data-proxy="bExportEnc"]').click();
-  assert.equal(m.dataset.tab, "security", "it takes you to the password field");
-  assert.equal(doc.activeElement, doc.getElementById("sVaultPass"));
+  await tick();
+  assert.notEqual(m.dataset.tab, "security", "it no longer sends you off to set a master password");
+  assert.match(askedFor.title, /password for this backup/);
+  win.ask = async () => "ok";
   // reopening starts on Appearance again
   win.closeAllPanels();
   doc.getElementById("bSettings").click();
@@ -9901,6 +9905,43 @@ test("archiving an account and deleting a selection both offer Undo", async () =
   doc.getElementById("toastBtn").click();
   await until(() => ids() === JSON.stringify(["a", "b", "c", "d"]), "both back, in their places");
   assert.equal(appGet(win, "accounts.find(a => a.id === 'c').password"), "pwc", "with their logins");
+});
+
+// "Export encrypted backup", the first and highlighted button, was a dead end without a
+// master password: it only said to go and set one
+test("an encrypted backup with no master password gets a password of its own, and import asks for it", async () => {
+  const win = bootApp([pwAcc("a", "Zt7#q!Lm2pWx")]);
+  win.ask = win.__ask;
+  const doc = win.document, $ = id => doc.getElementById(id), open = () => !$("askModal").classList.contains("hidden");
+  const files = [];
+  runScript(win, "downloadBlob = (b, n) => window.__files.push([b, n])"); win.__files = files;
+  $("bExportEnc").click(); await tick();
+  assert.ok(open(), "it asks right there");
+  assert.equal($("askTitle").textContent, "Choose a password for this backup");
+  assert.equal($("askF0").type, "password");
+  $("askF0").value = "backup-pw"; $("askF1").value = "backup-pq";
+  $("askOk").click(); await tick();
+  assert.ok(open(), "a typo would make the file unopenable, so it waits");
+  assert.equal($("askErr").textContent, "The two passwords don't match");
+  $("askF1").value = "backup-pw";
+  $("askOk").click();
+  await until(() => files.length === 1, "the backup to be saved");
+  assert.equal($("askFields").textContent, "", "and what was typed is gone from the page");
+  const text = await new Promise(r => { const fr = new win.FileReader(); fr.onload = () => r(fr.result); fr.readAsText(files[0][0]); });
+  assert.doesNotMatch(text, /Zt7#q!Lm2pWx/, "encrypted");
+  assert.match(text, /"encrypted": true/);
+  // brought back into a fresh vault, which has no master password either
+  const win2 = bootApp();
+  win2.ask = win2.__ask;
+  const d2 = win2.document, $2 = id => d2.getElementById(id);
+  win2.doImport(new win2.File([text], "smurf-backup.json", { type: "application/json" }));
+  await until(() => !$2("askModal").classList.contains("hidden"), "it to ask for the backup's password");
+  assert.equal($2("askTitle").textContent, "This backup is encrypted");
+  $2("askF0").value = "wrong"; $2("askOk").click();
+  await until(() => /didn't open it/.test($2("askBody").textContent), "a wrong password to be said");
+  $2("askF0").value = "backup-pw"; $2("askOk").click();
+  await until(() => d2.querySelectorAll(".card").length === 1, "the account to come back");
+  assert.equal(appGet(win2, "accounts[0].password"), "Zt7#q!Lm2pWx", "logins and all");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

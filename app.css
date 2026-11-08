@@ -1955,6 +1955,11 @@
   .ask-b{margin:0;padding:16px 22px;white-space:pre-line;color:var(--muted);line-height:1.5}
   .ask-b:empty{display:none}
   #askAlt[hidden]{display:none}
+  /* a question that needs a word typed, like a backup's password */
+  .ask-fields{display:flex;flex-direction:column;gap:12px;padding:0 22px 18px}
+  .ask-fields[hidden]{display:none}
+  .ask-fields label{display:flex;flex-direction:column;gap:6px;font-size:calc(13px*var(--ts));color:var(--muted)}
+  .ask-err{margin:0;min-height:1.2em;font-size:calc(13px*var(--ts));color:var(--danger)}
   @media (max-width:620px){
     #askModal{padding:16px;align-items:center}
     #askModal .mdl{margin:auto}
