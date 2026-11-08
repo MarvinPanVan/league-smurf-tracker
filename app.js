@@ -4785,6 +4785,7 @@ function snapHTML(s){
   const wr=w+l?Math.round(w/(w+l)*100):null;
   const regions=[...new Set(list.map(a=>a.region).filter(Boolean))];
   const tiers=TIER_ORDER.slice().reverse().map(t=>[t,ranked.filter(a=>a.rank.tier===t).length]).filter(x=>x[1]);
+  const unrankedN=list.length-ranked.length;
   const nice=t=>t.charAt(0)+t.slice(1).toLowerCase();
   const home=snapBase();
   return`<header class="sn-top">
@@ -4799,12 +4800,20 @@ function snapHTML(s){
         <div class="cell sn-best">${best?crest(best.rank.tier,"sn-best-c"):""}<div><span class="k">Highest</span>
           <b style="color:${best?tierColor(best.rank.tier):"var(--muted)"}">${best?esc(tierLabel(best.rank)):"Unranked"}</b>
           <em>${best?esc(fmtN(best.rank.lp)+" LP · "+best.name):"No ranked account in this snapshot"}</em></div></div>
-        <div class="cell"><span class="k">Ranked</span><b>${ranked.length}</b><em>of ${list.length}</em></div>
+        <div class="cell"><span class="k">Ranked</span>${
+          // "Ranked 16 / of 16" read as a sum with nothing to add up
+          ranked.length===list.length?`<b>All ${list.length}</b><em>this season</em>`
+          :ranked.length?`<b>${ranked.length} of ${list.length}</b><em>${list.length-ranked.length} unranked</em>`
+          :`<b>None</b><em>no ranked games yet</em>`}</div>
         <div class="cell"><span class="k">Games</span><b>${(w+l).toLocaleString("en-US")}</b><em>this season</em></div>
         <div class="cell"><span class="k">Win rate</span><b class="${wr!=null&&wr>=50?"wr-good":""}">${wr!=null?wr+"%":"—"}</b><em>${w+l?wlText(w,l):"no games"}</em></div>
       </div></div>`:""}
-      ${tiers.length>1?`<div class="sn-dist" aria-hidden="true">${tiers.map(([t,n])=>`<i style="flex:${n};background:${tierColor(t)}"></i>`).join("")}</div>
-        <div class="sn-legend">${tiers.map(([t,n])=>`<span style="--c:${tierColor(t)}">${esc(nice(t))} ${n}</span>`).join("")}</div>`:""}
+      ${tiers.length+(unrankedN?1:0)>1?
+        // the app header's emblem row, read-only: a 5px bar of tier colors under a
+        // legend of diamonds was one more way of saying the same thing
+        `<div class="sn-tiers" role="list" aria-label="Accounts by tier">${tiers.map(([t,n])=>`<span class="sn-t" role="listitem" title="${esc(nice(t))}: ${n} account${n===1?"":"s"}">`
+          +`${crest(t,"sn-t-c")}<b>${n}</b><span class="sr-only"> ${esc(nice(t))}</span></span>`).join("")}`
+        +(unrankedN?`<span class="sn-t sn-t-w" role="listitem">${unrankedN} unranked</span>`:"")+`</div>`:""}
     </section>
     ${list.length?`<section class="sn-grid" aria-label="Accounts">${list.map(snapCardHTML).join("")}</section>`
       :`<p class="sn-empty">This snapshot has no accounts in it.</p>`}

@@ -10060,6 +10060,30 @@ test("a win/loss record is written one way everywhere: 15W 9L", async () => {
   assert.deepEqual(row, ["Champion|W/L|WR", "Lux|15W 9L|63%"], "the champion table");
 });
 
+// The share page had a 5px bar of tier colors over a legend of diamonds, a third way
+// of drawing what the app's header shows as emblems; and "Ranked 16 / of 16"
+test("the share page counts tiers with the header's emblems, and says how many are ranked in words", async () => {
+  const page = async a => {
+    const win = viewSnap(snapCode({ v: 1, t: "Mine", a }, false));
+    const doc = win.document;
+    await until(() => doc.querySelector(".sn-card"), "the snapshot to render");
+    const cell = [...doc.querySelectorAll(".sn-sum .cell")].find(c => c.querySelector(".k").textContent === "Ranked");
+    return { doc, ranked: [cell.querySelector("b").textContent, cell.querySelector("em").textContent] };
+  };
+  const mixed = await page([{ n: "A", k: [6, "II", 10] }, { n: "B", k: [4, "I", 50] }, { n: "C", k: [4, "III", 5] }, { n: "D" }]);
+  assert.equal(mixed.doc.querySelector(".sn-dist"), null, "no color bar");
+  const items = [...mixed.doc.querySelectorAll(".sn-tiers .sn-t")];
+  assert.deepEqual(items.map(i => i.textContent.trim()), ["1 Diamond", "2 Platinum", "1 unranked"]);
+  assert.ok(items[0].querySelector("svg.crest"), "each tier is its emblem");
+  assert.equal(items[1].getAttribute("title"), "Platinum: 2 accounts");
+  assert.deepEqual(mixed.ranked, ["3 of 4", "1 unranked"]);
+  const all = await page([{ n: "A", k: [6, "II", 10] }, { n: "B", k: [4, "I", 50] }]);
+  assert.deepEqual(all.ranked, ["All 2", "this season"]);
+  const none = await page([{ n: "A" }, { n: "B" }]);
+  assert.deepEqual(none.ranked, ["None", "no ranked games yet"]);
+  assert.equal(none.doc.querySelector(".sn-tiers"), null, "one kind of account is not a spread");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
