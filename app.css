@@ -1066,6 +1066,10 @@
      anything on the card took a second tap, the first one only lifting the card.
      There the box is simply shown, faintly, and a tap is a tap. */
   @media (hover:hover){.card:hover .bulkchk,.rw:hover .bulkchk{opacity:1}}
+  /* while selecting (Select, or a Compare pick) every box shows: the next one to
+     tick should not have to be found by hovering */
+  body.selecting .bulkchk{opacity:1}
+  #bulkbar.cmp-pick>:not(#bulkCount):not(#bulkClear){display:none}
   @media (hover:none){.bulkchk{opacity:.5}}
 
   /* bare icon buttons — must beat the generic button rules */

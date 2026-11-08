@@ -715,6 +715,7 @@
   </div>
   <div id="bulkbar" class="hidden" style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--teal) 38%,transparent);border-radius:var(--r-md);background:color-mix(in srgb,var(--teal) 7%,var(--panel));box-shadow:var(--sh-1)">
     <span id="bulkCount" style="font-size:calc(12px*var(--ts));color:var(--teal-txt);font-weight:600;letter-spacing:.02em"></span>
+    <button id="bulkCompare" class="b-teal hidden">Compare these two</button>
     <select id="bulkStatus" aria-label="Set status of the selected accounts">
       <option value="">Set status…</option>
       <option value="active">Active</option>
@@ -778,8 +779,8 @@
         <button class="panel-close" id="cmpClose" data-close-panel title="Close" aria-label="Close">✕</button>
       </div>
       <div class="mdl-b" id="cmpBody"></div>
-      <div class="mdl-f"><button id="cmpClear" type="button">Clear selection</button>
-        <span class="sp hint">Pick accounts with Compare… in a card's ⋯ menu.</span></div>
+      <div class="mdl-f"><button id="cmpClear" type="button">Done</button>
+        <span class="sp hint">Compare… in a card's ⋯ menu, then tick a second account. Or tick any two and press Compare.</span></div>
     </div></div>
   </div>
 

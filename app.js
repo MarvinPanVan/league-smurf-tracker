@@ -3281,17 +3281,22 @@ function bindSparkTip(root){
   root.addEventListener("pointerleave",hideSparkTip);
 }
 let compareIds=[];
-function openCompare(id){
-  const prev=[...compareIds];
-  if(compareIds.includes(id))compareIds=compareIds.filter(x=>x!==id);
-  else {
-    compareIds.push(id);
-    if(compareIds.length>2)compareIds=compareIds.slice(-2);
-  }
-  // Only the cards whose compare label flipped need a patch — not the whole grid.
-  const touched=new Set([id,...prev,...compareIds]);
-  for(const tid of touched)renderCard(tid);
-  if(compareIds.length<2){toast("Pick one more account to compare ("+compareIds.length+"/2)");return}
+/* Comparing is picking two accounts, which is what selecting already does. It was
+   its own pick, "⋯ → Compare" on one card and again on another, with "Pick one
+   more account to compare (1/2)" in a message that stayed up after the comparison
+   had opened. Now "Compare…" selects the card, the bar says to tick one more, and
+   the second tick opens the comparison. Any two ticked accounts get a Compare
+   button in the bar. `cmpPick` is set while a pick started from the menu is under
+   way, so closing the comparison also puts the selection away again. */
+let cmpPick=false;
+function startCompare(id){
+  if(cmpPick&&selected.size===1&&!selected.has(id)){selected.add(id);render();compareSelected();return}
+  selected.clear();selected.add(id);lastSelectedId=id;ui.selecting=true;cmpPick=true;
+  render();
+}
+function compareSelected(){
+  if(selected.size!==2)return;
+  compareIds=[...selected];
   renderCompare();
 }
 /* A versus screen rather than two loose columns of grey lines: who, at what rank,
@@ -3736,9 +3741,15 @@ function syncSelecting(){
 }
 function renderBulkBar(shown){
   const n=selected.size;
+  if(cmpPick&&n===0)cmpPick=false;
   syncSelecting();
   $("bulkbar").classList.toggle("hidden",n===0);
-  $("bulkCount").textContent=n+" selected";
+  const first=cmpPick&&n===1&&accounts.find(a=>selected.has(a.id));
+  $("bulkCount").textContent=first?"Tick one more account to compare with "+plainName(first):n+" selected";
+  $("bulkCompare").classList.toggle("hidden",n!==2);
+  // mid-pick the bar is the instruction and a way out; status, tags and Delete wait
+  $("bulkbar").classList.toggle("cmp-pick",!!first);
+  $("bulkClear").textContent=first?"Cancel":"Clear selection";
   // "Select all shown" stayed ticked after the filter under it changed, so it
   // claimed a selection that no longer matched anything on screen — and clicking
   // it then *cleared* rather than selected, because a ticked box unticks first.
@@ -5606,7 +5617,7 @@ function cardMenuHTML(a){
     +grp("Mark")
     +it("played","check","Played today",' title="Mark that you played on this account today"')
     +it("flag","flag",a.flagged?"Clear the flag":"Flag for attention")
-    +it("compare","compare",compareIds.includes(a.id)?"Unselect compare":"Compare…")
+    +it("compare","compare","Compare…")
     /* Twelve actions under five headings. "Season reset…" is about the rank and
        lives at the foot of the Rank window now; "Exclude from stats" is a setting
        of the account and is in its form, under More details. */
@@ -5966,13 +5977,12 @@ function closeAllPanels(){
   closeShare();
 }
 function closeCompare(){
-  const had=compareIds.length>0;
   compareIds=[];
   const m=$("compareModal");
   if(m)m.classList.add("hidden");
-  // Escape / backdrop used to clear the selection without re-rendering, so cards
-  // kept showing "Unselect compare" until something else refreshed the grid.
-  if(had)render();
+  // a pick started from a card's menu ends with its comparison; two accounts ticked
+  // by hand stay ticked, for whatever else they were picked for
+  if(cmpPick){cmpPick=false;selected.clear();lastSelectedId=null;ui.selecting=false;render()}
 }
 /* ---- note fields in the account form ----
    One control per field in the list, filled from the account; saving writes
@@ -8011,9 +8021,10 @@ $("bulkDelete").addEventListener("click",()=>{
   selected.clear();lastSelectedId=null;render();
   saveThen(n+" account"+(n===1?"":"s")+" deleted");
 });
-$("bulkClear").addEventListener("click",()=>{selected.clear();lastSelectedId=null;ui.selecting=false;render()});
+$("bulkClear").addEventListener("click",()=>{selected.clear();lastSelectedId=null;ui.selecting=false;cmpPick=false;render()});
+$("bulkCompare").addEventListener("click",compareSelected);
 $("tSelectMode").addEventListener("click",()=>{
-  if(ui.selecting||selected.size){ui.selecting=false;selected.clear();lastSelectedId=null}
+  if(ui.selecting||selected.size){ui.selecting=false;selected.clear();lastSelectedId=null;cmpPick=false}
   else ui.selecting=true;
   render();
 });
@@ -8182,6 +8193,8 @@ async function onCardClick(e){
       // sorts the whole vault again, once per tick of a checkbox
       renderBulkBar(list);
     }
+    // the second account of a pick started with "Compare…" opens the comparison
+    if(cmpPick&&selected.size===2)compareSelected();
   }
   // A tile is for finding an account, not for acting on one. Clicking it hands
   // you back to the card view at that account and lights it up so it is obvious
@@ -8225,7 +8238,7 @@ async function onCardClick(e){
   else if(act==="copymail")copyText(acc.email,"Email",false,true).then(ok=>{if(ok)flashCopied(btn)});
   else if(act==="copybirth")copyText(acc.birthdate,"Date of birth",false,true).then(ok=>{if(ok)flashCopied(btn)});
   else if(act==="played"){markPlayed(id)}
-  else if(act==="compare"){openMore.delete(id);openCompare(id)}
+  else if(act==="compare"){openMore.delete(id);startCompare(id)}
   else if(act==="seasonreset"){
     if(!confirm("Reset this account for a new season? Current rank moves into Past seasons."))return;
     seasonReset(id);

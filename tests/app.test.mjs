@@ -7129,8 +7129,8 @@ test("compare modal is in the document at boot and closes via Escape / closeAllP
   const modal = win.document.getElementById("compareModal");
   assert.ok(modal, "static compare modal exists before first open");
   assert.ok(modal.classList.contains("hidden"));
-  win.openCompare("c1");
-  win.openCompare("c2");
+  win.startCompare("c1");
+  win.startCompare("c2");
   assert.equal(modal.classList.contains("hidden"), false);
   assert.match(win.document.getElementById("cmpBody").textContent, /Alpha|A/);
   assert.match(win.document.getElementById("cmpBody").textContent, /Beta|B/);
@@ -7138,8 +7138,8 @@ test("compare modal is in the document at boot and closes via Escape / closeAllP
   win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   assert.ok(modal.classList.contains("hidden"));
   assert.equal(appGet(win, "compareIds.length"), 0);
-  win.openCompare("c1");
-  win.openCompare("c2");
+  win.startCompare("c1");
+  win.startCompare("c2");
   win.document.getElementById("cmpClear").click();
   assert.ok(modal.classList.contains("hidden"));
   assert.equal(appGet(win, "compareIds.length"), 0);
@@ -7152,8 +7152,8 @@ test("compare escapes every account-supplied string in the modal HTML", () => {
     { id: "x2", region: "EUW", gameName: "Y", tagLine: "B", status: "active",
       stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: 1 }, history: [], tags: [] },
   ]);
-  win.openCompare("x1");
-  win.openCompare("x2");
+  win.startCompare("x1");
+  win.startCompare("x2");
   const body = win.document.getElementById("cmpBody");
   // Serialised HTML leaves "<" bare inside attribute values, so ask the DOM what
   // the strings became instead of pattern-matching markup.
@@ -7171,8 +7171,8 @@ test("compare is a versus screen: one row per fact, the better win rate lit", ()
       stats: { found: true, tier: "PLATINUM", division: "IV", lp: 5, wins: 20, losses: 10, level: 90, updatedAt: 1 }, history: [], tags: [] },
     { id: "c3", region: "NA", gameName: "Gamma", tagLine: "C", status: "active", stats: null, history: [], tags: [] },
   ]);
-  win.openCompare("c1");
-  win.openCompare("c2");
+  win.startCompare("c1");
+  win.startCompare("c2");
   const body = win.document.getElementById("cmpBody");
   const sides = body.querySelectorAll(".cmp-side");
   assert.equal(sides.length, 2);
@@ -7189,8 +7189,8 @@ test("compare is a versus screen: one row per fact, the better win rate lit", ()
   const clear = win.document.getElementById("cmpClear");
   assert.ok(clear.closest(".mdl-f") && !body.contains(clear), "Clear sits in the window's footer, not in the scroll");
   win.closeCompare();
-  win.openCompare("c1");
-  win.openCompare("c3");
+  win.startCompare("c1");
+  win.startCompare("c3");
   const q = win.document.querySelectorAll("#cmpBody .cmp-rk")[1];
   assert.ok(q.classList.contains("q"), "a side with no rank is not dressed as one");
   assert.equal(q.textContent, "Never checked");
@@ -7204,14 +7204,14 @@ test("closeAllPanels / closeCompare clears selection and hides Compare", () => {
     { id: "c2", region: "EUW", gameName: "B", tagLine: "B", status: "active",
       stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] },
   ]);
-  win.openCompare("c1");
-  win.openCompare("c2");
+  win.startCompare("c1");
+  win.startCompare("c2");
   assert.equal(win.document.getElementById("compareModal").classList.contains("hidden"), false);
   win.closeAllPanels();
   assert.equal(appGet(win, "compareIds.length"), 0);
   assert.ok(win.document.getElementById("compareModal").classList.contains("hidden"));
-  win.openCompare("c1");
-  win.openCompare("c2");
+  win.startCompare("c1");
+  win.startCompare("c2");
   win.closeCompare();
   assert.equal(appGet(win, "compareIds.length"), 0);
   assert.ok(win.document.getElementById("compareModal").classList.contains("hidden"));
@@ -7461,24 +7461,50 @@ test("clearing the selection unticks the boxes that were ticked by hand", () => 
   assert.equal(row("a").checked, false);
 });
 
-test("Escape on compare clears Unselect compare labels via re-render", async () => {
-  const win = bootApp([
-    { id: "c1", region: "EUW", gameName: "A", tagLine: "A", status: "active",
-      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] },
-    { id: "c2", region: "EUW", gameName: "B", tagLine: "B", status: "active",
-      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] },
-  ]);
-  win.openCompare("c1");
-  win.openCompare("c2");
+// Compare was its own pick: ⋯ → Compare on one card, then on another, with "Pick one
+// more account to compare (1/2)" in a message that stayed up after the comparison opened
+test("Compare picks with the selection: the menu ticks one, the second tick opens it", async () => {
+  const acc = (id, n) => ({ id, region: "EUW", gameName: n, tagLine: n, status: "active",
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] });
+  const win = bootApp([acc("c1", "A"), acc("c2", "B"), acc("c3", "C")]);
+  const doc = win.document, modal = doc.getElementById("compareModal");
+  const box = id => doc.querySelector(`.card[data-id="${id}"] .bulkchk`);
+  cardMenu(win, "c1").querySelector('[data-act="compare"]').click();
+  assert.ok(box("c1").checked, "the first account is ticked");
+  assert.ok(doc.body.classList.contains("selecting"), "and every card shows its box");
+  assert.equal(doc.getElementById("bulkCount").textContent, "Tick one more account to compare with A");
+  const bar = doc.getElementById("bulkbar");
+  assert.ok(bar.classList.contains("cmp-pick"), "mid-pick, status, tags and Delete are put away");
+  assert.match(html, /#bulkbar\.cmp-pick>:not\(#bulkCount\):not\(#bulkClear\)\{display:none\}/);
+  assert.equal(doc.getElementById("bulkClear").textContent, "Cancel");
+  assert.doesNotMatch(doc.getElementById("toast").textContent, /Pick one more/, "no message over the cards");
+  assert.ok(modal.classList.contains("hidden"));
+  box("c2").click();
+  assert.equal(modal.classList.contains("hidden"), false, "the second tick opens the comparison");
   assert.equal(appGet(win, 'compareIds.join(",")'), "c1,c2");
-  assert.match(cardMenu(win, "c1").textContent, /Unselect compare/);
-  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  await until(() => win.document.getElementById("compareModal").classList.contains("hidden"), "compare closed");
-  assert.equal(appGet(win, "compareIds.length"), 0);
-  // The label lives in the ⋯ menu now, so read it from there.
-  const menu = cardMenu(win, "c1");
-  assert.doesNotMatch(menu.textContent, /Unselect compare/);
-  assert.match(menu.textContent, /Compare/);
+  // closing it puts the pick away
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await until(() => modal.classList.contains("hidden"), "compare closed");
+  assert.equal(appGet(win, "selected.size"), 0);
+  assert.equal(doc.body.classList.contains("selecting"), false);
+  assert.match(cardMenu(win, "c1").textContent, /Compare…/, "the menu item never turns into Unselect");
+  // two accounts ticked by hand get a Compare button, and stay ticked after
+  doc.getElementById("tSelectMode").click();
+  box("c1").click(); box("c3").click();
+  assert.equal(bar.classList.contains("cmp-pick"), false, "an ordinary selection has every action");
+  assert.equal(doc.getElementById("bulkClear").textContent, "Clear selection");
+  const btn = doc.getElementById("bulkCompare");
+  assert.equal(btn.classList.contains("hidden"), false, "two ticked: Compare is offered");
+  assert.ok(modal.classList.contains("hidden"), "but not opened for them");
+  btn.click();
+  assert.equal(modal.classList.contains("hidden"), false);
+  assert.equal(appGet(win, 'compareIds.join(",")'), "c1,c3");
+  assert.equal(doc.getElementById("cmpClear").textContent, "Done");
+  doc.getElementById("cmpClear").click();
+  assert.equal(appGet(win, "selected.size"), 2, "a hand-picked selection stays");
+  assert.equal(box("c2").checked, false, "the box ticked in the first pick was cleared with it");
+  box("c2").click();
+  assert.ok(btn.classList.contains("hidden"), "three is not a pair");
 });
 
 test("soft-empty batch chunk continues to the next chunk instead of aborting", async () => {
