@@ -10586,6 +10586,30 @@ test("Help's Search and More are short lines, not run-on sentences", () => {
     "archiving is a card's, so it moved to Cards");
 });
 
+// A picture that failed to load is removed. A card drew its initial under it; a list
+// row and a wall tile drew one or the other, so the circle went blank until a redraw.
+test("a list row's and a wall tile's initial is drawn under the picture, so a dead picture leaves the letter", async () => {
+  const seed = seededAccount();
+  seed[0].stats.icon = "https://example.com/gone.jpg";
+  const win = bootApp(seed);
+  for (const [density, sel] of [["list", ".rw-pic"], ["wall", ".t-pic"]]) {
+    win.document.querySelector(`[data-density="${density}"]`).click();
+    await tick();
+    const pic = win.document.querySelector(sel), img = pic.querySelector("img[data-ico]");
+    assert.ok(img, density + ": the picture is tried");
+    assert.equal(pic.querySelector(":scope > b").textContent, "M", density + ": with the initial under it");
+    assert.equal(pic.querySelector(":scope > b").getAttribute("aria-hidden"), "true", "which a screen reader skips");
+    img.remove();   // what markIconDead does, with no redraw after it
+    assert.equal(pic.querySelector(":scope > b").textContent, "M", density + ": the letter is still there");
+    runScript(win, "deadIcons.clear()");
+  }
+  for (const k of ["rw-pic", "t-pic", "pal-pic", "cmp-pic"])
+    assert.match(html, new RegExp("\\n  \\." + k + " img\\{position:absolute;inset:0;"), k + ": the picture lies over the letter");
+  assert.match(html, /\n  \.cmp-pic\{position:relative;/);
+  // Quick find and Compare had the same either-or
+  assert.doesNotMatch(appJs, /\$\{(icon0|url)\?`<img[^`]*data-ico>`:`?(<b>)?\$\{esc\(initial\)\}/, "no picture-or-letter left anywhere");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

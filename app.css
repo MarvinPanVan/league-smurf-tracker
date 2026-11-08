@@ -781,7 +781,7 @@
   .t-pic{width:52px;height:52px;border-radius:50%;position:relative;flex-shrink:0;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center;margin-bottom:3px}
-  .t-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+  .t-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
   .t-pic b{font-size:calc(20px*var(--ts));font-weight:600;color:var(--faint)}
   .t-crest{position:absolute;right:-7px;top:-7px;width:21px;height:21px;
     filter:drop-shadow(0 1px 2px #000000cc)}
@@ -865,7 +865,7 @@
   .rw-pic{width:40px;height:40px;border-radius:50%;position:relative;overflow:visible;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center}
-  .rw-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+  .rw-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
   .rw-pic b{font-size:calc(16px*var(--ts));font-weight:600;color:var(--faint)}
   /* the tier, on the picture, the way the card puts it beside the rank */
   .rw-crest{position:absolute;right:-6px;top:-6px;width:17px;height:17px;
@@ -1550,7 +1550,8 @@
   .pal-pic{width:28px;height:28px;border-radius:50%;flex-shrink:0;position:relative;overflow:visible;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center;font-size:calc(12px*var(--ts));font-weight:600;color:var(--faint)}
-  .pal-pic img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+  .pal-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+  .pal-pic b{font-weight:inherit}
   .pal-pic .crest{position:absolute;right:-5px;top:-5px;width:14px;height:14px}
   .pal-ico{width:28px;height:28px;border-radius:var(--r-sm);flex-shrink:0;display:flex;align-items:center;
     justify-content:center;background:#ffffff0d;color:var(--muted)}
@@ -2313,10 +2314,10 @@
   .cmp{padding:22px 22px 6px}
   .cmp-head{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:start;margin-bottom:18px}
   .cmp-side{display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;min-width:0}
-  .cmp-pic{width:56px;height:56px;border-radius:50%;margin-bottom:8px;display:flex;align-items:center;justify-content:center;
+  .cmp-pic{position:relative;width:56px;height:56px;border-radius:50%;margin-bottom:8px;display:flex;align-items:center;justify-content:center;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));
     box-shadow:0 0 0 1px var(--gold-dim),0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold) 55%,transparent)}
-  .cmp-pic img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+  .cmp-pic img{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
   .cmp-pic b{font-size:calc(20px*var(--ts));font-weight:600;color:var(--faint)}
   .cmp-nm{font-size:calc(16px*var(--ts));font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cmp-id{font-size:calc(12px*var(--ts));color:var(--faint);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

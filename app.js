@@ -2505,6 +2505,10 @@ function iconUrl(s){
   const u=safeIconUrl(s&&s.icon);
   return u&&!deadIcons.has(u)?u:null;
 }
+/* The picture goes and whatever is under it shows. A card's portrait always drew
+   its initial under the picture; list rows, wall tiles, Quick find and Compare
+   drew one or the other, so a dead picture left an empty circle until something
+   redrew the page. All of them draw the initial under the picture now. */
 function markIconDead(img){
   const u=img.getAttribute("src");
   if(u)deadIcons.add(u);
@@ -3399,7 +3403,7 @@ function renderCompare(){
     const initial=(acc.label||acc.gameName||"?").trim().charAt(0).toUpperCase()||"?";
     const rank=ranked?tierLabel(s):!hasReading(s)?"Never checked":s.found===false?"Not found":"Unranked";
     return `<div class="cmp-side">
-      <span class="cmp-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" data-ico>`:`<b>${esc(initial)}</b>`}</span>
+      <span class="cmp-pic"><b aria-hidden="true">${esc(initial)}</b>${url?`<img src="${esc(url)}" alt="" loading="lazy" data-ico>`:""}</span>
       <div class="cmp-nm" title="${esc(plainName(acc))}">${nameOf(acc)}</div>
       <div class="cmp-id">${sens(esc(acc.gameName)+"#"+esc(acc.tagLine))} · ${esc(acc.region)}</div>
       <div class="cmp-rk${ranked?"":" q"}" style="color:${tierColor(s.tier)}">${ranked?crest(s.tier,"cmp-crest"):""}<span>${esc(rank)}</span></div>
@@ -5430,7 +5434,7 @@ function rowHTML(a,i){
            stopped that listener from ever running, so ticking a row selected
            nothing and the bulk bar never appeared. -->
       <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}">
-      <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
+      <span class="rw-pic"><b aria-hidden="true">${esc(initial)}</b>${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:""}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
       <span class="rw-id">
         <span class="rw-nm" title="${esc(plainName(a))}"><span class="nm-t">${nameOf(a)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?flagMark():""}${isLive(a)&&isFailed(a)?
           // the card's "Last check failed", on the row's first line so a phone shows it too
@@ -5494,7 +5498,7 @@ function tileHTML(a){
   const st=STATUS[a.status]||STATUS.active;
   return `<div class="hx${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" · "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
-    <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:`<b>${esc(initial)}</b>`}
+    <span class="t-pic"><b aria-hidden="true">${esc(initial)}</b>${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:""}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
     <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?flagMark():""}</span>
@@ -8274,7 +8278,7 @@ function renderPalette(){
       const url=iconUrl(s);
       const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
       html+=`<button class="pal-i${sel}" data-i="${i}" role="option" aria-selected="${i===palSel}">`
-        +`<span class="pal-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" data-ico>`:esc(initial)}`
+        +`<span class="pal-pic"><b aria-hidden="true">${esc(initial)}</b>${url?`<img src="${esc(url)}" alt="" loading="lazy" data-ico>`:""}`
         +`${isRanked(a)?crest(s.tier):""}</span>`
         +`<span class="pal-t"><span class="pal-n">${nameOf(a)}</span>`
         +`<span class="pal-s">${sens(esc(a.gameName)+"#"+esc(a.tagLine))} · ${esc(a.region)}</span></span>`
