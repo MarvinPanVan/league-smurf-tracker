@@ -110,8 +110,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.24.0";
+const APP_VERSION="2.25.0";
 const APP_CHANGELOG=[
+  {v:"2.25.0",items:[
+    "On a phone the app opens in the list view, so more accounts fit on a screen, each with its copy buttons",
+    "The search box shows Ctrl K: open Quick find, type a name, and copy the login",
+    "\"Need a refresh\" sits in the header with the other account states, and Check all ranks is the one button for it",
+  ]},
   {v:"2.24.0",items:[
     "Calmer cards: the Login button is tinted instead of bright, so the ranks stand out",
     "The chart's D/W/M switch sits in the date row instead of on your newest point",
@@ -3538,11 +3543,18 @@ function setStatusFilter(status){
   }
   render();
 }
+/* The out-of-date view keeps the accounts it opened with until you leave it. Checked
+   from there ("Check 2 shown"), each one stopped being out of date and vanished as
+   its new rank landed, and the run ended on an empty page; now they stay, updated
+   in place. */
+let staleHeld=null;
 function filtered(){
   const Q=parseQuery(ui.search);
+  if(ui.flag!=="stale")staleHeld=null;
+  else if(!staleHeld)staleHeld=new Set(accounts.filter(a=>isLive(a)&&isStale(a)).map(a=>a.id));
   let list=accounts.filter(a=>{
     if(!passesBaseFilters(a,Q))return false;
-    if(ui.flag==="stale"&&(!isLive(a)||!isStale(a)))return false;
+    if(ui.flag==="stale"&&!staleHeld.has(a.id)&&(!isLive(a)||!isStale(a)))return false;
     if(ui.flag==="unchecked"&&!neverChecked(a))return false;
     if(ui.flag==="failed"&&(!isLive(a)||!isFailed(a)))return false;
     if(ui.flag==="attention"&&!needsAttention(a))return false;
@@ -3934,7 +3946,11 @@ function renderRibbon(){
     else if(a.stats&&a.stats.found===false)missN++;
   }
   const tiers=TIER_ORDER.slice().reverse().filter(t=>dist[t]);
-  if(!tiers.length&&!unN&&!missN&&!neverN&&!bannedN){setHTML(el,"");return}
+  // a state of its own, across tiers: a Diamond account can be out of date too.
+  // It sat in the toolbar beside Check all; with the others here, the header holds
+  // what is wrong and the toolbar what to do about it.
+  const staleN=pool.filter(a=>isLive(a)&&isStale(a)).length;
+  if(!tiers.length&&!unN&&!missN&&!neverN&&!bannedN&&!staleN){setHTML(el,"");return}
   const plural=n=>n===1?"":"s";
   const tierItem=t=>{const on=ui.tier===t, n=dist[t], name=groupLabel(t);
     return`<button class="rib-i rib-t${on?" on":""}" data-tier="${t}" aria-pressed="${on}"`
@@ -3945,6 +3961,8 @@ function renderRibbon(){
     unN&&word('data-tier="UNRANKED"',ui.tier==="UNRANKED",unN,"unranked","Checked, and not ranked this season."),
     neverN&&word('data-flag="unchecked"',ui.flag==="unchecked",neverN,"never checked","No rank read yet."),
     bannedN&&word('data-status="banned"',ui.status==="banned",bannedN,"banned","Marked banned."),
+    staleN&&word('data-flag="stale"',ui.flag==="stale",staleN,staleN===1?"needs a refresh":"need a refresh","Last read over 3 days ago.")
+      .replace('class="rib-i rib-s','class="rib-i rib-s rib-stale'),
   ].filter(Boolean);
   const missOn=ui.flag==="missing";
   const warn=missN?`<button class="rib-i rib-warn${missOn?" on":""}" data-flag="missing" aria-pressed="${missOn}" aria-label="Not found, ${missN}"`
@@ -4158,8 +4176,7 @@ const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last c
 function renderChips(){
   syncFilterCount();
   const out=[];
-  // "Needs refresh" has its own pressed button in the same row, the count's
-  if(ui.flag&&ui.flag!=="stale")out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
+  if(ui.flag)out.push(["flag",FLAG_LABEL[ui.flag]||ui.flag]);
   if(ui.tier)out.push(["tier",ui.tier==="UNRANKED"?"Unranked":ui.tier.charAt(0)+ui.tier.slice(1).toLowerCase()]);
   if(ui.tag)out.push(["tag","Tag: "+ui.tag]);
   if(ui.favOnly)out.push(["favOnly","Favorites"]);
@@ -5463,7 +5480,7 @@ function tileHTML(a){
 }
 function cardHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
-  /* The toolbar's "N need a refresh", Refresh stale and the list all go by isStale.
+  /* The header's "N need a refresh", its filter and the list all go by isStale.
      The card had a rule of its own, so a banned account (never checked again, so it
      ages forever) and a Riot ID that came back not found wore an amber "out of
      date" warning the toolbar didn't count and Refresh stale wouldn't touch. */
@@ -5982,12 +5999,8 @@ function renderGrid(){
   // only matters if the note block was structurally replaced rather than patched
   if(editingNote)focusNoteEditor(grid);
   document.title=accounts.length?"Smurf Tracker ("+accounts.length+")":"Smurf Tracker";
-  // isStale(), not a second hand-rolled version of it: this one required an
-  // updatedAt, so never-checked accounts were left out and the readout disagreed
-  // with both the "Refresh N stale" button and the stats panel beside it.
-  const stale=accounts.filter(a=>!a.archived&&isStale(a)).length;
-  // "21 need a refresh" was a red sentence you could not act on — the filter that
-  // shows exactly those already existed, behind a stat tile in a collapsed panel.
+  // "N need a refresh" is in the header's status line now (renderRibbon), with the
+  // other states; the toolbar keeps the count and the actions.
   /* Out of what this view holds: archived accounts are a view of their own, so
      counting them in ("53 of 61 shown" with nothing filtered) read as eight
      accounts hidden by a filter nobody had set. Nothing filtered, it is just a
@@ -5995,9 +6008,7 @@ function renderGrid(){
   const held=accounts.filter(a=>!!a.archived===!!ui.showArchived).length;
   const noun=ui.showArchived?"archived":"account"+(held===1?"":"s");
   setHTML($("count"),!accounts.length?"":(list.length===held?`<span><b>${held}</b> ${noun}</span>`
-      :`<span><b>${list.length}</b> of <b>${held}</b>${ui.showArchived?" archived":""} shown</span>`)
-    +(stale?`<button class="warn${ui.flag==="stale"?" on":""}" data-flag="stale" aria-pressed="${ui.flag==="stale"}"
-        title="Show only the accounts that are out of date">${stale} need${stale===1?"s":""} a refresh</button>`:""));
+      :`<span><b>${list.length}</b> of <b>${held}</b>${ui.showArchived?" archived":""} shown</span>`));
   syncCheckAll(list);
 }
 // Called on its own during a run, where re-rendering the grid to flip one button
@@ -6020,15 +6031,6 @@ function syncCheckAll(shown){
     const inView=accounts.filter(a=>!!a.archived===ui.showArchived&&a.status!=="banned").length;
     setHTML($("bCheckAll"),icon("refresh")+" "+(n&&n<inView?`Check ${n} shown`:"Check all ranks"));
   }
-  // "Check all ranks" also re-checks the twenty accounts you did an hour ago. The
-  // run you actually mean is almost always the stale ones, so it gets its own
-  // button — hidden when it would do exactly the same work as the one beside it.
-  const live=accounts.filter(a=>!a.archived&&a.status!=="banned");
-  const stale=live.filter(isStale).length;
-  const sb=$("bCheckStale");
-  sb.classList.toggle("hidden",!!run||!stale||stale===live.length);
-  sb.textContent="Refresh "+stale+" stale";
-  sb.disabled=busy;
 }
 
 // Opening a panel on one card is a change to that card, not to the grid, and it
@@ -7480,6 +7482,9 @@ $("settings").addEventListener("click",e=>{
   if(hit&&e.currentTarget.contains(hit))settingsDirty(true);
 });
 $("bFind").addEventListener("click",openPalette);
+$("tFindKey").addEventListener("click",openPalette);
+// a Mac's key for it is ⌘, and that is what its keyboard says
+if(/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||"")){$("tFindKey").textContent="⌘ K";$("bFind").title="Quick find (⌘K)"}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():requestCloseSettings());
 $("bNewSeason").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");newSeasonAll()});
 $("bStreamer").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");setStreamer(!streamerOn())});
@@ -8118,7 +8123,7 @@ function palCommands(){
   return [
     {k:"add",n:"Add account",s:"New entry in the vault",i:"plus",run:()=>openForm(null)},
     {k:"check",n:"Check all ranks",s:"Refresh everything currently shown",i:"refresh",run:()=>checkAll()},
-    {k:"stale",n:"Refresh stale accounts",s:"Found accounts last read over 3 days ago",i:"refresh",run:()=>$("bCheckStale").click()},
+    {k:"stale",n:"Refresh stale accounts",s:"Found accounts last read over 3 days ago",i:"refresh",run:checkStale},
     {k:"cards list wall layout",n:"Switch layout",s:"Cards, list, wall",i:"chart",run:()=>{
       const order=["cards","list","wall"];
       ui.density=order[(order.indexOf(ui.density)+1)%order.length];
@@ -8285,8 +8290,11 @@ $("density").addEventListener("click",e=>{
   openInfo.clear(); // "expanded" means different things across the three layouts
   render();
 });
-$("bCheckStale").addEventListener("click",()=>
-  checkAll(accounts.filter(a=>!a.archived&&a.status!=="banned"&&isStale(a)).map(a=>a.id)));
+/* There was a Refresh N stale button beside Check all ranks, and "N need a refresh"
+   beside both: three controls for one job. The header's count shows those accounts,
+   and Check all ranks then says "Check N shown". Quick find keeps the one-step
+   version for the keyboard. */
+function checkStale(){checkAll(accounts.filter(a=>!a.archived&&isLive(a)&&isStale(a)).map(a=>a.id))}
 $("bCancelCheck").addEventListener("click",()=>{if(run){run.stop=true;toast("Stopping after this account…")}});
 $("failbar").addEventListener("click",e=>{
   if(e.target.closest("#bDismissFails")){lastFails=null;renderFailbar();return}
@@ -8759,6 +8767,10 @@ function startApp(){
   syncLockTimer();
   migrateStats();
   if(cfg.density==="list"||cfg.density==="cards"||cfg.density==="wall")ui.density=cfg.density;
+  /* Until a layout is picked, a phone starts in the list: cards there are one or
+     two accounts a screen (twenty accounts, ten screens of scrolling), rows six to
+     eleven, each with its copy buttons. A wider screen starts in cards. */
+  else if(phoneLayout())ui.density="list";
   refreshCutoffs(); // fire and forget; redraws only if a floor actually arrived
   $("grid").classList.add("boot");
   render();

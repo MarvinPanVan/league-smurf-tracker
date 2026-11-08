@@ -1050,7 +1050,7 @@ test("a stale card warns with a drawn mark, which a fresh card does not carry", 
 });
 
 // A banned card wore an amber "Updated 40 days ago" warning the toolbar did not count
-test("a card is out of date by the toolbar's own rule: never a banned account, never a not-found one", () => {
+test("a card is out of date by the header's own rule: never a banned account, never a not-found one", () => {
   const D = 86400000, old = Date.now() - 40 * D;
   const acc = (id, status, stats) => ({ id, region: "EUW", gameName: id, tagLine: "1", status, history: [], tags: [], stats });
   const win = bootApp([
@@ -1062,7 +1062,7 @@ test("a card is out of date by the toolbar's own rule: never a banned account, n
   assert.equal(upd("ban").classList.contains("stale"), false, "a banned account is never checked again, so never out of date");
   assert.equal(upd("ban").querySelector("svg"), null);
   assert.equal(upd("gone").classList.contains("stale"), false, "not found is its own state, not a stale one");
-  assert.match(win.document.getElementById("count").textContent, /1 needs? a refresh/, "and the count agrees: one");
+  assert.match(win.document.querySelector('#ribbon [data-flag="stale"]').textContent, /^1 needs a refresh$/, "and the header's count agrees: one");
 });
 
 test("actions and window titles are set in the text face; Cinzel is the wordmark's alone", () => {
@@ -1076,7 +1076,7 @@ test("actions and window titles are set in the text face; Cinzel is the wordmark
   assert.ok(users.every(sel => /hex-display|lock-wm|acc-prev-t|^@font-face$/.test(sel)), users.join(" | "));
 });
 
-test("Refresh stale refreshes found accounts that have gone old, not ones with no profile yet", () => {
+test("refreshing the stale ones takes found accounts that have gone old, not ones with no profile yet", () => {
   const D = 86400000, old = Date.now() - 6 * D, fresh = Date.now() - 3600000;
   const acc = (id, stats, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active",
     stats, history: [], tags: [] }, extra || {});
@@ -1088,15 +1088,18 @@ test("Refresh stale refreshes found accounts that have gone old, not ones with n
     acc("notFoundOld", { found: false, updatedAt: old }),
     acc("bannedOld", { found: true, tier: "SILVER", division: "I", lp: 1, level: 50, updatedAt: old }, { status: "banned" }),
   ]);
-  const btn = win.document.getElementById("bCheckStale");
-  assert.equal(btn.classList.contains("hidden"), false);
-  assert.equal(btn.textContent, "Refresh 2 stale", "the found ones that have gone old, ranked or not");
-  assert.match(win.document.querySelector("#count [data-flag='stale']").textContent, /^2 need a refresh$/,
-    "and the readout beside it counts the same two");
+  const doc = win.document;
+  assert.match(doc.querySelector("#ribbon [data-flag='stale']").textContent, /^2 need a refresh$/,
+    "the found ones that have gone old, ranked or not");
+  // Quick find's one-step command
   runScript(win, "window.__ids = null; checkAll = function (ids) { window.__ids = ids; };");
-  btn.click();
+  runScript(win, "checkStale()");
   assert.deepEqual([...win.__ids].sort(), ["rankedOld", "unrankedOld"],
     "never-checked and not-found accounts are not re-tried, banned ones are left alone");
+  // and the header's count shows the same two, which the toolbar's one button then checks
+  doc.querySelector("#ribbon [data-flag='stale']").click();
+  assert.deepEqual([...doc.querySelectorAll("#grid .card")].map(c => c.dataset.id).sort(), ["rankedOld", "unrankedOld"]);
+  assert.match(doc.getElementById("bCheckAll").textContent, /Check 2 shown/);
 });
 
 test("the vault asks the browser to keep it, once, and Settings says whether it does", async () => {
@@ -5192,12 +5195,13 @@ test("a refresh is owed only on checks that actually happened; never checked is 
     stats: updatedAt ? { found: true, tier: "GOLD", division: "II", lp: 10, updatedAt } : null });
 
   const win = bootApp([acc(1, now - 40 * D), acc(2, now - 5 * D), acc(3, null), acc(4, null)]);
-  assert.match(win.document.querySelector('#count [data-flag="stale"]').textContent, /^2 need a refresh/,
+  assert.match(win.document.querySelector('#ribbon [data-flag="stale"]').textContent, /^2 need a refresh/,
     "the two checked days ago");
   const never = win.document.querySelector('.rib-i[data-flag="unchecked"]').textContent;
   assert.equal(never, "2 never checked", "the two unchecked ones are counted in the header, and only there");
   assert.equal(win.document.querySelector('#dash [data-flag="unchecked"]'), null, "the stats panel does not repeat it");
-  assert.equal(win.document.querySelector('#dash [data-flag="stale"]'), null, "the toolbar says it, the panel does not repeat it");
+  assert.equal(win.document.querySelector('#dash [data-flag="stale"]'), null, "the header says it, the panel does not repeat it");
+  assert.equal(win.document.querySelector('#count [data-flag="stale"]'), null, "and nor does the toolbar");
 });
 
 // The duplicate guard only ran on add, so renaming one account onto another got
@@ -5858,7 +5862,7 @@ test("the refresh count is the button that filters to those accounts", () => {
   const seed = ladderSeed();
   seed[0].stats.updatedAt = Date.now() - 40 * 86400000;   // long stale
   const win = bootApp(seed);
-  const btn = win.document.querySelector("#count [data-flag='stale']");
+  const btn = win.document.querySelector("#ribbon [data-flag='stale']");
   assert.ok(btn, "the readout is a control");
   assert.equal(btn.tagName, "BUTTON");
   assert.match(btn.textContent, /needs? a refresh/);
@@ -5866,9 +5870,9 @@ test("the refresh count is the button that filters to those accounts", () => {
   btn.click();
   const shown = win.document.querySelectorAll(".card").length;
   assert.ok(shown < seed.length, "clicking it narrows the grid");
-  assert.equal(win.document.querySelector("#count [data-flag='stale']").getAttribute("aria-pressed"), "true");
+  assert.equal(win.document.querySelector("#ribbon [data-flag='stale']").getAttribute("aria-pressed"), "true");
 
-  win.document.querySelector("#count [data-flag='stale']").click();
+  win.document.querySelector("#ribbon [data-flag='stale']").click();
   assert.equal(win.document.querySelectorAll(".card").length, seed.length, "and clicking again clears it");
 });
 
@@ -8592,7 +8596,7 @@ test("a card's region is a neutral label, so Login is the one thing in the actio
 // A vault left alone for a weekend lit the page red: "out of date" took the colour of a ban
 test("out of date is amber like any warning; red stays for lost, banned and irreversible", () => {
   const rule = sel => html.match(new RegExp("\\n  " + sel.replace(/[.]/g, "\\.") + "\\{([^}]*)\\}"))[1];
-  for (const sel of [".upd.stale", ".stale", ".rw-up.stale", ".cmd-count .warn"]) {
+  for (const sel of [".upd.stale", ".stale", ".rw-up.stale", ".rib-s.rib-stale"]) {
     assert.match(rule(sel), /var\(--warn/, sel + " is amber");
     assert.doesNotMatch(rule(sel), /--danger/, sel);
   }
@@ -8826,16 +8830,6 @@ test("the select box shows on hovering a list row, as it does on a card", () => 
   assert.ok(sel.includes(".rw:hover .bulkchk"), "and on a list row: " + sel.join(", "));
 });
 
-// On a phone "12 need a refresh" started 10px right of "25 of 25 shown" above it
-// (its padding is its touch target), and the header's two caption lines sat 12px apart
-test("on a phone the toolbar's two count lines start at one edge, and the header caption is one block", () => {
-  const coarse = html.match(/\.cmd-count \.warn\{padding:6px (\d+)px\}/);
-  assert.ok(coarse, "the touch padding");
-  const phone = html.match(/\.cmd-count\{flex-direction:column;[^}]*\}\s*\.cmd-count \.warn\{margin-left:-(\d+)px\}/);
-  assert.ok(phone, "stacked, with the padding taken back out");
-  assert.equal(phone[1], coarse[1], "the margin is the padding");
-});
-
 // At 2560px the page stopped at 1640: 460px empty either side and four cards to a row
 test("a wide screen gets a wide page, and the list spreads its columns rather than opening a hole after the name", () => {
   const max = +html.match(/\n  \.wrap\{[^}]*max-width:(\d+)px/)[1];
@@ -9049,15 +9043,17 @@ test("the LP chip says it is since the last check, with the pace beside it, and 
   assert.doesNotMatch(card.querySelector(".c-stats")?.textContent || "", /Climb/, "no row of its own");
 });
 
-// A phone's toolbar stacked Check all ranks over Refresh N stale: two buttons for one job
-test("on a phone the toolbar has one ranks button: Refresh stale when there is any, else Check all", () => {
-  const block = html.slice(html.indexOf("@media (max-width:560px), (max-height:500px) and (orientation:landscape){\n    .tools{display:flex;flex-wrap:wrap}"));
-  assert.match(block.slice(0, 3000), /\.cmd:has\(#bCheckStale:not\(\.hidden\)\) #bCheckAll\{display:none\}/);
+// Three controls did one job: Check all ranks, Refresh N stale, and "N need a refresh"
+test("the toolbar has one ranks button; out-of-date accounts are a header filter away", () => {
+  assert.doesNotMatch(pageHtml, /bCheckStale|>Refresh stale</, "no Refresh N stale button");
+  assert.doesNotMatch(html, /#bCheckStale/, "nor a rule for it, on a phone or anywhere");
   const D = 864e5;
   const acc = (id, ago) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
     stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() - ago } });
   const win = bootApp([acc("old", 6 * D), acc("new", 3600000)]); // one stale, one fresh
-  assert.equal(win.document.getElementById("bCheckStale").classList.contains("hidden"), false, "the stale button is what shows");
+  const cmd = [...win.document.querySelectorAll(".cmd>button")].map(b => b.id);
+  assert.deepEqual(cmd.filter(id => /^bCheck/.test(id)), ["bCheckAll"], "one ranks button in the toolbar");
+  assert.ok(win.document.querySelector('#ribbon [data-flag="stale"]'), "the header counts the out-of-date one");
 });
 
 // Check all ranks wore the primary colour and Add account the secondary: two "this is
@@ -10243,6 +10239,71 @@ test("Master, Grandmaster and Challenger get chunkier crests at 24px and under; 
   assert.ok(win.document.querySelectorAll(".rk-crest").length >= 10, "the cards still draw theirs");
 });
 
+// On a phone the cards showed one or two accounts a screen: twenty accounts were
+// ten screens of scrolling, the list two and a half
+test("a phone starts in the list until a layout is picked; a wider screen in cards", () => {
+  const seed = seededAccount();
+  const phone = w => { w.matchMedia = q => ({ matches: /max-width:\s*560px/.test(q), addListener() {}, removeListener() {}, addEventListener() {} }); };
+  const pressed = w => w.document.querySelector("[data-density][aria-pressed='true'], [data-density].on")?.dataset.density;
+  const p = bootApp(seed, phone);
+  assert.equal(appGet(p, "ui.density"), "list");
+  assert.ok(p.document.querySelector("#grid .rw"), "rows, not cards");
+  assert.equal(pressed(p), "list", "and the layout switch says so");
+  assert.equal(appGet(bootApp(seed), "ui.density"), "cards", "a desk keeps cards");
+  const picked = bootApp(seed, w => { phone(w); w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, density: "cards" })); });
+  assert.equal(appGet(picked, "ui.density"), "cards", "a layout someone picked is kept on a phone too");
+});
+
+// The fastest way to a login (Ctrl K, type a name, copy) was invisible until Help
+test("the search box shows Quick find's key, which opens it, and steps aside once you type", async () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document, key = doc.getElementById("tFindKey"), q = doc.getElementById("tSearch");
+  assert.equal(key.previousElementSibling, q, "right after the search box, drawn inside its right end");
+  assert.equal(key.textContent, "Ctrl K");
+  assert.equal(key.getAttribute("tabindex"), "-1", "no extra Tab stop: the keys themselves are the keyboard way");
+  key.click();
+  assert.equal(doc.getElementById("palette").classList.contains("hidden"), false, "a click opens Quick find too");
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /\n  \.tools>#tSearch:not\(:placeholder-shown\)\+\.t-kbd\{display:none\}/, "gone once something is typed");
+  const coarse = css.slice(css.indexOf("@media (pointer:coarse){"));
+  assert.match(coarse.slice(0, 3000), /\.tools>\.t-kbd\{display:none\}/, "and on touch screens, which have no Ctrl");
+  assert.match(q.getAttribute("placeholder"), /^Search accounts…$/, "a placeholder short enough to sit beside it");
+  // a Mac says ⌘
+  const mac = bootApp(seededAccount(), w => Object.defineProperty(w.navigator, "platform", { value: "MacIntel", configurable: true }));
+  assert.equal(mac.document.getElementById("tFindKey").textContent, "⌘ K");
+});
+
+// Account problems sat in two places: "1 unranked · 1 banned · 1 not found" in the
+// header, "2 need a refresh" in the toolbar beside the actions
+test("need a refresh is a header state, and its view keeps its accounts while they are checked", () => {
+  const D = 864e5, now = Date.now();
+  const acc = (id, t) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 10, updatedAt: t } });
+  const win = bootApp([acc("old1", now - 9 * D), acc("old2", now - 5 * D), acc("new", now - 3600e3)]);
+  const doc = win.document, word = () => doc.querySelector('#ribbon .rib-states [data-flag="stale"]');
+  assert.ok(word(), "in the header's status line, with the other states");
+  assert.equal(word().textContent, "2 need a refresh");
+  assert.ok(word().classList.contains("rib-stale"), "amber, like the card's own out-of-date line");
+  assert.equal(doc.querySelector('#count [data-flag="stale"]'), null, "and gone from the toolbar");
+  const shown = () => [...doc.querySelectorAll("#grid .card")].map(c => c.dataset.id).sort();
+  word().click();
+  assert.deepEqual(shown(), ["old1", "old2"]);
+  assert.match(doc.getElementById("bCheckAll").textContent, /Check 2 shown/, "the toolbar's one button checks exactly those");
+  // a check lands: the account is up to date, and stays in the view it was checked from
+  runScript(win, `commitStats("old1", accounts.find(a => a.id === "old1"), {found:true,tier:"GOLD",division:"I",lp:30,updatedAt:Date.now()}); render()`);
+  assert.deepEqual(shown(), ["old1", "old2"], "not dropped from under you as its new rank arrives");
+  assert.equal(word().textContent, "1 needs a refresh", "while the header counts what is still owed");
+  runScript(win, `commitStats("old2", accounts.find(a => a.id === "old2"), {found:true,tier:"GOLD",division:"I",lp:30,updatedAt:Date.now()}); render()`);
+  assert.deepEqual(shown(), ["old1", "old2"], "the run ends on the accounts it refreshed, not an empty page");
+  assert.equal(word(), null, "nothing left to refresh");
+  const chip = doc.querySelector('#chips [data-clear="flag"]');
+  assert.match(chip.textContent, /Needs refresh/, "the chip says which view this is, and clears it");
+  chip.click();
+  assert.deepEqual(shown(), ["new", "old1", "old2"]);
+  runScript(win, "ui.flag='stale'; render()");
+  assert.deepEqual(shown(), [], "opened again, it starts from what is out of date now");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
@@ -10407,12 +10468,13 @@ test("everything that points to the Backend URL or the worker guide names the Ad
 });
 
 // The README still promised a "Needs refresh" tile after it moved to the toolbar
-test("the README names only stats tiles the panel still has, and the toolbar's Refresh stale", () => {
+test("the README names only stats tiles the panel still has, and how to refresh the stale ones", () => {
   const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
   const tiles = [...readme.matchAll(/\*\*(Play next|Decay risk|This week|Needs refresh|Accounts|Best account|Regions)\*\*/g)].map(m => m[1]);
   assert.ok(tiles.length >= 3, "it does describe the panel");
   for (const t of tiles) assert.ok(appJs.includes(`<div class="k">${t}</div>`), t + " is a tile the panel can show");
-  assert.ok(readme.includes("**Refresh stale**") && />Refresh stale</.test(pageHtml), "and the stale count's button by its name");
+  assert.doesNotMatch(readme, /\*\*Refresh stale\*\*/, "no button the page no longer has");
+  assert.ok(readme.includes("**Check N shown**"), "it names the button that does it now");
 });
 
 // Every add started on EUW, and "Faker#KR1" stayed on EUW unless you changed it
@@ -11539,9 +11601,9 @@ test("a filter's chip sits beside the count it explains, so turning one on moves
   assert.match(doc.getElementById("count").textContent, /1 of \d+ shown/, "beside the count it explains");
   doc.getElementById("tFav").click();
   assert.deepEqual(chips(), ["Gold", "Favorites"], "two say themselves, with no Clear all yet");
-  // "need a refresh" is pressed in the same row already, so it gets no chip of its own
+  // out of date is a header state like the others now, so it says itself here too
   runScript(win, "ui.tier=''; ui.favOnly=false; ui.flag='stale'; render()");
-  assert.deepEqual(chips(), []);
+  assert.deepEqual(chips(), ["Needs refresh"]);
 });
 
 // "Username copied" was a toast at the bottom centre of the screen, over the next

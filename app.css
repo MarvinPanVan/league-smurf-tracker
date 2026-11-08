@@ -255,6 +255,7 @@
   .rib-row:has(.rib-i.on) .rib-i:not(.on):hover{opacity:1}
   .rib-states{display:inline-flex;align-items:center;margin-left:8px}
   .rib-s{color:var(--muted);padding:0 6px}
+  .rib-s.rib-stale{color:var(--warn-txt)}   /* amber, as the card's own out-of-date line */
   .rib-dot{font-style:normal;color:var(--faint)}
   .rib-warn{margin-left:10px;color:var(--warn-txt);border-color:color-mix(in srgb,var(--warn) 38%,transparent);
     background:color-mix(in srgb,var(--warn) 9%,transparent)}
@@ -493,15 +494,6 @@
   .cmd-count{padding-right:3px;font-size:calc(12px*var(--ts));color:var(--faint);
     display:inline-flex;align-items:center;gap:9px;letter-spacing:.015em}
   .cmd-count b{font-weight:600;color:var(--muted)}
-  /* Out of date is "worth a look", not lost: amber, the warning colour, like
-     every other state that a click puts right (see --warn). In red it was the
-     loudest thing on the page in any vault left alone for a weekend. */
-  .cmd-count .warn{color:var(--warn-txt);font-weight:600;font-size:calc(12px*var(--ts));letter-spacing:.015em;
-    padding:3px 9px;border-radius:var(--r-xs);background:none;border:1px solid transparent;box-shadow:none}
-  .cmd-count .warn:hover{background:color-mix(in srgb,var(--warn) 13%,transparent);
-    border-color:color-mix(in srgb,var(--warn) 34%,transparent)}
-  .cmd-count .warn.on{background:color-mix(in srgb,var(--warn) 18%,transparent);
-    border-color:color-mix(in srgb,var(--warn) 46%,transparent)}
   .console.running{top:env(safe-area-inset-top,0px)}
   /* The rows used to lose some padding once the header scrolled away, which moved
      every card under them up 16px at that moment. With one row pinned there is
@@ -685,6 +677,16 @@
   select:hover,select:focus{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e9edf5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")}
   input::placeholder,textarea::placeholder{color:var(--faint)}
   .tools input[type=search]{flex:1;min-width:180px}
+  /* Quick find's key, sitting in the search box's right end: pulled back over it by
+     its own width, the row's 9px gap and a 6px inset. Gone once you type, and on
+     a phone or touch screen, which have the header's Quick find button. */
+  .tools>.t-kbd{order:0;flex:0 0 auto;width:52px;height:22px;margin-left:-67px;padding:0;z-index:1;
+    font-family:inherit;font-size:calc(12px*var(--ts));font-weight:600;line-height:1;letter-spacing:.02em;color:var(--faint);
+    background:var(--panel3);border:1px solid var(--line2);border-radius:var(--r-xs)}
+  .tools>.t-kbd:hover{color:var(--text);border-color:var(--teal);background:var(--panel3)}
+  .tools>#tSearch:placeholder-shown{padding-right:64px}
+  .tools>#tSearch:not(:placeholder-shown)+.t-kbd{display:none}
+
   /* Favorites and Archived are toggles, so their lit state is a class carrying
      aria-pressed with it — it used to be two inline style properties assigned by
      hand from three different places, which is how the state got out of step with
@@ -1720,7 +1722,7 @@
   .upd{font-size:calc(12px*var(--ts));color:var(--faint);letter-spacing:.015em;display:inline-flex;align-items:center;gap:7px;min-width:0}
   .upd::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.55;flex-shrink:0}
   .upd.stale{color:var(--warn-txt)}
-  /* Out of date: amber (it used to be red; see .cmd-count .warn), with a warning
+  /* Out of date: amber (it used to be red), with a warning
      mark in place of the dot. It was a ⚠ character, which some systems draw as a
      yellow emoji; this one is drawn. */
   .upd.stale::before{display:none}
@@ -2645,8 +2647,8 @@
     .bulkchk,#tSelectAll{width:24px;height:24px}
     .lpc-range button{height:30px;padding:0 9px}
     .lpc-axis{height:32px}   /* room for them in the date row */
+    .tools>.t-kbd{display:none}.tools>#tSearch:placeholder-shown{padding-right:12px}   /* no Ctrl on a touch screen */
     .rid{padding-block:5px;margin-block:-3px}
-    .cmd-count .warn{padding:6px 10px}
     .c-notes.blank>button,.c-notes.blank .nf-link{min-height:30px} /* matches the all:unset rule it has to beat */
   }
   @media (max-width:760px){
@@ -2718,6 +2720,7 @@
     /* search and Filters share the first row (search takes all but Filters' width,
        so the rest always starts a row of its own), the rest two to a row under it */
     .tools>input[type=search]{flex:1 1 calc(100% - 128px);width:auto;min-width:0}
+    .tools>.t-kbd{display:none!important}.tools>#tSearch:placeholder-shown{padding-right:12px}
     .tools>.t-filters{display:inline-flex;flex:0 0 auto;width:auto}
     .tools>:not(input[type=search]):not(.t-filters){flex:1 1 calc(50% - 4px)}
     /* !important: Select all is a label with an inline display of its own */
@@ -2729,19 +2732,11 @@
     .tools>#tFav,.tools>#tArchived,.tools>#tSelectMode{order:2;flex:1 1 calc(33.3% - 6px);min-width:0;padding-inline:8px}
     .tools>label:has(#tSelectAll){order:3}
     body:not(.selecting) .tools>label:has(#tSelectAll){display:none!important}
-    /* One ranks button, not two stacked: with accounts out of date, Refresh N stale
-       is the one a phone needs (the rest were read recently); with none, Check all. */
-    .cmd:has(#bCheckStale:not(.hidden)) #bCheckAll{display:none}
     .tools.open>.t-filters{background-color:var(--panel3);border-color:var(--line2)}
     /* The figures wrapped two to a row, a third alone beneath them, and the champion
        chips wrapped into a block of their own: together most of a screen. Each is
        one row now that slides sideways, the next figure peeking in at the edge to
        say there is more. */
-    /* On a phone the count and "N need a refresh" stack; the button's padding (its
-       hit area) pushed its words in from the count's, so the second line started
-       10px right of the first. The margin takes the padding back out. */
-    .cmd-count{flex-direction:column;align-items:flex-start;gap:0}
-    .cmd-count .warn{margin-left:-10px}
     #dash .dash,#dash .dash[style*="--cols"]{display:flex;overflow-x:auto;scroll-snap-type:x proximity;
       overscroll-behavior-x:contain;scrollbar-width:none}
     #dash .dash>.stat{flex:0 0 min(62%,220px);scroll-snap-align:start}
