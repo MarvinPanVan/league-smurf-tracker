@@ -119,6 +119,13 @@ function cardMenu(win, target) {
   assert.ok(menu && !menu.classList.contains("hidden"), "the ⋯ menu is open");
   return menu;
 }
+// Opens the note editor the way a person would: on the note itself if there is one
+// (or an open list row's prompt), otherwise through the card's ⋯ menu, Add note.
+function noteEdit(win) {
+  const direct = win.document.querySelector('#grid [data-act="noteedit"]');
+  if (direct) { direct.click(); return; }
+  cardMenu(win).querySelector('[data-act="noteedit"]').click();
+}
 
 test("boots clean with an empty vault, no accounts", () => {
   const win = bootApp();
@@ -2291,7 +2298,7 @@ test("note fields: shown on the card as facts, skins and a penalty line, searcha
   assert.ok(card("a").querySelector(".ni-kv .v2 .sens"), "your own text is hidden in streamer mode too");
   assert.match(card("a").querySelector(".nt").textContent, /duo only/, "and the free note is still there under them");
   assert.equal(card("b").querySelector(".ni"), null, "nothing in b's fields was a real value");
-  assert.match(card("b").querySelector(".c-notes.blank").textContent, /Add a note/);
+  assert.equal(card("b").querySelector(".c-notes"), null, "an empty note says nothing on the card: Add note is in its ⋯ menu");
   assert.deepEqual([...card("c").querySelectorAll(".ni-skins .ni-f")].map(f => f.textContent).slice(-2), ["Skin 5", "+3 more"], "nine skins: six and a count");
   runScript(win, "window.__s = JSON.stringify(accounts.map(a => a.info || null))");
   const mem = JSON.parse(win.__s);
@@ -2328,12 +2335,15 @@ test("note fields: a click on them opens the account form at Notes, and saving k
   assert.equal(JSON.stringify(JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].info),
     JSON.stringify({ honor: 2, owned: 999, rp: 500, twofa: true, skins: ["Elementalist Lux", "Arcade Ahri"] }),
     "a number past the field's top is kept at the top; an emptied field is gone; RP, switched off, keeps its value");
-  // an empty card offers the fields as a second way in, and opening the form for a
-  // name edit still starts at the name
-  doc.querySelector('.card[data-id="z"] .c-notes.blank [data-act="notefields"]').click();
+  // an empty account's open list row offers the fields as a second way in, and
+  // opening the form for a name edit still starts at the name
+  doc.querySelector('[data-density="list"]').click();
+  doc.querySelector('.hx.row[data-id="z"] .rw-main').click();
+  doc.querySelector('.hx.row[data-id="z"] .c-notes.blank [data-act="notefields"]').click();
   assert.equal($("form").classList.contains("hidden"), false);
   assert.ok(doc.querySelector("#fInfo [data-autofocus]"));
   doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  doc.querySelector('[data-density="cards"]').click();
   cardMenu(win, "z").querySelector('[data-act="edit"]').click();
   assert.equal($("fName").hasAttribute("data-autofocus"), true, "Account… starts at the name as before");
   assert.equal(doc.querySelector("#fInfo [data-autofocus]"), null);
@@ -3363,7 +3373,7 @@ test("a note saves itself as you type — there is no Save button to miss", () =
   addRealAccount(win, "NoteGuy", "1234");
 
   // an empty note is still a click target, so there is no separate "add" action
-  win.document.querySelector('[data-act="noteedit"]').click();
+  noteEdit(win);
   const ta = win.document.querySelector('[data-f="notetext"]');
   assert.ok(ta, "editor must open");
 
@@ -3379,7 +3389,7 @@ test("a note saves itself as you type — there is no Save button to miss", () =
 test("clicking away commits the note and collapses the editor", () => {
   const win = bootApp();
   addRealAccount(win, "NoteGuy", "1234");
-  win.document.querySelector('[data-act="noteedit"]').click();
+  noteEdit(win);
   typeNote(win, "original");
 
   // pointerdown outside the note block is the whole gesture
@@ -3389,12 +3399,12 @@ test("clicking away commits the note and collapses the editor", () => {
   assert.match(win.document.querySelector(".c-notes").textContent, /original/);
 
   // reopening shows what was saved, and clearing it puts the blank state back
-  win.document.querySelector('[data-act="noteedit"]').click();
+  noteEdit(win);
   assert.equal(win.document.querySelector('[data-f="notetext"]').value, "original");
   typeNote(win, "   ");
   win.document.body.dispatchEvent(new win.Event("pointerdown", { bubbles: true }));
   assert.equal(storedNote(win), undefined, "whitespace is not a note");
-  assert.ok(win.document.querySelector(".c-notes.blank"), "back to the quiet invitation");
+  assert.equal(win.document.querySelector(".card .c-notes"), null, "back to saying nothing");
 });
 
 test("the paste-a-whole-page fallback is gone; manual rank entry replaces it", () => {
@@ -4316,7 +4326,7 @@ test("a card is patched in place, not rebuilt, so nothing blinks", () => {
 
 test("typing a note survives a background re-render of the grid", () => {
   const win = bootApp(seededAccount());
-  win.document.querySelector('[data-act="noteedit"]').click();
+  noteEdit(win);
   const ta = win.document.querySelector('[data-f="notetext"]');
   ta.focus();
   ta.value = "half-typed thought";
@@ -4559,7 +4569,7 @@ test("the note editor closes after clicking away, in either layout", () => {
       win.document.querySelector('[data-density="list"]').click();
       win.document.querySelector(".rw-main").click();
     }
-    win.document.querySelector('[data-act="noteedit"]').click();
+    noteEdit(win);
     const ta = win.document.querySelector('[data-f="notetext"]');
     assert.ok(ta, `editor opens (list: ${asList})`);
     ta.value = "written in the " + (asList ? "list" : "cards");
@@ -4752,7 +4762,7 @@ test("locking clears every scrap of per-card state", async () => {
   win.document.getElementById("sVaultSet").click();
   await until(() => encrypted(win), "the vault to be written encrypted");
 
-  win.document.querySelector('[data-act="noteedit"]').click();
+  noteEdit(win);
   const ta = win.document.querySelector('[data-f="notetext"]');
   ta.value = "half-written secret";
   ta.dispatchEvent(new win.Event("input", { bubbles: true }));
@@ -8284,7 +8294,7 @@ test("the ⋯ menu is grouped and marked, not ten lines of grey text", () => {
     ["Edit", "Look up", "Mark", "Vault"],
     "named groups — a hairline never says what either side of it is");
   const items = [...m.querySelectorAll("button,.cm-link")];
-  assert.equal(items.length, 11, "eleven: Season reset and the stats setting live where they belong, and Refresh rank came in");
+  assert.equal(items.length, 12, "twelve: Season reset and the stats setting live where they belong; Refresh rank and Add note came in");
   for (const b of items) assert.ok(b.querySelector("svg.ico"), `"${b.textContent.trim()}" carries a mark`);
   // The account name used to sit at the top as the one row that was not an item,
   // which is exactly the row that got clipped once the list had to scroll.
@@ -10351,6 +10361,21 @@ test("a fresh card says nothing about when it was read; past a day it does, with
   // a check that failed is an exception, so it shows, with a way to try again
   runScript(win, `accounts.find(a => a.id === "fresh").stats.note = "auto-fetch failed (rate limited)"; render()`);
   assert.deepEqual([...card("fresh").querySelector(".c-meta").children].map(e => e.className.split(" ")[0]), ["c-ref", "c-failed"]);
+});
+
+// "Add a note" and "Honor, skins…" sat on nearly every card: twenty cards, forty prompts
+test("an empty note says nothing on a card; Add note is in its ⋯ menu and opens the editor on the card", () => {
+  const win = bootApp([{ id: "e", region: "EUW", gameName: "E", tagLine: "1", status: "active", tags: [], history: [], stats: null },
+    { id: "n", region: "EUW", gameName: "N", tagLine: "1", status: "active", tags: [], history: [], stats: null, notes: "duo only" }]);
+  const doc = win.document, card = id => doc.querySelector(`.card[data-id="${id}"]`);
+  assert.equal(card("e").querySelector(".c-notes"), null, "no prompt");
+  assert.match(card("n").querySelector(".c-notes").textContent, /duo only/, "a written note still shows");
+  const item = cardMenu(win, "e").querySelector('[data-act="noteedit"]');
+  assert.equal(item.textContent.trim(), "Add note");
+  item.click();
+  assert.ok(card("e").querySelector('.c-notes.editing [data-f="notetext"]'), "the editor opens on the card itself");
+  assert.equal(doc.querySelector('#cardMenu [data-f="notetext"]'), null, "not inside the menu");
+  assert.equal(cardMenu(win, "n").querySelector('[data-act="noteedit"]').textContent.trim(), "Edit note");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

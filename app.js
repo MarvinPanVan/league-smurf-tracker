@@ -5198,7 +5198,7 @@ function noteFactsHTML(a,clickable,cap){
 }
 // Split out of cardHTML so opening the editor can swap this one block instead of
 // rebuilding the card around it — see syncNoteBlock.
-function noteBlockHTML(a,rev){
+function noteBlockHTML(a,rev,blank){
   // The fields stay in view above the text being written, but only the text
   // edits here: they open the account form, which a click inside an open editor
   // must not do — it would take the focus the editor saves on losing.
@@ -5209,6 +5209,10 @@ function noteBlockHTML(a,rev){
   // capped on the card face; whole once Details is open
   const cap=!openInfo.has(a.id), facts=noteFactsHTML(a,true,cap);
   if(a.notes||facts)return`<div class="c-notes${cap?" capped":""}" data-act="noteedit" title="Click to edit the note"><span class="k">Notes ${icon("pencil")}</span>${facts}${a.notes?`<div class="nt">${sens(esc(a.notes))}</div>`:""}</div>`;
+  /* An empty note was two invitations, "Add a note" and "Honor, skins…", on nearly
+     every card: twenty cards, forty prompts. A card says nothing now (Add note is in
+     its ⋯ menu); an open list row, which is the detail view, still offers it. */
+  if(!blank)return"";
   return`<div class="c-notes blank"><button type="button" data-act="noteedit" title="Click to write a note">${icon("pencil")} Add a note</button>`
     +`<button type="button" class="nf-link" data-act="notefields" title="Honor, skins, Blue Essence and more">Honor, skins…</button></div>`;
 }
@@ -5217,7 +5221,7 @@ function noteBlockHTML(a,rev){
 // to open one textarea, which is why the portrait, the select checkbox and the
 // rest of the card blinked out and came back.
 function syncNoteBlock(card,a){
-  const html=noteBlockHTML(a);
+  const html=noteBlockHTML(a,"",!!card.closest(".row"));
   const cur=card.querySelector(".c-notes");
   if(!html){if(cur)cur.remove();return}
   const tmp=document.createElement("div");
@@ -5434,7 +5438,7 @@ function rowHTML(a,i){
     ${open?`<div class="rw-open">
       ${(()=>{const p=peakInfo(a);return rankChart(a.history||[],cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(a.history||[]),a.id,p.peakV,p.peak)})()}
       ${infoBlockHTML(a)||""}
-      ${noteBlockHTML(a)}
+      ${noteBlockHTML(a,"",true)}
       <div class="acts">
         <button data-act="login" class="a-login">${icon("user")} ${openLogin.has(a.id)?"Hide login":"Login"}</button>
         <a class="btn" href="https://op.gg/lol/summoners/${(REGIONS[a.region]||REGIONS.EUW).opgg}/${encodeURIComponent(a.gameName)}-${encodeURIComponent(a.tagLine)}" target="_blank" rel="noreferrer">OP.GG ↗</a>
@@ -5752,6 +5756,7 @@ function cardMenuHTML(a){
     +grp("Edit")
     +it("rank","pencil","Rank…")
     +it("edit","user","Account…")
+    +it("noteedit","pencil",a.notes?"Edit note":"Add note")
     +it("art","image","Card art…")
     // Both profile links together. op.gg used to sit in the footer while dpm.lol
     // sat in here, which split one kind of thing across two places.
@@ -8625,7 +8630,9 @@ async function onCardClick(e){
     if(editingNote===id)return;
     commitNote();            // only one editor open at a time
     editingNote=id;noteDraft=acc.notes||"";
-    syncNoteBlock(card,acc);
+    // from the ⋯ menu, "card" is the menu: the editor opens on the card itself
+    const host=card.closest("#cardMenu")?$("grid").querySelector(`[data-id="${idSel(id)}"]`):card;
+    if(host)syncNoteBlock(host,acc);
   }
 
   else if(act==="range"){chartRange.set(id,btn.dataset.r);renderCard(id)}
