@@ -9946,6 +9946,27 @@ test("an encrypted backup with no master password gets a password of its own, an
   assert.equal(appGet(win2, "accounts[0].password"), "Zt7#q!Lm2pWx", "logins and all");
 });
 
+// "While away" was always in the sort list and sorted by nothing unless the "While you were
+// away" band had measured a visit
+test("the sort list offers While you were away only while that sort is on", () => {
+  const opts = win => [...win.document.querySelectorAll("#tSort option")].map(o => o.value);
+  const DAY = 86400000, now = Date.now();
+  const h = (lp0, lp1) => [{ t: now - 3 * DAY, tier: "GOLD", division: "II", lp: lp0 }, { t: now - 1000, tier: "GOLD", division: "II", lp: lp1 }];
+  const seed = [
+    { id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: h(10, 60), stats: { found: true, tier: "GOLD", division: "II", lp: 60, updatedAt: now - 1000 } },
+    { id: "b", region: "EUW", gameName: "B", tagLine: "1", status: "active", tags: [], history: h(50, 20), stats: { found: true, tier: "GOLD", division: "II", lp: 20, updatedAt: now - 1000 } },
+  ];
+  const win = bootApp(seed, w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ lastSeenAt: now - 2 * DAY })));
+  assert.equal(opts(win).includes("away"), false, "not in the list on its own");
+  assert.equal(win.document.querySelector('#tSort option[value="change"]').textContent, "Sort: Last LP change");
+  win.document.getElementById("awayShow").click();
+  assert.equal(win.document.getElementById("tSort").value, "away", "the band's Sort by movement puts it in and picks it");
+  assert.deepEqual([...win.document.querySelectorAll(".card")].map(c => c.dataset.id), ["a", "b"]);
+  const sel = win.document.getElementById("tSort");
+  sel.value = "rank"; sel.dispatchEvent(new win.Event("change"));
+  assert.equal(opts(win).includes("away"), false, "and it goes once another sort is picked");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

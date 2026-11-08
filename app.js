@@ -7841,9 +7841,17 @@ let searchT;
 // the grid and the chips only: the stats panel above does not follow the search (see renderDash)
 $("tSearch").addEventListener("input",e=>{ui.search=e.target.value;clearTimeout(searchT);searchT=setTimeout(()=>{renderChips();renderGrid()},120)});
 $("tRegion").addEventListener("change",e=>{ui.region=e.target.value;renderFilters()});
+/* "While away" was always in the list, and picked from it sorted by nothing: it
+   only means something after "While you were away" has measured the visit. It
+   is offered while that sort is on, and goes again once another is picked. */
+function awaySortOption(on){
+  const sel=$("tSort");let o=sel.querySelector('option[value="away"]');
+  if(on&&!o){o=new Option("Sort: While you were away","away");sel.add(o)}
+  if(!on&&o)o.remove();
+}
 $("tSort").addEventListener("change",e=>{
   ui.sort=e.target.value;
-  if(ui.sort!=="away")awayDelta=new Map();
+  if(ui.sort!=="away"){awayDelta=new Map();awaySortOption(false)}
   renderGrid();
 });
 $("tStatus").addEventListener("change",e=>{ui.status=e.target.value;renderFilters()});
@@ -7993,6 +8001,7 @@ $("awayBand").addEventListener("click",e=>{
       for(const x of sum.down)awayDelta.set(x.a.id,x.d);
     }
     ui.sort="away";
+    awaySortOption(true);
     $("tSort").value="away";
     render();
   }
