@@ -8199,7 +8199,7 @@ function palCommands(){
     {k:"cards list wall layout",n:"Switch layout",s:"Cards, list, wall",i:"chart",run:()=>{
       const order=["cards","list","wall"];
       ui.density=order[(order.indexOf(ui.density)+1)%order.length];
-      cfg.density=ui.density;saveCfg();openInfo.clear();render();
+      cfg.density=ui.density;saveCfg();openInfo.clear();render();fadeInGrid();
     }},
     {k:"settings",n:"Settings",s:"Rank checks, alerts, security, appearance",i:"user",run:()=>openSettings()},
     {k:"password check security reused weak leak pwned",n:"Password check-up",s:"Passwords used twice, weak, or in a data leak",i:"alert",run:()=>openSettings("security")},
@@ -8358,10 +8358,21 @@ $("chips").addEventListener("click",e=>{
 });
 $("density").addEventListener("click",e=>{
   const b=e.target.closest("[data-density]");if(!b)return;
+  const changed=ui.density!==b.dataset.density;
   ui.density=b.dataset.density;cfg.density=ui.density;saveCfg();
   openInfo.clear(); // "expanded" means different things across the three layouts
   render();
+  if(changed)fadeInGrid();
 });
+/* A new layout replaces the whole page at once, and a hard cut there read as a
+   flicker. 150ms of fade, for this only: filtering and sorting stay instant,
+   since there speed is the point. (Reduced motion and Effects: Off skip it.) */
+function fadeInGrid(){
+  const g=$("grid");
+  g.classList.remove("view-in");void g.offsetWidth;g.classList.add("view-in");
+  const off=()=>{g.classList.remove("view-in");g.removeEventListener("animationend",off)};
+  g.addEventListener("animationend",off);
+}
 /* There was a Refresh N stale button beside Check all ranks, and "N need a refresh"
    beside both: three controls for one job. The header's count shows those accounts,
    and Check all ranks then says "Check N shown". Quick find keeps the one-step

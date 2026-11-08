@@ -10432,6 +10432,22 @@ test("the stats panel folds shut the way it opened, and goes at once with motion
   assert.equal(calm.document.querySelector("#dash > .hx"), null, "with motion reduced it goes at once");
 });
 
+// Switching Cards / List / Wall replaced the page in a hard cut
+test("switching layout fades the new one in; filtering and sorting stay instant", () => {
+  const win = bootApp(ladderSeed());
+  const doc = win.document, grid = doc.getElementById("grid");
+  doc.querySelector('[data-density="list"]').click();
+  assert.ok(grid.classList.contains("view-in"), "the new layout fades in");
+  grid.dispatchEvent(new win.Event("animationend"));
+  assert.equal(grid.classList.contains("view-in"), false, "and the class goes when it has");
+  doc.querySelector('[data-density="list"]').click();
+  assert.equal(grid.classList.contains("view-in"), false, "the same layout again: nothing to fade");
+  doc.getElementById("tFav").click();
+  assert.equal(grid.classList.contains("view-in"), false, "a filter is instant");
+  assert.match(html, /\n  \.grid\.view-in\{animation:viewIn \.15s ease-out both\}/);
+  assert.match(html, /\.hx\.dash-out,\.grid\.view-in,\.sec-b,/, "and it is off with motion reduced");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
