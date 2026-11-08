@@ -11488,7 +11488,7 @@ test("scrolled down, only the search row stays pinned, and nothing shifts on the
 
 // The Cards entry was one sentence chained with "·" over eight lines, and Keys and
 // More the same; and it still described Login as a panel to open
-test("Help lists what a card does, one thing a line, and says Login copies", () => {
+test("Help lists what a card does, one thing a line, and names the copy button as the card does", () => {
   const win = bootApp();
   const dd = label => [...win.document.querySelectorAll("#help dl.help dt")].find(d => d.textContent === label).nextElementSibling;
   for (const label of ["Cards", "Keys", "More"]) {
@@ -11496,10 +11496,22 @@ test("Help lists what a card does, one thing a line, and says Login copies", () 
     assert.ok(items.length >= 3, label + " is a list");
     assert.doesNotMatch(dd(label).textContent, / · /, label + " has no chained dots left");
   }
-  assert.match(dd("Cards").querySelector("li").textContent, /^Login copies the username, then the password/);
+  // the button has read "Copy username" since it stopped being a "Login" panel
+  assert.match(dd("Cards").querySelector("li").textContent, /^Copy username copies the username, then the same button reads Copy password\./);
   assert.match(html, /\n  \.help-ul\{margin:0;padding:0 0 0 18px/);
   // and the empty page's third step says the same
-  assert.match(win.document.getElementById("grid").textContent, /Login copies the username, then the password, one click each/);
+  assert.match(win.document.getElementById("grid").textContent, /Copy username, then Copy password: one click each/);
+  assert.doesNotMatch(win.document.getElementById("help").textContent + win.document.getElementById("grid").textContent, /Login copies/);
+});
+
+// "Full" still promised cards that lift, which they stopped doing in 2.26.0
+test("the Full effects line describes what Full does now", () => {
+  const win = bootApp();
+  const hint = [...win.document.querySelectorAll("#settings .hint")].find(h => /^Full:/.test(h.textContent));
+  assert.ok(hint);
+  assert.doesNotMatch(hint.textContent, /lift/);
+  assert.match(hint.textContent, /^Full: cards glow under the pointer and wall tiles rise a little\./);
+  assert.match(html, /\n  \.grid\.wall>\.hx:hover\{transform:translateY\(-2px\)\}/, "the wall tiles do rise");
 });
 
 // "Remove protection" was red and pressable with nothing protected

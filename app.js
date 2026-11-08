@@ -5994,7 +5994,7 @@ function renderGrid(){
       +`<h2 class="wl-t">No accounts yet</h2><p class="wl-s">Add your accounts to keep their ranks and logins in one place.</p>`
       +`<ol class="wl-steps"><li><span class="wl-n">1</span><b>Add an account</b><span>Its Riot ID and region. The login is optional.</span></li>`
       +`<li><span class="wl-n">2</span><b>Check its rank</b><span>Free and automatic, read from op.gg. No key needed.</span></li>`
-      +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Login copies the username, then the password, one click each.</span></li></ol>`
+      +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Copy username, then Copy password: one click each, on the card.</span></li></ol>`
       +`<div class="wl-acts"><button id="bEmptyAdd" class="b-fill">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div>`
       +`<p class="wl-note">${icon("lock")}<span>Logins, passwords and notes stay in this browser. A rank check sends only the Riot ID to op.gg, through a public proxy. Clearing the browser's data clears the vault too, so keep a backup.</span></p></div></div>`);
   }else if(list.length===0){
