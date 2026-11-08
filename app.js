@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.21.0";
+const APP_VERSION="2.22.0";
 const APP_CHANGELOG=[
+  {v:"2.22.0",items:[
+    "Questions like \"Delete all?\" open in the app's own window, and the back button closes windows instead of leaving",
+    "On iPhone, Safari's 7-day deletion is explained once, with how to keep your vault",
+    "Compare by ticking two accounts, Backup and Sync share one tab, and the example data stays until you save",
+  ]},
   {v:"2.21.0",items:[
     "A check that fails is said once on the card, with the reason in plain words",
     "List rows show \"Last check failed\" too",
