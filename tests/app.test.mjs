@@ -10378,6 +10378,33 @@ test("an empty note says nothing on a card; Add note is in its ⋯ menu and open
   assert.equal(cardMenu(win, "n").querySelector('[data-act="noteedit"]').textContent.trim(), "Edit note");
 });
 
+// Ten tags made a two-row block of chips on a card; the note chips were already one row
+test("a card's tags stay on one row, the rest behind +N, which opens Details where they all show", () => {
+  const tags = ["main", "adc", "duo", "ranked-ready", "do not use", "jonas", "flex"];
+  const win = bootApp([{ id: "t", region: "EUW", gameName: "T", tagLine: "1", status: "active", tags, history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() } }]);
+  assert.match(html, /\n  \.card:not\(\.info-open\) \.ctags\{flex-wrap:nowrap;overflow:hidden\}/, "one line even before it is measured");
+  // jsdom has no layout: a 200px row, 60px chips 6px apart
+  win.Element.prototype.getBoundingClientRect = function () {
+    if (this.classList.contains("ctags")) return { left: 0, right: 200, width: 200, top: 0, bottom: 20, height: 20 };
+    if (this.parentElement && this.parentElement.classList.contains("ctags")) {
+      let x = 0;
+      for (const sib of this.parentElement.children) { if (sib === this) break; if (!sib.hidden) x += 66; }
+      return { left: x, right: x + 60, width: 60, top: 0, bottom: 20, height: 20 };
+    }
+    return { left: 0, right: 0, width: 0, top: 0, bottom: 0, height: 0 };
+  };
+  runScript(win, "render()");
+  const row = () => win.document.querySelector('.card[data-id="t"] .ctags');
+  const shown = () => [...row().children].filter(c => !c.hidden).map(c => c.textContent);
+  assert.deepEqual(shown(), ["main", "adc", "+5"], "what fits, and a count of the rest that fits beside it");
+  const more = row().querySelector(".ct-more");
+  assert.equal(more.dataset.act, "info", "the count opens Details");
+  more.click();
+  assert.ok(win.document.querySelector('.card[data-id="t"]').classList.contains("info-open"));
+  assert.deepEqual(shown(), tags, "where every tag shows");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

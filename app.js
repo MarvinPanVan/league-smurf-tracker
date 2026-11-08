@@ -6032,6 +6032,7 @@ function renderGrid(){
   setHTML($("count"),!accounts.length?"":(list.length===held?`<span><b>${held}</b> ${noun}</span>`
       :`<span><b>${list.length}</b> of <b>${held}</b>${ui.showArchived?" archived":""} shown</span>`));
   syncCheckAll(list);
+  fitTags(grid);
 }
 // Called on its own during a run, where re-rendering the grid to flip one button
 // would undo the point of rendering a single card.
@@ -6079,6 +6080,7 @@ function renderCard(id){
   const tmp=document.createElement("div");
   tmp.innerHTML=html;
   morph(el,tmp.firstElementChild);
+  fitTags(el);
   cardCache.set(id,html); // keep the skip-check honest about what this node holds
   reveal=null; // consumed, exactly as renderGrid does
   if(editingNote)focusNoteEditor(grid);
@@ -6666,7 +6668,35 @@ const TEXT_SIZES=["small","default","large"];
 function applyTextSize(v){
   const t=TEXT_SIZES.includes(v)?v:"default";
   if(t==="default")delete document.documentElement.dataset.ts;else document.documentElement.dataset.ts=t;
-  syncOptSeg("sTextSize",t);return t;
+  syncOptSeg("sTextSize",t);fitTags();return t;
+}
+/* A card's tags stay on one row, the way its note chips do: ten tags made a
+   two-row block of chips on every card that had them. What does not fit hides
+   behind "+N", which opens Details, where they all show. Measured rather than
+   counted, since "do not use" and "2fa" are not the same width; the CSS keeps the
+   row to one line even before this runs. */
+let fitTagsRaf=0;
+addEventListener("resize",()=>{cancelAnimationFrame(fitTagsRaf);fitTagsRaf=requestAnimationFrame(()=>fitTags())});
+function fitTags(root){
+  const scope=root||$("grid");if(!scope)return;
+  const rows=scope.matches&&scope.matches(".ctags")?[scope]:scope.querySelectorAll(".card:not(.info-open) .ctags");
+  for(const row of rows){
+    for(const m of row.querySelectorAll(".ct-more"))m.remove();
+    const chips=[...row.children];
+    for(const c of chips)c.hidden=false;
+    const R=row.getBoundingClientRect();
+    if(!R.width)continue;
+    const out=el=>el.getBoundingClientRect().right>R.right+.5;
+    const cut=chips.findIndex(out);
+    if(cut<0)continue;
+    const more=document.createElement("button");
+    more.type="button";more.className="ct-more";more.dataset.act="info";more.title="Show every tag in Details";
+    row.appendChild(more);
+    let n=Math.max(1,cut);
+    const show=()=>{chips.forEach((c,i)=>{c.hidden=i>=n});more.textContent="+"+(chips.length-n)};
+    show();
+    while(n>1&&out(more)){n--;show()}
+  }
 }
 function applyEffects(v){const f=EFFECTS.includes(v)?v:"full";document.body.dataset.fx=f;syncOptSeg("sEffects",f);return f}
 const CARD_PARTS=[["chart","LP chart"],["stats","Peak & stats"],["wl","Win/loss bar"],["goal","Goal & level bar"],["tags","Tags"],["notes","Notes"]];

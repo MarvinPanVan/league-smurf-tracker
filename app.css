@@ -1659,6 +1659,13 @@
   .meta b{color:var(--text);font-weight:500}
   .meta .g{color:var(--gold-txt)}
   .ctags{display:flex;gap:6px;flex-wrap:wrap}
+  /* one row on a closed card; fitTags hides what does not fit behind "+N" */
+  .card:not(.info-open) .ctags{flex-wrap:nowrap;overflow:hidden}
+  .ctags>*{flex-shrink:0}
+  .ctags>[hidden]{display:none}
+  .ctags .ct-more{font:inherit;font-size:calc(12px*var(--ts));padding:3px 9px;border-radius:var(--r-xs);background:#ffffff12;
+    border:1px solid transparent;color:var(--muted);height:auto;box-shadow:none}
+  .ctags .ct-more:hover{color:var(--text);background:#ffffff1c;border-color:transparent}
   .ctags span{font-size:calc(12px*var(--ts));padding:3px 9px;border-radius:var(--r-xs);background:#ffffff12;border:1px solid transparent;color:var(--muted)}
   /* the role is read from recent games, not typed by you, so it is set apart from your tags */
   .ctags .role-tag{color:var(--teal-txt);background:color-mix(in srgb,var(--teal) 12%,transparent)}
