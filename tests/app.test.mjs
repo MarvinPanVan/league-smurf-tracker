@@ -9598,6 +9598,24 @@ test("Settings has five tabs, Backup & sync holding both ways to keep a copy", (
   assert.match(fs.readFileSync(path.join(ROOT, "README.md"), "utf8"), /Settings → Backup & sync/);
 });
 
+// The link preview still showed a famous player's account name, the "nothing leaves it"
+// claim the app had dropped as untrue, and a design two versions old. A new picture at
+// the same address would be kept from view by every chat app's cache of the old one.
+test("the link preview names a fresh image, at the size the page says it is", () => {
+  const url = pageHtml.match(/<meta property="og:image" content="([^"]+)">/)[1];
+  assert.match(url, /\/icons\/social\.jpg\?v=\d+$/, "a version on the address, so a new picture is fetched");
+  const jpg = fs.readFileSync(path.join(ROOT, "icons", "social.jpg"));
+  let i = 2, w = 0, h = 0;
+  while (i < jpg.length) {
+    if (jpg[i] !== 0xff) { i++; continue; }
+    const m = jpg[i + 1];
+    if (m === 0xc0 || m === 0xc2) { h = jpg.readUInt16BE(i + 5); w = jpg.readUInt16BE(i + 7); break; }
+    i += 2 + jpg.readUInt16BE(i + 2);
+  }
+  assert.equal(String(w), pageHtml.match(/og:image:width" content="(\d+)"/)[1]);
+  assert.equal(String(h), pageHtml.match(/og:image:height" content="(\d+)"/)[1]);
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
