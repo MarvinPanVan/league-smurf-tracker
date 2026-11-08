@@ -1923,6 +1923,21 @@
      grid down means the account you are editing walks off the screen the moment
      you start. Sixteen fields is a page of its own either way.
      Bulk add is the one panel still inline. */
+  /* a confirmation opens over whatever window asked it, and stays a small card
+     even on a phone, where every other window is the whole screen: a question of
+     one line does not need one */
+  #askModal{z-index:70}
+  #askModal .mdl{max-width:460px}
+  .ask-b{margin:0;padding:16px 22px;white-space:pre-line;color:var(--muted);line-height:1.5}
+  .ask-b:empty{display:none}
+  #askAlt[hidden]{display:none}
+  @media (max-width:620px){
+    #askModal{padding:16px;align-items:center}
+    #askModal .mdl{margin:auto}
+    #askModal .mdl.hx{border-radius:var(--r-md)}
+    #askModal .mdl-in{min-height:0;border-radius:inherit}
+    #askModal .ask-b{padding:14px 16px}
+  }
   .modal{position:fixed;inset:0;z-index:60;overflow:auto;overscroll-behavior:contain;
     display:flex;align-items:flex-start;justify-content:center;
     padding:clamp(14px,5vh,60px) clamp(12px,4vw,32px)}

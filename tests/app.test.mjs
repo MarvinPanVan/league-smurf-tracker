@@ -68,6 +68,10 @@ function bootApp(seed, tweak, url = "https://example.com/index.html") {
   if (seed) window.localStorage.setItem("smurf-tracker", JSON.stringify(seed));
   if (tweak) tweak(window);
   runScript(window, appScript); // runs the app's boot() at the end, exactly like a real page load
+  // every "are you sure" is the app's own window now (ask): answered yes, as the
+  // browser's box above was. A test of the window itself puts __ask back.
+  window.__ask = window.ask;
+  window.ask = async () => "ok";
   return window;
 }
 
@@ -1449,8 +1453,9 @@ test("New season resets every ranked account at once, leaves the rest, and one U
     acc("u", "UNRANKED"), acc("old", "SILVER", { archived: true })]);
   const doc = win.document;
   let asked = "";
-  win.confirm = m => { asked = m; return true; };
+  win.ask = async o => { asked = o.title; return "ok"; };
   doc.getElementById("bNewSeason").click();
+  await tick();
   assert.match(asked, /new season for 2 ranked accounts/, "says how many, before doing anything");
   const get = id => win.eval("accounts").find(a => a.id === id);
   assert.equal(get("g").stats.tier, "UNRANKED");
@@ -1463,8 +1468,9 @@ test("New season resets every ranked account at once, leaves the rest, and one U
   assert.equal(get("g").stats.tier, "GOLD", "Undo puts them back");
   assert.equal(get("d").stats.tier, "DIAMOND");
   assert.equal(JSON.stringify(get("d").goal), JSON.stringify({ tier: "MASTER", division: null, lp: 0 }), "goal included");
-  win.confirm = () => false;
+  win.ask = async () => false;
   doc.getElementById("bNewSeason").click();
+  await tick();
   assert.equal(get("g").stats.tier, "GOLD", "a No changes nothing");
 });
 
@@ -2146,7 +2152,7 @@ test("passkey unlock: changing or removing the master password turns it off, and
   assert.equal(pkRec(win), null);
 });
 
-test("dates are where you are: backup and export file names, and the passkey's date", () => {
+test("dates are where you are: backup and export file names, and the passkey's date", async () => {
   const tz = process.env.TZ;
   process.env.TZ = "Pacific/Auckland";
   try {
@@ -2159,6 +2165,7 @@ test("dates are where you are: backup and export file names, and the passkey's d
       URL.createObjectURL = () => "blob:x"; URL.revokeObjectURL = () => {};
       HTMLAnchorElement.prototype.click = function () { if (this.download) __names.push(this.download) }; })()`);
     runScript(win, "doExport()");
+    await tick();   // the plain-text question is answered first
     win.document.getElementById("bExportCsv").click();
     assert.deepEqual([...win.__names], ["smurf-backup-plaintext-2026-10-29.json", "smurf-export-2026-10-29.csv"]);
     win.localStorage.setItem("smurf-tracker-passkey", JSON.stringify({ v: 1, id: "AAAA", salt: "AAAA", iv: "AAAA", ct: "AAAA", at: Date.UTC(2026, 9, 28, 12, 0) }));
@@ -2354,8 +2361,9 @@ test("Fields…: built-ins switch off and on, your own are added, renamed and re
   cardMenu(win, "a").querySelector('[data-act="edit"]').click();
   $("fFieldsBtn").click();
   let asked = "";
-  win.confirm = m => { asked = m; return true; };
+  win.ask = async o => { asked = o.title + " " + o.body; return "ok"; };
   doc.querySelector('#fFieldsCfg [data-own-del="0"]').click();
+  await tick();
   assert.match(asked, /Remove “Source”\? 2 accounts have values in it/);
   assert.deepEqual(own(), ["Server"]);
   await until(() => !stored()[1].info, "b had only that field, so b has no fields left");
@@ -2971,7 +2979,7 @@ test("saveDB writes an encrypted envelope once a vault password is set, and plai
   let raw = JSON.parse(win.localStorage.getItem("smurf-tracker"));
   assert.equal(raw.__enc, true);
 
-  win.document.getElementById("sVaultRemove").click(); // confirm() is stubbed to always return true
+  win.document.getElementById("sVaultRemove").click(); // ask() is stubbed to always say yes
   await until(() => storedPlain(win), "the vault to be written back in the clear");
   raw = JSON.parse(win.localStorage.getItem("smurf-tracker"));
   assert.ok(Array.isArray(raw));
@@ -4489,7 +4497,7 @@ test("bulk selection works in the list view as well as the cards", () => {
    it was made in: the bar went on counting accounts the grid no longer showed, and
    the bulk actions — behind a confirm that names a number, not the accounts —
    reached straight past the grid to them. */
-test("a selection does not outlive the view it was made in", () => {
+test("a selection does not outlive the view it was made in", async () => {
   const count = win => win.document.getElementById("bulkCount").textContent;
   const barHidden = win => win.document.getElementById("bulkbar").classList.contains("hidden");
 
@@ -4516,7 +4524,8 @@ test("a selection does not outlive the view it was made in", () => {
   cardMenu(win2, first).querySelector('[data-act="archive"]').click();
   assert.equal(count(win2), "1 selected", "the archived one left the selection with the view");
 
-  win2.document.getElementById("bulkDelete").click(); // confirm() is stubbed to true
+  win2.document.getElementById("bulkDelete").click(); // ask() is stubbed to yes
+  await tick();
   win2.document.getElementById("tArchived").click();
   assert.equal(win2.document.querySelectorAll(".card").length, 1,
     "the archived account survives a delete it was never on screen for");
@@ -8700,7 +8709,7 @@ test("a missing Riot name or tag is said under the field, not in a toast over th
 
 // "Stored unencrypted, locally" was the field's placeholder, set in the password's
 // monospace and gone at the first letter typed
-test("what happens to the password is a line under the box, with a way to set a master password", () => {
+test("what happens to the password is a line under the box, with a way to set a master password", async () => {
   const win = bootApp();
   const doc = win.document, $ = id => doc.getElementById(id);
   $("bAdd").click();
@@ -8712,12 +8721,14 @@ test("what happens to the password is a line under the box, with a way to set a 
   assert.match($("fPassNote").textContent, /without encryption/, "still said once there is a password");
   // with something typed, the link asks before leaving the form; a no keeps it
   let asked = 0;
-  win.confirm = () => { asked++; return false; };
+  win.ask = async () => { asked++; return false; };
   $("fSetMaster").click();
+  await tick();
   assert.equal(asked, 1);
   assert.ok(!$("form").classList.contains("hidden"), "the form and what's in it stay");
-  win.confirm = () => { asked++; return true; };
+  win.ask = async () => { asked++; return "ok"; };
   $("fSetMaster").click();
+  await tick();
   assert.ok($("form").classList.contains("hidden"));
   assert.ok(!$("settings").classList.contains("hidden"));
   assert.equal($("settings").dataset.tab, "security", "at the master password");
@@ -9069,6 +9080,7 @@ test("no sentence in the app's text, tooltips or messages leans on an em dash", 
   assert.ok(!doc.title.includes("\u2014"), "the tab title too");
   // toasts, confirms and status lines only exist once something happens: read them off the source
   const said = [...appScript.matchAll(/(?:toast|confirm|notify|saveThen|lockError)\(\s*"([^"\n]*)"/g)].map(m => m[1])
+    .concat([...appScript.matchAll(/\b(?:title|body|ok|alt):"([^"\n]*)"/g)].map(m => m[1]))   // ask()
     .concat([...appScript.matchAll(/textContent=[^;\n]*?"([^"\n]*\u2014[^"\n]*)"/g)].map(m => m[1]));
   assert.deepEqual(said.filter(x => x.includes("\u2014")), [], "and what it says when something happens");
 });
@@ -9277,7 +9289,7 @@ test("the old address sends on a visit with nothing saved there, and keeps one w
   assert.ok(band.querySelector("#mvGo"), "Move my vault there");
   // moved by hand already, with Export and Import: the copy here can still be removed, after a sterner question
   let asked = "";
-  kept.confirm = q => { asked = q; return false; };
+  kept.ask = async o => { asked = o.title + " " + o.body; return false; };
   band.querySelector("#mvRemove").click();
   assert.match(asked, /Only do this if your accounts are already at smurf-tracker\.pages\.dev/);
   assert.ok(kept.localStorage.getItem("smurf-tracker"), "and nothing goes when the answer is no");
@@ -9288,7 +9300,7 @@ test("the old address sends on a visit with nothing saved there, and keeps one w
   runScript(locked, "window.__x = oldHomeExit()");
   assert.equal(locked.__x, null, "a locked vault counts: it moves as it is");
 });
-test("the old address hands its vault only to the tab it opened, at the new address", () => {
+test("the old address hands its vault only to the tab it opened, at the new address", async () => {
   const win = quietBoot(oneAcc(), null, OLD_HOME + "index.html");
   const sent = [], tab = { postMessage: (m, o) => sent.push([m, o]) };
   win.__tab = tab;
@@ -9309,6 +9321,7 @@ test("the old address hands its vault only to the tab it opened, at the new addr
   // removing the old copy takes the vault, settings and passkey from this address
   win.localStorage.setItem("smurf-tracker-passkey", "{}");
   band.querySelector("#mvRemove").click();
+  await tick();
   for (const k of ["smurf-tracker", "smurf-tracker-cfg", "smurf-tracker-passkey"]) assert.equal(win.localStorage.getItem(k), null, k + " removed");
 });
 test("the new address takes a moved vault only when it has none, and only from the old address", () => {
@@ -9501,6 +9514,68 @@ test("back closes the open window, and a window closed by hand gives its back st
   await settle();
   win.history.back();
   await until(() => !open("form"), "back to close the form");
+});
+
+// Seven "are you sure" questions used the browser's own grey box, which looked like a
+// different program and, on a phone, covered the app with the site's address
+test("every confirmation is the app's own window, and answering it leaves the window behind alone", async () => {
+  assert.doesNotMatch(appJs, /\bconfirm\(/, "no browser confirm box left anywhere");
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  win.ask = win.__ask;   // the real window, not the harness's yes
+  const doc = win.document, $ = id => doc.getElementById(id), open = id => !$(id).classList.contains("hidden");
+  const count = () => JSON.parse(win.localStorage.getItem("smurf-tracker") || "[]").length;
+  win.saveDB(); await tick();
+  assert.equal(count(), 1);
+  win.openSettings("backup");
+  $("bDeleteAll").click();
+  assert.ok(open("askModal") && open("settings"), "the question opens over Settings");
+  assert.equal($("askTitle").textContent, "Delete all 1 account in this vault?");
+  assert.match($("askBody").textContent, /can't be undone/);
+  assert.equal($("askOk").textContent, "Delete all");
+  assert.equal($("askOk").className, "b-danger", "a destructive answer is red");
+  assert.equal($("askAlt").hidden, true, "one way forward, one button");
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /#askAlt\[hidden\]\{display:none\}/, "which a button's own display rule must not bring back");
+  assert.match(css, /#askModal \.mdl\{max-width:460px\}/, "a small card, not a full window");
+  assert.match(css, /#askModal \.mdl-in\{min-height:0;/, "on a phone too, where other windows fill the screen");
+  await tick();
+  assert.equal(doc.activeElement, $("askCancel"), "and Enter alone never deletes: focus starts on Cancel");
+  $("askCancel").click(); await tick();
+  assert.ok(!open("askModal") && open("settings"), "Cancel closes the question, not Settings");
+  assert.equal(count(), 1, "and deletes nothing");
+
+  $("bDeleteAll").click();
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await tick();
+  assert.ok(!open("askModal") && open("settings"), "Escape answers the question and leaves Settings open");
+  assert.equal(count(), 1);
+
+  $("bDeleteAll").click();
+  await tick();
+  win.history.back();
+  await until(() => !open("askModal"), "back to answer No");
+  assert.ok(open("settings"), "the back button too");
+  assert.equal(count(), 1);
+
+  $("bDeleteAll").click();
+  $("askOk").click();
+  await until(() => count() === 0, "Delete all to go through");
+
+  // the one question with two ways forward: add to the vault, or replace it
+  const win2 = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  win2.ask = win2.__ask;
+  const answer = win2.askMergeOrReplace("backup", 4);
+  const d2 = win2.document;
+  assert.match(d2.getElementById("askBody").textContent, /This vault has 1 account and the backup 4/);
+  assert.equal(d2.getElementById("askOk").textContent, "Add the new ones");
+  assert.equal(d2.getElementById("askAlt").hidden, false);
+  assert.equal(d2.getElementById("askAlt").textContent, "Replace everything");
+  assert.equal(d2.getElementById("askAlt").className, "b-danger");
+  d2.getElementById("askAlt").click();
+  assert.equal(await answer, "replace");
+  const again = win2.askMergeOrReplace("file", 2);
+  d2.getElementById("askCancel").click();
+  assert.equal(await again, false, "and backing out is possible, which the browser's OK/Cancel never allowed");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
@@ -10493,7 +10568,7 @@ test("Remove protection shows only when there is a master password to remove", a
   await until(() => appGet(win, "vaultPassword") === "correct horse battery", "the vault to be encrypted");
   await until(() => !$("sVaultRemove").classList.contains("hidden"), "Remove protection to appear");
   assert.equal($("sVaultSet").textContent, "Change password");
-  $("sVaultRemove").click();   // confirm() is stubbed to yes
+  $("sVaultRemove").click();   // ask() is stubbed to yes
   await until(() => $("sVaultRemove").classList.contains("hidden"), "it to go again with the password");
   assert.equal($("sVaultSet").textContent, "Set password");
 });
@@ -10910,7 +10985,8 @@ test("the card menu keeps what you reach for; Season reset is in the Rank window
   const rank = rankWindow(win, id);
   const reset = rank.querySelector('.rk-season [data-act="seasonreset"]');
   assert.ok(reset, "in the Rank window");
-  reset.click();   // confirm() is stubbed to yes
+  reset.click();   // ask() is stubbed to yes
+  await tick();
   assert.equal(appGet(win, `accounts.find(a => a.id === ${JSON.stringify(id)}).stats.tier`), "UNRANKED", "the rank moved into Past seasons");
   assert.equal(doc.querySelector("#rankModal .rk-season"), null, "and the window shows the account as it is now");
   win.closeAllPanels();

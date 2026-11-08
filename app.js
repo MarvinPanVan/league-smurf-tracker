@@ -1633,8 +1633,8 @@ async function pushVaultSync(){
         const remoteAt=Number(remote&&remote.updatedAt)||0;
         if(remoteAt>updatedAt){
           toast("The synced copy is newer. Download it first, or upload again once you have sorted it out","Download…",()=>{
-            if(confirm("Replace this device's vault with the newer synced copy?\nChanges made here since your last sync may be lost."))
-              pullVaultSync(true);
+            ask({title:"Replace this device's vault with the newer synced copy?",body:"Changes made here since your last sync may be lost.",ok:"Download and replace",danger:true})
+              .then(ok=>{if(ok)pullVaultSync(true)});
           });
           return;
         }
@@ -1651,8 +1651,8 @@ async function pushVaultSync(){
     let data=null; try{data=JSON.parse(text)}catch(e){}
     if(res.status===409){
       toast("The synced copy is newer. Download it first, or upload again once you have sorted it out","Download…",()=>{
-        if(confirm("Replace this device's vault with the newer synced copy?\nChanges made here since your last sync may be lost."))
-          pullVaultSync(true);
+        ask({title:"Replace this device's vault with the newer synced copy?",body:"Changes made here since your last sync may be lost.",ok:"Download and replace",danger:true})
+          .then(ok=>{if(ok)pullVaultSync(true)});
       });
       return;
     }
@@ -1707,16 +1707,16 @@ async function pullVaultSync(force){
     if(!force&&accounts.length){
       if(localAt>remoteAt){
         toast("This vault is newer than the synced copy. Downloading would replace it","Download…",()=>{
-          if(confirm("Replace this device's vault with the older synced copy?\nThis cannot be undone from here. Export first if unsure."))
-            pullVaultSync(true);
+          ask({title:"Replace this device's vault with the older synced copy?",body:"This cannot be undone from here. Export a backup first if you're not sure.",ok:"Download and replace",danger:true})
+            .then(ok=>{if(ok)pullVaultSync(true)});
         });
         return;
       }
       // Remote newer, but this device also saved after the last successful sync.
       if(remoteAt>localAt&&localAt>lastSync){
         toast("The synced copy is newer, but this device changed since the last sync","Download…",()=>{
-          if(confirm("Replace this device's vault with the synced copy?\nChanges made here since the last sync will be lost."))
-            pullVaultSync(true);
+          ask({title:"Replace this device's vault with the synced copy?",body:"Changes made here since the last sync will be lost.",ok:"Download and replace",danger:true})
+            .then(ok=>{if(ok)pullVaultSync(true)});
         });
         return;
       }
@@ -3118,10 +3118,11 @@ function seasonResetCore(a){
 /* New season: the same reset for every ranked account at once, for the day a
    split ends, instead of thirty trips through thirty ⋯ menus. Archived and
    never-ranked accounts are left alone. One Undo puts them all back. */
-function newSeasonAll(){
+async function newSeasonAll(){
   const list=accounts.filter(a=>!a.archived&&isRanked(a));
   if(!list.length){toast("No ranked accounts to start a new season for");return}
-  if(!confirm("Start a new season for "+list.length+" ranked account"+(list.length===1?"":"s")+"?\n\nEach one's current rank moves into its Past seasons, and it shows as unranked until it is checked again."))return;
+  if(!await ask({title:"Start a new season for "+list.length+" ranked account"+(list.length===1?"":"s")+"?",
+    body:"Each one's current rank moves into its Past seasons, and it shows as unranked until it is checked again.",ok:"Start new season"}))return;
   const before=new Map(list.map(a=>[a.id,JSON.parse(JSON.stringify(a))]));
   for(const a of list)seasonResetCore(a);
   render();
@@ -5976,6 +5977,7 @@ function renderCard(id){
 
 // ---------- form ----------
 function closeAllPanels(){
+  if(askDone)askDone(false);
   // The card's ⋯ menu floats on the body, so nothing else takes it down — and a
   // menu left hanging over a modal that has just opened on top of it is the one
   // thing on this page that could still be above everything and belong to nothing.
@@ -6150,12 +6152,13 @@ $("fFieldsCfg").addEventListener("change",e=>{
     if(moved)saveDB();
   }
 });
-$("fFieldsCfg").addEventListener("click",e=>{
+$("fFieldsCfg").addEventListener("click",async e=>{
   const del=e.target.closest("[data-own-del]");
   if(del){
     const {off}=normNoteFields(cfg.noteFields), own=ownFields(), c=own[+del.dataset.ownDel];if(!c)return;
     const holders=accounts.filter(a=>a.info&&a.info.own&&Object.keys(a.info.own).some(k=>k.toLowerCase()===c.label.toLowerCase()));
-    if(holders.length&&!confirm(`Remove “${c.label}”? ${holders.length} account${holders.length===1?" has a value":"s have values"} in it, and ${holders.length===1?"it goes":"they go"} too.`))return;
+    if(holders.length&&!await ask({title:`Remove “${c.label}”?`,
+      body:`${holders.length} account${holders.length===1?" has a value":"s have values"} in it, and ${holders.length===1?"it goes":"they go"} too.`,ok:"Remove",danger:true}))return;
     for(const a of holders){
       for(const k of Object.keys(a.info.own))if(k.toLowerCase()===c.label.toLowerCase())delete a.info.own[k];
       a.info=normInfo(a.info);if(!a.info)delete a.info;
@@ -6291,9 +6294,9 @@ $("fMoreBtn").addEventListener("click",()=>{
   setFormMore(on);cfg.formMore=on;saveCfg();   // kept the way you leave it, for the next account
   if(on)$("fLabel").focus();
 });
-$("fPassNote").addEventListener("click",e=>{
+$("fPassNote").addEventListener("click",async e=>{
   if(!e.target.closest("#fSetMaster"))return;
-  if(formSnapshot()!==formBase&&!confirm("Leave this form? What you typed here isn't saved yet."))return;
+  if(formSnapshot()!==formBase&&!await ask({title:"Leave this form?",body:"What you typed here isn't saved yet.",ok:"Leave",danger:true}))return;
   openSettings("security");
   setTimeout(()=>{const f=$("sVaultPass");if(f){f.scrollIntoView&&f.scrollIntoView({block:"center"});f.focus()}},60);
 });
@@ -6724,10 +6727,11 @@ function downloadBlob(blob,filename){
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),3000);
 }
-function doExport(){
+async function doExport(){
   if(previewMode){toast("Exit preview before exporting. This is example data, not your vault");return}
   const hasSecrets=accounts.some(a=>a.password||a.login||a.email);
-  if(hasSecrets&&!confirm("This downloads a PLAINTEXT JSON backup.\nLogin passwords and emails are readable in the file.\n\nContinue?"))return;
+  if(hasSecrets&&!await ask({title:"Download a plain-text backup?",
+    body:"Login passwords and emails are readable in the file. With a master password set, the backup can be encrypted instead.",ok:"Download"}))return;
   const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),plaintext:true,accounts};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   downloadBlob(blob,"smurf-backup-plaintext-"+localDay()+".json");
@@ -6817,7 +6821,9 @@ function doImport(file){
         // Same Riot ID twice in one file used to land as two rows with different
         // ids — merge and replace both treated them as distinct.
         .filter(a=>{const k=key(a);if(fileSeen.has(k))return false;fileSeen.add(k);return true});
-      const merge=accounts.length>0&&confirm("OK = MERGE backup into current vault (adds only new accounts)\nCancel = replace everything instead");
+      const how=accounts.length>0?await askMergeOrReplace("backup",cleaned.length):"replace";
+      if(!how)return;
+      const merge=how==="merge";
       if(merge){
         const seen=new Set(accounts.map(key));
         const add=cleaned.filter(a=>!seen.has(key(a)));
@@ -6826,7 +6832,6 @@ function doImport(file){
         render();
         toast(add.length+" added, "+(cleaned.length-add.length)+" duplicates skipped");
       }else{
-        if(accounts.length>0&&!confirm("REPLACE the whole vault ("+accounts.length+" → "+cleaned.length+" accounts)?"))return;
         accounts=cleaned;
         if(!await saveDB()){toast("Import saved in memory but could not write to storage");render();return}
         render();toast("Backup imported ("+cleaned.length+" accounts)");
@@ -6913,7 +6918,9 @@ function doImportCSV(file){
       }).filter(Boolean)
         .filter(a=>{const k=key(a);if(fileSeen.has(k))return false;fileSeen.add(k);return true});
       if(!list.length)throw new Error("no rows");
-      const merge=accounts.length>0&&confirm("OK = MERGE CSV into current vault (adds only new accounts)\nCancel = replace everything instead");
+      const how=accounts.length>0?await askMergeOrReplace("file",list.length):"replace";
+      if(!how)return;
+      const merge=how==="merge";
       if(merge){
         const seen=new Set(accounts.map(key));
         const add=list.filter(a=>!seen.has(key(a)));
@@ -6922,7 +6929,6 @@ function doImportCSV(file){
         render();
         toast(add.length+" added, "+(list.length-add.length)+" duplicates skipped");
       }else{
-        if(accounts.length>0&&!confirm("REPLACE the whole vault ("+accounts.length+" → "+list.length+" accounts)?"))return;
         accounts=list;
         if(!await saveDB()){toast("Import saved in memory but could not write to storage");render();return}
         render();toast("CSV imported ("+list.length+" accounts)");
@@ -6997,8 +7003,8 @@ function setPassShown(show){
   $("fTogglePass").title=show?"Hide password":"Show password";
   $("fTogglePass").setAttribute("aria-label",show?"Hide password":"Show password");
 }
-$("fGen").addEventListener("click",()=>{
-  if($("fPass").value&&!confirm("This replaces the password already in this field, with no undo. Continue?"))return;
+$("fGen").addEventListener("click",async()=>{
+  if($("fPass").value&&!await ask({title:"Replace the password in this field?",body:"The one there now is gone, with no undo.",ok:"Replace",danger:true}))return;
   $("fPass").value=genPassword(16);
   setPassShown(true);
   renderPwMeter();
@@ -7124,7 +7130,48 @@ document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListene
 // Driven by an observer rather than by each of the eight places that add or
 // remove .hidden on these two. Wiring it into every call site works right up
 // until the ninth one is added and quietly doesn't lock the page.
-const MODALS=["settings","help","form","rankModal","palette","compareModal","bulkAdd","artPicker","shareModal"];
+/* Every "are you sure" used the browser's own grey box: replacing the vault from
+   sync, a new season, leaving a form, removing a field, deleting accounts. It
+   looked like a different program, and on a phone it covered the app with the
+   site's address. ask() is the same question in the app's own window, over the
+   one that asked. It resolves to "ok" (or "alt", for the one question with two
+   ways forward, adding or replacing on import) and to false on Cancel, Escape,
+   a click outside or the back button. A destructive answer is red, and focus
+   starts on Cancel for those, so Enter alone never deletes anything. */
+let askDone=null;
+function ask(o){
+  if(askDone)askDone(false);
+  const m=$("askModal"), ok=$("askOk"), alt=$("askAlt"), cancel=$("askCancel");
+  $("askTitle").textContent=o.title;
+  $("askBody").textContent=o.body||"";
+  ok.textContent=o.ok||"OK";ok.className=o.danger?"b-danger":"b-fill";
+  alt.hidden=!o.alt;alt.textContent=o.alt||"";alt.className=o.altDanger?"b-danger":"";
+  cancel.textContent=o.cancel||"Cancel";
+  for(const b of[ok,alt,cancel])b.removeAttribute("data-autofocus");
+  (o.danger||o.altDanger?cancel:ok).setAttribute("data-autofocus","");
+  return new Promise(res=>{
+    askDone=v=>{askDone=null;m.classList.add("hidden");res(v)};
+    m.classList.remove("hidden");
+  });
+}
+// An import into a vault that already has accounts: add the new ones, or replace
+// everything. The browser's box could only say "OK = MERGE, Cancel = replace",
+// so there was no way to back out, and replacing took a second box after it.
+function askMergeOrReplace(what,n){
+  return ask({title:"Add this "+what+" to the vault, or replace it?",
+    body:"This vault has "+accounts.length+" account"+(accounts.length===1?"":"s")+" and the "+what+" "+n+". "
+      +"Adding keeps everything here and adds the accounts that are new. Replacing leaves only the "+what+"'s, with no undo.",
+    ok:"Add the new ones",alt:"Replace everything",altDanger:true})
+    .then(v=>v==="ok"?"merge":v==="alt"?"replace":false);
+}
+$("askOk").addEventListener("click",()=>{if(askDone)askDone("ok")});
+$("askAlt").addEventListener("click",()=>{if(askDone)askDone("alt")});
+$("askCancel").addEventListener("click",()=>{if(askDone)askDone(false)});
+// Escape answers the question and nothing else: the window behind stays open
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&askDone){e.preventDefault();e.stopImmediatePropagation();askDone(false)}
+},true);
+const MODALS=["askModal","settings","help","form","rankModal","palette","compareModal","bulkAdd","artPicker","shareModal"];
 let modalReturn=null;
 function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains("hidden"))}
 /* The phone's back button left the app. A window here is not a page of its own,
@@ -7143,6 +7190,7 @@ addEventListener("popstate",()=>{
   if(backSkip){backSkip=false;return}
   if(!backStep)return;
   backStep=false;
+  if(askDone){askDone(false);return}   // a question goes, the window that asked it stays
   // the window in front goes first, as with Escape; one still open behind it asks
   // for a new entry of its own through syncModals
   if(!$("palette").classList.contains("hidden")){closePalette();return}
@@ -7195,7 +7243,9 @@ function syncModals(){
     // happened to be released outside.
     let downOnBack=false;
     el.addEventListener("mousedown",e=>{downOnBack=e.target===el});
-    el.addEventListener("click",e=>{if(downOnBack&&e.target===el)closeAllPanels();downOnBack=false});
+    el.addEventListener("click",e=>{
+      if(downOnBack&&e.target===el){if(id==="askModal"){if(askDone)askDone(false)}else closeAllPanels()}
+      downOnBack=false});
   }
 }
 document.addEventListener("keydown",e=>{
@@ -7522,7 +7572,8 @@ async function setVaultPassword(pass){
   const prev=vaultPassword;
   const changing=!!prev&&prev!==pass;
   if(changing&&cfg.syncToken&&cfg.backendUrl){
-    if(!confirm("You're changing the master password.\nThe synced copy stays locked with the old one until you upload again from this device.\nOther devices need the new password after that upload.\n\nContinue?"))return false;
+    if(!await ask({title:"Change the master password?",
+      body:"The synced copy stays locked with the old one until you upload again from this device. Other devices need the new password after that upload.",ok:"Change it"}))return false;
   }
   vaultPassword=pass;
   // If the envelope never reached the disk then the vault there is still the old
@@ -7545,10 +7596,10 @@ async function setVaultPassword(pass){
     :"Vault password set. Remember it: there's no way to recover it if lost");
   return true;
 }
-if($("sLockNow"))$("sLockNow").addEventListener("click",()=>{
+if($("sLockNow"))$("sLockNow").addEventListener("click",async()=>{
   if(!vaultPassword){toast("Set a master password first. There's nothing to lock yet");return}
   if(vaultLocked()){toast("Already locked");return}
-  if(!confirm("Lock the vault now? You'll need the master password to open it again."))return;
+  if(!await ask({title:"Lock the vault now?",body:"You'll need the master password to open it again.",ok:"Lock"}))return;
   $("settings").classList.add("hidden");
   relock();
   toast("Vault locked");
@@ -7556,7 +7607,7 @@ if($("sLockNow"))$("sLockNow").addEventListener("click",()=>{
 $("sVaultRemove").addEventListener("click",async()=>{
   if(!vaultPassword){toast("No password is set");return}
   if(previewMode){toast("Exit preview before removing vault protection");return}
-  if(!confirm("Remove password protection? Your vault will be saved unencrypted again."))return;
+  if(!await ask({title:"Remove password protection?",body:"Your vault will be saved unencrypted again.",ok:"Remove protection",danger:true}))return;
   const prev=vaultPassword;
   vaultPassword=null;forgetVaultKey();
   // The same the other way round: a failed write leaves the encrypted vault on the
@@ -7592,9 +7643,10 @@ $("sStorageProtect").addEventListener("click",async()=>{
 if($("bExportEnc"))$("bExportEnc").addEventListener("click",()=>{doExportEnc()});
 $("bExportCsv").addEventListener("click",doExportCSV);
 $("bImport").addEventListener("click",()=>$("fileIn").click());
-$("bDeleteAll").addEventListener("click",()=>{
+$("bDeleteAll").addEventListener("click",async()=>{
   if(accounts.length===0)return;
-  if(!confirm("Delete all "+accounts.length+" account"+(accounts.length===1?"":"s")+" in this vault? This can't be undone, so export a backup first if you're not sure."))return;
+  if(!await ask({title:"Delete all "+accounts.length+" account"+(accounts.length===1?"":"s")+" in this vault?",
+    body:"This can't be undone, so export a backup first if you're not sure.",ok:"Delete all",danger:true}))return;
   accounts=[];selected.clear();lastSelectedId=null;render();
   saveThen("Vault cleared");
 });
@@ -8074,9 +8126,9 @@ $("bulkTagBtn").addEventListener("click",()=>{
   saveThen('Tag "'+t+'" added to '+n+" account"+(n===1?"":"s"));
 });
 $("bulkTag").addEventListener("keydown",e=>{if(e.key==="Enter")$("bulkTagBtn").click()});
-$("bulkDelete").addEventListener("click",()=>{
+$("bulkDelete").addEventListener("click",async()=>{
   const n=selected.size;
-  if(!confirm("Delete "+n+" selected account"+(n===1?"":"s")+"? This can't be undone."))return;
+  if(!await ask({title:"Delete "+n+" selected account"+(n===1?"":"s")+"?",body:"This can't be undone.",ok:"Delete",danger:true}))return;
   accounts=accounts.filter(a=>!selected.has(a.id));
   selected.clear();lastSelectedId=null;render();
   saveThen(n+" account"+(n===1?"":"s")+" deleted");
@@ -8300,9 +8352,12 @@ async function onCardClick(e){
   else if(act==="played"){markPlayed(id)}
   else if(act==="compare"){openMore.delete(id);startCompare(id)}
   else if(act==="seasonreset"){
-    if(!confirm("Reset this account for a new season? Current rank moves into Past seasons."))return;
-    seasonReset(id);
-    if(e.target.closest("#rankModal"))renderRankBody(id)}
+    const inRank=!!e.target.closest("#rankModal");
+    ask({title:"Reset this account for a new season?",body:"Its current rank moves into Past seasons.",ok:"Reset"}).then(ok=>{
+      if(!ok)return;
+      seasonReset(id);
+      if(inRank)renderRankBody(id);
+    })}
   else if(act==="flag"){
     acc.flagged=!acc.flagged;
     if(ui.flag==="attention")render();
@@ -8806,11 +8861,12 @@ function moveOutMessage(e){
       :"The new address could not keep the vault. Use Export here and Import there");
   }
 }
-function removeOldCopy(){
+async function removeOldCopy(){
   const host=new URL(APP_HOME).host;
-  if(!confirm(Number(cfg.movedAt)>0
-    ?"Remove the vault and settings saved at this old address?\nThe copy at "+host+" stays as it is."
-    :"Remove the vault and settings saved at this old address?\nOnly do this if your accounts are already at "+host+" (moved with Export and Import). This can't be undone."))return;
+  if(!await ask({title:"Remove the vault and settings saved at this old address?",
+    body:Number(cfg.movedAt)>0?"The copy at "+host+" stays as it is."
+      :"Only do this if your accounts are already at "+host+" (moved with Export and Import). This can't be undone.",
+    ok:"Remove",danger:true}))return;
   hasStorage=false;   // nothing on this page may save them back on its way out
   try{for(const k of [DB_KEY,CFG_KEY,PK_KEY])localStorage.removeItem(k)}catch(e){}
   location.replace(APP_HOME);
