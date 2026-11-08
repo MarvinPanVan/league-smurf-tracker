@@ -1076,7 +1076,7 @@ test("actions and window titles are set in the text face; Cinzel is the wordmark
   assert.ok(users.every(sel => /hex-display|lock-wm|acc-prev-t|^@font-face$/.test(sel)), users.join(" | "));
 });
 
-test("Refresh stale refreshes found accounts that have gone old, not ones with no profile yet", () => {
+test("refreshing the stale ones takes found accounts that have gone old, not ones with no profile yet", () => {
   const D = 86400000, old = Date.now() - 6 * D, fresh = Date.now() - 3600000;
   const acc = (id, stats, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active",
     stats, history: [], tags: [] }, extra || {});
@@ -1088,15 +1088,18 @@ test("Refresh stale refreshes found accounts that have gone old, not ones with n
     acc("notFoundOld", { found: false, updatedAt: old }),
     acc("bannedOld", { found: true, tier: "SILVER", division: "I", lp: 1, level: 50, updatedAt: old }, { status: "banned" }),
   ]);
-  const btn = win.document.getElementById("bCheckStale");
-  assert.equal(btn.classList.contains("hidden"), false);
-  assert.equal(btn.textContent, "Refresh 2 stale", "the found ones that have gone old, ranked or not");
-  assert.match(win.document.querySelector("#ribbon [data-flag='stale']").textContent, /^2 need a refresh$/,
-    "and the header counts the same two");
+  const doc = win.document;
+  assert.match(doc.querySelector("#ribbon [data-flag='stale']").textContent, /^2 need a refresh$/,
+    "the found ones that have gone old, ranked or not");
+  // Quick find's one-step command
   runScript(win, "window.__ids = null; checkAll = function (ids) { window.__ids = ids; };");
-  btn.click();
+  runScript(win, "checkStale()");
   assert.deepEqual([...win.__ids].sort(), ["rankedOld", "unrankedOld"],
     "never-checked and not-found accounts are not re-tried, banned ones are left alone");
+  // and the header's count shows the same two, which the toolbar's one button then checks
+  doc.querySelector("#ribbon [data-flag='stale']").click();
+  assert.deepEqual([...doc.querySelectorAll("#grid .card")].map(c => c.dataset.id).sort(), ["rankedOld", "unrankedOld"]);
+  assert.match(doc.getElementById("bCheckAll").textContent, /Check 2 shown/);
 });
 
 test("the vault asks the browser to keep it, once, and Settings says whether it does", async () => {
@@ -9040,15 +9043,17 @@ test("the LP chip says it is since the last check, with the pace beside it, and 
   assert.doesNotMatch(card.querySelector(".c-stats")?.textContent || "", /Climb/, "no row of its own");
 });
 
-// A phone's toolbar stacked Check all ranks over Refresh N stale: two buttons for one job
-test("on a phone the toolbar has one ranks button: Refresh stale when there is any, else Check all", () => {
-  const block = html.slice(html.indexOf("@media (max-width:560px), (max-height:500px) and (orientation:landscape){\n    .tools{display:flex;flex-wrap:wrap}"));
-  assert.match(block.slice(0, 3000), /\.cmd:has\(#bCheckStale:not\(\.hidden\)\) #bCheckAll\{display:none\}/);
+// Three controls did one job: Check all ranks, Refresh N stale, and "N need a refresh"
+test("the toolbar has one ranks button; out-of-date accounts are a header filter away", () => {
+  assert.doesNotMatch(pageHtml, /bCheckStale|>Refresh stale</, "no Refresh N stale button");
+  assert.doesNotMatch(html, /#bCheckStale/, "nor a rule for it, on a phone or anywhere");
   const D = 864e5;
   const acc = (id, ago) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
     stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 1, losses: 1, updatedAt: Date.now() - ago } });
   const win = bootApp([acc("old", 6 * D), acc("new", 3600000)]); // one stale, one fresh
-  assert.equal(win.document.getElementById("bCheckStale").classList.contains("hidden"), false, "the stale button is what shows");
+  const cmd = [...win.document.querySelectorAll(".cmd>button")].map(b => b.id);
+  assert.deepEqual(cmd.filter(id => /^bCheck/.test(id)), ["bCheckAll"], "one ranks button in the toolbar");
+  assert.ok(win.document.querySelector('#ribbon [data-flag="stale"]'), "the header counts the out-of-date one");
 });
 
 // Check all ranks wore the primary colour and Add account the secondary: two "this is
@@ -10463,12 +10468,13 @@ test("everything that points to the Backend URL or the worker guide names the Ad
 });
 
 // The README still promised a "Needs refresh" tile after it moved to the toolbar
-test("the README names only stats tiles the panel still has, and the toolbar's Refresh stale", () => {
+test("the README names only stats tiles the panel still has, and how to refresh the stale ones", () => {
   const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
   const tiles = [...readme.matchAll(/\*\*(Play next|Decay risk|This week|Needs refresh|Accounts|Best account|Regions)\*\*/g)].map(m => m[1]);
   assert.ok(tiles.length >= 3, "it does describe the panel");
   for (const t of tiles) assert.ok(appJs.includes(`<div class="k">${t}</div>`), t + " is a tile the panel can show");
-  assert.ok(readme.includes("**Refresh stale**") && />Refresh stale</.test(pageHtml), "and the stale count's button by its name");
+  assert.doesNotMatch(readme, /\*\*Refresh stale\*\*/, "no button the page no longer has");
+  assert.ok(readme.includes("**Check N shown**"), "it names the button that does it now");
 });
 
 // Every add started on EUW, and "Faker#KR1" stayed on EUW unless you changed it

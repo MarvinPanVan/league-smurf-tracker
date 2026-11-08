@@ -5475,7 +5475,7 @@ function tileHTML(a){
 }
 function cardHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
-  /* The toolbar's "N need a refresh", Refresh stale and the list all go by isStale.
+  /* The header's "N need a refresh", its filter and the list all go by isStale.
      The card had a rule of its own, so a banned account (never checked again, so it
      ages forever) and a Riot ID that came back not found wore an amber "out of
      date" warning the toolbar didn't count and Refresh stale wouldn't touch. */
@@ -6026,15 +6026,6 @@ function syncCheckAll(shown){
     const inView=accounts.filter(a=>!!a.archived===ui.showArchived&&a.status!=="banned").length;
     setHTML($("bCheckAll"),icon("refresh")+" "+(n&&n<inView?`Check ${n} shown`:"Check all ranks"));
   }
-  // "Check all ranks" also re-checks the twenty accounts you did an hour ago. The
-  // run you actually mean is almost always the stale ones, so it gets its own
-  // button — hidden when it would do exactly the same work as the one beside it.
-  const live=accounts.filter(a=>!a.archived&&a.status!=="banned");
-  const stale=live.filter(isStale).length;
-  const sb=$("bCheckStale");
-  sb.classList.toggle("hidden",!!run||!stale||stale===live.length);
-  sb.textContent="Refresh "+stale+" stale";
-  sb.disabled=busy;
 }
 
 // Opening a panel on one card is a change to that card, not to the grid, and it
@@ -8127,7 +8118,7 @@ function palCommands(){
   return [
     {k:"add",n:"Add account",s:"New entry in the vault",i:"plus",run:()=>openForm(null)},
     {k:"check",n:"Check all ranks",s:"Refresh everything currently shown",i:"refresh",run:()=>checkAll()},
-    {k:"stale",n:"Refresh stale accounts",s:"Found accounts last read over 3 days ago",i:"refresh",run:()=>$("bCheckStale").click()},
+    {k:"stale",n:"Refresh stale accounts",s:"Found accounts last read over 3 days ago",i:"refresh",run:checkStale},
     {k:"cards list wall layout",n:"Switch layout",s:"Cards, list, wall",i:"chart",run:()=>{
       const order=["cards","list","wall"];
       ui.density=order[(order.indexOf(ui.density)+1)%order.length];
@@ -8294,8 +8285,11 @@ $("density").addEventListener("click",e=>{
   openInfo.clear(); // "expanded" means different things across the three layouts
   render();
 });
-$("bCheckStale").addEventListener("click",()=>
-  checkAll(accounts.filter(a=>!a.archived&&a.status!=="banned"&&isStale(a)).map(a=>a.id)));
+/* There was a Refresh N stale button beside Check all ranks, and "N need a refresh"
+   beside both: three controls for one job. The header's count shows those accounts,
+   and Check all ranks then says "Check N shown". Quick find keeps the one-step
+   version for the keyboard. */
+function checkStale(){checkAll(accounts.filter(a=>!a.archived&&isLive(a)&&isStale(a)).map(a=>a.id))}
 $("bCancelCheck").addEventListener("click",()=>{if(run){run.stop=true;toast("Stopping after this account…")}});
 $("failbar").addEventListener("click",e=>{
   if(e.target.closest("#bDismissFails")){lastFails=null;renderFailbar();return}
