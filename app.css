@@ -253,7 +253,9 @@
   /* while one is the filter, the others step back */
   .rib-row:has(.rib-i.on) .rib-i:not(.on){opacity:.55}
   .rib-row:has(.rib-i.on) .rib-i:not(.on):hover{opacity:1}
-  .rib-states{display:inline-flex;align-items:center;margin-left:8px}
+  /* wraps: with four states at once ("1 unranked · 1 never checked · 1 banned ·
+     2 need a refresh") one unbroken line was 403px, and a phone's page grew to fit it */
+  .rib-states{display:inline-flex;align-items:center;flex-wrap:wrap;row-gap:2px;min-width:0;max-width:100%;margin-left:8px}
   .rib-s{color:var(--muted);padding:0 6px}
   .rib-s.rib-stale{color:var(--warn-txt)}   /* amber, as the card's own out-of-date line */
   .rib-dot{font-style:normal;color:var(--faint)}

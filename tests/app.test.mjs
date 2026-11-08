@@ -10450,6 +10450,15 @@ test("switching layout fades the new one in; filtering and sorting stay instant"
   assert.match(html, /\.hx\.dash-out,\.grid\.view-in,\.sec-b,/, "and it is off with motion reduced");
 });
 
+// With four states at once the header's status line was one 403px line, and a phone's
+// page grew to 427px to hold it (a 320px phone showed everything at about 75%)
+test("the header's status words wrap onto a second line instead of widening a phone's page", () => {
+  const rule = html.match(/\n  \.rib-states\{([^}]*)\}/)[1];
+  assert.match(rule, /flex-wrap:wrap/, "they wrap");
+  assert.match(rule, /max-width:100%/, "and never ask for more than the row");
+  assert.match(html.match(/\n  \.rib-row\{([^}]*)\}/)[1], /flex-wrap:wrap/, "as the row around them does");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
