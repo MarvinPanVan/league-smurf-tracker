@@ -1080,6 +1080,20 @@
      tick should not have to be found by hovering */
   body.selecting .bulkchk{opacity:1}
   #bulkbar.cmp-pick>:not(#bulkCount):not(#bulkClear){display:none}
+  /* On a phone the bar sat at the top of the list, so a box ticked further down
+     sent you scrolling back up to use it. It sits at the foot of the screen there
+     instead, over the cards, with room left under the last one. */
+  @media (max-width:560px), (max-height:500px) and (orientation:landscape){
+    #bulkbar:not(.hidden){position:fixed;z-index:58;margin:0!important;
+      left:calc(10px + env(safe-area-inset-left,0px));right:calc(10px + env(safe-area-inset-right,0px));
+      bottom:calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 10px 40px #000c!important;
+      background:color-mix(in srgb,var(--teal) 9%,var(--panel))!important}
+    #bulkbar>#bulkCount{flex:1 1 100%}
+    #bulkbar>#bulkStatus,#bulkbar>#bulkTag{flex:1 1 calc(50% - 5px);min-width:0;width:auto!important}
+    #bulkbar>button{flex:1 1 auto}
+    body.selecting .grid{padding-bottom:190px}
+    body.selecting .to-top{display:none}
+  }
   @media (hover:none){.bulkchk{opacity:.5}}
 
   /* bare icon buttons — must beat the generic button rules */

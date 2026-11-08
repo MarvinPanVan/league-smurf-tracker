@@ -9869,6 +9869,18 @@ test("a phone held sideways gets the phone's layout: stats folded, filters behin
   assert.equal(appGet(bootApp(seed), "dashCollapsed()"), false, "a desktop still opens them");
 });
 
+// On a phone the selection bar stayed at the top of the list: tick a card further down
+// and you scrolled back up to act on it
+test("on a phone the selection bar sits at the foot of the screen, with room under the last card", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const at = css.indexOf("#bulkbar:not(.hidden){position:fixed;");
+  assert.ok(at > 0, "pinned");
+  assert.match(css.slice(css.lastIndexOf("@media", at), at), /^@media \(max-width:560px\), \(max-height:500px\) and \(orientation:landscape\)\{/, "on a phone, upright or sideways");
+  const rule = css.slice(at, css.indexOf("}", at));
+  assert.match(rule, /bottom:calc\(10px \+ env\(safe-area-inset-bottom,0px\)\)/, "above the home bar");
+  assert.match(css, /body\.selecting \.grid\{padding-bottom:190px\}/, "and the last card can scroll out from under it");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
