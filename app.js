@@ -1508,9 +1508,12 @@ function rankChart(hist,cut,mode,key,peakV,peakLabel){
     +(last?`<polygon points="0,${LPC_H} 0,${py(pts[0].v).toFixed(1)} ${coords} ${LPC_W},${py(pts[last].v).toFixed(1)} ${LPC_W},${LPC_H}" fill="url(#${aid})"/>`
         +`<polyline class="lpc-line" points="${coords}" fill="none" stroke="url(#${gid})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`:"")
     +`</svg>${labels}${overlay}`
-    +`<div class="lpc-range">${RANGES.map(([v,label])=>`<button data-act="range" data-r="${v}" class="${mode===v?"on":""}" title="${label}">${v.toUpperCase()}</button>`).join("")}</div>`
     +`</div>`
-    +(axis?`<div class="lpc-axis">${axis}</div>`:"")
+    // D/W/M at the end of the date row, off the line. Without dates there is no
+    // time to cut by, so there is no row and no switch.
+    +(axis?`<div class="lpc-axis">${axis}`
+      +`<div class="lpc-range">${RANGES.map(([v,label])=>`<button data-act="range" data-r="${v}" class="${mode===v?"on":""}" title="${label}">${v.toUpperCase()}</button>`).join("")}</div>`
+      +`</div>`:"")
     +`</div>`;
 }
 // Compact and unambiguous: "22 Jul" rather than 22/07 or 07/22, which mean

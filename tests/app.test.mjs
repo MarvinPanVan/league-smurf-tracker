@@ -10195,6 +10195,26 @@ test("the tab icon is a bold diamond drawn for small sizes, with a 32px PNG besi
   for (const f of ["./icons/favicon.svg", "./icons/favicon-32.png"]) assert.ok(sw.includes(`"${f}"`), "offline too: " + f);
 });
 
+// On hover, D/W/M sat over the plot's top-right corner, on the end of the line,
+// which is the newest point; and the dates sat on the frame's bottom edge
+test("D/W/M sit at the end of the date row, off the line, and the last date steps aside for them", () => {
+  const win = bootApp(seededAccount());
+  const lpc = win.document.querySelector(".card .lpc");
+  assert.equal(lpc.querySelector(".lpc-plot .lpc-range"), null, "nothing over the plot");
+  const axis = lpc.querySelector(".lpc-axis");
+  assert.deepEqual([...axis.querySelectorAll(".lpc-range button")].map(b => b.textContent), ["D", "W", "M"], "in the date row");
+  assert.ok(axis.querySelector(".lpc-tick.r"), "beside the dates");
+  assert.match(html, /\n  \.lpc-axis\{position:relative;height:26px;/, "a row with room for them");
+  assert.match(html, /\n  \.lpc-tick\{position:absolute;top:50%;transform:translate\(-50%,-50%\)/, "the dates in its middle, not on the edge");
+  assert.match(html, /\n  \.lpc:hover \.lpc-tick\.r,\.lpc:has\(\.lpc-range:focus-within\) \.lpc-tick\.r\{opacity:0\}/, "the last date makes way");
+  assert.doesNotMatch(html, /\.lpc-plot:has\(\.lpc-pt:hover\) \.lpc-range/, "no longer hidden for a point's tip: they don't share a corner now");
+  const coarse = html.slice(html.indexOf("@media (pointer:coarse){"));
+  assert.match(coarse.slice(0, 3000), /\.lpc-axis\{height:32px\}/, "and the row grows with the 30px touch buttons");
+  // no dates, no time to cut by
+  const bare = chartDom(win, [{ tier: "GOLD", division: "II", lp: 10 }, { tier: "GOLD", division: "II", lp: 40 }]);
+  assert.equal(bare.querySelector(".lpc-range"), null);
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
