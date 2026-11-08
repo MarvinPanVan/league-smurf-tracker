@@ -6466,7 +6466,7 @@ test("a rank label drops the division above Master and keeps it below", () => {
   assert.equal(win.tierLabel({ tier: "UNRANKED", division: "II" }), "Unranked");
   assert.equal(win.tierLabel({}), "Unranked");
   // shortRank builds on it, so it inherits the guard
-  assert.equal(win.shortRank({ tier: "CHALLENGER", division: "III", lp: 1200 }), "Challenger · 1200 LP");
+  assert.equal(win.shortRank({ tier: "CHALLENGER", division: "III", lp: 1200 }), "Challenger · 1,200 LP");
   assert.equal(win.shortRank({ tier: "SILVER", division: "III", lp: 40 }), "Silver III · 40 LP");
 });
 
@@ -6620,7 +6620,7 @@ test("the markup builders refuse a bad division even when handed one directly", 
   assert.doesNotMatch(win.tileHTML(acc), bad, "tile");
   // and the rank still reads as a rank
   assert.match(win.cardHTML(acc, 0), /Challenger/);
-  assert.match(win.cardHTML(acc, 0), /1200 LP/);
+  assert.match(win.cardHTML(acc, 0), /1,200 LP/);
 });
 
 // ---- what a failed first check is allowed to claim ----
@@ -10021,6 +10021,23 @@ test("the page's words are spelled one way, American, as Riot's are", () => {
   const inCode = (code.match(/\b(colour|licence|favourite|honour|behaviour|centre|grey|cancelled)\w*/gi) || [])
     .filter(w => w !== "centreSettingsTab");
   assert.deepEqual(inCode, [], "in the app's messages");
+});
+
+// "1234 LP" with no separator, two lines above "1,591 games" with one
+test("LP figures carry a thousands separator, like the game counts", () => {
+  const D = 864e5, now = Date.now();
+  const win = bootApp([{ id: "c", region: "KR", gameName: "Top", tagLine: "KR1", status: "active", tags: [],
+    stats: { found: true, tier: "CHALLENGER", division: null, lp: 1234, wins: 312, losses: 250, updatedAt: now },
+    history: [{ t: now - 2 * D, tier: "CHALLENGER", lp: 1034, w: 300, l: 240 }, { t: now, tier: "CHALLENGER", lp: 1234, w: 312, l: 250 }] }]);
+  const doc = win.document;
+  const card = doc.querySelector('.card[data-id="c"]');
+  assert.match(card.textContent, /1,234 LP/, "the card");
+  assert.doesNotMatch(card.textContent, /1234/);
+  assert.match(card.querySelector(".delta").textContent, /\+200 LP/);
+  assert.equal(win.shortRank({ tier: "CHALLENGER", lp: 1234 }), "Challenger · 1,234 LP", "the label tips and the header use");
+  listView(win);
+  const row = doc.querySelector('.rw[data-id="c"]');
+  assert.match(row.querySelector(".rw-rank").textContent, /1,234 LP/, "the list row");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

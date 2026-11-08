@@ -1143,7 +1143,7 @@ function shortRank(s){
   if(!s||!s.tier)return null;
   const t=s.tier.toUpperCase();
   if(t==="UNRANKED")return"Unranked";
-  return tierLabel(s)+((s.lp!==null&&s.lp!==undefined)?" · "+s.lp+" LP":"");
+  return tierLabel(s)+((s.lp!==null&&s.lp!==undefined)?" · "+fmtN(s.lp)+" LP":"");
 }
 /* Master, Grandmaster and Challenger have no divisions: above Master the ladder is
    only LP. Every parser that reads a *peak* or a *past season* already knew that
@@ -2878,7 +2878,7 @@ function rollNumber(el,from,to,suffix){
     if(!el.isConnected)return;   // the card was re-rendered under us; let it stand
     const p=Math.min((now-t0)/dur,1);
     const e=1-Math.pow(1-p,3);
-    el.textContent=Math.round(from+(to-from)*e)+suffix;
+    el.textContent=fmtN(Math.round(from+(to-from)*e))+suffix;
     if(p<1)requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
@@ -3256,7 +3256,7 @@ function poolLpTrend(pool){
   const from=fmtDay(days[0].t), to=fmtDay(days[days.length-1].t);
   const dots=coords.map((c,i)=>{
     const ch=Math.round(c.v-pts[0]);
-    const label=fmtDay(c.d.t)+"\n"+(ch>0?"+":ch<0?"−":"±")+Math.abs(ch)+" LP since "+fmtDay(days[0].t)+"\n"+c.d.n+" counted account"+(c.d.n===1?"":"s");
+    const label=fmtDay(c.d.t)+"\n"+(ch>0?"+":ch<0?"−":"±")+fmtN(Math.abs(ch))+" LP since "+fmtDay(days[0].t)+"\n"+c.d.n+" counted account"+(c.d.n===1?"":"s");
     return `<circle class="pool-hit" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="8" data-spark-tip="${esc(label)}"></circle>`
       +(i===coords.length-1?`<circle class="pool-dot" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.6"></circle>`:"");
   }).join("");
@@ -3346,7 +3346,7 @@ function renderCompare(){
       <div class="cmp-nm" title="${esc(plainName(acc))}">${nameOf(acc)}</div>
       <div class="cmp-id">${sens(esc(acc.gameName)+"#"+esc(acc.tagLine))} · ${esc(acc.region)}</div>
       <div class="cmp-rk${ranked?"":" q"}" style="color:${tierColor(s.tier)}">${ranked?crest(s.tier,"cmp-crest"):""}<span>${esc(rank)}</span></div>
-      <div class="cmp-lp">${ranked&&s.lp!=null?esc(s.lp+" LP"):"&nbsp;"}</div>
+      <div class="cmp-lp">${ranked&&s.lp!=null?esc(fmtN(s.lp)+" LP"):"&nbsp;"}</div>
     </div>`;
   };
   const facts=acc=>{
@@ -4021,7 +4021,7 @@ function renderDash(){
       const note="total of "+week.moved+" account"+(week.moved===1?"":"s")
         +(week.games?" · "+week.games+" game"+(week.games===1?"":"s"):"")
         +(week.best?" · best "+nameOf(week.best.a)+" +"+week.best.d:"");
-      const inner=`<div class="k">This week</div><div class="v">${week.lp>0?"+":week.lp<0?"−":""}${Math.abs(week.lp)} <small>LP</small></div><div class="s-note">${note}</div>`;
+      const inner=`<div class="k">This week</div><div class="v">${week.lp>0?"+":week.lp<0?"−":""}${fmtN(Math.abs(week.lp))} <small>LP</small></div><div class="s-note">${note}</div>`;
       return week.best?`<button class="stat stat-b" id="weekStat" data-next="${idAttr(week.best.a.id)}" title="The last seven days across the counted accounts. Click to see the best climber">${inner}</button>`
         :`<div class="stat" id="weekStat" title="The last seven days across the counted accounts">${inner}</div>`;
     })(),
@@ -4491,7 +4491,7 @@ function apStrength(acc){
   const img=el.querySelector("img");if(img)img.style.opacity=String(ap.op/100);
   const s=acc&&acc.stats, ranked=acc&&isRanked(acc);
   el.querySelector(".ap-prev-t").innerHTML=acc?`<b>${esc(plainName(acc))}</b><span style="color:${ranked?tierColor(s.tier):"var(--muted)"}">`
-    +`${esc(ranked?tierLabel(s)+(s.lp!=null?" · "+s.lp+" LP":""):"Unranked")}</span>`:"";
+    +`${esc(ranked?tierLabel(s)+(s.lp!=null?" · "+fmtN(s.lp)+" LP":""):"Unranked")}</span>`:"";
 }
 function apPickChamp(id){
   const acc=apAcc(), own=acc&&normArt(acc.art);
@@ -4770,7 +4770,7 @@ function snapCardHTML(a,i){
         ${a.rid?`<div class="sn-rid">${esc(a.rid)}</div>`:""}</div>
       ${a.region?`<span class="regiontag">${esc(a.region)}</span>`:""}
     </div>
-    <div class="sn-rank"><b>${esc(label)}</b>${r?`<span>${esc(r.lp)} LP</span>`:""}${st?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.short||st.label)}</span>`:""}</div>
+    <div class="sn-rank"><b>${esc(label)}</b>${r?`<span>${esc(fmtN(r.lp))} LP</span>`:""}${st?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.short||st.label)}</span>`:""}</div>
     ${wr!=null?`<div class="sn-wl"><span>${esc(a.w)}W ${esc(a.l)}L</span><b class="${wr>=50?"wr-good":""}">${wr}% WR</b></div>
       <div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
     ${spk?`<div class="sn-spk" title="Last ${days} day${days===1?"":"s"}">${spk}</div>`:""}
@@ -4798,7 +4798,7 @@ function snapHTML(s){
       ${list.length?`<div class="hx gold sn-sum"><div class="hx-in">
         <div class="cell sn-best">${best?crest(best.rank.tier,"sn-best-c"):""}<div><span class="k">Highest</span>
           <b style="color:${best?tierColor(best.rank.tier):"var(--muted)"}">${best?esc(tierLabel(best.rank)):"Unranked"}</b>
-          <em>${best?esc(best.rank.lp+" LP · "+best.name):"No ranked account in this snapshot"}</em></div></div>
+          <em>${best?esc(fmtN(best.rank.lp)+" LP · "+best.name):"No ranked account in this snapshot"}</em></div></div>
         <div class="cell"><span class="k">Ranked</span><b>${ranked.length}</b><em>of ${list.length}</em></div>
         <div class="cell"><span class="k">Games</span><b>${(w+l).toLocaleString("en-US")}</b><em>this season</em></div>
         <div class="cell"><span class="k">Win rate</span><b class="${wr!=null&&wr>=50?"wr-good":""}">${wr!=null?wr+"%":"—"}</b><em>${w+l?w+"W "+l+"L":"no games"}</em></div>
@@ -4963,7 +4963,7 @@ function infoBlockHTML(a,rev){
   if(!solo.length&&!flexHist.length&&!champs.length&&!flex&&!mastery.length&&!canForm(a))return"";
   // through tierLabel like everywhere else — the drawer was the fifth place
   // building this string by hand, and the fifth place printing "Challenger II"
-  const rank=e=>tierLabel(e)+(e.lp!=null?" · "+e.lp+" LP":"");
+  const rank=e=>tierLabel(e)+(e.lp!=null?" · "+fmtN(e.lp)+" LP":"");
   const tinted=e=>`<span style="color:${tierColor(e.tier)}">${esc(rank(e))}</span>`;
   const rows=list=>list.map(e=>`<div class="sea"><span class="s-yr">${esc(e.season)}</span>`
     +`<span class="s-rk" style="color:${tierColor(e.tier)}">${esc(rank(e))}</span></div>`).join("");
@@ -5082,7 +5082,8 @@ function nfValue(info,f){
   const own=info.own||{}, k=Object.keys(own).find(x=>x.toLowerCase()===f.label.toLowerCase());
   return k==null?null:own[k];
 }
-const fmtN=n=>Number(n).toLocaleString("en-US",{maximumFractionDigits:2});
+// a function, not a const, so the rank labels built before this line can use it
+function fmtN(n){return Number(n).toLocaleString("en-US",{maximumFractionDigits:2})}
 // Everything a search should find in the fields, as one string
 function noteFieldsText(a){
   const info=normInfo(a.info);if(!info)return"";
@@ -5331,7 +5332,7 @@ function rowHTML(a,i){
   else if(s.found===false)rank="Not found";
   else if(isRanked(a)){
     rank=tierLabel(s);
-    if(s.lp!=null)lp=s.lp+" LP";
+    if(s.lp!=null)lp=fmtN(s.lp)+" LP";
   // as the card says it: a levelling account is its level, not "Unranked"
   }else rank=s.level?"Level "+s.level:"Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
@@ -5356,7 +5357,7 @@ function rowHTML(a,i){
         // that. Sixty never-checked rows used to be sixty dead lines.
         ||(!isChecked(a)&&!isChecking?`<button class="rw-check" data-act="check" title="Check this account's rank now">${icon("refresh")} Check</button>`:"")}</span>
       <span class="rw-rank" style="color:${isRanked(a)?col:"var(--muted)"}"><b>${esc(rank)}</b>${lp?`<em>${esc(lp)}</em>`:""}</span>
-      <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${Math.abs(dv)}</span>`:""}</span>
+      <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${fmtN(Math.abs(dv))}</span>`:""}</span>
       <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wins}W ${losses}L</em>`
         :total>0?`<em>${wins!=null?wins+"W":losses+"L"}</em>`:""}</span>
       <span class="rw-rg">${esc(a.region)}</span>
@@ -5402,7 +5403,7 @@ function tileHTML(a){
   else if(s.found===false)rank="Not found";
   else if(isRanked(a)){
     rank=tierLabel(s);
-    if(s.lp!=null)lp=s.lp+" LP";
+    if(s.lp!=null)lp=fmtN(s.lp)+" LP";
   // as the card says it: a levelling account is its level, not "Unranked"
   }else rank=s.level?"Level "+s.level:"Unranked";
   const st=STATUS[a.status]||STATUS.active;
@@ -5439,7 +5440,7 @@ function cardHTML(a,i){
   // correctly suppressed.
   {
     const dv=lastDelta(a);
-    if(dv&&!dead)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
+    if(dv&&!dead)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+fmtN(Math.abs(dv))+' LP</span>';
     /* "+87 LP" over what? Said under the chip now, with the pace beside it: the
        pace had a whole row of the card to itself ("Climb · +21 LP/day"), and
        without "since last check" the two numbers read as a contradiction. */
@@ -5490,7 +5491,7 @@ function cardHTML(a,i){
   let tierTxt="",lpTxt="";
   if(s&&s.tier){
     tierTxt=tierLabel(s);
-    if(s.lp!==null&&s.lp!==undefined)lpTxt=s.lp+" LP";
+    if(s.lp!==null&&s.lp!==undefined)lpTxt=fmtN(s.lp)+" LP";
   }
   // On an account that isn't ranked yet the level is the whole story, so it gets
   // the headline slot. Printing "Unranked" in 26 px and tucking "Level 97" into a
@@ -5594,7 +5595,7 @@ function cardHTML(a,i){
       const gcol=tierColor(a.goal.tier);
       return `<div class="goal${g.done?" hit":""}" title="Goal: ${esc(g.label)}">
         <div class="goal-h"><span class="k">Goal</span><span class="goal-t" style="color:${gcol}">${esc(g.label)}</span>
-          <span class="goal-r">${g.done?"reached":g.gap+" LP to go"+(g.eta?" · "+esc(g.eta):"")}</span></div>
+          <span class="goal-r">${g.done?"reached":fmtN(g.gap)+" LP to go"+(g.eta?" · "+esc(g.eta):"")}</span></div>
         <div class="goal-bar"><i style="width:${pct}%;background:${gcol}"></i></div>
       </div>`;
     })()}
@@ -7996,7 +7997,7 @@ function renderAwayBand(){
   const star=best&&(!worst||best.d>=-worst.d)?best:worst;
   setHTML(el,`<span class="away-k">While you were away</span>`
     +`<span>${bits.join(" · ")}${star?` · biggest mover <b>${nameOf(star.a)}</b> `
-      +`<span class="${star.d>0?"up":"down"}">${star.d>0?"+":""}${star.d} LP</span>`:""}</span>`
+      +`<span class="${star.d>0?"up":"down"}">${star.d>0?"+":star.d<0?"-":""}${fmtN(Math.abs(star.d))} LP</span>`:""}</span>`
     +`<span class="sp"><button id="awayShow">Sort by movement</button><button id="awayHide">Dismiss</button></span>`);
   el.classList.remove("hidden");
 }
