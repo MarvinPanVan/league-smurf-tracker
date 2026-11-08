@@ -441,14 +441,46 @@ test("demo preview never touches localStorage, and Exit preview cleanly returns 
   assert.match(win.document.getElementById("grid").textContent, /No accounts yet/);
 });
 
-test("opening the add-account form during preview discards the preview data instead of mixing it with real accounts", () => {
+// Opening Add account or Bulk add ended the preview there and then: the example
+// accounts vanished, and Cancel left the empty start page
+test("Add account and Bulk add keep the preview until something is saved, then replace it", () => {
   const win = bootApp();
-  win.document.getElementById("bDemo").click();
-  assert.equal(win.document.querySelectorAll(".card").length, 5);
+  const doc = win.document, cards = () => doc.querySelectorAll(".card").length;
+  const inPreview = () => !doc.getElementById("previewBanner").classList.contains("hidden");
+  doc.getElementById("bDemo").click();
+  assert.equal(cards(), 5);
 
-  win.document.getElementById("bAdd").click();
-  assert.equal(win.document.getElementById("previewBanner").classList.contains("hidden"), true, "preview must end once the user starts adding a real account");
-  assert.equal(win.document.getElementById("form").classList.contains("hidden"), false, "the add-account form must still open");
+  doc.getElementById("bAdd").click();
+  assert.equal(doc.getElementById("form").classList.contains("hidden"), false, "the form opens");
+  assert.ok(inPreview() && cards() === 5, "with the example data still there behind it");
+  assert.equal(doc.getElementById("fPreviewNote").hidden, false, "and it says what saving will do");
+  doc.querySelector("#form [data-close-panel]").click();
+  assert.ok(inPreview() && cards() === 5, "cancelled: still the preview");
+
+  doc.getElementById("bBulkAdd").click();
+  assert.equal(doc.getElementById("baPreviewNote").hidden, false);
+  doc.getElementById("baCancel").click();
+  assert.ok(inPreview() && cards() === 5, "Bulk add cancelled: still the preview");
+  assert.equal(win.localStorage.getItem("smurf-tracker"), null, "and nothing written");
+
+  // a save is what ends it, and the example accounts make way for the real one
+  doc.getElementById("bAdd").click();
+  doc.getElementById("fName").value = "Bot Diff"; doc.getElementById("fTag").value = "EUW";   // an example's Riot ID is no duplicate
+  doc.getElementById("fSave").click();
+  assert.equal(inPreview(), false);
+  assert.equal(cards(), 1);
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker")).length, 1, "saved, alone");
+  doc.getElementById("bAdd").click();
+  assert.equal(doc.getElementById("fPreviewNote").hidden, true, "no preview note in a real vault");
+
+  const win2 = bootApp();
+  win2.document.getElementById("bDemo").click();
+  win2.document.getElementById("bBulkAdd").click();
+  win2.document.getElementById("baList").value = "First One#EUW\nSecond One#EUW";
+  win2.document.getElementById("baSave").click();
+  assert.equal(win2.document.getElementById("previewBanner").classList.contains("hidden"), true);
+  assert.equal(win2.document.querySelectorAll(".card").length, 2, "the two pasted, without the five examples");
+  assert.equal(JSON.parse(win2.localStorage.getItem("smurf-tracker")).length, 2);
 });
 
 test("isClimbing detects 3 consecutive LP increases and ignores flat/downward trends", () => {

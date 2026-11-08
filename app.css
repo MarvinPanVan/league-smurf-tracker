@@ -1856,6 +1856,10 @@
     box-shadow:0 0 0 3px color-mix(in srgb,var(--danger) 16%,transparent)}
   /* what happens to the password, said under it in the page's own type, and kept
      once there is a password in the box */
+  /* in the example data, Add account and Bulk add say what saving will do to it */
+  .pv-note{margin:0 0 14px;padding:9px 12px;border-radius:var(--r-sm);font-size:calc(13px*var(--ts));line-height:1.45;
+    color:var(--teal-txt);background:color-mix(in srgb,var(--teal) 9%,var(--panel2));border:1px solid color-mix(in srgb,var(--teal) 28%,transparent)}
+  .pv-note[hidden]{display:none}
   .f-note{margin:0;font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
   .f-note .ico{width:13px;height:13px;flex:0 0 auto}
   .f-note.open{color:var(--warn-txt)}

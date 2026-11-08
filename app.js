@@ -6153,9 +6153,13 @@ function addOwnField(){
   setNoteFields(off,own.concat({label,kind}));
   const n=$("nfNewLabel");if(n)n.focus();
 }
+/* Opening Add account or Bulk add from the example data used to end the preview
+   there and then, so the example accounts were gone and Cancel left an empty
+   page. The preview now lasts until something is actually added, and the window
+   says that saving is what ends it. */
 function openForm(acc,focus){
-  if(!acc&&previewMode){previewMode=false;accounts=[];render()}
   closeAllPanels();
+  $("fPreviewNote").hidden=!(previewMode&&!acc);
   editingId=acc?acc.id:null;
   $("fLabel").value=acc?acc.label||"":"";
   $("fRegion").value=acc?normRegion(acc.region):usualRegion();delete $("fRegion").dataset.picked;
@@ -6288,8 +6292,10 @@ function submitForm(){
       &&a.gameName.toLowerCase()===gameName.toLowerCase()
       &&a.tagLine.toLowerCase()===tagLine.toLowerCase()
       &&a.region===$("fRegion").value);
-    if(dup){fieldError("fName","Already in the vault as "+plainName(dup));$("fName").focus();return}
+    if(dup&&!(previewMode&&!editingId)){fieldError("fName","Already in the vault as "+plainName(dup));$("fName").focus();return}
   }
+  // the first account of your own: the example data makes way for it
+  if(previewMode&&!editingId){previewMode=false;accounts=[]}
   const data={label:$("fLabel").value.trim(),region:$("fRegion").value,gameName,tagLine,status:$("fStatus").value,
     login:$("fLogin").value,password:$("fPass").value,email:$("fEmail").value.trim(),
     // Stored as the ISO string the date input hands over, so they sort as strings
@@ -7544,8 +7550,8 @@ $("fileIn").addEventListener("change",e=>{if(e.target.files[0])doImport(e.target
 $("bImportCsv").addEventListener("click",()=>$("fileInCsv").click());
 $("fileInCsv").addEventListener("change",e=>{if(e.target.files[0])doImportCSV(e.target.files[0]);e.target.value=""});
 $("bBulkAdd").addEventListener("click",()=>{
-  if(previewMode){previewMode=false;accounts=[];render()}
   closeAllPanels();
+  $("baPreviewNote").hidden=!previewMode;
   $("baList").value="";
   $("baRegion").value=usualRegion(); // it started on NA, the first in the list, for everyone
   // The list carries data-autofocus: the first field is the region select, and
@@ -7602,6 +7608,7 @@ function parseBulk(text,fallbackRegion){
 $("baSave").addEventListener("click",()=>{
   const parsed=parseBulk($("baList").value,$("baRegion").value);
   if(!parsed.entries.length&&!parsed.bad){toast("Paste at least one Name#TAG, an op.gg link or the lobby chat");return}
+  if(previewMode&&parsed.entries.length){previewMode=false;accounts=[]}
   let added=0,skipped=0,bad=parsed.bad;const newIds=[];
   for(const{gameName,tagLine,region}of parsed.entries){
     const dup=accounts.find(a=>a.gameName.toLowerCase()===gameName.toLowerCase()&&a.tagLine.toLowerCase()===tagLine.toLowerCase()&&a.region===region);
