@@ -110,8 +110,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.25.0";
+const APP_VERSION="2.26.0";
 const APP_CHANGELOG=[
+  {v:"2.26.0",items:[
+    "Calmer cards: no win bar under the win rate, no \"Updated\" line until a rank is a day old, no empty note prompts, and tags on one row",
+    "Refresh rank and Add note are in each card's ⋯ menu, and the LP-per-day pace is on the chart's newest point",
+    "Cards no longer lift under the pointer, the stats panel closes as smoothly as it opens, and switching layout fades in",
+  ]},
   {v:"2.25.0",items:[
     "On a phone the app opens in the list view, so more accounts fit on a screen, each with its copy buttons",
     "The search box shows Ctrl K: open Quick find, type a name, and copy the login",
