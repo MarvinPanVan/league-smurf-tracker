@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.22.0";
+const APP_VERSION="2.23.0";
 const APP_CHANGELOG=[
+  {v:"2.23.0",items:[
+    "Closing the account form or Settings asks before it throws away what you typed, and search finds a full Riot ID like Name#EUW",
+    "A new account scrolls into view, Undo covers archiving and bulk delete, and phones get the selection bar at the bottom of the screen",
+    "Dates, times, numbers and records read the same everywhere: 8 Nov, 12 hours ago, 1,234 LP, 15W 9L",
+  ]},
   {v:"2.22.0",items:[
     "Questions like \"Delete all?\" open in the app's own window, and the back button closes windows instead of leaving",
     "On iPhone, Safari's 7-day deletion is explained once, with how to keep your vault",
