@@ -2256,6 +2256,8 @@
   }
   @keyframes dashIn{from{opacity:0;transform:translateY(-12px) scaleY(.94)}to{opacity:1;transform:none}}
   .hx.dash-in{transform-origin:top center;animation:dashIn .32s cubic-bezier(.22,1,.36,1) both}
+  @keyframes dashOut{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-12px) scaleY(.94)}}
+  .hx.dash-out{transform-origin:top center;animation:dashOut .22s cubic-bezier(.4,0,1,1) both;pointer-events:none}
   @keyframes barIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
   #previewBanner{display:flex;align-items:center;justify-content:space-between;gap:10px;
     border:1px solid color-mix(in srgb,var(--gold) 42%,transparent);background:color-mix(in srgb,var(--gold) 9%,transparent);
@@ -2629,7 +2631,7 @@
     .spin,.brand-mark::before,.grid.boot>.hx,.grid.boot .lpc,.hx.flash .lpc,.hx.flash,#toast,.confetti i,
     #bulkAdd:not(.hidden),#lock:not(.hidden),
     #moreMenu:not(.hidden),#bulkbar:not(.hidden),#previewBanner:not(.hidden),.banner.show,
-    .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in,.sec-b,
+    .login.reveal,.acts.reveal,.c-notes.reveal,.login.reveal .lrow,.star.reveal,.hx.dash-in,.hx.dash-out,.sec-b,
     .modal::before,.modal:not(.hidden) .mdl,.acc-prev.show{animation:none!important}
     .hx-in.scanning::after{animation:none!important;content:none}
     .grid>.hx{transition:none}

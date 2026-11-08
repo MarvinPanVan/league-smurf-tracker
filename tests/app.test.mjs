@@ -5812,7 +5812,7 @@ test("the ribbon stays out of the way until there is a spread to show", () => {
 
 // The stats toggle used to float alone on a row of its own above the console, and
 // was rebuilt by renderDash on every account change.
-test("the stats toggle lives in the header tray and survives a re-render", () => {
+test("the stats toggle lives in the header tray and survives a re-render", async () => {
   const win = bootApp(ladderSeed());
   const btn = win.document.querySelector(".bar #bDashToggle");
   assert.ok(btn, "it sits with the rest of the header chrome");
@@ -5823,7 +5823,7 @@ test("the stats toggle lives in the header tray and survives a re-render", () =>
 
   btn.click();
   assert.match(win.document.querySelector("#bDashToggle").textContent, /Show stats/);
-  assert.equal(win.document.querySelectorAll(".dash .stat").length, 0, "the panel closes");
+  await until(() => win.document.querySelectorAll(".dash .stat").length === 0, "the panel closes");
 
   win.render();
   assert.equal(win.document.querySelector(".bar #bDashToggle"), btn, "the same button, not a rebuilt one");
@@ -10414,6 +10414,22 @@ test("a card does not lift under the pointer, since it is not a button; a wall t
   assert.match(block, /\.grid>\.hx:hover::after\{opacity:\.4/, "a quiet sheen instead");
   assert.match(css, /\n  \.grid\.wall>\.hx:hover\{transform:translateY\(-2px\)\}/, "a wall tile still lifts");
   assert.match(css, /\n  \.tile\{[^}]*cursor:pointer/, "because it is clickable");
+});
+
+// The stats panel folded open and snapped shut
+test("the stats panel folds shut the way it opened, and goes at once with motion reduced", async () => {
+  const seed = ladderSeed();
+  const win = bootApp(seed);
+  const doc = win.document, box = () => doc.querySelector("#dash > .hx");
+  assert.ok(box(), "open to begin with");
+  doc.getElementById("bDashToggle").click();
+  assert.ok(box() && box().classList.contains("dash-out"), "it plays its way out");
+  assert.match(doc.getElementById("bDashToggle").getAttribute("aria-label"), /^Show stats$/, "the button already says what the next click does");
+  await until(() => !box(), "then the panel is gone");
+  assert.match(html, /\.hx\.dash-out\{transform-origin:top center;animation:dashOut \.22s/);
+  const calm = bootApp(seed, w => { w.matchMedia = q => ({ matches: /reduce/.test(q), addListener() {}, removeListener() {}, addEventListener() {} }); });
+  calm.document.getElementById("bDashToggle").click();
+  assert.equal(calm.document.querySelector("#dash > .hx"), null, "with motion reduced it goes at once");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

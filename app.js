@@ -8032,7 +8032,21 @@ $("bDashToggle").addEventListener("click",()=>{
   // not re-animate then — only when the user actually opened it
   dashJustOpened=!cfg.dashCollapsed;
   if(cfg.dashCollapsed)hideSparkTip();
-  saveCfg();renderDash();
+  saveCfg();
+  /* It opened with a fold-down and snapped shut. Closing plays the same move the
+     other way, a little quicker, then the panel goes; with motion reduced or
+     effects off it goes at once, as before. */
+  const box=$("dash").querySelector(":scope>.hx");
+  if(cfg.dashCollapsed&&box&&!prefersReducedMotion()&&document.body.dataset.fx!=="off"){
+    syncDashToggle();
+    box.classList.remove("dash-in");box.classList.add("dash-out");
+    let t=0;
+    const done=()=>{clearTimeout(t);box.removeEventListener("animationend",done);if(dashCollapsed())renderDash()};
+    box.addEventListener("animationend",done);
+    t=setTimeout(done,320);   // in case no animation runs to say it ended
+    return;
+  }
+  renderDash();
 });
 // The ribbon filters by tier exactly the way the dashboard's gem row does, so it
 // hands the click to the same place rather than growing its own idea of filtering.
