@@ -110,8 +110,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.26.1";
+const APP_VERSION="2.27.0";
 const APP_CHANGELOG=[
+  {v:"2.27.0",items:[
+    "Play next is now Suggested game, and says why first: \"Decays in 3 days\", then the account",
+    "On a phone, Check all ranks and + Add account share one row, and the status line no longer ends in a stray dot",
+    "Cards opened from \"+N more\" can be closed, never-checked cards have a Check rank button, and a picture that won't load leaves the initial",
+  ]},
   {v:"2.26.1",items:[
     "On a phone, the header's status line wraps instead of making the whole page wider",
     "A new account is scrolled into view, not only lit up",
@@ -603,12 +608,14 @@ function nextStep(s){
 function playNext(pool){
   const live=(pool||accounts).filter(a=>isLive(a)&&(a.status||"active")==="active"&&isChecked(a)&&a.stats.found!==false);
   const urgent=live.filter(decayRisk).sort((x,y)=>decayDays(x)-decayDays(y));
-  if(urgent.length){const a=urgent[0],d=decayDays(a);return{a,why:d<0?"decaying · play a ranked game":"decay in "+decayIn(d)}}
+  // the reason is the tile's headline now, so it is a sentence, not a note
+  if(urgent.length){const a=urgent[0],d=decayDays(a);
+    return{a,why:d<0?"Decaying now, play a ranked game":d<1?"Decays in under a day":"Decays in "+d+" day"+(d===1?"":"s")}}
   const MI=TIER_ORDER.indexOf("MASTER");
   const near=live.filter(a=>{const s=a.stats,lp=Number(s.lp),t=TIER_ORDER.indexOf((s.tier||"").toUpperCase());
     return isRanked(a)&&t>=0&&t<MI&&normDivision(s.tier.toUpperCase(),s.division)&&lp>=75&&lp<100})
     .sort((x,y)=>y.stats.lp-x.stats.lp);
-  if(near.length){const a=near[0];return{a,why:(100-a.stats.lp)+" LP from "+nextStep(a.stats)}}
+  if(near.length){const a=near[0];return{a,why:(100-a.stats.lp)+" LP to "+nextStep(a.stats)}}
   let best=null,days=-1,played=false;
   for(const a of live){
     const p=lastPlayedOf(a)||0, l=Number(a.lastLoginAt)||0, t=Math.max(p,l);
@@ -617,7 +624,7 @@ function playNext(pool){
     if(d>days){best=a;days=d;played=p>=l}
   }
   if(!best||days<7)return null;
-  return{a:best,why:played?"not played in "+days+" days":"login last used "+days+" days ago"};
+  return{a:best,why:played?"Not played in "+days+" days":"Login last used "+days+" days ago"};
 }
 // Said in words on hover and to a screen reader: unexplained, it was a mystery mark
 function flagMark(){return `<span class="flagmark" role="img" aria-label="Flagged for attention" title="Flagged for attention. Clear it in the ⋯ menu.">${icon("flag")}</span>`}
@@ -2500,6 +2507,10 @@ function iconUrl(s){
   const u=safeIconUrl(s&&s.icon);
   return u&&!deadIcons.has(u)?u:null;
 }
+/* The picture goes and whatever is under it shows. A card's portrait always drew
+   its initial under the picture; list rows, wall tiles, Quick find and Compare
+   drew one or the other, so a dead picture left an empty circle until something
+   redrew the page. All of them draw the initial under the picture now. */
 function markIconDead(img){
   const u=img.getAttribute("src");
   if(u)deadIcons.add(u);
@@ -3394,7 +3405,7 @@ function renderCompare(){
     const initial=(acc.label||acc.gameName||"?").trim().charAt(0).toUpperCase()||"?";
     const rank=ranked?tierLabel(s):!hasReading(s)?"Never checked":s.found===false?"Not found":"Unranked";
     return `<div class="cmp-side">
-      <span class="cmp-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" data-ico>`:`<b>${esc(initial)}</b>`}</span>
+      <span class="cmp-pic"><b aria-hidden="true">${esc(initial)}</b>${url?`<img src="${esc(url)}" alt="" loading="lazy" data-ico>`:""}</span>
       <div class="cmp-nm" title="${esc(plainName(acc))}">${nameOf(acc)}</div>
       <div class="cmp-id">${sens(esc(acc.gameName)+"#"+esc(acc.tagLine))} · ${esc(acc.region)}</div>
       <div class="cmp-rk${ranked?"":" q"}" style="color:${tierColor(s.tier)}">${ranked?crest(s.tier,"cmp-crest"):""}<span>${esc(rank)}</span></div>
@@ -3983,7 +3994,7 @@ function renderRibbon(){
   const warn=missN?`<button class="rib-i rib-warn${missOn?" on":""}" data-flag="missing" aria-pressed="${missOn}" aria-label="Not found, ${missN}"`
     +` title="op.gg has no profile for these Riot IDs: not entered yet, renamed, or mistyped.">${icon("alert")}<span>${missN} not found</span><u>${missOn?"Shown":"Show"}</u></button>`:"";
   setHTML(el,`<div class="rib-row" role="group" aria-label="Accounts by tier">${tiers.map(tierItem).join("")}`
-    +(states.length?`<span class="rib-states">${states.join('<i class="rib-dot" aria-hidden="true">·</i>')}</span>`:"")
+    +(states.length?`<span class="rib-states">${states.join("")}</span>`:"")
     +warn+`</div>`);
 }
 /* Collapsed until asked for on a phone: there the stats were the whole first
@@ -4071,9 +4082,12 @@ function renderDash(){
       <div class="v" style="color:var(--warn-txt)">${attentionN}</div><div class="s-note">marked by you · click to see them</div></button>`,
     dupN&&`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`,
-    next&&`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
-      <div class="v" style="font-size:calc(14px*var(--ts))">${nameOf(next.a)}</div><div class="s-note">${esc(next.why)}</div></button>`,
-    // Play next already names the one account at decay risk and when it decays;
+    /* The reason leads and the account follows: "Decays in 3 days", then "Main",
+       reads at a glance. Named "Play next" with the name first, the tile only made
+       sense once you knew why it had picked that account. */
+    next&&`<button class="stat stat-b s-next" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Suggested game</div>
+      <div class="v">${esc(next.why)}</div><div class="s-note">${nameOf(next.a)}</div></button>`,
+    // Suggested game already names the one account at decay risk and when it decays;
     // a tile saying "1" beside it only says it again. Two or more, and it filters.
     decayN&&!(decayN===1&&next&&decayRisk(next.a))&&`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left, estimated from the games seen between checks"><div class="k">Decay risk</div>
       <div class="v" style="color:var(--warn)">${decayN}</div><div class="s-note">a week or less banked · play a ranked game</div></button>`,
@@ -5184,9 +5198,9 @@ function noteFactsHTML(a,clickable,cap){
     else if(f.k==="rp")facts.push(`<span class="ni-f"><b>${fmtN(v)}</b> RP</span>`);
     else if(f.k==="skins"){
       skinList=v;
-      const shown=v.slice(0,6);
-      skins=`<div class="ni-row ni-skins" title="${esc(v.join(", "))}">${shown.map(s=>`<span class="ni-f">${esc(s)}</span>`).join("")}`
-        +(v.length>6?`<span class="ni-f more">+${v.length-6} more</span>`:"")+`</div>`;
+      // all of them: this is the open view, where "+N more" on the card face leads,
+      // and a second "+2 more" here led nowhere
+      skins=`<div class="ni-row ni-skins">${v.map(s=>`<span class="ni-f">${esc(s)}</span>`).join("")}</div>`;
     }
     else if(f.k==="penalty")pen=`<div class="ni-pen">${icon("alert")}<span>${sens(esc(v))}</span></div>`;
     // your own fields are shown by what the value is, not by what the list says it
@@ -5425,7 +5439,7 @@ function rowHTML(a,i){
            stopped that listener from ever running, so ticking a row selected
            nothing and the bulk bar never appeared. -->
       <input type="checkbox" class="bulkchk" data-act="select" ${selected.has(a.id)?"checked":""} title="Select for bulk actions" aria-label="Select ${esc(a.label||a.gameName)}">
-      <span class="rw-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:`<b>${esc(initial)}</b>`}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
+      <span class="rw-pic"><b aria-hidden="true">${esc(initial)}</b>${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:""}${s&&s.level?`<em class="rw-lvb" title="Level ${esc(s.level)}">${esc(s.level)}</em>`:""}${isRanked(a)?`<span class="rw-crest" style="--c:${col}" title="${esc(rank)}">${crest(s.tier)}</span>`:""}</span>
       <span class="rw-id">
         <span class="rw-nm" title="${esc(plainName(a))}"><span class="nm-t">${nameOf(a)}</span>${a.fav?` <span class="rw-star">${icon("star")}</span>`:""}${a.flagged?flagMark():""}${isLive(a)&&isFailed(a)?
           // the card's "Last check failed", on the row's first line so a phone shows it too
@@ -5489,7 +5503,7 @@ function tileHTML(a){
   const st=STATUS[a.status]||STATUS.active;
   return `<div class="hx${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" · "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
-    <span class="t-pic">${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:`<b>${esc(initial)}</b>`}
+    <span class="t-pic"><b aria-hidden="true">${esc(initial)}</b>${icon0?`<img src="${esc(icon0)}" alt="" loading="lazy" data-ico>`:""}
       ${s&&s.level?`<em class="t-lv">${esc(s.level)}</em>`:""}
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
     <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?flagMark():""}</span>
@@ -5577,7 +5591,10 @@ function cardHTML(a,i){
   const levelLed=!!(s&&s.found!==false&&!isRanked(a)&&s.level);
   let rankBlock;
   if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
-  else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">${noRankLabel(a)}</div>`;
+  // A card never checked had no way to check it but the ⋯ menu, the one card that
+  // most needs it. A failed one has its Refresh on the meta line; banned ones are skipped.
+  else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">${noRankLabel(a)}</div>`
+    +(!dead&&!isFailed(a)?`<div class="wl"><button type="button" class="c-check" data-act="check" title="Check this account's rank now">${icon("refresh")}Check rank</button></div>`:"");
   // amber like the header's warning: a Riot ID op.gg doesn't know is usually one to
   // correct, so the line is the way to correct it, not only the advice to
   else if(s.found===false)rankBlock=`<div class="wl c-miss">${icon("alert")}<span>Not found on op.gg</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;
@@ -5723,7 +5740,7 @@ function cardHTML(a,i){
       </div>
     </div>
     ${openInfo.has(a.id)&&(hasInfo(a)||canForm(a))?infoBlockHTML(a,rv("info")):""}
-    ${hasInfo(a)||cardHidden().some(k=>k!=="wl")||canForm(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${esc(drawerTitle())}">
+    ${openInfo.has(a.id)||hasInfo(a)||cardHidden().some(k=>k!=="wl")||canForm(a)?(open=>`<button class="c-drawer${open?" on":""}" data-act="info" aria-expanded="${open}" title="${esc(drawerTitle())}">
       <span class="c-dl" aria-hidden="true"></span>
       <span class="c-dt">${open?"Close":"Details"}</span>
       <svg class="ico" viewBox="0 0 26 12" aria-hidden="true"><polyline points="2 3 13 10 24 3"/></svg>
@@ -5994,7 +6011,7 @@ function renderGrid(){
       +`<h2 class="wl-t">No accounts yet</h2><p class="wl-s">Add your accounts to keep their ranks and logins in one place.</p>`
       +`<ol class="wl-steps"><li><span class="wl-n">1</span><b>Add an account</b><span>Its Riot ID and region. The login is optional.</span></li>`
       +`<li><span class="wl-n">2</span><b>Check its rank</b><span>Free and automatic, read from op.gg. No key needed.</span></li>`
-      +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Login copies the username, then the password, one click each.</span></li></ol>`
+      +`<li><span class="wl-n">3</span><b>Log in fast</b><span>Copy username, then Copy password: one click each, on the card.</span></li></ol>`
       +`<div class="wl-acts"><button id="bEmptyAdd" class="b-fill">+ Add account</button><button id="bDemo">${icon("eye")} Preview with example data</button></div>`
       +`<p class="wl-note">${icon("lock")}<span>Logins, passwords and notes stay in this browser. A rank check sends only the Riot ID to op.gg, through a public proxy. Clearing the browser's data clears the vault too, so keep a backup.</span></p></div></div>`);
   }else if(list.length===0){
@@ -8266,7 +8283,7 @@ function renderPalette(){
       const url=iconUrl(s);
       const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
       html+=`<button class="pal-i${sel}" data-i="${i}" role="option" aria-selected="${i===palSel}">`
-        +`<span class="pal-pic">${url?`<img src="${esc(url)}" alt="" loading="lazy" data-ico>`:esc(initial)}`
+        +`<span class="pal-pic"><b aria-hidden="true">${esc(initial)}</b>${url?`<img src="${esc(url)}" alt="" loading="lazy" data-ico>`:""}`
         +`${isRanked(a)?crest(s.tier):""}</span>`
         +`<span class="pal-t"><span class="pal-n">${nameOf(a)}</span>`
         +`<span class="pal-s">${sens(esc(a.gameName)+"#"+esc(a.tagLine))} · ${esc(a.region)}</span></span>`

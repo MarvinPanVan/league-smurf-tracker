@@ -35,7 +35,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="app.css?v=2.26.1">
+<link rel="stylesheet" href="app.css?v=2.27.0">
 </head>
 <body data-atmosphere="spotlight">
 <!-- A shared snapshot opens here instead of the app: see openSnapshot -->
@@ -143,16 +143,26 @@
       <!-- Cards, Keys and More were one sentence each, chained with "·" over eight
            lines. They are lists of separate things, so they are lists. -->
       <dd><ul class="help-ul">
-        <li><b>Login</b> copies the username, then the password, which clears from the clipboard after 30 seconds. The eye beside it shows the saved login.</li>
+        <li><b>Copy username</b> copies the username, then the same button reads <b>Copy password</b>. The password clears from the clipboard after 30 seconds. The eye beside it shows the saved login.</li>
         <li>The bar across the bottom edge opens <b>Details</b>: flex rank, past seasons and the champions played.</li>
         <li>The star pins a favorite to the top.</li>
         <li>A status marks a banned or resting account. Checks skip banned ones.</li>
+        <li><b>Archive</b> in a card's ⋯ menu hides it without deleting it. <b>Archived</b> in the toolbar shows them.</li>
         <li>Tick cards' checkboxes to change the status or tags of several at once, or delete them.</li>
         <li>Click a note to rewrite it, or a field (honor, skins, Blue Essence…) to edit it. <b>Fields…</b> in the account form picks which fields there are and adds your own.</li>
         <li><b>Card art…</b> in the ⋯ menu sets the champion and skin behind a card, and how strongly it shows.</li>
       </ul></dd>
       <dt>Search</dt>
-      <dd>Matches names, tags, notes and skins, even ranks (try "gold"), and every word you add narrows it further. Beyond plain words it takes <code>tier:diamond</code> <code>region:euw</code> <code>champ:yasuo</code> (played this season, or in its top mastery) <code>role:mid</code> (from the last five ranked games), <code>&gt;plat</code> and <code>&lt;gold</code> for "at least" and "below" (<code>&lt;=gold</code> takes Gold with it), and <code>is:</code> stale · never · flagged · banned · fav · goal · decay · ready · leveling. They combine, so <code>&gt;diamond is:stale</code> is one query.</dd>
+      <!-- Search and More were one 56-word and one 53-word sentence. Lists, like Cards. -->
+      <dd><ul class="help-ul">
+        <li>Words match names, tags, notes, skins and ranks (try "gold"). Each word you add narrows it.</li>
+        <li><code>tier:diamond</code> and <code>region:euw</code> pick a tier or a region.</li>
+        <li><code>champ:yasuo</code> finds accounts that played Yasuo this season or have Yasuo in their top mastery.</li>
+        <li><code>role:mid</code> goes by the last five ranked games.</li>
+        <li><code>&gt;plat</code> is Platinum and up. <code>&lt;gold</code> is below Gold, and <code>&lt;=gold</code> takes Gold with it.</li>
+        <li><code>is:</code> takes stale, never, flagged, banned, fav, goal, decay, ready or leveling.</li>
+        <li>They combine: <code>&gt;diamond is:stale</code> is one search.</li>
+      </ul></dd>
       <dt>Quick find</dt>
       <dd><kbd>Ctrl</kbd><kbd>K</kbd> (or <kbd>⌘</kbd><kbd>K</kbd>) anywhere, then type a few letters of a name or a rank to jump straight to an account, or a word like "layout", "export" or "settings" to run it. Arrows move, Enter opens.</dd>
       <dt>Keys</dt>
@@ -169,9 +179,11 @@
       <dt>Extra privacy</dt>
       <dd>Set a master password in <b>Settings → Security</b> to encrypt everything at rest, with an auto-lock timer, and unlock with Face ID, a fingerprint or Windows Hello instead of typing it. Don't lose the password: there's no recovery. The <b>Password check-up</b> there finds passwords used on more than one account, weak ones and, when you ask, ones in known data leaks. <b>Sort: Last login</b> brings up the account you last copied a login from.</dd>
       <dt>More</dt>
-      <dd><ul class="help-ul">
-        <li>The <b>⋯</b> menu has bulk add (paste Name#TAGs, an op.gg multi-search link or the lobby chat), CSV import, <b>New season</b> (every rank into Past seasons at once, with Undo), streamer mode and <b>Share a snapshot</b> (a read-only page of your ranks in one link, with no logins, emails or notes in it).</li>
-        <li>Archive an account to hide it without deleting it. <b>Archived</b> in the toolbar shows them.</li>
+      <dd><p class="help-lead">In the <b>⋯</b> menu at the top:</p><ul class="help-ul">
+        <li><b>Bulk add accounts</b> takes pasted Name#TAGs, an op.gg multi-search link or the lobby chat. <b>Import CSV</b> takes a spreadsheet.</li>
+        <li><b>New season</b> moves every rank into Past seasons at once. Undo puts them back.</li>
+        <li><b>Share a snapshot</b> makes one link to a read-only page of your ranks. Logins, emails and notes are never in it.</li>
+        <li><b>Streamer mode</b> hides Riot IDs, logins, emails and notes. <kbd>H</kbd> turns it on too.</li>
         <li><b>Settings → Appearance</b> has themes, effects, text size and what each card shows.</li>
       </ul></dd>
       <dt id="helpTerms">Using this app</dt>
@@ -262,7 +274,7 @@
             <button type="button" role="radio" data-v="subtle">Subtle</button>
             <button type="button" role="radio" data-v="off">Off</button>
           </div>
-          <div class="hint" style="margin-top:7px">Full: cards lift and glow under the pointer. Subtle: nothing moves under the pointer and the glow is quieter. Off: no animation and no glow. Your system's "reduce motion" setting is always respected.</div>
+          <div class="hint" style="margin-top:7px">Full: cards glow under the pointer and wall tiles rise a little. Subtle: nothing moves under the pointer and the glow is quieter. Off: no animation and no glow. Your system's "reduce motion" setting is always respected.</div>
         </div>
         <div class="atm-block">
           <div class="s-h">Text size</div>
@@ -869,6 +881,6 @@
   <div id="srSay" class="sr-only" role="status" aria-live="polite"></div>
 </div>
 
-<script src="app.js?v=2.26.1"></script>
+<script src="app.js?v=2.27.0"></script>
 </body>
 </html>

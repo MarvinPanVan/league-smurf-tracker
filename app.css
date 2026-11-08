@@ -255,10 +255,16 @@
   .rib-row:has(.rib-i.on) .rib-i:not(.on):hover{opacity:1}
   /* wraps: with four states at once ("1 unranked · 1 never checked · 1 banned ·
      2 need a refresh") one unbroken line was 403px, and a phone's page grew to fit it */
-  .rib-states{display:inline-flex;align-items:center;flex-wrap:wrap;row-gap:2px;min-width:0;max-width:100%;margin-left:8px}
-  .rib-s{color:var(--muted);padding:0 6px}
+  .rib-states{display:inline-flex;align-items:center;flex-wrap:wrap;gap:2px 6px;min-width:0;max-width:100%;margin-left:8px;clip-path:inset(-8px -8px -8px 0)}
+  .rib-s{position:relative;color:var(--muted);padding:0 6px}
+  /* The dot between two words was an item of its own, and on a phone the line broke
+     after it: "1 unranked · 1 never checked ·". Each word after the first carries
+     its dot in the gap before it, and the left edge above clips the dot of a word
+     that starts a line, wherever the line breaks. The focus ring sits inside the
+     button so the same edge cannot clip it. */
+  .rib-s+.rib-s::before{content:"·";position:absolute;right:100%;width:6px;text-align:center;color:var(--faint);pointer-events:none}
+  .rib-s:focus-visible{outline-offset:-2px}
   .rib-s.rib-stale{color:var(--warn-txt)}   /* amber, as the card's own out-of-date line */
-  .rib-dot{font-style:normal;color:var(--faint)}
   .rib-warn{margin-left:10px;color:var(--warn-txt);border-color:color-mix(in srgb,var(--warn) 38%,transparent);
     background:color-mix(in srgb,var(--warn) 9%,transparent)}
   .rib-warn:hover{color:var(--warn-txt);border-color:color-mix(in srgb,var(--warn) 60%,transparent);background:color-mix(in srgb,var(--warn) 15%,transparent)}
@@ -446,6 +452,8 @@
   .stat-b.on{background:color-mix(in srgb,var(--gold) 11%,transparent);border:0;
     box-shadow:inset 2px 0 0 var(--gold)}
   .s-note{font-size:calc(12px*var(--ts));color:var(--faint);margin-top:4px;line-height:1.4}
+  .s-next .v{font-size:calc(16px*var(--ts));line-height:1.35}   /* a sentence, not a figure */
+  .s-next .s-note{color:var(--muted)}   /* the account is the second thing to read, not a footnote */
   .gem.cmb b{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .gem.cmb b.wr-good{color:var(--good)}
   .gem.cmb i.g{font-style:normal;font-size:calc(12px*var(--ts));font-weight:600;color:var(--muted);
@@ -775,7 +783,7 @@
   .t-pic{width:52px;height:52px;border-radius:50%;position:relative;flex-shrink:0;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center;margin-bottom:3px}
-  .t-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+  .t-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
   .t-pic b{font-size:calc(20px*var(--ts));font-weight:600;color:var(--faint)}
   .t-crest{position:absolute;right:-7px;top:-7px;width:21px;height:21px;
     filter:drop-shadow(0 1px 2px #000000cc)}
@@ -859,7 +867,7 @@
   .rw-pic{width:40px;height:40px;border-radius:50%;position:relative;overflow:visible;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center}
-  .rw-pic img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+  .rw-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
   .rw-pic b{font-size:calc(16px*var(--ts));font-weight:600;color:var(--faint)}
   /* the tier, on the picture, the way the card puts it beside the rank */
   .rw-crest{position:absolute;right:-6px;top:-6px;width:17px;height:17px;
@@ -1304,10 +1312,6 @@
   .ni-pips{display:inline-flex;gap:3px}
   .ni-pips i{width:7px;height:7px;transform:rotate(45deg);border-radius:1px;background:#ffffff38}
   .ni-pips i.on{background:var(--gold-txt)}
-  /* Skins wore the accent, a fourth chip style beside the plain facts, the green
-     and amber states and the tags, and in an accent colour they read as pressed
-     filters. They are facts like the others; their own row says what they are. */
-  .ni-skins span.more{color:var(--muted);background:none;border-style:dashed}
   .ni-pen{display:flex;align-items:flex-start;gap:7px;padding:6px 9px;border-radius:var(--r-xs);font-size:calc(12px*var(--ts));line-height:1.45;
     color:#ffc4c4;background:#ff6b6b12;border:1px solid #ff6b6b2e}
   .ni-pen .ico{width:13px;height:13px;flex-shrink:0;margin-top:2px;color:var(--danger)}
@@ -1487,6 +1491,11 @@
   .c-fix{padding:4px 10px;min-height:28px;font-size:calc(12px*var(--ts));font-weight:600;color:var(--warn-txt);
     background:none;border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
   .c-fix:hover{color:var(--warn-txt);background:color-mix(in srgb,var(--warn) 14%,transparent);border-color:var(--warn)}
+  /* the same small outlined button, in the colour of checking */
+  .c-check{padding:4px 10px;min-height:28px;gap:6px;font-size:calc(12px*var(--ts));font-weight:600;color:var(--teal-txt);
+    background:none;border-color:color-mix(in srgb,var(--teal) 40%,transparent)}
+  .c-check:hover{color:var(--teal-txt);background:color-mix(in srgb,var(--teal) 12%,transparent);border-color:var(--teal)}
+  .c-check .ico{width:13px;height:13px}
   .delta .ico{width:1em;height:1em;vertical-align:-.15em}
   /* ---- LP chart ----
      The old sparkline was a bare line with no scale: it told you the number went
@@ -1543,7 +1552,8 @@
   .pal-pic{width:28px;height:28px;border-radius:50%;flex-shrink:0;position:relative;overflow:visible;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));box-shadow:inset 0 0 0 1px var(--line);
     display:flex;align-items:center;justify-content:center;font-size:calc(12px*var(--ts));font-weight:600;color:var(--faint)}
-  .pal-pic img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+  .pal-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+  .pal-pic b{font-weight:inherit}
   .pal-pic .crest{position:absolute;right:-5px;top:-5px;width:14px;height:14px}
   .pal-ico{width:28px;height:28px;border-radius:var(--r-sm);flex-shrink:0;display:flex;align-items:center;
     justify-content:center;background:#ffffff0d;color:var(--muted)}
@@ -1567,6 +1577,7 @@
   .help dt{font-size:calc(13px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;color:var(--gold-txt);line-height:2.2}
   .help dd{margin:0}
   .help-ul{margin:0;padding:0 0 0 18px;display:grid;gap:5px}
+  .help-lead{margin:0 0 5px}
   .help-ul li::marker{color:var(--faint)}
   .help-ul.keys{list-style:none;padding:0}
   .help dd.terms::first-letter{text-transform:uppercase}
@@ -2305,10 +2316,10 @@
   .cmp{padding:22px 22px 6px}
   .cmp-head{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:start;margin-bottom:18px}
   .cmp-side{display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;min-width:0}
-  .cmp-pic{width:56px;height:56px;border-radius:50%;margin-bottom:8px;display:flex;align-items:center;justify-content:center;
+  .cmp-pic{position:relative;width:56px;height:56px;border-radius:50%;margin-bottom:8px;display:flex;align-items:center;justify-content:center;
     background:linear-gradient(150deg,var(--panel3),var(--panel2));
     box-shadow:0 0 0 1px var(--gold-dim),0 0 0 3px var(--bg),0 0 0 4px color-mix(in srgb,var(--gold) 55%,transparent)}
-  .cmp-pic img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+  .cmp-pic img{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
   .cmp-pic b{font-size:calc(20px*var(--ts));font-weight:600;color:var(--faint)}
   .cmp-nm{font-size:calc(16px*var(--ts));font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cmp-id{font-size:calc(12px*var(--ts));color:var(--faint);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2693,7 +2704,6 @@
      row, Archived and the checkbox trailing — so every row was a different ragged
      length. They sit on a two-column grid. (The command row is set out above.) */
   @media (max-width:560px){
-    .cmd>#bCheckAll{flex-basis:100%} /* the primary gets the full first row, not half of it */
     .seg button{width:36px}
     .tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:stretch}
     .tools>*{min-width:0;width:100%}
