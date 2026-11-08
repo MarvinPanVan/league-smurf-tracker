@@ -10040,6 +10040,26 @@ test("LP figures carry a thousands separator, like the game counts", () => {
   assert.match(row.querySelector(".rw-rank").textContent, /1,234 LP/, "the list row");
 });
 
+// "312W 250L" on a card, "15-9" in the champion table and "15 · 9" on the Most
+// played chips (a hyphen faded to half): one record, written one way
+test("a win/loss record is written one way everywhere: 15W 9L", async () => {
+  const now = Date.now();
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 1203, losses: 990, updatedAt: now,
+      champs: [{ name: "Lux", games: 24, wins: 15, losses: 9, wr: 63 }] } }]);
+  const doc = win.document;
+  assert.equal(win.wlText(1203, 990), "1,203W 990L");
+  const chip = [...doc.querySelectorAll("#dash .cmb")].find(c => c.querySelector(".n").textContent === "Lux");
+  assert.equal(chip.querySelector(".g").textContent, "15W 9L", "Most played");
+  assert.match(doc.getElementById("dash").textContent, /1,203W 990L/, "Season W/L");
+  const card = () => doc.querySelector('.card[data-id="a"]');
+  assert.match(card().querySelector(".wl").textContent, /^1,203W 990L/, "the card");
+  card().querySelector('[data-act="info"]').click(); // the drawer opens with the table unfolded
+  await tick();
+  const row = [...card().querySelectorAll('[data-k="sec-champs"] .chp')].map(r => [...r.children].map(c => c.textContent).join("|"));
+  assert.deepEqual(row, ["Champion|W/L|WR", "Lux|15W 9L|63%"], "the champion table");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
@@ -10908,7 +10928,7 @@ test("the dashboard reads as one row of figures", () => {
 
   const wl = tile("Season W/L").querySelector(".v");
   assert.ok(wl.classList.contains("nw"), "the record holds together on one line");
-  assert.match(wl.textContent.replace(/\s+/g, " "), /^3600W 3300L$/);
+  assert.match(wl.textContent.replace(/\s+/g, " "), /^3,600W 3,300L$/);
   assert.match(tile("Season W/L").querySelector(".s-note").textContent, /52% WR/, "the rate moves under it");
 
   assert.equal(tile("Regions"), undefined, "a count nobody acts on is not a figure here");

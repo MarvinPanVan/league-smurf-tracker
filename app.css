@@ -447,7 +447,6 @@
   .gem.cmb b.wr-good{color:var(--good)}
   .gem.cmb i.g{font-style:normal;font-size:calc(12px*var(--ts));font-weight:600;color:var(--muted);
     font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:var(--r-xs);background:#ffffff12}
-  .gem.cmb i.g em{font-style:normal;opacity:.5;padding:0 1px}
   .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px;position:relative}
   /* The client divides with a hairline that is brightest in the middle and a
      small diamond set on it, not with a flat grey rule. In the accent it was one

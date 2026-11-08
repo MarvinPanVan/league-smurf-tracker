@@ -3353,7 +3353,7 @@ function renderCompare(){
     const s=acc.stats||{}, wl=winLoss(s), tr=wrTrend(acc);
     const seen=acc.lastPlayedAt||acc.lastLoginAt||s.updatedAt||0;
     return {
-      record:wl.w!=null||wl.l!=null?(wl.w!=null?wl.w+"W":"—")+" "+(wl.l!=null?wl.l+"L":"—"):"—",
+      record:wl.w!=null||wl.l!=null?(wl.w!=null?fmtN(wl.w)+"W":"—")+" "+(wl.l!=null?fmtN(wl.l)+"L":"—"):"—",
       wr:wl.wr, peak:peakInfo(acc).peak||"—", trend:tr?(tr.d>0?"+":"")+tr.d+" pp":"—",
       seen, level:s.level!=null?String(s.level):"—",
     };
@@ -3998,7 +3998,7 @@ function renderDash(){
      with nothing behind it yet (0W 0L, a climb with one day of history) waits
      until it has something. */
   const cells=[
-    (W+L)>0&&`<div class="stat"><div class="k">Season W/L</div><div class="v nw">${W}<small>W</small> ${L}<small>L</small></div>
+    (W+L)>0&&`<div class="stat"><div class="k">Season W/L</div><div class="v nw">${fmtN(W)}<small>W</small> ${fmtN(L)}<small>L</small></div>
       <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>`,
     // "Never checked" is a word in the header line, which filters the same way, so
     // it has no tile here. Flagged is amber: a reminder you left, not an alarm.
@@ -4044,7 +4044,7 @@ function renderDash(){
     topChamps.map(c=>`<span class="gem cmb" title="${esc(c.games)} games across ${esc(c.accs)} account${c.accs===1?"":"s"}">`
       +`<span class="n">${esc(c.name)}</span>`
       +`<b class="${c.wr>=50&&c.games>=10?"wr-good":""}">${esc(c.wr)}%</b>`
-      +`<i class="g">${esc(c.wins)}<em>-</em>${esc(c.losses)}</i></span>`).join("")}</div>`:""}
+      +`<i class="g">${esc(wlText(c.wins,c.losses))}</i></span>`).join("")}</div>`:""}
   ${scopeShown?`<div class="dash-scope"><label for="dashMin">Figures from</label>
     <select id="dashMin">${floors.map(f=>{const n=floorN(f.v);
       return`<option value="${f.v}"${curFloor===f.v?" selected":""}>${f.v?esc(f.label)+" ("+n+")":"all "+n+" ranked account"+(n===1?"":"s")}</option>`}).join("")}</select>
@@ -4197,7 +4197,7 @@ function formHTML(a){
   if(!f.games.length)return flat(`<span class="sec-p">No ranked games yet this season</span>`);
   const w=f.games.filter(g=>g.win).length;
   const pips=`<span class="fm-pips" aria-hidden="true">${f.games.map(g=>`<i class="fm-pip${g.win?" w":""}"></i>`).join("")}</span>`;
-  return secHTML(a,"form","Last 5 ranked",f.games.length,`${w}W ${f.games.length-w}L${pips}`,
+  return secHTML(a,"form","Last 5 ranked",f.games.length,`${wlText(w,f.games.length-w)}${pips}`,
     f.games.map(g=>`<div class="chp">`
       +`<span class="c-nm"><b class="fm-res${g.win?" w":""}">${g.win?"W":"L"}</b>${esc(g.champ)}</span>`
       +`<span class="c-kd">${esc(g.kda)}</span>`
@@ -4771,7 +4771,7 @@ function snapCardHTML(a,i){
       ${a.region?`<span class="regiontag">${esc(a.region)}</span>`:""}
     </div>
     <div class="sn-rank"><b>${esc(label)}</b>${r?`<span>${esc(fmtN(r.lp))} LP</span>`:""}${st?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.short||st.label)}</span>`:""}</div>
-    ${wr!=null?`<div class="sn-wl"><span>${esc(a.w)}W ${esc(a.l)}L</span><b class="${wr>=50?"wr-good":""}">${wr}% WR</b></div>
+    ${wr!=null?`<div class="sn-wl"><span>${esc(wlText(a.w,a.l))}</span><b class="${wr>=50?"wr-good":""}">${wr}% WR</b></div>
       <div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
     ${spk?`<div class="sn-spk" title="Last ${days} day${days===1?"":"s"}">${spk}</div>`:""}
     ${meta?`<div class="sn-meta">${meta}</div>`:""}
@@ -4801,7 +4801,7 @@ function snapHTML(s){
           <em>${best?esc(fmtN(best.rank.lp)+" LP · "+best.name):"No ranked account in this snapshot"}</em></div></div>
         <div class="cell"><span class="k">Ranked</span><b>${ranked.length}</b><em>of ${list.length}</em></div>
         <div class="cell"><span class="k">Games</span><b>${(w+l).toLocaleString("en-US")}</b><em>this season</em></div>
-        <div class="cell"><span class="k">Win rate</span><b class="${wr!=null&&wr>=50?"wr-good":""}">${wr!=null?wr+"%":"—"}</b><em>${w+l?w+"W "+l+"L":"no games"}</em></div>
+        <div class="cell"><span class="k">Win rate</span><b class="${wr!=null&&wr>=50?"wr-good":""}">${wr!=null?wr+"%":"—"}</b><em>${w+l?wlText(w,l):"no games"}</em></div>
       </div></div>`:""}
       ${tiers.length>1?`<div class="sn-dist" aria-hidden="true">${tiers.map(([t,n])=>`<i style="flex:${n};background:${tierColor(t)}"></i>`).join("")}</div>
         <div class="sn-legend">${tiers.map(([t,n])=>`<span style="--c:${tierColor(t)}">${esc(nice(t))} ${n}</span>`).join("")}</div>`:""}
@@ -4983,9 +4983,9 @@ function infoBlockHTML(a,rev){
     const row=(cls,cells)=>`<div class="chp${cls}"${kdaCol?"":' style="grid-template-columns:1fr auto auto"'}>${cells}</div>`;
     out+=secHTML(a,"champs","Champions this season",champs.length,
       `<span class="c-nm">${esc(top.name)}</span> <span class="${top.wr>=50?"wr-good":""}">${esc(top.wr)}%</span>`,
-      row(" chp-h",`<span>Champion</span><span>W-L</span><span>WR</span>${kdaCol?"<span>KDA</span>":""}`)
+      row(" chp-h",`<span>Champion</span><span>W/L</span><span>WR</span>${kdaCol?"<span>KDA</span>":""}`)
       +champs.map(c=>row("",`<span class="c-nm">${esc(c.name)}</span>`
-        +`<span class="c-gm">${c.wins!=null&&c.losses!=null?esc(c.wins)+"-"+esc(c.losses):esc(c.games)+"G"}</span>`
+        +`<span class="c-gm">${c.wins!=null&&c.losses!=null?esc(wlText(c.wins,c.losses)):esc(c.games)+"G"}</span>`
         +`<span class="c-wr${c.wr>=50?" wr-good":""}">${esc(c.wr)}%</span>`
         +(kdaCol?`<span class="c-kd">${c.kda!=null?esc(c.kda):"—"}</span>`:""))).join(""));
   }
@@ -5084,6 +5084,9 @@ function nfValue(info,f){
 }
 // a function, not a const, so the rank labels built before this line can use it
 function fmtN(n){return Number(n).toLocaleString("en-US",{maximumFractionDigits:2})}
+/* One way to write a record. "312W 250L" on a card, "15-9" in the champion table
+   and "15 · 9" on the Most played chips (a faded hyphen) were the same thing. */
+function wlText(w,l){return fmtN(w)+"W "+fmtN(l)+"L"}
 // Everything a search should find in the fields, as one string
 function noteFieldsText(a){
   const info=normInfo(a.info);if(!info)return"";
@@ -5358,8 +5361,8 @@ function rowHTML(a,i){
         ||(!isChecked(a)&&!isChecking?`<button class="rw-check" data-act="check" title="Check this account's rank now">${icon("refresh")} Check</button>`:"")}</span>
       <span class="rw-rank" style="color:${isRanked(a)?col:"var(--muted)"}"><b>${esc(rank)}</b>${lp?`<em>${esc(lp)}</em>`:""}</span>
       <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${fmtN(Math.abs(dv))}</span>`:""}</span>
-      <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wins}W ${losses}L</em>`
-        :total>0?`<em>${wins!=null?wins+"W":losses+"L"}</em>`:""}</span>
+      <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wlText(wins,losses)}</em>`
+        :total>0?`<em>${wins!=null?fmtN(wins)+"W":fmtN(losses)+"L"}</em>`:""}</span>
       <span class="rw-rg">${esc(a.region)}</span>
       <span class="rw-up${isStale(a)||!hasReading(s)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
       <span class="rw-keys">${a.login?`<button class="rw-key" data-act="copylogin" title="Copy username" aria-label="Copy username for ${esc(plainName(a))}">${icon("user")}</button>`:""}${a.password?`<button class="rw-key" data-act="copypw" title="Copy password" aria-label="Copy password for ${esc(plainName(a))}">${icon("key")}</button>`:""}</span>
@@ -5483,7 +5486,7 @@ function cardHTML(a,i){
   const {w:wins,l:losses,total,wr}=winLoss(s);
   // whichever of the two is known — printing both from coerced numbers is what put
   // an invented "0L" beside a real win count
-  const wlTxt=[wins!=null?`<b>${wins}W</b>`:"",losses!=null?`<b>${losses}L</b>`:""].filter(Boolean).join(" ");
+  const wlTxt=[wins!=null?`<b>${fmtN(wins)}W</b>`:"",losses!=null?`<b>${fmtN(losses)}L</b>`:""].filter(Boolean).join(" ");
   // Both profile links live in the ⋯ menu's "Look up" group now.
   // Tier and LP are separate on purpose: the tier carries the card's type scale,
   // the LP sits under it as the companion figure — shortRank() glues them for
@@ -5535,7 +5538,7 @@ function cardHTML(a,i){
     }
     {
       const g=gamesSince(hist);
-      if(g)microStats.push(["Since last check",g.n+(g.n===1?" game · ":" games · ")+g.w+"W "+g.l+"L"]);
+      if(g)microStats.push(["Since last check",fmtN(g.n)+(g.n===1?" game · ":" games · ")+wlText(g.w,g.l)]);
       // the pace ("Climb") sits under the LP chip now, beside "since last check"
     }
     if(s.mmr)microStats.push(["MMR est.",s.mmr]);
