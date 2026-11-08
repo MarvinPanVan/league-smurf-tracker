@@ -452,6 +452,8 @@
   .stat-b.on{background:color-mix(in srgb,var(--gold) 11%,transparent);border:0;
     box-shadow:inset 2px 0 0 var(--gold)}
   .s-note{font-size:calc(12px*var(--ts));color:var(--faint);margin-top:4px;line-height:1.4}
+  .s-next .v{font-size:calc(16px*var(--ts));line-height:1.35}   /* a sentence, not a figure */
+  .s-next .s-note{color:var(--muted)}   /* the account is the second thing to read, not a footnote */
   .gem.cmb b{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .gem.cmb b.wr-good{color:var(--good)}
   .gem.cmb i.g{font-style:normal;font-size:calc(12px*var(--ts));font-weight:600;color:var(--muted);

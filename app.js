@@ -608,12 +608,14 @@ function nextStep(s){
 function playNext(pool){
   const live=(pool||accounts).filter(a=>isLive(a)&&(a.status||"active")==="active"&&isChecked(a)&&a.stats.found!==false);
   const urgent=live.filter(decayRisk).sort((x,y)=>decayDays(x)-decayDays(y));
-  if(urgent.length){const a=urgent[0],d=decayDays(a);return{a,why:d<0?"decaying · play a ranked game":"decay in "+decayIn(d)}}
+  // the reason is the tile's headline now, so it is a sentence, not a note
+  if(urgent.length){const a=urgent[0],d=decayDays(a);
+    return{a,why:d<0?"Decaying now, play a ranked game":d<1?"Decays in under a day":"Decays in "+d+" day"+(d===1?"":"s")}}
   const MI=TIER_ORDER.indexOf("MASTER");
   const near=live.filter(a=>{const s=a.stats,lp=Number(s.lp),t=TIER_ORDER.indexOf((s.tier||"").toUpperCase());
     return isRanked(a)&&t>=0&&t<MI&&normDivision(s.tier.toUpperCase(),s.division)&&lp>=75&&lp<100})
     .sort((x,y)=>y.stats.lp-x.stats.lp);
-  if(near.length){const a=near[0];return{a,why:(100-a.stats.lp)+" LP from "+nextStep(a.stats)}}
+  if(near.length){const a=near[0];return{a,why:(100-a.stats.lp)+" LP to "+nextStep(a.stats)}}
   let best=null,days=-1,played=false;
   for(const a of live){
     const p=lastPlayedOf(a)||0, l=Number(a.lastLoginAt)||0, t=Math.max(p,l);
@@ -622,7 +624,7 @@ function playNext(pool){
     if(d>days){best=a;days=d;played=p>=l}
   }
   if(!best||days<7)return null;
-  return{a:best,why:played?"not played in "+days+" days":"login last used "+days+" days ago"};
+  return{a:best,why:played?"Not played in "+days+" days":"Login last used "+days+" days ago"};
 }
 // Said in words on hover and to a screen reader: unexplained, it was a mystery mark
 function flagMark(){return `<span class="flagmark" role="img" aria-label="Flagged for attention" title="Flagged for attention. Clear it in the ⋯ menu.">${icon("flag")}</span>`}
@@ -4080,9 +4082,12 @@ function renderDash(){
       <div class="v" style="color:var(--warn-txt)">${attentionN}</div><div class="s-note">marked by you · click to see them</div></button>`,
     dupN&&`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`,
-    next&&`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
-      <div class="v" style="font-size:calc(14px*var(--ts))">${nameOf(next.a)}</div><div class="s-note">${esc(next.why)}</div></button>`,
-    // Play next already names the one account at decay risk and when it decays;
+    /* The reason leads and the account follows: "Decays in 3 days", then "Main",
+       reads at a glance. Named "Play next" with the name first, the tile only made
+       sense once you knew why it had picked that account. */
+    next&&`<button class="stat stat-b s-next" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Suggested game</div>
+      <div class="v">${esc(next.why)}</div><div class="s-note">${nameOf(next.a)}</div></button>`,
+    // Suggested game already names the one account at decay risk and when it decays;
     // a tile saying "1" beside it only says it again. Two or more, and it filters.
     decayN&&!(decayN===1&&next&&decayRisk(next.a))&&`<button class="stat stat-b${ui.flag==="decay"?" on":""}" data-flag="decay" aria-pressed="${ui.flag==="decay"}" title="Diamond and up with a week or less of decay protection left, estimated from the games seen between checks"><div class="k">Decay risk</div>
       <div class="v" style="color:var(--warn)">${decayN}</div><div class="s-note">a week or less banked · play a ranked game</div></button>`,

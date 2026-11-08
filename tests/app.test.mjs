@@ -1355,7 +1355,7 @@ test("a Copy button turns into a green Copied for a moment, and only when the co
   assert.match(html, /\n  \.lbtns button\.copied,button\.copied\{color:var\(--good\)/, "in the colour that means done");
 });
 
-test("Play next names the account to play: about to decay first, then one about to go up, then the longest left", () => {
+test("Suggested game names the account to play: about to decay first, then one about to go up, then the longest left", () => {
   const D = 86400000, now = Date.now();
   const acc = (id, tier, playedAgo, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [],
     history: [], lastPlayedAt: now - playedAgo * D,
@@ -1363,12 +1363,18 @@ test("Play next names the account to play: about to decay first, then one about 
   const sitting = bootApp([acc("recent", "GOLD", 1), acc("old", "GOLD", 20), acc("resting", "GOLD", 60, { status: "resting" })]);
   const tile = w => w.document.querySelector("#dash [data-next]");
   assert.equal(tile(sitting).dataset.next, "old", "the active account left longest; resting ones are not suggested");
-  assert.match(tile(sitting).textContent, /not played in 20 days/);
+  // the reason is the headline and the account the line under it
+  assert.equal(tile(sitting).querySelector(".k").textContent, "Suggested game");
+  assert.equal(tile(sitting).querySelector(".v").textContent, "Not played in 20 days");
+  assert.equal(tile(sitting).querySelector(".s-note").textContent, "old");
   const urgent = acc("dia", "DIAMOND", 2, { history: [{ t: now - 25 * D, tier: "DIAMOND", division: "II", lp: 20, w: 10, l: 10 }] });
   const both = bootApp([acc("old", "GOLD", 20), urgent]);
   assert.equal(tile(both).dataset.next, "dia", "an account about to decay comes before one that has merely sat");
-  assert.match(tile(both).textContent, /decay in ~\dd/);
-  // Play next already names the one account at risk: a "Decay risk 1" tile beside it said it twice
+  assert.match(tile(both).querySelector(".v").textContent, /^Decays in \d days?$/);
+  assert.equal(tile(both).querySelector(".s-note").textContent, "dia");
+  const gone = acc("gone", "DIAMOND", 2, { history: [{ t: now - 35 * D, tier: "DIAMOND", division: "II", lp: 20, w: 10, l: 10 }] });
+  assert.equal(tile(bootApp([gone])).querySelector(".v").textContent, "Decaying now, play a ranked game");
+  // Suggested game already names the one account at risk: a "Decay risk 1" tile beside it said it twice
   assert.equal(both.document.querySelector('#dash [data-flag="decay"]'), null, "one at risk is said once, by Play next");
   const dia2 = acc("dia2", "DIAMOND", 2, { history: [{ t: now - 24 * D, tier: "DIAMOND", division: "II", lp: 20, w: 10, l: 10 }] });
   const two = bootApp([acc("old", "GOLD", 20), urgent, dia2]);
@@ -1392,18 +1398,20 @@ test("Play next names the account to play: about to decay first, then one about 
   const counted = acc("g", "GOLD", 0, { lastPlayedAt: undefined, history: [
     { t: now - 30 * D, tier: "GOLD", division: "II", lp: 0, w: 9, l: 10 }, { t: now - 12 * D, tier: "GOLD", division: "II", lp: 20, w: 10, l: 10 },
     { t: now - 2 * D, tier: "GOLD", division: "II", lp: 20, w: 10, l: 10 }] });
-  assert.match(tile(bootApp([counted])).textContent, /not played in 12 days/, "from the check that saw the game, not the last check");
+  assert.equal(tile(bootApp([counted])).querySelector(".v").textContent, "Not played in 12 days", "from the check that saw the game, not the last check");
   // a login copied, and nothing played, says that
   const login = acc("l", "GOLD", 0, { lastPlayedAt: undefined, lastLoginAt: now - 10 * D });
-  assert.match(tile(bootApp([login])).textContent, /login last used 10 days ago/);
+  assert.equal(tile(bootApp([login])).querySelector(".v").textContent, "Login last used 10 days ago");
   // one a game or two from going up comes before one that has merely sat
   const close = acc("up", "GOLD", 1); close.stats.lp = 88;
   const top = acc("top", "SILVER", 1); Object.assign(top.stats, { division: "I", lp: 80 });
   const w = bootApp([acc("old", "GOLD", 20), close, top]);
   assert.equal(tile(w).dataset.next, "up", "the nearest to its next division");
-  assert.match(tile(w).textContent, /12 LP from Gold I/);
+  assert.equal(tile(w).querySelector(".v").textContent, "12 LP to Gold I");
   const w2 = bootApp([acc("old", "GOLD", 20), top]);
-  assert.match(tile(w2).textContent, /20 LP from Gold$/m, "division I goes up a tier");
+  assert.equal(tile(w2).querySelector(".v").textContent, "20 LP to Gold", "division I goes up a tier");
+  assert.doesNotMatch(appJs, /<div class="k">Play next<\/div>/, "the old name is gone");
+  assert.match(fs.readFileSync(path.join(ROOT, "README.md"), "utf8"), /\*\*Suggested game\*\* says why an account needs a game, then names it/, "and the README says it the same way");
 });
 
 test("a new vault gets four set-up steps, each a button, until they are done or hidden", async () => {
@@ -10776,7 +10784,7 @@ test("everything that points to the Backend URL or the worker guide names the Ad
 // The README still promised a "Needs refresh" tile after it moved to the toolbar
 test("the README names only stats tiles the panel still has, and how to refresh the stale ones", () => {
   const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
-  const tiles = [...readme.matchAll(/\*\*(Play next|Decay risk|This week|Needs refresh|Accounts|Best account|Regions)\*\*/g)].map(m => m[1]);
+  const tiles = [...readme.matchAll(/\*\*(Suggested game|Play next|Decay risk|This week|Needs refresh|Accounts|Best account|Regions)\*\*/g)].map(m => m[1]);
   assert.ok(tiles.length >= 3, "it does describe the panel");
   for (const t of tiles) assert.ok(appJs.includes(`<div class="k">${t}</div>`), t + " is a tile the panel can show");
   assert.doesNotMatch(readme, /\*\*Refresh stale\*\*/, "no button the page no longer has");
