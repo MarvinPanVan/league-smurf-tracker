@@ -9654,19 +9654,21 @@ test("the link preview names a fresh image, at the size the page says it is", ()
 test("a window opened straight after another closed still has its back step", async () => {
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
   const doc = win.document, open = id => !doc.getElementById(id).classList.contains("hidden");
-  const settle = () => new Promise(r => setTimeout(r, 40));
+  // The app's own step back lands when the browser gets to it. This waited a fixed
+  // 40ms, and on a loaded CI runner pressed back again before that step had landed,
+  // so the two traversals stacked. It waits for the step itself now.
+  const landed = () => !appGet(win, "backSkip");
   for (let i = 0; i < 4; i++) {
     doc.getElementById("bSettings").click(); await tick();
     doc.querySelector("#settings [data-close-panel]").click();
     await tick();   // the close is seen, and its step back asked for...
     doc.getElementById("bAdd").click();   // ...and the next window opens before it has happened
-    await settle();
+    await until(() => landed() && win.history.state && win.history.state.smurfWindow === 1,
+      "round " + i + ": the step back to land, and the open form to take its own entry");
     assert.ok(open("form"));
-    assert.equal(win.history.state && win.history.state.smurfWindow, 1, "round " + i + ": the open form has its entry");
     win.history.back();
     await until(() => !open("form"), "back to close the form, round " + i);
-    await settle();
-    assert.equal(win.history.state, null, "and nothing is left behind");
+    await until(() => landed() && win.history.state === null, "round " + i + ": nothing left behind");
   }
 });
 
