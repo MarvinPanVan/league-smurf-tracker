@@ -6698,7 +6698,8 @@ function fitTags(root){
     more.type="button";more.className="ct-more";more.dataset.act="info";more.title="Show every tag in Details";
     row.appendChild(more);
     let n=Math.max(1,cut);
-    const show=()=>{chips.forEach((c,i)=>{c.hidden=i>=n});more.textContent="+"+(chips.length-n)};
+    // "+5 more", worded like the note chips' count beside it
+    const show=()=>{chips.forEach((c,i)=>{c.hidden=i>=n});more.textContent="+"+(chips.length-n)+" more"};
     show();
     while(n>1&&out(more)){n--;show()}
   }

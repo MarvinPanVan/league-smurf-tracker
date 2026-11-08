@@ -10411,7 +10411,7 @@ test("a card's tags stay on one row, the rest behind +N, which opens Details whe
   runScript(win, "render()");
   const row = () => win.document.querySelector('.card[data-id="t"] .ctags');
   const shown = () => [...row().children].filter(c => !c.hidden).map(c => c.textContent);
-  assert.deepEqual(shown(), ["main", "adc", "+5"], "what fits, and a count of the rest that fits beside it");
+  assert.deepEqual(shown(), ["main", "adc", "+5 more"], "what fits, and a count of the rest that fits beside it, worded like the notes'");
   const more = row().querySelector(".ct-more");
   assert.equal(more.dataset.act, "info", "the count opens Details");
   more.click();
