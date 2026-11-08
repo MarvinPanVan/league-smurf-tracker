@@ -3920,6 +3920,8 @@ function syncDashToggle(){
   b.classList.toggle("open",!dashCollapsed());
   // the verb is its own span so a phone, short of room, can say just "Stats"
   setHTML(b,icon("chevron")+` <span class="dt-v">${dashCollapsed()?"Show":"Hide"} </span><span class="dt-n">stats</span>`);
+  // what it does, for when the narrowest phones show only the arrow
+  b.setAttribute("aria-label",(dashCollapsed()?"Show":"Hide")+" stats");
 }
 function renderDash(){
   applyRankTheme(); // a new best tier is news the dashboard already gets; the colours follow it

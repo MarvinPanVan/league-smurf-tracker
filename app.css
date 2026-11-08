@@ -739,7 +739,9 @@
      chart, a peak and a winrate bar; an unranked one has none of those, so it got
      the same box with a hundred pixels of nothing between its notes and its
      footer. Ragged bottoms are honest — a hollow card is not. */
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(335px,1fr));gap:16px}
+  /* min(…,100%): a 335px floor is wider than a 320px phone's 288px of room, and the
+     whole page grew sideways to fit it, cutting every card off on the right */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(335px,100%),1fr));gap:16px}
   /* Not on .grid itself. The list is a flex column, where align-items:start stops
      meaning "don't stretch the short card to the row height" and starts meaning
      "shrink every row to the width of its own text" — which cut the list off in
@@ -2666,6 +2668,16 @@
     #bDashToggle .dt-n{text-transform:capitalize}
   }
   @media (max-width:400px){.top h1{font-size:calc(18px*var(--ts))}}
+  /* 320 to 375px (an iPhone mini or SE, with Display Zoom too, small Androids):
+     the wordmark ran into "Stats", with the Quick find button beside it. The
+     toggle keeps its arrow, the word goes, and at the narrowest the wordmark
+     steps down a size. */
+  @media (max-width:380px){
+    .top .bar{gap:0}
+    #bDashToggle{width:var(--ctl-h);padding:0;justify-content:center}
+    #bDashToggle .dt-v,#bDashToggle .dt-n{display:none}
+  }
+  @media (max-width:340px){.top h1{font-size:calc(16px*var(--ts));letter-spacing:.06em}}
   /* On a phone the toolbar's filters were the whole first screen: search, two rows
      of dropdowns, Favorites, Archived and Select all, before a single account. Only
      search stays out; the rest fold behind Filters, whose badge counts what is on so

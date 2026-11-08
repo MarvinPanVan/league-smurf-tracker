@@ -8828,7 +8828,7 @@ test("on a phone the toolbar's two count lines start at one edge, and the header
 // At 2560px the page stopped at 1640: 460px empty either side and four cards to a row
 test("a wide screen gets a wide page, and the list spreads its columns rather than opening a hole after the name", () => {
   const max = +html.match(/\n  \.wrap\{[^}]*max-width:(\d+)px/)[1];
-  const minCard = +html.match(/\n  \.grid\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\((\d+)px/)[1];
+  const minCard = +html.match(/\n  \.grid\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\(min\((\d+)px,100%\)/)[1];
   const cols = w => Math.floor((Math.min(w, max) - 60 + 16) / (minCard + 16));
   assert.ok(cols(2560) >= 6, "six cards to a row at 2560: " + cols(2560));
   assert.ok(cols(1920) >= 5, "five at 1920: " + cols(1920));
@@ -9837,6 +9837,22 @@ test("Quick find has a button in the header, for a phone with no Ctrl+K", async 
   btn.click(); await tick();
   assert.equal(win.document.getElementById("palette").classList.contains("hidden"), false);
   assert.equal(win.document.activeElement, win.document.getElementById("palInput"), "ready to type");
+});
+
+// At 320px (an iPhone mini or SE with Display Zoom) "SMURF TRACKER" ran into "Stats" and
+// every card was cut off on the right: the grid's 335px floor was wider than the screen
+test("a 320px phone gets cards that fit and a header that does not collide", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /\n  \.grid\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\(min\(335px,100%\),1fr\)\)/, "a column never wider than the room");
+  const narrow = css.slice(css.indexOf("@media (max-width:380px){"));
+  assert.match(narrow.slice(0, narrow.indexOf("\n  }")), /#bDashToggle \.dt-v,#bDashToggle \.dt-n\{display:none\}/, "the toggle keeps only its arrow");
+  assert.match(css, /@media \(max-width:340px\)\{\.top h1\{font-size:calc\(16px\*var\(--ts\)\)/, "and the wordmark steps down at the narrowest");
+  // with the word gone, the arrow still says what it does
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const t = win.document.getElementById("bDashToggle");
+  assert.match(t.getAttribute("aria-label"), /^(Show|Hide) stats$/);
+  t.click();
+  assert.match(t.getAttribute("aria-label"), /^(Show|Hide) stats$/);
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
