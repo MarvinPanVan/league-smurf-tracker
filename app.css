@@ -2134,7 +2134,6 @@
   .lock-in{display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px 34px 32px}
   .lock-in .brand-mark{margin:6px 0 24px}
   .lock-wm{font-size:calc(30px*var(--ts))}
-  .lock-sub{margin-top:8px;font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
   .lock-in .hx-rule{margin:24px 0 20px}
   .lock-k{font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt)}
   .lock-txt{font-size:calc(13px*var(--ts));color:var(--muted);margin:8px 0 18px;line-height:1.6}

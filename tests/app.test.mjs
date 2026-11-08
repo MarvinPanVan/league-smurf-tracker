@@ -9336,6 +9336,10 @@ test("the header has one name, the wordmark, and no slogan badge", () => {
   assert.equal(brand.textContent.trim(), "Smurf Tracker");
   for (const sel of [".top", "#settings"])
     assert.doesNotMatch(win.document.querySelector(sel).textContent, /Private by default|Summoner Vault/, sel + ", the Settings preview of the header included");
+  // nor the browser tab ("Smurf Tracker · Summoner Vault") or the lock screen
+  assert.equal(win.document.title, "Smurf Tracker");
+  assert.equal(win.document.getElementById("lock").textContent.includes("Summoner Vault"), false);
+  assert.equal(pageHtml.match(/<title>([^<]*)<\/title>/)[1], "Smurf Tracker", "before the app has run, too");
 });
 
 // Panel, card, notes box, chip: four borders deep. The card is the box now; chips are fills

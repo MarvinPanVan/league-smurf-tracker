@@ -5851,7 +5851,7 @@ function renderGrid(){
   // patching keeps a focused textarea alive, so this is normally a no-op — it
   // only matters if the note block was structurally replaced rather than patched
   if(editingNote)focusNoteEditor(grid);
-  document.title=accounts.length?"Smurf Tracker ("+accounts.length+")":"Smurf Tracker · Summoner Vault";
+  document.title=accounts.length?"Smurf Tracker ("+accounts.length+")":"Smurf Tracker";
   // isStale(), not a second hand-rolled version of it: this one required an
   // updatedAt, so never-checked accounts were left out and the readout disagreed
   // with both the "Refresh N stale" button and the stats panel beside it.
