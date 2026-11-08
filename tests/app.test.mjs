@@ -10485,6 +10485,14 @@ test("a banned row's copy keys step back like the banned card's Login, and still
   assert.equal(row.querySelectorAll(".rw-key").length, 2, "both keys are still there, for an appeal");
 });
 
+// On a phone Quick find said "↑↓ move, ⏎ open, Esc close" to a screen with no keys
+test("Quick find's key hints are left off on a touch screen", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const coarse = css.slice(css.indexOf("@media (pointer:coarse){"));
+  assert.match(coarse.slice(0, 3000), /\.pal-f\{display:none\}/);
+  assert.match(pageHtml, /<div class="pal-f">/, "a keyboard still gets them");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

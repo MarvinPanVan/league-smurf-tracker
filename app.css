@@ -2670,6 +2670,7 @@
     .lpc-range button{height:30px;padding:0 9px}
     .lpc-axis{height:32px}   /* room for them in the date row */
     .tools>.t-kbd{display:none}.tools>#tSearch:placeholder-shown{padding-right:12px}   /* no Ctrl on a touch screen */
+    .pal-f{display:none}   /* nor arrow keys, Enter or Esc: Quick find's key hints mean nothing there */
     .rid{padding-block:5px;margin-block:-3px}
     .c-notes.blank>button,.c-notes.blank .nf-link{min-height:30px} /* matches the all:unset rule it has to beat */
   }
