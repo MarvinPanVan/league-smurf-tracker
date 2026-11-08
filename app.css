@@ -326,16 +326,17 @@
   .b-quiet:hover,.ghost-toggle:hover{background:#ffffff10;border-color:transparent;color:var(--text)}
   /* every control in a toolbar row: one height, one size, one weight */
   .cmd>button,.cmd .seg,.tools>button,.tools>select,.tools>input[type=search],.tag-handle,
-  #bulkbar>button,#bulkbar>select,#bulkbar>input,.bar>button,.bar #bMore,.bar #bHelp{
+  #bulkbar>button,#bulkbar>select,#bulkbar>input,.bar>button,.bar #bMore,.bar #bHelp,.bar #bFind{
     height:var(--ctl-h);padding-top:0;padding-bottom:0;font-size:calc(13px*var(--ts));font-weight:500}
   .cmd>.b-fill{font-weight:600}
   .b-danger{color:var(--danger)}
   .b-danger:hover{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);
     background-color:color-mix(in srgb,var(--danger) 13%,var(--panel2))}
   /* utilities, not actions — no rim of their own inside the tray */
-  #bMore,#bHelp{width:var(--ctl-h);padding:0;color:var(--text);font-size:calc(16px*var(--ts));
+  #bMore,#bHelp,#bFind{width:var(--ctl-h);padding:0;color:var(--text);font-size:calc(16px*var(--ts));
     background:none;border-color:transparent;box-shadow:none}
-  #bMore:hover,#bHelp:hover{color:var(--text);background:#ffffff12;border-color:transparent}
+  #bMore:hover,#bHelp:hover,#bFind:hover{color:var(--text);background:#ffffff12;border-color:transparent}
+  #bFind .ico{width:17px;height:17px}
   .bar{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 
   /* ---- dropdown menu ---- */
@@ -446,7 +447,6 @@
   .gem.cmb b.wr-good{color:var(--good)}
   .gem.cmb i.g{font-style:normal;font-size:calc(12px*var(--ts));font-weight:600;color:var(--muted);
     font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:var(--r-xs);background:#ffffff12}
-  .gem.cmb i.g em{font-style:normal;opacity:.5;padding:0 1px}
   .dist{display:flex;gap:13px;flex-wrap:wrap;align-items:center;padding:13px 20px;position:relative}
   /* The client divides with a hairline that is brightest in the middle and a
      small diamond set on it, not with a flat grey rule. In the accent it was one
@@ -479,7 +479,7 @@
      at minus the command row's height (measured in app.js), so that row scrolls off
      and the search row stops at the top, with nothing in the page changing size.
      While a check runs it pins whole again, so Stop and the progress stay in reach. */
-  .console{position:sticky;top:calc(-1*var(--cmd-pin,0px));z-index:10;margin:0 0 18px;
+  .console{position:sticky;top:calc(env(safe-area-inset-top,0px) - var(--cmd-pin,0px));z-index:10;margin:0 0 18px;
     border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;
     /* glass, because it rides over the cards: blurred, but not saturated, which
        turned whatever scrolled under it into a smear of its brightest colour */
@@ -502,7 +502,7 @@
     border-color:color-mix(in srgb,var(--warn) 34%,transparent)}
   .cmd-count .warn.on{background:color-mix(in srgb,var(--warn) 18%,transparent);
     border-color:color-mix(in srgb,var(--warn) 46%,transparent)}
-  .console.running{top:0}
+  .console.running{top:env(safe-area-inset-top,0px)}
   /* The rows used to lose some padding once the header scrolled away, which moved
      every card under them up 16px at that moment. With one row pinned there is
      little height to win back, so they keep their size. */
@@ -738,7 +738,9 @@
      chart, a peak and a winrate bar; an unranked one has none of those, so it got
      the same box with a hundred pixels of nothing between its notes and its
      footer. Ragged bottoms are honest — a hollow card is not. */
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(335px,1fr));gap:16px}
+  /* min(…,100%): a 335px floor is wider than a 320px phone's 288px of room, and the
+     whole page grew sideways to fit it, cutting every card off on the right */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(335px,100%),1fr));gap:16px}
   /* Not on .grid itself. The list is a flex column, where align-items:start stops
      meaning "don't stretch the short card to the row height" and starts meaning
      "shrink every row to the width of its own text" — which cut the list off in
@@ -818,14 +820,14 @@
      name and one after the rank — and the figures crowded at the right edge. Now
      the slack is all after the name, like any table, and the figures sit together
      as one block under their headings. The heading row uses the same columns. */
-  .grid.list{--rw-cols:auto 40px minmax(160px,1fr) 124px 124px 60px 94px 38px 72px 62px 16px;--rw-gap:13px}
+  .grid.list{--rw-cols:auto 40px minmax(160px,1fr) 124px 124px 60px 94px 38px 88px 62px 16px;--rw-gap:13px}
   /* Up to a point: past about 1180px, "all the slack after the name" was a hole
      between a name and its own rank (450px of nothing at 1440, a thousand at 2560).
      There every column after the picture takes a share, more for the name and the
      climb, the way a full-width table spreads; the picture stays beside the name.
      Below that width the narrower templates further down take over. */
   @media (min-width:1181px){
-    .grid.list{--rw-cols:auto 40px minmax(160px,2.4fr) minmax(124px,1.4fr) minmax(124px,1fr) minmax(60px,.6fr) minmax(94px,1fr) minmax(38px,.5fr) minmax(72px,.8fr) minmax(62px,.5fr) 16px}
+    .grid.list{--rw-cols:auto 40px minmax(160px,2.4fr) minmax(124px,1.4fr) minmax(124px,1fr) minmax(60px,.6fr) minmax(94px,1fr) minmax(38px,.5fr) minmax(88px,.8fr) minmax(62px,.5fr) 16px}
     /* a wider column is room around the change pill and the record bar, not a
        longer pill or a bar whose length stops meaning the same thing row to row */
     .rw-d{align-items:flex-start}
@@ -945,7 +947,7 @@
      The sparkline outranks the region code and the timestamp: it is the only
      column that says anything a glance can't already get from the rank. */
   @media (max-width:1180px){
-    .grid.list{--rw-cols:auto 40px minmax(130px,1fr) 104px 112px 58px 88px 72px 62px 16px;--rw-gap:11px}
+    .grid.list{--rw-cols:auto 40px minmax(130px,1fr) 104px 112px 58px 88px 88px 62px 16px;--rw-gap:11px}
     .rw-rg,.h-rg{display:none}
   }
   @media (max-width:980px){
@@ -1006,6 +1008,13 @@
   @supports (padding:max(0px)){
     body{padding-bottom:max(12px,env(safe-area-inset-bottom))}
   }
+  /* The installed iPhone app draws under a see-through status bar
+     (black-translucent), so the page starts where the clock is: without room
+     for it, "Stats ⋯ ?" sat under the time and the battery. viewport-fit=cover
+     makes iOS report the notch and the home bar, and everything that meets an
+     edge of the screen keeps clear of them. Elsewhere these are all 0. */
+  body{padding-top:env(safe-area-inset-top,0px);
+    padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
   .card{position:relative;padding:17px;display:flex;flex-direction:column;gap:11px;
     overflow:hidden;isolation:isolate}
   /* status as a left edge rail — scannable down a column of 60 cards in a way a
@@ -1070,6 +1079,20 @@
      tick should not have to be found by hovering */
   body.selecting .bulkchk{opacity:1}
   #bulkbar.cmp-pick>:not(#bulkCount):not(#bulkClear){display:none}
+  /* On a phone the bar sat at the top of the list, so a box ticked further down
+     sent you scrolling back up to use it. It sits at the foot of the screen there
+     instead, over the cards, with room left under the last one. */
+  @media (max-width:560px), (max-height:500px) and (orientation:landscape){
+    #bulkbar:not(.hidden){position:fixed;z-index:58;margin:0!important;
+      left:calc(10px + env(safe-area-inset-left,0px));right:calc(10px + env(safe-area-inset-right,0px));
+      bottom:calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 10px 40px #000c!important;
+      background:color-mix(in srgb,var(--teal) 9%,var(--panel))!important}
+    #bulkbar>#bulkCount{flex:1 1 100%}
+    #bulkbar>#bulkStatus,#bulkbar>#bulkTag{flex:1 1 calc(50% - 5px);min-width:0;width:auto!important}
+    #bulkbar>button{flex:1 1 auto}
+    body.selecting .grid{padding-bottom:190px}
+    body.selecting .to-top{display:none}
+  }
   @media (hover:none){.bulkchk{opacity:.5}}
 
   /* bare icon buttons — must beat the generic button rules */
@@ -1543,7 +1566,7 @@
     box-shadow:inset 0 0 0 1px var(--line2),inset 0 -2px 0 var(--line2)}
   @media (max-width:560px){.help{grid-template-columns:1fr;padding:4px 18px 10px}
     .help dt{padding:14px 0 2px}.help dd{border-top:0;padding-top:0}}
-  .to-top{position:fixed;right:clamp(14px,3vw,28px);bottom:clamp(14px,3vw,28px);z-index:55;
+  .to-top{position:fixed;right:calc(clamp(14px,3vw,28px) + env(safe-area-inset-right,0px));bottom:calc(clamp(14px,3vw,28px) + env(safe-area-inset-bottom,0px));z-index:55;
     width:40px;height:40px;padding:0;border-radius:50%;
     background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
     border:1px solid var(--line2);box-shadow:var(--sh-2);color:var(--muted);
@@ -1911,7 +1934,6 @@
   /* The version, hovering for what changed in it. Tabular figures so it doesn't
      jiggle between releases, and a help cursor because there is something to read. */
   .ver{font-variant-numeric:tabular-nums;letter-spacing:.02em}
-  .ver[title]{cursor:help;border-bottom:1px dotted var(--line2)}
 
   /* ---- modal panels ----
      As inline panels these shoved the entire grid down the page — open one on a
@@ -1930,7 +1952,12 @@
   #askModal .mdl{max-width:460px}
   .ask-b{margin:0;padding:16px 22px;white-space:pre-line;color:var(--muted);line-height:1.5}
   .ask-b:empty{display:none}
-  #askAlt[hidden]{display:none}
+  #askAlt[hidden],#askCancel[hidden]{display:none}
+  /* a question that needs a word typed, like a backup's password */
+  .ask-fields{display:flex;flex-direction:column;gap:12px;padding:0 22px 18px}
+  .ask-fields[hidden]{display:none}
+  .ask-fields label{display:flex;flex-direction:column;gap:6px;font-size:calc(13px*var(--ts));color:var(--muted)}
+  .ask-err{margin:0;min-height:1.2em;font-size:calc(13px*var(--ts));color:var(--danger)}
   @media (max-width:620px){
     #askModal{padding:16px;align-items:center}
     #askModal .mdl{margin:auto}
@@ -1939,6 +1966,8 @@
     #askModal .ask-b{padding:14px 16px}
   }
   .modal{position:fixed;inset:0;z-index:60;overflow:auto;overscroll-behavior:contain;
+    /* a window on a phone is the whole screen, header first: keep it below the clock */
+    border-top:env(safe-area-inset-top,0px) solid transparent;
     display:flex;align-items:flex-start;justify-content:center;
     padding:clamp(14px,5vh,60px) clamp(12px,4vw,32px)}
   .modal::before{content:"";position:fixed;inset:0;background:#05070bd1;
@@ -2124,7 +2153,7 @@
     .modal{padding:0;align-items:stretch}
     .mdl{max-width:none;margin:0}
     .mdl.hx{border-radius:0;padding:0;box-shadow:none}
-    .mdl-in{max-height:none;min-height:100vh;min-height:100dvh;border-radius:0}
+    .mdl-in{max-height:none;min-height:100vh;min-height:calc(100dvh - env(safe-area-inset-top,0px));border-radius:0}
     .mdl-h .s{display:none}
     /* …except in the rank window, where that line is not a caption: it is which
        account you are editing. Hiding it put the phone back in the state the
@@ -2146,7 +2175,7 @@
      put "Marked played today" or "Streamer mode on" over the buttons of whichever
      card sat in the middle. It also lets clicks through: only its own button
      (Undo, Show) takes them, so a message is never in the way of what it covers. */
-  #toast{position:fixed;bottom:clamp(14px,3vw,28px);left:clamp(14px,3vw,28px);z-index:80;display:none;
+  #toast{position:fixed;bottom:calc(clamp(14px,3vw,28px) + env(safe-area-inset-bottom,0px));left:calc(clamp(14px,3vw,28px) + env(safe-area-inset-left,0px));z-index:80;display:none;
     width:max-content;max-width:min(460px,calc(100vw - 32px));pointer-events:none;
     background:color-mix(in srgb,var(--panel2) 95%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
     border:1px solid var(--line2);border-radius:var(--r-md);color:var(--text);
@@ -2306,11 +2335,12 @@
   .sn-sum em{font-style:normal;font-size:calc(12px*var(--ts));color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .sn-sum .cell:first-child>div{min-width:0;display:flex;flex-direction:column;gap:3px}
   .sn-best-c{width:54px;height:54px;flex-shrink:0;filter:drop-shadow(0 4px 14px #0009)}
-  .sn-dist{display:flex;gap:2px;height:5px;max-width:880px;margin:16px auto 0;border-radius:2px;overflow:hidden}
-  .sn-dist i{display:block;min-width:4px}
-  .sn-legend{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:calc(12px*var(--ts));color:var(--muted)}
-  .sn-legend span{display:inline-flex;align-items:center;gap:6px}
-  .sn-legend span::before{content:"";width:7px;height:7px;border-radius:1px;transform:rotate(45deg);background:var(--c)}
+  .sn-tiers{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 14px;max-width:880px;margin:18px auto 0;
+    font-size:calc(14px*var(--ts));font-variant-numeric:tabular-nums;color:var(--text)}
+  .sn-t{display:inline-flex;align-items:center;gap:6px;height:30px}
+  .sn-t b{font-weight:600}
+  .sn-t-c{width:24px;height:24px;flex-shrink:0}
+  .sn-t-w{color:var(--muted)}
   .sn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:18px;margin-top:clamp(34px,6vw,52px)}
   .sn-card{animation:cardIn .5s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--i) * 45ms)}
   .sn-c{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:12px;padding:0 18px 18px}
@@ -2645,7 +2675,9 @@
      its own — 230px. It is an app bar now: the wordmark on the left, the tray on
      the right, the rank bar under both. The gem and the strapline stand down;
      the wordmark is the brand at this size. */
-  @media (max-width:560px){
+  /* PHONE: these two blocks also serve a phone held sideways (short, not narrow),
+     the same query as PHONE_MQ in app.js */
+  @media (max-width:560px), (max-height:500px) and (orientation:landscape){
     .top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px 10px}
     .top>.brand{grid-column:1;grid-row:1;gap:0;min-width:0}
     .top>.brand .brand-mark{display:none}
@@ -2656,6 +2688,16 @@
     #bDashToggle .dt-n{text-transform:capitalize}
   }
   @media (max-width:400px){.top h1{font-size:calc(18px*var(--ts))}}
+  /* 320 to 375px (an iPhone mini or SE, with Display Zoom too, small Androids):
+     the wordmark ran into "Stats", with the Quick find button beside it. The
+     toggle keeps its arrow, the word goes, and at the narrowest the wordmark
+     steps down a size. */
+  @media (max-width:380px){
+    .top .bar{gap:0}
+    #bDashToggle{width:var(--ctl-h);padding:0;justify-content:center}
+    #bDashToggle .dt-v,#bDashToggle .dt-n{display:none}
+  }
+  @media (max-width:340px){.top h1{font-size:calc(16px*var(--ts));letter-spacing:.06em}}
   /* On a phone the toolbar's filters were the whole first screen: search, two rows
      of dropdowns, Favorites, Archived and Select all, before a single account. Only
      search stays out; the rest fold behind Filters, whose badge counts what is on so
@@ -2665,7 +2707,7 @@
     justify-content:center;font-size:calc(12px*var(--ts));font-weight:700;color:var(--teal-ink);background:var(--teal)}
   .t-filters .t-n[hidden]{display:none}
   .t-select{display:none}
-  @media (max-width:560px){
+  @media (max-width:560px), (max-height:500px) and (orientation:landscape){
     .tools{display:flex;flex-wrap:wrap}
     /* search and Filters share the first row (search takes all but Filters' width,
        so the rest always starts a row of its own), the rest two to a row under it */

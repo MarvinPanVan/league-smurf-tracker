@@ -9,7 +9,7 @@
      https host because the backend URL, the Discord webhook and the proxies are
      yours to choose; plain http only to a worker running on this computer. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#090c10">
 <!-- What a shared link shows: Discord, Reddit, iMessage and friends render these as
@@ -34,7 +34,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="app.css?v=2.22.0">
+<link rel="stylesheet" href="app.css?v=2.23.0">
 </head>
 <body data-atmosphere="spotlight">
 <!-- A shared snapshot opens here instead of the app: see openSnapshot -->
@@ -76,6 +76,9 @@
     <div class="bar">
       <button id="streamerPill" class="streamer-pill hidden" title="Streamer mode is on: Riot IDs, logins, emails and notes are hidden. Click to show them again."><i aria-hidden="true"></i>Streamer mode</button>
       <button id="bDashToggle" class="ghost-toggle" title="Season totals, champion pool, account counts"></button>
+      <!-- Quick find was Ctrl+K and nothing else, so a phone never had it, and it holds
+           the quickest login in the app: type a name, Enter copies the username -->
+      <button id="bFind" type="button" title="Quick find (Ctrl+K)" aria-label="Quick find"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
       <div style="position:relative">
         <button id="bMore" title="Export, import, settings">⋯</button>
         <div id="moreMenu" class="hx teal hidden" style="position:absolute;right:0;top:calc(100% + 8px);z-index:20;min-width:206px"><div class="hx-in" style="padding:7px;display:flex;flex-direction:column;gap:1px">
@@ -88,7 +91,7 @@
           <button id="bNewSeason" style="justify-content:flex-start;width:100%" title="Move every ranked account's current rank into its Past seasons">New season…</button>
           <button id="bStreamer" style="justify-content:flex-start;width:100%" title="Hide Riot IDs, logins, emails and notes while you stream or share your screen (H)">Streamer mode</button>
           <div class="cm-g">Backup</div>
-          <button id="bExportEnc" style="justify-content:flex-start;width:100%" title="AES-encrypted backup. Your master password opens it.">Export encrypted backup…</button>
+          <button id="bExportEnc" style="justify-content:flex-start;width:100%" title="AES-encrypted backup, opened by your master password or one you choose for it">Export encrypted backup…</button>
           <button id="bExport" style="justify-content:flex-start;width:100%" title="Plaintext JSON, login passwords included">Export backup (JSON, plaintext)</button>
           <button id="bExportCsv" style="justify-content:flex-start;width:100%">Export as CSV</button>
           <button id="bImport" style="justify-content:flex-start;width:100%">Import backup</button>
@@ -172,7 +175,7 @@
       </ul></dd>
       <dt id="helpTerms">Using this app</dt>
       <dd class="terms">free for your own personal use, and feel free to share the link. Don't resell it, rebrand it, publish a modified version, or use it for anything malicious or against Riot's terms.</dd>
-    </dl><p class="help-lic"><a href="https://github.com/MarvinPanVan/league-smurf-tracker/blob/main/LICENSE" target="_blank" rel="noreferrer">The full licence</a></p></div>
+    </dl><p class="help-lic"><a href="https://github.com/MarvinPanVan/league-smurf-tracker/blob/main/LICENSE" target="_blank" rel="noreferrer">The full license</a></p></div>
     <div class="mdl-f"><button id="bHelpClose" class="b-fill" data-autofocus>Got it</button></div>
   </div></div></div>
 
@@ -200,8 +203,8 @@
         <div class="grp-h tab-same">Appearance</div>
         <div class="s-h">Theme</div>
         <div id="sThemes" class="thm-grid" role="radiogroup" aria-label="Theme"></div>
-        <div class="s-h s-gap">Your own colours</div>
-        <div class="hint" style="margin-bottom:12px">Pick a colour and a preview of the homepage opens beside it. Everything here changes live; close without saving to put it back.</div>
+        <div class="s-h s-gap">Your own colors</div>
+        <div class="hint" style="margin-bottom:12px">Pick a color and a preview of the homepage opens beside it. Everything here changes live; close without saving to put it back.</div>
         <div class="acc-swatches">
           <div class="acc-swatch">
             <input type="color" id="sAccent" aria-label="Primary accent color">
@@ -232,7 +235,7 @@
             <button type="button" role="radio" data-atmosphere="noir" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="noir" aria-hidden="true"></span>
               <span class="atm-name">Noir</span>
-              <span class="atm-tip">Darker edges and heavier grain, and no accent colour.</span>
+              <span class="atm-tip">Darker edges and heavier grain, and no accent color.</span>
             </button>
             <button type="button" role="radio" data-atmosphere="lattice" class="atm-tile" aria-checked="false">
               <span class="atm-mini" data-atm="lattice" aria-hidden="true"></span>
@@ -698,8 +701,7 @@
       <option value="rank">Sort: Rank</option>
       <option value="name">Sort: Name</option>
       <option value="level">Sort: Level</option>
-      <option value="change">Sort: LP change</option>
-      <option value="away">Sort: While away</option>
+      <option value="change">Sort: Last LP change</option>
       <option value="climb">Sort: Climbing fastest</option>
       <option value="updated">Sort: Last updated</option>
       <option value="opened">Sort: Last login</option>
@@ -744,7 +746,7 @@
        are written out in full. Riot's notice stays on the page itself, small: its
        policy asks for it where players can readily see it, which a dialog is not. -->
   <footer class="foot">
-  <div class="count foot-l">© 2026 MarvinPanVan · <span id="appVer" class="ver"></span> · <a href="#terms" id="footTerms">Terms</a> · Discord: marvinpanvan</div>
+  <div class="count foot-l">© 2026 MarvinPanVan · <a href="#whats-new" id="appVer" class="ver"></a> · <a href="#terms" id="footTerms">Terms</a> · Discord: marvinpanvan</div>
   <!-- Riot's own wording for projects that use its games and data (its developer
        policy), in place of a bare "not affiliated with Riot Games" -->
   <div class="count riot-notice">Smurf Tracker isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</div>
@@ -783,7 +785,7 @@
   <div id="askModal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="askTitle" aria-describedby="askBody">
     <div class="mdl narrow hx"><div class="hx-in mdl-in">
       <div class="mdl-h"><span class="t" id="askTitle"></span></div>
-      <div class="mdl-b"><p id="askBody" class="ask-b"></p></div>
+      <div class="mdl-b"><p id="askBody" class="ask-b"></p><div id="askFields" class="ask-fields" hidden></div></div>
       <div class="mdl-f"><button id="askCancel" type="button">Cancel</button><span class="sp"></span>
         <button id="askAlt" type="button" hidden></button><button id="askOk" type="button"></button></div>
     </div></div>
@@ -865,6 +867,6 @@
   <div id="srSay" class="sr-only" role="status" aria-live="polite"></div>
 </div>
 
-<script src="app.js?v=2.22.0"></script>
+<script src="app.js?v=2.23.0"></script>
 </body>
 </html>

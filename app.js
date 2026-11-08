@@ -105,8 +105,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.22.0";
+const APP_VERSION="2.23.0";
 const APP_CHANGELOG=[
+  {v:"2.23.0",items:[
+    "Closing the account form or Settings asks before it throws away what you typed, and search finds a full Riot ID like Name#EUW",
+    "A new account scrolls into view, Undo covers archiving and bulk delete, and phones get the selection bar at the bottom of the screen",
+    "Dates, times, numbers and records read the same everywhere: 8 Nov, 12 hours ago, 1,234 LP, 15W 9L",
+  ]},
   {v:"2.22.0",items:[
     "Questions like \"Delete all?\" open in the app's own window, and the back button closes windows instead of leaving",
     "On iPhone, Safari's 7-day deletion is explained once, with how to keep your vault",
@@ -418,6 +423,10 @@ function isStale(a){
   return a.status!=="banned"&&isChecked(a)&&s.found!==false&&!!(s.tier||s.level!=null)&&Date.now()-s.updatedAt>STALE_MS;
 }
 function isRanked(a){const t=a.stats&&a.stats.found!==false&&(a.stats.tier||"").toUpperCase();return !!(t&&t!=="UNRANKED")}
+/* An account with no rank yet. "Never checked" is right until a check has been
+   tried; after one that failed it sat over "Last check failed" on the same card,
+   one line saying the check never happened and the next that it did. */
+function noRankLabel(a){return isFailed(a)?"No rank yet":"Never checked"}
 function isFailed(a){
   if(!a.stats||a.stats.found===false)return false;
   // Transport failure note only — "failed (" alone matched too many informational notes.
@@ -625,7 +634,10 @@ function hasReading(s){return !!(s&&(s.tier||s.level!=null||s.found===false))}
    This exists because the vault filled up with notes reading "verify Riot ID",
    typed by hand into a freetext box where nothing could count them, filter by
    them, or show them anywhere but inside that one card. */
-function needsAttention(a){return !!a.flagged&&a.status!=="banned"&&!a.archived}
+/* Flagged by you. A check that finds no profile raises the flag by itself, but
+   those are the header's "not found" warning already, and counting them here too
+   said the same thing twice. */
+function needsAttention(a){return !!a.flagged&&a.status!=="banned"&&!a.archived&&!(a.stats&&a.stats.found===false)}
 /* Active vault accounts — chore counts (never checked, failed, …) ignore banned
    and archived, which are already dealt with and only clutter those tiles. */
 function isLive(a){return !a.archived&&a.status!=="banned"}
@@ -1079,7 +1091,17 @@ function ageFrom(iso){
   const yr=Math.floor(days/365.25);
   return yr+(yr===1?" year old":" years old");
 }
-function timeAgo(ts){if(!ts)return null;const s=Math.floor((Date.now()-ts)/1000);if(s<60)return"just now";const m=Math.floor(s/60);if(m<60)return m+" min ago";const h=Math.floor(m/60);if(h<24)return h+" h ago";const d=Math.floor(h/24);return d+(d===1?" day ago":" days ago")}
+// Whole words for every unit: "12 h ago" in one row and "4 days ago" in the next
+// read as two styles in one column.
+function timeAgo(ts){
+  if(!ts)return null;
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60)return"just now";
+  const ago=(n,u)=>n+" "+u+(n===1?"":"s")+" ago";
+  const m=Math.floor(s/60);if(m<60)return ago(m,"minute");
+  const h=Math.floor(m/60);if(h<24)return ago(h,"hour");
+  return ago(Math.floor(h/24),"day");
+}
 function tierColor(t){return TIER_COLORS[(t||"UNRANKED").toUpperCase()]||TIER_COLORS.UNRANKED}
 // Sized by CSS through `cls`, never by attributes — the same markup is the 13px
 // mark on a row, the 20px badge on a portrait and the 80px watermark on a card.
@@ -1126,7 +1148,7 @@ function shortRank(s){
   if(!s||!s.tier)return null;
   const t=s.tier.toUpperCase();
   if(t==="UNRANKED")return"Unranked";
-  return tierLabel(s)+((s.lp!==null&&s.lp!==undefined)?" · "+s.lp+" LP":"");
+  return tierLabel(s)+((s.lp!==null&&s.lp!==undefined)?" · "+fmtN(s.lp)+" LP":"");
 }
 /* Master, Grandmaster and Challenger have no divisions: above Master the ladder is
    only LP. Every parser that reads a *peak* or a *past season* already knew that
@@ -2861,7 +2883,7 @@ function rollNumber(el,from,to,suffix){
     if(!el.isConnected)return;   // the card was re-rendered under us; let it stand
     const p=Math.min((now-t0)/dur,1);
     const e=1-Math.pow(1-p,3);
-    el.textContent=Math.round(from+(to-from)*e)+suffix;
+    el.textContent=fmtN(Math.round(from+(to-from)*e))+suffix;
     if(p<1)requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
@@ -2985,8 +3007,14 @@ function renderFailbar(){
     +`<button id="bShowFails">Show</button><button id="bRetryFails">Try again</button><button id="bDismissFails" class="fb-x" aria-label="Dismiss">✕</button>`);
 }
 let lastFails=null;
+/* With no connection Check all went through every account in turn and failed
+   each one ("5 of 18 · 5 failed"), leaving a failure on every card for a network
+   that was simply off. Not starting is the honest answer. */
+const OFFLINE_SAY="You're offline. Ranks can be checked once you're back online";
+function isOffline(){try{return navigator.onLine===false}catch(e){return false}}
 async function checkAll(ids){
   if(run)return;
+  if(isOffline()){toast(OFFLINE_SAY);return}
   // Array.isArray rather than a truthiness test: this used to be wired straight to
   // a click listener, which passes an Event — truthy, and with no .map on it.
   const list=(Array.isArray(ids)?ids.map(id=>accounts.find(a=>a.id===id)).filter(Boolean):filtered()).filter(a=>a.status!=="banned");
@@ -3227,11 +3255,13 @@ function poolLpTrend(pool){
   });
   const poly=coords.map(c=>c.x.toFixed(1)+","+c.y.toFixed(1)).join(" ");
   const delta=Math.round(pts[pts.length-1]-pts[0]);
-  const fmtDay=t=>new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  // day before month, as on the charts' axes: the tile read "Oct 19 → Nov 8" above
+  // a chart marked "8 Nov"
+  const fmtDay=t=>dateLabel(t,"year");
   const from=fmtDay(days[0].t), to=fmtDay(days[days.length-1].t);
   const dots=coords.map((c,i)=>{
     const ch=Math.round(c.v-pts[0]);
-    const label=fmtDay(c.d.t)+"\n"+(ch>0?"+":ch<0?"−":"±")+Math.abs(ch)+" LP since "+fmtDay(days[0].t)+"\n"+c.d.n+" counted account"+(c.d.n===1?"":"s");
+    const label=fmtDay(c.d.t)+"\n"+(ch>0?"+":ch<0?"−":"±")+fmtN(Math.abs(ch))+" LP since "+fmtDay(days[0].t)+"\n"+c.d.n+" counted account"+(c.d.n===1?"":"s");
     return `<circle class="pool-hit" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="8" data-spark-tip="${esc(label)}"></circle>`
       +(i===coords.length-1?`<circle class="pool-dot" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.6"></circle>`:"");
   }).join("");
@@ -3321,14 +3351,14 @@ function renderCompare(){
       <div class="cmp-nm" title="${esc(plainName(acc))}">${nameOf(acc)}</div>
       <div class="cmp-id">${sens(esc(acc.gameName)+"#"+esc(acc.tagLine))} · ${esc(acc.region)}</div>
       <div class="cmp-rk${ranked?"":" q"}" style="color:${tierColor(s.tier)}">${ranked?crest(s.tier,"cmp-crest"):""}<span>${esc(rank)}</span></div>
-      <div class="cmp-lp">${ranked&&s.lp!=null?esc(s.lp+" LP"):"&nbsp;"}</div>
+      <div class="cmp-lp">${ranked&&s.lp!=null?esc(fmtN(s.lp)+" LP"):"&nbsp;"}</div>
     </div>`;
   };
   const facts=acc=>{
     const s=acc.stats||{}, wl=winLoss(s), tr=wrTrend(acc);
     const seen=acc.lastPlayedAt||acc.lastLoginAt||s.updatedAt||0;
     return {
-      record:wl.w!=null||wl.l!=null?(wl.w!=null?wl.w+"W":"—")+" "+(wl.l!=null?wl.l+"L":"—"):"—",
+      record:wl.w!=null||wl.l!=null?(wl.w!=null?fmtN(wl.w)+"W":"—")+" "+(wl.l!=null?fmtN(wl.l)+"L":"—"):"—",
       wr:wl.wr, peak:peakInfo(acc).peak||"—", trend:tr?(tr.d>0?"+":"")+tr.d+" pp":"—",
       seen, level:s.level!=null?String(s.level):"—",
     };
@@ -3443,7 +3473,9 @@ function passesBaseFilters(a,Q,{forceActive=false}={}){
     if(f==="leveling"&&!isLeveling(a))return false;
   }
   if(Q.terms.length){
-    const hay=[a.label,a.gameName,a.tagLine,a.email,a.login,a.notes,noteFieldsText(a),a.createdOn,a.birthdate,
+    // the Riot ID whole as well: "Lunar Echo#EUW", pasted from the client, found nothing
+    // while the name and the tag were only ever in here apart
+    const hay=[a.label,a.gameName,a.tagLine,a.gameName+"#"+a.tagLine,a.email,a.login,a.notes,noteFieldsText(a),a.createdOn,a.birthdate,
       a.flagged?"flagged attention":"",(a.tags||[]).join(" "),a.stats?(a.stats.tier||"")+" "+(shortRank(a.stats)||""):"",(STATUS[a.status]||STATUS.active).label].join(" ").toLowerCase();
     if(!Q.terms.every(t=>hay.includes(t)))return false;
   }
@@ -3897,9 +3929,15 @@ function renderRibbon(){
 /* Collapsed until asked for on a phone: there the stats were the whole first
    screen, ahead of every account. A choice made with the toggle is kept on any
    screen; until then a phone starts closed and a wider screen open. */
+/* A phone held sideways is 844 by 390: wide enough to be laid out as a desktop,
+   with the header, the stats and the toolbar's two rows of filters all open, and
+   the first card more than two screens down. A screen that short is a phone,
+   whichever way up, and gets the phone's layout (see PHONE in the CSS too). */
+const PHONE_MQ="(max-width:560px), (max-height:500px) and (orientation:landscape)";
+function phoneLayout(){return !!(window.matchMedia&&matchMedia(PHONE_MQ).matches)}
 function dashCollapsed(){
   if(typeof cfg.dashCollapsed==="boolean")return cfg.dashCollapsed;
-  return !!(window.matchMedia&&matchMedia("(max-width:560px)").matches);
+  return phoneLayout();
 }
 function syncDashToggle(){
   const b=$("bDashToggle");
@@ -3908,6 +3946,8 @@ function syncDashToggle(){
   b.classList.toggle("open",!dashCollapsed());
   // the verb is its own span so a phone, short of room, can say just "Stats"
   setHTML(b,icon("chevron")+` <span class="dt-v">${dashCollapsed()?"Show":"Hide"} </span><span class="dt-n">stats</span>`);
+  // what it does, for when the narrowest phones show only the arrow
+  b.setAttribute("aria-label",(dashCollapsed()?"Show":"Hide")+" stats");
 }
 function renderDash(){
   applyRankTheme(); // a new best tier is news the dashboard already gets; the colours follow it
@@ -3963,12 +4003,12 @@ function renderDash(){
      with nothing behind it yet (0W 0L, a climb with one day of history) waits
      until it has something. */
   const cells=[
-    (W+L)>0&&`<div class="stat"><div class="k">Season W/L</div><div class="v nw">${W}<small>W</small> ${L}<small>L</small></div>
+    (W+L)>0&&`<div class="stat"><div class="k">Season W/L</div><div class="v nw">${fmtN(W)}<small>W</small> ${fmtN(L)}<small>L</small></div>
       <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>`,
-    neverN&&`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
-      <div class="v" style="color:var(--warn-txt)">${neverN}</div><div class="s-note">no rank pulled yet · click to see them</div></button>`,
-    attentionN&&`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
-      <div class="v" style="color:var(--danger)">${attentionN}</div><div class="s-note">flagged by you, or the profile no longer exists</div></button>`,
+    // "Never checked" is a word in the header line, which filters the same way, so
+    // it has no tile here. Flagged is amber: a reminder you left, not an alarm.
+    attentionN&&`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Flagged</div>
+      <div class="v" style="color:var(--warn-txt)">${attentionN}</div><div class="s-note">marked by you · click to see them</div></button>`,
     dupN&&`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`,
     next&&`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
@@ -3986,7 +4026,7 @@ function renderDash(){
       const note="total of "+week.moved+" account"+(week.moved===1?"":"s")
         +(week.games?" · "+week.games+" game"+(week.games===1?"":"s"):"")
         +(week.best?" · best "+nameOf(week.best.a)+" +"+week.best.d:"");
-      const inner=`<div class="k">This week</div><div class="v">${week.lp>0?"+":week.lp<0?"−":""}${Math.abs(week.lp)} <small>LP</small></div><div class="s-note">${note}</div>`;
+      const inner=`<div class="k">This week</div><div class="v">${week.lp>0?"+":week.lp<0?"−":""}${fmtN(Math.abs(week.lp))} <small>LP</small></div><div class="s-note">${note}</div>`;
       return week.best?`<button class="stat stat-b" id="weekStat" data-next="${idAttr(week.best.a.id)}" title="The last seven days across the counted accounts. Click to see the best climber">${inner}</button>`
         :`<div class="stat" id="weekStat" title="The last seven days across the counted accounts">${inner}</div>`;
     })(),
@@ -4009,7 +4049,7 @@ function renderDash(){
     topChamps.map(c=>`<span class="gem cmb" title="${esc(c.games)} games across ${esc(c.accs)} account${c.accs===1?"":"s"}">`
       +`<span class="n">${esc(c.name)}</span>`
       +`<b class="${c.wr>=50&&c.games>=10?"wr-good":""}">${esc(c.wr)}%</b>`
-      +`<i class="g">${esc(c.wins)}<em>-</em>${esc(c.losses)}</i></span>`).join("")}</div>`:""}
+      +`<i class="g">${esc(wlText(c.wins,c.losses))}</i></span>`).join("")}</div>`:""}
   ${scopeShown?`<div class="dash-scope"><label for="dashMin">Figures from</label>
     <select id="dashMin">${floors.map(f=>{const n=floorN(f.v);
       return`<option value="${f.v}"${curFloor===f.v?" selected":""}>${f.v?esc(f.label)+" ("+n+")":"all "+n+" ranked account"+(n===1?"":"s")}</option>`}).join("")}</select>
@@ -4045,7 +4085,7 @@ function balanceDash(){
   const tiles=[...d.children];
   const narrow=!!(window.matchMedia&&matchMedia("(max-width:720px)").matches); // the .dash rule's own minimum there
   // a phone lays the figures in one sliding row: one row, so only the first has no rule before it
-  const strip=!!(window.matchMedia&&matchMedia("(max-width:560px)").matches);
+  const strip=phoneLayout();
   const cols=strip?tiles.length:dashCols(tiles.length,d.clientWidth,narrow?140:158);
   if(!cols){d.style.removeProperty("--cols");return}
   d.style.setProperty("--cols",cols);
@@ -4087,7 +4127,7 @@ function renderTagbar(){
 // A number in a dashboard always raises "which ones?", so the stats panel sets
 // these — and they have to be visible and removable, or the grid just looks
 // mysteriously short.
-const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Needs attention",missing:"Not found",dup:"Duplicate IDs",rotate:"Idle 14+ days"};
+const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Flagged",missing:"Not found",dup:"Duplicate IDs",rotate:"Idle 14+ days"};
 function renderChips(){
   syncFilterCount();
   const out=[];
@@ -4162,7 +4202,7 @@ function formHTML(a){
   if(!f.games.length)return flat(`<span class="sec-p">No ranked games yet this season</span>`);
   const w=f.games.filter(g=>g.win).length;
   const pips=`<span class="fm-pips" aria-hidden="true">${f.games.map(g=>`<i class="fm-pip${g.win?" w":""}"></i>`).join("")}</span>`;
-  return secHTML(a,"form","Last 5 ranked",f.games.length,`${w}W ${f.games.length-w}L${pips}`,
+  return secHTML(a,"form","Last 5 ranked",f.games.length,`${wlText(w,f.games.length-w)}${pips}`,
     f.games.map(g=>`<div class="chp">`
       +`<span class="c-nm"><b class="fm-res${g.win?" w":""}">${g.win?"W":"L"}</b>${esc(g.champ)}</span>`
       +`<span class="c-kd">${esc(g.kda)}</span>`
@@ -4456,7 +4496,7 @@ function apStrength(acc){
   const img=el.querySelector("img");if(img)img.style.opacity=String(ap.op/100);
   const s=acc&&acc.stats, ranked=acc&&isRanked(acc);
   el.querySelector(".ap-prev-t").innerHTML=acc?`<b>${esc(plainName(acc))}</b><span style="color:${ranked?tierColor(s.tier):"var(--muted)"}">`
-    +`${esc(ranked?tierLabel(s)+(s.lp!=null?" · "+s.lp+" LP":""):"Unranked")}</span>`:"";
+    +`${esc(ranked?tierLabel(s)+(s.lp!=null?" · "+fmtN(s.lp)+" LP":""):"Unranked")}</span>`:"";
 }
 function apPickChamp(id){
   const acc=apAcc(), own=acc&&normArt(acc.art);
@@ -4735,8 +4775,8 @@ function snapCardHTML(a,i){
         ${a.rid?`<div class="sn-rid">${esc(a.rid)}</div>`:""}</div>
       ${a.region?`<span class="regiontag">${esc(a.region)}</span>`:""}
     </div>
-    <div class="sn-rank"><b>${esc(label)}</b>${r?`<span>${esc(r.lp)} LP</span>`:""}${st?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.short||st.label)}</span>`:""}</div>
-    ${wr!=null?`<div class="sn-wl"><span>${esc(a.w)}W ${esc(a.l)}L</span><b class="${wr>=50?"wr-good":""}">${wr}% WR</b></div>
+    <div class="sn-rank"><b>${esc(label)}</b>${r?`<span>${esc(fmtN(r.lp))} LP</span>`:""}${st?`<span class="stchip" style="color:${st.color};background:${st.color}1f">${esc(st.short||st.label)}</span>`:""}</div>
+    ${wr!=null?`<div class="sn-wl"><span>${esc(wlText(a.w,a.l))}</span><b class="${wr>=50?"wr-good":""}">${wr}% WR</b></div>
       <div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
     ${spk?`<div class="sn-spk" title="Last ${days} day${days===1?"":"s"}">${spk}</div>`:""}
     ${meta?`<div class="sn-meta">${meta}</div>`:""}
@@ -4750,6 +4790,7 @@ function snapHTML(s){
   const wr=w+l?Math.round(w/(w+l)*100):null;
   const regions=[...new Set(list.map(a=>a.region).filter(Boolean))];
   const tiers=TIER_ORDER.slice().reverse().map(t=>[t,ranked.filter(a=>a.rank.tier===t).length]).filter(x=>x[1]);
+  const unrankedN=list.length-ranked.length;
   const nice=t=>t.charAt(0)+t.slice(1).toLowerCase();
   const home=snapBase();
   return`<header class="sn-top">
@@ -4763,13 +4804,21 @@ function snapHTML(s){
       ${list.length?`<div class="hx gold sn-sum"><div class="hx-in">
         <div class="cell sn-best">${best?crest(best.rank.tier,"sn-best-c"):""}<div><span class="k">Highest</span>
           <b style="color:${best?tierColor(best.rank.tier):"var(--muted)"}">${best?esc(tierLabel(best.rank)):"Unranked"}</b>
-          <em>${best?esc(best.rank.lp+" LP · "+best.name):"No ranked account in this snapshot"}</em></div></div>
-        <div class="cell"><span class="k">Ranked</span><b>${ranked.length}</b><em>of ${list.length}</em></div>
+          <em>${best?esc(fmtN(best.rank.lp)+" LP · "+best.name):"No ranked account in this snapshot"}</em></div></div>
+        <div class="cell"><span class="k">Ranked</span>${
+          // "Ranked 16 / of 16" read as a sum with nothing to add up
+          ranked.length===list.length?`<b>All ${list.length}</b><em>this season</em>`
+          :ranked.length?`<b>${ranked.length} of ${list.length}</b><em>${list.length-ranked.length} unranked</em>`
+          :`<b>None</b><em>no ranked games yet</em>`}</div>
         <div class="cell"><span class="k">Games</span><b>${(w+l).toLocaleString("en-US")}</b><em>this season</em></div>
-        <div class="cell"><span class="k">Win rate</span><b class="${wr!=null&&wr>=50?"wr-good":""}">${wr!=null?wr+"%":"—"}</b><em>${w+l?w+"W "+l+"L":"no games"}</em></div>
+        <div class="cell"><span class="k">Win rate</span><b class="${wr!=null&&wr>=50?"wr-good":""}">${wr!=null?wr+"%":"—"}</b><em>${w+l?wlText(w,l):"no games"}</em></div>
       </div></div>`:""}
-      ${tiers.length>1?`<div class="sn-dist" aria-hidden="true">${tiers.map(([t,n])=>`<i style="flex:${n};background:${tierColor(t)}"></i>`).join("")}</div>
-        <div class="sn-legend">${tiers.map(([t,n])=>`<span style="--c:${tierColor(t)}">${esc(nice(t))} ${n}</span>`).join("")}</div>`:""}
+      ${tiers.length+(unrankedN?1:0)>1?
+        // the app header's emblem row, read-only: a 5px bar of tier colors under a
+        // legend of diamonds was one more way of saying the same thing
+        `<div class="sn-tiers" role="list" aria-label="Accounts by tier">${tiers.map(([t,n])=>`<span class="sn-t" role="listitem" title="${esc(nice(t))}: ${n} account${n===1?"":"s"}">`
+          +`${crest(t,"sn-t-c")}<b>${n}</b><span class="sr-only"> ${esc(nice(t))}</span></span>`).join("")}`
+        +(unrankedN?`<span class="sn-t sn-t-w" role="listitem">${unrankedN} unranked</span>`:"")+`</div>`:""}
     </section>
     ${list.length?`<section class="sn-grid" aria-label="Accounts">${list.map(snapCardHTML).join("")}</section>`
       :`<p class="sn-empty">This snapshot has no accounts in it.</p>`}
@@ -4928,7 +4977,7 @@ function infoBlockHTML(a,rev){
   if(!solo.length&&!flexHist.length&&!champs.length&&!flex&&!mastery.length&&!canForm(a))return"";
   // through tierLabel like everywhere else — the drawer was the fifth place
   // building this string by hand, and the fifth place printing "Challenger II"
-  const rank=e=>tierLabel(e)+(e.lp!=null?" · "+e.lp+" LP":"");
+  const rank=e=>tierLabel(e)+(e.lp!=null?" · "+fmtN(e.lp)+" LP":"");
   const tinted=e=>`<span style="color:${tierColor(e.tier)}">${esc(rank(e))}</span>`;
   const rows=list=>list.map(e=>`<div class="sea"><span class="s-yr">${esc(e.season)}</span>`
     +`<span class="s-rk" style="color:${tierColor(e.tier)}">${esc(rank(e))}</span></div>`).join("");
@@ -4948,9 +4997,9 @@ function infoBlockHTML(a,rev){
     const row=(cls,cells)=>`<div class="chp${cls}"${kdaCol?"":' style="grid-template-columns:1fr auto auto"'}>${cells}</div>`;
     out+=secHTML(a,"champs","Champions this season",champs.length,
       `<span class="c-nm">${esc(top.name)}</span> <span class="${top.wr>=50?"wr-good":""}">${esc(top.wr)}%</span>`,
-      row(" chp-h",`<span>Champion</span><span>W-L</span><span>WR</span>${kdaCol?"<span>KDA</span>":""}`)
+      row(" chp-h",`<span>Champion</span><span>W/L</span><span>WR</span>${kdaCol?"<span>KDA</span>":""}`)
       +champs.map(c=>row("",`<span class="c-nm">${esc(c.name)}</span>`
-        +`<span class="c-gm">${c.wins!=null&&c.losses!=null?esc(c.wins)+"-"+esc(c.losses):esc(c.games)+"G"}</span>`
+        +`<span class="c-gm">${c.wins!=null&&c.losses!=null?esc(wlText(c.wins,c.losses)):esc(c.games)+"G"}</span>`
         +`<span class="c-wr${c.wr>=50?" wr-good":""}">${esc(c.wr)}%</span>`
         +(kdaCol?`<span class="c-kd">${c.kda!=null?esc(c.kda):"—"}</span>`:""))).join(""));
   }
@@ -5047,7 +5096,11 @@ function nfValue(info,f){
   const own=info.own||{}, k=Object.keys(own).find(x=>x.toLowerCase()===f.label.toLowerCase());
   return k==null?null:own[k];
 }
-const fmtN=n=>Number(n).toLocaleString("en-US",{maximumFractionDigits:2});
+// a function, not a const, so the rank labels built before this line can use it
+function fmtN(n){return Number(n).toLocaleString("en-US",{maximumFractionDigits:2})}
+/* One way to write a record. "312W 250L" on a card, "15-9" in the champion table
+   and "15 · 9" on the Most played chips (a faded hyphen) were the same thing. */
+function wlText(w,l){return fmtN(w)+"W "+fmtN(l)+"L"}
 // Everything a search should find in the fields, as one string
 function noteFieldsText(a){
   const info=normInfo(a.info);if(!info)return"";
@@ -5292,11 +5345,11 @@ function rowHTML(a,i){
   const dv=a.status==="banned"?0:lastDelta(a);
   let rank="—",lp="";
   if(isChecking)rank="…";
-  else if(!hasReading(s))rank="Never checked";
+  else if(!hasReading(s))rank=noRankLabel(a);
   else if(s.found===false)rank="Not found";
   else if(isRanked(a)){
     rank=tierLabel(s);
-    if(s.lp!=null)lp=s.lp+" LP";
+    if(s.lp!=null)lp=fmtN(s.lp)+" LP";
   // as the card says it: a levelling account is its level, not "Unranked"
   }else rank=s.level?"Level "+s.level:"Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
@@ -5321,9 +5374,9 @@ function rowHTML(a,i){
         // that. Sixty never-checked rows used to be sixty dead lines.
         ||(!isChecked(a)&&!isChecking?`<button class="rw-check" data-act="check" title="Check this account's rank now">${icon("refresh")} Check</button>`:"")}</span>
       <span class="rw-rank" style="color:${isRanked(a)?col:"var(--muted)"}"><b>${esc(rank)}</b>${lp?`<em>${esc(lp)}</em>`:""}</span>
-      <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${Math.abs(dv)}</span>`:""}</span>
-      <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wins}W ${losses}L</em>`
-        :total>0?`<em>${wins!=null?wins+"W":losses+"L"}</em>`:""}</span>
+      <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${fmtN(Math.abs(dv))}</span>`:""}</span>
+      <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wlText(wins,losses)}</em>`
+        :total>0?`<em>${wins!=null?fmtN(wins)+"W":fmtN(losses)+"L"}</em>`:""}</span>
       <span class="rw-rg">${esc(a.region)}</span>
       <span class="rw-up${isStale(a)||!hasReading(s)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
       <span class="rw-keys">${a.login?`<button class="rw-key" data-act="copylogin" title="Copy username" aria-label="Copy username for ${esc(plainName(a))}">${icon("user")}</button>`:""}${a.password?`<button class="rw-key" data-act="copypw" title="Copy password" aria-label="Copy password for ${esc(plainName(a))}">${icon("key")}</button>`:""}</span>
@@ -5363,11 +5416,11 @@ function tileHTML(a){
   const icon0=iconUrl(s);
   let rank="Never checked",lp="";
   if(checking.has(a.id))rank="…";
-  else if(!hasReading(s))rank="Never checked";
+  else if(!hasReading(s))rank=noRankLabel(a);
   else if(s.found===false)rank="Not found";
   else if(isRanked(a)){
     rank=tierLabel(s);
-    if(s.lp!=null)lp=s.lp+" LP";
+    if(s.lp!=null)lp=fmtN(s.lp)+" LP";
   // as the card says it: a levelling account is its level, not "Unranked"
   }else rank=s.level?"Level "+s.level:"Unranked";
   const st=STATUS[a.status]||STATUS.active;
@@ -5404,7 +5457,7 @@ function cardHTML(a,i){
   // correctly suppressed.
   {
     const dv=lastDelta(a);
-    if(dv&&!dead)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+Math.abs(dv)+' LP</span>';
+    if(dv&&!dead)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+fmtN(Math.abs(dv))+' LP</span>';
     /* "+87 LP" over what? Said under the chip now, with the pace beside it: the
        pace had a whole row of the card to itself ("Climb · +21 LP/day"), and
        without "since last check" the two numbers read as a contradiction. */
@@ -5447,7 +5500,7 @@ function cardHTML(a,i){
   const {w:wins,l:losses,total,wr}=winLoss(s);
   // whichever of the two is known — printing both from coerced numbers is what put
   // an invented "0L" beside a real win count
-  const wlTxt=[wins!=null?`<b>${wins}W</b>`:"",losses!=null?`<b>${losses}L</b>`:""].filter(Boolean).join(" ");
+  const wlTxt=[wins!=null?`<b>${fmtN(wins)}W</b>`:"",losses!=null?`<b>${fmtN(losses)}L</b>`:""].filter(Boolean).join(" ");
   // Both profile links live in the ⋯ menu's "Look up" group now.
   // Tier and LP are separate on purpose: the tier carries the card's type scale,
   // the LP sits under it as the companion figure — shortRank() glues them for
@@ -5455,7 +5508,7 @@ function cardHTML(a,i){
   let tierTxt="",lpTxt="";
   if(s&&s.tier){
     tierTxt=tierLabel(s);
-    if(s.lp!==null&&s.lp!==undefined)lpTxt=s.lp+" LP";
+    if(s.lp!==null&&s.lp!==undefined)lpTxt=fmtN(s.lp)+" LP";
   }
   // On an account that isn't ranked yet the level is the whole story, so it gets
   // the headline slot. Printing "Unranked" in 26 px and tucking "Level 97" into a
@@ -5463,7 +5516,7 @@ function cardHTML(a,i){
   const levelLed=!!(s&&s.found!==false&&!isRanked(a)&&s.level);
   let rankBlock;
   if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
-  else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">Never checked</div>`;
+  else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">${noRankLabel(a)}</div>`;
   // amber like the header's warning: a Riot ID op.gg doesn't know is usually one to
   // correct, so the line is the way to correct it, not only the advice to
   else if(s.found===false)rankBlock=`<div class="wl c-miss">${icon("alert")}<span>Not found on op.gg</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;
@@ -5499,7 +5552,7 @@ function cardHTML(a,i){
     }
     {
       const g=gamesSince(hist);
-      if(g)microStats.push(["Since last check",g.n+(g.n===1?" game · ":" games · ")+g.w+"W "+g.l+"L"]);
+      if(g)microStats.push(["Since last check",fmtN(g.n)+(g.n===1?" game · ":" games · ")+wlText(g.w,g.l)]);
       // the pace ("Climb") sits under the LP chip now, beside "since last check"
     }
     if(s.mmr)microStats.push(["MMR est.",s.mmr]);
@@ -5559,7 +5612,7 @@ function cardHTML(a,i){
       const gcol=tierColor(a.goal.tier);
       return `<div class="goal${g.done?" hit":""}" title="Goal: ${esc(g.label)}">
         <div class="goal-h"><span class="k">Goal</span><span class="goal-t" style="color:${gcol}">${esc(g.label)}</span>
-          <span class="goal-r">${g.done?"reached":g.gap+" LP to go"+(g.eta?" · "+esc(g.eta):"")}</span></div>
+          <span class="goal-r">${g.done?"reached":fmtN(g.gap)+" LP to go"+(g.eta?" · "+esc(g.eta):"")}</span></div>
         <div class="goal-bar"><i style="width:${pct}%;background:${gcol}"></i></div>
       </div>`;
     })()}
@@ -5998,7 +6051,7 @@ function closeAllPanels(){
   $("settings").classList.add("hidden");
   $("help").classList.add("hidden");
   $("bulkAdd").classList.add("hidden");
-  $("lockPrompt").classList.add("hidden");
+  closeLockPrompt();
   $("moreMenu").classList.add("hidden");
   // Quick find is a modal like the other two, and every way out of a modal —
   // Escape, a click on the backdrop, the ✕ — goes through here. Leaving it off
@@ -6268,6 +6321,28 @@ function renderPassNote(){
     :`<span>Saved in this browser without encryption.</span><button type="button" class="f-link" id="fSetMaster">Set a master password</button>`);
 }
 function closeForm(){$("form").classList.add("hidden");editingId=null}
+/* Only "Set a master password" asked before dropping what the form held. Escape,
+   Cancel, ✕, a click beside the window and the back button all closed it without
+   a word, so a password made with Gen, already set on the Riot account, was gone
+   with one misclick. Every way out now goes through here, and asks first if
+   anything in the form differs from what it opened with. */
+function formDirty(){return !$("form").classList.contains("hidden")&&formSnapshot()!==formBase}
+async function leaveForm(){
+  if(!formDirty())return true;
+  return !!await ask({title:editingId?"Discard your changes to this account?":"Discard this new account?",
+    body:"What you typed here isn't saved yet.",ok:"Discard",cancel:"Keep editing",danger:true});
+}
+// With nothing at stake the window closes there and then; only a question waits.
+function requestClose(){
+  const go=()=>{closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}return true};
+  if(formDirty())return leaveForm().then(ok=>ok?go():false);
+  if(settingsUnsaved())return leaveSettings().then(ok=>ok?go():false);
+  return Promise.resolve(go());
+}
+function cancelForm(){
+  if(!formDirty()){closeForm();return}
+  leaveForm().then(ok=>{if(ok)closeForm()});
+}
 /* A Riot ID is copied as one string — "Hide on Bush#EUW" from op.gg, the client,
    a friend's message — and the form wanted it in two boxes, so a paste into the
    name failed with "name and tag are required". A game name cannot contain "#",
@@ -6301,7 +6376,7 @@ $("fMoreBtn").addEventListener("click",()=>{
 });
 $("fPassNote").addEventListener("click",async e=>{
   if(!e.target.closest("#fSetMaster"))return;
-  if(formSnapshot()!==formBase&&!await ask({title:"Leave this form?",body:"What you typed here isn't saved yet.",ok:"Leave",danger:true}))return;
+  if(formDirty()&&!await leaveForm())return;
   openSettings("security");
   setTimeout(()=>{const f=$("sVaultPass");if(f){f.scrollIntoView&&f.scrollIntoView({block:"center"});f.focus()}},60);
 });
@@ -6346,6 +6421,7 @@ function submitForm(){
     newId=a.id;
   }
   saveDB();closeForm();render();
+  if(newId)revealAccount(newId);
   /* A new account came in as "Never checked" and stayed that way until somebody
      found Refresh, on an app that says rank checks are free and automatic. It is
      read straight away now, the same check its own Refresh runs. Not in the
@@ -6461,7 +6537,7 @@ $("sPkSet").addEventListener("click",async()=>{
     toast(done?"Face ID / fingerprint unlock is on for this browser":"Passkey made. Tap Finish set-up and confirm it once more");
   }catch(e){
     toast(e.name==="NoPrf"?"This browser or device can't unlock with a passkey yet. Recent Chrome, Edge and Safari can."
-      :e.name==="NotAllowedError"?(pkPending?"Cancelled. Tap Finish set-up to try again":"Cancelled. Nothing was set up")
+      :e.name==="NotAllowedError"?(pkPending?"Canceled. Tap Finish set-up to try again":"Canceled. Nothing was set up")
       :"Couldn't set it up: "+(e.message||e.name||"unknown error"));
   }finally{updatePkStatus()}
 });
@@ -6563,7 +6639,9 @@ function revertAtmosphere(){applyAtmosphere(cfg.atmosphere||DEFAULT_ATMOSPHERE)}
 const THEMES=[
   {k:"hextech",n:"Hextech",a:"#c8aa6e",b:"#0ac8b9",atm:"spotlight"},
   {k:"shadowisles",n:"Shadow Isles",a:"#7fe8c9",b:"#1fae8a",atm:"noir"},
-  {k:"noxus",n:"Noxus",a:"#b8c0c8",b:"#d33b3b",atm:"spotlight"},
+  // red on the wordmark and headings, steel on the buttons: as the button colour, red
+  // made "Copy username" look like Delete
+  {k:"noxus",n:"Noxus",a:"#d9434a",b:"#b8c0c8",atm:"spotlight"},
   {k:"piltover",n:"Piltover",a:"#e0a458",b:"#3f9cff",atm:"lattice"},
   {k:"freljord",n:"Freljord",a:"#d6ecff",b:"#5bb8f5",atm:"stardust"},
   {k:"ionia",n:"Ionia",a:"#f0a6c4",b:"#4fcf9f",atm:"spotlight"},
@@ -6668,7 +6746,16 @@ function applyAccent2(hex){
   // Anything filled with --teal prints its label in --teal-ink. A fixed dark ink
   // vanishes on a deep secondary and a fixed light one vanishes on a pale one,
   // so the ink follows the colour instead of being hardcoded.
-  root.setProperty("--teal-ink",relLuminance(hex)>0.42?hslToHex(h,Math.min(s+15,100),9):"#ffffff");
+  root.setProperty("--teal-ink",inkOn(hex));
+}
+/* Whichever of the two inks reads better on it, by contrast ratio. A luminance
+   cut-off at 0.42 put white on mid-bright accents where dark was far better:
+   white on Shadow Isles and Piltover was 2.8:1, on Void 3.4:1, all under the
+   4.5:1 small text needs. */
+function inkOn(hex){
+  const[h,s]=hexToHsl(hex), dark=hslToHex(h,Math.min(s+15,100),9);
+  const L=relLuminance(hex), cWhite=1.05/(L+0.05), cDark=(L+0.05)/(relLuminance(dark)+0.05);
+  return cDark>=cWhite?dark:"#ffffff";
 }
 // Dragging the colour picker fires `input` continuously, and one accent change is
 // not cheap: setting a custom property on :root makes the browser re-resolve
@@ -6744,18 +6831,29 @@ async function doExport(){
   cfg.lastExport=Date.now();saveCfg();renderDash();renderSetup();
   toast("Plaintext backup exported. Keep it private");
 }
+/* With no master password the encrypted backup, the first and highlighted button,
+   only sent you off to set one. It asks for a password for this backup instead,
+   twice, since a typo would make the file unopenable. Import asks for it back. */
+function askBackupPassword(){
+  return ask({title:"Choose a password for this backup",
+    body:"You have no master password, so the backup gets a password of its own. You need it to import the file, and it can't be recovered.",
+    fields:[{label:"Backup password",type:"password",ac:"new-password"},{label:"The same again",type:"password",ac:"new-password"}],
+    check:v=>v[0].length<4?"At least 4 characters":v[0]!==v[1]?"The two passwords don't match":"",ok:"Export"})
+    .then(v=>v?v[0]:null);
+}
 async function doExportEnc(){
   if(previewMode){toast("Exit preview before exporting. This is example data, not your vault");return}
-  if(!vaultPassword){toast("Set a master password in Settings first. Encrypted export needs it");return}
   if(vaultLocked()){toast("Unlock the vault first");return}
+  const pass=vaultPassword||await askBackupPassword();
+  if(!pass)return;
   try{
-    const envelope=await encryptData(vaultPassword,accounts);
+    const envelope=await encryptData(pass,accounts);
     if(vaultLocked())return;
     const payload={app:"smurf-tracker",version:2,exported:new Date().toISOString(),encrypted:true,envelope};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
     downloadBlob(blob,"smurf-backup-encrypted-"+localDay()+".json");
     cfg.lastExport=Date.now();saveCfg();renderDash();renderSetup();
-    toast("Encrypted backup exported. Your master password opens it");
+    toast(pass===vaultPassword?"Encrypted backup exported. Your master password opens it":"Encrypted backup exported. Its password opens it");
   }catch(e){toast("Encrypted export failed: "+(e.message||"error"))}
 }
 function csvCell(v){
@@ -6767,8 +6865,12 @@ function csvCell(v){
   if(/^['=+\-@\t\r]/.test(s))s="'"+s;
   return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
 }
-function doExportCSV(){
+async function doExportCSV(){
   if(previewMode){toast("Exit preview before exporting. This is example data, not your vault");return}
+  // The JSON backup warned that its passwords are readable; the spreadsheet, the file
+  // most likely to be opened, shared or synced somewhere, said nothing.
+  if(accounts.some(a=>a.password||a.login||a.email)&&!await ask({title:"Export a spreadsheet with your logins in it?",
+    body:"Usernames, passwords and emails are in the file as plain text, readable by anyone who opens it.",ok:"Export"}))return;
   // The note fields go on the end, so every column a spreadsheet already reads by
   // position stays where it was.
   const nf=noteFields();
@@ -6805,9 +6907,15 @@ function doImport(file){
       const envelope=(p&&p.envelope&&p.envelope.__enc)?p.envelope
         :(p&&p.__enc)?p:null;
       if(envelope){
-        if(!vaultPassword){toast("Set a master password first. This backup is encrypted");return}
-        try{list=await decryptData(vaultPassword,envelope)}
-        catch(e){toast("Wrong master password for this encrypted backup");return}
+        // the master password first; a backup made with a password of its own asks for it
+        if(vaultPassword){try{list=await decryptData(vaultPassword,envelope)}catch(e){list=null}}
+        for(let tries=0;!list;tries++){
+          const v=await ask({title:"This backup is encrypted",
+            body:tries?"That password didn't open it. Try again.":"Type the password it was exported with.",
+            fields:[{label:"Backup password",type:"password",ac:"current-password"}],check:v=>v[0]?"":"Type the password",ok:"Open"});
+          if(!v)return;
+          try{list=await decryptData(v[0],envelope)}catch(e){list=null}
+        }
       }else{
         list=Array.isArray(p)?p:p.accounts;
       }
@@ -6984,9 +7092,9 @@ function loadDemo(){
 }
 
 // ---------- events ----------
-$("bAdd").addEventListener("click",()=>$("form").classList.contains("hidden")?openForm(null):closeForm());
+$("bAdd").addEventListener("click",()=>{if($("form").classList.contains("hidden"))openForm(null);else cancelForm()});
 $("fSave").addEventListener("click",submitForm);
-$("fCancel").addEventListener("click",closeForm);
+$("fCancel").addEventListener("click",cancelForm);
 // Enter in a field submits the form — except inside the notes textarea, where it
 // still means a newline.
 $("form").addEventListener("keydown",e=>{
@@ -7044,7 +7152,7 @@ document.addEventListener("keydown",e=>{
       // Colour miniature alone — Escape used to close Settings while the picker
       // was the thing being dismissed.
       if($("accPrev").classList.contains("show")){hideAccPrev();return}
-      closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}
+      requestClose();
     }
     return;
   }
@@ -7125,7 +7233,7 @@ document.body.classList.toggle("away",document.hidden); // a restored tab can bo
     pickedByPointer=false;
   });
 }
-document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListener("click",closeAllPanels));
+document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListener("click",requestClose));
 
 // ---------- modal panels ----------
 // Settings and Help open over the page. Everything a modal owes the user beyond
@@ -7144,19 +7252,31 @@ document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListene
    ways forward, adding or replacing on import) and to false on Cancel, Escape,
    a click outside or the back button. A destructive answer is red, and focus
    starts on Cancel for those, so Enter alone never deletes anything. */
-let askDone=null;
+let askDone=null, askCheck=null;
+/* `fields` makes it a question that needs something typed ([{label,type,ac}]); it
+   then resolves to the values, once `check` (values => an error, or "") passes. */
 function ask(o){
   if(askDone)askDone(false);
-  const m=$("askModal"), ok=$("askOk"), alt=$("askAlt"), cancel=$("askCancel");
+  const m=$("askModal"), ok=$("askOk"), alt=$("askAlt"), cancel=$("askCancel"), box=$("askFields");
   $("askTitle").textContent=o.title;
   $("askBody").textContent=o.body||"";
+  const fields=o.fields||null;
+  setHTML(box,fields?fields.map((f,i)=>`<label><span>${esc(f.label)}</span><input id="askF${i}" type="${esc(f.type||"text")}" autocomplete="${esc(f.ac||"off")}"${i===0?" data-autofocus":""}></label>`).join("")
+    +`<p class="ask-err" id="askErr" role="alert"></p>`:"");
+  box.hidden=!fields;
+  askCheck=fields?()=>{
+    const v=fields.map((_,i)=>$("askF"+i).value), err=o.check?o.check(v):"";
+    $("askErr").textContent=err||"";return err?null:v;
+  }:null;
   ok.textContent=o.ok||"OK";ok.className=o.danger?"b-danger":"b-fill";
   alt.hidden=!o.alt;alt.textContent=o.alt||"";alt.className=o.altDanger?"b-danger":"";
-  cancel.textContent=o.cancel||"Cancel";
+  // cancel:false for a window that only tells you something
+  cancel.hidden=o.cancel===false;cancel.textContent=o.cancel||"Cancel";
   for(const b of[ok,alt,cancel])b.removeAttribute("data-autofocus");
-  (o.danger||o.altDanger?cancel:ok).setAttribute("data-autofocus","");
+  if(!fields)(o.danger||o.altDanger?cancel:ok).setAttribute("data-autofocus","");
   return new Promise(res=>{
-    askDone=v=>{askDone=null;m.classList.add("hidden");res(v)};
+    // what was typed leaves the page with the answer: a password is not left in a hidden field
+    askDone=v=>{askDone=null;askCheck=null;m.classList.add("hidden");box.textContent="";res(v)};
     m.classList.remove("hidden");
   });
 }
@@ -7170,7 +7290,12 @@ function askMergeOrReplace(what,n){
     ok:"Add the new ones",alt:"Replace everything",altDanger:true})
     .then(v=>v==="ok"?"merge":v==="alt"?"replace":false);
 }
-$("askOk").addEventListener("click",()=>{if(askDone)askDone("ok")});
+$("askOk").addEventListener("click",()=>{
+  if(!askDone)return;
+  if(askCheck){const v=askCheck();if(v)askDone(v);return}
+  askDone("ok");
+});
+$("askFields").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("askOk").click()}});
 $("askAlt").addEventListener("click",()=>{if(askDone)askDone("alt")});
 $("askCancel").addEventListener("click",()=>{if(askDone)askDone(false)});
 // Escape answers the question and nothing else: the window behind stays open
@@ -7186,22 +7311,27 @@ function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains
    open there is one history entry for it: back takes it and closes the window,
    the way Escape does. A window closed any other way takes the entry back out,
    so the next back press means what it always meant. */
-let backStep=false, backSkip=false;
+/* Read off the history itself, not a flag of our own: a window that closes and
+   another that opens before the browser has carried out the step back left a
+   flag saying "there is an entry" over an entry that was already gone. */
+let backSkip=false;
+function onWindowEntry(){try{return !!(history.state&&history.state.smurfWindow)}catch(e){return false}}
 function syncBackStep(open){
-  if(snapMode)return;
-  if(open&&!backStep){try{history.pushState({smurfWindow:1},"");backStep=true}catch(e){}}
-  else if(!open&&backStep){backStep=false;backSkip=true;try{history.back()}catch(e){backSkip=false}}
+  if(snapMode||backSkip)return;   // our own step back is on its way; popstate settles it
+  if(open&&!onWindowEntry()){try{history.pushState({smurfWindow:1},"")}catch(e){}}
+  else if(!open&&onWindowEntry()){backSkip=true;try{history.back()}catch(e){backSkip=false}}
 }
 addEventListener("popstate",()=>{
-  if(backSkip){backSkip=false;return}
-  if(!backStep)return;
-  backStep=false;
-  if(askDone){askDone(false);return}   // a question goes, the window that asked it stays
-  // the window in front goes first, as with Escape; one still open behind it asks
-  // for a new entry of its own through syncModals
+  if(backSkip){backSkip=false;syncBackStep(openModals().length>0);return}
+  if(!openModals().length)return;
+  // the window in front goes first, as with Escape; whatever stays open behind it
+  // (or a form you chose to keep editing) takes a new entry through syncModals
+  if(askDone){askDone(false);return}
   if(!$("palette").classList.contains("hidden")){closePalette();return}
-  closeAllPanels();editingId=null;
+  requestClose();
 });
+// a reload keeps the history entry a window had taken; with nothing open it is ours to clear
+try{if(onWindowEntry())history.replaceState(null,"")}catch(e){}
 function syncModals(){
   const open=openModals();
   document.body.classList.toggle("modal-open",open.length>0);
@@ -7250,7 +7380,7 @@ function syncModals(){
     let downOnBack=false;
     el.addEventListener("mousedown",e=>{downOnBack=e.target===el});
     el.addEventListener("click",e=>{
-      if(downOnBack&&e.target===el){if(id==="askModal"){if(askDone)askDone(false)}else closeAllPanels()}
+      if(downOnBack&&e.target===el){if(id==="askModal"){if(askDone)askDone(false)}else requestClose()}
       downOnBack=false});
   }
 }
@@ -7287,13 +7417,32 @@ function closeSettings(){revertLookPreviews();settingsSaveGen++;$("settings").cl
    undid it without a word, though. Once something has changed, the footer says
    what Save and closing each do. */
 const S_FOOT="Stays in this browser unless you use Device sync.";
+let sUnsaved=false;
 function settingsDirty(on){
+  sUnsaved=!!on;
   const h=$("sFootHint");if(!h)return;
   h.classList.toggle("dirty",!!on);
-  h.textContent=on?"Not saved yet. Save keeps it; closing puts it back.":S_FOOT;
+  h.textContent=on?"Not saved yet. Save keeps it; closing asks first.":S_FOOT;
 }
-// fields that act on their own button, not on Save
-const S_SELF=new Set(["sVaultPass"]);
+// fields that act on their own button, or save the moment they change, not on Save
+const S_SELF=new Set(["sVaultPass","sSyncToken"]);
+/* Closing put back whatever Save had not kept, which is right for a theme being
+   tried on and wrong for a Backend URL or a webhook just pasted in: that was gone
+   with one Escape, the way the account form used to lose what you typed. Now a
+   change that would be lost is asked about, as the form does. */
+function settingsUnsaved(){return sUnsaved&&!$("settings").classList.contains("hidden")}
+async function leaveSettings(){
+  if(!settingsUnsaved())return true;
+  // the same question as the account form's, with Save beside it
+  const r=await ask({title:"Discard your changes to Settings?",body:"They aren't saved yet. Discarding puts them back the way they were.",
+    ok:"Discard",danger:true,alt:"Save",cancel:"Keep editing"});
+  if(r==="alt"){$("sSave").click();return false}  // Save closes the window itself, once the links check out
+  return r==="ok";
+}
+function requestCloseSettings(){
+  if(!settingsUnsaved()){closeSettings();return}
+  leaveSettings().then(ok=>{if(ok)closeSettings()});
+}
 $("settings").addEventListener("input",e=>{if(e.target.closest(".mdl-b")&&!S_SELF.has(e.target.id))settingsDirty(true)});
 $("settings").addEventListener("change",e=>{if(e.target.closest(".mdl-b")&&!S_SELF.has(e.target.id))settingsDirty(true)});
 $("settings").addEventListener("click",e=>{
@@ -7303,7 +7452,8 @@ $("settings").addEventListener("click",e=>{
   const hit=e.target.closest("[data-theme],[data-atmosphere],#sEffects [data-v],#sTextSize [data-v],#sCompact,.acc-reset");
   if(hit&&e.currentTarget.contains(hit))settingsDirty(true);
 });
-$("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
+$("bFind").addEventListener("click",openPalette);
+$("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():requestCloseSettings());
 $("bNewSeason").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");newSeasonAll()});
 $("bStreamer").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");setStreamer(!streamerOn())});
 $("streamerPill").addEventListener("click",()=>setStreamer(false));
@@ -7314,13 +7464,8 @@ $("settings").querySelector(".stabs").addEventListener("keydown",e=>{
   if(to===null)return;
   e.preventDefault();settingsTab(SETTINGS_TABS[(to+SETTINGS_TABS.length)%SETTINGS_TABS.length],true);
 });
+// the backup buttons in Settings do what their twins in the ⋯ menu do
 for(const b of document.querySelectorAll("#settings [data-proxy]"))b.addEventListener("click",()=>{
-  // An encrypted backup needs the master password, and its field is one tab
-  // away: go there rather than saying "in Settings" to someone already in it.
-  if(b.dataset.proxy==="bExportEnc"&&!vaultPassword&&!previewMode){
-    settingsTab("security");$("sVaultPass").focus();
-    toast("Set a master password here first. The encrypted backup is locked with it");return;
-  }
   const t=$(b.dataset.proxy);if(t)t.click();setTimeout(updateBackupLast,0);
 });
 $("sSave").addEventListener("click",async()=>{
@@ -7387,7 +7532,7 @@ $("sSave").addEventListener("click",async()=>{
   saveCfg();syncLockTimer();hideAccPrev();$("settings").classList.add("hidden");toast("Settings saved"+notifyNote)
 });
 let settingsSaveGen=0;
-$("sClose").addEventListener("click",closeSettings);
+$("sClose").addEventListener("click",requestCloseSettings);
 if($("sSyncGen"))$("sSyncGen").addEventListener("click",()=>{
   const t=genSyncToken();
   $("sSyncToken").value=t;cfg.syncToken=t;saveCfg();updateSyncStatus();toast("Sync key made. Paste the same key on your other devices");
@@ -7566,11 +7711,11 @@ $("sVaultSet").addEventListener("click",async()=>{if(await setVaultPassword($("s
 $("lpSet").addEventListener("click",async()=>{
   const p=$("lpPass").value;
   if(p!==$("lpPass2").value){toast("The two passwords don't match");$("lpPass2").focus();return}
-  if(await setVaultPassword(p)){$("lockPrompt").classList.add("hidden");render()}
+  if(await setVaultPassword(p)){closeLockPrompt();render()}
 });
 $("lpLater").addEventListener("click",()=>{
   if($("lpOff").checked){cfg.lockPromptOff=true;saveCfg()}
-  $("lockPrompt").classList.add("hidden");
+  closeLockPrompt();
 });
 async function setVaultPassword(pass){
   if(!pass||pass.length<4){toast("Choose a password with at least 4 characters");return false}
@@ -7607,8 +7752,7 @@ if($("sLockNow"))$("sLockNow").addEventListener("click",async()=>{
   if(vaultLocked()){toast("Already locked");return}
   if(!await ask({title:"Lock the vault now?",body:"You'll need the master password to open it again.",ok:"Lock"}))return;
   $("settings").classList.add("hidden");
-  relock();
-  toast("Vault locked");
+  relock();   // the lock screen says "Vault locked"; a message saying it again under it did not
 });
 $("sVaultRemove").addEventListener("click",async()=>{
   if(!vaultPassword){toast("No password is set");return}
@@ -7630,6 +7774,7 @@ $("sVaultRemove").addEventListener("click",async()=>{
 });
 $("bHelp").addEventListener("click",()=>{const willShow=$("help").classList.contains("hidden");closeAllPanels();if(willShow)$("help").classList.remove("hidden")});
 // the footer's Terms: Help, at "Using this app", where the terms are written out
+$("appVer").addEventListener("click",e=>{e.preventDefault();showWhatsNew()});
 $("footTerms").addEventListener("click",e=>{e.preventDefault();closeAllPanels();$("help").classList.remove("hidden");
   const t=$("helpTerms");if(t&&t.scrollIntoView)t.scrollIntoView({block:"start"})});
 $("bHelpClose").addEventListener("click",()=>{$("help").classList.add("hidden");cfg.seenHelp=true;saveCfg()});
@@ -7729,6 +7874,7 @@ $("baSave").addEventListener("click",()=>{
     added++;
   }
   render();$("bulkAdd").classList.add("hidden");
+  if(newIds.length)revealAccount(newIds[0]);
   const msg=added+" added"+(skipped?", "+skipped+" duplicate"+(skipped===1?"":"s")+" skipped":"")+(bad?", "+bad+" line"+(bad===1?"":"s")+" couldn't be parsed":"");
   // The new ones are read straight away, through the same paced run as Check all
   // ranks: its progress bar, its Stop, its summary at the end.
@@ -7747,9 +7893,17 @@ let searchT;
 // the grid and the chips only: the stats panel above does not follow the search (see renderDash)
 $("tSearch").addEventListener("input",e=>{ui.search=e.target.value;clearTimeout(searchT);searchT=setTimeout(()=>{renderChips();renderGrid()},120)});
 $("tRegion").addEventListener("change",e=>{ui.region=e.target.value;renderFilters()});
+/* "While away" was always in the list, and picked from it sorted by nothing: it
+   only means something after "While you were away" has measured the visit. It
+   is offered while that sort is on, and goes again once another is picked. */
+function awaySortOption(on){
+  const sel=$("tSort");let o=sel.querySelector('option[value="away"]');
+  if(on&&!o){o=new Option("Sort: While you were away","away");sel.add(o)}
+  if(!on&&o)o.remove();
+}
 $("tSort").addEventListener("change",e=>{
   ui.sort=e.target.value;
-  if(ui.sort!=="away")awayDelta=new Map();
+  if(ui.sort!=="away"){awayDelta=new Map();awaySortOption(false)}
   renderGrid();
 });
 $("tStatus").addEventListener("change",e=>{ui.status=e.target.value;renderFilters()});
@@ -7823,7 +7977,7 @@ $("bDashToggle").addEventListener("click",()=>{
     new ResizeObserver(()=>con.style.setProperty("--cmd-pin",cmd.offsetHeight+con.clientTop+"px")).observe(cmd);
   /* Phones only: away while scrolling down, back on the way up (see .to-top.away).
      Passive, and it only compares two numbers, so it costs nothing per frame. */
-  const narrow=window.matchMedia&&window.matchMedia("(max-width:560px)");
+  const narrow=window.matchMedia&&window.matchMedia(PHONE_MQ);
   let lastY=window.scrollY||0;
   window.addEventListener("scroll",()=>{
     const y=window.scrollY||0, d=y-lastY;
@@ -7882,7 +8036,7 @@ function renderAwayBand(){
   const star=best&&(!worst||best.d>=-worst.d)?best:worst;
   setHTML(el,`<span class="away-k">While you were away</span>`
     +`<span>${bits.join(" · ")}${star?` · biggest mover <b>${nameOf(star.a)}</b> `
-      +`<span class="${star.d>0?"up":"down"}">${star.d>0?"+":""}${star.d} LP</span>`:""}</span>`
+      +`<span class="${star.d>0?"up":"down"}">${star.d>0?"+":star.d<0?"-":""}${fmtN(Math.abs(star.d))} LP</span>`:""}</span>`
     +`<span class="sp"><button id="awayShow">Sort by movement</button><button id="awayHide">Dismiss</button></span>`);
   el.classList.remove("hidden");
 }
@@ -7899,6 +8053,7 @@ $("awayBand").addEventListener("click",e=>{
       for(const x of sum.down)awayDelta.set(x.a.id,x.d);
     }
     ui.sort="away";
+    awaySortOption(true);
     $("tSort").value="away";
     render();
   }
@@ -7951,11 +8106,14 @@ function palCommands(){
   ];
 }
 function palResults(q){
-  const s=q.trim().toLowerCase();
+  const s=q.trim().toLowerCase(), words=s.split(/\s+/).filter(Boolean);
+  // each word anywhere, like the search box, and the Riot ID whole: "Lunar Echo#EUW"
+  // and "lunar echo #euw" both find it
   const accs=accounts.filter(a=>!a.archived).filter(a=>{
     if(!s)return true;
-    return [a.label,a.gameName,a.tagLine,a.email,a.login,(a.tags||[]).join(" "),
-      a.stats?shortRank(a.stats)||"":""].join(" ").toLowerCase().includes(s);
+    const hay=[a.label,a.gameName,a.tagLine,a.gameName+"#"+a.tagLine,a.email,a.login,(a.tags||[]).join(" "),
+      a.stats?shortRank(a.stats)||"":""].join(" ").toLowerCase();
+    return words.every(w=>hay.includes(w));
   });
   // Favourites first, then the best ranks — the same order the grid uses, so the
   // palette never disagrees with the page behind it.
@@ -8020,17 +8178,25 @@ function runPalette(i){
   if(it.type==="cmd"||it.type==="key"){it.c.run();return}
   // An account is a place, not an action: go there, in the layout that can
   // actually show it, and light it up so it is obvious which one you landed on.
-  const id=it.a.id;
   if(ui.density==="wall"){ui.density="cards";cfg.density="cards";saveCfg()}
-  ui.search="";ui.tier="";ui.flag="";ui.tag=null;ui.favOnly=false;
-  ui.region="";ui.status="";
-  // Palette results are the live vault only — jumping from the Archived view
-  // still has to leave that view, or the card it landed on is filtered out.
-  ui.showArchived=!!it.a.archived;
+  revealAccount(it.a.id,true);
+}
+/* Go to an account and light it up. Quick find did this; a new account did not:
+   the page stayed at the top and the card was sorted in somewhere below, so it
+   looked as if nothing had been added. `clear` drops every filter on the way
+   (Quick find); otherwise filters go only if they hide the account. */
+function clearFilters(a){
+  ui.search="";ui.tier="";ui.flag="";ui.tag=null;ui.favOnly=false;ui.region="";ui.status="";
+  // the Archived view is a view of its own: leave it for a live account, enter it for an archived one
+  ui.showArchived=!!(a&&a.archived);
   $("tSearch").value="";syncToggles();
+}
+function revealAccount(id,clear){
+  const a=accounts.find(x=>x.id===id);if(!a)return;
+  if(clear||!filtered().some(x=>x.id===id))clearFilters(a);
   flashId=id;render();
-  const card=$("grid").querySelector(`[data-id="${idSel(id)}"]`);
-  if(card&&card.scrollIntoView)card.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
+  const el=$("grid").querySelector(`[data-id="${idSel(id)}"]`);
+  if(el&&el.scrollIntoView)el.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
   setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1600);
 }
 $("palInput").addEventListener("input",()=>{palSel=0;renderPalette()});
@@ -8134,10 +8300,16 @@ $("bulkTagBtn").addEventListener("click",()=>{
 $("bulkTag").addEventListener("keydown",e=>{if(e.key==="Enter")$("bulkTagBtn").click()});
 $("bulkDelete").addEventListener("click",async()=>{
   const n=selected.size;
-  if(!await ask({title:"Delete "+n+" selected account"+(n===1?"":"s")+"?",body:"This can't be undone.",ok:"Delete",danger:true}))return;
+  if(!await ask({title:"Delete "+n+" selected account"+(n===1?"":"s")+"?",body:"There's an Undo for a few seconds afterwards.",ok:"Delete",danger:true}))return;
+  // kept with their places, so Undo puts each back where it was
+  const gone=accounts.map((a,i)=>[i,a]).filter(([,a])=>selected.has(a.id));
   accounts=accounts.filter(a=>!selected.has(a.id));
   selected.clear();lastSelectedId=null;render();
-  saveThen(n+" account"+(n===1?"":"s")+" deleted");
+  saveThen(n+" account"+(n===1?"":"s")+" deleted","Undo",()=>{
+    if(vaultLocked())return;   // as with one: no passwords back into a locked page
+    for(const[i,a]of gone)accounts.splice(Math.min(i,accounts.length),0,a);
+    render();saveThen(n+" account"+(n===1?"":"s")+" restored");
+  });
 });
 $("bulkClear").addEventListener("click",()=>{selected.clear();lastSelectedId=null;ui.selecting=false;cmpPick=false;render()});
 $("bulkCompare").addEventListener("click",compareSelected);
@@ -8368,7 +8540,7 @@ async function onCardClick(e){
     acc.flagged=!acc.flagged;
     if(ui.flag==="attention")render();
     else{renderCard(id);renderDash();renderChips()}
-    saveThen(acc.flagged?"Flagged. It's under Needs attention now":"Flag cleared")}
+    saveThen(acc.flagged?"Flagged. The stats count it under Flagged":"Flag cleared")}
   else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderCard(id)}
   else if(act==="login"){
     const on=togglePanel(id,"login");   // puts ✎ Rank away if it was open
@@ -8383,7 +8555,13 @@ async function onCardClick(e){
   else if(act==="edit")openForm(acc);
   else if(act==="art")openArtPicker(id);
   else if(act==="notefields"){commitNote();openForm(acc,"notes")}
-  else if(act==="archive"){acc.archived=true;render();saveThen("Archived. Turn on \"Archived\" in the toolbar to see it again")}
+  // Archiving said where the account went, with nothing to take it back: Undo now,
+  // like a delete has
+  else if(act==="archive"){acc.archived=true;render();
+    saveThen("Archived. It's under Archived in the toolbar","Undo",()=>{
+      const a=accounts.find(x=>x.id===id);if(!a||vaultLocked())return;
+      a.archived=false;render();saveThen("Back in your active accounts");
+    })}
   else if(act==="unarchive"){acc.archived=false;render();saveThen("Restored to active accounts")}
   else if(act==="noteedit"){
     if(editingNote===id)return;
@@ -8434,6 +8612,7 @@ async function onCardClick(e){
     closeRankModal();
     commitStats(id,acc,s);toast("Rank saved");
   }
+  else if(act==="check"&&isOffline())toast(OFFLINE_SAY);
   else if(act==="check")check(id).then(r=>{const a=accounts.find(x=>x.id===id);if(r===true&&a&&canForm(a))loadForm(id)});
   else if(act==="del"){
     if(armedDelete===id){
@@ -8515,12 +8694,27 @@ function renderVersion(){
   if(items.length)el.title="New in v"+APP_VERSION+":\n• "+items.join("\n• ");
   else el.removeAttribute("title");
 }
+/* After an update: one short line with a way to read more, not two release notes
+   cut off at "…" in a toast. And never at the same time as the master password
+   prompt, which asks for something: the note waits until that window closes. */
 function showChangelogIfNeeded(){
-  if(cfg.lastChangelog===APP_VERSION)return;
+  if(cfg.lastChangelog===APP_VERSION)return false;
+  if(!$("lockPrompt").classList.contains("hidden"))return false;
   const entry=APP_CHANGELOG.find(e=>e.v===APP_VERSION);
   cfg.lastChangelog=APP_VERSION;saveCfg();
-  if(!entry||!entry.items||!entry.items.length)return;
-  toast("v"+entry.v+": "+entry.items.slice(0,2).join(" · ")+(entry.items.length>2?"…":""));
+  if(!entry||!entry.items||!entry.items.length)return false;
+  toast("Updated to v"+entry.v,"What's new",showWhatsNew);
+  return true;
+}
+function showWhatsNew(){
+  const entry=APP_CHANGELOG.find(e=>e.v===APP_VERSION);
+  if(!entry||!entry.items)return;
+  ask({title:"What's new in v"+APP_VERSION,body:"• "+entry.items.join("\n• "),ok:"Got it",cancel:false});
+}
+function closeLockPrompt(){
+  const m=$("lockPrompt"), was=!m.classList.contains("hidden");
+  m.classList.add("hidden");
+  if(was)showChangelogIfNeeded();
 }
 // The installed app's icon shortcuts (manifest.json) open the page with
 // ?action=…. It is read once and wiped from the address bar, so a reload or a
@@ -8547,14 +8741,15 @@ function startApp(){
      operators, keyboard keys and privacy notes, over a page with nothing on it
      yet. That is a reference, and it stays one click away on the ?. The empty
      vault itself is the welcome now: what the app does, and the first step. */
-  showChangelogIfNeeded();
   if(startAction)setTimeout(runStartAction,0); // after boot's own first paint
   else maybeLockPrompt();
+  const told=showChangelogIfNeeded(); // waits, if the prompt just opened
   if(cfg.watch)setTimeout(()=>syncWatch(false),1500); // at most every ten minutes
-  if(cfg.autoCheck){
+  if(cfg.autoCheck&&!isOffline()){   // offline it waits for the next visit, quietly
     const staleAccs=accounts.filter(autoCheckDue);
     if(staleAccs.length){
-      toast("Auto-checking "+staleAccs.length+" stale account"+(staleAccs.length===1?"":"s")+"…");
+      // the run bar shows the check either way; the update note is not covered by it
+      if(!told)toast("Auto-checking "+staleAccs.length+" stale account"+(staleAccs.length===1?"":"s")+"…");
       // Through checkAll rather than its own loop: this ran as an invisible second
       // runner, so it got no progress bar and no Stop button, and pressing Check
       // all ranks while it was going started a *parallel* pass over the same
@@ -8619,7 +8814,7 @@ async function pkUnlock(){
   try{pass=await pkOpen(r)}
   catch(e){
     $("lockPk").disabled=false;
-    lockError(e&&e.name==="NotAllowedError"?"Cancelled. Try Face ID / fingerprint again, or type the master password."
+    lockError(e&&e.name==="NotAllowedError"?"Canceled. Try Face ID / fingerprint again, or type the master password."
       :"This browser couldn't use the passkey. Type the master password instead.");
     return;
   }

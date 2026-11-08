@@ -65,6 +65,9 @@ function bootApp(seed, tweak, url = "https://example.com/index.html") {
   window.fetch = async () => { throw new Error("network disabled in tests"); };
   window.confirm = () => true;
   window.alert = () => {};
+  // jsdom has no object URLs; an export that runs on after its test would throw for lack of one
+  window.URL.createObjectURL = () => "blob:test";
+  window.URL.revokeObjectURL = () => {};
   if (seed) window.localStorage.setItem("smurf-tracker", JSON.stringify(seed));
   if (tweak) tweak(window);
   runScript(window, appScript); // runs the app's boot() at the end, exactly like a real page load
@@ -798,7 +801,9 @@ test("a card's win-rate bar is drawn as a record, not as the goal rail's progres
 });
 
 test("the dashboard shares its figures evenly across rows instead of leaving a stub row", () => {
-  const win = bootApp();
+  // a ranked account with games, so the panel has a figure to show
+  const win = bootApp([{ id: "r", gameName: "Ranked", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 10, losses: 8, updatedAt: Date.now() } }]);
   assert.equal(win.dashCols(8, 1338, 158), 8, "one row when they fit");
   assert.equal(win.dashCols(8, 952, 158), 4, "eight at 1024px: four and four, not six and two");
   assert.equal(win.dashCols(11, 1338, 158), 6, "eleven: six and five");
@@ -1009,7 +1014,7 @@ test("buttons are flat, of three kinds, and every control in a toolbar row is on
   // the filter toggles sit beside boxed dropdowns: quiet, they read as plain text
   for (const who of [".tools>button", ".tag-handle", ".t-select"]) assert.ok(!quiet[1].split(",").includes(who), who + " is outlined, like the dropdowns");
   assert.match(rule("select"), /border-color:var\(--btn-edge\)/, "and the dropdowns wear the buttons' edge");
-  assert.match(rule("#bMore,#bHelp"), /color:var\(--text\)/, "⋯ and ? are not greyed out");
+  assert.match(rule("#bMore,#bHelp,#bFind"), /color:var\(--text\)/, "⋯, ? and Quick find are not greyed out");
   // one height, size and weight across a toolbar row
   assert.match(css, /--ctl-h:36px/);
   const row = css.match(/\n  (\.cmd>button,\.cmd \.seg,[^{]*)\{([^}]*)\}/);
@@ -1018,7 +1023,7 @@ test("buttons are flat, of three kinds, and every control in a toolbar row is on
   assert.match(row[2], /height:var\(--ctl-h\)[^}]*font-size:calc\(13px\*var\(--ts\)\);font-weight:500/);
   assert.match(rule(".seg button"), /height:calc\(var\(--ctl-h\) - 2px\)/, "the layout switch, inside its 1px edge");
   // what is not a plate at all still clears fill and shadow
-  for (const sel of [".rid,.star,.eye-btn,.panel-close,.c-ref", "#bMore,#bHelp", "#moreMenu button", ".fb-x", ".fchip-all",
+  for (const sel of [".rid,.star,.eye-btn,.panel-close,.c-ref", "#bMore,#bHelp,#bFind", "#moreMenu button", ".fb-x", ".fchip-all",
       ".bk-note button", ".setup-x"]) {
     assert.match(rule(sel), /box-shadow:none/, sel);
     assert.match(rule(sel), /background:none/, sel);
@@ -2105,7 +2110,7 @@ test("passkey unlock: a cancel leaves the password box, and the typed password s
   fakePasskeys(win, { cancelGet: true });
   doc.getElementById("lockPk").click();
   await until(() => doc.getElementById("lockErr").style.display === "block", "the cancel to be said");
-  assert.match(doc.getElementById("lockErr").textContent, /^Cancelled\./);
+  assert.match(doc.getElementById("lockErr").textContent, /^Canceled\./);
   assert.equal(doc.getElementById("lock").classList.contains("hidden"), false);
   assert.equal(doc.getElementById("lockPk").disabled, false, "and can be tried again");
   doc.getElementById("lockPass").value = "master-pass-123";
@@ -2167,6 +2172,7 @@ test("dates are where you are: backup and export file names, and the passkey's d
     runScript(win, "doExport()");
     await tick();   // the plain-text question is answered first
     win.document.getElementById("bExportCsv").click();
+    await tick();   // its own plain-text question first
     assert.deepEqual([...win.__names], ["smurf-backup-plaintext-2026-10-29.json", "smurf-export-2026-10-29.csv"]);
     win.localStorage.setItem("smurf-tracker-passkey", JSON.stringify({ v: 1, id: "AAAA", salt: "AAAA", iv: "AAAA", ct: "AAAA", at: Date.UTC(2026, 9, 28, 12, 0) }));
     runScript(win, "updatePkStatus()");
@@ -2240,7 +2246,7 @@ test("passkey unlock: says when it can't be used, and never makes a passkey the 
   btn.click();
   await until(() => btn.textContent === "Finish set-up", "the second step");
   btn.click();
-  await until(() => /^Cancelled\. Tap Finish set-up to try again/.test(half.document.getElementById("toast").textContent), "the cancel");
+  await until(() => /^Canceled\. Tap Finish set-up to try again/.test(half.document.getElementById("toast").textContent), "the cancel");
   assert.equal(btn.textContent, "Finish set-up");
   assert.equal(gone.length, 0);
   fakePasskeys(half, { noPrfGet: true });
@@ -2565,7 +2571,7 @@ test("share window: not for example data, and not for an empty vault", () => {
   assert.match(win.document.getElementById("toast").textContent, /Exit preview/);
 });
 
-test("On each card: any part can wait under Details, Compact is chart and stats, and 2.1's switch carries over", () => {
+test("On each card: any part can wait under Details, Compact is chart and stats, and 2.1's switch carries over", async () => {
   const now = Date.now(), D = 86400000;
   const acc = { id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: ["mid"], notes: "honor 3",
     history: [1, 2, 3].map(k => ({ t: now - (4 - k) * D, tier: "GOLD", division: "II", lp: 10 * k, w: k, l: 0 })),
@@ -2575,17 +2581,17 @@ test("On each card: any part can wait under Details, Compact is chart and stats,
   const card = () => doc.querySelector('.card[data-id="c"]');
   const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
   assert.equal(card().querySelector('[data-act="info"]'), null, "nothing hidden and nothing to show: no Details handle");
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   const box = k => doc.querySelector(`#sCardParts [data-part="${k}"]`);
   assert.deepEqual([...doc.querySelectorAll("#sCardParts [data-part]")].map(b => b.dataset.part), ["chart", "stats", "wl", "goal", "tags", "notes"]);
   assert.ok([...doc.querySelectorAll("#sCardParts [data-part]")].every(b => b.checked), "everything shows by default");
   box("tags").checked = false; box("tags").dispatchEvent(new win.Event("change", { bubbles: true }));
   assert.ok(body.classList.contains("hide-tags"), "previews at once");
   assert.ok(card().querySelector('[data-act="info"]'), "and the card grows a Details handle to find them under");
-  doc.getElementById("sClose").click();
+  doc.getElementById("sClose").click(); await tick();
   assert.equal(body.classList.contains("hide-tags"), false, "Close puts it back");
   assert.equal(card().querySelector('[data-act="info"]'), null);
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   doc.getElementById("sCompact").click();
   assert.equal(box("chart").checked, false);
   assert.equal(box("stats").checked, false);
@@ -2726,7 +2732,7 @@ test("Recent form: a Riot-read account's Details fetch its last five ranked game
   assert.equal(card("r").querySelectorAll(".fm-pip.w").length, 2);
   const rows = [...card("r").querySelectorAll('[data-k="sec-form"] .chp')].map(r => [...r.children].map(c => c.textContent).join("|"));
   assert.equal(rows.length, 3);
-  assert.equal(rows[0], "WAhri|8/2/5|31 min|1 h ago");
+  assert.equal(rows[0], "WAhri|8/2/5|31 min|1 hour ago");
   assert.equal(card("r").querySelector('[data-k="sec-form"] img'), null, "a champion name is text, never markup");
   card("r").querySelector('[data-act="info"]').click();
   card("r").querySelector('[data-act="info"]').click();
@@ -2762,7 +2768,7 @@ test("Escape closes Quick find first, even with a card's login open behind it", 
   assert.ok(doc.querySelector('.card[data-id="a"] .login'), "the card behind it is left as it was");
 });
 
-test("Settings is five tabs, one section at a time, and a step that needs a field opens its tab", () => {
+test("Settings is five tabs, one section at a time, and a step that needs a field opens its tab", async () => {
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
   const doc = win.document, m = doc.getElementById("settings");
   const tabs = [...m.querySelectorAll('[role="tab"]')];
@@ -2795,10 +2801,14 @@ test("Settings is five tabs, one section at a time, and a step that needs a fiel
   doc.getElementById("bExportCsv").addEventListener("click", () => exported++);
   backup.querySelector('[data-proxy="bExportCsv"]').click();
   assert.equal(exported, 1, "a backup button does what its ⋯ menu twin does");
-  // the encrypted backup needs a master password, whose field is a tab away
+  // the encrypted backup with no master password asks for one of its own, right there
+  // (the harness answers its questions; the real window is tested on its own)
+  let askedFor = null; win.ask = async o => { askedFor = o; return false; };
   backup.querySelector('[data-proxy="bExportEnc"]').click();
-  assert.equal(m.dataset.tab, "security", "it takes you to the password field");
-  assert.equal(doc.activeElement, doc.getElementById("sVaultPass"));
+  await tick();
+  assert.notEqual(m.dataset.tab, "security", "it no longer sends you off to set a master password");
+  assert.match(askedFor.title, /password for this backup/);
+  win.ask = async () => "ok";
   // reopening starts on Appearance again
   win.closeAllPanels();
   doc.getElementById("bSettings").click();
@@ -2851,7 +2861,7 @@ test("Discord decay alerts: switched on in Alerts, the worker gets a list of Dia
   runScript(win, `commitStats("g", accounts.find(x => x.id === "g"), {found:true,tier:"GOLD",division:"I",lp:5,wins:1,losses:0,updatedAt:Date.now()})`);
   assert.equal(win.__soon, 1, "a Gold reading cannot change a decay estimate");
   doc.getElementById("bSettings").click();
-  await until(() => /On, watching 1 account · last checked 1 h ago/.test(doc.getElementById("sWatchStatus").textContent), "the status line");
+  await until(() => /On, watching 1 account · last checked 1 hour ago/.test(doc.getElementById("sWatchStatus").textContent), "the status line");
   // a worker deployed before alerts existed answers 405: say so instead of failing quietly
   win.fetch = async () => ({ ok: false, status: 405, json: async () => ({ error: "method not allowed" }) });
   runScript(win, "updateWatchStatus()");
@@ -3402,11 +3412,11 @@ test("the secondary accent drives --teal, and its ink flips with the colour's lu
   assert.equal(read("--teal-ink"), "#ffffff");
 });
 
-test("both accents persist, and leaving Settings unsaved puts the previewed colours back", () => {
+test("both accents persist, and leaving Settings unsaved puts the previewed colours back", async () => {
   const win = bootApp();
   const read = v => win.document.documentElement.style.getPropertyValue(v).trim().toLowerCase();
 
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   win.document.getElementById("sAccent").value = "#ff0000";
   win.document.getElementById("sAccent2").value = "#00ff00";
   win.document.getElementById("sSave").click();
@@ -3414,23 +3424,23 @@ test("both accents persist, and leaving Settings unsaved puts the previewed colo
   assert.equal(read("--teal"), "#00ff00");
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).accent2, "#00ff00");
 
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   const picker = win.document.getElementById("sAccent2");
   picker.value = "#0000ff";
   picker.dispatchEvent(new win.Event("input", { bubbles: true }));
   assert.equal(read("--teal"), "#0000ff", "the picker previews live");
-  win.document.getElementById("sClose").click();
+  win.document.getElementById("sClose").click(); await tick();
   assert.equal(read("--teal"), "#00ff00", "closing without saving reverts");
 
   // the ⋯ menu's Settings entry toggles the panel shut, which is a close as well —
   // it used to only hide it, leaving an unsaved colour applied to the whole page
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   picker.value = "#123456";
   // change rather than input: releasing the picker skips the rate-limit queue that
   // the preview above has just opened
   picker.dispatchEvent(new win.Event("change", { bubbles: true }));
   assert.equal(read("--teal"), "#123456", "the colour is applied but not saved");
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   assert.equal(win.document.getElementById("settings").classList.contains("hidden"), true);
   assert.equal(read("--teal"), "#00ff00", "and closing it from the menu reverts too");
 });
@@ -3441,20 +3451,20 @@ const DEFAULT_ACCENT = "#c8aa6e", DEFAULT_ACCENT2 = "#0ac8b9";
 /* Each colour gets its own way back. They preview like the pickers do rather than
    saving on the spot — a reset that wrote cfg immediately would be the one control
    in the panel Close could not undo. */
-test("each accent resets on its own, and a reset is only kept by Save", () => {
+test("each accent resets on its own, and a reset is only kept by Save", async () => {
   const win = bootApp();
   const read = v => win.document.documentElement.style.getPropertyValue(v).trim().toLowerCase();
   const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg"));
   const $ = id => win.document.getElementById(id);
 
-  $("bSettings").click();
+  $("bSettings").click(); await tick();
   $("sAccent").value = "#ff0000";
   $("sAccent2").value = "#00ff00";
   $("sSave").click();
   assert.equal(read("--gold"), "#ff0000");
 
   // one colour back, the other left exactly where it was
-  $("bSettings").click();
+  $("bSettings").click(); await tick();
   $("sAccentReset1").click();
   assert.equal(read("--gold"), DEFAULT_ACCENT, "the primary is back to default");
   assert.equal(read("--teal"), "#00ff00", "and the secondary was not touched");
@@ -3462,11 +3472,11 @@ test("each accent resets on its own, and a reset is only kept by Save", () => {
   assert.equal(cfg().accent, "#ff0000", "nothing is saved yet");
   assert.equal($("accPrev").classList.contains("show"), false, "reset does not open the colour miniature");
 
-  $("sClose").click();
+  $("sClose").click(); await tick();
   assert.equal(read("--gold"), "#ff0000", "so closing puts the old colour back");
 
   // the same for the secondary, and this time keep it
-  $("bSettings").click();
+  $("bSettings").click(); await tick();
   $("sAccentReset2").click();
   assert.equal(read("--teal"), DEFAULT_ACCENT2);
   assert.equal(read("--gold"), "#ff0000", "the primary stays where it was");
@@ -4930,7 +4940,7 @@ test("the modal panels keep every control the app talks to", () => {
   assert.ok(win.document.getElementById("help").contains(win.document.getElementById("bHelpClose")));
 });
 
-test("leaving Settings by Escape, its ✕ or the backdrop puts every Appearance preview back, not just the colours", () => {
+test("leaving Settings by Escape, its ✕ or the backdrop puts every Appearance preview back, not just the colours", async () => {
   const now = Date.now();
   const acc = { id: "c", region: "EUW", gameName: "C", tagLine: "1", status: "active", tags: [], history: [],
     stats: { found: true, tier: "GOLD", division: "II", lp: 30, wins: 3, losses: 0, updatedAt: now, champs: [{ name: "Ahri", games: 5, wr: 60 }] } };
@@ -4958,27 +4968,27 @@ test("leaving Settings by Escape, its ✕ or the backdrop puts every Appearance 
     assert.equal(html.style.getPropertyValue("--gold"), "#c8aa6e", how + ": colours");
   };
   preview();
-  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await tick();
   reverted("Escape");
   preview();
-  doc.querySelector("#settings [data-close-panel]").click();
+  doc.querySelector("#settings [data-close-panel]").click(); await tick();
   reverted("the ✕");
 });
 
-test("Effects: Full, Subtle or Off — previewed live, kept on Save, honoured on the next visit", () => {
+test("Effects: Full, Subtle or Off — previewed live, kept on Save, honoured on the next visit", async () => {
   const win = bootApp();
   const doc = win.document;
   const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
   assert.equal(doc.body.dataset.fx, "full", "full by default");
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   const seg = doc.getElementById("sEffects");
   const checked = () => [...seg.querySelectorAll("[data-v]")].filter(b => b.getAttribute("aria-checked") === "true").map(b => b.dataset.v);
   assert.deepEqual(checked(), ["full"]);
   seg.querySelector('[data-v="off"]').click();
   assert.equal(doc.body.dataset.fx, "off", "previews at once");
-  doc.getElementById("sClose").click();
+  doc.getElementById("sClose").click(); await tick();
   assert.equal(doc.body.dataset.fx, "full", "Close puts it back");
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   seg.querySelector('[data-v="subtle"]').click();
   doc.getElementById("sSave").click();
   assert.equal(cfg().effects, "subtle");
@@ -4999,7 +5009,7 @@ test("on touch screens no field is ever under 16px, whatever the text size (iOS 
     "a floor of 16px that Small cannot scale under, and that beats the fields' own smaller rules");
 });
 
-test("Text size: every font size scales with one setting, and nothing else moves", () => {
+test("Text size: every font size scales with one setting, and nothing else moves", async () => {
   const win = bootApp();
   const doc = win.document, html = doc.documentElement;
   const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
@@ -5010,12 +5020,12 @@ test("Text size: every font size scales with one setting, and nothing else moves
   assert.match(all, /--ts:1;/);
   assert.match(all, /html\[data-ts="large"\]\{--ts:1\.15\}/);
   assert.equal(html.dataset.ts, undefined, "default: no attribute at all");
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   doc.querySelector('#sTextSize [data-v="large"]').click();
   assert.equal(html.dataset.ts, "large", "previews at once");
-  doc.getElementById("sClose").click();
+  doc.getElementById("sClose").click(); await tick();
   assert.equal(html.dataset.ts, undefined, "Close puts it back");
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   doc.querySelector('#sTextSize [data-v="small"]').click();
   doc.getElementById("sSave").click();
   assert.equal(cfg().textSize, "small");
@@ -5023,30 +5033,30 @@ test("Text size: every font size scales with one setting, and nothing else moves
   assert.equal(again.document.documentElement.dataset.ts, "large", "applied on boot");
 });
 
-test("themes: one click sets both colours and the atmosphere, kept only on Save", () => {
+test("themes: one click sets both colours and the atmosphere, kept only on Save", async () => {
   const win = bootApp();
   const doc = win.document, root = doc.documentElement.style;
   const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
   const tiles = () => [...doc.querySelectorAll("#sThemes [data-theme]")];
   const on = () => tiles().filter(t => t.getAttribute("aria-checked") === "true").map(t => t.dataset.theme);
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   assert.deepEqual(tiles().map(t => t.dataset.theme), ["hextech", "shadowisles", "noxus", "piltover", "freljord", "ionia", "void", "rank"]);
   assert.deepEqual(on(), ["hextech"], "the defaults are the Hextech theme");
   doc.querySelector('#sThemes [data-theme="noxus"]').click();
-  assert.equal(root.getPropertyValue("--gold"), "#b8c0c8");
-  assert.equal(root.getPropertyValue("--teal"), "#d33b3b");
+  assert.equal(root.getPropertyValue("--gold"), "#d9434a");
+  assert.equal(root.getPropertyValue("--teal"), "#b8c0c8");
   assert.deepEqual(on(), ["noxus"]);
-  doc.getElementById("sClose").click();
+  doc.getElementById("sClose").click(); await tick();
   assert.equal(root.getPropertyValue("--gold"), "#c8aa6e", "closing without saving puts it back");
   assert.equal(doc.body.dataset.atmosphere, "spotlight");
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   doc.querySelector('#sThemes [data-theme="piltover"]').click();
   assert.equal(doc.body.dataset.atmosphere, "lattice", "a theme brings its atmosphere");
   doc.getElementById("sSave").click();
   assert.equal(cfg().accent, "#e0a458");
   assert.equal(cfg().accent2, "#3f9cff");
   assert.equal(cfg().atmosphere, "lattice");
-  doc.getElementById("bSettings").click();
+  doc.getElementById("bSettings").click(); await tick();
   assert.deepEqual(on(), ["piltover"], "reopening shows the theme in force");
   // a picker of your own is no theme at all
   const pick = doc.getElementById("sAccent");
@@ -5099,7 +5109,7 @@ test("themes: My best rank follows the highest tier, and moves when you climb", 
   assert.equal(root.getPropertyValue("--teal"), "#c8aa6e");
 });
 
-test("atmosphere previews live and only sticks after Save", () => {
+test("atmosphere previews live and only sticks after Save", async () => {
   const win = bootApp();
   const body = win.document.body;
   const cfg = () => JSON.parse(win.localStorage.getItem("smurf-tracker-cfg") || "{}");
@@ -5118,30 +5128,30 @@ test("atmosphere previews live and only sticks after Save", () => {
     "atmosphere comes after the colour swatches"
   );
 
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   win.document.querySelector('#sAtmosphere [data-atmosphere="aurora"]').click();
   assert.equal(body.dataset.atmosphere, "aurora", "switches for a live compare");
   assert.equal(cfg().atmosphere, undefined, "nothing written yet");
 
-  win.document.getElementById("sClose").click();
+  win.document.getElementById("sClose").click(); await tick();
   assert.equal(body.dataset.atmosphere, "spotlight", "Close puts the saved choice back");
 
   // Escape / ✕ go through closeAllPanels, which used to keep the preview while
   // only the dedicated Close button reverted it — Save then persisted the wrong one.
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   win.document.querySelector('#sAtmosphere [data-atmosphere="aurora"]').click();
   assert.equal(body.dataset.atmosphere, "aurora");
   win.closeAllPanels();
   assert.equal(body.dataset.atmosphere, "spotlight", "Escape must put the saved choice back too");
 
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   win.document.querySelector('#sAtmosphere [data-atmosphere="noir"]').click();
   win.document.getElementById("sSave").click();
   assert.equal(body.dataset.atmosphere, "noir");
   assert.equal(cfg().atmosphere, "noir");
 
   // default is stored as no preference, same idea as the accent resets
-  win.document.getElementById("bSettings").click();
+  win.document.getElementById("bSettings").click(); await tick();
   win.document.querySelector('#sAtmosphere [data-atmosphere="spotlight"]').click();
   win.document.getElementById("sSave").click();
   assert.equal(body.dataset.atmosphere, "spotlight");
@@ -5179,8 +5189,9 @@ test("a refresh is owed only on checks that actually happened; never checked is 
   const win = bootApp([acc(1, now - 40 * D), acc(2, now - 5 * D), acc(3, null), acc(4, null)]);
   assert.match(win.document.querySelector('#count [data-flag="stale"]').textContent, /^2 need a refresh/,
     "the two checked days ago");
-  const never = win.document.querySelector('#dash [data-flag="unchecked"] .v').textContent;
-  assert.equal(never, "2", "the two unchecked ones are counted here, and only here");
+  const never = win.document.querySelector('.rib-i[data-flag="unchecked"]').textContent;
+  assert.equal(never, "2 never checked", "the two unchecked ones are counted in the header, and only there");
+  assert.equal(win.document.querySelector('#dash [data-flag="unchecked"]'), null, "the stats panel does not repeat it");
   assert.equal(win.document.querySelector('#dash [data-flag="stale"]'), null, "the toolbar says it, the panel does not repeat it");
 });
 
@@ -5739,7 +5750,7 @@ test("the Unranked count and the filter behind it agree", () => {
 
   // the never-checked account is still reachable, from the tile that counts it
   win.document.querySelector('#ribbon .rib-i[data-tier="UNRANKED"]').click();
-  win.document.querySelector('#dash [data-flag="unchecked"]').click();
+  win.document.querySelector('#ribbon .rib-i[data-flag="unchecked"]').click();
   assert.equal(win.document.querySelectorAll(".card").length, 1);
   assert.equal(win.document.querySelector(".card").dataset.id, "nv");
 });
@@ -6072,10 +6083,11 @@ test("flagging an account marks it in every layout, filters, and is counted", ()
 
   const tile = win.document.querySelector('[data-flag="attention"]');
   assert.ok(tile, "a stat tile appears once something is flagged");
-  assert.match(tile.textContent, /Needs attention/);
+  assert.match(tile.textContent, /^\s*Flagged\s*1\s*marked by you/);
+  assert.doesNotMatch(tile.textContent, /no longer exists/, "it only ever counted flags");
   tile.click();
   assert.equal(win.document.querySelectorAll(".card").length, 1, "and filters to it");
-  assert.match(win.document.getElementById("chips").textContent, /Needs attention/);
+  assert.match(win.document.getElementById("chips").textContent, /Flagged/);
 });
 
 // A profile that no longer exists is not a transient failure: every future check
@@ -6454,7 +6466,7 @@ test("a rank label drops the division above Master and keeps it below", () => {
   assert.equal(win.tierLabel({ tier: "UNRANKED", division: "II" }), "Unranked");
   assert.equal(win.tierLabel({}), "Unranked");
   // shortRank builds on it, so it inherits the guard
-  assert.equal(win.shortRank({ tier: "CHALLENGER", division: "III", lp: 1200 }), "Challenger · 1200 LP");
+  assert.equal(win.shortRank({ tier: "CHALLENGER", division: "III", lp: 1200 }), "Challenger · 1,200 LP");
   assert.equal(win.shortRank({ tier: "SILVER", division: "III", lp: 40 }), "Silver III · 40 LP");
 });
 
@@ -6608,7 +6620,7 @@ test("the markup builders refuse a bad division even when handed one directly", 
   assert.doesNotMatch(win.tileHTML(acc), bad, "tile");
   // and the rank still reads as a rank
   assert.match(win.cardHTML(acc, 0), /Challenger/);
-  assert.match(win.cardHTML(acc, 0), /1200 LP/);
+  assert.match(win.cardHTML(acc, 0), /1,200 LP/);
 });
 
 // ---- what a failed first check is allowed to claim ----
@@ -6625,21 +6637,20 @@ test("a first check that failed leaves the account never checked, not unranked",
     stats: { note: "Auto-fetch failed (timeout) — enter it by hand with ✎ Rank" },
   }]);
   const card = win.document.querySelector('.card[data-id="f1"]');
-  assert.match(card.textContent, /Never checked/);
+  assert.match(card.textContent, /No rank yet/);
+  assert.doesNotMatch(card.textContent, /Never checked/, "a check was tried: \"Never checked\" beside \"Last check failed\" contradicted it");
   assert.doesNotMatch(card.textContent, /Unranked|No ranked games found/);
   assert.match(card.textContent, /Last check failed/, "and it says the check failed");
   assert.match(card.querySelector(".c-failed").title, /took too long/, "and why, on the mark");
 
-  // the panel was right all along; the card is what disagreed with it
-  const tile = win.document.querySelector('#dash [data-flag="unchecked"]');
-  assert.ok(tile, "the stats panel counts it as never checked");
-  assert.equal(tile.querySelector(".v").textContent, "1");
+  // the card is the one place it is said, with a single account and no header line yet
+  assert.equal(win.document.querySelector('#dash [data-flag="unchecked"]'), null, "no tile repeating it");
 
   for (const layout of ["list", "wall"]) {
     win.document.querySelector(`[data-density="${layout}"]`).click();
     const el = win.document.querySelector('[data-id="f1"] .hx-in');
-    assert.match(el.textContent, /Never checked/, layout);
-    assert.doesNotMatch(el.textContent, /Unranked/, layout);
+    assert.match(el.textContent, /No rank yet/, layout + " says the same");
+    assert.doesNotMatch(el.textContent, /Unranked|Never checked/, layout);
   }
 });
 
@@ -7784,12 +7795,15 @@ test("never-checked / chore filters ignore banned and archived accounts", () => 
   assert.equal(win.isLive({ archived: false, status: "active" }), true);
   assert.equal(win.isLive({ archived: false, status: "banned" }), false);
   assert.equal(win.needsAttention({ flagged: true, status: "banned", archived: false }), false);
+  assert.equal(win.needsAttention({ flagged: true, status: "active", archived: false, stats: { found: false } }), false,
+    "flagged by a check that found no profile: the header's not-found warning has it, Flagged does not count it again");
+  assert.equal(win.needsAttention({ flagged: true, status: "active", archived: false, stats: { found: true } }), true);
 
-  const never = win.document.querySelector('#dash [data-flag="unchecked"] .v');
-  assert.ok(never, "never-checked tile present");
-  assert.equal(never.textContent.trim(), "1", "only the live unchecked account counts");
+  const never = win.document.querySelector('.rib-i[data-flag="unchecked"]');
+  assert.ok(never, "never checked is in the header");
+  assert.equal(never.textContent.trim(), "1 never checked", "only the live unchecked account counts");
 
-  win.document.querySelector('#dash [data-flag="unchecked"]').click();
+  win.document.querySelector('.rib-i[data-flag="unchecked"]').click();
   const names = [...win.document.querySelectorAll(".card .c-name, .rw-nm")].map(n => n.textContent);
   assert.equal(win.document.querySelectorAll(".card, .rw").length, 1);
   assert.match(names.join(" "), /Live/);
@@ -8526,9 +8540,6 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
     { id: "c", region: "EUW", gameName: "Ok", tagLine: "3", status: "active", tags: [], history: [],
       stats: { found: true, tier: "SILVER", division: "I", lp: 0, updatedAt: Date.now() } },
   ]);
-  const dashNever = win.document.querySelector('#dash [data-flag="unchecked"] .v');
-  assert.ok(dashNever);
-  assert.equal(dashNever.textContent.trim(), "1", "CSV tier without updatedAt is not never-checked");
   assert.match(win.document.querySelector(".rib-row").textContent, /1 never checked/);
   assert.equal(win.neverChecked({ status: "active", archived: false,
     stats: { found: true, tier: "GOLD", division: "II", lp: 10 } }), false);
@@ -8551,7 +8562,7 @@ test("the paid AI rank check waits under Advanced, and opens by itself when a ke
 // A phone's header was four rows: gem and wordmark, strapline, rank bar, then the tray alone
 test("on a phone the header is one app bar: the wordmark left, the tray right, the rank bar under both", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-  const at = css.indexOf("@media (max-width:560px){\n    .top{display:grid");
+  const at = css.indexOf("@media (max-width:560px), (max-height:500px) and (orientation:landscape){\n    .top{display:grid");
   assert.ok(at > -1, "a phone rule for the header");
   const r = css.slice(at, css.indexOf("\n  }", at));
   assert.match(r, /\.top>\.bar\{grid-column:2;grid-row:1/, "the tray beside the wordmark, not on a row of its own");
@@ -8584,8 +8595,8 @@ test("out of date is amber like any warning; red stays for lost, banned and irre
     stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() - 6 * 86400000 } },
     { id: "n", gameName: "N", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], stats: null }]);
   assert.ok(win.document.querySelector('.card[data-id="s"] .upd.stale'), "the stale card is marked");
-  assert.match(win.document.querySelector('#dash [data-flag="unchecked"] .v').getAttribute("style"), /--warn-txt/,
-    "never checked is a chore, not the user's accent");
+  assert.match(appJs, /<div class="k">Flagged<\/div>\s*<div class="v" style="color:var\(--warn-txt\)">/,
+    "a flag you left is a chore, amber, not the user's accent and not red");
   assert.match(rule(".b-danger"), /--danger/, "a destructive button is still red");
   // the decay chip had an amber of its own, a shade off --warn: two yellows on one card
   assert.match(rule(".d-warn"), /color:var\(--warn-txt\)/, "the decay chip is the warning colour");
@@ -8593,15 +8604,15 @@ test("out of date is amber like any warning; red stays for lost, banned and irre
 });
 
 // Picking a theme and pressing Esc undid it without a word
-test("once a setting changes, Settings says Save keeps it and closing puts it back", () => {
+test("once a setting changes, Settings says Save keeps it and closing asks first", async () => {
   const win = bootApp(seededAccount());
   const doc = win.document, hint = () => doc.getElementById("sFootHint");
   win.openSettings("look");
   assert.equal(hint().classList.contains("dirty"), false);
   doc.querySelector('#sEffects [data-v="subtle"]').click();
   assert.ok(hint().classList.contains("dirty"), "a change is flagged");
-  assert.match(hint().textContent, /Not saved yet\. Save keeps it; closing puts it back\./);
-  doc.getElementById("sClose").click();
+  assert.match(hint().textContent, /Not saved yet\. Save keeps it; closing asks first\./);
+  doc.getElementById("sClose").click(); await tick();
   win.openSettings("security");
   assert.equal(hint().classList.contains("dirty"), false, "a fresh open starts clean");
   const pw = doc.getElementById("sVaultPass");
@@ -8823,7 +8834,7 @@ test("on a phone the toolbar's two count lines start at one edge, and the header
 // At 2560px the page stopped at 1640: 460px empty either side and four cards to a row
 test("a wide screen gets a wide page, and the list spreads its columns rather than opening a hole after the name", () => {
   const max = +html.match(/\n  \.wrap\{[^}]*max-width:(\d+)px/)[1];
-  const minCard = +html.match(/\n  \.grid\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\((\d+)px/)[1];
+  const minCard = +html.match(/\n  \.grid\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\(min\((\d+)px,100%\)/)[1];
   const cols = w => Math.floor((Math.min(w, max) - 60 + 16) / (minCard + 16));
   assert.ok(cols(2560) >= 6, "six cards to a row at 2560: " + cols(2560));
   assert.ok(cols(1920) >= 5, "five at 1920: " + cols(1920));
@@ -9035,7 +9046,7 @@ test("the LP chip says it is since the last check, with the pace beside it, and 
 
 // A phone's toolbar stacked Check all ranks over Refresh N stale: two buttons for one job
 test("on a phone the toolbar has one ranks button: Refresh stale when there is any, else Check all", () => {
-  const block = html.slice(html.indexOf("@media (max-width:560px){\n    .tools{display:flex;flex-wrap:wrap}"));
+  const block = html.slice(html.indexOf("@media (max-width:560px), (max-height:500px) and (orientation:landscape){\n    .tools{display:flex;flex-wrap:wrap}"));
   assert.match(block.slice(0, 3000), /\.cmd:has\(#bCheckStale:not\(\.hidden\)\) #bCheckAll\{display:none\}/);
   const D = 864e5;
   const acc = (id, ago) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
@@ -9440,7 +9451,7 @@ test("every form control a screen reader can reach has a name of its own", () =>
 test("a passing message sits bottom left and lets clicks through to what it covers", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
   const rule = css.match(/\n  #toast\{([^}]*)\}/)[1];
-  assert.match(rule, /left:clamp\(14px,3vw,28px\)/, "on the left: " + rule);
+  assert.match(rule, /left:calc\(clamp\(14px,3vw,28px\) \+ env\(safe-area-inset-left,0px\)\)/, "on the left: " + rule);
   assert.doesNotMatch(rule, /left:50%|translateX\(-50%\)/, "not centred");
   assert.match(rule, /pointer-events:none/, "a click on it reaches the card underneath");
   assert.match(css, /\n  #toast button\{pointer-events:auto;/, "except on its own Undo or Show");
@@ -9535,7 +9546,7 @@ test("every confirmation is the app's own window, and answering it leaves the wi
   assert.equal($("askOk").className, "b-danger", "a destructive answer is red");
   assert.equal($("askAlt").hidden, true, "one way forward, one button");
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-  assert.match(css, /#askAlt\[hidden\]\{display:none\}/, "which a button's own display rule must not bring back");
+  assert.match(css, /#askAlt\[hidden\],#askCancel\[hidden\]\{display:none\}/, "which a button's own display rule must not bring back");
   assert.match(css, /#askModal \.mdl\{max-width:460px\}/, "a small card, not a full window");
   assert.match(css, /#askModal \.mdl-in\{min-height:0;/, "on a phone too, where other windows fill the screen");
   await tick();
@@ -9614,6 +9625,551 @@ test("the link preview names a fresh image, at the size the page says it is", ()
   }
   assert.equal(String(w), pageHtml.match(/og:image:width" content="(\d+)"/)[1]);
   assert.equal(String(h), pageHtml.match(/og:image:height" content="(\d+)"/)[1]);
+});
+
+// A window closed and another opened before the browser had taken the step back: the
+// app's own flag said there was a history entry, the history said there was not, and
+// the next back press left the app with the window still open
+test("a window opened straight after another closed still has its back step", async () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const doc = win.document, open = id => !doc.getElementById(id).classList.contains("hidden");
+  const settle = () => new Promise(r => setTimeout(r, 40));
+  for (let i = 0; i < 4; i++) {
+    doc.getElementById("bSettings").click(); await tick();
+    doc.querySelector("#settings [data-close-panel]").click();
+    await tick();   // the close is seen, and its step back asked for...
+    doc.getElementById("bAdd").click();   // ...and the next window opens before it has happened
+    await settle();
+    assert.ok(open("form"));
+    assert.equal(win.history.state && win.history.state.smurfWindow, 1, "round " + i + ": the open form has its entry");
+    win.history.back();
+    await until(() => !open("form"), "back to close the form, round " + i);
+    await settle();
+    assert.equal(win.history.state, null, "and nothing is left behind");
+  }
+});
+
+// Only "Set a master password" asked before dropping the form. Escape, Cancel, ✕, a click
+// beside it and the back button closed it silently: a password made with Gen, already set
+// on the Riot account, was gone with one misclick.
+test("every way out of a form with typing in it asks first, and Keep editing keeps it", async () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  win.ask = win.__ask;
+  const doc = win.document, $ = id => doc.getElementById(id), open = id => !$(id).classList.contains("hidden");
+  const ways = {
+    "Escape": () => doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true })),
+    "✕": () => doc.querySelector("#form [data-close-panel]").click(),
+    "Cancel": () => $("fCancel").click(),
+    "a click beside it": () => { const f = $("form"); f.dispatchEvent(new win.MouseEvent("mousedown", { bubbles: true })); f.dispatchEvent(new win.MouseEvent("click", { bubbles: true })); },
+    "Add account again": () => $("bAdd").click(),
+  };
+  for (const [name, leave] of Object.entries(ways)) {
+    $("bAdd").click();
+    $("fLogin").value = "riot_login";
+    $("fGen").click(); await tick();
+    const pw = $("fPass").value;
+    assert.ok(pw.length >= 12, "Gen made a password");
+    leave(); await tick();
+    assert.ok(open("askModal"), name + " asks before dropping it");
+    assert.equal($("askOk").textContent, "Discard");
+    assert.equal($("askCancel").textContent, "Keep editing");
+    $("askCancel").click(); await tick();
+    assert.ok(open("form"), name + ": Keep editing leaves the form open");
+    assert.equal($("fPass").value, pw, "with the password still in it");
+    leave(); await tick();
+    $("askOk").click(); await tick();
+    assert.equal(open("form"), false, name + ": Discard closes it");
+  }
+  // nothing typed, nothing asked; an edit left as it was closes at once too
+  $("bAdd").click();
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await tick();
+  assert.ok(!open("form") && !open("askModal"), "an untouched form just closes");
+  runScript(win, "openForm(accounts[0])");
+  $("fCancel").click(); await tick();
+  assert.ok(!open("form") && !open("askModal"), "so does an edit with no change");
+  runScript(win, "openForm(accounts[0])");
+  $("fLabel").value = "Renamed";
+  await tick();   // the window's history entry is taken as it opens
+  win.history.back(); await until(() => open("askModal"), "the back button to ask too");
+  assert.equal($("askTitle").textContent, "Discard your changes to this account?");
+  $("askCancel").click(); await tick();
+  assert.ok(open("form") && $("fLabel").value === "Renamed");
+});
+
+// "Lunar" found the account and "Lunar Echo#EUW", pasted from the client, found nothing
+test("search finds an account by its whole Riot ID, however it was pasted", async () => {
+  const acc = (id, n, t) => ({ id, region: "EUW", gameName: n, tagLine: t, status: "active", tags: [], history: [], stats: null });
+  const win = bootApp([acc("e", "Lunar Echo", "EUW"), acc("t", "Lunar Tide", "NA1"), acc("x", "Echo Chamber", "EUW")]);
+  const shown = async q => { win.document.getElementById("tSearch").value = q;
+    win.document.getElementById("tSearch").dispatchEvent(new win.Event("input", { bubbles: true }));
+    await new Promise(r => setTimeout(r, 180));   // the search waits for a pause in typing
+    return [...win.document.querySelectorAll(".card")].map(c => c.dataset.id).sort().join(","); };
+  assert.equal(await shown("Lunar Echo#EUW"), "e", "as the client copies it");
+  assert.equal(await shown("lunar echo #euw"), "e", "as the lobby chat prints it");
+  assert.equal(await shown("Echo#EUW"), "e", "the end of a name with its tag");
+  assert.equal(await shown("Lunar Echo#NA1"), "", "and not with someone else's tag");
+  assert.equal(await shown("Lunar"), "e,t", "a part of a name still finds every match");
+  // Quick find too, where the word order had to match as well
+  const pal = q => win.palResults(q).filter(it => it.type === "acc").map(it => it.a.id).sort().join(",");
+  assert.equal(pal("Lunar Echo#EUW"), "e");
+  assert.equal(pal("lunar echo #euw"), "e");
+  assert.equal(pal("echo lunar"), "e", "words in any order");
+  assert.equal(pal("Lunar Echo#NA1"), "");
+});
+
+// The plain-text JSON export warned; the CSV, with the same passwords in it, did not
+test("exporting a spreadsheet with logins in it says so first, like the JSON backup", async () => {
+  const win = bootApp([pwAcc("a", "Zt7#q!Lm2pWx")]);
+  let asked = null, saved = 0;
+  win.ask = async o => { asked = o; return false; };
+  const catchSaves = w => runScript(w, `URL.createObjectURL = () => "blob:x"; URL.revokeObjectURL = () => {};
+    downloadBlob = () => { window.__saved = (window.__saved || 0) + 1 };
+    HTMLAnchorElement.prototype.click = function () { if (this.download) window.__saved = (window.__saved || 0) + 1 }`);
+  catchSaves(win);
+  win.document.getElementById("bExportCsv").click(); await tick();
+  assert.match(asked.title, /spreadsheet with your logins/);
+  assert.match(asked.body, /passwords and emails are in the file as plain text/);
+  assert.equal(win.__saved, undefined, "and No exports nothing");
+  win.ask = async () => "ok";
+  win.document.getElementById("bExportCsv").click(); await tick();
+  assert.equal(win.__saved, 1, "Yes exports it");
+  // an account with no login at all has nothing to warn about
+  const bare = bootApp([{ id: "b", region: "EUW", gameName: "B", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  let bareAsked = 0; bare.ask = async () => { bareAsked++; return "ok"; };
+  catchSaves(bare);
+  bare.document.getElementById("bExportCsv").click(); await tick();
+  assert.equal(bareAsked, 0);
+});
+
+// Lock now showed "VAULT LOCKED" on the lock screen and a "Vault locked" message with it
+test("Lock now says it once: the lock screen, with no message under it", async () => {
+  const win = bootApp();
+  addRealAccount(win, "First", "1");
+  win.document.getElementById("sVaultPass").value = "lockme123";
+  win.document.getElementById("sVaultSet").click();
+  await until(() => encrypted(win), "encrypted");
+  win.document.getElementById("toast").textContent = "";
+  win.openSettings("security");
+  win.document.getElementById("sLockNow").click(); await tick();
+  assert.equal(win.document.getElementById("lock").classList.contains("hidden"), false, "locked");
+  assert.match(win.document.getElementById("lock").textContent, /Vault locked/);
+  assert.doesNotMatch(win.document.getElementById("toast").textContent, /Vault locked/, "and said once");
+});
+
+// Offline, Check all ran through every account and failed each one: "5 of 18 · 5 failed"
+test("offline, Check all and Refresh say so instead of failing every account", async () => {
+  const one = (id, n) => ({ id, region: "EUW", gameName: n, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 } });
+  const win = bootApp([one("a", "A"), one("b", "B")], w => Object.defineProperty(w.navigator, "onLine", { configurable: true, get: () => false }));
+  let fetched = 0; win.fetch = async () => { fetched++; throw new Error("offline"); };
+  win.document.getElementById("bCheckAll").click(); await tick();
+  assert.match(win.document.getElementById("toast").textContent, /You're offline/);
+  assert.equal(appGet(win, "run"), null, "no run started");
+  win.document.querySelector('.card[data-id="a"] [data-act="check"]').click(); await tick();
+  assert.match(win.document.getElementById("toast").textContent, /You're offline/, "a single Refresh too");
+  assert.equal(fetched, 0, "nothing sent");
+  assert.equal(win.document.querySelectorAll(".c-failed").length, 0, "and no card marked as failed for it");
+});
+
+// A new account was sorted in somewhere below while the page stayed at the top, so it
+// looked as if nothing had been added
+test("a new account is scrolled to and lit up, even past a filter that would hide it", async () => {
+  const ranked = (id, n, tier) => ({ id, region: "EUW", gameName: n, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier, division: "I", lp: 1, updatedAt: Date.now() } });
+  const win = bootApp([ranked("a", "Alpha", "DIAMOND"), ranked("b", "Beta", "GOLD"), ranked("c", "Gamma", "SILVER")]);
+  const doc = win.document, scrolled = [];
+  win.Element.prototype.scrollIntoView = function () { scrolled.push(this.dataset.id) };
+  // a search that the new account will not match
+  doc.getElementById("tSearch").value = "Alpha";
+  doc.getElementById("tSearch").dispatchEvent(new win.Event("input", { bubbles: true }));
+  await new Promise(r => setTimeout(r, 180));
+  doc.getElementById("bAdd").click();
+  doc.getElementById("fName").value = "Zeta New"; doc.getElementById("fTag").value = "EUW";
+  doc.getElementById("fSave").click();
+  const id = appGet(win, "accounts.find(a => a.gameName === 'Zeta New').id");
+  const card = doc.querySelector(`.card[data-id="${id}"]`);
+  assert.ok(card, "the filter that would hide it is gone");
+  assert.equal(doc.getElementById("tSearch").value, "");
+  assert.ok(card.closest(".hx").classList.contains("flash"), "lit up");
+  assert.equal(scrolled.at(-1), id, "and brought into view");
+  // Bulk add takes you to the first of what it added
+  doc.getElementById("bBulkAdd").click();
+  doc.getElementById("baList").value = "Omega One#EUW\nOmega Two#EUW";
+  doc.getElementById("baSave").click();
+  assert.equal(scrolled.at(-1), appGet(win, "accounts.find(a => a.gameName === 'Omega One').id"));
+});
+
+// White text on the main buttons was 2.8:1 on Shadow Isles and Piltover and 3.4:1 on Void;
+// and Noxus filled every main button red, so "Copy username" looked like Delete
+test("every theme's main buttons are readable, and none of them is red", () => {
+  const win = bootApp();
+  const lum = hex => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const ratio = (x, y) => { const [a, b] = [lum(x), lum(y)].sort((p, q) => q - p); return (a + 0.05) / (b + 0.05); };
+  const themes = appGet(win, "JSON.stringify(THEMES)");
+  for (const t of JSON.parse(themes)) {
+    const ink = win.inkOn(t.b);
+    assert.ok(ratio(ink, t.b) >= 4.5, `${t.n}: ${ink} on ${t.b} is ${ratio(ink, t.b).toFixed(2)}:1`);
+    const hue = win.hexToHsl(t.b)[0];
+    assert.ok(Math.min(hue, 360 - hue) > 25 || win.hexToHsl(t.b)[1] < 25, t.n + "'s buttons are not the colour of Delete");
+  }
+  // and a colour picked by hand gets the better ink too
+  for (const hex of ["#1fae8a", "#3f9cff", "#e04fd0", "#7a1fd1", "#ffe066", "#204060"])
+    assert.ok(ratio(win.inkOn(hex), hex) >= ratio("#ffffff", hex) - 1e-9, hex + ": never worse than plain white");
+});
+
+// The installed iPhone app draws under a see-through status bar, and nothing made room
+// for it: "Stats ⋯ ?" would sit under the clock
+test("the installed iPhone app keeps the page, the pinned toolbar and windows clear of the clock", () => {
+  assert.match(pageHtml, /<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">/);
+  assert.match(pageHtml, /<meta name="viewport" content="[^"]*viewport-fit=cover/, "so iOS reports the notch at all");
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /\n  body\{padding-top:env\(safe-area-inset-top,0px\);/, "the page starts below it");
+  assert.match(css, /\.console\{position:sticky;top:calc\(env\(safe-area-inset-top,0px\) - var\(--cmd-pin,0px\)\)/, "the toolbar pins below it");
+  assert.match(css, /\.console\.running\{top:env\(safe-area-inset-top,0px\)\}/);
+  assert.match(css, /\.modal\{[^}]*border-top:env\(safe-area-inset-top,0px\) solid transparent/, "a phone's full-screen window too");
+  assert.match(css, /#toast\{position:fixed;bottom:calc\([^;]*env\(safe-area-inset-bottom,0px\)\)/, "and the home bar at the bottom");
+  assert.match(css, /\.to-top\{position:fixed;[^}]*env\(safe-area-inset-bottom,0px\)/);
+});
+
+// Quick find was Ctrl+K only, so a phone could never open it, though it holds the
+// quickest way to a login in the app
+test("Quick find has a button in the header, for a phone with no Ctrl+K", async () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const btn = win.document.querySelector(".top .bar #bFind");
+  assert.ok(btn, "in the header bar");
+  assert.equal(btn.getAttribute("aria-label"), "Quick find");
+  assert.match(btn.title, /Ctrl\+K/, "and it teaches the shortcut");
+  btn.click(); await tick();
+  assert.equal(win.document.getElementById("palette").classList.contains("hidden"), false);
+  assert.equal(win.document.activeElement, win.document.getElementById("palInput"), "ready to type");
+});
+
+// At 320px (an iPhone mini or SE with Display Zoom) "SMURF TRACKER" ran into "Stats" and
+// every card was cut off on the right: the grid's 335px floor was wider than the screen
+test("a 320px phone gets cards that fit and a header that does not collide", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /\n  \.grid\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\(min\(335px,100%\),1fr\)\)/, "a column never wider than the room");
+  const narrow = css.slice(css.indexOf("@media (max-width:380px){"));
+  assert.match(narrow.slice(0, narrow.indexOf("\n  }")), /#bDashToggle \.dt-v,#bDashToggle \.dt-n\{display:none\}/, "the toggle keeps only its arrow");
+  assert.match(css, /@media \(max-width:340px\)\{\.top h1\{font-size:calc\(16px\*var\(--ts\)\)/, "and the wordmark steps down at the narrowest");
+  // with the word gone, the arrow still says what it does
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const t = win.document.getElementById("bDashToggle");
+  assert.match(t.getAttribute("aria-label"), /^(Show|Hide) stats$/);
+  t.click();
+  assert.match(t.getAttribute("aria-label"), /^(Show|Hide) stats$/);
+});
+
+// A phone held sideways (844 by 390) was laid out as a desktop: header, stats and two rows
+// of filters all open, and the first card more than two screens down
+test("a phone held sideways gets the phone's layout: stats folded, filters behind one button", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const q = "@media (max-width:560px), (max-height:500px) and (orientation:landscape){";
+  assert.ok(css.includes(q + "\n    .top{display:grid;"), "the phone's app-bar header");
+  assert.ok(css.includes(q + "\n    .tools{display:flex;flex-wrap:wrap}"), "and the filters folded behind Filters");
+  assert.equal(appGet(bootApp(), "PHONE_MQ"), "(max-width:560px), (max-height:500px) and (orientation:landscape)", "the script asks the same question");
+  const seed = [{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }];
+  const sideways = bootApp(seed, w => { w.matchMedia = m => ({ matches: m.includes("max-height:500px"), addListener() {}, removeListener() {}, addEventListener() {} }); });
+  assert.equal(appGet(sideways, "dashCollapsed()"), true, "the stats start folded, as on a phone held upright");
+  assert.equal(appGet(bootApp(seed), "dashCollapsed()"), false, "a desktop still opens them");
+});
+
+// On a phone the selection bar stayed at the top of the list: tick a card further down
+// and you scrolled back up to act on it
+test("on a phone the selection bar sits at the foot of the screen, with room under the last card", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const at = css.indexOf("#bulkbar:not(.hidden){position:fixed;");
+  assert.ok(at > 0, "pinned");
+  assert.match(css.slice(css.lastIndexOf("@media", at), at), /^@media \(max-width:560px\), \(max-height:500px\) and \(orientation:landscape\)\{/, "on a phone, upright or sideways");
+  const rule = css.slice(at, css.indexOf("}", at));
+  assert.match(rule, /bottom:calc\(10px \+ env\(safe-area-inset-bottom,0px\)\)/, "above the home bar");
+  assert.match(css, /body\.selecting \.grid\{padding-bottom:190px\}/, "and the last card can scroll out from under it");
+});
+
+// Archive said where the account went and offered no way back, and neither did deleting
+// a selection
+test("archiving an account and deleting a selection both offer Undo", async () => {
+  const acc = (id, n) => ({ id, region: "EUW", gameName: n, tagLine: "1", status: "active", tags: [], history: [], stats: null, password: "pw" + id });
+  const win = bootApp([acc("a", "A"), acc("b", "B"), acc("c", "C"), acc("d", "D")]);
+  const doc = win.document, ids = () => appGet(win, "JSON.stringify(accounts.filter(a => !a.archived).map(a => a.id))");
+  cardMenu(win, "b").querySelector('[data-act="archive"]').click();
+  await until(() => doc.getElementById("toastBtn"), "the message with its Undo");
+  assert.match(doc.getElementById("toast").textContent, /^Archived\./);
+  assert.equal(ids(), JSON.stringify(["a", "c", "d"]));
+  doc.getElementById("toastBtn").click();
+  await until(() => ids() === JSON.stringify(["a", "b", "c", "d"]), "Undo to bring it back");
+  // a selection of two, deleted and put back where each one was
+  const box = id => doc.querySelector(`.card[data-id="${id}"] .bulkchk`);
+  box("a").click(); box("c").click();
+  doc.getElementById("bulkDelete").click(); await tick();
+  await until(() => ids() === JSON.stringify(["b", "d"]) && doc.getElementById("toastBtn"), "the delete and its Undo");
+  doc.getElementById("toastBtn").click();
+  await until(() => ids() === JSON.stringify(["a", "b", "c", "d"]), "both back, in their places");
+  assert.equal(appGet(win, "accounts.find(a => a.id === 'c').password"), "pwc", "with their logins");
+});
+
+// "Export encrypted backup", the first and highlighted button, was a dead end without a
+// master password: it only said to go and set one
+test("an encrypted backup with no master password gets a password of its own, and import asks for it", async () => {
+  const win = bootApp([pwAcc("a", "Zt7#q!Lm2pWx")]);
+  win.ask = win.__ask;
+  const doc = win.document, $ = id => doc.getElementById(id), open = () => !$("askModal").classList.contains("hidden");
+  const files = [];
+  runScript(win, "downloadBlob = (b, n) => window.__files.push([b, n])"); win.__files = files;
+  $("bExportEnc").click(); await tick();
+  assert.ok(open(), "it asks right there");
+  assert.equal($("askTitle").textContent, "Choose a password for this backup");
+  assert.equal($("askF0").type, "password");
+  $("askF0").value = "backup-pw"; $("askF1").value = "backup-pq";
+  $("askOk").click(); await tick();
+  assert.ok(open(), "a typo would make the file unopenable, so it waits");
+  assert.equal($("askErr").textContent, "The two passwords don't match");
+  $("askF1").value = "backup-pw";
+  $("askOk").click();
+  await until(() => files.length === 1, "the backup to be saved");
+  assert.equal($("askFields").textContent, "", "and what was typed is gone from the page");
+  const text = await new Promise(r => { const fr = new win.FileReader(); fr.onload = () => r(fr.result); fr.readAsText(files[0][0]); });
+  assert.doesNotMatch(text, /Zt7#q!Lm2pWx/, "encrypted");
+  assert.match(text, /"encrypted": true/);
+  // brought back into a fresh vault, which has no master password either
+  const win2 = bootApp();
+  win2.ask = win2.__ask;
+  const d2 = win2.document, $2 = id => d2.getElementById(id);
+  win2.doImport(new win2.File([text], "smurf-backup.json", { type: "application/json" }));
+  await until(() => !$2("askModal").classList.contains("hidden"), "it to ask for the backup's password");
+  assert.equal($2("askTitle").textContent, "This backup is encrypted");
+  $2("askF0").value = "wrong"; $2("askOk").click();
+  await until(() => /didn't open it/.test($2("askBody").textContent), "a wrong password to be said");
+  $2("askF0").value = "backup-pw"; $2("askOk").click();
+  await until(() => d2.querySelectorAll(".card").length === 1, "the account to come back");
+  assert.equal(appGet(win2, "accounts[0].password"), "Zt7#q!Lm2pWx", "logins and all");
+});
+
+// "While away" was always in the sort list and sorted by nothing unless the "While you were
+// away" band had measured a visit
+test("the sort list offers While you were away only while that sort is on", () => {
+  const opts = win => [...win.document.querySelectorAll("#tSort option")].map(o => o.value);
+  const DAY = 86400000, now = Date.now();
+  const h = (lp0, lp1) => [{ t: now - 3 * DAY, tier: "GOLD", division: "II", lp: lp0 }, { t: now - 1000, tier: "GOLD", division: "II", lp: lp1 }];
+  const seed = [
+    { id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: h(10, 60), stats: { found: true, tier: "GOLD", division: "II", lp: 60, updatedAt: now - 1000 } },
+    { id: "b", region: "EUW", gameName: "B", tagLine: "1", status: "active", tags: [], history: h(50, 20), stats: { found: true, tier: "GOLD", division: "II", lp: 20, updatedAt: now - 1000 } },
+  ];
+  const win = bootApp(seed, w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ lastSeenAt: now - 2 * DAY })));
+  assert.equal(opts(win).includes("away"), false, "not in the list on its own");
+  assert.equal(win.document.querySelector('#tSort option[value="change"]').textContent, "Sort: Last LP change");
+  win.document.getElementById("awayShow").click();
+  assert.equal(win.document.getElementById("tSort").value, "away", "the band's Sort by movement puts it in and picks it");
+  assert.deepEqual([...win.document.querySelectorAll(".card")].map(c => c.dataset.id), ["a", "b"]);
+  const sel = win.document.getElementById("tSort");
+  sel.value = "rank"; sel.dispatchEvent(new win.Event("change"));
+  assert.equal(opts(win).includes("away"), false, "and it goes once another sort is picked");
+});
+
+// "Oct 19 → Nov 8" in the stats, "8 Nov" on the charts: one app, two date orders
+test("the Average climb dates read day before month, as the charts do", () => {
+  const win = bootApp();
+  const y = new Date().getFullYear();
+  const t1 = new Date(y, 9, 19, 12).getTime(), t2 = new Date(y, 10, 8, 12).getTime();
+  const tr = win.poolLpTrend([{ id: "a", history: [
+    { t: t1, tier: "GOLD", division: "II", lp: 10 }, { t: t2, tier: "GOLD", division: "II", lp: 40 }] }]);
+  assert.equal(tr.span, "19 Oct → 8 Nov");
+  assert.match(tr.svg, /\+30 LP since 19 Oct/);
+  assert.equal(win.dateLabel(t2), "8 Nov", "the chart axis says the same");
+});
+
+// "12 h ago" next to "4 days ago": every unit in words, and the list's Updated
+// column wide enough for the longest of them
+test("times ago use whole words for every unit, and the list column fits them", () => {
+  const win = bootApp();
+  const now = Date.now(), M = 60000;
+  assert.equal(win.timeAgo(now - 20000), "just now");
+  assert.equal(win.timeAgo(now - 1 * M - 5000), "1 minute ago");
+  assert.equal(win.timeAgo(now - 59 * M - 5000), "59 minutes ago");
+  assert.equal(win.timeAgo(now - 60 * M - 5000), "1 hour ago");
+  assert.equal(win.timeAgo(now - 12 * 60 * M - 5000), "12 hours ago");
+  assert.equal(win.timeAgo(now - 24 * 60 * M - 5000), "1 day ago");
+  assert.equal(win.timeAgo(now - 4 * 24 * 60 * M - 5000), "4 days ago");
+  // "59 minutes ago" is 87px in the list's 12px type; "143 days ago" (75px) was
+  // already cut to "143 days…" in the old 72px column
+  // third from the end in every template: Updated, the copy keys, the chevron
+  const updCol = c => +c.trim().split(/\s+(?![^(]*\))/).at(-3).replace(/minmax\((\d+)px.*/, "$1").replace("px", "");
+  const base = html.match(/\.grid\.list\{--rw-cols:([^;]+);/)[1];
+  const wide = html.match(/@media \(min-width:1181px\)\{\s*\.grid\.list\{--rw-cols:([^}]+)\}/)[1];
+  const mid = html.match(/@media \(max-width:1180px\)\{\s*\.grid\.list\{--rw-cols:([^;]+);/)[1];
+  for (const c of [base, wide, mid]) assert.ok(updCol(c) >= 88, "the Updated column: " + c);
+});
+
+// "colour" and "licence" beside "Favorites" and "Honor", and a screen reader saying
+// "color" for the button the eye reads as "colour". Riot writes American English.
+test("the page's words are spelled one way, American, as Riot's are", () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], fav: true,
+    stats: { found: true, tier: "GOLD", division: "II", lp: 50, wins: 10, losses: 10, updatedAt: Date.now() } }]);
+  const doc = win.document;
+  const terms = doc.querySelector("#help .terms");
+  if (terms) terms.remove(); // the terms are left word for word
+  doc.querySelectorAll("script,style").forEach(e => e.remove()); // the inlined code and its comments
+  const said = [doc.body.textContent, doc.title,
+    ...[...doc.querySelectorAll("[title],[aria-label],[placeholder]")].flatMap(e => ["title", "aria-label", "placeholder"].map(k => e.getAttribute(k) || ""))].join("\n");
+  const british = said.match(/\b(colour|licence|favourite|honour|behaviour|centre|grey|organis|recognis|customis|cancell)\w*/gi);
+  assert.equal(british, null, "British spellings: " + (british || []).join(", "));
+  // and the messages the code writes later: the code with its comments taken out,
+  // past releases' notes left as written, and one function name allowed
+  const code = appJs.slice(appJs.indexOf("];", appJs.indexOf("const APP_CHANGELOG")))
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").replace(/\s\/\/ .*$/gm, "");
+  const inCode = (code.match(/\b(colour|licence|favourite|honour|behaviour|centre|grey|cancelled)\w*/gi) || [])
+    .filter(w => w !== "centreSettingsTab");
+  assert.deepEqual(inCode, [], "in the app's messages");
+});
+
+// "1234 LP" with no separator, two lines above "1,591 games" with one
+test("LP figures carry a thousands separator, like the game counts", () => {
+  const D = 864e5, now = Date.now();
+  const win = bootApp([{ id: "c", region: "KR", gameName: "Top", tagLine: "KR1", status: "active", tags: [],
+    stats: { found: true, tier: "CHALLENGER", division: null, lp: 1234, wins: 312, losses: 250, updatedAt: now },
+    history: [{ t: now - 2 * D, tier: "CHALLENGER", lp: 1034, w: 300, l: 240 }, { t: now, tier: "CHALLENGER", lp: 1234, w: 312, l: 250 }] }]);
+  const doc = win.document;
+  const card = doc.querySelector('.card[data-id="c"]');
+  assert.match(card.textContent, /1,234 LP/, "the card");
+  assert.doesNotMatch(card.textContent, /1234/);
+  assert.match(card.querySelector(".delta").textContent, /\+200 LP/);
+  assert.equal(win.shortRank({ tier: "CHALLENGER", lp: 1234 }), "Challenger · 1,234 LP", "the label tips and the header use");
+  listView(win);
+  const row = doc.querySelector('.rw[data-id="c"]');
+  assert.match(row.querySelector(".rw-rank").textContent, /1,234 LP/, "the list row");
+});
+
+// "312W 250L" on a card, "15-9" in the champion table and "15 · 9" on the Most
+// played chips (a hyphen faded to half): one record, written one way
+test("a win/loss record is written one way everywhere: 15W 9L", async () => {
+  const now = Date.now();
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 1203, losses: 990, updatedAt: now,
+      champs: [{ name: "Lux", games: 24, wins: 15, losses: 9, wr: 63 }] } }]);
+  const doc = win.document;
+  assert.equal(win.wlText(1203, 990), "1,203W 990L");
+  const chip = [...doc.querySelectorAll("#dash .cmb")].find(c => c.querySelector(".n").textContent === "Lux");
+  assert.equal(chip.querySelector(".g").textContent, "15W 9L", "Most played");
+  assert.match(doc.getElementById("dash").textContent, /1,203W 990L/, "Season W/L");
+  const card = () => doc.querySelector('.card[data-id="a"]');
+  assert.match(card().querySelector(".wl").textContent, /^1,203W 990L/, "the card");
+  card().querySelector('[data-act="info"]').click(); // the drawer opens with the table unfolded
+  await tick();
+  const row = [...card().querySelectorAll('[data-k="sec-champs"] .chp')].map(r => [...r.children].map(c => c.textContent).join("|"));
+  assert.deepEqual(row, ["Champion|W/L|WR", "Lux|15W 9L|63%"], "the champion table");
+});
+
+// The share page had a 5px bar of tier colors over a legend of diamonds, a third way
+// of drawing what the app's header shows as emblems; and "Ranked 16 / of 16"
+test("the share page counts tiers with the header's emblems, and says how many are ranked in words", async () => {
+  const page = async a => {
+    const win = viewSnap(snapCode({ v: 1, t: "Mine", a }, false));
+    const doc = win.document;
+    await until(() => doc.querySelector(".sn-card"), "the snapshot to render");
+    const cell = [...doc.querySelectorAll(".sn-sum .cell")].find(c => c.querySelector(".k").textContent === "Ranked");
+    return { doc, ranked: [cell.querySelector("b").textContent, cell.querySelector("em").textContent] };
+  };
+  const mixed = await page([{ n: "A", k: [6, "II", 10] }, { n: "B", k: [4, "I", 50] }, { n: "C", k: [4, "III", 5] }, { n: "D" }]);
+  assert.equal(mixed.doc.querySelector(".sn-dist"), null, "no color bar");
+  const items = [...mixed.doc.querySelectorAll(".sn-tiers .sn-t")];
+  assert.deepEqual(items.map(i => i.textContent.trim()), ["1 Diamond", "2 Platinum", "1 unranked"]);
+  assert.ok(items[0].querySelector("svg.crest"), "each tier is its emblem");
+  assert.equal(items[1].getAttribute("title"), "Platinum: 2 accounts");
+  assert.deepEqual(mixed.ranked, ["3 of 4", "1 unranked"]);
+  const all = await page([{ n: "A", k: [6, "II", 10] }, { n: "B", k: [4, "I", 50] }]);
+  assert.deepEqual(all.ranked, ["All 2", "this season"]);
+  const none = await page([{ n: "A" }, { n: "B" }]);
+  assert.deepEqual(none.ranked, ["None", "no ranked games yet"]);
+  assert.equal(none.doc.querySelector(".sn-tiers"), null, "one kind of account is not a spread");
+});
+
+// The update note came up together with the master password prompt, and it was two
+// release notes cut off at "…" in a toast, gone after two seconds
+test("What's new waits for the master password prompt, then opens in a window of its own", async () => {
+  const seed = [{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], stats: null, password: "pw1" }];
+  const win = bootApp(seed, w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, lastChangelog: "1.0.0" })));
+  win.ask = win.__ask;
+  const doc = win.document, toastEl = doc.getElementById("toast");
+  const prompt = doc.getElementById("lockPrompt"), askM = doc.getElementById("askModal");
+  assert.equal(prompt.classList.contains("hidden"), false, "the prompt asks first");
+  assert.doesNotMatch(toastEl.textContent, /Updated/, "and nothing talks over it");
+  assert.equal(appGet(win, "cfg.lastChangelog"), "1.0.0", "the note is still owed");
+  doc.getElementById("lpLater").click();
+  const v = appGet(win, "APP_VERSION");
+  assert.match(toastEl.textContent, new RegExp("^Updated to v" + v.replace(/\./g, "\\.") + " What's new$"), "once it closes, the note");
+  assert.equal(appGet(win, "cfg.lastChangelog"), v);
+  doc.getElementById("toastBtn").click();
+  await tick();
+  assert.equal(askM.classList.contains("hidden"), false, "What's new opens the app's window");
+  assert.equal(doc.getElementById("askTitle").textContent, "What's new in v" + v);
+  const list = JSON.parse(appGet(win, "JSON.stringify(APP_CHANGELOG.find(e => e.v === APP_VERSION).items)"));
+  assert.equal(doc.getElementById("askBody").textContent, "• " + list.join("\n• "), "every item, none cut off");
+  assert.equal(doc.getElementById("askCancel").hidden, true, "nothing to cancel: it only tells you something");
+  doc.getElementById("askOk").click();
+  await tick();
+  assert.equal(askM.classList.contains("hidden"), true);
+  doc.getElementById("appVer").click();
+  await tick();
+  assert.equal(askM.classList.contains("hidden"), false, "the footer's version number opens it again");
+  doc.getElementById("askOk").click();
+  await tick();
+  // a window that asks something still has its Cancel
+  const p = win.ask({ title: "Sure?", body: "" });
+  assert.equal(doc.getElementById("askCancel").hidden, false);
+  doc.getElementById("askCancel").click();
+  assert.equal(await p, false);
+});
+
+// Closing Settings put back whatever Save had not kept: right for a theme being
+// tried on, wrong for an API key just pasted in, gone with one Escape
+test("closing Settings with unsaved changes asks first, with Save beside Discard", async () => {
+  const win = bootApp();
+  win.ask = win.__ask;
+  const doc = win.document, $ = id => doc.getElementById(id);
+  const open = id => !$(id).classList.contains("hidden");
+  const type = (id, v) => { $(id).value = v; $(id).dispatchEvent(new win.Event("input", { bubbles: true })); };
+  // nothing changed: Close just closes
+  $("bSettings").click();
+  $("sClose").click();
+  assert.equal(open("settings"), false, "nothing to lose, nothing asked");
+  assert.equal(open("askModal"), false);
+  // a pasted key, then Escape: asked, and Keep editing keeps it
+  $("bSettings").click();
+  type("sKey", "sk-test-123");
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await tick();
+  assert.ok(open("askModal"), "asked");
+  assert.equal($("askTitle").textContent, "Discard your changes to Settings?");
+  assert.equal($("askAlt").textContent, "Save");
+  assert.ok(open("settings"), "Settings stays behind the question");
+  $("askCancel").click();
+  await tick();
+  assert.ok(open("settings"));
+  assert.equal($("sKey").value, "sk-test-123", "Keep editing keeps what was typed");
+  // Close, then Save from the question
+  $("sClose").click();
+  await tick();
+  $("askAlt").click();
+  await tick();
+  assert.equal(open("settings"), false, "Save closes it");
+  assert.equal(appGet(win, "cfg.apiKey"), "sk-test-123", "and keeps the key");
+  // the ✕, then Discard
+  $("bSettings").click();
+  type("sKey", "sk-other");
+  doc.querySelector("#settings [data-close-panel]").click();
+  await tick();
+  $("askOk").click();
+  await tick();
+  assert.equal(open("settings"), false);
+  assert.equal(appGet(win, "cfg.apiKey"), "sk-test-123", "Discard keeps the saved one");
+  // the sync key saves itself the moment it changes, so it is nothing to lose
+  $("bSettings").click();
+  $("sSyncToken").value = "a".repeat(40);
+  $("sSyncToken").dispatchEvent(new win.Event("change", { bubbles: true }));
+  $("sClose").click();
+  assert.equal(open("settings"), false);
+  assert.equal(open("askModal"), false);
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
@@ -9742,9 +10298,10 @@ test("on a phone the filters fold behind one button that counts what is on, and 
 // After the first account the panel was 0W 0L, Best —, Group climb —: a wall of nothing
 test("the stats panel shows a figure only once there is something behind it", () => {
   const tiles = win => [...win.document.querySelectorAll("#dash .stat .k")].map(k => k.textContent.trim());
-  // one account, never checked: the one thing worth saying is that
+  // one account, never checked: its card says so, and the header once there are more;
+  // the panel has nothing of its own to add yet
   const fresh = bootApp([{ id: "n", gameName: "New", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], stats: null }]);
-  assert.deepEqual(tiles(fresh), ["Never checked"]);
+  assert.deepEqual(tiles(fresh), []);
   assert.equal(fresh.document.querySelector("#dash .dash-scope"), null, "no scope picker with nothing ranked to count");
   // a checked, unranked account with no games: nothing at all, and no Hide stats for an empty panel
   const quiet = bootApp([{ id: "u", gameName: "Lvl", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
@@ -10373,12 +10930,12 @@ test("the lock screen has no back-to-top button", async () => {
    visit records the version quietly; an update still announces itself. */
 test("a first visit is not shown a changelog; an update still is", () => {
   const first = bootApp();
-  assert.doesNotMatch(first.document.getElementById("toast").textContent, /^v\d/, "nothing to compare against yet");
+  assert.doesNotMatch(first.document.getElementById("toast").textContent, /^Updated to v\d/, "nothing to compare against yet");
   assert.equal(appGet(first, "cfg.lastChangelog"), appGet(first, "APP_VERSION"), "but the version is recorded, so the next one is news");
 
   const returning = bootApp(seededAccount(), w => w.localStorage.setItem("smurf-tracker-cfg",
     JSON.stringify({ seenHelp: true, lastChangelog: "1.0.0" })));
-  assert.match(returning.document.getElementById("toast").textContent, /^v\d/, "someone on an older version hears what changed");
+  assert.match(returning.document.getElementById("toast").textContent, /^Updated to v\d/, "someone on an older version hears what changed");
 });
 
 /* Until something is saved, the vault key still holds what could not be read — so
@@ -10451,7 +11008,7 @@ test("a pull from a device whose clock runs ahead does not make this one look ed
    its owner is exactly who the changelog is for. */
 test("a vault with no saved settings still hears what changed", () => {
   const win = bootApp(seededAccount());   // accounts on disk, no cfg key at all
-  assert.match(win.document.getElementById("toast").textContent, /^v\d/);
+  assert.match(win.document.getElementById("toast").textContent, /^Updated to v\d/);
 });
 
 /* A box positioned at left:50% with no width of its own shrinks to fit the space
@@ -10483,7 +11040,7 @@ test("the dashboard reads as one row of figures", () => {
 
   const wl = tile("Season W/L").querySelector(".v");
   assert.ok(wl.classList.contains("nw"), "the record holds together on one line");
-  assert.match(wl.textContent.replace(/\s+/g, " "), /^3600W 3300L$/);
+  assert.match(wl.textContent.replace(/\s+/g, " "), /^3,600W 3,300L$/);
   assert.match(tile("Season W/L").querySelector(".s-note").textContent, /52% WR/, "the rate moves under it");
 
   assert.equal(tile("Regions"), undefined, "a count nobody acts on is not a figure here");
@@ -10558,8 +11115,8 @@ test("frozen: both export files and the CSV import into an empty vault", async (
 // rows lost padding as the header left, which moved every card 16px at that moment
 test("scrolled down, only the search row stays pinned, and nothing shifts on the way", async () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-  assert.match(css, /\n  \.console\{position:sticky;top:calc\(-1\*var\(--cmd-pin,0px\)\)/, "it sticks at minus the command row");
-  assert.match(css, /\n  \.console\.running\{top:0\}/, "and whole while a check runs");
+  assert.match(css, /\n  \.console\{position:sticky;top:calc\(env\(safe-area-inset-top,0px\) - var\(--cmd-pin,0px\)\)/, "it sticks at minus the command row (below an iPhone's clock)");
+  assert.match(css, /\n  \.console\.running\{top:env\(safe-area-inset-top,0px\)\}/, "and whole while a check runs");
   assert.doesNotMatch(css, /body\.scrolled/, "no row changes size once the header is gone");
   // the offset is the command row's measured height, kept up to date as it wraps
   const watched = [];
@@ -10645,7 +11202,7 @@ test("Settings uses one kind of sub-heading in every tab, and every label names 
   const doc = win.document;
   const heads = tab => [...doc.querySelectorAll(`#settings .grp[data-tab="${tab}"] .s-h`)].map(h => h.textContent.trim());
   assert.equal(doc.querySelectorAll("#settings .atm-h").length, 0, "Appearance's own kind is gone");
-  assert.deepEqual(heads("look").slice(0, 2), ["Theme", "Your own colours"]);
+  assert.deepEqual(heads("look").slice(0, 2), ["Theme", "Your own colors"]);
   assert.deepEqual(heads("checks"), ["Automatic refresh"], "no ruled heading");
   assert.deepEqual(heads("security"), ["Storage", "Master password", "Unlock with Face ID, fingerprint or Windows Hello", "Locking", "Password check-up"]);
   assert.match(doc.querySelector('#settings .grp[data-tab="security"]').textContent, /Encrypts the whole vault at rest with AES-256/, "what it means, under it");
