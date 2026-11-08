@@ -801,7 +801,9 @@ test("a card's win-rate bar is drawn as a record, not as the goal rail's progres
 });
 
 test("the dashboard shares its figures evenly across rows instead of leaving a stub row", () => {
-  const win = bootApp();
+  // a ranked account with games, so the panel has a figure to show
+  const win = bootApp([{ id: "r", gameName: "Ranked", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 10, losses: 8, updatedAt: Date.now() } }]);
   assert.equal(win.dashCols(8, 1338, 158), 8, "one row when they fit");
   assert.equal(win.dashCols(8, 952, 158), 4, "eight at 1024px: four and four, not six and two");
   assert.equal(win.dashCols(11, 1338, 158), 6, "eleven: six and five");
@@ -5187,8 +5189,9 @@ test("a refresh is owed only on checks that actually happened; never checked is 
   const win = bootApp([acc(1, now - 40 * D), acc(2, now - 5 * D), acc(3, null), acc(4, null)]);
   assert.match(win.document.querySelector('#count [data-flag="stale"]').textContent, /^2 need a refresh/,
     "the two checked days ago");
-  const never = win.document.querySelector('#dash [data-flag="unchecked"] .v').textContent;
-  assert.equal(never, "2", "the two unchecked ones are counted here, and only here");
+  const never = win.document.querySelector('.rib-i[data-flag="unchecked"]').textContent;
+  assert.equal(never, "2 never checked", "the two unchecked ones are counted in the header, and only there");
+  assert.equal(win.document.querySelector('#dash [data-flag="unchecked"]'), null, "the stats panel does not repeat it");
   assert.equal(win.document.querySelector('#dash [data-flag="stale"]'), null, "the toolbar says it, the panel does not repeat it");
 });
 
@@ -5747,7 +5750,7 @@ test("the Unranked count and the filter behind it agree", () => {
 
   // the never-checked account is still reachable, from the tile that counts it
   win.document.querySelector('#ribbon .rib-i[data-tier="UNRANKED"]').click();
-  win.document.querySelector('#dash [data-flag="unchecked"]').click();
+  win.document.querySelector('#ribbon .rib-i[data-flag="unchecked"]').click();
   assert.equal(win.document.querySelectorAll(".card").length, 1);
   assert.equal(win.document.querySelector(".card").dataset.id, "nv");
 });
@@ -6080,10 +6083,11 @@ test("flagging an account marks it in every layout, filters, and is counted", ()
 
   const tile = win.document.querySelector('[data-flag="attention"]');
   assert.ok(tile, "a stat tile appears once something is flagged");
-  assert.match(tile.textContent, /Needs attention/);
+  assert.match(tile.textContent, /^\s*Flagged\s*1\s*marked by you/);
+  assert.doesNotMatch(tile.textContent, /no longer exists/, "it only ever counted flags");
   tile.click();
   assert.equal(win.document.querySelectorAll(".card").length, 1, "and filters to it");
-  assert.match(win.document.getElementById("chips").textContent, /Needs attention/);
+  assert.match(win.document.getElementById("chips").textContent, /Flagged/);
 });
 
 // A profile that no longer exists is not a transient failure: every future check
@@ -6639,10 +6643,8 @@ test("a first check that failed leaves the account never checked, not unranked",
   assert.match(card.textContent, /Last check failed/, "and it says the check failed");
   assert.match(card.querySelector(".c-failed").title, /took too long/, "and why, on the mark");
 
-  // the panel was right all along; the card is what disagreed with it
-  const tile = win.document.querySelector('#dash [data-flag="unchecked"]');
-  assert.ok(tile, "the stats panel counts it as never checked");
-  assert.equal(tile.querySelector(".v").textContent, "1");
+  // the card is the one place it is said, with a single account and no header line yet
+  assert.equal(win.document.querySelector('#dash [data-flag="unchecked"]'), null, "no tile repeating it");
 
   for (const layout of ["list", "wall"]) {
     win.document.querySelector(`[data-density="${layout}"]`).click();
@@ -7793,12 +7795,15 @@ test("never-checked / chore filters ignore banned and archived accounts", () => 
   assert.equal(win.isLive({ archived: false, status: "active" }), true);
   assert.equal(win.isLive({ archived: false, status: "banned" }), false);
   assert.equal(win.needsAttention({ flagged: true, status: "banned", archived: false }), false);
+  assert.equal(win.needsAttention({ flagged: true, status: "active", archived: false, stats: { found: false } }), false,
+    "flagged by a check that found no profile: the header's not-found warning has it, Flagged does not count it again");
+  assert.equal(win.needsAttention({ flagged: true, status: "active", archived: false, stats: { found: true } }), true);
 
-  const never = win.document.querySelector('#dash [data-flag="unchecked"] .v');
-  assert.ok(never, "never-checked tile present");
-  assert.equal(never.textContent.trim(), "1", "only the live unchecked account counts");
+  const never = win.document.querySelector('.rib-i[data-flag="unchecked"]');
+  assert.ok(never, "never checked is in the header");
+  assert.equal(never.textContent.trim(), "1 never checked", "only the live unchecked account counts");
 
-  win.document.querySelector('#dash [data-flag="unchecked"]').click();
+  win.document.querySelector('.rib-i[data-flag="unchecked"]').click();
   const names = [...win.document.querySelectorAll(".card .c-name, .rw-nm")].map(n => n.textContent);
   assert.equal(win.document.querySelectorAll(".card, .rw").length, 1);
   assert.match(names.join(" "), /Live/);
@@ -8535,9 +8540,6 @@ test("ribbon never-checked count matches the dash tile for tier-without-timestam
     { id: "c", region: "EUW", gameName: "Ok", tagLine: "3", status: "active", tags: [], history: [],
       stats: { found: true, tier: "SILVER", division: "I", lp: 0, updatedAt: Date.now() } },
   ]);
-  const dashNever = win.document.querySelector('#dash [data-flag="unchecked"] .v');
-  assert.ok(dashNever);
-  assert.equal(dashNever.textContent.trim(), "1", "CSV tier without updatedAt is not never-checked");
   assert.match(win.document.querySelector(".rib-row").textContent, /1 never checked/);
   assert.equal(win.neverChecked({ status: "active", archived: false,
     stats: { found: true, tier: "GOLD", division: "II", lp: 10 } }), false);
@@ -8593,8 +8595,8 @@ test("out of date is amber like any warning; red stays for lost, banned and irre
     stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() - 6 * 86400000 } },
     { id: "n", gameName: "N", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], stats: null }]);
   assert.ok(win.document.querySelector('.card[data-id="s"] .upd.stale'), "the stale card is marked");
-  assert.match(win.document.querySelector('#dash [data-flag="unchecked"] .v').getAttribute("style"), /--warn-txt/,
-    "never checked is a chore, not the user's accent");
+  assert.match(appJs, /<div class="k">Flagged<\/div>\s*<div class="v" style="color:var\(--warn-txt\)">/,
+    "a flag you left is a chore, amber, not the user's accent and not red");
   assert.match(rule(".b-danger"), /--danger/, "a destructive button is still red");
   // the decay chip had an amber of its own, a shade off --warn: two yellows on one card
   assert.match(rule(".d-warn"), /color:var\(--warn-txt\)/, "the decay chip is the warning colour");
@@ -10070,9 +10072,10 @@ test("on a phone the filters fold behind one button that counts what is on, and 
 // After the first account the panel was 0W 0L, Best —, Group climb —: a wall of nothing
 test("the stats panel shows a figure only once there is something behind it", () => {
   const tiles = win => [...win.document.querySelectorAll("#dash .stat .k")].map(k => k.textContent.trim());
-  // one account, never checked: the one thing worth saying is that
+  // one account, never checked: its card says so, and the header once there are more;
+  // the panel has nothing of its own to add yet
   const fresh = bootApp([{ id: "n", gameName: "New", tagLine: "1", region: "EUW", status: "active", tags: [], history: [], stats: null }]);
-  assert.deepEqual(tiles(fresh), ["Never checked"]);
+  assert.deepEqual(tiles(fresh), []);
   assert.equal(fresh.document.querySelector("#dash .dash-scope"), null, "no scope picker with nothing ranked to count");
   // a checked, unranked account with no games: nothing at all, and no Hide stats for an empty panel
   const quiet = bootApp([{ id: "u", gameName: "Lvl", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],

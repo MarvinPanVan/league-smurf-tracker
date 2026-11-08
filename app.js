@@ -629,7 +629,10 @@ function hasReading(s){return !!(s&&(s.tier||s.level!=null||s.found===false))}
    This exists because the vault filled up with notes reading "verify Riot ID",
    typed by hand into a freetext box where nothing could count them, filter by
    them, or show them anywhere but inside that one card. */
-function needsAttention(a){return !!a.flagged&&a.status!=="banned"&&!a.archived}
+/* Flagged by you. A check that finds no profile raises the flag by itself, but
+   those are the header's "not found" warning already, and counting them here too
+   said the same thing twice. */
+function needsAttention(a){return !!a.flagged&&a.status!=="banned"&&!a.archived&&!(a.stats&&a.stats.found===false)}
 /* Active vault accounts — chore counts (never checked, failed, …) ignore banned
    and archived, which are already dealt with and only clutter those tiles. */
 function isLive(a){return !a.archived&&a.status!=="banned"}
@@ -3985,10 +3988,10 @@ function renderDash(){
   const cells=[
     (W+L)>0&&`<div class="stat"><div class="k">Season W/L</div><div class="v nw">${W}<small>W</small> ${L}<small>L</small></div>
       <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>`,
-    neverN&&`<button class="stat stat-b${ui.flag==="unchecked"?" on":""}" data-flag="unchecked" aria-pressed="${ui.flag==="unchecked"}"><div class="k">Never checked</div>
-      <div class="v" style="color:var(--warn-txt)">${neverN}</div><div class="s-note">no rank pulled yet · click to see them</div></button>`,
-    attentionN&&`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Needs attention</div>
-      <div class="v" style="color:var(--danger)">${attentionN}</div><div class="s-note">flagged by you, or the profile no longer exists</div></button>`,
+    // "Never checked" is a word in the header line, which filters the same way, so
+    // it has no tile here. Flagged is amber: a reminder you left, not an alarm.
+    attentionN&&`<button class="stat stat-b${ui.flag==="attention"?" on":""}" data-flag="attention" aria-pressed="${ui.flag==="attention"}"><div class="k">Flagged</div>
+      <div class="v" style="color:var(--warn-txt)">${attentionN}</div><div class="s-note">marked by you · click to see them</div></button>`,
     dupN&&`<button class="stat stat-b${ui.flag==="dup"?" on":""}" data-flag="dup" aria-pressed="${ui.flag==="dup"}"><div class="k">Duplicate IDs</div>
       <div class="v" style="color:var(--danger)">${dupN}</div><div class="s-note">same name#tag on one region</div></button>`,
     next&&`<button class="stat stat-b" data-next="${idAttr(next.a.id)}" title="Show this account"><div class="k">Play next</div>
@@ -4107,7 +4110,7 @@ function renderTagbar(){
 // A number in a dashboard always raises "which ones?", so the stats panel sets
 // these — and they have to be visible and removable, or the grid just looks
 // mysteriously short.
-const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Needs attention",missing:"Not found",dup:"Duplicate IDs",rotate:"Idle 14+ days"};
+const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Flagged",missing:"Not found",dup:"Duplicate IDs",rotate:"Idle 14+ days"};
 function renderChips(){
   syncFilterCount();
   const out=[];
@@ -8476,7 +8479,7 @@ async function onCardClick(e){
     acc.flagged=!acc.flagged;
     if(ui.flag==="attention")render();
     else{renderCard(id);renderDash();renderChips()}
-    saveThen(acc.flagged?"Flagged. It's under Needs attention now":"Flag cleared")}
+    saveThen(acc.flagged?"Flagged. The stats count it under Flagged":"Flag cleared")}
   else if(act==="togglepw"){shownPw.has(id)?shownPw.delete(id):shownPw.add(id);renderCard(id)}
   else if(act==="login"){
     const on=togglePanel(id,"login");   // puts ✎ Rank away if it was open
