@@ -3744,6 +3744,13 @@ function renderBulkBar(shown){
   // it then *cleared* rather than selected, because a ticked box unticks first.
   const list=shown||filtered();
   $("tSelectAll").checked=list.length>0&&list.every(a=>selected.has(a.id));
+  /* A box ticked by hand changes its own state and nothing else, so the card's
+     markup is the same ticked or not and the grid's patch skips it. Clearing the
+     selection then left the boxes ticked with nothing selected behind them. */
+  for(const b of document.querySelectorAll("#grid .bulkchk")){
+    const host=b.closest("[data-id]"), on=!!host&&selected.has(host.dataset.id);
+    if(b.checked!==on)b.checked=on;
+  }
 }
 
 function renderFilterOptions(){

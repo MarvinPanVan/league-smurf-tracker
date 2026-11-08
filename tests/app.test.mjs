@@ -7441,6 +7441,26 @@ test("sequential check returns missing for found:false and does not count as ref
   assert.match(toastMsg, /not found/i);
 });
 
+// Ticking a box changes nothing in the card's markup, so the grid's patch skipped it
+// and "Clear selection" left the boxes ticked with nothing selected behind them
+test("clearing the selection unticks the boxes that were ticked by hand", () => {
+  const acc = (id, n) => ({ id, region: "EUW", gameName: n, tagLine: n, status: "active",
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] });
+  const win = bootApp([acc("a", "A"), acc("b", "B")]);
+  const doc = win.document, box = id => doc.querySelector(`.card[data-id="${id}"] .bulkchk`);
+  box("a").click(); box("b").click();
+  assert.equal(appGet(win, "selected.size"), 2);
+  doc.getElementById("bulkClear").click();
+  assert.equal(appGet(win, "selected.size"), 0);
+  assert.deepEqual([box("a").checked, box("b").checked], [false, false]);
+  // and in the list, where rows carry the same box
+  doc.querySelector('[data-density="list"]').click();
+  const row = id => doc.querySelector(`.rw[data-id="${id}"] .bulkchk`);
+  row("a").click();
+  doc.getElementById("bulkClear").click();
+  assert.equal(row("a").checked, false);
+});
+
 test("Escape on compare clears Unselect compare labels via re-render", async () => {
   const win = bootApp([
     { id: "c1", region: "EUW", gameName: "A", tagLine: "A", status: "active",
