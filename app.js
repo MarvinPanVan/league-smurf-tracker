@@ -110,8 +110,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.24.0";
+const APP_VERSION="2.25.0";
 const APP_CHANGELOG=[
+  {v:"2.25.0",items:[
+    "On a phone the app opens in the list view, so more accounts fit on a screen, each with its copy buttons",
+    "The search box shows Ctrl K: open Quick find, type a name, and copy the login",
+    "\"Need a refresh\" sits in the header with the other account states, and Check all ranks is the one button for it",
+  ]},
   {v:"2.24.0",items:[
     "Calmer cards: the Login button is tinted instead of bright, so the ranks stand out",
     "The chart's D/W/M switch sits in the date row instead of on your newest point",
