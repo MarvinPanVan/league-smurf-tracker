@@ -68,6 +68,10 @@ function bootApp(seed, tweak, url = "https://example.com/index.html") {
   if (seed) window.localStorage.setItem("smurf-tracker", JSON.stringify(seed));
   if (tweak) tweak(window);
   runScript(window, appScript); // runs the app's boot() at the end, exactly like a real page load
+  // every "are you sure" is the app's own window now (ask): answered yes, as the
+  // browser's box above was. A test of the window itself puts __ask back.
+  window.__ask = window.ask;
+  window.ask = async () => "ok";
   return window;
 }
 
@@ -441,14 +445,46 @@ test("demo preview never touches localStorage, and Exit preview cleanly returns 
   assert.match(win.document.getElementById("grid").textContent, /No accounts yet/);
 });
 
-test("opening the add-account form during preview discards the preview data instead of mixing it with real accounts", () => {
+// Opening Add account or Bulk add ended the preview there and then: the example
+// accounts vanished, and Cancel left the empty start page
+test("Add account and Bulk add keep the preview until something is saved, then replace it", () => {
   const win = bootApp();
-  win.document.getElementById("bDemo").click();
-  assert.equal(win.document.querySelectorAll(".card").length, 5);
+  const doc = win.document, cards = () => doc.querySelectorAll(".card").length;
+  const inPreview = () => !doc.getElementById("previewBanner").classList.contains("hidden");
+  doc.getElementById("bDemo").click();
+  assert.equal(cards(), 5);
 
-  win.document.getElementById("bAdd").click();
-  assert.equal(win.document.getElementById("previewBanner").classList.contains("hidden"), true, "preview must end once the user starts adding a real account");
-  assert.equal(win.document.getElementById("form").classList.contains("hidden"), false, "the add-account form must still open");
+  doc.getElementById("bAdd").click();
+  assert.equal(doc.getElementById("form").classList.contains("hidden"), false, "the form opens");
+  assert.ok(inPreview() && cards() === 5, "with the example data still there behind it");
+  assert.equal(doc.getElementById("fPreviewNote").hidden, false, "and it says what saving will do");
+  doc.querySelector("#form [data-close-panel]").click();
+  assert.ok(inPreview() && cards() === 5, "cancelled: still the preview");
+
+  doc.getElementById("bBulkAdd").click();
+  assert.equal(doc.getElementById("baPreviewNote").hidden, false);
+  doc.getElementById("baCancel").click();
+  assert.ok(inPreview() && cards() === 5, "Bulk add cancelled: still the preview");
+  assert.equal(win.localStorage.getItem("smurf-tracker"), null, "and nothing written");
+
+  // a save is what ends it, and the example accounts make way for the real one
+  doc.getElementById("bAdd").click();
+  doc.getElementById("fName").value = "Bot Diff"; doc.getElementById("fTag").value = "EUW";   // an example's Riot ID is no duplicate
+  doc.getElementById("fSave").click();
+  assert.equal(inPreview(), false);
+  assert.equal(cards(), 1);
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker")).length, 1, "saved, alone");
+  doc.getElementById("bAdd").click();
+  assert.equal(doc.getElementById("fPreviewNote").hidden, true, "no preview note in a real vault");
+
+  const win2 = bootApp();
+  win2.document.getElementById("bDemo").click();
+  win2.document.getElementById("bBulkAdd").click();
+  win2.document.getElementById("baList").value = "First One#EUW\nSecond One#EUW";
+  win2.document.getElementById("baSave").click();
+  assert.equal(win2.document.getElementById("previewBanner").classList.contains("hidden"), true);
+  assert.equal(win2.document.querySelectorAll(".card").length, 2, "the two pasted, without the five examples");
+  assert.equal(JSON.parse(win2.localStorage.getItem("smurf-tracker")).length, 2);
 });
 
 test("isClimbing detects 3 consecutive LP increases and ignores flat/downward trends", () => {
@@ -1417,8 +1453,9 @@ test("New season resets every ranked account at once, leaves the rest, and one U
     acc("u", "UNRANKED"), acc("old", "SILVER", { archived: true })]);
   const doc = win.document;
   let asked = "";
-  win.confirm = m => { asked = m; return true; };
+  win.ask = async o => { asked = o.title; return "ok"; };
   doc.getElementById("bNewSeason").click();
+  await tick();
   assert.match(asked, /new season for 2 ranked accounts/, "says how many, before doing anything");
   const get = id => win.eval("accounts").find(a => a.id === id);
   assert.equal(get("g").stats.tier, "UNRANKED");
@@ -1431,8 +1468,9 @@ test("New season resets every ranked account at once, leaves the rest, and one U
   assert.equal(get("g").stats.tier, "GOLD", "Undo puts them back");
   assert.equal(get("d").stats.tier, "DIAMOND");
   assert.equal(JSON.stringify(get("d").goal), JSON.stringify({ tier: "MASTER", division: null, lp: 0 }), "goal included");
-  win.confirm = () => false;
+  win.ask = async () => false;
   doc.getElementById("bNewSeason").click();
+  await tick();
   assert.equal(get("g").stats.tier, "GOLD", "a No changes nothing");
 });
 
@@ -2114,7 +2152,7 @@ test("passkey unlock: changing or removing the master password turns it off, and
   assert.equal(pkRec(win), null);
 });
 
-test("dates are where you are: backup and export file names, and the passkey's date", () => {
+test("dates are where you are: backup and export file names, and the passkey's date", async () => {
   const tz = process.env.TZ;
   process.env.TZ = "Pacific/Auckland";
   try {
@@ -2127,6 +2165,7 @@ test("dates are where you are: backup and export file names, and the passkey's d
       URL.createObjectURL = () => "blob:x"; URL.revokeObjectURL = () => {};
       HTMLAnchorElement.prototype.click = function () { if (this.download) __names.push(this.download) }; })()`);
     runScript(win, "doExport()");
+    await tick();   // the plain-text question is answered first
     win.document.getElementById("bExportCsv").click();
     assert.deepEqual([...win.__names], ["smurf-backup-plaintext-2026-10-29.json", "smurf-export-2026-10-29.csv"]);
     win.localStorage.setItem("smurf-tracker-passkey", JSON.stringify({ v: 1, id: "AAAA", salt: "AAAA", iv: "AAAA", ct: "AAAA", at: Date.UTC(2026, 9, 28, 12, 0) }));
@@ -2322,8 +2361,9 @@ test("Fields…: built-ins switch off and on, your own are added, renamed and re
   cardMenu(win, "a").querySelector('[data-act="edit"]').click();
   $("fFieldsBtn").click();
   let asked = "";
-  win.confirm = m => { asked = m; return true; };
+  win.ask = async o => { asked = o.title + " " + o.body; return "ok"; };
   doc.querySelector('#fFieldsCfg [data-own-del="0"]').click();
+  await tick();
   assert.match(asked, /Remove “Source”\? 2 accounts have values in it/);
   assert.deepEqual(own(), ["Server"]);
   await until(() => !stored()[1].info, "b had only that field, so b has no fields left");
@@ -2722,11 +2762,11 @@ test("Escape closes Quick find first, even with a card's login open behind it", 
   assert.ok(doc.querySelector('.card[data-id="a"] .login'), "the card behind it is left as it was");
 });
 
-test("Settings is six tabs, one section at a time, and a step that needs a field opens its tab", () => {
+test("Settings is five tabs, one section at a time, and a step that needs a field opens its tab", () => {
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
   const doc = win.document, m = doc.getElementById("settings");
   const tabs = [...m.querySelectorAll('[role="tab"]')];
-  assert.deepEqual(tabs.map(t => t.textContent.trim()), ["Appearance", "Rank checks", "Alerts", "Security", "Sync", "Backup"]);
+  assert.deepEqual(tabs.map(t => t.textContent.trim()), ["Appearance", "Rank checks", "Alerts", "Security", "Backup & sync"]);
   const shown = () => [...m.querySelectorAll(".grp")].filter(g => win.getComputedStyle(g).display !== "none")
     .map(g => g.querySelector(".grp-h, .adv-fold > summary").textContent.trim());
   doc.getElementById("bSettings").click();
@@ -2744,8 +2784,8 @@ test("Settings is six tabs, one section at a time, and a step that needs a field
   assert.equal(m.dataset.tab, "alerts");
   tabs[2].dispatchEvent(new win.KeyboardEvent("keydown", { key: "End", bubbles: true }));
   assert.equal(m.dataset.tab, "backup");
-  assert.equal(doc.activeElement, tabs[5], "focus follows the selection");
-  tabs[5].dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  assert.equal(doc.activeElement, tabs[4], "focus follows the selection");
+  tabs[4].dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
   assert.equal(m.dataset.tab, "look");
   // the export reminder lives with the backups now, next to the backup buttons
   const backup = m.querySelector('.grp[data-tab="backup"]');
@@ -2939,7 +2979,7 @@ test("saveDB writes an encrypted envelope once a vault password is set, and plai
   let raw = JSON.parse(win.localStorage.getItem("smurf-tracker"));
   assert.equal(raw.__enc, true);
 
-  win.document.getElementById("sVaultRemove").click(); // confirm() is stubbed to always return true
+  win.document.getElementById("sVaultRemove").click(); // ask() is stubbed to always say yes
   await until(() => storedPlain(win), "the vault to be written back in the clear");
   raw = JSON.parse(win.localStorage.getItem("smurf-tracker"));
   assert.ok(Array.isArray(raw));
@@ -4457,7 +4497,7 @@ test("bulk selection works in the list view as well as the cards", () => {
    it was made in: the bar went on counting accounts the grid no longer showed, and
    the bulk actions — behind a confirm that names a number, not the accounts —
    reached straight past the grid to them. */
-test("a selection does not outlive the view it was made in", () => {
+test("a selection does not outlive the view it was made in", async () => {
   const count = win => win.document.getElementById("bulkCount").textContent;
   const barHidden = win => win.document.getElementById("bulkbar").classList.contains("hidden");
 
@@ -4484,7 +4524,8 @@ test("a selection does not outlive the view it was made in", () => {
   cardMenu(win2, first).querySelector('[data-act="archive"]').click();
   assert.equal(count(win2), "1 selected", "the archived one left the selection with the view");
 
-  win2.document.getElementById("bulkDelete").click(); // confirm() is stubbed to true
+  win2.document.getElementById("bulkDelete").click(); // ask() is stubbed to yes
+  await tick();
   win2.document.getElementById("tArchived").click();
   assert.equal(win2.document.querySelectorAll(".card").length, 1,
     "the archived account survives a delete it was never on screen for");
@@ -5112,7 +5153,7 @@ test("the settings body is grouped rather than one flat run of fields", () => {
   const groups = [...win.document.querySelectorAll("#settings .grp-h")].map(g => g.textContent.trim());
   // in the order of the tab row, which is one click to any of them; sync still
   // comes after both of the things it needs (a master password and a worker)
-  assert.deepEqual(groups, ["Appearance", "Rank checks", "Alerts", "Security", "Device sync", "Backup"]);
+  assert.deepEqual(groups, ["Appearance", "Rank checks", "Alerts", "Security", "Backup", "Device sync"]);
   const tabOrder = [...win.document.querySelectorAll("#settings [data-stab]")].map(b => b.dataset.stab);
   const grpOrder = [...new Set([...win.document.querySelectorAll("#settings .grp")].map(g => g.dataset.tab))];
   assert.deepEqual(grpOrder, tabOrder, "the groups run in the tabs' order");
@@ -7129,8 +7170,8 @@ test("compare modal is in the document at boot and closes via Escape / closeAllP
   const modal = win.document.getElementById("compareModal");
   assert.ok(modal, "static compare modal exists before first open");
   assert.ok(modal.classList.contains("hidden"));
-  win.openCompare("c1");
-  win.openCompare("c2");
+  win.startCompare("c1");
+  win.startCompare("c2");
   assert.equal(modal.classList.contains("hidden"), false);
   assert.match(win.document.getElementById("cmpBody").textContent, /Alpha|A/);
   assert.match(win.document.getElementById("cmpBody").textContent, /Beta|B/);
@@ -7138,8 +7179,8 @@ test("compare modal is in the document at boot and closes via Escape / closeAllP
   win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   assert.ok(modal.classList.contains("hidden"));
   assert.equal(appGet(win, "compareIds.length"), 0);
-  win.openCompare("c1");
-  win.openCompare("c2");
+  win.startCompare("c1");
+  win.startCompare("c2");
   win.document.getElementById("cmpClear").click();
   assert.ok(modal.classList.contains("hidden"));
   assert.equal(appGet(win, "compareIds.length"), 0);
@@ -7152,8 +7193,8 @@ test("compare escapes every account-supplied string in the modal HTML", () => {
     { id: "x2", region: "EUW", gameName: "Y", tagLine: "B", status: "active",
       stats: { found: true, tier: "GOLD", division: "I", lp: 1, wins: 1, losses: 1, updatedAt: 1 }, history: [], tags: [] },
   ]);
-  win.openCompare("x1");
-  win.openCompare("x2");
+  win.startCompare("x1");
+  win.startCompare("x2");
   const body = win.document.getElementById("cmpBody");
   // Serialised HTML leaves "<" bare inside attribute values, so ask the DOM what
   // the strings became instead of pattern-matching markup.
@@ -7171,8 +7212,8 @@ test("compare is a versus screen: one row per fact, the better win rate lit", ()
       stats: { found: true, tier: "PLATINUM", division: "IV", lp: 5, wins: 20, losses: 10, level: 90, updatedAt: 1 }, history: [], tags: [] },
     { id: "c3", region: "NA", gameName: "Gamma", tagLine: "C", status: "active", stats: null, history: [], tags: [] },
   ]);
-  win.openCompare("c1");
-  win.openCompare("c2");
+  win.startCompare("c1");
+  win.startCompare("c2");
   const body = win.document.getElementById("cmpBody");
   const sides = body.querySelectorAll(".cmp-side");
   assert.equal(sides.length, 2);
@@ -7189,8 +7230,8 @@ test("compare is a versus screen: one row per fact, the better win rate lit", ()
   const clear = win.document.getElementById("cmpClear");
   assert.ok(clear.closest(".mdl-f") && !body.contains(clear), "Clear sits in the window's footer, not in the scroll");
   win.closeCompare();
-  win.openCompare("c1");
-  win.openCompare("c3");
+  win.startCompare("c1");
+  win.startCompare("c3");
   const q = win.document.querySelectorAll("#cmpBody .cmp-rk")[1];
   assert.ok(q.classList.contains("q"), "a side with no rank is not dressed as one");
   assert.equal(q.textContent, "Never checked");
@@ -7204,14 +7245,14 @@ test("closeAllPanels / closeCompare clears selection and hides Compare", () => {
     { id: "c2", region: "EUW", gameName: "B", tagLine: "B", status: "active",
       stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] },
   ]);
-  win.openCompare("c1");
-  win.openCompare("c2");
+  win.startCompare("c1");
+  win.startCompare("c2");
   assert.equal(win.document.getElementById("compareModal").classList.contains("hidden"), false);
   win.closeAllPanels();
   assert.equal(appGet(win, "compareIds.length"), 0);
   assert.ok(win.document.getElementById("compareModal").classList.contains("hidden"));
-  win.openCompare("c1");
-  win.openCompare("c2");
+  win.startCompare("c1");
+  win.startCompare("c2");
   win.closeCompare();
   assert.equal(appGet(win, "compareIds.length"), 0);
   assert.ok(win.document.getElementById("compareModal").classList.contains("hidden"));
@@ -7441,24 +7482,70 @@ test("sequential check returns missing for found:false and does not count as ref
   assert.match(toastMsg, /not found/i);
 });
 
-test("Escape on compare clears Unselect compare labels via re-render", async () => {
-  const win = bootApp([
-    { id: "c1", region: "EUW", gameName: "A", tagLine: "A", status: "active",
-      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] },
-    { id: "c2", region: "EUW", gameName: "B", tagLine: "B", status: "active",
-      stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] },
-  ]);
-  win.openCompare("c1");
-  win.openCompare("c2");
+// Ticking a box changes nothing in the card's markup, so the grid's patch skipped it
+// and "Clear selection" left the boxes ticked with nothing selected behind them
+test("clearing the selection unticks the boxes that were ticked by hand", () => {
+  const acc = (id, n) => ({ id, region: "EUW", gameName: n, tagLine: n, status: "active",
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] });
+  const win = bootApp([acc("a", "A"), acc("b", "B")]);
+  const doc = win.document, box = id => doc.querySelector(`.card[data-id="${id}"] .bulkchk`);
+  box("a").click(); box("b").click();
+  assert.equal(appGet(win, "selected.size"), 2);
+  doc.getElementById("bulkClear").click();
+  assert.equal(appGet(win, "selected.size"), 0);
+  assert.deepEqual([box("a").checked, box("b").checked], [false, false]);
+  // and in the list, where rows carry the same box
+  doc.querySelector('[data-density="list"]').click();
+  const row = id => doc.querySelector(`.rw[data-id="${id}"] .bulkchk`);
+  row("a").click();
+  doc.getElementById("bulkClear").click();
+  assert.equal(row("a").checked, false);
+});
+
+// Compare was its own pick: ⋯ → Compare on one card, then on another, with "Pick one
+// more account to compare (1/2)" in a message that stayed up after the comparison opened
+test("Compare picks with the selection: the menu ticks one, the second tick opens it", async () => {
+  const acc = (id, n) => ({ id, region: "EUW", gameName: n, tagLine: n, status: "active",
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 }, history: [], tags: [] });
+  const win = bootApp([acc("c1", "A"), acc("c2", "B"), acc("c3", "C")]);
+  const doc = win.document, modal = doc.getElementById("compareModal");
+  const box = id => doc.querySelector(`.card[data-id="${id}"] .bulkchk`);
+  cardMenu(win, "c1").querySelector('[data-act="compare"]').click();
+  assert.ok(box("c1").checked, "the first account is ticked");
+  assert.ok(doc.body.classList.contains("selecting"), "and every card shows its box");
+  assert.equal(doc.getElementById("bulkCount").textContent, "Tick one more account to compare with A");
+  const bar = doc.getElementById("bulkbar");
+  assert.ok(bar.classList.contains("cmp-pick"), "mid-pick, status, tags and Delete are put away");
+  assert.match(html, /#bulkbar\.cmp-pick>:not\(#bulkCount\):not\(#bulkClear\)\{display:none\}/);
+  assert.equal(doc.getElementById("bulkClear").textContent, "Cancel");
+  assert.doesNotMatch(doc.getElementById("toast").textContent, /Pick one more/, "no message over the cards");
+  assert.ok(modal.classList.contains("hidden"));
+  box("c2").click();
+  assert.equal(modal.classList.contains("hidden"), false, "the second tick opens the comparison");
   assert.equal(appGet(win, 'compareIds.join(",")'), "c1,c2");
-  assert.match(cardMenu(win, "c1").textContent, /Unselect compare/);
-  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  await until(() => win.document.getElementById("compareModal").classList.contains("hidden"), "compare closed");
-  assert.equal(appGet(win, "compareIds.length"), 0);
-  // The label lives in the ⋯ menu now, so read it from there.
-  const menu = cardMenu(win, "c1");
-  assert.doesNotMatch(menu.textContent, /Unselect compare/);
-  assert.match(menu.textContent, /Compare/);
+  // closing it puts the pick away
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await until(() => modal.classList.contains("hidden"), "compare closed");
+  assert.equal(appGet(win, "selected.size"), 0);
+  assert.equal(doc.body.classList.contains("selecting"), false);
+  assert.match(cardMenu(win, "c1").textContent, /Compare…/, "the menu item never turns into Unselect");
+  // two accounts ticked by hand get a Compare button, and stay ticked after
+  doc.getElementById("tSelectMode").click();
+  box("c1").click(); box("c3").click();
+  assert.equal(bar.classList.contains("cmp-pick"), false, "an ordinary selection has every action");
+  assert.equal(doc.getElementById("bulkClear").textContent, "Clear selection");
+  const btn = doc.getElementById("bulkCompare");
+  assert.equal(btn.classList.contains("hidden"), false, "two ticked: Compare is offered");
+  assert.ok(modal.classList.contains("hidden"), "but not opened for them");
+  btn.click();
+  assert.equal(modal.classList.contains("hidden"), false);
+  assert.equal(appGet(win, 'compareIds.join(",")'), "c1,c3");
+  assert.equal(doc.getElementById("cmpClear").textContent, "Done");
+  doc.getElementById("cmpClear").click();
+  assert.equal(appGet(win, "selected.size"), 2, "a hand-picked selection stays");
+  assert.equal(box("c2").checked, false, "the box ticked in the first pick was cleared with it");
+  box("c2").click();
+  assert.ok(btn.classList.contains("hidden"), "three is not a pair");
 });
 
 test("soft-empty batch chunk continues to the next chunk instead of aborting", async () => {
@@ -8622,7 +8709,7 @@ test("a missing Riot name or tag is said under the field, not in a toast over th
 
 // "Stored unencrypted, locally" was the field's placeholder, set in the password's
 // monospace and gone at the first letter typed
-test("what happens to the password is a line under the box, with a way to set a master password", () => {
+test("what happens to the password is a line under the box, with a way to set a master password", async () => {
   const win = bootApp();
   const doc = win.document, $ = id => doc.getElementById(id);
   $("bAdd").click();
@@ -8634,12 +8721,14 @@ test("what happens to the password is a line under the box, with a way to set a 
   assert.match($("fPassNote").textContent, /without encryption/, "still said once there is a password");
   // with something typed, the link asks before leaving the form; a no keeps it
   let asked = 0;
-  win.confirm = () => { asked++; return false; };
+  win.ask = async () => { asked++; return false; };
   $("fSetMaster").click();
+  await tick();
   assert.equal(asked, 1);
   assert.ok(!$("form").classList.contains("hidden"), "the form and what's in it stay");
-  win.confirm = () => { asked++; return true; };
+  win.ask = async () => { asked++; return "ok"; };
   $("fSetMaster").click();
+  await tick();
   assert.ok($("form").classList.contains("hidden"));
   assert.ok(!$("settings").classList.contains("hidden"));
   assert.equal($("settings").dataset.tab, "security", "at the master password");
@@ -8991,6 +9080,7 @@ test("no sentence in the app's text, tooltips or messages leans on an em dash", 
   assert.ok(!doc.title.includes("\u2014"), "the tab title too");
   // toasts, confirms and status lines only exist once something happens: read them off the source
   const said = [...appScript.matchAll(/(?:toast|confirm|notify|saveThen|lockError)\(\s*"([^"\n]*)"/g)].map(m => m[1])
+    .concat([...appScript.matchAll(/\b(?:title|body|ok|alt):"([^"\n]*)"/g)].map(m => m[1]))   // ask()
     .concat([...appScript.matchAll(/textContent=[^;\n]*?"([^"\n]*\u2014[^"\n]*)"/g)].map(m => m[1]));
   assert.deepEqual(said.filter(x => x.includes("\u2014")), [], "and what it says when something happens");
 });
@@ -9199,7 +9289,7 @@ test("the old address sends on a visit with nothing saved there, and keeps one w
   assert.ok(band.querySelector("#mvGo"), "Move my vault there");
   // moved by hand already, with Export and Import: the copy here can still be removed, after a sterner question
   let asked = "";
-  kept.confirm = q => { asked = q; return false; };
+  kept.ask = async o => { asked = o.title + " " + o.body; return false; };
   band.querySelector("#mvRemove").click();
   assert.match(asked, /Only do this if your accounts are already at smurf-tracker\.pages\.dev/);
   assert.ok(kept.localStorage.getItem("smurf-tracker"), "and nothing goes when the answer is no");
@@ -9210,7 +9300,7 @@ test("the old address sends on a visit with nothing saved there, and keeps one w
   runScript(locked, "window.__x = oldHomeExit()");
   assert.equal(locked.__x, null, "a locked vault counts: it moves as it is");
 });
-test("the old address hands its vault only to the tab it opened, at the new address", () => {
+test("the old address hands its vault only to the tab it opened, at the new address", async () => {
   const win = quietBoot(oneAcc(), null, OLD_HOME + "index.html");
   const sent = [], tab = { postMessage: (m, o) => sent.push([m, o]) };
   win.__tab = tab;
@@ -9231,6 +9321,7 @@ test("the old address hands its vault only to the tab it opened, at the new addr
   // removing the old copy takes the vault, settings and passkey from this address
   win.localStorage.setItem("smurf-tracker-passkey", "{}");
   band.querySelector("#mvRemove").click();
+  await tick();
   for (const k of ["smurf-tracker", "smurf-tracker-cfg", "smurf-tracker-passkey"]) assert.equal(win.localStorage.getItem(k), null, k + " removed");
 });
 test("the new address takes a moved vault only when it has none, and only from the old address", () => {
@@ -9329,6 +9420,202 @@ test("one type scale: nothing under 11px, 11px only inside charts and badges, sm
     "the shared label: a calm 12px in sentence case");
 });
 
+// An accessibility check found the region, sort and status filters read out as just
+// "combo box". A placeholder is not a name: it goes the moment you type.
+test("every form control a screen reader can reach has a name of its own", () => {
+  const doc = new JSDOM(pageHtml).window.document;
+  const unnamed = [...doc.querySelectorAll("select,textarea,input:not([type=hidden]):not([type=file])")]
+    .filter(el => !el.closest("[aria-hidden=true],[inert]"))
+    .filter(el => !(el.id && doc.querySelector(`label[for="${el.id}"]`)) && !el.closest("label")
+      && !el.getAttribute("aria-label") && !el.getAttribute("aria-labelledby"))
+    .map(el => el.id || el.outerHTML.slice(0, 60));
+  assert.deepEqual(unnamed, []);
+  assert.equal(doc.getElementById("tRegion").getAttribute("aria-label"), "Region");
+  assert.equal(doc.getElementById("tSort").getAttribute("aria-label"), "Sort by");
+  assert.equal(doc.getElementById("tStatus").getAttribute("aria-label"), "Status");
+});
+
+// "Marked played today", "Streamer mode on" and the like sat bottom centre, over the
+// buttons of whichever card was in the middle of the screen
+test("a passing message sits bottom left and lets clicks through to what it covers", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const rule = css.match(/\n  #toast\{([^}]*)\}/)[1];
+  assert.match(rule, /left:clamp\(14px,3vw,28px\)/, "on the left: " + rule);
+  assert.doesNotMatch(rule, /left:50%|translateX\(-50%\)/, "not centred");
+  assert.match(rule, /pointer-events:none/, "a click on it reaches the card underneath");
+  assert.match(css, /\n  #toast button\{pointer-events:auto;/, "except on its own Undo or Show");
+  const anim = css.match(/@keyframes toastIn\{([^\n]*)\}/)[1];
+  assert.doesNotMatch(anim, /-50%/, "and its entrance doesn't drag it back to the centre");
+});
+
+// Safari on iPhone deletes a site's storage after seven days without a visit, and the
+// only word of it was one line in Settings → Security
+test("on iPhone Safari, a vault with something in it warns once about the seven days", () => {
+  const SAFARI = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
+  const CHROME = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0 Mobile/15E148 Safari/604.1";
+  const one = [{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }];
+  const as = (ua, extra = {}) => w => {
+    Object.defineProperty(w.navigator, "userAgent", { value: ua, configurable: true });
+    for (const [k, v] of Object.entries(extra)) Object.defineProperty(w.navigator, k, { value: v, configurable: true });
+  };
+  const band = w => w.document.getElementById("iosBand");
+  const shown = w => !band(w).classList.contains("hidden");
+
+  const win = bootApp(one, as(SAFARI));
+  assert.ok(shown(win), "Safari on an iPhone, one account: the warning");
+  assert.match(band(win).textContent, /Safari deletes this vault after 7 days without a visit/);
+  assert.match(band(win).textContent, /Share, then Add to Home Screen/);
+  assert.match(band(win).textContent, /starts empty, so back up here first and import the backup there/);
+  let exported = 0;
+  win.doExport = () => { exported++; };
+  band(win).querySelector('[data-ios="backup"]').click();
+  assert.equal(exported, 1, "Back up now makes the backup");
+  assert.ok(shown(win), "and leaves the steps up");
+  band(win).querySelector('[data-ios="ok"]').click();
+  assert.equal(shown(win), false, "Got it puts it away");
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).iosHintSeen, true, "for good");
+
+  assert.equal(shown(bootApp(null, as(SAFARI))), false, "an empty vault has nothing to lose yet");
+  const pv = bootApp(null, as(SAFARI));
+  pv.document.getElementById("bDemo").click();
+  assert.equal(shown(pv), false, "nor does the example data");
+  assert.equal(shown(bootApp(one, as(CHROME))), false, "the rule is Safari's");
+  assert.equal(shown(bootApp(one, as(SAFARI, { standalone: true }))), false, "the Home Screen app keeps its data");
+  assert.equal(shown(bootApp(one)), false, "and nothing on any other device");
+  const ipad = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15";
+  assert.ok(shown(bootApp(one, as(ipad, { platform: "MacIntel", maxTouchPoints: 5 }))), "an iPad calls itself a Mac");
+  assert.equal(shown(bootApp(one, as(ipad, { platform: "MacIntel", maxTouchPoints: 0 }))), false, "a real Mac keeps its data");
+});
+
+// With a window open, the phone's back button left the whole app instead of closing it
+test("back closes the open window, and a window closed by hand gives its back step up", async () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const doc = win.document, open = id => !doc.getElementById(id).classList.contains("hidden");
+  const settle = () => new Promise(r => setTimeout(r, 30));
+  assert.equal(win.history.state, null, "nothing open, nothing pushed");
+  doc.getElementById("bSettings").click();
+  await settle();
+  assert.ok(open("settings"));
+  assert.equal(win.history.state && win.history.state.smurfWindow, 1, "an open window has a history entry");
+  win.history.back();
+  await until(() => !open("settings"), "back to close Settings");
+  assert.equal(win.history.state, null, "and the entry is gone with it");
+  // closed with its ✕: the entry is taken back out, so the next back is a real one
+  doc.getElementById("bAdd").click();
+  await settle();
+  assert.ok(open("form"));
+  assert.equal(win.history.state && win.history.state.smurfWindow, 1);
+  doc.querySelector("#form [data-close-panel]").click();
+  await until(() => win.history.state === null, "the entry taken back out");
+  await settle();
+  assert.equal(open("form"), false, "and nothing reopened on the way");
+  // a window over a window: back closes them like Escape does, and the page is left as it was
+  doc.getElementById("bAdd").click();
+  await settle();
+  win.history.back();
+  await until(() => !open("form"), "back to close the form");
+});
+
+// Seven "are you sure" questions used the browser's own grey box, which looked like a
+// different program and, on a phone, covered the app with the site's address
+test("every confirmation is the app's own window, and answering it leaves the window behind alone", async () => {
+  assert.doesNotMatch(appJs, /\bconfirm\(/, "no browser confirm box left anywhere");
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  win.ask = win.__ask;   // the real window, not the harness's yes
+  const doc = win.document, $ = id => doc.getElementById(id), open = id => !$(id).classList.contains("hidden");
+  const count = () => JSON.parse(win.localStorage.getItem("smurf-tracker") || "[]").length;
+  win.saveDB(); await tick();
+  assert.equal(count(), 1);
+  win.openSettings("backup");
+  $("bDeleteAll").click();
+  assert.ok(open("askModal") && open("settings"), "the question opens over Settings");
+  assert.equal($("askTitle").textContent, "Delete all 1 account in this vault?");
+  assert.match($("askBody").textContent, /can't be undone/);
+  assert.equal($("askOk").textContent, "Delete all");
+  assert.equal($("askOk").className, "b-danger", "a destructive answer is red");
+  assert.equal($("askAlt").hidden, true, "one way forward, one button");
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /#askAlt\[hidden\]\{display:none\}/, "which a button's own display rule must not bring back");
+  assert.match(css, /#askModal \.mdl\{max-width:460px\}/, "a small card, not a full window");
+  assert.match(css, /#askModal \.mdl-in\{min-height:0;/, "on a phone too, where other windows fill the screen");
+  await tick();
+  assert.equal(doc.activeElement, $("askCancel"), "and Enter alone never deletes: focus starts on Cancel");
+  $("askCancel").click(); await tick();
+  assert.ok(!open("askModal") && open("settings"), "Cancel closes the question, not Settings");
+  assert.equal(count(), 1, "and deletes nothing");
+
+  $("bDeleteAll").click();
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await tick();
+  assert.ok(!open("askModal") && open("settings"), "Escape answers the question and leaves Settings open");
+  assert.equal(count(), 1);
+
+  $("bDeleteAll").click();
+  await tick();
+  win.history.back();
+  await until(() => !open("askModal"), "back to answer No");
+  assert.ok(open("settings"), "the back button too");
+  assert.equal(count(), 1);
+
+  $("bDeleteAll").click();
+  $("askOk").click();
+  await until(() => count() === 0, "Delete all to go through");
+
+  // the one question with two ways forward: add to the vault, or replace it
+  const win2 = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  win2.ask = win2.__ask;
+  const answer = win2.askMergeOrReplace("backup", 4);
+  const d2 = win2.document;
+  assert.match(d2.getElementById("askBody").textContent, /This vault has 1 account and the backup 4/);
+  assert.equal(d2.getElementById("askOk").textContent, "Add the new ones");
+  assert.equal(d2.getElementById("askAlt").hidden, false);
+  assert.equal(d2.getElementById("askAlt").textContent, "Replace everything");
+  assert.equal(d2.getElementById("askAlt").className, "b-danger");
+  d2.getElementById("askAlt").click();
+  assert.equal(await answer, "replace");
+  const again = win2.askMergeOrReplace("file", 2);
+  d2.getElementById("askCancel").click();
+  assert.equal(await again, false, "and backing out is possible, which the browser's OK/Cancel never allowed");
+});
+
+// Sync and Backup were two tabs of one subject (copies of your vault), both half empty
+// in a window that keeps one height
+test("Settings has five tabs, Backup & sync holding both ways to keep a copy", () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document;
+  const tabs = [...doc.querySelectorAll("#settings [data-stab]")].map(b => b.textContent);
+  assert.deepEqual(tabs, ["Appearance", "Rank checks", "Alerts", "Security", "Backup & sync"]);
+  win.openSettings("backup");
+  const shown = [...doc.querySelectorAll('#settings .grp[data-tab="backup"] .grp-h')].map(h => h.textContent);
+  assert.deepEqual(shown, ["Backup", "Device sync"], "each part keeps its heading now that the tab says both");
+  assert.ok(doc.getElementById("sSyncGrp").contains(doc.getElementById("sSyncPush")));
+  win.openSettings("sync");
+  assert.equal(doc.getElementById("settings").dataset.tab, "backup", "anything still asking for Sync lands there");
+  // a phone's two rows: three tabs, then two sharing the width, with no hole at the end
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /#settings \.stabs\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
+  assert.match(css, /#settings \.stabs button:nth-child\(n\+4\)\{grid-column:span 3\}/);
+  assert.match(fs.readFileSync(path.join(ROOT, "README.md"), "utf8"), /Settings → Backup & sync/);
+});
+
+// The link preview still showed a famous player's account name, the "nothing leaves it"
+// claim the app had dropped as untrue, and a design two versions old. A new picture at
+// the same address would be kept from view by every chat app's cache of the old one.
+test("the link preview names a fresh image, at the size the page says it is", () => {
+  const url = pageHtml.match(/<meta property="og:image" content="([^"]+)">/)[1];
+  assert.match(url, /\/icons\/social\.jpg\?v=\d+$/, "a version on the address, so a new picture is fetched");
+  const jpg = fs.readFileSync(path.join(ROOT, "icons", "social.jpg"));
+  let i = 2, w = 0, h = 0;
+  while (i < jpg.length) {
+    if (jpg[i] !== 0xff) { i++; continue; }
+    const m = jpg[i + 1];
+    if (m === 0xc0 || m === 0xc2) { h = jpg.readUInt16BE(i + 5); w = jpg.readUInt16BE(i + 7); break; }
+    i += 2 + jpg.readUInt16BE(i + 2);
+  }
+  assert.equal(String(w), pageHtml.match(/og:image:width" content="(\d+)"/)[1]);
+  assert.equal(String(h), pageHtml.match(/og:image:height" content="(\d+)"/)[1]);
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
@@ -9336,6 +9623,10 @@ test("the header has one name, the wordmark, and no slogan badge", () => {
   assert.equal(brand.textContent.trim(), "Smurf Tracker");
   for (const sel of [".top", "#settings"])
     assert.doesNotMatch(win.document.querySelector(sel).textContent, /Private by default|Summoner Vault/, sel + ", the Settings preview of the header included");
+  // nor the browser tab ("Smurf Tracker · Summoner Vault") or the lock screen
+  assert.equal(win.document.title, "Smurf Tracker");
+  assert.equal(win.document.getElementById("lock").textContent.includes("Summoner Vault"), false);
+  assert.equal(pageHtml.match(/<title>([^<]*)<\/title>/)[1], "Smurf Tracker", "before the app has run, too");
 });
 
 // Panel, card, notes box, chip: four borders deep. The card is the box now; chips are fills
@@ -9373,7 +9664,7 @@ test("switching Settings tabs is not a change: the footer says Not saved yet onl
   const win = bootApp(seededAccount());
   const doc = win.document, foot = () => doc.getElementById("sFootHint").textContent;
   doc.getElementById("bSettings").click();
-  for (const tab of ["checks", "alerts", "security", "sync", "backup", "look"]) {
+  for (const tab of ["checks", "alerts", "security", "backup", "look"]) {
     doc.querySelector(`[data-stab="${tab}"]`).click();
     assert.doesNotMatch(foot(), /Not saved yet/, "after opening " + tab);
   }
@@ -10171,10 +10462,9 @@ test("a vault with no saved settings still hears what changed", () => {
 test("a toast can use the width of a phone, not half of it", () => {
   const rule = html.match(/#toast\{position:fixed;[^}]*\}/);
   assert.ok(rule, "the toast rule is still there");
-  assert.match(rule[0], /left:50%/, "still centred the same way");
   assert.match(rule[0], /width:max-content/, "sized by its text rather than by the half-viewport left over");
-  assert.match(rule[0], /max-width:min\(720px,calc\(100vw - 32px\)\)/,
-    "never wider than the screen, nor than the measure a desktop always had");
+  assert.match(rule[0], /max-width:min\(460px,calc\(100vw - 32px\)\)/,
+    "never wider than the screen, and a short line on a desktop");
 });
 
 /* Three tiles were laid out as prose: Season W/L broke "2311W / 2450L" over two
@@ -10316,7 +10606,7 @@ test("Remove protection shows only when there is a master password to remove", a
   await until(() => appGet(win, "vaultPassword") === "correct horse battery", "the vault to be encrypted");
   await until(() => !$("sVaultRemove").classList.contains("hidden"), "Remove protection to appear");
   assert.equal($("sVaultSet").textContent, "Change password");
-  $("sVaultRemove").click();   // confirm() is stubbed to yes
+  $("sVaultRemove").click();   // ask() is stubbed to yes
   await until(() => $("sVaultRemove").classList.contains("hidden"), "it to go again with the password");
   assert.equal($("sVaultSet").textContent, "Set password");
 });
@@ -10418,10 +10708,10 @@ test("on a phone, back to top steps aside while you scroll down and returns on t
 
 // On a phone the six tabs scrolled sideways with nothing saying so, and Settings
 // opened focused on the colour picker, which scrolled the themes away
-test("on a phone Settings shows all six tabs, the theme names whole, and opens on its tab", async () => {
+test("on a phone Settings shows all five tabs, the theme names whole, and opens on its tab", async () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-  const at = css.indexOf("#settings .stabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))");
-  assert.ok(at > 0, "two rows of three");
+  const at = css.indexOf("#settings .stabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))");
+  assert.ok(at > 0, "two rows: three, then two across the same width");
   assert.match(css.slice(css.lastIndexOf("@media", at), at), /^@media \(max-width:560px\)\{/);
   assert.match(css.slice(at, at + 400), /\.thm-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/, "themes two to a row");
   const win = bootApp(seededAccount());
@@ -10702,8 +10992,8 @@ test("Sync says what it does in plain words, and what it still needs with a link
   const win = bootApp(seededAccount());
   const doc = win.document, $ = id => doc.getElementById(id);
   $("bSettings").click();
-  doc.querySelector('[data-stab="sync"]').click();
-  const tab = doc.querySelector('#settings .grp[data-tab="sync"]').textContent;
+  doc.querySelector('[data-stab="backup"]').click();
+  const tab = $("sSyncGrp").textContent;
   for (const jargon of [/blob/i, /\bKV\b/, /Last write wins/i, /scrape cache/i, /Backend URL/, /ciphertext/i, /\btoken\b/i])
     assert.doesNotMatch(tab, jargon, "no " + jargon);
   assert.match(tab, /Keeps this vault the same on your phone and your PC/);
@@ -10733,7 +11023,8 @@ test("the card menu keeps what you reach for; Season reset is in the Rank window
   const rank = rankWindow(win, id);
   const reset = rank.querySelector('.rk-season [data-act="seasonreset"]');
   assert.ok(reset, "in the Rank window");
-  reset.click();   // confirm() is stubbed to yes
+  reset.click();   // ask() is stubbed to yes
+  await tick();
   assert.equal(appGet(win, `accounts.find(a => a.id === ${JSON.stringify(id)}).stats.tier`), "UNRANKED", "the rank moved into Past seasons");
   assert.equal(doc.querySelector("#rankModal .rk-season"), null, "and the window shows the account as it is now");
   win.closeAllPanels();

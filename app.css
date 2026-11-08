@@ -1066,6 +1066,10 @@
      anything on the card took a second tap, the first one only lifting the card.
      There the box is simply shown, faintly, and a tap is a tap. */
   @media (hover:hover){.card:hover .bulkchk,.rw:hover .bulkchk{opacity:1}}
+  /* while selecting (Select, or a Compare pick) every box shows: the next one to
+     tick should not have to be found by hovering */
+  body.selecting .bulkchk{opacity:1}
+  #bulkbar.cmp-pick>:not(#bulkCount):not(#bulkClear){display:none}
   @media (hover:none){.bulkchk{opacity:.5}}
 
   /* bare icon buttons — must beat the generic button rules */
@@ -1624,7 +1628,7 @@
   .lpc-tip.hi{bottom:auto;top:12px}
   .lpc-pt:hover .lpc-tip{opacity:1}
   .stale{color:var(--warn-txt)}
-  #toast button{margin-left:12px;font-size:calc(12px*var(--ts));padding:3px 10px;color:var(--teal-txt)}
+  #toast button{pointer-events:auto;margin-left:12px;font-size:calc(12px*var(--ts));padding:3px 10px;color:var(--teal-txt)}
   .meta{font-size:calc(13px*var(--ts));color:var(--muted);line-height:1.65}
   .meta b{color:var(--text);font-weight:500}
   .meta .g{color:var(--gold-txt)}
@@ -1852,6 +1856,10 @@
     box-shadow:0 0 0 3px color-mix(in srgb,var(--danger) 16%,transparent)}
   /* what happens to the password, said under it in the page's own type, and kept
      once there is a password in the box */
+  /* in the example data, Add account and Bulk add say what saving will do to it */
+  .pv-note{margin:0 0 14px;padding:9px 12px;border-radius:var(--r-sm);font-size:calc(13px*var(--ts));line-height:1.45;
+    color:var(--teal-txt);background:color-mix(in srgb,var(--teal) 9%,var(--panel2));border:1px solid color-mix(in srgb,var(--teal) 28%,transparent)}
+  .pv-note[hidden]{display:none}
   .f-note{margin:0;font-size:calc(12px*var(--ts));color:var(--faint);line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
   .f-note .ico{width:13px;height:13px;flex:0 0 auto}
   .f-note.open{color:var(--warn-txt)}
@@ -1915,6 +1923,21 @@
      grid down means the account you are editing walks off the screen the moment
      you start. Sixteen fields is a page of its own either way.
      Bulk add is the one panel still inline. */
+  /* a confirmation opens over whatever window asked it, and stays a small card
+     even on a phone, where every other window is the whole screen: a question of
+     one line does not need one */
+  #askModal{z-index:70}
+  #askModal .mdl{max-width:460px}
+  .ask-b{margin:0;padding:16px 22px;white-space:pre-line;color:var(--muted);line-height:1.5}
+  .ask-b:empty{display:none}
+  #askAlt[hidden]{display:none}
+  @media (max-width:620px){
+    #askModal{padding:16px;align-items:center}
+    #askModal .mdl{margin:auto}
+    #askModal .mdl.hx{border-radius:var(--r-md)}
+    #askModal .mdl-in{min-height:0;border-radius:inherit}
+    #askModal .ask-b{padding:14px 16px}
+  }
   .modal{position:fixed;inset:0;z-index:60;overflow:auto;overscroll-behavior:contain;
     display:flex;align-items:flex-start;justify-content:center;
     padding:clamp(14px,5vh,60px) clamp(12px,4vw,32px)}
@@ -1961,12 +1984,14 @@
   #settings[data-tab="sync"] .grp[data-tab="sync"],#settings[data-tab="backup"] .grp[data-tab="backup"]{display:block}
   #settings .grp[data-tab="checks"]+.grp[data-tab="checks"]{border-top:1px solid var(--line)}
   .grp-h.tab-same{display:none}
-  /* On a phone the row of six scrolled sideways with nothing saying so, and Sync and
-     Backup sat off the edge. Two rows of three, all of them in sight. The themes go
-     two to a row there, where four cut "Shadow Isles" short. */
+  /* On a phone the row of tabs scrolled sideways with nothing saying so, and the last
+     ones sat off the edge. Two rows, all of them in sight: three, then the other two
+     sharing the second row's width, so it has no hole at the end. The themes go two
+     to a row there, where four cut "Shadow Isles" short. */
   @media (max-width:560px){
-    #settings .stabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:0 8px;overflow:visible}
-    #settings .stabs button{padding:10px 4px 9px;text-align:center}
+    #settings .stabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));padding:0 8px;overflow:visible}
+    #settings .stabs button{padding:10px 4px 9px;text-align:center;grid-column:span 2}
+    #settings .stabs button:nth-child(n+4){grid-column:span 3}
     .thm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   }
   .bk-acts{display:flex;flex-wrap:wrap;gap:8px}
@@ -2117,8 +2142,12 @@
      195px on a phone, which made every longer toast a tall pill of short lines. As
      wide as its text, up to the screen less its gutters, and no wider than the
      measure a desktop always got by accident. */
-  #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:80;display:none;
-    width:max-content;max-width:min(720px,calc(100vw - 32px));
+  /* Bottom left, the way most desktop apps place a passing message. Bottom centre
+     put "Marked played today" or "Streamer mode on" over the buttons of whichever
+     card sat in the middle. It also lets clicks through: only its own button
+     (Undo, Show) takes them, so a message is never in the way of what it covers. */
+  #toast{position:fixed;bottom:clamp(14px,3vw,28px);left:clamp(14px,3vw,28px);z-index:80;display:none;
+    width:max-content;max-width:min(460px,calc(100vw - 32px));pointer-events:none;
     background:color-mix(in srgb,var(--panel2) 95%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
     border:1px solid var(--line2);border-radius:var(--r-md);color:var(--text);
     padding:11px 20px;font-size:calc(13px*var(--ts));font-weight:500;box-shadow:var(--sh-3)}
@@ -2134,7 +2163,6 @@
   .lock-in{display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px 34px 32px}
   .lock-in .brand-mark{margin:6px 0 24px}
   .lock-wm{font-size:calc(30px*var(--ts))}
-  .lock-sub{margin-top:8px;font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
   .lock-in .hx-rule{margin:24px 0 20px}
   .lock-k{font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-txt)}
   .lock-txt{font-size:calc(13px*var(--ts));color:var(--muted);margin:8px 0 18px;line-height:1.6}
@@ -2198,6 +2226,7 @@
     color:var(--text);padding:10px 10px 10px 14px;border-radius:var(--r-md);font-size:calc(13px*var(--ts));line-height:1.45}
   .mv-t{display:flex;gap:9px;align-items:flex-start;flex:1 1 320px;min-width:0}
   .mv-t .ico{width:15px;height:15px;flex-shrink:0;margin-top:2px;color:var(--teal-txt)}
+  .ios-band .mv-t .ico{color:var(--warn-txt)}   /* a warning, unlike the move */
   .mv-acts{display:flex;gap:8px;flex-wrap:wrap}
   .mv-acts>*{min-height:34px}
   .mv-acts>a{display:inline-flex;align-items:center;text-decoration:none}
@@ -2542,7 +2571,7 @@
   .grid.boot .lpc,.hx.flash .lpc{animation:drawIn .8s cubic-bezier(.22,1,.36,1)}
   @keyframes borderPulse{0%{background:var(--teal)}100%{background:linear-gradient(155deg,#ffffff1f,#ffffff0a 38%,#ffffff05)}}
   .hx.flash{animation:borderPulse 1.1s ease-out}
-  @keyframes toastIn{from{opacity:0;transform:translate(-50%,14px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+  @keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
   #toast{animation:toastIn .28s cubic-bezier(.22,1,.36,1)}
   .confetti{position:fixed;pointer-events:none;z-index:60}
   .confetti i{position:absolute;left:50%;top:40%;width:6px;height:10px;border-radius:2px;animation:pop 1.1s ease-out forwards}

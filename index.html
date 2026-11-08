@@ -22,19 +22,19 @@
 <meta property="og:title" content="Smurf Tracker: every League account in one place">
 <meta property="og:description" content="Ranks, LP history and logins for all your League of Legends accounts. Free, no sign-up, runs in your browser.">
 <meta property="og:url" content="https://smurf-tracker.pages.dev/">
-<meta property="og:image" content="https://smurf-tracker.pages.dev/icons/social.jpg">
+<meta property="og:image" content="https://smurf-tracker.pages.dev/icons/social.jpg?v=2">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="Smurf Tracker: account cards with rank crests, LP charts and win rates">
 <meta name="twitter:card" content="summary_large_image">
-<title>Smurf Tracker · Summoner Vault</title>
+<title>Smurf Tracker</title>
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="app.css?v=2.21.0">
+<link rel="stylesheet" href="app.css?v=2.22.0">
 </head>
 <body data-atmosphere="spotlight">
 <!-- A shared snapshot opens here instead of the app: see openSnapshot -->
@@ -47,7 +47,6 @@
   <div id="lock" class="hx gold hidden" role="region" aria-labelledby="lockTitle"><div class="hx-in lock-in">
     <span class="brand-mark" aria-hidden="true"></span>
     <div class="lock-wm hex-display" id="lockTitle">Smurf Tracker</div>
-    <div class="lock-sub">Summoner Vault</div>
     <div class="hx-rule" aria-hidden="true"></div>
     <div class="lock-k">Vault locked</div>
     <p class="lock-txt" id="lockTxt">Enter your master password to open it.</p>
@@ -115,6 +114,9 @@
     <span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> <b>Preview</b>: example data, nothing is saved</span>
     <button id="bExitPreview" class="b-teal">Exit preview</button>
   </div>
+
+  <!-- Safari on iPhone and iPad only (see renderIosBand) -->
+  <div id="iosBand" class="move-band ios-band hidden" role="region" aria-label="Keep your vault on this iPhone"></div>
 
   <!-- help -->
   <div id="help" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
@@ -188,8 +190,9 @@
       <button type="button" role="tab" id="stab-checks" aria-controls="settingsPanel" data-stab="checks" aria-selected="false" tabindex="-1">Rank checks</button>
       <button type="button" role="tab" id="stab-alerts" aria-controls="settingsPanel" data-stab="alerts" aria-selected="false" tabindex="-1">Alerts</button>
       <button type="button" role="tab" id="stab-security" aria-controls="settingsPanel" data-stab="security" aria-selected="false" tabindex="-1">Security</button>
-      <button type="button" role="tab" id="stab-sync" aria-controls="settingsPanel" data-stab="sync" aria-selected="false" tabindex="-1">Sync</button>
-      <button type="button" role="tab" id="stab-backup" aria-controls="settingsPanel" data-stab="backup" aria-selected="false" tabindex="-1">Backup</button>
+      <!-- Backup and Sync were two tabs of one subject, copies of your vault, and both
+           were half empty in a window that keeps one height -->
+      <button type="button" role="tab" id="stab-backup" aria-controls="settingsPanel" data-stab="backup" aria-selected="false" tabindex="-1">Backup &amp; sync</button>
     </div>
     <div class="mdl-b" id="settingsPanel" role="tabpanel" aria-labelledby="stab-look">
 
@@ -426,8 +429,26 @@
         </div>
       </div>
 
-      <div class="grp" data-tab="sync">
-        <div class="grp-h tab-same">Device sync</div>
+      <div class="grp" data-tab="backup">
+        <div class="grp-h">Backup</div>
+        <div class="hint" style="margin-bottom:6px">Your vault lives only in this browser. A backup file is the copy you can bring back if the browser loses it.</div>
+        <div id="sBackupLast" class="hint" style="margin-bottom:14px"></div>
+        <!-- the same actions as the ⋯ menu, where you would look for them in Settings -->
+        <div class="bk-acts">
+          <button type="button" data-proxy="bExportEnc" class="b-teal">Export encrypted backup…</button>
+          <button type="button" data-proxy="bExport">Export backup (JSON, plaintext)</button>
+          <button type="button" data-proxy="bExportCsv">Export as CSV</button>
+          <button type="button" data-proxy="bImport">Import backup</button>
+          <button type="button" data-proxy="bImportCsv">Import CSV</button>
+        </div>
+        <div class="sub-fld inline" style="padding-left:0;margin-top:16px">
+          <label for="sExportDays">Remind me to export after</label>
+          <input id="sExportDays" type="number" min="1" max="365" value="30" style="max-width:90px"> <span class="hint" style="margin:0">days</span>
+        </div>
+      </div>
+
+      <div class="grp" data-tab="backup" id="sSyncGrp">
+        <div class="grp-h">Device sync</div>
         <!-- It was written for whoever built it: "Pushes the encrypted vault blob to
              your worker (KV)", "Last write wins", "There is no scrape cache". The same
              facts, for someone with a phone and a PC. -->
@@ -445,24 +466,6 @@
         </div>
         <div id="sSyncStatus" class="hint" style="margin-top:8px"></div>
         <p class="hint" style="margin:6px 0 0">The newest upload wins, so download on a device before you change things there. You are warned when the synced copy is newer than this one.</p>
-      </div>
-
-      <div class="grp" data-tab="backup">
-        <div class="grp-h tab-same">Backup</div>
-        <div class="hint" style="margin-bottom:6px">Your vault lives only in this browser. A backup file is the copy you can bring back if the browser loses it.</div>
-        <div id="sBackupLast" class="hint" style="margin-bottom:14px"></div>
-        <!-- the same actions as the ⋯ menu, where you would look for them in Settings -->
-        <div class="bk-acts">
-          <button type="button" data-proxy="bExportEnc" class="b-teal">Export encrypted backup…</button>
-          <button type="button" data-proxy="bExport">Export backup (JSON, plaintext)</button>
-          <button type="button" data-proxy="bExportCsv">Export as CSV</button>
-          <button type="button" data-proxy="bImport">Import backup</button>
-          <button type="button" data-proxy="bImportCsv">Import CSV</button>
-        </div>
-        <div class="sub-fld inline" style="padding-left:0;margin-top:16px">
-          <label for="sExportDays">Remind me to export after</label>
-          <input id="sExportDays" type="number" min="1" max="365" value="30" style="max-width:90px"> <span class="hint" style="margin:0">days</span>
-        </div>
       </div>
 
     </div>
@@ -528,10 +531,11 @@
       <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     </div>
     <div class="mdl-b">
+    <p class="pv-note" id="baPreviewNote" hidden>You are looking at example data. Adding ends the preview and starts your own vault with these accounts.</p>
     <div class="formgrid">
       <div class="fw hint">Paste <code>Name#TAG</code>s (one a line, or comma-separated), an <b>op.gg multi-search link</b>, or lines from the <b>lobby chat</b> ("Name #TAG joined the lobby"). A link brings its own region; the rest get the region below. Add logins and notes to each afterwards.</div>
-      <div class="fld"><label>Region for all</label><select id="baRegion"></select></div>
-      <div class="fld fw"><label>Accounts</label><textarea id="baList" data-autofocus rows="6" placeholder="Moonlit Mid#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
+      <div class="fld"><label for="baRegion">Region for all</label><select id="baRegion"></select></div>
+      <div class="fld fw"><label for="baList">Accounts</label><textarea id="baList" data-autofocus rows="6" placeholder="Moonlit Mid#0001&#10;Bot Diff#EUW&#10;Coinflip Queue#EUNE"></textarea></div>
     </div>
     </div>
     <div class="mdl-f">
@@ -571,6 +575,7 @@
       <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
     </div>
     <div class="mdl-b">
+    <p class="pv-note" id="fPreviewNote" hidden>You are looking at example data. Saving ends the preview and starts your own vault with this account.</p>
     <div class="formgrid" id="fGrid">
       <!-- What an account can't be added without comes first: the Riot ID and where
            it lives, then the login the card copies. The rest, which most accounts
@@ -681,15 +686,15 @@
   <div id="runbar" class="runbar hidden"><div class="run-fill"></div><span class="run-txt"></span></div>
   <div id="failbar" class="failbar hidden"></div>
   <div class="tools">
-    <input type="search" id="tSearch" placeholder="Search name, label, tag, email…">
+    <input type="search" id="tSearch" placeholder="Search name, label, tag, email…" aria-label="Search accounts">
     <!-- a phone's whole first screen was filters; there they fold behind this -->
     <button type="button" id="tFilters" class="t-filters" aria-expanded="false" title="Region, sort, status, favorites, archived">
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
       Filters<b class="t-n" hidden></b></button>
-    <select id="tRegion">
+    <select id="tRegion" aria-label="Region">
       <option value="">All regions</option>
     </select>
-    <select id="tSort">
+    <select id="tSort" aria-label="Sort by">
       <option value="rank">Sort: Rank</option>
       <option value="name">Sort: Name</option>
       <option value="level">Sort: Level</option>
@@ -699,7 +704,7 @@
       <option value="updated">Sort: Last updated</option>
       <option value="opened">Sort: Last login</option>
     </select>
-    <select id="tStatus">
+    <select id="tStatus" aria-label="Status">
       <option value="">All statuses</option>
     </select>
     <button id="tFav" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Favorites</button>
@@ -716,14 +721,15 @@
   </div>
   <div id="bulkbar" class="hidden" style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--teal) 38%,transparent);border-radius:var(--r-md);background:color-mix(in srgb,var(--teal) 7%,var(--panel));box-shadow:var(--sh-1)">
     <span id="bulkCount" style="font-size:calc(12px*var(--ts));color:var(--teal-txt);font-weight:600;letter-spacing:.02em"></span>
-    <select id="bulkStatus">
+    <button id="bulkCompare" class="b-teal hidden">Compare these two</button>
+    <select id="bulkStatus" aria-label="Set status of the selected accounts">
       <option value="">Set status…</option>
       <option value="active">Active</option>
       <option value="resting">Resting / unused</option>
       <option value="restricted">Chat/ranked restricted</option>
       <option value="banned">Banned</option>
     </select>
-    <input id="bulkTag" placeholder="Add tag…" style="width:130px">
+    <input id="bulkTag" placeholder="Add tag…" aria-label="Add a tag to the selected accounts" style="width:130px">
     <button id="bulkTagBtn">Add tag</button>
     <button id="bulkDelete" class="b-danger">Delete selected</button>
     <button id="bulkClear">Clear selection</button>
@@ -761,7 +767,7 @@
     <div class="mdl narrow hx pal"><div class="hx-in mdl-in">
       <div class="pal-h">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-        <input id="palInput" type="text" placeholder="Jump to an account, or start typing a command…"
+        <input id="palInput" type="text" aria-label="Jump to an account or run a command" placeholder="Jump to an account, or start typing a command…"
           autocomplete="off" autocorrect="off" spellcheck="false" role="combobox"
           aria-expanded="true" aria-controls="palList" aria-autocomplete="list">
       </div>
@@ -773,14 +779,24 @@
   <!-- Must exist at boot so the shared modal observer / Escape / backdrop wiring
        sees it — creating it lazily left Compare outside body.modal-open and the
        focus trap. -->
+  <!-- every "are you sure", in place of the browser's own grey box (see ask()) -->
+  <div id="askModal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="askTitle" aria-describedby="askBody">
+    <div class="mdl narrow hx"><div class="hx-in mdl-in">
+      <div class="mdl-h"><span class="t" id="askTitle"></span></div>
+      <div class="mdl-b"><p id="askBody" class="ask-b"></p></div>
+      <div class="mdl-f"><button id="askCancel" type="button">Cancel</button><span class="sp"></span>
+        <button id="askAlt" type="button" hidden></button><button id="askOk" type="button"></button></div>
+    </div></div>
+  </div>
+
   <div id="compareModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Compare">
     <div class="mdl narrow hx teal"><div class="hx-in mdl-in">
       <div class="mdl-h"><span class="t">Compare</span>
         <button class="panel-close" id="cmpClose" data-close-panel title="Close" aria-label="Close">✕</button>
       </div>
       <div class="mdl-b" id="cmpBody"></div>
-      <div class="mdl-f"><button id="cmpClear" type="button">Clear selection</button>
-        <span class="sp hint">Pick accounts with Compare… in a card's ⋯ menu.</span></div>
+      <div class="mdl-f"><button id="cmpClear" type="button">Done</button>
+        <span class="sp hint">Compare… in a card's ⋯ menu, then tick a second account. Or tick any two and press Compare.</span></div>
     </div></div>
   </div>
 
@@ -849,6 +865,6 @@
   <div id="srSay" class="sr-only" role="status" aria-live="polite"></div>
 </div>
 
-<script src="app.js?v=2.21.0"></script>
+<script src="app.js?v=2.22.0"></script>
 </body>
 </html>
