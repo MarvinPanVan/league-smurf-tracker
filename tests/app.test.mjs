@@ -9881,6 +9881,28 @@ test("on a phone the selection bar sits at the foot of the screen, with room und
   assert.match(css, /body\.selecting \.grid\{padding-bottom:190px\}/, "and the last card can scroll out from under it");
 });
 
+// Archive said where the account went and offered no way back, and neither did deleting
+// a selection
+test("archiving an account and deleting a selection both offer Undo", async () => {
+  const acc = (id, n) => ({ id, region: "EUW", gameName: n, tagLine: "1", status: "active", tags: [], history: [], stats: null, password: "pw" + id });
+  const win = bootApp([acc("a", "A"), acc("b", "B"), acc("c", "C"), acc("d", "D")]);
+  const doc = win.document, ids = () => appGet(win, "JSON.stringify(accounts.filter(a => !a.archived).map(a => a.id))");
+  cardMenu(win, "b").querySelector('[data-act="archive"]').click();
+  await until(() => doc.getElementById("toastBtn"), "the message with its Undo");
+  assert.match(doc.getElementById("toast").textContent, /^Archived\./);
+  assert.equal(ids(), JSON.stringify(["a", "c", "d"]));
+  doc.getElementById("toastBtn").click();
+  await until(() => ids() === JSON.stringify(["a", "b", "c", "d"]), "Undo to bring it back");
+  // a selection of two, deleted and put back where each one was
+  const box = id => doc.querySelector(`.card[data-id="${id}"] .bulkchk`);
+  box("a").click(); box("c").click();
+  doc.getElementById("bulkDelete").click(); await tick();
+  await until(() => ids() === JSON.stringify(["b", "d"]) && doc.getElementById("toastBtn"), "the delete and its Undo");
+  doc.getElementById("toastBtn").click();
+  await until(() => ids() === JSON.stringify(["a", "b", "c", "d"]), "both back, in their places");
+  assert.equal(appGet(win, "accounts.find(a => a.id === 'c').password"), "pwc", "with their logins");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

@@ -8208,10 +8208,16 @@ $("bulkTagBtn").addEventListener("click",()=>{
 $("bulkTag").addEventListener("keydown",e=>{if(e.key==="Enter")$("bulkTagBtn").click()});
 $("bulkDelete").addEventListener("click",async()=>{
   const n=selected.size;
-  if(!await ask({title:"Delete "+n+" selected account"+(n===1?"":"s")+"?",body:"This can't be undone.",ok:"Delete",danger:true}))return;
+  if(!await ask({title:"Delete "+n+" selected account"+(n===1?"":"s")+"?",body:"There's an Undo for a few seconds afterwards.",ok:"Delete",danger:true}))return;
+  // kept with their places, so Undo puts each back where it was
+  const gone=accounts.map((a,i)=>[i,a]).filter(([,a])=>selected.has(a.id));
   accounts=accounts.filter(a=>!selected.has(a.id));
   selected.clear();lastSelectedId=null;render();
-  saveThen(n+" account"+(n===1?"":"s")+" deleted");
+  saveThen(n+" account"+(n===1?"":"s")+" deleted","Undo",()=>{
+    if(vaultLocked())return;   // as with one: no passwords back into a locked page
+    for(const[i,a]of gone)accounts.splice(Math.min(i,accounts.length),0,a);
+    render();saveThen(n+" account"+(n===1?"":"s")+" restored");
+  });
 });
 $("bulkClear").addEventListener("click",()=>{selected.clear();lastSelectedId=null;ui.selecting=false;cmpPick=false;render()});
 $("bulkCompare").addEventListener("click",compareSelected);
@@ -8457,7 +8463,13 @@ async function onCardClick(e){
   else if(act==="edit")openForm(acc);
   else if(act==="art")openArtPicker(id);
   else if(act==="notefields"){commitNote();openForm(acc,"notes")}
-  else if(act==="archive"){acc.archived=true;render();saveThen("Archived. Turn on \"Archived\" in the toolbar to see it again")}
+  // Archiving said where the account went, with nothing to take it back: Undo now,
+  // like a delete has
+  else if(act==="archive"){acc.archived=true;render();
+    saveThen("Archived. It's under Archived in the toolbar","Undo",()=>{
+      const a=accounts.find(x=>x.id===id);if(!a||vaultLocked())return;
+      a.archived=false;render();saveThen("Back in your active accounts");
+    })}
   else if(act==="unarchive"){acc.archived=false;render();saveThen("Restored to active accounts")}
   else if(act==="noteedit"){
     if(editingNote===id)return;
