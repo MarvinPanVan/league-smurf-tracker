@@ -821,14 +821,14 @@
      name and one after the rank — and the figures crowded at the right edge. Now
      the slack is all after the name, like any table, and the figures sit together
      as one block under their headings. The heading row uses the same columns. */
-  .grid.list{--rw-cols:auto 40px minmax(160px,1fr) 124px 124px 60px 94px 38px 72px 62px 16px;--rw-gap:13px}
+  .grid.list{--rw-cols:auto 40px minmax(160px,1fr) 124px 124px 60px 94px 38px 88px 62px 16px;--rw-gap:13px}
   /* Up to a point: past about 1180px, "all the slack after the name" was a hole
      between a name and its own rank (450px of nothing at 1440, a thousand at 2560).
      There every column after the picture takes a share, more for the name and the
      climb, the way a full-width table spreads; the picture stays beside the name.
      Below that width the narrower templates further down take over. */
   @media (min-width:1181px){
-    .grid.list{--rw-cols:auto 40px minmax(160px,2.4fr) minmax(124px,1.4fr) minmax(124px,1fr) minmax(60px,.6fr) minmax(94px,1fr) minmax(38px,.5fr) minmax(72px,.8fr) minmax(62px,.5fr) 16px}
+    .grid.list{--rw-cols:auto 40px minmax(160px,2.4fr) minmax(124px,1.4fr) minmax(124px,1fr) minmax(60px,.6fr) minmax(94px,1fr) minmax(38px,.5fr) minmax(88px,.8fr) minmax(62px,.5fr) 16px}
     /* a wider column is room around the change pill and the record bar, not a
        longer pill or a bar whose length stops meaning the same thing row to row */
     .rw-d{align-items:flex-start}
@@ -948,7 +948,7 @@
      The sparkline outranks the region code and the timestamp: it is the only
      column that says anything a glance can't already get from the rank. */
   @media (max-width:1180px){
-    .grid.list{--rw-cols:auto 40px minmax(130px,1fr) 104px 112px 58px 88px 72px 62px 16px;--rw-gap:11px}
+    .grid.list{--rw-cols:auto 40px minmax(130px,1fr) 104px 112px 58px 88px 88px 62px 16px;--rw-gap:11px}
     .rw-rg,.h-rg{display:none}
   }
   @media (max-width:980px){

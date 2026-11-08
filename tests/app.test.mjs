@@ -2732,7 +2732,7 @@ test("Recent form: a Riot-read account's Details fetch its last five ranked game
   assert.equal(card("r").querySelectorAll(".fm-pip.w").length, 2);
   const rows = [...card("r").querySelectorAll('[data-k="sec-form"] .chp')].map(r => [...r.children].map(c => c.textContent).join("|"));
   assert.equal(rows.length, 3);
-  assert.equal(rows[0], "WAhri|8/2/5|31 min|1 h ago");
+  assert.equal(rows[0], "WAhri|8/2/5|31 min|1 hour ago");
   assert.equal(card("r").querySelector('[data-k="sec-form"] img'), null, "a champion name is text, never markup");
   card("r").querySelector('[data-act="info"]').click();
   card("r").querySelector('[data-act="info"]').click();
@@ -2861,7 +2861,7 @@ test("Discord decay alerts: switched on in Alerts, the worker gets a list of Dia
   runScript(win, `commitStats("g", accounts.find(x => x.id === "g"), {found:true,tier:"GOLD",division:"I",lp:5,wins:1,losses:0,updatedAt:Date.now()})`);
   assert.equal(win.__soon, 1, "a Gold reading cannot change a decay estimate");
   doc.getElementById("bSettings").click();
-  await until(() => /On, watching 1 account · last checked 1 h ago/.test(doc.getElementById("sWatchStatus").textContent), "the status line");
+  await until(() => /On, watching 1 account · last checked 1 hour ago/.test(doc.getElementById("sWatchStatus").textContent), "the status line");
   // a worker deployed before alerts existed answers 405: say so instead of failing quietly
   win.fetch = async () => ({ ok: false, status: 405, json: async () => ({ error: "method not allowed" }) });
   runScript(win, "updateWatchStatus()");
@@ -9977,6 +9977,28 @@ test("the Average climb dates read day before month, as the charts do", () => {
   assert.equal(tr.span, "19 Oct → 8 Nov");
   assert.match(tr.svg, /\+30 LP since 19 Oct/);
   assert.equal(win.dateLabel(t2), "8 Nov", "the chart axis says the same");
+});
+
+// "12 h ago" next to "4 days ago": every unit in words, and the list's Updated
+// column wide enough for the longest of them
+test("times ago use whole words for every unit, and the list column fits them", () => {
+  const win = bootApp();
+  const now = Date.now(), M = 60000;
+  assert.equal(win.timeAgo(now - 20000), "just now");
+  assert.equal(win.timeAgo(now - 1 * M - 5000), "1 minute ago");
+  assert.equal(win.timeAgo(now - 59 * M - 5000), "59 minutes ago");
+  assert.equal(win.timeAgo(now - 60 * M - 5000), "1 hour ago");
+  assert.equal(win.timeAgo(now - 12 * 60 * M - 5000), "12 hours ago");
+  assert.equal(win.timeAgo(now - 24 * 60 * M - 5000), "1 day ago");
+  assert.equal(win.timeAgo(now - 4 * 24 * 60 * M - 5000), "4 days ago");
+  // "59 minutes ago" is 87px in the list's 12px type; "143 days ago" (75px) was
+  // already cut to "143 days…" in the old 72px column
+  // third from the end in every template: Updated, the copy keys, the chevron
+  const updCol = c => +c.trim().split(/\s+(?![^(]*\))/).at(-3).replace(/minmax\((\d+)px.*/, "$1").replace("px", "");
+  const base = html.match(/\.grid\.list\{--rw-cols:([^;]+);/)[1];
+  const wide = html.match(/@media \(min-width:1181px\)\{\s*\.grid\.list\{--rw-cols:([^}]+)\}/)[1];
+  const mid = html.match(/@media \(max-width:1180px\)\{\s*\.grid\.list\{--rw-cols:([^;]+);/)[1];
+  for (const c of [base, wide, mid]) assert.ok(updCol(c) >= 88, "the Updated column: " + c);
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

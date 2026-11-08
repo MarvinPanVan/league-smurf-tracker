@@ -1086,7 +1086,17 @@ function ageFrom(iso){
   const yr=Math.floor(days/365.25);
   return yr+(yr===1?" year old":" years old");
 }
-function timeAgo(ts){if(!ts)return null;const s=Math.floor((Date.now()-ts)/1000);if(s<60)return"just now";const m=Math.floor(s/60);if(m<60)return m+" min ago";const h=Math.floor(m/60);if(h<24)return h+" h ago";const d=Math.floor(h/24);return d+(d===1?" day ago":" days ago")}
+// Whole words for every unit: "12 h ago" in one row and "4 days ago" in the next
+// read as two styles in one column.
+function timeAgo(ts){
+  if(!ts)return null;
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60)return"just now";
+  const ago=(n,u)=>n+" "+u+(n===1?"":"s")+" ago";
+  const m=Math.floor(s/60);if(m<60)return ago(m,"minute");
+  const h=Math.floor(m/60);if(h<24)return ago(h,"hour");
+  return ago(Math.floor(h/24),"day");
+}
 function tierColor(t){return TIER_COLORS[(t||"UNRANKED").toUpperCase()]||TIER_COLORS.UNRANKED}
 // Sized by CSS through `cls`, never by attributes — the same markup is the 13px
 // mark on a row, the 20px badge on a portrait and the 80px watermark on a card.
