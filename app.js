@@ -6268,6 +6268,27 @@ function renderPassNote(){
     :`<span>Saved in this browser without encryption.</span><button type="button" class="f-link" id="fSetMaster">Set a master password</button>`);
 }
 function closeForm(){$("form").classList.add("hidden");editingId=null}
+/* Only "Set a master password" asked before dropping what the form held. Escape,
+   Cancel, ✕, a click beside the window and the back button all closed it without
+   a word, so a password made with Gen, already set on the Riot account, was gone
+   with one misclick. Every way out now goes through here, and asks first if
+   anything in the form differs from what it opened with. */
+function formDirty(){return !$("form").classList.contains("hidden")&&formSnapshot()!==formBase}
+async function leaveForm(){
+  if(!formDirty())return true;
+  return !!await ask({title:editingId?"Discard your changes to this account?":"Discard this new account?",
+    body:"What you typed here isn't saved yet.",ok:"Discard",cancel:"Keep editing",danger:true});
+}
+// With nothing at stake the window closes there and then; only a question waits.
+function requestClose(){
+  const go=()=>{closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}return true};
+  if(!formDirty())return Promise.resolve(go());
+  return leaveForm().then(ok=>ok?go():false);
+}
+function cancelForm(){
+  if(!formDirty()){closeForm();return}
+  leaveForm().then(ok=>{if(ok)closeForm()});
+}
 /* A Riot ID is copied as one string — "Hide on Bush#EUW" from op.gg, the client,
    a friend's message — and the form wanted it in two boxes, so a paste into the
    name failed with "name and tag are required". A game name cannot contain "#",
@@ -6301,7 +6322,7 @@ $("fMoreBtn").addEventListener("click",()=>{
 });
 $("fPassNote").addEventListener("click",async e=>{
   if(!e.target.closest("#fSetMaster"))return;
-  if(formSnapshot()!==formBase&&!await ask({title:"Leave this form?",body:"What you typed here isn't saved yet.",ok:"Leave",danger:true}))return;
+  if(formDirty()&&!await leaveForm())return;
   openSettings("security");
   setTimeout(()=>{const f=$("sVaultPass");if(f){f.scrollIntoView&&f.scrollIntoView({block:"center"});f.focus()}},60);
 });
@@ -6984,9 +7005,9 @@ function loadDemo(){
 }
 
 // ---------- events ----------
-$("bAdd").addEventListener("click",()=>$("form").classList.contains("hidden")?openForm(null):closeForm());
+$("bAdd").addEventListener("click",()=>{if($("form").classList.contains("hidden"))openForm(null);else cancelForm()});
 $("fSave").addEventListener("click",submitForm);
-$("fCancel").addEventListener("click",closeForm);
+$("fCancel").addEventListener("click",cancelForm);
 // Enter in a field submits the form — except inside the notes textarea, where it
 // still means a newline.
 $("form").addEventListener("keydown",e=>{
@@ -7044,7 +7065,7 @@ document.addEventListener("keydown",e=>{
       // Colour miniature alone — Escape used to close Settings while the picker
       // was the thing being dismissed.
       if($("accPrev").classList.contains("show")){hideAccPrev();return}
-      closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}
+      requestClose();
     }
     return;
   }
@@ -7125,7 +7146,7 @@ document.body.classList.toggle("away",document.hidden); // a restored tab can bo
     pickedByPointer=false;
   });
 }
-document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListener("click",closeAllPanels));
+document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListener("click",requestClose));
 
 // ---------- modal panels ----------
 // Settings and Help open over the page. Everything a modal owes the user beyond
@@ -7203,7 +7224,7 @@ addEventListener("popstate",()=>{
   // (or a form you chose to keep editing) takes a new entry through syncModals
   if(askDone){askDone(false);return}
   if(!$("palette").classList.contains("hidden")){closePalette();return}
-  closeAllPanels();editingId=null;
+  requestClose();
 });
 // a reload keeps the history entry a window had taken; with nothing open it is ours to clear
 try{if(onWindowEntry())history.replaceState(null,"")}catch(e){}
@@ -7255,7 +7276,7 @@ function syncModals(){
     let downOnBack=false;
     el.addEventListener("mousedown",e=>{downOnBack=e.target===el});
     el.addEventListener("click",e=>{
-      if(downOnBack&&e.target===el){if(id==="askModal"){if(askDone)askDone(false)}else closeAllPanels()}
+      if(downOnBack&&e.target===el){if(id==="askModal"){if(askDone)askDone(false)}else requestClose()}
       downOnBack=false});
   }
 }

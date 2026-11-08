@@ -9638,6 +9638,53 @@ test("a window opened straight after another closed still has its back step", as
   }
 });
 
+// Only "Set a master password" asked before dropping the form. Escape, Cancel, ✕, a click
+// beside it and the back button closed it silently: a password made with Gen, already set
+// on the Riot account, was gone with one misclick.
+test("every way out of a form with typing in it asks first, and Keep editing keeps it", async () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  win.ask = win.__ask;
+  const doc = win.document, $ = id => doc.getElementById(id), open = id => !$(id).classList.contains("hidden");
+  const ways = {
+    "Escape": () => doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true })),
+    "✕": () => doc.querySelector("#form [data-close-panel]").click(),
+    "Cancel": () => $("fCancel").click(),
+    "a click beside it": () => { const f = $("form"); f.dispatchEvent(new win.MouseEvent("mousedown", { bubbles: true })); f.dispatchEvent(new win.MouseEvent("click", { bubbles: true })); },
+    "Add account again": () => $("bAdd").click(),
+  };
+  for (const [name, leave] of Object.entries(ways)) {
+    $("bAdd").click();
+    $("fLogin").value = "riot_login";
+    $("fGen").click(); await tick();
+    const pw = $("fPass").value;
+    assert.ok(pw.length >= 12, "Gen made a password");
+    leave(); await tick();
+    assert.ok(open("askModal"), name + " asks before dropping it");
+    assert.equal($("askOk").textContent, "Discard");
+    assert.equal($("askCancel").textContent, "Keep editing");
+    $("askCancel").click(); await tick();
+    assert.ok(open("form"), name + ": Keep editing leaves the form open");
+    assert.equal($("fPass").value, pw, "with the password still in it");
+    leave(); await tick();
+    $("askOk").click(); await tick();
+    assert.equal(open("form"), false, name + ": Discard closes it");
+  }
+  // nothing typed, nothing asked; an edit left as it was closes at once too
+  $("bAdd").click();
+  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await tick();
+  assert.ok(!open("form") && !open("askModal"), "an untouched form just closes");
+  runScript(win, "openForm(accounts[0])");
+  $("fCancel").click(); await tick();
+  assert.ok(!open("form") && !open("askModal"), "so does an edit with no change");
+  runScript(win, "openForm(accounts[0])");
+  $("fLabel").value = "Renamed";
+  await tick();   // the window's history entry is taken as it opens
+  win.history.back(); await until(() => open("askModal"), "the back button to ask too");
+  assert.equal($("askTitle").textContent, "Discard your changes to this account?");
+  $("askCancel").click(); await tick();
+  assert.ok(open("form") && $("fLabel").value === "Renamed");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
