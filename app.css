@@ -2695,7 +2695,6 @@
      row, Archived and the checkbox trailing — so every row was a different ragged
      length. They sit on a two-column grid. (The command row is set out above.) */
   @media (max-width:560px){
-    .cmd>#bCheckAll{flex-basis:100%} /* the primary gets the full first row, not half of it */
     .seg button{width:36px}
     .tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:stretch}
     .tools>*{min-width:0;width:100%}

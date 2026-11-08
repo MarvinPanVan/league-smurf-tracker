@@ -679,13 +679,15 @@ test("the colour miniature looks like the page it stands in for", () => {
   assert.doesNotMatch(rule(".acc-prev-rib i"), /999px/, "the ribbon is plates, not a pill");
 });
 
-test("on a phone the console's readout rides with the layout switch and the filters sit on a grid", () => {
+// Check all ranks had the first row to itself on a phone and + Add account the next:
+// two 36px rows where one holds both (141px and 117px on a 320px phone).
+test("on a phone the two commands share a row, the readout rides with the layout switch and the filters sit on a grid", () => {
   const win = bootApp();
   const count = win.document.getElementById("count"), density = win.document.getElementById("density");
   assert.ok(count.parentElement === density.parentElement && count.parentElement.classList.contains("cmd-r"),
     "the count and the switch wrap as one unit, so neither is left on a row alone");
-  const at = w => { const i = html.indexOf("@media (max-width:" + w + "px){\n    .cmd>#bCheckAll"); return i; };
-  assert.ok(at(560) > -1, "the primary takes the first row on a phone");
+  assert.doesNotMatch(html, /#bCheckAll\{flex-basis/, "Check all ranks no longer takes a row of its own");
+  assert.match(html, /@media \(max-width:760px\)\{[^@]*\n    \.cmd>button\{flex:1 1 auto\}/, "the two stretch to fill the row they share");
   assert.match(html, /\.tools\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/, "two even columns of filters");
   assert.match(html, /\.tools input\[type=search\]\{grid-column:1\/-1/, "with search across both");
 });
