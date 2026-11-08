@@ -8556,7 +8556,7 @@ test("the paid AI rank check waits under Advanced, and opens by itself when a ke
 // A phone's header was four rows: gem and wordmark, strapline, rank bar, then the tray alone
 test("on a phone the header is one app bar: the wordmark left, the tray right, the rank bar under both", () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-  const at = css.indexOf("@media (max-width:560px){\n    .top{display:grid");
+  const at = css.indexOf("@media (max-width:560px), (max-height:500px) and (orientation:landscape){\n    .top{display:grid");
   assert.ok(at > -1, "a phone rule for the header");
   const r = css.slice(at, css.indexOf("\n  }", at));
   assert.match(r, /\.top>\.bar\{grid-column:2;grid-row:1/, "the tray beside the wordmark, not on a row of its own");
@@ -9040,7 +9040,7 @@ test("the LP chip says it is since the last check, with the pace beside it, and 
 
 // A phone's toolbar stacked Check all ranks over Refresh N stale: two buttons for one job
 test("on a phone the toolbar has one ranks button: Refresh stale when there is any, else Check all", () => {
-  const block = html.slice(html.indexOf("@media (max-width:560px){\n    .tools{display:flex;flex-wrap:wrap}"));
+  const block = html.slice(html.indexOf("@media (max-width:560px), (max-height:500px) and (orientation:landscape){\n    .tools{display:flex;flex-wrap:wrap}"));
   assert.match(block.slice(0, 3000), /\.cmd:has\(#bCheckStale:not\(\.hidden\)\) #bCheckAll\{display:none\}/);
   const D = 864e5;
   const acc = (id, ago) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
@@ -9853,6 +9853,20 @@ test("a 320px phone gets cards that fit and a header that does not collide", () 
   assert.match(t.getAttribute("aria-label"), /^(Show|Hide) stats$/);
   t.click();
   assert.match(t.getAttribute("aria-label"), /^(Show|Hide) stats$/);
+});
+
+// A phone held sideways (844 by 390) was laid out as a desktop: header, stats and two rows
+// of filters all open, and the first card more than two screens down
+test("a phone held sideways gets the phone's layout: stats folded, filters behind one button", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const q = "@media (max-width:560px), (max-height:500px) and (orientation:landscape){";
+  assert.ok(css.includes(q + "\n    .top{display:grid;"), "the phone's app-bar header");
+  assert.ok(css.includes(q + "\n    .tools{display:flex;flex-wrap:wrap}"), "and the filters folded behind Filters");
+  assert.equal(appGet(bootApp(), "PHONE_MQ"), "(max-width:560px), (max-height:500px) and (orientation:landscape)", "the script asks the same question");
+  const seed = [{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }];
+  const sideways = bootApp(seed, w => { w.matchMedia = m => ({ matches: m.includes("max-height:500px"), addListener() {}, removeListener() {}, addEventListener() {} }); });
+  assert.equal(appGet(sideways, "dashCollapsed()"), true, "the stats start folded, as on a phone held upright");
+  assert.equal(appGet(bootApp(seed), "dashCollapsed()"), false, "a desktop still opens them");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

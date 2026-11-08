@@ -2657,7 +2657,9 @@
      its own — 230px. It is an app bar now: the wordmark on the left, the tray on
      the right, the rank bar under both. The gem and the strapline stand down;
      the wordmark is the brand at this size. */
-  @media (max-width:560px){
+  /* PHONE: these two blocks also serve a phone held sideways (short, not narrow),
+     the same query as PHONE_MQ in app.js */
+  @media (max-width:560px), (max-height:500px) and (orientation:landscape){
     .top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px 10px}
     .top>.brand{grid-column:1;grid-row:1;gap:0;min-width:0}
     .top>.brand .brand-mark{display:none}
@@ -2687,7 +2689,7 @@
     justify-content:center;font-size:calc(12px*var(--ts));font-weight:700;color:var(--teal-ink);background:var(--teal)}
   .t-filters .t-n[hidden]{display:none}
   .t-select{display:none}
-  @media (max-width:560px){
+  @media (max-width:560px), (max-height:500px) and (orientation:landscape){
     .tools{display:flex;flex-wrap:wrap}
     /* search and Filters share the first row (search takes all but Filters' width,
        so the rest always starts a row of its own), the rest two to a row under it */

@@ -3909,9 +3909,15 @@ function renderRibbon(){
 /* Collapsed until asked for on a phone: there the stats were the whole first
    screen, ahead of every account. A choice made with the toggle is kept on any
    screen; until then a phone starts closed and a wider screen open. */
+/* A phone held sideways is 844 by 390: wide enough to be laid out as a desktop,
+   with the header, the stats and the toolbar's two rows of filters all open, and
+   the first card more than two screens down. A screen that short is a phone,
+   whichever way up, and gets the phone's layout (see PHONE in the CSS too). */
+const PHONE_MQ="(max-width:560px), (max-height:500px) and (orientation:landscape)";
+function phoneLayout(){return !!(window.matchMedia&&matchMedia(PHONE_MQ).matches)}
 function dashCollapsed(){
   if(typeof cfg.dashCollapsed==="boolean")return cfg.dashCollapsed;
-  return !!(window.matchMedia&&matchMedia("(max-width:560px)").matches);
+  return phoneLayout();
 }
 function syncDashToggle(){
   const b=$("bDashToggle");
@@ -4059,7 +4065,7 @@ function balanceDash(){
   const tiles=[...d.children];
   const narrow=!!(window.matchMedia&&matchMedia("(max-width:720px)").matches); // the .dash rule's own minimum there
   // a phone lays the figures in one sliding row: one row, so only the first has no rule before it
-  const strip=!!(window.matchMedia&&matchMedia("(max-width:560px)").matches);
+  const strip=phoneLayout();
   const cols=strip?tiles.length:dashCols(tiles.length,d.clientWidth,narrow?140:158);
   if(!cols){d.style.removeProperty("--cols");return}
   d.style.setProperty("--cols",cols);
@@ -7880,7 +7886,7 @@ $("bDashToggle").addEventListener("click",()=>{
     new ResizeObserver(()=>con.style.setProperty("--cmd-pin",cmd.offsetHeight+con.clientTop+"px")).observe(cmd);
   /* Phones only: away while scrolling down, back on the way up (see .to-top.away).
      Passive, and it only compares two numbers, so it costs nothing per frame. */
-  const narrow=window.matchMedia&&window.matchMedia("(max-width:560px)");
+  const narrow=window.matchMedia&&window.matchMedia(PHONE_MQ);
   let lastY=window.scrollY||0;
   window.addEventListener("scroll",()=>{
     const y=window.scrollY||0, d=y-lastY;
