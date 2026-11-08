@@ -7407,6 +7407,11 @@ function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains
    another that opens before the browser has carried out the step back left a
    flag saying "there is an entry" over an entry that was already gone. */
 let backSkip=false;
+/* Each window takes a history entry, and closing it steps back off that entry. On
+   that step the browser put the page back where it had been when the window opened:
+   after Add account, at the top, while the new account's card was being scrolled to.
+   Windows never move the page, so there is nothing for the browser to restore. */
+try{if("scrollRestoration" in history)history.scrollRestoration="manual"}catch(e){}
 function onWindowEntry(){try{return !!(history.state&&history.state.smurfWindow)}catch(e){return false}}
 function syncBackStep(open){
   if(snapMode||backSkip)return;   // our own step back is on its way; popstate settles it
@@ -7456,7 +7461,8 @@ function syncModals(){
     const back=modalReturn.isConnected
       ?(modalReturn.closest("#moreMenu")?$("bMore"):modalReturn)
       :null;
-    try{if(back)back.focus()}catch(e){}
+    // without scrolling: the page may have moved on (to a new account) meanwhile
+    try{if(back)back.focus({preventScroll:true})}catch(e){}
     modalReturn=null;
   }
 }
@@ -8304,8 +8310,14 @@ function revealAccount(id,clear){
   const a=accounts.find(x=>x.id===id);if(!a)return;
   if(clear||!filtered().some(x=>x.id===id))clearFilters(a);
   flashId=id;render();
-  const el=$("grid").querySelector(`[data-id="${idSel(id)}"]`);
-  if(el&&el.scrollIntoView)el.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
+  /* Lit up but never reached: this ran while the form that added the account was
+     still closing, with the page locked against scrolling, and the focus handed
+     back to "+ Add account" just after pulled the page back up to it. The scroll
+     waits until that window is gone. */
+  setTimeout(()=>{
+    const el=$("grid").querySelector(`[data-id="${idSel(id)}"]`);
+    if(el&&el.scrollIntoView)el.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
+  },0);
   setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1600);
 }
 $("palInput").addEventListener("input",()=>{palSel=0;renderPalette()});

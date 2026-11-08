@@ -9796,12 +9796,15 @@ test("offline, Check all and Refresh say so instead of failing every account", a
 
 // A new account was sorted in somewhere below while the page stayed at the top, so it
 // looked as if nothing had been added
-test("a new account is scrolled to and lit up, even past a filter that would hide it", async () => {
+test("a new account is scrolled to and lit up, even past a filter that would hide it, once the form has gone", async () => {
   const ranked = (id, n, tier) => ({ id, region: "EUW", gameName: n, tagLine: "1", status: "active", tags: [], history: [],
     stats: { found: true, tier, division: "I", lp: 1, updatedAt: Date.now() } });
   const win = bootApp([ranked("a", "Alpha", "DIAMOND"), ranked("b", "Beta", "GOLD"), ranked("c", "Gamma", "SILVER")]);
-  const doc = win.document, scrolled = [];
-  win.Element.prototype.scrollIntoView = function () { scrolled.push(this.dataset.id) };
+  const doc = win.document, scrolled = [], formOpenAtScroll = [];
+  win.Element.prototype.scrollIntoView = function () {
+    scrolled.push(this.dataset.id);
+    formOpenAtScroll.push(!doc.getElementById("form").classList.contains("hidden") || doc.body.classList.contains("modal-open"));
+  };
   // a search that the new account will not match
   doc.getElementById("tSearch").value = "Alpha";
   doc.getElementById("tSearch").dispatchEvent(new win.Event("input", { bubbles: true }));
@@ -9814,11 +9817,20 @@ test("a new account is scrolled to and lit up, even past a filter that would hid
   assert.ok(card, "the filter that would hide it is gone");
   assert.equal(doc.getElementById("tSearch").value, "");
   assert.ok(card.closest(".hx").classList.contains("flash"), "lit up");
+  await tick();
   assert.equal(scrolled.at(-1), id, "and brought into view");
+  // It was lit but never reached: it scrolled while the form was still closing, with the
+  // page locked, then the browser's own scroll restoration on the step back and the
+  // focus handed back to + Add account both pulled the page up again
+  assert.equal(formOpenAtScroll.at(-1), false, "the scroll waits until the form is gone");
+  // (jsdom has no scrollRestoration, so this one is read from the code)
+  assert.match(appJs, /if\("scrollRestoration" in history\)history\.scrollRestoration="manual"/, "closing a window does not restore an old scroll position");
+  assert.match(appJs, /back\.focus\(\{preventScroll:true\}\)/, "and focus goes back without moving the page");
   // Bulk add takes you to the first of what it added
   doc.getElementById("bBulkAdd").click();
   doc.getElementById("baList").value = "Omega One#EUW\nOmega Two#EUW";
   doc.getElementById("baSave").click();
+  await tick();
   assert.equal(scrolled.at(-1), appGet(win, "accounts.find(a => a.gameName === 'Omega One').id"));
 });
 
