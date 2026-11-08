@@ -76,6 +76,9 @@
     <div class="bar">
       <button id="streamerPill" class="streamer-pill hidden" title="Streamer mode is on: Riot IDs, logins, emails and notes are hidden. Click to show them again."><i aria-hidden="true"></i>Streamer mode</button>
       <button id="bDashToggle" class="ghost-toggle" title="Season totals, champion pool, account counts"></button>
+      <!-- Quick find was Ctrl+K and nothing else, so a phone never had it, and it holds
+           the quickest login in the app: type a name, Enter copies the username -->
+      <button id="bFind" type="button" title="Quick find (Ctrl+K)" aria-label="Quick find"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></button>
       <div style="position:relative">
         <button id="bMore" title="Export, import, settings">⋯</button>
         <div id="moreMenu" class="hx teal hidden" style="position:absolute;right:0;top:calc(100% + 8px);z-index:20;min-width:206px"><div class="hx-in" style="padding:7px;display:flex;flex-direction:column;gap:1px">

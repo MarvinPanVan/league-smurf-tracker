@@ -7357,6 +7357,7 @@ $("settings").addEventListener("click",e=>{
   const hit=e.target.closest("[data-theme],[data-atmosphere],#sEffects [data-v],#sTextSize [data-v],#sCompact,.acc-reset");
   if(hit&&e.currentTarget.contains(hit))settingsDirty(true);
 });
+$("bFind").addEventListener("click",openPalette);
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():closeSettings());
 $("bNewSeason").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");newSeasonAll()});
 $("bStreamer").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");setStreamer(!streamerOn())});

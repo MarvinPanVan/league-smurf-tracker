@@ -326,16 +326,17 @@
   .b-quiet:hover,.ghost-toggle:hover{background:#ffffff10;border-color:transparent;color:var(--text)}
   /* every control in a toolbar row: one height, one size, one weight */
   .cmd>button,.cmd .seg,.tools>button,.tools>select,.tools>input[type=search],.tag-handle,
-  #bulkbar>button,#bulkbar>select,#bulkbar>input,.bar>button,.bar #bMore,.bar #bHelp{
+  #bulkbar>button,#bulkbar>select,#bulkbar>input,.bar>button,.bar #bMore,.bar #bHelp,.bar #bFind{
     height:var(--ctl-h);padding-top:0;padding-bottom:0;font-size:calc(13px*var(--ts));font-weight:500}
   .cmd>.b-fill{font-weight:600}
   .b-danger{color:var(--danger)}
   .b-danger:hover{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);
     background-color:color-mix(in srgb,var(--danger) 13%,var(--panel2))}
   /* utilities, not actions — no rim of their own inside the tray */
-  #bMore,#bHelp{width:var(--ctl-h);padding:0;color:var(--text);font-size:calc(16px*var(--ts));
+  #bMore,#bHelp,#bFind{width:var(--ctl-h);padding:0;color:var(--text);font-size:calc(16px*var(--ts));
     background:none;border-color:transparent;box-shadow:none}
-  #bMore:hover,#bHelp:hover{color:var(--text);background:#ffffff12;border-color:transparent}
+  #bMore:hover,#bHelp:hover,#bFind:hover{color:var(--text);background:#ffffff12;border-color:transparent}
+  #bFind .ico{width:17px;height:17px}
   .bar{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 
   /* ---- dropdown menu ---- */

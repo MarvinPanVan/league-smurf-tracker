@@ -1012,7 +1012,7 @@ test("buttons are flat, of three kinds, and every control in a toolbar row is on
   // the filter toggles sit beside boxed dropdowns: quiet, they read as plain text
   for (const who of [".tools>button", ".tag-handle", ".t-select"]) assert.ok(!quiet[1].split(",").includes(who), who + " is outlined, like the dropdowns");
   assert.match(rule("select"), /border-color:var\(--btn-edge\)/, "and the dropdowns wear the buttons' edge");
-  assert.match(rule("#bMore,#bHelp"), /color:var\(--text\)/, "⋯ and ? are not greyed out");
+  assert.match(rule("#bMore,#bHelp,#bFind"), /color:var\(--text\)/, "⋯, ? and Quick find are not greyed out");
   // one height, size and weight across a toolbar row
   assert.match(css, /--ctl-h:36px/);
   const row = css.match(/\n  (\.cmd>button,\.cmd \.seg,[^{]*)\{([^}]*)\}/);
@@ -1021,7 +1021,7 @@ test("buttons are flat, of three kinds, and every control in a toolbar row is on
   assert.match(row[2], /height:var\(--ctl-h\)[^}]*font-size:calc\(13px\*var\(--ts\)\);font-weight:500/);
   assert.match(rule(".seg button"), /height:calc\(var\(--ctl-h\) - 2px\)/, "the layout switch, inside its 1px edge");
   // what is not a plate at all still clears fill and shadow
-  for (const sel of [".rid,.star,.eye-btn,.panel-close,.c-ref", "#bMore,#bHelp", "#moreMenu button", ".fb-x", ".fchip-all",
+  for (const sel of [".rid,.star,.eye-btn,.panel-close,.c-ref", "#bMore,#bHelp,#bFind", "#moreMenu button", ".fb-x", ".fchip-all",
       ".bk-note button", ".setup-x"]) {
     assert.match(rule(sel), /box-shadow:none/, sel);
     assert.match(rule(sel), /background:none/, sel);
@@ -9824,6 +9824,19 @@ test("the installed iPhone app keeps the page, the pinned toolbar and windows cl
   assert.match(css, /\.modal\{[^}]*border-top:env\(safe-area-inset-top,0px\) solid transparent/, "a phone's full-screen window too");
   assert.match(css, /#toast\{position:fixed;bottom:calc\([^;]*env\(safe-area-inset-bottom,0px\)\)/, "and the home bar at the bottom");
   assert.match(css, /\.to-top\{position:fixed;[^}]*env\(safe-area-inset-bottom,0px\)/);
+});
+
+// Quick find was Ctrl+K only, so a phone could never open it, though it holds the
+// quickest way to a login in the app
+test("Quick find has a button in the header, for a phone with no Ctrl+K", async () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const btn = win.document.querySelector(".top .bar #bFind");
+  assert.ok(btn, "in the header bar");
+  assert.equal(btn.getAttribute("aria-label"), "Quick find");
+  assert.match(btn.title, /Ctrl\+K/, "and it teaches the shortcut");
+  btn.click(); await tick();
+  assert.equal(win.document.getElementById("palette").classList.contains("hidden"), false);
+  assert.equal(win.document.activeElement, win.document.getElementById("palInput"), "ready to type");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
