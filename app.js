@@ -110,8 +110,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.26.0";
+const APP_VERSION="2.26.1";
 const APP_CHANGELOG=[
+  {v:"2.26.1",items:[
+    "On a phone, the header's status line wraps instead of making the whole page wider",
+    "A new account is scrolled into view, not only lit up",
+    "A banned account's copy buttons are muted in the list, Quick find leaves out key hints on touch screens, and tags say \"+5 more\" like the notes",
+  ]},
   {v:"2.26.0",items:[
     "Calmer cards: no win bar under the win rate, no \"Updated\" line until a rank is a day old, no empty note prompts, and tags on one row",
     "Refresh rank and Add note are in each card's ⋯ menu, and the LP-per-day pace is on the chart's newest point",
