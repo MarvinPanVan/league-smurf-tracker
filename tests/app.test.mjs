@@ -2762,11 +2762,11 @@ test("Escape closes Quick find first, even with a card's login open behind it", 
   assert.ok(doc.querySelector('.card[data-id="a"] .login'), "the card behind it is left as it was");
 });
 
-test("Settings is six tabs, one section at a time, and a step that needs a field opens its tab", () => {
+test("Settings is five tabs, one section at a time, and a step that needs a field opens its tab", () => {
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
   const doc = win.document, m = doc.getElementById("settings");
   const tabs = [...m.querySelectorAll('[role="tab"]')];
-  assert.deepEqual(tabs.map(t => t.textContent.trim()), ["Appearance", "Rank checks", "Alerts", "Security", "Sync", "Backup"]);
+  assert.deepEqual(tabs.map(t => t.textContent.trim()), ["Appearance", "Rank checks", "Alerts", "Security", "Backup & sync"]);
   const shown = () => [...m.querySelectorAll(".grp")].filter(g => win.getComputedStyle(g).display !== "none")
     .map(g => g.querySelector(".grp-h, .adv-fold > summary").textContent.trim());
   doc.getElementById("bSettings").click();
@@ -2784,8 +2784,8 @@ test("Settings is six tabs, one section at a time, and a step that needs a field
   assert.equal(m.dataset.tab, "alerts");
   tabs[2].dispatchEvent(new win.KeyboardEvent("keydown", { key: "End", bubbles: true }));
   assert.equal(m.dataset.tab, "backup");
-  assert.equal(doc.activeElement, tabs[5], "focus follows the selection");
-  tabs[5].dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  assert.equal(doc.activeElement, tabs[4], "focus follows the selection");
+  tabs[4].dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
   assert.equal(m.dataset.tab, "look");
   // the export reminder lives with the backups now, next to the backup buttons
   const backup = m.querySelector('.grp[data-tab="backup"]');
@@ -5153,7 +5153,7 @@ test("the settings body is grouped rather than one flat run of fields", () => {
   const groups = [...win.document.querySelectorAll("#settings .grp-h")].map(g => g.textContent.trim());
   // in the order of the tab row, which is one click to any of them; sync still
   // comes after both of the things it needs (a master password and a worker)
-  assert.deepEqual(groups, ["Appearance", "Rank checks", "Alerts", "Security", "Device sync", "Backup"]);
+  assert.deepEqual(groups, ["Appearance", "Rank checks", "Alerts", "Security", "Backup", "Device sync"]);
   const tabOrder = [...win.document.querySelectorAll("#settings [data-stab]")].map(b => b.dataset.stab);
   const grpOrder = [...new Set([...win.document.querySelectorAll("#settings .grp")].map(g => g.dataset.tab))];
   assert.deepEqual(grpOrder, tabOrder, "the groups run in the tabs' order");
@@ -9578,6 +9578,26 @@ test("every confirmation is the app's own window, and answering it leaves the wi
   assert.equal(await again, false, "and backing out is possible, which the browser's OK/Cancel never allowed");
 });
 
+// Sync and Backup were two tabs of one subject (copies of your vault), both half empty
+// in a window that keeps one height
+test("Settings has five tabs, Backup & sync holding both ways to keep a copy", () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document;
+  const tabs = [...doc.querySelectorAll("#settings [data-stab]")].map(b => b.textContent);
+  assert.deepEqual(tabs, ["Appearance", "Rank checks", "Alerts", "Security", "Backup & sync"]);
+  win.openSettings("backup");
+  const shown = [...doc.querySelectorAll('#settings .grp[data-tab="backup"] .grp-h')].map(h => h.textContent);
+  assert.deepEqual(shown, ["Backup", "Device sync"], "each part keeps its heading now that the tab says both");
+  assert.ok(doc.getElementById("sSyncGrp").contains(doc.getElementById("sSyncPush")));
+  win.openSettings("sync");
+  assert.equal(doc.getElementById("settings").dataset.tab, "backup", "anything still asking for Sync lands there");
+  // a phone's two rows: three tabs, then two sharing the width, with no hole at the end
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /#settings \.stabs\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
+  assert.match(css, /#settings \.stabs button:nth-child\(n\+4\)\{grid-column:span 3\}/);
+  assert.match(fs.readFileSync(path.join(ROOT, "README.md"), "utf8"), /Settings → Backup & sync/);
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
@@ -9626,7 +9646,7 @@ test("switching Settings tabs is not a change: the footer says Not saved yet onl
   const win = bootApp(seededAccount());
   const doc = win.document, foot = () => doc.getElementById("sFootHint").textContent;
   doc.getElementById("bSettings").click();
-  for (const tab of ["checks", "alerts", "security", "sync", "backup", "look"]) {
+  for (const tab of ["checks", "alerts", "security", "backup", "look"]) {
     doc.querySelector(`[data-stab="${tab}"]`).click();
     assert.doesNotMatch(foot(), /Not saved yet/, "after opening " + tab);
   }
@@ -10670,10 +10690,10 @@ test("on a phone, back to top steps aside while you scroll down and returns on t
 
 // On a phone the six tabs scrolled sideways with nothing saying so, and Settings
 // opened focused on the colour picker, which scrolled the themes away
-test("on a phone Settings shows all six tabs, the theme names whole, and opens on its tab", async () => {
+test("on a phone Settings shows all five tabs, the theme names whole, and opens on its tab", async () => {
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-  const at = css.indexOf("#settings .stabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))");
-  assert.ok(at > 0, "two rows of three");
+  const at = css.indexOf("#settings .stabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))");
+  assert.ok(at > 0, "two rows: three, then two across the same width");
   assert.match(css.slice(css.lastIndexOf("@media", at), at), /^@media \(max-width:560px\)\{/);
   assert.match(css.slice(at, at + 400), /\.thm-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/, "themes two to a row");
   const win = bootApp(seededAccount());
@@ -10954,8 +10974,8 @@ test("Sync says what it does in plain words, and what it still needs with a link
   const win = bootApp(seededAccount());
   const doc = win.document, $ = id => doc.getElementById(id);
   $("bSettings").click();
-  doc.querySelector('[data-stab="sync"]').click();
-  const tab = doc.querySelector('#settings .grp[data-tab="sync"]').textContent;
+  doc.querySelector('[data-stab="backup"]').click();
+  const tab = $("sSyncGrp").textContent;
   for (const jargon of [/blob/i, /\bKV\b/, /Last write wins/i, /scrape cache/i, /Backend URL/, /ciphertext/i, /\btoken\b/i])
     assert.doesNotMatch(tab, jargon, "no " + jargon);
   assert.match(tab, /Keeps this vault the same on your phone and your PC/);

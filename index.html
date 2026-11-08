@@ -190,8 +190,9 @@
       <button type="button" role="tab" id="stab-checks" aria-controls="settingsPanel" data-stab="checks" aria-selected="false" tabindex="-1">Rank checks</button>
       <button type="button" role="tab" id="stab-alerts" aria-controls="settingsPanel" data-stab="alerts" aria-selected="false" tabindex="-1">Alerts</button>
       <button type="button" role="tab" id="stab-security" aria-controls="settingsPanel" data-stab="security" aria-selected="false" tabindex="-1">Security</button>
-      <button type="button" role="tab" id="stab-sync" aria-controls="settingsPanel" data-stab="sync" aria-selected="false" tabindex="-1">Sync</button>
-      <button type="button" role="tab" id="stab-backup" aria-controls="settingsPanel" data-stab="backup" aria-selected="false" tabindex="-1">Backup</button>
+      <!-- Backup and Sync were two tabs of one subject, copies of your vault, and both
+           were half empty in a window that keeps one height -->
+      <button type="button" role="tab" id="stab-backup" aria-controls="settingsPanel" data-stab="backup" aria-selected="false" tabindex="-1">Backup &amp; sync</button>
     </div>
     <div class="mdl-b" id="settingsPanel" role="tabpanel" aria-labelledby="stab-look">
 
@@ -428,8 +429,26 @@
         </div>
       </div>
 
-      <div class="grp" data-tab="sync">
-        <div class="grp-h tab-same">Device sync</div>
+      <div class="grp" data-tab="backup">
+        <div class="grp-h">Backup</div>
+        <div class="hint" style="margin-bottom:6px">Your vault lives only in this browser. A backup file is the copy you can bring back if the browser loses it.</div>
+        <div id="sBackupLast" class="hint" style="margin-bottom:14px"></div>
+        <!-- the same actions as the ⋯ menu, where you would look for them in Settings -->
+        <div class="bk-acts">
+          <button type="button" data-proxy="bExportEnc" class="b-teal">Export encrypted backup…</button>
+          <button type="button" data-proxy="bExport">Export backup (JSON, plaintext)</button>
+          <button type="button" data-proxy="bExportCsv">Export as CSV</button>
+          <button type="button" data-proxy="bImport">Import backup</button>
+          <button type="button" data-proxy="bImportCsv">Import CSV</button>
+        </div>
+        <div class="sub-fld inline" style="padding-left:0;margin-top:16px">
+          <label for="sExportDays">Remind me to export after</label>
+          <input id="sExportDays" type="number" min="1" max="365" value="30" style="max-width:90px"> <span class="hint" style="margin:0">days</span>
+        </div>
+      </div>
+
+      <div class="grp" data-tab="backup" id="sSyncGrp">
+        <div class="grp-h">Device sync</div>
         <!-- It was written for whoever built it: "Pushes the encrypted vault blob to
              your worker (KV)", "Last write wins", "There is no scrape cache". The same
              facts, for someone with a phone and a PC. -->
@@ -447,24 +466,6 @@
         </div>
         <div id="sSyncStatus" class="hint" style="margin-top:8px"></div>
         <p class="hint" style="margin:6px 0 0">The newest upload wins, so download on a device before you change things there. You are warned when the synced copy is newer than this one.</p>
-      </div>
-
-      <div class="grp" data-tab="backup">
-        <div class="grp-h tab-same">Backup</div>
-        <div class="hint" style="margin-bottom:6px">Your vault lives only in this browser. A backup file is the copy you can bring back if the browser loses it.</div>
-        <div id="sBackupLast" class="hint" style="margin-bottom:14px"></div>
-        <!-- the same actions as the ⋯ menu, where you would look for them in Settings -->
-        <div class="bk-acts">
-          <button type="button" data-proxy="bExportEnc" class="b-teal">Export encrypted backup…</button>
-          <button type="button" data-proxy="bExport">Export backup (JSON, plaintext)</button>
-          <button type="button" data-proxy="bExportCsv">Export as CSV</button>
-          <button type="button" data-proxy="bImport">Import backup</button>
-          <button type="button" data-proxy="bImportCsv">Import CSV</button>
-        </div>
-        <div class="sub-fld inline" style="padding-left:0;margin-top:16px">
-          <label for="sExportDays">Remind me to export after</label>
-          <input id="sExportDays" type="number" min="1" max="365" value="30" style="max-width:90px"> <span class="hint" style="margin:0">days</span>
-        </div>
       </div>
 
     </div>

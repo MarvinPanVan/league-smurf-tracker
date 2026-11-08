@@ -1984,12 +1984,14 @@
   #settings[data-tab="sync"] .grp[data-tab="sync"],#settings[data-tab="backup"] .grp[data-tab="backup"]{display:block}
   #settings .grp[data-tab="checks"]+.grp[data-tab="checks"]{border-top:1px solid var(--line)}
   .grp-h.tab-same{display:none}
-  /* On a phone the row of six scrolled sideways with nothing saying so, and Sync and
-     Backup sat off the edge. Two rows of three, all of them in sight. The themes go
-     two to a row there, where four cut "Shadow Isles" short. */
+  /* On a phone the row of tabs scrolled sideways with nothing saying so, and the last
+     ones sat off the edge. Two rows, all of them in sight: three, then the other two
+     sharing the second row's width, so it has no hole at the end. The themes go two
+     to a row there, where four cut "Shadow Isles" short. */
   @media (max-width:560px){
-    #settings .stabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:0 8px;overflow:visible}
-    #settings .stabs button{padding:10px 4px 9px;text-align:center}
+    #settings .stabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));padding:0 8px;overflow:visible}
+    #settings .stabs button{padding:10px 4px 9px;text-align:center;grid-column:span 2}
+    #settings .stabs button:nth-child(n+4){grid-column:span 3}
     .thm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   }
   .bk-acts{display:flex;flex-wrap:wrap;gap:8px}

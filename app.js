@@ -6351,8 +6351,9 @@ function submitForm(){
 }
 
 // ---------- settings ----------
-const SETTINGS_TABS=["look","checks","alerts","security","sync","backup"];
+const SETTINGS_TABS=["look","checks","alerts","security","backup"];
 function settingsTab(tab,focus){
+  if(tab==="sync")tab="backup";   // a tab of its own until Backup & sync
   if(!SETTINGS_TABS.includes(tab))tab="look";
   const m=$("settings");m.dataset.tab=tab;
   $("settingsPanel").setAttribute("aria-labelledby","stab-"+tab); // read as the tab's panel
@@ -6367,8 +6368,8 @@ function settingsTab(tab,focus){
   const body=m.querySelector(".mdl-b");if(body)body.scrollTop=0;
   centreSettingsTab();
 }
-// A phone shows four of the six tabs; one chosen from elsewhere (Back up, Set a
-// master password) was selected out of sight. Centre it in the row. Only
+// A phone showed four of the tabs in one sliding row; one chosen from elsewhere
+// (Back up, Set a master password) was selected out of sight. Centre it in the row. Only
 // measurable once Settings is on screen, so openSettings calls it again then.
 function centreSettingsTab(){
   const row=$("settings").querySelector(".stabs"), on=row&&row.querySelector('[aria-selected="true"]');
