@@ -690,7 +690,9 @@
   <div id="runbar" class="runbar hidden"><div class="run-fill"></div><span class="run-txt"></span></div>
   <div id="failbar" class="failbar hidden"></div>
   <div class="tools">
-    <input type="search" id="tSearch" placeholder="Search name, label, tag, email…" aria-label="Search accounts">
+    <input type="search" id="tSearch" placeholder="Search accounts…" aria-label="Search accounts">
+    <!-- the fastest way to a login (type a name, copy it) was invisible until Help -->
+    <button type="button" id="tFindKey" class="t-kbd" tabindex="-1" title="Quick find: type a name and copy its login">Ctrl K</button>
     <!-- a phone's whole first screen was filters; there they fold behind this -->
     <button type="button" id="tFilters" class="t-filters" aria-expanded="false" title="Region, sort, status, favorites, archived">
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg>

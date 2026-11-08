@@ -10258,6 +10258,25 @@ test("a phone starts in the list until a layout is picked; a wider screen in car
   assert.equal(appGet(picked, "ui.density"), "cards", "a layout someone picked is kept on a phone too");
 });
 
+// The fastest way to a login (Ctrl K, type a name, copy) was invisible until Help
+test("the search box shows Quick find's key, which opens it, and steps aside once you type", async () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document, key = doc.getElementById("tFindKey"), q = doc.getElementById("tSearch");
+  assert.equal(key.previousElementSibling, q, "right after the search box, drawn inside its right end");
+  assert.equal(key.textContent, "Ctrl K");
+  assert.equal(key.getAttribute("tabindex"), "-1", "no extra Tab stop: the keys themselves are the keyboard way");
+  key.click();
+  assert.equal(doc.getElementById("palette").classList.contains("hidden"), false, "a click opens Quick find too");
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  assert.match(css, /\n  \.tools>#tSearch:not\(:placeholder-shown\)\+\.t-kbd\{display:none\}/, "gone once something is typed");
+  const coarse = css.slice(css.indexOf("@media (pointer:coarse){"));
+  assert.match(coarse.slice(0, 3000), /\.tools>\.t-kbd\{display:none\}/, "and on touch screens, which have no Ctrl");
+  assert.match(q.getAttribute("placeholder"), /^Search accounts…$/, "a placeholder short enough to sit beside it");
+  // a Mac says ⌘
+  const mac = bootApp(seededAccount(), w => Object.defineProperty(w.navigator, "platform", { value: "MacIntel", configurable: true }));
+  assert.equal(mac.document.getElementById("tFindKey").textContent, "⌘ K");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

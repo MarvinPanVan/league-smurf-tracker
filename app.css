@@ -685,6 +685,16 @@
   select:hover,select:focus{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e9edf5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")}
   input::placeholder,textarea::placeholder{color:var(--faint)}
   .tools input[type=search]{flex:1;min-width:180px}
+  /* Quick find's key, sitting in the search box's right end: pulled back over it by
+     its own width, the row's 9px gap and a 6px inset. Gone once you type, and on
+     a phone or touch screen, which have the header's Quick find button. */
+  .tools>.t-kbd{order:0;flex:0 0 auto;width:52px;height:22px;margin-left:-67px;padding:0;z-index:1;
+    font-family:inherit;font-size:calc(12px*var(--ts));font-weight:600;line-height:1;letter-spacing:.02em;color:var(--faint);
+    background:var(--panel3);border:1px solid var(--line2);border-radius:var(--r-xs)}
+  .tools>.t-kbd:hover{color:var(--text);border-color:var(--teal);background:var(--panel3)}
+  .tools>#tSearch:placeholder-shown{padding-right:64px}
+  .tools>#tSearch:not(:placeholder-shown)+.t-kbd{display:none}
+
   /* Favorites and Archived are toggles, so their lit state is a class carrying
      aria-pressed with it — it used to be two inline style properties assigned by
      hand from three different places, which is how the state got out of step with
@@ -2645,6 +2655,7 @@
     .bulkchk,#tSelectAll{width:24px;height:24px}
     .lpc-range button{height:30px;padding:0 9px}
     .lpc-axis{height:32px}   /* room for them in the date row */
+    .tools>.t-kbd{display:none}.tools>#tSearch:placeholder-shown{padding-right:12px}   /* no Ctrl on a touch screen */
     .rid{padding-block:5px;margin-block:-3px}
     .cmd-count .warn{padding:6px 10px}
     .c-notes.blank>button,.c-notes.blank .nf-link{min-height:30px} /* matches the all:unset rule it has to beat */
@@ -2718,6 +2729,7 @@
     /* search and Filters share the first row (search takes all but Filters' width,
        so the rest always starts a row of its own), the rest two to a row under it */
     .tools>input[type=search]{flex:1 1 calc(100% - 128px);width:auto;min-width:0}
+    .tools>.t-kbd{display:none!important}.tools>#tSearch:placeholder-shown{padding-right:12px}
     .tools>.t-filters{display:inline-flex;flex:0 0 auto;width:auto}
     .tools>:not(input[type=search]):not(.t-filters){flex:1 1 calc(50% - 4px)}
     /* !important: Select all is a label with an inline display of its own */

@@ -7480,6 +7480,9 @@ $("settings").addEventListener("click",e=>{
   if(hit&&e.currentTarget.contains(hit))settingsDirty(true);
 });
 $("bFind").addEventListener("click",openPalette);
+$("tFindKey").addEventListener("click",openPalette);
+// a Mac's key for it is ⌘, and that is what its keyboard says
+if(/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||"")){$("tFindKey").textContent="⌘ K";$("bFind").title="Quick find (⌘K)"}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():requestCloseSettings());
 $("bNewSeason").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");newSeasonAll()});
 $("bStreamer").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");setStreamer(!streamerOn())});
