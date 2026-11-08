@@ -9750,6 +9750,21 @@ test("Lock now says it once: the lock screen, with no message under it", async (
   assert.doesNotMatch(win.document.getElementById("toast").textContent, /Vault locked/, "and said once");
 });
 
+// Offline, Check all ran through every account and failed each one: "5 of 18 · 5 failed"
+test("offline, Check all and Refresh say so instead of failing every account", async () => {
+  const one = (id, n) => ({ id, region: "EUW", gameName: n, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: 1 } });
+  const win = bootApp([one("a", "A"), one("b", "B")], w => Object.defineProperty(w.navigator, "onLine", { configurable: true, get: () => false }));
+  let fetched = 0; win.fetch = async () => { fetched++; throw new Error("offline"); };
+  win.document.getElementById("bCheckAll").click(); await tick();
+  assert.match(win.document.getElementById("toast").textContent, /You're offline/);
+  assert.equal(appGet(win, "run"), null, "no run started");
+  win.document.querySelector('.card[data-id="a"] [data-act="check"]').click(); await tick();
+  assert.match(win.document.getElementById("toast").textContent, /You're offline/, "a single Refresh too");
+  assert.equal(fetched, 0, "nothing sent");
+  assert.equal(win.document.querySelectorAll(".c-failed").length, 0, "and no card marked as failed for it");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

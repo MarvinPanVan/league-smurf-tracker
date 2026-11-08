@@ -2989,8 +2989,14 @@ function renderFailbar(){
     +`<button id="bShowFails">Show</button><button id="bRetryFails">Try again</button><button id="bDismissFails" class="fb-x" aria-label="Dismiss">✕</button>`);
 }
 let lastFails=null;
+/* With no connection Check all went through every account in turn and failed
+   each one ("5 of 18 · 5 failed"), leaving a failure on every card for a network
+   that was simply off. Not starting is the honest answer. */
+const OFFLINE_SAY="You're offline. Ranks can be checked once you're back online";
+function isOffline(){try{return navigator.onLine===false}catch(e){return false}}
 async function checkAll(ids){
   if(run)return;
+  if(isOffline()){toast(OFFLINE_SAY);return}
   // Array.isArray rather than a truthiness test: this used to be wired straight to
   // a click listener, which passes an Event — truthy, and with no .map on it.
   const list=(Array.isArray(ids)?ids.map(id=>accounts.find(a=>a.id===id)).filter(Boolean):filtered()).filter(a=>a.status!=="banned");
@@ -8472,6 +8478,7 @@ async function onCardClick(e){
     closeRankModal();
     commitStats(id,acc,s);toast("Rank saved");
   }
+  else if(act==="check"&&isOffline())toast(OFFLINE_SAY);
   else if(act==="check")check(id).then(r=>{const a=accounts.find(x=>x.id===id);if(r===true&&a&&canForm(a))loadForm(id)});
   else if(act==="del"){
     if(armedDelete===id){
@@ -8589,7 +8596,7 @@ function startApp(){
   if(startAction)setTimeout(runStartAction,0); // after boot's own first paint
   else maybeLockPrompt();
   if(cfg.watch)setTimeout(()=>syncWatch(false),1500); // at most every ten minutes
-  if(cfg.autoCheck){
+  if(cfg.autoCheck&&!isOffline()){   // offline it waits for the next visit, quietly
     const staleAccs=accounts.filter(autoCheckDue);
     if(staleAccs.length){
       toast("Auto-checking "+staleAccs.length+" stale account"+(staleAccs.length===1?"":"s")+"…");
