@@ -9344,6 +9344,19 @@ test("every form control a screen reader can reach has a name of its own", () =>
   assert.equal(doc.getElementById("tStatus").getAttribute("aria-label"), "Status");
 });
 
+// "Marked played today", "Streamer mode on" and the like sat bottom centre, over the
+// buttons of whichever card was in the middle of the screen
+test("a passing message sits bottom left and lets clicks through to what it covers", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const rule = css.match(/\n  #toast\{([^}]*)\}/)[1];
+  assert.match(rule, /left:clamp\(14px,3vw,28px\)/, "on the left: " + rule);
+  assert.doesNotMatch(rule, /left:50%|translateX\(-50%\)/, "not centred");
+  assert.match(rule, /pointer-events:none/, "a click on it reaches the card underneath");
+  assert.match(css, /\n  #toast button\{pointer-events:auto;/, "except on its own Undo or Show");
+  const anim = css.match(/@keyframes toastIn\{([^\n]*)\}/)[1];
+  assert.doesNotMatch(anim, /-50%/, "and its entrance doesn't drag it back to the centre");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
@@ -10190,10 +10203,9 @@ test("a vault with no saved settings still hears what changed", () => {
 test("a toast can use the width of a phone, not half of it", () => {
   const rule = html.match(/#toast\{position:fixed;[^}]*\}/);
   assert.ok(rule, "the toast rule is still there");
-  assert.match(rule[0], /left:50%/, "still centred the same way");
   assert.match(rule[0], /width:max-content/, "sized by its text rather than by the half-viewport left over");
-  assert.match(rule[0], /max-width:min\(720px,calc\(100vw - 32px\)\)/,
-    "never wider than the screen, nor than the measure a desktop always had");
+  assert.match(rule[0], /max-width:min\(460px,calc\(100vw - 32px\)\)/,
+    "never wider than the screen, and a short line on a desktop");
 });
 
 /* Three tiles were laid out as prose: Season W/L broke "2311W / 2450L" over two

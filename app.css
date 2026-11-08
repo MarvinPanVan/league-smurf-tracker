@@ -1624,7 +1624,7 @@
   .lpc-tip.hi{bottom:auto;top:12px}
   .lpc-pt:hover .lpc-tip{opacity:1}
   .stale{color:var(--warn-txt)}
-  #toast button{margin-left:12px;font-size:calc(12px*var(--ts));padding:3px 10px;color:var(--teal-txt)}
+  #toast button{pointer-events:auto;margin-left:12px;font-size:calc(12px*var(--ts));padding:3px 10px;color:var(--teal-txt)}
   .meta{font-size:calc(13px*var(--ts));color:var(--muted);line-height:1.65}
   .meta b{color:var(--text);font-weight:500}
   .meta .g{color:var(--gold-txt)}
@@ -2117,8 +2117,12 @@
      195px on a phone, which made every longer toast a tall pill of short lines. As
      wide as its text, up to the screen less its gutters, and no wider than the
      measure a desktop always got by accident. */
-  #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:80;display:none;
-    width:max-content;max-width:min(720px,calc(100vw - 32px));
+  /* Bottom left, the way most desktop apps place a passing message. Bottom centre
+     put "Marked played today" or "Streamer mode on" over the buttons of whichever
+     card sat in the middle. It also lets clicks through: only its own button
+     (Undo, Show) takes them, so a message is never in the way of what it covers. */
+  #toast{position:fixed;bottom:clamp(14px,3vw,28px);left:clamp(14px,3vw,28px);z-index:80;display:none;
+    width:max-content;max-width:min(460px,calc(100vw - 32px));pointer-events:none;
     background:color-mix(in srgb,var(--panel2) 95%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
     border:1px solid var(--line2);border-radius:var(--r-md);color:var(--text);
     padding:11px 20px;font-size:calc(13px*var(--ts));font-weight:500;box-shadow:var(--sh-3)}
@@ -2541,7 +2545,7 @@
   .grid.boot .lpc,.hx.flash .lpc{animation:drawIn .8s cubic-bezier(.22,1,.36,1)}
   @keyframes borderPulse{0%{background:var(--teal)}100%{background:linear-gradient(155deg,#ffffff1f,#ffffff0a 38%,#ffffff05)}}
   .hx.flash{animation:borderPulse 1.1s ease-out}
-  @keyframes toastIn{from{opacity:0;transform:translate(-50%,14px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+  @keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
   #toast{animation:toastIn .28s cubic-bezier(.22,1,.36,1)}
   .confetti{position:fixed;pointer-events:none;z-index:60}
   .confetti i{position:absolute;left:50%;top:40%;width:6px;height:10px;border-radius:2px;animation:pop 1.1s ease-out forwards}
