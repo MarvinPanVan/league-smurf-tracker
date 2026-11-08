@@ -9637,6 +9637,12 @@ test("the link preview names a fresh image, at the size the page says it is", ()
   const url = pageHtml.match(/<meta property="og:image" content="([^"]+)">/)[1];
   assert.match(url, /\/icons\/social\.jpg\?v=\d+$/, "a version on the address, so a new picture is fetched");
   const jpg = fs.readFileSync(path.join(ROOT, "icons", "social.jpg"));
+  // and the version moves with the picture: a new image under the old ?v= stays unseen.
+  // Replacing it means a new entry here, at a new version.
+  const shown = { 3: "f0e2dbd50a4b" };
+  const v = +url.match(/\?v=(\d+)$/)[1];
+  assert.equal(createHash("sha1").update(jpg).digest("hex").slice(0, 12), shown[v],
+    "icons/social.jpg changed: bump og:image's ?v= in index.html and add its hash here");
   let i = 2, w = 0, h = 0;
   while (i < jpg.length) {
     if (jpg[i] !== 0xff) { i++; continue; }
