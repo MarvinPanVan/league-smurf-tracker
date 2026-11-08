@@ -7127,9 +7127,31 @@ document.querySelectorAll("[data-close-panel]").forEach(btn=>btn.addEventListene
 const MODALS=["settings","help","form","rankModal","palette","compareModal","bulkAdd","artPicker","shareModal"];
 let modalReturn=null;
 function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains("hidden"))}
+/* The phone's back button left the app. A window here is not a page of its own,
+   so with Settings or Add account open, back on Android (or in the installed
+   app) went past the whole app instead of closing the window. While a window is
+   open there is one history entry for it: back takes it and closes the window,
+   the way Escape does. A window closed any other way takes the entry back out,
+   so the next back press means what it always meant. */
+let backStep=false, backSkip=false;
+function syncBackStep(open){
+  if(snapMode)return;
+  if(open&&!backStep){try{history.pushState({smurfWindow:1},"");backStep=true}catch(e){}}
+  else if(!open&&backStep){backStep=false;backSkip=true;try{history.back()}catch(e){backSkip=false}}
+}
+addEventListener("popstate",()=>{
+  if(backSkip){backSkip=false;return}
+  if(!backStep)return;
+  backStep=false;
+  // the window in front goes first, as with Escape; one still open behind it asks
+  // for a new entry of its own through syncModals
+  if(!$("palette").classList.contains("hidden")){closePalette();return}
+  closeAllPanels();editingId=null;
+});
 function syncModals(){
   const open=openModals();
   document.body.classList.toggle("modal-open",open.length>0);
+  syncBackStep(open.length>0);
   if(open.length){
     if(!modalReturn){
       const a=document.activeElement;

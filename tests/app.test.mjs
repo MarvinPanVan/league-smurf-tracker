@@ -9474,6 +9474,35 @@ test("on iPhone Safari, a vault with something in it warns once about the seven 
   assert.equal(shown(bootApp(one, as(ipad, { platform: "MacIntel", maxTouchPoints: 0 }))), false, "a real Mac keeps its data");
 });
 
+// With a window open, the phone's back button left the whole app instead of closing it
+test("back closes the open window, and a window closed by hand gives its back step up", async () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const doc = win.document, open = id => !doc.getElementById(id).classList.contains("hidden");
+  const settle = () => new Promise(r => setTimeout(r, 30));
+  assert.equal(win.history.state, null, "nothing open, nothing pushed");
+  doc.getElementById("bSettings").click();
+  await settle();
+  assert.ok(open("settings"));
+  assert.equal(win.history.state && win.history.state.smurfWindow, 1, "an open window has a history entry");
+  win.history.back();
+  await until(() => !open("settings"), "back to close Settings");
+  assert.equal(win.history.state, null, "and the entry is gone with it");
+  // closed with its ✕: the entry is taken back out, so the next back is a real one
+  doc.getElementById("bAdd").click();
+  await settle();
+  assert.ok(open("form"));
+  assert.equal(win.history.state && win.history.state.smurfWindow, 1);
+  doc.querySelector("#form [data-close-panel]").click();
+  await until(() => win.history.state === null, "the entry taken back out");
+  await settle();
+  assert.equal(open("form"), false, "and nothing reopened on the way");
+  // a window over a window: back closes them like Escape does, and the page is left as it was
+  doc.getElementById("bAdd").click();
+  await settle();
+  win.history.back();
+  await until(() => !open("form"), "back to close the form");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
