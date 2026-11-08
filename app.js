@@ -3715,9 +3715,35 @@ function pruneCardState(){
   if(flashId&&!live.has(flashId))flashId=null;
   if(lastSelectedId&&!live.has(lastSelectedId))lastSelectedId=null;
 }
+/* Safari on iPhone and iPad deletes everything a site stored after seven days
+   without a visit, this vault included, and the only word of it was one line in
+   Settings → Security. Once there is something to lose, the page says so, once,
+   with what to do about it. A Home Screen app keeps its data, but it starts with
+   storage of its own, empty, so the vault goes over by backup. Other browsers on
+   iOS are left out: the seven-day rule is Safari's. */
+function iosSafari(){
+  const ua=navigator.userAgent||"";
+  const ios=/iP(hone|od|ad)/.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  return ios&&/Safari\//.test(ua)&&!/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua);
+}
+function installedApp(){
+  try{return navigator.standalone===true||matchMedia("(display-mode: standalone)").matches}catch(e){return false}
+}
+function renderIosBand(){
+  const el=$("iosBand");if(!el)return;
+  const show=accounts.length>0&&!previewMode&&!cfg.iosHintSeen&&iosSafari()&&!installedApp();
+  el.classList.toggle("hidden",!show);
+  if(!show||el.childElementCount)return;
+  setHTML(el,`<div class="mv-t">${icon("alert")}<span><b>Safari deletes this vault after 7 days without a visit.</b> `
+    +`To keep it, add the app to your Home Screen: tap Share, then Add to Home Screen. `
+    +`The Home Screen app starts empty, so back up here first and import the backup there.</span></div>`
+    +`<div class="mv-acts"><button type="button" class="b-fill" data-ios="backup">Back up now</button>`
+    +`<button type="button" class="mv-quiet" data-ios="ok">Got it</button></div>`);
+}
 function render(){
   pruneCardState();
   $("previewBanner").classList.toggle("hidden",!previewMode);
+  renderIosBand();
   $("bDeleteAll").disabled=accounts.length===0;
   // No renderBulkBar() after renderGrid(): it ends with one, against the list it
   // has just built. Calling it again here filtered and sorted the whole vault a
@@ -7529,6 +7555,11 @@ $("footTerms").addEventListener("click",e=>{e.preventDefault();closeAllPanels();
   const t=$("helpTerms");if(t&&t.scrollIntoView)t.scrollIntoView({block:"start"})});
 $("bHelpClose").addEventListener("click",()=>{$("help").classList.add("hidden");cfg.seenHelp=true;saveCfg()});
 $("bExport").addEventListener("click",doExport);
+$("iosBand").addEventListener("click",e=>{
+  const b=e.target.closest("[data-ios]");if(!b)return;
+  if(b.dataset.ios==="backup"){doExport();return}
+  cfg.iosHintSeen=true;saveCfg();renderIosBand();
+});
 $("sBackend").addEventListener("change",updateBackendStatus);
 $("sStorageProtect").addEventListener("click",async()=>{
   const ok=await protectStorage();

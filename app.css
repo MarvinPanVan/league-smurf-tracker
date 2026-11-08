@@ -2209,6 +2209,7 @@
     color:var(--text);padding:10px 10px 10px 14px;border-radius:var(--r-md);font-size:calc(13px*var(--ts));line-height:1.45}
   .mv-t{display:flex;gap:9px;align-items:flex-start;flex:1 1 320px;min-width:0}
   .mv-t .ico{width:15px;height:15px;flex-shrink:0;margin-top:2px;color:var(--teal-txt)}
+  .ios-band .mv-t .ico{color:var(--warn-txt)}   /* a warning, unlike the move */
   .mv-acts{display:flex;gap:8px;flex-wrap:wrap}
   .mv-acts>*{min-height:34px}
   .mv-acts>a{display:inline-flex;align-items:center;text-decoration:none}

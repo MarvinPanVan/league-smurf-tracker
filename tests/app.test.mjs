@@ -9435,6 +9435,45 @@ test("a passing message sits bottom left and lets clicks through to what it cove
   assert.doesNotMatch(anim, /-50%/, "and its entrance doesn't drag it back to the centre");
 });
 
+// Safari on iPhone deletes a site's storage after seven days without a visit, and the
+// only word of it was one line in Settings → Security
+test("on iPhone Safari, a vault with something in it warns once about the seven days", () => {
+  const SAFARI = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
+  const CHROME = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0 Mobile/15E148 Safari/604.1";
+  const one = [{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }];
+  const as = (ua, extra = {}) => w => {
+    Object.defineProperty(w.navigator, "userAgent", { value: ua, configurable: true });
+    for (const [k, v] of Object.entries(extra)) Object.defineProperty(w.navigator, k, { value: v, configurable: true });
+  };
+  const band = w => w.document.getElementById("iosBand");
+  const shown = w => !band(w).classList.contains("hidden");
+
+  const win = bootApp(one, as(SAFARI));
+  assert.ok(shown(win), "Safari on an iPhone, one account: the warning");
+  assert.match(band(win).textContent, /Safari deletes this vault after 7 days without a visit/);
+  assert.match(band(win).textContent, /Share, then Add to Home Screen/);
+  assert.match(band(win).textContent, /starts empty, so back up here first and import the backup there/);
+  let exported = 0;
+  win.doExport = () => { exported++; };
+  band(win).querySelector('[data-ios="backup"]').click();
+  assert.equal(exported, 1, "Back up now makes the backup");
+  assert.ok(shown(win), "and leaves the steps up");
+  band(win).querySelector('[data-ios="ok"]').click();
+  assert.equal(shown(win), false, "Got it puts it away");
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).iosHintSeen, true, "for good");
+
+  assert.equal(shown(bootApp(null, as(SAFARI))), false, "an empty vault has nothing to lose yet");
+  const pv = bootApp(null, as(SAFARI));
+  pv.document.getElementById("bDemo").click();
+  assert.equal(shown(pv), false, "nor does the example data");
+  assert.equal(shown(bootApp(one, as(CHROME))), false, "the rule is Safari's");
+  assert.equal(shown(bootApp(one, as(SAFARI, { standalone: true }))), false, "the Home Screen app keeps its data");
+  assert.equal(shown(bootApp(one)), false, "and nothing on any other device");
+  const ipad = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15";
+  assert.ok(shown(bootApp(one, as(ipad, { platform: "MacIntel", maxTouchPoints: 5 }))), "an iPad calls itself a Mac");
+  assert.equal(shown(bootApp(one, as(ipad, { platform: "MacIntel", maxTouchPoints: 0 }))), false, "a real Mac keeps its data");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
