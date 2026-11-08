@@ -110,8 +110,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.26.1";
+const APP_VERSION="2.26.2";
 const APP_CHANGELOG=[
+  {v:"2.26.2",items:[
+    "A card opened from \"+N more\" has a Close button, and its skins are all listed",
+    "On a phone, Check all ranks and + Add account share one row, and the status line no longer ends in a stray dot",
+    "A never-checked card has its own Check rank button, and Help is shorter and up to date",
+  ]},
   {v:"2.26.1",items:[
     "On a phone, the header's status line wraps instead of making the whole page wider",
     "A new account is scrolled into view, not only lit up",
