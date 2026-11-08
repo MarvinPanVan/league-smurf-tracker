@@ -965,15 +965,20 @@ test("a card's tier tint is a hint in its corner, not a wash over the art", () =
   assert.ok(pct <= 8, "at most 8% of the tier colour (" + pct + "%)");
 });
 
-test("Login stays the one filled control on a card, flat like every other button", () => {
-  const rule = html.match(/\n  \.a-login\{[^}]*\}/)[0];
-  assert.match(rule, /background-color:var\(--teal\)/, "filled with the accent");
-  assert.match(rule, /color:var\(--teal-ink\)/, "lettered in the ink that reads on it");
+// It was the one filled control on a card, until twenty cards meant twenty bright
+// bars outshining the ranks (and matching a Platinum rank's own color)
+test("Login is tinted on a card, flat, and nothing on a card is filled", () => {
+  const rule = html.match(/\n  \.a-login\{([^}]*)\}/)[1];
+  const tint = +rule.match(/background-color:color-mix\(in srgb,var\(--teal\) (\d+)%/)[1];
+  assert.ok(tint >= 10 && tint <= 18, "a tint of the accent, not a fill (" + tint + "%)");
+  assert.match(rule, /color:var\(--teal-txt\)/, "lettered in the accent's readable text color");
   assert.doesNotMatch(rule, /gradient|background-image|box-shadow/, "flat: no gloss, rim or shadow");
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [] }]);
   const filled = [...win.document.querySelectorAll('.card[data-id="a"] .acts > *')]
-    .filter(b => /var\(--teal\)/.test((html.match(new RegExp("\\n  \\." + b.className.split(" ")[0] + "\\{([^}]*)\\}")) || [])[1] || ""));
-  assert.deepEqual(filled.map(b => b.className), ["a-login"], "and the only filled one");
+    .filter(b => /background-color:var\(--teal\)/.test((html.match(new RegExp("\\n  \\." + b.className.split(" ")[0] + "\\{([^}]*)\\}")) || [])[1] || ""));
+  assert.deepEqual(filled.map(b => b.className), [], "no filled button on a card");
+  assert.ok(win.document.querySelector("#settings .acc-prev-card .a-login"), "and the Appearance preview's card draws it the same way");
+  assert.equal(win.document.querySelector("#settings .acc-prev-card .b-fill"), null);
 });
 // and every accent button is the same plate, edged and lettered in the accent, never metal
 test("the accent buttons add no gradient rim or glow of their own; the wordmark and gem are solid", () => {
@@ -10170,6 +10175,72 @@ test("closing Settings with unsaved changes asks first, with Save beside Discard
   $("sClose").click();
   assert.equal(open("settings"), false);
   assert.equal(open("askModal"), false);
+});
+
+// At 16px in a browser tab, the detailed 192px icon shrank to a dark square with a dot
+test("the tab icon is a bold diamond drawn for small sizes, with a 32px PNG beside it", () => {
+  const svg = fs.readFileSync(path.join(ROOT, "icons", "favicon.svg"), "utf8");
+  assert.match(svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 32 32">/, "an SVG drawn on a 32 grid");
+  assert.doesNotMatch(svg, /<script|on\w+=|href=/i, "nothing in it but shapes");
+  assert.ok(svg.length < 1024, "a few hundred bytes");
+  assert.match(svg, /fill="#c8aa6e"/, "in the app's gold");
+  const png = fs.readFileSync(path.join(ROOT, "icons", "favicon-32.png"));
+  assert.equal(png.subarray(1, 4).toString("latin1"), "PNG");
+  assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [32, 32], "32 by 32");
+  assert.match(pageHtml, /<link rel="icon" href="icons\/favicon-32\.png" sizes="32x32" type="image\/png">\n<link rel="icon" href="icons\/favicon\.svg" type="image\/svg\+xml">/,
+    "the PNG first and the SVG after it, which a browser that draws SVG prefers");
+  assert.doesNotMatch(pageHtml, /rel="icon" href="icons\/icon-192/, "the detailed icon is not shrunk into a tab any more");
+  assert.match(pageHtml, /rel="apple-touch-icon" href="icons\/apple-touch-icon\.png"/, "the home-screen icon keeps the detailed design");
+  const sw = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  for (const f of ["./icons/favicon.svg", "./icons/favicon-32.png"]) assert.ok(sw.includes(`"${f}"`), "offline too: " + f);
+});
+
+// On hover, D/W/M sat over the plot's top-right corner, on the end of the line,
+// which is the newest point; and the dates sat on the frame's bottom edge
+test("D/W/M sit at the end of the date row, off the line, and the last date steps aside for them", () => {
+  const win = bootApp(seededAccount());
+  const lpc = win.document.querySelector(".card .lpc");
+  assert.equal(lpc.querySelector(".lpc-plot .lpc-range"), null, "nothing over the plot");
+  const axis = lpc.querySelector(".lpc-axis");
+  assert.deepEqual([...axis.querySelectorAll(".lpc-range button")].map(b => b.textContent), ["D", "W", "M"], "in the date row");
+  assert.ok(axis.querySelector(".lpc-tick.r"), "beside the dates");
+  assert.match(html, /\n  \.lpc-axis\{position:relative;height:26px;/, "a row with room for them");
+  assert.match(html, /\n  \.lpc-tick\{position:absolute;top:50%;transform:translate\(-50%,-50%\)/, "the dates in its middle, not on the edge");
+  assert.match(html, /\n  \.lpc:hover \.lpc-tick\.r,\.lpc:has\(\.lpc-range:focus-within\) \.lpc-tick\.r\{opacity:0\}/, "the last date makes way");
+  assert.doesNotMatch(html, /\.lpc-plot:has\(\.lpc-pt:hover\) \.lpc-range/, "no longer hidden for a point's tip: they don't share a corner now");
+  const coarse = html.slice(html.indexOf("@media (pointer:coarse){"));
+  assert.match(coarse.slice(0, 3000), /\.lpc-axis\{height:32px\}/, "and the row grows with the 30px touch buttons");
+  // no dates, no time to cut by
+  const bare = chartDom(win, [{ tier: "GOLD", division: "II", lp: 10 }, { tier: "GOLD", division: "II", lp: 40 }]);
+  assert.equal(bare.querySelector(".lpc-range"), null);
+});
+
+// At 16px the top three crests' thin spikes and wing tips turned to crumbs, and
+// Challenger's gold gem read as one more Gold
+test("Master, Grandmaster and Challenger get chunkier crests at 24px and under; Challenger's gem is ice blue", () => {
+  const win = bootApp(ladderSeed());
+  const paths = (t, cls) => { runScript(win, `window.__s = crest("${t}"${cls ? `, "${cls}"` : ""})`); return (win.__s.match(/<path /g) || []).length; };
+  const fills = (t, cls) => { runScript(win, `window.__s = crest("${t}"${cls ? `, "${cls}"` : ""})`); return [...win.__s.matchAll(/fill="(#[0-9a-f]{3,6})"/g)].map(m => m[1]); };
+  assert.equal(paths("GRANDMASTER"), 8, "small: a broad gem (six facets) with two wings, no crown");
+  assert.equal(paths("GRANDMASTER", "rk-crest"), 10, "the card's 28px crest keeps the crown");
+  for (const cls of ["rk-crest", "sn-crest-i", "sn-best-c"]) {
+    runScript(win, `window.__a = crest("CHALLENGER", "${cls}").replace(/class="[^"]*"/, ""); window.__b = crest("CHALLENGER", "rib-crest").replace(/class="[^"]*"/, "")`);
+    assert.notEqual(win.__a, win.__b, cls + " draws the full crest");
+  }
+  for (const cls of [undefined, "rib-crest", "cmp-crest", "lgrp-crest", "sn-t-c"]) {
+    runScript(win, `window.__a = crest("MASTER", ${cls ? `"${cls}"` : "undefined"}).replace(/class="[^"]*"/, ""); window.__b = crest("MASTER", "rk-crest").replace(/class="[^"]*"/, "")`);
+    assert.notEqual(win.__a, win.__b, (cls || "a row, a tile, Quick find") + " draws the small one");
+  }
+  // the rest of the ladder is one drawing at every size
+  runScript(win, `window.__a = crest("GOLD", "rib-crest").replace(/class="[^"]*"/, ""); window.__b = crest("GOLD", "rk-crest").replace(/class="[^"]*"/, "")`);
+  assert.equal(win.__a, win.__b, "Gold is unchanged");
+  for (const cls of [undefined, "rk-crest"]) {
+    const f = fills("CHALLENGER", cls);
+    assert.ok(f.includes("#a9dcf5"), "an ice-blue gem" + (cls ? " at full size" : ""));
+    assert.ok(f.includes("#f4d688"), "with gold wings");
+    assert.ok(f.includes("#fff"), "and a white star");
+  }
+  assert.ok(win.document.querySelectorAll(".rk-crest").length >= 10, "the cards still draw theirs");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

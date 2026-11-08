@@ -1494,11 +1494,14 @@
   .lpc-plot{position:relative;height:88px}
   .lpc-svg{display:block;width:100%;height:100%;border-radius:var(--r-sm) var(--r-sm) 0 0}
   /* X is real time now, so the dates below are worth printing */
-  .lpc-axis{position:relative;height:16px;border-top:1px solid var(--line)}
-  .lpc-tick{position:absolute;top:3px;transform:translateX(-50%);white-space:nowrap;
-    font-size:calc(11px*var(--ts));font-weight:500;letter-spacing:.04em;color:var(--faint);pointer-events:none}
-  .lpc-tick.l{transform:none;left:5px!important}
-  .lpc-tick.r{transform:none;left:auto!important;right:5px}
+  /* 26px, with the dates in the middle of it: at 16px they sat on the frame's bottom
+     edge. It is also where D/W/M live (below). */
+  .lpc-axis{position:relative;height:26px;border-top:1px solid var(--line)}
+  .lpc-tick{position:absolute;top:50%;transform:translate(-50%,-50%);white-space:nowrap;
+    font-size:calc(11px*var(--ts));font-weight:500;letter-spacing:.04em;color:var(--faint);pointer-events:none;
+    transition:opacity .13s ease}
+  .lpc-tick.l{transform:translateY(-50%);left:5px!important}
+  .lpc-tick.r{transform:translateY(-50%);left:auto!important;right:5px}
   .away-band{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;
     padding:12px 15px;border-radius:var(--r-md);font-size:calc(13px*var(--ts));
     border:1px solid color-mix(in srgb,var(--teal) 34%,transparent);
@@ -1579,17 +1582,15 @@
      back as soon as you scroll up, which is when the top is what you want. */
   .to-top.away{opacity:0;pointer-events:none;transform:translateY(12px) scale(.9)}
   @media (prefers-reduced-motion:reduce){.to-top{transition:none}}
-  /* Top-right of the plot, which is also where a point's tip opens. The tip is
-     information; this is a control used once in a while, so it is the one that
-     waits to be asked for. Visible on hovering the chart, or when it has
-     keyboard focus. */
+  /* In the date row, at its right end. Over the plot's top-right corner they
+     covered the end of the line, which is the newest and most important point.
+     A control used once in a while, so it waits to be asked for: on hovering the
+     chart, or with keyboard focus, and the last date steps aside for it. */
   .lpc-one{margin:4px 0 2px;font-size:calc(12px*var(--ts));color:var(--faint)}
-  .lpc-range{position:absolute;top:4px;right:5px;display:flex;gap:2px;z-index:3;
+  .lpc-range{position:absolute;top:0;bottom:0;right:2px;display:flex;align-items:center;gap:2px;z-index:3;
     opacity:0;pointer-events:none;transition:opacity .13s ease}
-  .lpc-plot:hover .lpc-range,.lpc-range:focus-within{opacity:1;pointer-events:auto}
-  /* except while a point is being read — the tip wants that corner and you asked
-     for the tip. Outranks the hover rule above on specificity. */
-  .lpc-plot:has(.lpc-pt:hover) .lpc-range{opacity:0;pointer-events:none}
+  .lpc:hover .lpc-range,.lpc-range:focus-within{opacity:1;pointer-events:auto}
+  .lpc:hover .lpc-tick.r,.lpc:has(.lpc-range:focus-within) .lpc-tick.r{opacity:0}
   /* 24px and 12px: at about 17px with the smallest type on the card they were hard
      to read and harder to hit. On the plot's own dark, so the line under them
      doesn't show through the letters. */
@@ -1819,9 +1820,13 @@
   .rankpanel .sec-h{padding:12px 22px}
   .rankpanel .sec-b{padding:2px 22px 14px}
   .rankpanel .sec:last-child{border-bottom:1px solid var(--line)}
-  /* The main action, and the one filled button on a card (see .b-fill) */
-  .a-login{background-color:var(--teal);border-color:var(--teal);color:var(--teal-ink);font-weight:650}
-  .a-login:hover{background-color:color-mix(in srgb,var(--teal) 86%,#fff);border-color:color-mix(in srgb,var(--teal) 86%,#fff);color:var(--teal-ink)}
+  /* The main action on a card, tinted rather than filled. Twenty filled bars were
+     the brightest things on the page, so the eye went to the buttons and not the
+     ranks, and on a Platinum card the bar was the rank's own color. The one filled
+     button left is + Add account, once per screen (see .b-fill). */
+  .a-login{background-color:color-mix(in srgb,var(--teal) 13%,var(--panel2));border-color:color-mix(in srgb,var(--teal) 50%,var(--panel2));
+    color:var(--teal-txt);font-weight:650}
+  .a-login:hover{background-color:color-mix(in srgb,var(--teal) 24%,var(--panel2));border-color:var(--teal);color:var(--teal-txt)}
   /* just copied: the same filled plate in the green that means done, hovered or not
      (the pointer is still on it the moment it changes) */
   .a-login.copied,.a-login.copied:hover{color:var(--teal-ink);background-color:var(--good);border-color:var(--good)}
@@ -2639,6 +2644,7 @@
        only; with a mouse nothing changes size. */
     .bulkchk,#tSelectAll{width:24px;height:24px}
     .lpc-range button{height:30px;padding:0 9px}
+    .lpc-axis{height:32px}   /* room for them in the date row */
     .rid{padding-block:5px;margin-block:-3px}
     .cmd-count .warn{padding:6px 10px}
     .c-notes.blank>button,.c-notes.blank .nf-link{min-height:30px} /* matches the all:unset rule it has to beat */
