@@ -253,7 +253,9 @@
   /* while one is the filter, the others step back */
   .rib-row:has(.rib-i.on) .rib-i:not(.on){opacity:.55}
   .rib-row:has(.rib-i.on) .rib-i:not(.on):hover{opacity:1}
-  .rib-states{display:inline-flex;align-items:center;margin-left:8px}
+  /* wraps: with four states at once ("1 unranked · 1 never checked · 1 banned ·
+     2 need a refresh") one unbroken line was 403px, and a phone's page grew to fit it */
+  .rib-states{display:inline-flex;align-items:center;flex-wrap:wrap;row-gap:2px;min-width:0;max-width:100%;margin-left:8px}
   .rib-s{color:var(--muted);padding:0 6px}
   .rib-s.rib-stale{color:var(--warn-txt)}   /* amber, as the card's own out-of-date line */
   .rib-dot{font-style:normal;color:var(--faint)}
@@ -930,6 +932,10 @@
      the strikethrough say it; the rail is gone, and Login is a plain button. */
   .card.dead .a-login{background-color:var(--panel2);border-color:var(--btn-edge);color:var(--muted);font-weight:600}
   .card.dead .a-login:hover{color:var(--text)}
+  /* the list's copy keys step back on a banned row the way the card's Login does:
+     still there (a login is wanted for an appeal), no longer an invitation */
+  .rw.dead .rw-key{color:var(--faint);opacity:.6}
+  .rw.dead .rw-key:hover{color:var(--text);opacity:1}
   .card.dead .rk-crest,.rw.dead .rw-crest{filter:grayscale(.9);opacity:.55}
   .card.dead .rk .rk-t,.rw.dead .rw-rank b{text-decoration:line-through;
     text-decoration-thickness:1.5px;text-decoration-color:currentColor;opacity:.62}
@@ -2664,6 +2670,7 @@
     .lpc-range button{height:30px;padding:0 9px}
     .lpc-axis{height:32px}   /* room for them in the date row */
     .tools>.t-kbd{display:none}.tools>#tSearch:placeholder-shown{padding-right:12px}   /* no Ctrl on a touch screen */
+    .pal-f{display:none}   /* nor arrow keys, Enter or Esc: Quick find's key hints mean nothing there */
     .rid{padding-block:5px;margin-block:-3px}
     .c-notes.blank>button,.c-notes.blank .nf-link{min-height:30px} /* matches the all:unset rule it has to beat */
   }

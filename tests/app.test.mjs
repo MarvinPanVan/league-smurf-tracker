@@ -9637,6 +9637,12 @@ test("the link preview names a fresh image, at the size the page says it is", ()
   const url = pageHtml.match(/<meta property="og:image" content="([^"]+)">/)[1];
   assert.match(url, /\/icons\/social\.jpg\?v=\d+$/, "a version on the address, so a new picture is fetched");
   const jpg = fs.readFileSync(path.join(ROOT, "icons", "social.jpg"));
+  // and the version moves with the picture: a new image under the old ?v= stays unseen.
+  // Replacing it means a new entry here, at a new version.
+  const shown = { 3: "f0e2dbd50a4b" };
+  const v = +url.match(/\?v=(\d+)$/)[1];
+  assert.equal(createHash("sha1").update(jpg).digest("hex").slice(0, 12), shown[v],
+    "icons/social.jpg changed: bump og:image's ?v= in index.html and add its hash here");
   let i = 2, w = 0, h = 0;
   while (i < jpg.length) {
     if (jpg[i] !== 0xff) { i++; continue; }
@@ -9796,12 +9802,15 @@ test("offline, Check all and Refresh say so instead of failing every account", a
 
 // A new account was sorted in somewhere below while the page stayed at the top, so it
 // looked as if nothing had been added
-test("a new account is scrolled to and lit up, even past a filter that would hide it", async () => {
+test("a new account is scrolled to and lit up, even past a filter that would hide it, once the form has gone", async () => {
   const ranked = (id, n, tier) => ({ id, region: "EUW", gameName: n, tagLine: "1", status: "active", tags: [], history: [],
     stats: { found: true, tier, division: "I", lp: 1, updatedAt: Date.now() } });
   const win = bootApp([ranked("a", "Alpha", "DIAMOND"), ranked("b", "Beta", "GOLD"), ranked("c", "Gamma", "SILVER")]);
-  const doc = win.document, scrolled = [];
-  win.Element.prototype.scrollIntoView = function () { scrolled.push(this.dataset.id) };
+  const doc = win.document, scrolled = [], formOpenAtScroll = [];
+  win.Element.prototype.scrollIntoView = function () {
+    scrolled.push(this.dataset.id);
+    formOpenAtScroll.push(!doc.getElementById("form").classList.contains("hidden") || doc.body.classList.contains("modal-open"));
+  };
   // a search that the new account will not match
   doc.getElementById("tSearch").value = "Alpha";
   doc.getElementById("tSearch").dispatchEvent(new win.Event("input", { bubbles: true }));
@@ -9814,11 +9823,20 @@ test("a new account is scrolled to and lit up, even past a filter that would hid
   assert.ok(card, "the filter that would hide it is gone");
   assert.equal(doc.getElementById("tSearch").value, "");
   assert.ok(card.closest(".hx").classList.contains("flash"), "lit up");
+  await tick();
   assert.equal(scrolled.at(-1), id, "and brought into view");
+  // It was lit but never reached: it scrolled while the form was still closing, with the
+  // page locked, then the browser's own scroll restoration on the step back and the
+  // focus handed back to + Add account both pulled the page up again
+  assert.equal(formOpenAtScroll.at(-1), false, "the scroll waits until the form is gone");
+  // (jsdom has no scrollRestoration, so this one is read from the code)
+  assert.match(appJs, /if\("scrollRestoration" in history\)history\.scrollRestoration="manual"/, "closing a window does not restore an old scroll position");
+  assert.match(appJs, /back\.focus\(\{preventScroll:true\}\)/, "and focus goes back without moving the page");
   // Bulk add takes you to the first of what it added
   doc.getElementById("bBulkAdd").click();
   doc.getElementById("baList").value = "Omega One#EUW\nOmega Two#EUW";
   doc.getElementById("baSave").click();
+  await tick();
   assert.equal(scrolled.at(-1), appGet(win, "accounts.find(a => a.gameName === 'Omega One').id"));
 });
 
@@ -10399,7 +10417,7 @@ test("a card's tags stay on one row, the rest behind +N, which opens Details whe
   runScript(win, "render()");
   const row = () => win.document.querySelector('.card[data-id="t"] .ctags');
   const shown = () => [...row().children].filter(c => !c.hidden).map(c => c.textContent);
-  assert.deepEqual(shown(), ["main", "adc", "+5"], "what fits, and a count of the rest that fits beside it");
+  assert.deepEqual(shown(), ["main", "adc", "+5 more"], "what fits, and a count of the rest that fits beside it, worded like the notes'");
   const more = row().querySelector(".ct-more");
   assert.equal(more.dataset.act, "info", "the count opens Details");
   more.click();
@@ -10448,6 +10466,37 @@ test("switching layout fades the new one in; filtering and sorting stay instant"
   assert.equal(grid.classList.contains("view-in"), false, "a filter is instant");
   assert.match(html, /\n  \.grid\.view-in\{animation:viewIn \.15s ease-out both\}/);
   assert.match(html, /\.hx\.dash-out,\.grid\.view-in,\.sec-b,/, "and it is off with motion reduced");
+});
+
+// With four states at once the header's status line was one 403px line, and a phone's
+// page grew to 427px to hold it (a 320px phone showed everything at about 75%)
+test("the header's status words wrap onto a second line instead of widening a phone's page", () => {
+  const rule = html.match(/\n  \.rib-states\{([^}]*)\}/)[1];
+  assert.match(rule, /flex-wrap:wrap/, "they wrap");
+  assert.match(rule, /max-width:100%/, "and never ask for more than the row");
+  assert.match(html.match(/\n  \.rib-row\{([^}]*)\}/)[1], /flex-wrap:wrap/, "as the row around them does");
+});
+
+// A banned account's card mutes its Login; its list row still offered both copy keys
+// at full strength
+test("a banned row's copy keys step back like the banned card's Login, and still work", () => {
+  const rule = html.match(/\n  \.rw\.dead \.rw-key\{([^}]*)\}/);
+  assert.ok(rule, "a rule for them");
+  assert.match(rule[1], /color:var\(--faint\)/);
+  const win = bootApp([{ id: "b", region: "EUW", gameName: "B", tagLine: "1", status: "banned", tags: [], history: [], login: "old", password: "pw",
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, updatedAt: Date.now() } }]);
+  win.document.querySelector('[data-density="list"]').click();
+  const row = win.document.querySelector('.rw[data-id="b"]');
+  assert.ok(row.classList.contains("dead"), "the row is marked");
+  assert.equal(row.querySelectorAll(".rw-key").length, 2, "both keys are still there, for an appeal");
+});
+
+// On a phone Quick find said "↑↓ move, ⏎ open, Esc close" to a screen with no keys
+test("Quick find's key hints are left off on a touch screen", () => {
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  const coarse = css.slice(css.indexOf("@media (pointer:coarse){"));
+  assert.match(coarse.slice(0, 3000), /\.pal-f\{display:none\}/);
+  assert.match(pageHtml, /<div class="pal-f">/, "a keyboard still gets them");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

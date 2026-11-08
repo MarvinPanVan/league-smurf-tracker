@@ -110,8 +110,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.26.0";
+const APP_VERSION="2.26.1";
 const APP_CHANGELOG=[
+  {v:"2.26.1",items:[
+    "On a phone, the header's status line wraps instead of making the whole page wider",
+    "A new account is scrolled into view, not only lit up",
+    "A banned account's copy buttons are muted in the list, Quick find leaves out key hints on touch screens, and tags say \"+5 more\" like the notes",
+  ]},
   {v:"2.26.0",items:[
     "Calmer cards: no win bar under the win rate, no \"Updated\" line until a rank is a day old, no empty note prompts, and tags on one row",
     "Refresh rank and Add note are in each card's ⋯ menu, and the LP-per-day pace is on the chart's newest point",
@@ -6698,7 +6703,8 @@ function fitTags(root){
     more.type="button";more.className="ct-more";more.dataset.act="info";more.title="Show every tag in Details";
     row.appendChild(more);
     let n=Math.max(1,cut);
-    const show=()=>{chips.forEach((c,i)=>{c.hidden=i>=n});more.textContent="+"+(chips.length-n)};
+    // "+5 more", worded like the note chips' count beside it
+    const show=()=>{chips.forEach((c,i)=>{c.hidden=i>=n});more.textContent="+"+(chips.length-n)+" more"};
     show();
     while(n>1&&out(more)){n--;show()}
   }
@@ -7407,6 +7413,11 @@ function openModals(){return MODALS.map($).filter(el=>el&&!el.classList.contains
    another that opens before the browser has carried out the step back left a
    flag saying "there is an entry" over an entry that was already gone. */
 let backSkip=false;
+/* Each window takes a history entry, and closing it steps back off that entry. On
+   that step the browser put the page back where it had been when the window opened:
+   after Add account, at the top, while the new account's card was being scrolled to.
+   Windows never move the page, so there is nothing for the browser to restore. */
+try{if("scrollRestoration" in history)history.scrollRestoration="manual"}catch(e){}
 function onWindowEntry(){try{return !!(history.state&&history.state.smurfWindow)}catch(e){return false}}
 function syncBackStep(open){
   if(snapMode||backSkip)return;   // our own step back is on its way; popstate settles it
@@ -7456,7 +7467,8 @@ function syncModals(){
     const back=modalReturn.isConnected
       ?(modalReturn.closest("#moreMenu")?$("bMore"):modalReturn)
       :null;
-    try{if(back)back.focus()}catch(e){}
+    // without scrolling: the page may have moved on (to a new account) meanwhile
+    try{if(back)back.focus({preventScroll:true})}catch(e){}
     modalReturn=null;
   }
 }
@@ -8304,8 +8316,14 @@ function revealAccount(id,clear){
   const a=accounts.find(x=>x.id===id);if(!a)return;
   if(clear||!filtered().some(x=>x.id===id))clearFilters(a);
   flashId=id;render();
-  const el=$("grid").querySelector(`[data-id="${idSel(id)}"]`);
-  if(el&&el.scrollIntoView)el.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
+  /* Lit up but never reached: this ran while the form that added the account was
+     still closing, with the page locked against scrolling, and the focus handed
+     back to "+ Add account" just after pulled the page back up to it. The scroll
+     waits until that window is gone. */
+  setTimeout(()=>{
+    const el=$("grid").querySelector(`[data-id="${idSel(id)}"]`);
+    if(el&&el.scrollIntoView)el.scrollIntoView({block:"center",behavior:prefersReducedMotion()?"auto":"smooth"});
+  },0);
   setTimeout(()=>{if(flashId===id){flashId=null;renderCard(id)}},1600);
 }
 $("palInput").addEventListener("input",()=>{palSel=0;renderPalette()});
