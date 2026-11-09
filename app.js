@@ -1086,6 +1086,8 @@ const ICON={
   clipboard:'<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
   star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
   chevron:'<polyline points="6 9 12 15 18 9"/>',
+  // Settings, as the header's ⋯ menu draws it
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   /* The header's set, drawn on the same grid and stroke as the magnifier beside them:
      the stats switch, and ⋯ and ? which were typed characters, smaller than the
      drawn icon, at another height and in another weight. */
@@ -1984,12 +1986,16 @@ function flashLogin(id,pw){
    had to be pressed for the copying, the thing you came for. The panel (to see the
    password, the email, the date of birth) is the eye beside it. With one of the
    two saved it copies that one; with neither it offers to add them. */
+/* One mark for one thing, everywhere: the person is the username and the key is the
+   password, on a card, in a list row and in Quick find. The card's main button wore
+   the key while it said "Copy username", the key a list row uses for the password. */
+const LOGIN_ICON={"Copy username":"user","Copy password":"key","Add login":"plus"};
 function loginButtonsHTML(a,open){
   const both=a.login&&a.password, next=both&&loginSeq.has(a.id), fl=loginFlash.get(a.id);
   const label=next||(!a.login&&a.password)?"Copy password":a.login?"Copy username":"Add login";
   const main=a.login||a.password
-    ?`<button data-act="copyseq" class="a-login${fl?" copied":""}" title="${both?"Copies the username, then the password":"Copies it to paste into the Riot client"}">${fl?icon("check")+(fl.pw?" Copied, clears in 30s":" Username copied"):icon("key")+" "+label}</button>`
-    :`<button data-act="addlogin" class="a-login" title="Save the username and password for this account">${icon("key")} ${label}</button>`;
+    ?`<button data-act="copyseq" class="a-login${fl?" copied":""}" title="${both?"Copies the username, then the password":"Copies it to paste into the Riot client"}">${fl?icon("check")+(fl.pw?" Copied, clears in 30s":" Username copied"):icon(LOGIN_ICON[label])+" "+label}</button>`
+    :`<button data-act="addlogin" class="a-login" title="Save the username and password for this account">${icon(LOGIN_ICON[label])} ${label}</button>`;
   const eye=a.login||a.password||a.email||a.birthdate
     ?`<button data-act="login" class="c-lgn${open?" on":""}" aria-pressed="${open}" title="${open?"Hide":"Show"} the saved login" aria-label="${open?"Hide":"Show"} the saved login">${icon(open?"eyeOff":"eye")}</button>`:"";
   return main+eye;
@@ -5871,7 +5877,7 @@ function cardMenuHTML(a){
   return `<div class="hx-in cm-in">`
     +grp("Edit")
     +it("rank","pencil","Rank…")
-    +it("edit","user","Account…")
+    +it("edit","pencil","Account…")   // the person is the username's mark
     +it("noteedit","pencil",a.notes?"Edit note":"Add note")
     +it("art","image","Card art…")
     // Both profile links together. op.gg used to sit in the footer while dpm.lol
@@ -8396,7 +8402,7 @@ function palCommands(){
       ui.density=order[(order.indexOf(ui.density)+1)%order.length];
       cfg.density=ui.density;saveCfg();openInfo.clear();render();fadeInGrid();
     }},
-    {k:"settings",n:"Settings",s:"Rank checks, alerts, security, appearance",i:"user",run:()=>openSettings()},
+    {k:"settings",n:"Settings",s:"Rank checks, alerts, security, appearance",i:"gear",run:()=>openSettings()},
     {k:"password check security reused weak leak pwned",n:"Password check-up",s:"Passwords used twice, weak, or in a data leak",i:"alert",run:()=>openSettings("security")},
     {k:"newseason",n:"New season",s:"Move every ranked account's rank into Past seasons",i:"refresh",run:()=>newSeasonAll()},
     {k:"streamer",n:"Streamer mode",s:"Hide Riot IDs, logins, emails and notes on screen (H)",i:"eye",run:()=>setStreamer(!streamerOn())},

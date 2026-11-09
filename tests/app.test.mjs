@@ -8345,9 +8345,10 @@ test("the card footer is Login and a ⋯, with Refresh on an old timestamp and i
   assert.deepEqual(called, ["seed1"], "and it still checks the account");
   cardMenu(win).querySelector('[data-act="check"]').click();
   assert.deepEqual(called, ["seed1", "seed1"], "as does the ⋯ menu's Refresh rank");
-  // a key, not a person: a person beside "Login" read as signing in to this app
-  const d = [...acts.querySelectorAll(".a-login svg path")].map(p => p.getAttribute("d"));
-  assert.ok(d.includes("m10.7 12.3 9.3-9.3"), "the key icon: " + d.join(" | "));
+  // Not a person: beside "Login" that read as signing in to this app, and the person is
+  // the username's mark now. Adding a login is a plus.
+  assert.match(acts.querySelector(".a-login").textContent, /Add login/);
+  assert.equal(acts.querySelector(".a-login svg line[x1=\"12\"][y1=\"5\"]") && acts.querySelectorAll(".a-login svg line").length, 2, "the plus icon");
   // Neither profile link vanished — they are one kind of thing and now sit
   // together under Look up, rather than op.gg in the footer and dpm.lol in here.
   const links = [...cardMenu(win).querySelectorAll(".cm-link")];
@@ -10886,6 +10887,34 @@ test("an opened list row speaks the card's vocabulary: Copy username, the eye, a
   // and its ⋯ opens the same menu a card's does
   doc.querySelector('.rw[data-id="L"] .rw-open [data-act="more"]').click();
   assert.deepEqual(cardMenuItems(), fromCard, "every entry the card's menu has, in the same order");
+});
+
+// The card's "Copy username" wore the key, which a list row and Quick find use for the
+// password: the same mark copied the username on one screen and the password on the next
+test("the person is the username and the key is the password, on a card, a list row and in Quick find", async () => {
+  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [], login: "riotuser", password: "hunter22!", stats: null },
+    { id: "N", region: "EUW", gameName: "N", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async () => {} } });
+  const doc = win.document;
+  // the markup each mark draws, as the page itself writes it out
+  const drawn = name => { const s = doc.createElementNS("http://www.w3.org/2000/svg", "svg"); s.innerHTML = appGet(win, "ICON." + name); return s.innerHTML; };
+  const user = drawn("user"), key = drawn("key");
+  const main = () => doc.querySelector('.card[data-id="L"] .a-login');
+  assert.match(main().textContent, /Copy username/);
+  assert.equal(main().querySelector("svg").innerHTML, user, "Copy username: the person");
+  main().click();
+  await until(() => /Copy password/.test(main().textContent), "the next step");
+  assert.equal(main().querySelector("svg").innerHTML, key, "Copy password: the key");
+  assert.equal(doc.querySelector('.card[data-id="N"] .a-login svg').innerHTML, drawn("plus"), "Add login: a plus, neither of the two");
+  // nothing else wears the person: the card menu's Account… and Quick find's Settings
+  const menu = cardMenu(win, "L");
+  assert.notEqual(menu.querySelector('[data-act="edit"] svg').innerHTML, user, "Account… is not the username");
+  assert.ok(!/i:"user",run:\(\)=>openSettings/.test(appJs), "nor is Settings");
+  runScript(win, "closeCardMenu()");
+  // the list row's two keys
+  doc.querySelector('[data-density="list"]').click();
+  assert.equal(doc.querySelector('.rw[data-id="L"] [data-act="copylogin"] svg').innerHTML, user);
+  assert.equal(doc.querySelector('.rw[data-id="L"] [data-act="copypw"] svg').innerHTML, key);
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
