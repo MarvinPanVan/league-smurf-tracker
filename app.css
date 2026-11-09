@@ -246,6 +246,9 @@
   .ribbon{flex:1 1 260px;min-width:0;max-width:760px;display:flex;align-items:center}
   .ribbon:empty{display:none}
   .rib-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px 2px}
+  .rib-tiers{display:inline-flex;align-items:center;gap:4px 2px;flex-wrap:nowrap}
+  /* not room for the emblems beside the wordmark: a row of their own under it (fitRibbon) */
+  .top.rib-below>.ribbon{order:3;flex:1 1 100%;max-width:none}
   .rib-i{height:30px;padding:0 8px;gap:6px;border-radius:var(--r-sm);background:none;border:1px solid transparent;
     color:var(--text);font-size:calc(13px*var(--ts));font-weight:500;font-variant-numeric:tabular-nums}
   .rib-i:hover{background:#ffffff10;border-color:transparent;color:var(--text)}
@@ -2733,6 +2736,7 @@
     .top>.brand .brand-mark{display:none}
     .top>.bar{grid-column:2;grid-row:1;margin-left:0}
     .top>.ribbon{grid-column:1/-1;grid-row:2;max-width:none}
+    .rib-tiers{flex-wrap:wrap}   /* the ribbon has the full width here; ten emblems may still wrap */
     .top h1{font-size:calc(20px*var(--ts));white-space:nowrap}
   }
   @media (max-width:400px){.top h1{font-size:calc(18px*var(--ts))}}

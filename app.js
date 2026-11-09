@@ -4120,10 +4120,32 @@ function renderRibbon(){
   const missOn=ui.flag==="missing";
   const warn=missN?`<button class="rib-i rib-warn${missOn?" on":""}" data-flag="missing" aria-pressed="${missOn}" aria-label="Not found, ${missN}"`
     +` title="op.gg has no profile for these Riot IDs: not entered yet, renamed, or mistyped.">${icon("alert")}<span>${missN} not found</span><u>${missOn?"Shown":"Show"}</u></button>`:"";
-  setHTML(el,`<div class="rib-row" role="group" aria-label="Accounts by tier">${tiers.map(tierItem).join("")}`
+  setHTML(el,`<div class="rib-row" role="group" aria-label="Accounts by tier">${tiers.length?`<span class="rib-tiers">${tiers.map(tierItem).join("")}</span>`:""}`
     +(states.length?`<span class="rib-states">${states.join("")}</span>`:"")
     +warn+`</div>`);
+  fitRibbon();
 }
+/* The emblems are one group, never wrapped one at a time: at 1280px nine sat beside
+   the wordmark and Iron alone on a second line, and with Streamer mode on the
+   header grew from 64px to 164px. When the group does not fit between the wordmark
+   and the buttons, the whole ribbon takes a row of its own under both, the states
+   after the emblems. Measured, since only layout knows; a phone gives the ribbon a
+   row of its own already, and lets the emblems wrap there. */
+function fitRibbon(){
+  const top=document.querySelector(".top"), rib=$("ribbon");if(!top||!rib)return;
+  const tiers=rib.querySelector(".rib-tiers");
+  let below=false;
+  if(tiers&&!phoneLayout()){
+    const brand=top.querySelector(".brand"), bar=top.querySelector(".bar");
+    const gap=parseFloat(getComputedStyle(top).columnGap)||0;
+    const room=top.clientWidth-(brand?brand.getBoundingClientRect().width:0)-(bar?bar.getBoundingClientRect().width:0)-2*gap;
+    below=tiers.getBoundingClientRect().width>room;
+  }
+  top.classList.toggle("rib-below",below);
+}
+// the room changes with the window, and with the buttons: Streamer mode's pill, the Stats switch
+if("ResizeObserver"in window){const ro=new ResizeObserver(()=>fitRibbon());ro.observe(document.querySelector(".top"));ro.observe(document.querySelector(".top .bar"))}
+else addEventListener("resize",()=>fitRibbon());
 /* Collapsed until asked for on a phone: there the stats were the whole first
    screen, ahead of every account. A choice made with the toggle is kept on any
    screen; until then a phone starts closed and a wider screen open. */

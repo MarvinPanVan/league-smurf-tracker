@@ -11072,6 +11072,34 @@ test("the backup reminder sits above the accounts, open stats or not", () => {
   assert.equal(doc.querySelector("#bkNote .bk-note"), null, "one Back up now at a time");
 });
 
+// At 1280px nine rank emblems sat beside the wordmark and Iron alone on a second line;
+// with Streamer mode's pill in the header it grew from 64px to 164px
+test("the header's rank emblems move as one group: beside the wordmark, or all on a row below it", () => {
+  const T = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND"];
+  const win = bootApp(T.map((t, i) => ({ id: "t" + i, region: "EUW", gameName: "T" + i, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: t, division: "II", lp: 5, wins: 3, losses: 2, updatedAt: Date.now() } })));
+  const doc = win.document, top = doc.querySelector(".top");
+  const group = doc.querySelector("#ribbon .rib-tiers");
+  assert.ok(group, "the emblems are one group");
+  assert.equal(group.querySelectorAll(".rib-t").length, 7, "every tier in it");
+  assert.equal(doc.querySelector("#ribbon .rib-states .rib-t"), null, "and the states apart from it");
+  assert.match(appCss, /\.rib-tiers\{[^}]*flex-wrap:nowrap/, "the group does not break up");
+  assert.match(appCss, /\.top\.rib-below>\.ribbon\{order:3;flex:1 1 100%/, "below, it takes a whole row under the wordmark and buttons");
+  // layout, which jsdom has not: a 1280px header, a 440px wordmark, 300px of buttons
+  const box = w => () => ({ width: w, height: 30, top: 0, left: 0, right: w, bottom: 30, x: 0, y: 0 });
+  Object.defineProperty(top, "clientWidth", { configurable: true, get: () => 1240 });
+  doc.querySelector(".top .brand").getBoundingClientRect = box(440);
+  doc.querySelector(".top .bar").getBoundingClientRect = box(300);
+  const fits = w => { doc.querySelector("#ribbon .rib-tiers").getBoundingClientRect = box(w); runScript(win, "fitRibbon()"); return !top.classList.contains("rib-below"); };
+  assert.equal(fits(420), true, "room for the emblems: they stay beside the wordmark");
+  assert.equal(fits(560), false, "no room: the whole row moves below, not just the last emblem");
+  assert.equal(fits(420), true, "and comes back when there is room again");
+  // a phone already gives the ribbon its own row, and lets the emblems wrap there
+  win.matchMedia = q => ({ matches: /max-width:\s*560px/.test(q), addListener() {}, removeListener() {} });
+  assert.equal(fits(900), true, "no rib-below on a phone");
+  assert.match(appCss, /\.rib-tiers\{flex-wrap:wrap\}/, "the phone's emblems may wrap within their row");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
