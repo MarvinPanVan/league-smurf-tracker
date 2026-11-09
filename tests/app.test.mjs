@@ -4387,6 +4387,10 @@ test("ranked-only skips accounts known to have no rank, but not ones never check
   setAutoCheck(win, { hours: 0.5, rankedOnly: true });
   assert.equal(win.autoCheckDue(acc("GOLD", 9)), true);
   assert.equal(win.autoCheckDue(acc("UNRANKED", 9)), false, "an unranked account answers the same every time");
+  // one that was ranked last season is waiting on placements: after a reset that is
+  // the whole vault, and skipping it meant its new rank was never found
+  const placing = Object.assign(acc("UNRANKED", 9), { history: [{ t: now - 30 * 864e5, tier: "GOLD", division: "I", lp: 50 }, { t: now - 9 * 3600e3, tier: "UNRANKED" }] });
+  assert.equal(win.autoCheckDue(placing), true, "an account waiting on placements is still checked");
   // a never-checked account has no rank *yet*; skipping it would leave it stuck
   // outside the filter permanently, with no way in
   assert.equal(win.autoCheckDue(acc(null, 0)), true, "it still needs its first check");

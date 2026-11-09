@@ -756,9 +756,11 @@ function autoCheckDue(a){
   // first fetch leaves a note-only stats object with no tier; that is still "never
   // read", not "known unranked", so hasReading() gates the skip rather than the
   // bare presence of a stats object.
+  /* Nor is one waiting on its placements: after a reset that is every account in
+     the vault, and skipping them all meant no new rank was ever found on its own. */
   if(cfg.autoRankedOnly&&hasReading(a.stats)){
     const t=(a.stats.tier||"").toUpperCase();
-    if(a.stats.found===false||!t||t==="UNRANKED")return false;
+    if(a.stats.found===false||!t||(t==="UNRANKED"&&!notPlaced(a)))return false;
   }
   const hrs=coerceAutoEvery(cfg.autoEveryHours);
   if(!a.stats||!a.stats.updatedAt)return true;
