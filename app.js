@@ -110,8 +110,11 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.27.1";
+const APP_VERSION="2.27.2";
 const APP_CHANGELOG=[
+  {v:"2.27.2",items:[
+    "More details and Settings' Advanced sections open more gently, so they glide instead of jumping at the start",
+  ]},
   {v:"2.27.1",items:[
     "Windows open straight away: + Add account no longer waits a tenth of a second before it shows",
     "Opening a window is smoother: the page behind is darkened instead of blurred",
