@@ -8336,7 +8336,7 @@ test("the card footer is Login and a ⋯, with Refresh on an old timestamp and i
   const acts = win.document.querySelector(".card .acts");
   // Refresh weighed nearly as much as Login there; it sits by "Updated …" now.
   // This account has no login saved yet, so the Login button offers to add one.
-  assert.deepEqual([...acts.children].map(el => el.textContent.trim()), ["Add login", "⋯"]);
+  assert.deepEqual([...acts.children].map(el => el.textContent.trim() || el.getAttribute("aria-label")), ["Add login", "More actions"]);
   const ref = win.document.querySelector('.card .c-meta .c-ref[data-act="check"]');
   assert.ok(ref && ref.previousElementSibling.classList.contains("upd"), "beside the timestamp");
   assert.equal(ref.getAttribute("aria-label"), "Refresh rank", "an icon with a name");
@@ -10915,6 +10915,30 @@ test("the person is the username and the key is the password, on a card, a list 
   doc.querySelector('[data-density="list"]').click();
   assert.equal(doc.querySelector('.rw[data-id="L"] [data-act="copylogin"] svg').innerHTML, user);
   assert.equal(doc.querySelector('.rw[data-id="L"] [data-act="copypw"] svg').innerHTML, key);
+});
+
+// Typed characters stood in for icons: the card's ⋯ at 16px type beside a 16px drawn eye
+// and a 12px key, ✕ on every window, ↺ on the colour resets, and "—" for an empty field
+test("no typed character stands in for an icon: ⋯, ✕ and ↺ are drawn, and an empty field is empty", () => {
+  const win = bootApp(seededAccount()), doc = win.document;
+  const glyphs = /[⋯✕↺]/;
+  runScript(win, "ui.tier = 'DIAMOND'; render()");   // a filter chip, with its x, over the same card
+  // every button on the page and every one the app has drawn
+  for (const b of doc.querySelectorAll("button")) assert.doesNotMatch(b.textContent, glyphs, (b.id || b.className) + ": " + b.textContent.trim());
+  const closes = doc.querySelectorAll(".panel-close");
+  assert.equal(closes.length, 9, "every window's close");
+  for (const c of closes) assert.ok(c.querySelector("svg.ico line"), "a drawn x");
+  for (const id of ["sAccentReset1", "sAccentReset2"]) assert.ok(doc.getElementById(id).querySelector("svg.ico polyline"), id + ": the reset arrow, drawn");
+  const more = doc.querySelector(".card .c-more");
+  assert.equal(more.querySelectorAll("svg.ico circle").length, 3, "the card's ⋯ is three drawn dots");
+  assert.match(html, /\n  \.c-lgn \.ico,\.acts>\.a-login \.ico,\.c-more \.ico\{width:16px;height:16px\}/, "one size across the card's row");
+  // the failure bar's dismiss, the filter chips and a field's remove are drawn too
+  assert.ok(doc.querySelector("#chips .fchip") && doc.querySelectorAll("#chips .fchip svg.ico line").length === 2 * doc.querySelectorAll("#chips .fchip").length, "the filter chips' x, drawn");
+  assert.doesNotMatch(appJs.match(/bDismissFails[^\n]*/)[0], /✕/);
+  // an empty note field is empty, and the honor control's empty choice says so
+  runScript(win, "renderInfoFields(null)");
+  for (const f of doc.querySelectorAll("#fInfo input")) assert.notEqual(f.getAttribute("placeholder"), "—", f.id);
+  assert.equal(doc.querySelector('#fInfo [data-nf="honor"] [data-v=""]').textContent, "Not set");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

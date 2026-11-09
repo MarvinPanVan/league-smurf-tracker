@@ -1086,6 +1086,8 @@ const ICON={
   clipboard:'<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
   star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
   chevron:'<polyline points="6 9 12 15 18 9"/>',
+  // close and remove: drawn, as ✕ was a typed character a size and weight of its own
+  x:'<line x1="6.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="6.5" y2="17.5"/>',
   // Settings, as the header's ⋯ menu draws it
   gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   /* The header's set, drawn on the same grid and stroke as the magnifier beside them:
@@ -2018,7 +2020,7 @@ function loginPanelHTML(a,rev){
 // The ⋯ that opens an account's menu, on a card and in an opened list row
 function moreButtonHTML(a){
   const on=openMore.has(a.id);
-  return`<button data-act="more" class="c-more${on?" on":""}" aria-haspopup="menu" aria-expanded="${on}" title="More actions" aria-label="More actions">⋯</button>`;
+  return`<button data-act="more" class="c-more${on?" on":""}" aria-haspopup="menu" aria-expanded="${on}" title="More actions" aria-label="More actions">${icon("dots")}</button>`;
 }
 function uid(){return Date.now()+"-"+Math.random().toString(36).slice(2,7)}
 function cryptoInt(max){
@@ -3158,7 +3160,7 @@ function renderFailbar(){
   el.classList.remove("hidden");
   setHTML(el,`<span class="fb-n">${fails.length} account${fails.length===1?"":"s"} failed to refresh</span>`
     +`<span class="fb-l">${fails.slice(0,6).map(f=>esc(f.name)).join(", ")}${fails.length>6?" +"+(fails.length-6)+" more":""}</span>`
-    +`<button id="bShowFails">Show</button><button id="bRetryFails">Try again</button><button id="bDismissFails" class="fb-x" aria-label="Dismiss">✕</button>`);
+    +`<button id="bShowFails">Show</button><button id="bRetryFails">Try again</button><button id="bDismissFails" class="fb-x" aria-label="Dismiss">${icon("x")}</button>`);
 }
 let lastFails=null;
 /* With no connection Check all went through every account in turn and failed
@@ -4319,8 +4321,8 @@ function renderChips(){
   if(ui.favOnly)out.push(["favOnly","Favorites"]);
   // no chip for the search: the box already says what is in it
   setHTML($("chips"),!out.length?"":out.map(([k,label])=>
-    `<button class="fchip" data-clear="${k}">${esc(label)}<span aria-hidden="true">✕</span></button>`).join("")
-    // two have a ✕ each; Clear all earns its room from three
+    `<button class="fchip" data-clear="${k}" aria-label="${esc(label)}, clear">${esc(label)}${icon("x")}</button>`).join("")
+    // two have an x each; Clear all earns its room from three
     +(out.length>2?`<button class="fchip fchip-all" data-clear="all">Clear all</button>`:""));
 }
 
@@ -6255,9 +6257,9 @@ function renderInfoFields(info,focusFirst){
     const v=nfValue(info,f), id="nf"+i, at=f.own?` data-label="${esc(f.label)}"`:"";
     if(f.kind==="honor"){
       const cur=v==null?"":String(v);
-      return`<div class="fld"><label id="${id}">Honor level</label><div class="seg nf-honor" role="radiogroup" aria-labelledby="${id}" data-nf="honor">`
+      return`<div class="fld f-honor"><label id="${id}">Honor level</label><div class="seg nf-honor" role="radiogroup" aria-labelledby="${id}" data-nf="honor">`
         +["",0,1,2,3,4,5].map(n=>`<button type="button" role="radio" data-v="${n}" aria-checked="${String(n)===cur}" tabindex="${String(n)===cur?0:-1}"`
-          +` class="${String(n)===cur?"on":""}" title="${n===""?"Not set":"Honor level "+n}">${n===""?"—":n}</button>`).join("")+`</div></div>`;
+          +` class="${String(n)===cur?"on":""}" title="${n===""?"Not set":"Honor level "+n}">${n===""?"Not set":n}</button>`).join("")+`</div></div>`;
     }
     if(f.kind==="bool"){
       const val=v===true?"1":v===false?"0":"";
@@ -6268,13 +6270,13 @@ function renderInfoFields(info,focusFirst){
     if(f.kind==="num"){
       const val=typeof v==="number"?String(v):"";
       return`<div class="fld"><label for="${id}">${esc(f.label)}</label><input id="${id}" type="number" inputmode="${f.own?"decimal":"numeric"}" data-nf="${f.k}"${at}`
-        +(f.own?' step="any"':` min="0" max="${f.max}" step="1"`)+` value="${esc(val)}" placeholder="—"></div>`;
+        +(f.own?' step="any"':` min="0" max="${f.max}" step="1"`)+` value="${esc(val)}"></div>`;
     }
     if(f.kind==="list")return`<div class="fld wide"><label for="${id}">${esc(f.label)}</label><input id="${id}" data-nf="skins" autocomplete="off"`
       +` value="${esc((v||[]).join(", "))}" placeholder="Comma-separated, e.g. Elementalist Lux, Spirit Blossom Yasuo"></div>`;
     const val=v==null?"":String(v);
     return`<div class="fld wide"><label for="${id}">${esc(f.label)}</label><input id="${id}" class="nf-sens" data-nf="${f.k}"${at} autocomplete="off" value="${esc(val)}"`
-      +` placeholder="${f.k==="penalty"?"e.g. 14-day chat restriction, ends 12 Oct":"—"}"></div>`;
+      +(f.k==="penalty"?` placeholder="e.g. 14-day chat restriction, ends 12 Oct"`:"")+`></div>`;
   }).join("");
   for(const el of box.querySelectorAll("[data-autofocus]"))el.removeAttribute("data-autofocus");
   if(focusFirst){const first=box.querySelector('[aria-checked="true"],input,select');if(first)first.setAttribute("data-autofocus","")}
@@ -6330,7 +6332,7 @@ function renderFieldsCfg(){
     +`<div class="grp-h">Your own</div><div class="nf-own">`
     +(own.length?own.map((c,i)=>`<div class="row"><input data-own-label="${i}" value="${esc(c.label)}" maxlength="32" aria-label="Field name">`
       +`<select data-own-kind="${i}" aria-label="Kind of field">${kinds(c.kind)}</select>`
-      +`<button type="button" data-own-del="${i}" title="Remove this field" aria-label="Remove ${esc(c.label)}">✕</button></div>`).join("")
+      +`<button type="button" data-own-del="${i}" title="Remove this field" aria-label="Remove ${esc(c.label)}">${icon("x")}</button></div>`).join("")
       :`<span class="none">Anything else you track on every account: where it came from, what it cost, the recovery question.</span>`)
     +(own.length<NF_MAX_OWN?`<div class="row"><input id="nfNewLabel" maxlength="32" placeholder="New field, e.g. Bought from" aria-label="New field name">`
       +`<select id="nfNewKind" aria-label="Kind of field">${kinds("text")}</select><button type="button" id="nfAdd">Add</button></div>`
