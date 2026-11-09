@@ -7904,7 +7904,7 @@ test("Group climb: an account added later joins the line instead of dragging it"
   // day Silver arrives moves nothing (Diamond's +30 alone), the last day averages
   // the two (+20, +20). A plain average of whoever was counted read as a 660-LP fall.
   assert.equal(t.delta, 50);
-  assert.equal(t.headline, "↑ +50");
+  assert.equal(t.headline, "+50", "signed like This week, with no arrow");
   assert.match(t.svg, /\+50 LP since/);
   assert.equal(win.poolLpTrend([diamond]).delta, 50, "one account: the line is its own climb");
 });
@@ -10970,6 +10970,22 @@ test("both ⋯ menus mark every entry, each with a mark of its own", () => {
   const mark = act => menu.querySelector(`[data-act="${act}"] svg`).innerHTML;
   const marks = ["rank", "edit", "noteedit"].map(mark);
   assert.equal(new Set(marks).size, 3, "Rank…, Account… and Add note each their own");
+});
+
+// The stats panel wrote "774W 697L" with small letters where every card writes "312W 250L",
+// and Average climb said "↑ +312" beside This week's "+286"
+test("the stats panel writes wins, losses and a climb the way the rest of the app does", () => {
+  const win = bootApp(ladderSeed());
+  const tile = k => [...win.document.querySelectorAll("#dash .stat")].find(t => t.querySelector(".k").textContent === k);
+  const wl = tile("Season W/L").querySelector(".v");
+  assert.match(wl.textContent, /^[\d,]+W [\d,]+L$/, "312W 250L, as on a card");
+  assert.equal(wl.querySelector("small"), null, "no small letters");
+  // a climb over two days: the figure is signed like This week's, with no arrow
+  const D = 864e5, now = Date.now(), acc = (id, lp0, lp1) => ({ id, stats: { found: true, tier: "GOLD", division: "II", lp: lp1, updatedAt: now },
+    history: [{ t: now - 3 * D, tier: "GOLD", division: "II", lp: lp0 }, { t: now - D, tier: "GOLD", division: "II", lp: lp1 }] });
+  runScript(win, `window.__t = poolLpTrend(${JSON.stringify([acc("a", 10, 60), acc("b", 20, 70)])})`);
+  assert.ok(win.__t, "a trend to read");
+  assert.match(win.__t.headline, /^[+−]?[\d,]+$/, "signed, no arrow: " + win.__t.headline);
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

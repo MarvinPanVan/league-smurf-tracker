@@ -3436,8 +3436,8 @@ function poolLpTrend(pool){
       +(i===coords.length-1?`<circle class="pool-dot" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.6"></circle>`:"");
   }).join("");
   const svg=`<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Average climb of counted accounts from ${esc(from)} to ${esc(to)}"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/>${dots}</svg>`;
-  const sign=delta>0?"↑ +":delta<0?"↓ ":"→ ";
-  const headline=sign+Math.abs(delta);
+  // signed the way This week beside it is, "+312": it alone had an arrow, "↑ +312"
+  const headline=(delta>0?"+":delta<0?"−":"")+fmtN(Math.abs(delta));
   const note=from+" → "+to+" · the average climb of counted accounts; one added later counts from its first check";
   // what fits under a tile: the window; the rest of the sentence is the tile's title
   const window_=from+" → "+to;
@@ -4195,7 +4195,7 @@ function renderDash(){
      with nothing behind it yet (0W 0L, a climb with one day of history) waits
      until it has something. */
   const cells=[
-    (W+L)>0&&`<div class="stat"><div class="k">Season W/L</div><div class="v nw">${fmtN(W)}<small>W</small> ${fmtN(L)}<small>L</small></div>
+    (W+L)>0&&`<div class="stat"><div class="k">Season W/L</div><div class="v nw">${esc(wlText(W,L))}</div>
       <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>`,
     // "Never checked" is a word in the header line, which filters the same way, so
     // it has no tile here. Flagged is amber: a reminder you left, not an alarm.
