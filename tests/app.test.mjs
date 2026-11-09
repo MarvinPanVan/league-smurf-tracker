@@ -11211,6 +11211,17 @@ test("every fold in Settings wears the same drawn chevron, none the browser's tr
   assert.doesNotMatch(appCss, /list-style-position:inside/, "no triangle placed inside the summary");
 });
 
+// The two required fields said it two ways: "Needed: the name before the #" and
+// "Needed for the lookup, the part after #"
+test("the Riot name and tag are asked for in the same words", () => {
+  const win = bootApp();
+  const doc = win.document;
+  doc.getElementById("bAdd").click();
+  doc.getElementById("fSave").click();
+  assert.equal(doc.getElementById("fNameMsg").textContent, "Needed: the name before the #");
+  assert.equal(doc.getElementById("fTagMsg").textContent, "Needed: the tag after the #");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

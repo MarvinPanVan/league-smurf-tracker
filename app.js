@@ -6692,7 +6692,8 @@ function submitForm(){
   const gameName=$("fName").value.trim(), tagLine=$("fTag").value.trim().replace(/^#/,"");
   clearFormErrors();
   if(!gameName||!tagLine){
-    if(!tagLine)fieldError("fTag","Needed for the lookup, the part after #");
+    // said the same way under both fields; one read "Needed for the lookup, the part after #"
+    if(!tagLine)fieldError("fTag","Needed: the tag after the #");
     if(!gameName)fieldError("fName","Needed: the name before the #");
     $(gameName?"fTag":"fName").focus();
     return;
