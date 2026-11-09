@@ -10953,6 +10953,25 @@ test("Settings' colour preview draws the card as it is now", () => {
   assert.ok(prev.querySelector(".acc-prev-star svg.ico") && prev.querySelector(".acc-prev-tools .on svg.ico"), "stars drawn, not typed");
 });
 
+// Two menus, two styles: the card's ⋯ menu marked every entry, the header's only Settings;
+// and in the card's, Rank… and Add note wore the same pencil
+test("both ⋯ menus mark every entry, each with a mark of its own", () => {
+  const win = bootApp(seededAccount()), doc = win.document;
+  const head = [...doc.querySelectorAll("#moreMenu button")];
+  assert.ok(head.length >= 11);
+  for (const b of head) assert.ok(b.querySelector(":scope > svg.ico") && b.querySelector(":scope > span").textContent.trim(), b.id + " has a mark and its words");
+  assert.match(html, /\n  #moreMenu \.ico\{width:15px;height:15px;flex-shrink:0;color:var\(--muted\)/, "the card menu's size and colour");
+  // a label that changes keeps its mark
+  runScript(win, "setStreamer(true)");
+  assert.ok(doc.querySelector("#bStreamer > svg.ico"));
+  assert.equal(doc.getElementById("bStreamer").textContent.trim(), "Streamer mode: on");
+  runScript(win, "setStreamer(false)");
+  const menu = cardMenu(win);
+  const mark = act => menu.querySelector(`[data-act="${act}"] svg`).innerHTML;
+  const marks = ["rank", "edit", "noteedit"].map(mark);
+  assert.equal(new Set(marks).size, 3, "Rank…, Account… and Add note each their own");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

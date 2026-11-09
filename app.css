@@ -352,10 +352,14 @@
   .bar{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 
   /* ---- dropdown menu ---- */
-  #moreMenu button{width:100%;justify-content:flex-start;padding:8px 11px;border-radius:var(--r-sm);
-    background:none;border-color:transparent;box-shadow:none;color:var(--text);font-weight:450}
+  /* the card's ⋯ menu's look: a mark on every entry, one step down, teal on hover */
+  #moreMenu button{width:100%;justify-content:flex-start;gap:10px;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
+    background:none;border-color:transparent;box-shadow:none;color:var(--text);font-size:calc(13px*var(--ts));font-weight:500}
   #moreMenu button:hover{background:#ffffff0f;border-color:transparent;color:var(--text)}
+  #moreMenu .ico{width:15px;height:15px;flex-shrink:0;color:var(--muted);transition:color .14s ease}
+  #moreMenu button:hover .ico{color:var(--teal-txt)}
   #moreMenu button.b-danger{color:var(--danger)}
+  #moreMenu button.b-danger .ico{color:color-mix(in srgb,var(--danger) 70%,transparent)}
   #moreMenu button.b-danger:hover{background:color-mix(in srgb,var(--danger) 14%,transparent)}
 
   /* ---- native controls ---- */

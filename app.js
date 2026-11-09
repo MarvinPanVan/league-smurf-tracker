@@ -1088,6 +1088,12 @@ const ICON={
   chevron:'<polyline points="6 9 12 15 18 9"/>',
   // close and remove: drawn, as ✕ was a typed character a size and weight of its own
   x:'<line x1="6.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="6.5" y2="17.5"/>',
+  // Rank…: a rank's chevrons, so it no longer shares Account…'s pencil
+  rank:'<polyline points="6 13.5 12 8 18 13.5"/><polyline points="6 19 12 13.5 18 19"/><line x1="12" y1="3" x2="12" y2="5"/>',
+  // the header menu's files: out of the app, into it, and a link to share
+  download:'<path d="M12 4v11"/><polyline points="7.5 10.5 12 15 16.5 10.5"/><path d="M5 20h14"/>',
+  upload:'<path d="M12 20V9"/><polyline points="7.5 13.5 12 9 16.5 13.5"/><path d="M5 4h14"/>',
+  link:'<path d="M10 13.5a4.5 4.5 0 0 0 6.8.5l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.6 1.6"/><path d="M14 10.5a4.5 4.5 0 0 0-6.8-.5l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.6-1.6"/>',
   // Settings, as the header's ⋯ menu draws it
   gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   /* The header's set, drawn on the same grid and stroke as the magnifier beside them:
@@ -1127,6 +1133,11 @@ const ICON={
   trash:'<line x1="3.5" y1="6" x2="20.5" y2="6"/><path d="M18.5 6l-.9 13.1A2 2 0 0 1 15.6 21H8.4a2 2 0 0 1-2-1.9L5.5 6"/><line x1="10" y1="10.5" x2="10" y2="17"/><line x1="14" y1="10.5" x2="14" y2="17"/><path d="M9 6V4.2A1.2 1.2 0 0 1 10.2 3h3.6A1.2 1.2 0 0 1 15 4.2V6"/>'
 };
 function icon(name,cls){return `<svg class="ico${cls?" "+cls:""}" viewBox="0 0 24 24">${ICON[name]}</svg>`}
+/* The header's ⋯ menu marks every entry the way a card's ⋯ menu does. Settings had
+   the only mark, over ten lines of plain words: two menus, two styles. */
+function setMenuItem(b,ic,label){setHTML(b,icon(ic)+`<span>${esc(label)}</span>`)}
+const MORE_MENU_ICONS={bSettings:"gear",bBulkAdd:"plus",bShare:"link",bNewSeason:"reset",bStreamer:"eyeOff",
+  bExportEnc:"lock",bExport:"download",bExportCsv:"download",bImport:"upload",bImportCsv:"upload",bDeleteAll:"trash"};
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 // data-id and querySelector both need the id to be inert. esc() for attributes;
 // CSS.escape for selectors — a poisoned id in localStorage used to break out of
@@ -5111,7 +5122,7 @@ function applyStreamer(){
   const on=streamerOn();
   document.body.classList.toggle("streamer",on);
   const pill=$("streamerPill");if(pill)pill.classList.toggle("hidden",!on);
-  const b=$("bStreamer");if(b)b.textContent=on?"Streamer mode: on":"Streamer mode";
+  const b=$("bStreamer");if(b)setMenuItem(b,"eyeOff",on?"Streamer mode: on":"Streamer mode");
 }
 function setStreamer(on){
   cfg.streamer=on?true:null;saveCfg();applyStreamer();render();
@@ -5878,9 +5889,9 @@ function cardMenuHTML(a){
     `<button data-act="${act}" role="menuitem"${extra||""}>${icon(ico)}<span>${esc(label)}</span></button>`;
   return `<div class="hx-in cm-in">`
     +grp("Edit")
-    +it("rank","pencil","Rank…")
+    +it("rank","rank","Rank…")
     +it("edit","pencil","Account…")   // the person is the username's mark
-    +it("noteedit","pencil",a.notes?"Edit note":"Add note")
+    +it("noteedit","note",a.notes?"Edit note":"Add note")
     +it("art","image","Card art…")
     // Both profile links together. op.gg used to sit in the footer while dpm.lol
     // sat in here, which split one kind of thing across two places.
@@ -7748,6 +7759,7 @@ $("tFindKey").addEventListener("click",openPalette);
 if(/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||"")){$("tFindKey").textContent="⌘ K";$("bFind").title="Quick find (⌘K)"}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():requestCloseSettings());
 $("bNewSeason").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");newSeasonAll()});
+for(const[id,ic]of Object.entries(MORE_MENU_ICONS)){const b=$(id);if(b)setMenuItem(b,ic,b.textContent.trim())}
 $("bStreamer").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");setStreamer(!streamerOn())});
 $("streamerPill").addEventListener("click",()=>setStreamer(false));
 $("settings").querySelector(".stabs").addEventListener("click",e=>{const b=e.target.closest("[data-stab]");if(b)settingsTab(b.dataset.stab)});
