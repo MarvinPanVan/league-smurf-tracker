@@ -11196,6 +11196,21 @@ test("an archived account is not nagged: no out-of-date amber, no Refresh, no Ch
   assert.ok(menu.querySelector('[data-act="check"]'), "Refresh rank stays in the ⋯ menu");
 });
 
+// Settings → Advanced drew its own chevron, and the two guides inside it the browser's ▼
+test("every fold in Settings wears the same drawn chevron, none the browser's triangle", () => {
+  const doc = new JSDOM(pageHtml).window.document;
+  const folds = [...doc.querySelectorAll("details")];
+  assert.ok(folds.length >= 3, "Advanced and its two guides");
+  for (const d of folds) assert.ok(d.matches(".adv-fold, .guide"), (d.id || "a fold") + " is one of the two styled kinds");
+  for (const k of ["adv-fold", "guide"]) {
+    assert.match(appCss, new RegExp(`\\.${k}>summary::-webkit-details-marker[,{]`), k + ": Safari's marker hidden");
+    assert.match(appCss, new RegExp(`\\.${k}>summary::after(,[^{]*)?\\{content:"";[^}]*border-width:0 1\\.5px 1\\.5px 0`), k + ": the drawn chevron");
+    assert.match(appCss, new RegExp(`\\.${k}\\[open\\]>summary::after[,{]`), k + ": turned when open");
+  }
+  assert.match(appCss, /\.guide>summary\{[^}]*list-style:none/, "and the guides' own triangle gone");
+  assert.doesNotMatch(appCss, /list-style-position:inside/, "no triangle placed inside the summary");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

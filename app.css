@@ -1449,19 +1449,21 @@
   .s-lead{margin:0 0 18px;font-size:calc(13px*var(--ts));color:var(--muted)}
   .adv-fold>summary{display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;cursor:pointer;list-style:none;
     font-size:calc(13px*var(--ts));font-weight:600;color:var(--text)}
-  .adv-fold>summary::-webkit-details-marker{display:none}
-  .adv-fold>summary::after{content:"";width:6px;height:6px;margin:-3px 0 0 2px;border:solid var(--muted);border-width:0 1.5px 1.5px 0;
+  /* One fold mark: the two guides inside this fold wore the browser's ▼ under its
+     drawn chevron. */
+  .adv-fold>summary::-webkit-details-marker,.guide>summary::-webkit-details-marker{display:none}
+  .adv-fold>summary::after,.guide>summary::after{content:"";flex-shrink:0;width:6px;height:6px;margin:-3px 0 0 2px;border:solid var(--muted);border-width:0 1.5px 1.5px 0;
     transform:rotate(45deg);transition:transform .16s ease}
-  .adv-fold[open]>summary::after{margin-top:3px;transform:rotate(225deg)}
+  .adv-fold[open]>summary::after,.guide[open]>summary::after{margin-top:3px;transform:rotate(225deg)}
   .adv-fold>.hint{margin:10px 0 14px}
-  @media (prefers-reduced-motion:reduce){.adv-fold>summary::after{transition:none}}
+  @media (prefers-reduced-motion:reduce){.adv-fold>summary::after,.guide>summary::after{transition:none}}
   /* Settings → the worker guide */
   .guide{margin-top:8px;border:1px solid var(--line);border-radius:var(--r-md);background:#ffffff05;font-size:calc(13px*var(--ts));color:var(--muted);line-height:1.55}
-  .guide summary{cursor:pointer;padding:10px 13px;font-weight:600;color:var(--text);list-style-position:inside}
+  .guide>summary{display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 13px;font-weight:600;color:var(--text);list-style:none}
   .adv-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px 16px;padding:4px 13px 13px}
   .adv-grid>.fld:first-child,.adv-grid>.hint{grid-column:1/-1}
   @media (max-width:560px){.adv-grid{grid-template-columns:1fr}}
-  .guide[open] summary{border-bottom:1px solid var(--line)}
+  .guide[open]>summary{border-bottom:1px solid var(--line)}
   .guide ol{margin:0;padding:10px 14px 4px 32px}
   .guide li{margin-bottom:9px}
   .guide li::marker{color:var(--gold-txt);font-weight:700}
