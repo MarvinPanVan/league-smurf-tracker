@@ -2775,18 +2775,15 @@
     /* open, it says so: a panel shade darker was all that changed, which nobody saw */
     .tools.open>.t-filters{color:var(--teal-txt);background-color:color-mix(in srgb,var(--teal) 12%,var(--panel2));
       border-color:color-mix(in srgb,var(--teal) 50%,transparent)}
-    /* The figures wrapped two to a row, a third alone beneath them, and the champion
-       chips wrapped into a block of their own: together most of a screen. Each is
-       one row now that slides sideways, the next figure peeking in at the edge to
-       say there is more. */
-    #dash .dash,#dash .dash[style*="--cols"]{display:flex;overflow-x:auto;scroll-snap-type:x proximity;
-      overscroll-behavior-x:contain;scrollbar-width:none}
-    #dash .dash>.stat{flex:0 0 min(62%,220px);scroll-snap-align:start}
-    /* the edge fades, so a figure cut by it reads as "more this way", not as all there is */
-    #dash .dash{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent)}
+    /* The figures slid sideways in one row, and a phone showed one and a half of
+       five, with nothing but a faded edge to say the rest were there. They stack two
+       to a row now, an odd last one across both; the panel starts folded on a phone,
+       so its height is only spent when asked for. The champion chips still slide. */
+    #dash .dash,#dash .dash[style*="--cols"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+    #dash .dash>.stat:last-child:nth-child(odd){grid-column:1/-1}
     #dash .dist{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-right:20px}
     #dash .dist>*{flex-shrink:0}
-    #dash .dash::-webkit-scrollbar,#dash .dist::-webkit-scrollbar{display:none}
+    #dash .dist::-webkit-scrollbar{display:none}
   }
   @media (max-width:560px){.formgrid{grid-template-columns:1fr;padding:18px}.card{padding:15px}
     .c-drawer{margin:1px -15px -15px}

@@ -11169,7 +11169,7 @@ test("a levelling account's level is kept at each check, and its track says the 
 });
 
 // On a phone the filters and the stats were the whole first screen
-test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
+test("on a phone the filters fold behind one button that counts what is on, and the figures stack two to a row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
     stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 10, losses: 8, updatedAt: Date.now() } },
     { id: "b", gameName: "B", tagLine: "1", region: "NA", status: "active", tags: [], history: [], stats: null }]);
@@ -11192,7 +11192,13 @@ test("on a phone the filters fold behind one button that counts what is on, and 
   const phone = css.slice(css.indexOf(".t-filters{display:none}"));
   assert.match(phone, /\.tools:not\(\.open\)>:not\(input\[type=search\]\):not\(\.t-filters\)\{display:none!important\}/,
     "folded means everything but search, the inline-styled Select all too");
-  assert.match(phone, /#dash \.dash,#dash \.dash\[style\*="--cols"\]\{display:flex;overflow-x:auto/, "the figures in one sliding row");
+  // they slid sideways in one row, and a phone showed one and a half of five
+  assert.match(phone, /#dash \.dash,#dash \.dash\[style\*="--cols"\]\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/, "the figures two to a row");
+  assert.match(phone, /#dash \.dash>\.stat:last-child:nth-child\(odd\)\{grid-column:1\/-1\}/, "an odd last one across both");
+  assert.doesNotMatch(phone, /#dash \.dash[^{]*\{[^}]*overflow-x:auto/, "nothing off the edge");
+  const opened = bootApp(ladderSeed(), w => { w.matchMedia = q => ({ matches: /max-width:\s*560px/.test(q), addListener() {}, removeListener() {} });
+    w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ dashCollapsed: false })); });
+  assert.equal(opened.document.querySelector("#dash .dash").style.getPropertyValue("--cols"), "2", "two columns, laid out as such");
 });
 
 // After the first account the panel was 0W 0L, Best —, Group climb —: a wall of nothing

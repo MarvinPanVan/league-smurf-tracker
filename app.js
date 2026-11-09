@@ -4299,9 +4299,8 @@ function balanceDash(){
   if(!d)return;
   const tiles=[...d.children];
   const narrow=!!(window.matchMedia&&matchMedia("(max-width:720px)").matches); // the .dash rule's own minimum there
-  // a phone lays the figures in one sliding row: one row, so only the first has no rule before it
-  const strip=phoneLayout();
-  const cols=strip?tiles.length:dashCols(tiles.length,d.clientWidth,narrow?140:158);
+  // a phone lays the figures two to a row
+  const cols=phoneLayout()?Math.min(2,tiles.length):dashCols(tiles.length,d.clientWidth,narrow?140:158);
   if(!cols){d.style.removeProperty("--cols");return}
   d.style.setProperty("--cols",cols);
   // the hairline between tiles belongs inside a row, not down the left edge of one
