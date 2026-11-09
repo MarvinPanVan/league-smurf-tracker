@@ -9798,6 +9798,13 @@ test("exporting a spreadsheet with logins in it says so first, like the JSON bac
     "with nothing to ask, the note comes after");
 });
 
+// iPadOS offered "fill contact" on the Label field, the one text field in the form
+// without autocomplete off
+test("the account form's Label field is not a contact field to autofill", () => {
+  const doc = new JSDOM(pageHtml).window.document;
+  assert.equal(doc.getElementById("fLabel").getAttribute("autocomplete"), "off");
+});
+
 // Lock now showed "VAULT LOCKED" on the lock screen and a "Vault locked" message with it
 test("Lock now says it once: the lock screen, with no message under it", async () => {
   const win = bootApp();
