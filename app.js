@@ -3558,19 +3558,19 @@ function renderCompare(){
   const fa=facts(a), fb=facts(b);
   // -1 left is better, 1 right is, 0 neither (or nothing to compare)
   const cmp=(x,y)=>x==null||y==null||x===y?0:(x>y?-1:1);
-  const row=(label,l,r,better)=>`<div class="cmp-row"><span class="${better<0?"win":""}">${esc(l)}</span>`
+  // a fact neither account has is not a row: "WR trend" alone between two blanks said nothing
+  const row=(label,l,r,better)=>!l&&!r?"":`<div class="cmp-row"><span class="${better<0?"win":""}">${esc(l)}</span>`
     +`<span class="k">${esc(label)}</span><span class="${better>0?"win":""}">${esc(r)}</span></div>`;
   const pct=v=>v==null?"":v+"%";
+  const rows=row("Record",fa.record,fb.record,0)
+    +row("Win rate",pct(fa.wr),pct(fb.wr),cmp(fa.wr,fb.wr))
+    +row("Peak",fa.peak,fb.peak,0)
+    +row("WR trend",fa.trend,fb.trend,0)
+    +row("Level",fa.level,fb.level,0)
+    +row("Last login",fa.login,fb.login,0);
   setHTML($("cmpBody"),`<div class="cmp">
     <div class="cmp-head">${side(a)}<div class="cmp-vs" aria-hidden="true"><span>VS</span></div>${side(b)}</div>
-    <div class="cmp-rows">`
-      +row("Record",fa.record,fb.record,0)
-      +row("Win rate",pct(fa.wr),pct(fb.wr),cmp(fa.wr,fb.wr))
-      +row("Peak",fa.peak,fb.peak,0)
-      +row("WR trend",fa.trend,fb.trend,0)
-      +row("Level",fa.level,fb.level,0)
-      +row("Last login",fa.login,fb.login,0)
-    +`</div></div>`);
+    ${rows?`<div class="cmp-rows">${rows}</div>`:""}</div>`);
   const modal=$("compareModal");
   if(!modal){compareIds=[];return}
   modal.classList.remove("hidden");
