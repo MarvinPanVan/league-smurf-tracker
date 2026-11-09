@@ -11001,6 +11001,16 @@ test("the list's headings are in sentence case, and its win-rate bar follows the
   assert.ok(!doc.body.classList.contains("hide-wl"), "and back when it is switched on");
 });
 
+// On a phone the Filters button looked the same open and closed
+test("on a phone the Filters button shows when it is open", () => {
+  const win = bootApp(seededAccount()), doc = win.document;
+  const rule = html.match(/\.tools\.open>\.t-filters\{([^}]*)\}/)[1];
+  assert.match(rule, /color:var\(--teal-txt\)/, "in the accent, not a shade darker");
+  assert.match(rule, /border-color:color-mix\(in srgb,var\(--teal\)/);
+  doc.getElementById("tFilters").click();
+  assert.equal(doc.getElementById("tFilters").getAttribute("aria-expanded"), "true", "and says so to a screen reader");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

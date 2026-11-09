@@ -2769,7 +2769,9 @@
     .tools>#tFav,.tools>#tArchived,.tools>#tSelectMode{order:2;flex:1 1 calc(33.3% - 6px);min-width:0;padding-inline:8px}
     .tools>label:has(#tSelectAll){order:3}
     body:not(.selecting) .tools>label:has(#tSelectAll){display:none!important}
-    .tools.open>.t-filters{background-color:var(--panel3);border-color:var(--line2)}
+    /* open, it says so: a panel shade darker was all that changed, which nobody saw */
+    .tools.open>.t-filters{color:var(--teal-txt);background-color:color-mix(in srgb,var(--teal) 12%,var(--panel2));
+      border-color:color-mix(in srgb,var(--teal) 50%,transparent)}
     /* The figures wrapped two to a row, a third alone beneath them, and the champion
        chips wrapped into a block of their own: together most of a screen. Each is
        one row now that slides sideways, the next figure peeking in at the edge to
