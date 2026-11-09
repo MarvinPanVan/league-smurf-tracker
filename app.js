@@ -1988,6 +1988,16 @@ function flashCopied(btn){
 }
 let lastCopiedSecret=null;
 const loginSeq=new Set();   // cards whose username is copied and whose password is next
+/* ...for a minute. The step stayed until the password was copied or the page was
+   reloaded, and this app sits in a tab for days: the next day the button you
+   always press copied the password. A minute is time enough to switch to the
+   client, paste the name and come back. */
+let LOGIN_SEQ_MS=60000;
+const loginSeqTimer=new Map();
+function armLoginSeq(id){
+  clearTimeout(loginSeqTimer.get(id));
+  loginSeqTimer.set(id,setTimeout(()=>{loginSeqTimer.delete(id);if(loginSeq.delete(id))renderCard(id)},LOGIN_SEQ_MS));
+}
 const loginFlash=new Map(); // card id -> what its Login button just copied, for a moment
 function flashLogin(id,pw){
   const token={pw};loginFlash.set(id,token);renderCard(id);
@@ -8855,7 +8865,7 @@ async function onCardClick(e){
       // only a copy that worked moves on to the next step: a failed one (the toast
       // says so) left the button on "Copy password" with the username never copied
       if(!ok)return;
-      if(!pw){if(both)loginSeq.add(id)}else loginSeq.delete(id);
+      if(!pw){if(both){loginSeq.add(id);armLoginSeq(id)}}else{loginSeq.delete(id);clearTimeout(loginSeqTimer.get(id));loginSeqTimer.delete(id)}
       // copying the login is the closest thing to playing on it this app can see
       acc.lastLoginAt=Date.now();saveDB();
       flashLogin(id,pw);

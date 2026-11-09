@@ -11029,6 +11029,28 @@ test("a goal at 0% still shows where its bar starts, in the goal's colour", () =
   assert.match(fill.getAttribute("style"), /background:/, "in the goal's colour");
 });
 
+// After the username was copied the button stayed on "Copy password" until the password was
+// copied or the page reloaded: the next day, the button you always press copied the password
+test("Copy password goes back to Copy username a minute after the username was copied", async () => {
+  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [], login: "riotuser", password: "hunter22!", stats: null }]);
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async () => {} } });
+  const main = () => win.document.querySelector('.card[data-id="L"] .a-login');
+  assert.equal(appGet(win, "LOGIN_SEQ_MS"), 60000, "a minute");
+  runScript(win, "LOGIN_SEQ_MS = 60");   // a minute, for the test, is 60ms
+  main().click();
+  await until(() => appGet(win, 'loginSeq.has("L")'), "the password is next");
+  await until(() => !appGet(win, 'loginSeq.has("L")'), "and then, untouched, it starts over", 3000);
+  await until(() => /^\s*Copy username$/.test(main().textContent), "the button says so, once its flash is over", 3000);
+  // copied in time, the password ends the round as before, and nothing resets it later
+  runScript(win, "LOGIN_SEQ_MS = 60000");
+  main().click();
+  await until(() => appGet(win, 'loginSeq.has("L")'), "the password is next again");
+  await until(() => /Copy password/.test(main().textContent), "on the button", 3000);
+  main().click();
+  await until(() => appGet(win, 'loginSeq.has("L")') === false, "the password copied");
+  assert.equal(appGet(win, 'loginSeqTimer.has("L")'), false, "and its minute is called off");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
