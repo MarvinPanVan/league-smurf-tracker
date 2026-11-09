@@ -110,8 +110,11 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.28.0";
+const APP_VERSION="2.28.1";
 const APP_CHANGELOG=[
+  {v:"2.28.1",items:[
+    "The buttons at the top right are one set of icons, and Stats is a simple on/off switch",
+  ]},
   {v:"2.28.0",items:[
     "After a new season, accounts say \"Not placed yet this season\" with last season's rank under it, and the header counts them",
     "The chart and Peak show this season only, and \"Ranked accounts only\" auto-check still checks accounts waiting on placements",
