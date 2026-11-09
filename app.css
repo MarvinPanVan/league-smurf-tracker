@@ -1286,14 +1286,6 @@
   .c-notes .none{color:var(--faint)}
   .c-notes textarea{width:100%;font-size:calc(13px*var(--ts));line-height:1.6;min-height:62px;display:block}
   .c-notes.editing{border-color:color-mix(in srgb,var(--teal) 34%,transparent);background:#ffffff0d}
-  /* An empty note is an invitation, not a panel. It still had a dashed box around
-     it, which on a vault where almost nothing is annotated makes it the most
-     repeated element on the page — fifty-one outlined rectangles, all empty.
-     One quiet line now; the box arrives with the note, or as soon as you click. */
-  .c-notes.blank{display:flex;align-items:center;gap:6px;padding:3px 5px;
-    background:none;border:0;color:var(--faint);font-size:calc(12px*var(--ts));opacity:.9}
-  .c-notes.blank:hover{background:#ffffff0d;border:0;color:var(--muted);opacity:1}
-  .c-notes.blank .ico{width:11px;height:11px;opacity:.8}
   /* ---- note fields on the card ----
      Honor, skins, Blue Essence and the rest, each in the same place on every
      card, so sixty accounts can be read down a column instead of one paragraph
@@ -1325,17 +1317,6 @@
   .ni-kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 10px;font-size:calc(12px*var(--ts));line-height:1.45}
   .ni-kv .k2{color:var(--muted)}
   .ni-kv .v2{color:var(--text);overflow-wrap:anywhere}
-  /* the second way in from an empty note, for when what you want to write down
-     is a field; shown on hover where there is hover, always where there isn't */
-  .c-notes.blank{gap:4px}
-  .c-notes.blank button{all:unset;display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:2px 4px;border-radius:var(--r-xs)}
-  .c-notes.blank button:focus-visible{outline:2px solid var(--teal-txt);outline-offset:1px}
-  .c-notes.blank .nf-link{margin-left:auto;color:var(--faint)}
-  .c-notes.blank .nf-link:hover{color:var(--gold-txt)}
-  @media (hover:hover){
-    .c-notes.blank .nf-link{opacity:0;transition:opacity .16s ease}
-    :is(.card,.rw):hover .c-notes.blank .nf-link,.c-notes.blank .nf-link:focus-visible{opacity:1}
-  }
   /* ---- note fields in the account form ---- */
   /* .fld is a column further down the sheet; this one row of it is a header */
   .fld.nf-head{flex-direction:row;align-items:center;gap:10px;padding-top:18px;border-top:1px solid var(--line)}
@@ -1742,9 +1723,6 @@
   .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
   .lbtns button.copied,button.copied{color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,transparent);gap:4px}
   button.copied .ico{width:11px;height:11px;stroke-width:2.6}
-  .login .lseq{width:100%;font-size:calc(12px*var(--ts));font-weight:600;padding:8px 10px;color:var(--teal-txt);
-    border-color:color-mix(in srgb,var(--teal) 45%,transparent);background:color-mix(in srgb,var(--teal) 10%,transparent)}
-  .login .lseq:hover{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 18%,transparent);color:var(--teal-txt)}
   .c-foot{display:flex;flex-direction:column;align-items:stretch;gap:11px;
     border-top:1px solid var(--line);padding-top:12px;margin-top:auto}
   .c-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
@@ -1786,6 +1764,10 @@
   .c-foot .acts{gap:8px}
   .c-foot .acts>button:not(.c-more):not(.c-lgn){flex:1 1 0;min-width:0}
   .c-foot .acts>.c-more,.c-foot .acts>.c-lgn{flex:0 0 auto}
+  /* An opened list row has the card's three. The row is up to 1280px wide, so the
+     main button keeps a card's width rather than stretching across all of it. */
+  .rw-open .acts{gap:8px;flex-wrap:nowrap}   /* narrower first, never a ⋯ on a line of its own */
+  .rw-open .acts>.a-login{flex:0 1 260px;min-width:0}
 
   /* ---- the card's ⋯ menu: one fixed element, shared by every card ---- */
   .card-menu{position:fixed;z-index:70;width:232px;max-width:calc(100vw - 16px)}
@@ -2692,7 +2674,6 @@
     .tools>.t-kbd{display:none}.tools>#tSearch:placeholder-shown{padding-right:12px}   /* no Ctrl on a touch screen */
     .pal-f{display:none}   /* nor arrow keys, Enter or Esc: Quick find's key hints mean nothing there */
     .rid{padding-block:5px;margin-block:-3px}
-    .c-notes.blank>button,.c-notes.blank .nf-link{min-height:30px} /* matches the all:unset rule it has to beat */
   }
   @media (max-width:760px){
     .top{align-items:flex-start;gap:16px}

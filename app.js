@@ -1994,6 +1994,26 @@ function loginButtonsHTML(a,open){
     ?`<button data-act="login" class="c-lgn${open?" on":""}" aria-pressed="${open}" title="${open?"Hide":"Show"} the saved login" aria-label="${open?"Hide":"Show"} the saved login">${icon(open?"eyeOff":"eye")}</button>`:"";
   return main+eye;
 }
+
+/* The saved login, unfolded by the eye beside Copy username: the same panel on a
+   card and in an opened list row. */
+function loginPanelHTML(a,rev){
+  return `<div class="login${rev||""}">
+      <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
+      <div class="lrow"><span class="val mono ${a.password?"":"none"}" style="font-family:${a.password?"":"inherit"}">${a.password?(shownPw.has(a.id)?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${shownPw.has(a.id)?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
+      ${pwWarnHTML(a)}
+      ${a.email?`<div class="lrow"><span class="val">${esc(a.email)}</span><span class="lbtns"><button data-act="copymail">Copy</button></span></div>`:""}
+      <!-- The two facts Riot asks for when an account has to be recovered, which is
+           exactly the moment you are looking at this panel. -->
+      ${a.birthdate?`<div class="lrow"><span class="val"><span class="lk">Date of birth</span>${esc(fmtDate(a.birthdate))}</span><span class="lbtns"><button data-act="copybirth">Copy</button></span></div>`:""}
+      ${a.createdOn?`<div class="lrow"><span class="val"><span class="lk">Created</span>${esc(fmtDate(a.createdOn))}<em class="lage">${esc(ageFrom(a.createdOn))}</em></span></div>`:""}
+    </div>`;
+}
+// The ⋯ that opens an account's menu, on a card and in an opened list row
+function moreButtonHTML(a){
+  const on=openMore.has(a.id);
+  return`<button data-act="more" class="c-more${on?" on":""}" aria-haspopup="menu" aria-expanded="${on}" title="More actions" aria-label="More actions">⋯</button>`;
+}
 function uid(){return Date.now()+"-"+Math.random().toString(36).slice(2,7)}
 function cryptoInt(max){
   // Rejection sampling — a raw `% max` is slightly biased whenever max does not
@@ -5304,7 +5324,7 @@ function noteFactsHTML(a,clickable,cap){
 }
 // Split out of cardHTML so opening the editor can swap this one block instead of
 // rebuilding the card around it — see syncNoteBlock.
-function noteBlockHTML(a,rev,blank){
+function noteBlockHTML(a,rev){
   // The fields stay in view above the text being written, but only the text
   // edits here: they open the account form, which a click inside an open editor
   // must not do — it would take the focus the editor saves on losing.
@@ -5316,25 +5336,23 @@ function noteBlockHTML(a,rev,blank){
   const cap=!openInfo.has(a.id), facts=noteFactsHTML(a,true,cap);
   if(a.notes||facts)return`<div class="c-notes${cap?" capped":""}" data-act="noteedit" title="Click to edit the note"><span class="k">Notes ${icon("pencil")}</span>${facts}${a.notes?`<div class="nt">${sens(esc(a.notes))}</div>`:""}</div>`;
   /* An empty note was two invitations, "Add a note" and "Honor, skins…", on nearly
-     every card: twenty cards, forty prompts. A card says nothing now (Add note is in
-     its ⋯ menu); an open list row, which is the detail view, still offers it. */
-  if(!blank)return"";
-  return`<div class="c-notes blank"><button type="button" data-act="noteedit" title="Click to write a note">${icon("pencil")} Add a note</button>`
-    +`<button type="button" class="nf-link" data-act="notefields" title="Honor, skins, Blue Essence and more">Honor, skins…</button></div>`;
+     every card: twenty cards, forty prompts. It says nothing now, on a card or in an
+     opened list row: Add note is in the ⋯ menu of both. */
+  return"";
 }
 // Replace only the note block, leaving the rest of the card's DOM alone. Going
 // through renderGrid meant every card on screen was thrown away and rebuilt just
 // to open one textarea, which is why the portrait, the select checkbox and the
 // rest of the card blinked out and came back.
 function syncNoteBlock(card,a){
-  const html=noteBlockHTML(a,"",!!card.closest(".row"));
+  const html=noteBlockHTML(a,"");
   const cur=card.querySelector(".c-notes");
   if(!html){if(cur)cur.remove();return}
   const tmp=document.createElement("div");
   tmp.innerHTML=html;
   const node=tmp.firstElementChild;
   if(cur)cur.replaceWith(node);
-  else{const foot=card.querySelector(".c-foot");foot?foot.before(node):card.appendChild(node)}
+  else{const foot=card.querySelector(".c-foot")||card.querySelector(".rw-open>.acts");foot?foot.before(node):card.appendChild(node)}
   focusNoteEditor(card);
 }
 function focusNoteEditor(root){
@@ -5549,23 +5567,13 @@ function rowHTML(a,i){
     ${open?`<div class="rw-open">
       ${(()=>{const p=peakInfo(a),h=thisSeason(a.history);return rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,p.peakV,p.peak)})()}
       ${infoBlockHTML(a)||""}
-      ${noteBlockHTML(a,"",true)}
-      <div class="acts">
-        <button data-act="login" class="a-login">${icon("user")} ${openLogin.has(a.id)?"Hide login":"Login"}</button>
-        <a class="btn" href="https://op.gg/lol/summoners/${(REGIONS[a.region]||REGIONS.EUW).opgg}/${encodeURIComponent(a.gameName)}-${encodeURIComponent(a.tagLine)}" target="_blank" rel="noreferrer">OP.GG ↗</a>
-        <button data-act="check" ${isChecking?"disabled":""} style="color:var(--teal-txt)">${isChecking?"…":icon("refresh")+" Refresh"}</button>
-        <button data-act="rank">${icon("pencil")} Rank</button>
-        <button data-act="edit">Edit</button>
-        ${a.archived?'<button data-act="unarchive">Unarchive</button>':'<button data-act="archive">Archive</button>'}
-        <button data-act="del" class="b-danger">${armedDelete===a.id?"Sure?":"Delete"}</button>
-      </div>
-      ${openLogin.has(a.id)?`<div class="login">
-        ${a.login&&a.password?(()=>{const fl=loginFlash.get(a.id);   // copies say so on the button, here as on the card
-          return`<button class="lseq${fl?" copied":""}" data-act="copyseq">${fl?icon("check")+(fl.pw?" Copied, clears in 30s":" Username copied"):loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`})():""}
-      <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
-        <div class="lrow"><span class="val mono ${a.password?"":"none"}">${a.password?(shownPw.has(a.id)?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${shownPw.has(a.id)?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
-        ${pwWarnHTML(a)}
-      </div>`:""}
+      ${noteBlockHTML(a,"")}
+      <!-- The card's own words and controls. It was the app before every clean-up:
+           Login, OP.GG ↗, Refresh, Rank, Edit, Archive and Delete in a row of seven,
+           "Add a note" and "Honor, skins…" on every empty note, and a login panel
+           of its own. The ⋯ menu holds the rest, the same menu as a card's. -->
+      <div class="acts">${loginButtonsHTML(a,openLogin.has(a.id))}${moreButtonHTML(a)}</div>
+      ${openLogin.has(a.id)?loginPanelHTML(a,""):""}
     </div>`:""}
   </div></div>`;
 }
@@ -5726,7 +5734,7 @@ function cardHTML(a,i){
     if(s.mmr)microStats.push(["MMR est.",s.mmr]);
     if(s.avgRecent)microStats.push(["Recent avg",s.avgRecent]);
   }
-  const loginOpen=openLogin.has(a.id), pw=shownPw.has(a.id);
+  const loginOpen=openLogin.has(a.id);
   const rv=block=>reveal===a.id+":"+block?" reveal":"";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   // Active is the default state of almost every account, so railing it green just
@@ -5789,16 +5797,7 @@ function cardHTML(a,i){
     ${s&&s.note&&!isFailed(a)?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(()=>{const role=mainRole(a),tags=a.tags||[];
       return role||tags.length?`<div class="ctags">${role?`<span class="role-tag" title="Played in 3 or more of the last 5 ranked games">${esc(role)}</span>`:""}${tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""})()}
-    ${loginOpen?`<div class="login${rv("login")}">
-      <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
-      <div class="lrow"><span class="val mono ${a.password?"":"none"}" style="font-family:${a.password?"":"inherit"}">${a.password?(pw?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${pw?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
-      ${pwWarnHTML(a)}
-      ${a.email?`<div class="lrow"><span class="val">${esc(a.email)}</span><span class="lbtns"><button data-act="copymail">Copy</button></span></div>`:""}
-      <!-- The two facts Riot asks for when an account has to be recovered, which is
-           exactly the moment you are looking at this panel. -->
-      ${a.birthdate?`<div class="lrow"><span class="val"><span class="lk">Date of birth</span>${esc(fmtDate(a.birthdate))}</span><span class="lbtns"><button data-act="copybirth">Copy</button></span></div>`:""}
-      ${a.createdOn?`<div class="lrow"><span class="val"><span class="lk">Created</span>${esc(fmtDate(a.createdOn))}<em class="lage">${esc(ageFrom(a.createdOn))}</em></span></div>`:""}
-    </div>`:""}
+    ${loginOpen?loginPanelHTML(a,rv("login")):""}
     ${noteBlockHTML(a,rv("note"))}
     <div class="c-foot">
       <!-- Where the numbers came from used to sit here as its own pill. It is
@@ -5826,7 +5825,7 @@ function cardHTML(a,i){
              app". Refresh moved up beside "Updated 2 h ago", the thing it changes;
              here it weighed nearly as much as Login, which is what a card is for. -->
         ${loginButtonsHTML(a,loginOpen)}
-        <button data-act="more" class="c-more${openMore.has(a.id)?" on":""}" aria-haspopup="menu" aria-expanded="${openMore.has(a.id)}" title="More actions" aria-label="More actions">⋯</button>
+        ${moreButtonHTML(a)}
       </div>
     </div>
     ${openInfo.has(a.id)&&(hasInfo(a)||canForm(a))?infoBlockHTML(a,rv("info")):""}

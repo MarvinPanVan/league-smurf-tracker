@@ -2349,14 +2349,16 @@ test("note fields: a click on them opens the account form at Notes, and saving k
   assert.equal(JSON.stringify(JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].info),
     JSON.stringify({ honor: 2, owned: 999, rp: 500, twofa: true, skins: ["Elementalist Lux", "Arcade Ahri"] }),
     "a number past the field's top is kept at the top; an emptied field is gone; RP, switched off, keeps its value");
-  // an empty account's open list row offers the fields as a second way in, and
-  // opening the form for a name edit still starts at the name
+  // an empty account's open list row says nothing about its note, like a card: Add
+  // note is in its ⋯ menu, and opens the editor in the row
   doc.querySelector('[data-density="list"]').click();
   doc.querySelector('.hx.row[data-id="z"] .rw-main').click();
-  doc.querySelector('.hx.row[data-id="z"] .c-notes.blank [data-act="notefields"]').click();
-  assert.equal($("form").classList.contains("hidden"), false);
-  assert.ok(doc.querySelector("#fInfo [data-autofocus]"));
-  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(doc.querySelector('.hx.row[data-id="z"] .c-notes'), null, "no Add a note, no Honor, skins…");
+  cardMenu(win, "z").querySelector('[data-act="noteedit"]').click();
+  const ed = doc.querySelector('.hx.row[data-id="z"] .rw-open > .c-notes.editing');
+  assert.ok(ed && ed.querySelector("textarea"), "the editor opens in the row");
+  assert.ok(ed.nextElementSibling.classList.contains("acts"), "above its buttons");
+  runScript(win, "editingNote = null; render()");
   doc.querySelector('[data-density="cards"]').click();
   cardMenu(win, "z").querySelector('[data-act="edit"]').click();
   assert.equal($("fName").hasAttribute("data-autofocus"), true, "Account… starts at the name as before");
@@ -4042,7 +4044,8 @@ test("the list view puts a whole account on one row, and unfolds it in place", (
   const open = win.document.querySelector(".rw");
   assert.ok(open.querySelector(".lpc"), "the chart unfolds under the row");
   assert.ok(open.querySelector(".sec"), "so do the details");
-  assert.ok(open.querySelector('[data-act="check"]'), "and the actions");
+  // the card's controls, not a row of seven of its own
+  assert.deepEqual([...open.querySelectorAll(".rw-open > .acts > *")].map(b => b.dataset.act), ["addlogin", "more"], "Add login and the ⋯, as on the card");
   assert.equal(open.querySelector(".rw-main").getAttribute("aria-expanded"), "true");
 
   // the layout choice outlives the session
@@ -8688,7 +8691,6 @@ test("on a touch screen the small controls reach WCAG's 24px, and nothing change
   const coarse = css.slice(at, css.indexOf("\n  }", at));
   const px = (sel, prop) => { const m = coarse.match(new RegExp(sel.replace(/[.#()[\]>*+]/g, "\\$&") + "[^{]*\\{[^}]*" + prop + ":(\\d+)px")); return m && +m[1]; };
   assert.ok(px(".bulkchk,#tSelectAll", "width") >= 24, "selection boxes");
-  assert.ok(px(".c-notes.blank>button,.c-notes.blank .nf-link", "min-height") >= 24, "Add a note");
   assert.match(coarse, /\.lpc-range button\{height:30px/, "the chart's range buttons");
   assert.match(coarse, /\.rid\{padding-block:[4-9]px/, "the Riot ID's copy line");
   // a mouse keeps the sizes it had
@@ -10857,6 +10859,35 @@ test("the header's four buttons are one set of drawn icons, and Stats is an on/o
   assert.match(html, /\n  \.bar>#bDashToggle\.on\{color:var\(--text\);background:#ffffff10\}/, "on: a light tint, not other words");
 });
 
+// Opening a row in the list showed the app from before every clean-up: Login, OP.GG ↗,
+// Refresh, Rank, Edit, Archive and Delete in a row of seven, "Add a note" and "Honor,
+// skins…" on an empty note, and a login panel of its own with its own copy button
+test("an opened list row speaks the card's vocabulary: Copy username, the eye, and the card's ⋯ menu", async () => {
+  const win = bootApp([{ id: "L", label: "GM duo", region: "EUW", gameName: "Quiet Storm", tagLine: "1111", status: "active", tags: [], history: [],
+    login: "riotuser", password: "hunter22!", stats: { found: true, tier: "GOLD", division: "I", lp: 40, wins: 10, losses: 9, updatedAt: Date.now() } }]);
+  const doc = win.document;
+  const cardMenuItems = () => [...doc.querySelectorAll("#cardMenu [data-act]")].map(b => b.dataset.act + ":" + b.textContent.trim());
+  const card = cardMenu(win, "L"); const fromCard = cardMenuItems();
+  assert.ok(card && fromCard.length > 5);
+  runScript(win, "closeCardMenu()");
+  doc.querySelector('[data-density="list"]').click();
+  doc.querySelector('.rw[data-id="L"] .rw-main').click();
+  const open = doc.querySelector('.rw[data-id="L"] .rw-open');
+  const acts = open.querySelector(":scope > .acts");
+  assert.deepEqual([...acts.children].map(b => b.dataset.act), ["copyseq", "login", "more"], "the card's three");
+  assert.match(acts.querySelector(".a-login").textContent, /^\s*Copy username$/);
+  for (const gone of [/Login\b/, /OP\.GG/, /\bRefresh\b/, /\bEdit\b/, /\bArchive\b/, /\bDelete\b/, /Add a note/, /Honor, skins/])
+    assert.doesNotMatch(open.textContent, gone, String(gone));
+  // the eye unfolds the card's login panel, with no copy button of its own
+  acts.querySelector('[data-act="login"]').click();
+  const panel = doc.querySelector('.rw[data-id="L"] .rw-open > .login');
+  assert.ok(panel && panel.querySelector('[data-act="copypw"]'));
+  assert.equal(panel.querySelector('[data-act="copyseq"]'), null);
+  // and its ⋯ opens the same menu a card's does
+  doc.querySelector('.rw[data-id="L"] .rw-open [data-act="more"]').click();
+  assert.deepEqual(cardMenuItems(), fromCard, "every entry the card's menu has, in the same order");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
@@ -12312,8 +12343,9 @@ test("an empty vault opens on the app's own gem, over a sentence that breaks eve
 });
 
 // Copies stopped putting up a toast because the button says so; the list row's own
-// "Copy username, then password" button had no such flash, so it said nothing at all
-test("in the list, the login panel's one-button copy says it copied, as the card's does", async () => {
+// "Copy username, then password" button had no such flash, so it said nothing at all.
+// The row has the card's own Copy username now.
+test("in the list, the opened row's Copy username says it copied, as the card's does", async () => {
   const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [],
     login: "riotuser", password: "hunter22!", stats: null }]);
   const copied = [];
@@ -12321,8 +12353,8 @@ test("in the list, the login panel's one-button copy says it copied, as the card
   const doc = win.document;
   doc.querySelector('[data-density="list"]').click();
   doc.querySelector('.rw[data-id="L"] .rw-main').click();   // the row opens
-  doc.querySelector('.rw[data-id="L"] .rw-open [data-act="login"]').click();
-  const seq = () => doc.querySelector('.rw[data-id="L"] .lseq');
+  const seq = () => doc.querySelector('.rw[data-id="L"] .rw-open .a-login');
+  assert.match(seq().textContent, /^\s*Copy username$/);
   seq().click();
   await until(() => copied[0] === "riotuser" && /Username copied/.test(seq().textContent), "the row to say it copied");
   assert.ok(seq().classList.contains("copied"));
