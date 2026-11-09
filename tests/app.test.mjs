@@ -2349,14 +2349,16 @@ test("note fields: a click on them opens the account form at Notes, and saving k
   assert.equal(JSON.stringify(JSON.parse(win.localStorage.getItem("smurf-tracker"))[0].info),
     JSON.stringify({ honor: 2, owned: 999, rp: 500, twofa: true, skins: ["Elementalist Lux", "Arcade Ahri"] }),
     "a number past the field's top is kept at the top; an emptied field is gone; RP, switched off, keeps its value");
-  // an empty account's open list row offers the fields as a second way in, and
-  // opening the form for a name edit still starts at the name
+  // an empty account's open list row says nothing about its note, like a card: Add
+  // note is in its ⋯ menu, and opens the editor in the row
   doc.querySelector('[data-density="list"]').click();
   doc.querySelector('.hx.row[data-id="z"] .rw-main').click();
-  doc.querySelector('.hx.row[data-id="z"] .c-notes.blank [data-act="notefields"]').click();
-  assert.equal($("form").classList.contains("hidden"), false);
-  assert.ok(doc.querySelector("#fInfo [data-autofocus]"));
-  doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(doc.querySelector('.hx.row[data-id="z"] .c-notes'), null, "no Add a note, no Honor, skins…");
+  cardMenu(win, "z").querySelector('[data-act="noteedit"]').click();
+  const ed = doc.querySelector('.hx.row[data-id="z"] .rw-open > .c-notes.editing');
+  assert.ok(ed && ed.querySelector("textarea"), "the editor opens in the row");
+  assert.ok(ed.nextElementSibling.classList.contains("acts"), "above its buttons");
+  runScript(win, "editingNote = null; render()");
   doc.querySelector('[data-density="cards"]').click();
   cardMenu(win, "z").querySelector('[data-act="edit"]').click();
   assert.equal($("fName").hasAttribute("data-autofocus"), true, "Account… starts at the name as before");
@@ -4042,7 +4044,8 @@ test("the list view puts a whole account on one row, and unfolds it in place", (
   const open = win.document.querySelector(".rw");
   assert.ok(open.querySelector(".lpc"), "the chart unfolds under the row");
   assert.ok(open.querySelector(".sec"), "so do the details");
-  assert.ok(open.querySelector('[data-act="check"]'), "and the actions");
+  // the card's controls, not a row of seven of its own
+  assert.deepEqual([...open.querySelectorAll(".rw-open > .acts > *")].map(b => b.dataset.act), ["addlogin", "more"], "Add login and the ⋯, as on the card");
   assert.equal(open.querySelector(".rw-main").getAttribute("aria-expanded"), "true");
 
   // the layout choice outlives the session
@@ -7278,7 +7281,7 @@ test("compare is a versus screen: one row per fact, the better win rate lit", ()
   assert.equal(sides[1].querySelector(".cmp-lp").textContent, "5 LP");
   const rows = [...body.querySelectorAll(".cmp-row")];
   assert.deepEqual(rows.map(r => r.querySelector(".k").textContent),
-    ["Record", "Win rate", "Peak", "WR trend", "Level", "Last played"]);
+    ["Record", "Win rate", "Peak", "WR trend", "Level", "Last login"]);
   const wr = rows[1].children;
   assert.equal(wr[0].textContent, "56%");
   assert.equal(wr[2].textContent, "67%");
@@ -7901,7 +7904,7 @@ test("Group climb: an account added later joins the line instead of dragging it"
   // day Silver arrives moves nothing (Diamond's +30 alone), the last day averages
   // the two (+20, +20). A plain average of whoever was counted read as a 660-LP fall.
   assert.equal(t.delta, 50);
-  assert.equal(t.headline, "↑ +50");
+  assert.equal(t.headline, "+50", "signed like This week, with no arrow");
   assert.match(t.svg, /\+50 LP since/);
   assert.equal(win.poolLpTrend([diamond]).delta, 50, "one account: the line is its own climb");
 });
@@ -8333,7 +8336,7 @@ test("the card footer is Login and a ⋯, with Refresh on an old timestamp and i
   const acts = win.document.querySelector(".card .acts");
   // Refresh weighed nearly as much as Login there; it sits by "Updated …" now.
   // This account has no login saved yet, so the Login button offers to add one.
-  assert.deepEqual([...acts.children].map(el => el.textContent.trim()), ["Add login", "⋯"]);
+  assert.deepEqual([...acts.children].map(el => el.textContent.trim() || el.getAttribute("aria-label")), ["Add login", "More actions"]);
   const ref = win.document.querySelector('.card .c-meta .c-ref[data-act="check"]');
   assert.ok(ref && ref.previousElementSibling.classList.contains("upd"), "beside the timestamp");
   assert.equal(ref.getAttribute("aria-label"), "Refresh rank", "an icon with a name");
@@ -8342,9 +8345,10 @@ test("the card footer is Login and a ⋯, with Refresh on an old timestamp and i
   assert.deepEqual(called, ["seed1"], "and it still checks the account");
   cardMenu(win).querySelector('[data-act="check"]').click();
   assert.deepEqual(called, ["seed1", "seed1"], "as does the ⋯ menu's Refresh rank");
-  // a key, not a person: a person beside "Login" read as signing in to this app
-  const d = [...acts.querySelectorAll(".a-login svg path")].map(p => p.getAttribute("d"));
-  assert.ok(d.includes("m10.7 12.3 9.3-9.3"), "the key icon: " + d.join(" | "));
+  // Not a person: beside "Login" that read as signing in to this app, and the person is
+  // the username's mark now. Adding a login is a plus.
+  assert.match(acts.querySelector(".a-login").textContent, /Add login/);
+  assert.equal(acts.querySelector(".a-login svg line[x1=\"12\"][y1=\"5\"]") && acts.querySelectorAll(".a-login svg line").length, 2, "the plus icon");
   // Neither profile link vanished — they are one kind of thing and now sit
   // together under Look up, rather than op.gg in the footer and dpm.lol in here.
   const links = [...cardMenu(win).querySelectorAll(".cm-link")];
@@ -8630,7 +8634,9 @@ test("a card's region is a neutral label, so Login is the one thing in the actio
   const rule = html.match(/\n  \.regiontag\{([^}]*)\}/)[1];
   assert.doesNotMatch(rule, /--teal|--gold/, "not the accent");
   assert.match(rule, /color:var\(--muted\)/);
-  assert.doesNotMatch(html.match(/\n  \.card:hover \.regiontag\{([^}]*)\}/)[1], /--teal|--gold/, "nor on hover");
+  // plain words, as in the list: a framed box read as a button that did nothing
+  assert.doesNotMatch(rule, /border|background|padding/, "no frame, no fill");
+  assert.doesNotMatch(html, /\.card:hover \.regiontag/, "and it does not light up under the pointer like a control");
 });
 
 // A vault left alone for a weekend lit the page red: "out of date" took the colour of a ban
@@ -8688,7 +8694,6 @@ test("on a touch screen the small controls reach WCAG's 24px, and nothing change
   const coarse = css.slice(at, css.indexOf("\n  }", at));
   const px = (sel, prop) => { const m = coarse.match(new RegExp(sel.replace(/[.#()[\]>*+]/g, "\\$&") + "[^{]*\\{[^}]*" + prop + ":(\\d+)px")); return m && +m[1]; };
   assert.ok(px(".bulkchk,#tSelectAll", "width") >= 24, "selection boxes");
-  assert.ok(px(".c-notes.blank>button,.c-notes.blank .nf-link", "min-height") >= 24, "Add a note");
   assert.match(coarse, /\.lpc-range button\{height:30px/, "the chart's range buttons");
   assert.match(coarse, /\.rid\{padding-block:[4-9]px/, "the Riot ID's copy line");
   // a mouse keeps the sizes it had
@@ -8950,7 +8955,7 @@ test("a banned card shows no movement and no Refresh; a live one with the same r
   assert.equal(card("ban").querySelector(".c-ref"), null, "nor get checked; checks skip it");
   assert.ok(card("ban").querySelector(".a-login"), "its login is still there");
   // ...but as a plain button, and with no red rail: the badge and the strikethrough say banned
-  assert.match(html, /\n  \.card\.dead \.a-login\{background-color:var\(--panel2\)/, "Login is not the brightest thing on a dead card");
+  assert.match(html, /\n  \.card\.dead \.a-login(,\.rw\.dead \.a-login)?\{background-color:var\(--panel2\)/, "Login is not the brightest thing on a dead card");
   const hx = id => win.document.querySelector(`.grid>.hx[data-id="${id}"]`);
   assert.doesNotMatch(hx("ban").getAttribute("style") || "", /--st/, "no status rail on the card");
   // and the list says the same: no "+82" on a closed account
@@ -10857,6 +10862,366 @@ test("the header's four buttons are one set of drawn icons, and Stats is an on/o
   assert.match(html, /\n  \.bar>#bDashToggle\.on\{color:var\(--text\);background:#ffffff10\}/, "on: a light tint, not other words");
 });
 
+// Opening a row in the list showed the app from before every clean-up: Login, OP.GG ↗,
+// Refresh, Rank, Edit, Archive and Delete in a row of seven, "Add a note" and "Honor,
+// skins…" on an empty note, and a login panel of its own with its own copy button
+test("an opened list row speaks the card's vocabulary: Copy username, the eye, and the card's ⋯ menu", async () => {
+  const win = bootApp([{ id: "L", label: "GM duo", region: "EUW", gameName: "Quiet Storm", tagLine: "1111", status: "active", tags: [], history: [],
+    login: "riotuser", password: "hunter22!", stats: { found: true, tier: "GOLD", division: "I", lp: 40, wins: 10, losses: 9, updatedAt: Date.now() } }]);
+  const doc = win.document;
+  const cardMenuItems = () => [...doc.querySelectorAll("#cardMenu [data-act]")].map(b => b.dataset.act + ":" + b.textContent.trim());
+  const card = cardMenu(win, "L"); const fromCard = cardMenuItems();
+  assert.ok(card && fromCard.length > 5);
+  runScript(win, "closeCardMenu()");
+  doc.querySelector('[data-density="list"]').click();
+  doc.querySelector('.rw[data-id="L"] .rw-main').click();
+  const open = doc.querySelector('.rw[data-id="L"] .rw-open');
+  const acts = open.querySelector(":scope > .acts");
+  assert.deepEqual([...acts.children].map(b => b.dataset.act), ["copyseq", "login", "more"], "the card's three");
+  assert.match(acts.querySelector(".a-login").textContent, /^\s*Copy username$/);
+  for (const gone of [/Login\b/, /OP\.GG/, /\bRefresh\b/, /\bEdit\b/, /\bArchive\b/, /\bDelete\b/, /Add a note/, /Honor, skins/])
+    assert.doesNotMatch(open.textContent, gone, String(gone));
+  // the eye unfolds the card's login panel, with no copy button of its own
+  acts.querySelector('[data-act="login"]').click();
+  const panel = doc.querySelector('.rw[data-id="L"] .rw-open > .login');
+  assert.ok(panel && panel.querySelector('[data-act="copypw"]'));
+  assert.equal(panel.querySelector('[data-act="copyseq"]'), null);
+  // and its ⋯ opens the same menu a card's does
+  doc.querySelector('.rw[data-id="L"] .rw-open [data-act="more"]').click();
+  assert.deepEqual(cardMenuItems(), fromCard, "every entry the card's menu has, in the same order");
+});
+
+// The card's "Copy username" wore the key, which a list row and Quick find use for the
+// password: the same mark copied the username on one screen and the password on the next
+test("the person is the username and the key is the password, on a card, a list row and in Quick find", async () => {
+  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [], login: "riotuser", password: "hunter22!", stats: null },
+    { id: "N", region: "EUW", gameName: "N", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async () => {} } });
+  const doc = win.document;
+  // the markup each mark draws, as the page itself writes it out
+  const drawn = name => { const s = doc.createElementNS("http://www.w3.org/2000/svg", "svg"); s.innerHTML = appGet(win, "ICON." + name); return s.innerHTML; };
+  const user = drawn("user"), key = drawn("key");
+  const main = () => doc.querySelector('.card[data-id="L"] .a-login');
+  assert.match(main().textContent, /Copy username/);
+  assert.equal(main().querySelector("svg").innerHTML, user, "Copy username: the person");
+  main().click();
+  await until(() => /Copy password/.test(main().textContent), "the next step");
+  assert.equal(main().querySelector("svg").innerHTML, key, "Copy password: the key");
+  assert.equal(doc.querySelector('.card[data-id="N"] .a-login svg').innerHTML, drawn("plus"), "Add login: a plus, neither of the two");
+  // nothing else wears the person: the card menu's Account… and Quick find's Settings
+  const menu = cardMenu(win, "L");
+  assert.notEqual(menu.querySelector('[data-act="edit"] svg').innerHTML, user, "Account… is not the username");
+  assert.ok(!/i:"user",run:\(\)=>openSettings/.test(appJs), "nor is Settings");
+  runScript(win, "closeCardMenu()");
+  // the list row's two keys
+  doc.querySelector('[data-density="list"]').click();
+  assert.equal(doc.querySelector('.rw[data-id="L"] [data-act="copylogin"] svg').innerHTML, user);
+  assert.equal(doc.querySelector('.rw[data-id="L"] [data-act="copypw"] svg').innerHTML, key);
+});
+
+// Typed characters stood in for icons: the card's ⋯ at 16px type beside a 16px drawn eye
+// and a 12px key, ✕ on every window, ↺ on the colour resets, and "—" for an empty field
+test("no typed character stands in for an icon: ⋯, ✕ and ↺ are drawn, and an empty field is empty", () => {
+  const win = bootApp(seededAccount()), doc = win.document;
+  const glyphs = /[⋯✕↺]/;
+  runScript(win, "ui.tier = 'DIAMOND'; render()");   // a filter chip, with its x, over the same card
+  // every button on the page and every one the app has drawn
+  for (const b of doc.querySelectorAll("button")) assert.doesNotMatch(b.textContent, glyphs, (b.id || b.className) + ": " + b.textContent.trim());
+  const closes = doc.querySelectorAll(".panel-close");
+  assert.equal(closes.length, 9, "every window's close");
+  for (const c of closes) assert.ok(c.querySelector("svg.ico line"), "a drawn x");
+  for (const id of ["sAccentReset1", "sAccentReset2"]) assert.ok(doc.getElementById(id).querySelector("svg.ico polyline"), id + ": the reset arrow, drawn");
+  const more = doc.querySelector(".card .c-more");
+  assert.equal(more.querySelectorAll("svg.ico circle").length, 3, "the card's ⋯ is three drawn dots");
+  assert.match(html, /\n  \.c-lgn \.ico,\.acts>\.a-login \.ico,\.c-more \.ico\{width:16px;height:16px\}/, "one size across the card's row");
+  // the failure bar's dismiss, the filter chips and a field's remove are drawn too
+  assert.ok(doc.querySelector("#chips .fchip") && doc.querySelectorAll("#chips .fchip svg.ico line").length === 2 * doc.querySelectorAll("#chips .fchip").length, "the filter chips' x, drawn");
+  assert.doesNotMatch(appJs.match(/bDismissFails[^\n]*/)[0], /✕/);
+  // an empty note field is empty, and the honor control's empty choice says so
+  runScript(win, "renderInfoFields(null)");
+  for (const f of doc.querySelectorAll("#fInfo input")) assert.notEqual(f.getAttribute("placeholder"), "—", f.id);
+  assert.equal(doc.querySelector('#fInfo [data-nf="honor"] [data-v=""]').textContent, "Not set");
+});
+
+// Settings' colour preview drew a card two clean-ups old: Login and Refresh, a typed ★ and ?
+test("Settings' colour preview draws the card as it is now", () => {
+  const doc = new JSDOM(pageHtml).window.document, prev = doc.getElementById("accPrev");
+  assert.doesNotMatch(prev.textContent, /\bLogin\b|\bRefresh\b|[★?⋯]/);
+  assert.equal(prev.querySelector(".acc-prev-card .a-login").textContent.trim(), "Copy username");
+  assert.ok(prev.querySelector(".acc-prev-card .a-login svg.ico"), "with the username's mark");
+  assert.ok(prev.querySelector('.acc-prev-card [aria-label="More actions"] svg.ico'), "and the drawn ⋯");
+  assert.ok(prev.querySelector(".acc-prev-star svg.ico") && prev.querySelector(".acc-prev-tools .on svg.ico"), "stars drawn, not typed");
+});
+
+// Two menus, two styles: the card's ⋯ menu marked every entry, the header's only Settings;
+// and in the card's, Rank… and Add note wore the same pencil
+test("both ⋯ menus mark every entry, each with a mark of its own", () => {
+  const win = bootApp(seededAccount()), doc = win.document;
+  const head = [...doc.querySelectorAll("#moreMenu button")];
+  assert.ok(head.length >= 11);
+  for (const b of head) assert.ok(b.querySelector(":scope > svg.ico") && b.querySelector(":scope > span").textContent.trim(), b.id + " has a mark and its words");
+  assert.match(html, /\n  #moreMenu \.ico\{width:15px;height:15px;flex-shrink:0;color:var\(--muted\)/, "the card menu's size and colour");
+  // a label that changes keeps its mark
+  runScript(win, "setStreamer(true)");
+  assert.ok(doc.querySelector("#bStreamer > svg.ico"));
+  assert.equal(doc.getElementById("bStreamer").textContent.trim(), "Streamer mode: on");
+  runScript(win, "setStreamer(false)");
+  const menu = cardMenu(win);
+  const mark = act => menu.querySelector(`[data-act="${act}"] svg`).innerHTML;
+  const marks = ["rank", "edit", "noteedit"].map(mark);
+  assert.equal(new Set(marks).size, 3, "Rank…, Account… and Add note each their own");
+});
+
+// The stats panel wrote "774W 697L" with small letters where every card writes "312W 250L",
+// and Average climb said "↑ +312" beside This week's "+286"
+test("the stats panel writes wins, losses and a climb the way the rest of the app does", () => {
+  const win = bootApp(ladderSeed());
+  const tile = k => [...win.document.querySelectorAll("#dash .stat")].find(t => t.querySelector(".k").textContent === k);
+  const wl = tile("Season W/L").querySelector(".v");
+  assert.match(wl.textContent, /^[\d,]+W [\d,]+L$/, "312W 250L, as on a card");
+  assert.equal(wl.querySelector("small"), null, "no small letters");
+  // a climb over two days: the figure is signed like This week's, with no arrow
+  const D = 864e5, now = Date.now(), acc = (id, lp0, lp1) => ({ id, stats: { found: true, tier: "GOLD", division: "II", lp: lp1, updatedAt: now },
+    history: [{ t: now - 3 * D, tier: "GOLD", division: "II", lp: lp0 }, { t: now - D, tier: "GOLD", division: "II", lp: lp1 }] });
+  runScript(win, `window.__t = poolLpTrend(${JSON.stringify([acc("a", 10, 60), acc("b", 20, 70)])})`);
+  assert.ok(win.__t, "a trend to read");
+  assert.match(win.__t.headline, /^[+−]?[\d,]+$/, "signed, no arrow: " + win.__t.headline);
+});
+
+// The list kept two things the rest of the app had dropped: column headings in small
+// capitals, and the win-rate bar that cards hide unless asked for
+test("the list's headings are in sentence case, and its win-rate bar follows the cards' setting", () => {
+  const win = bootApp(seededAccount()), doc = win.document;
+  const head = html.match(/\n  \.rw-head\{([^}]*)\}/)[1];
+  assert.doesNotMatch(head, /uppercase|letter-spacing:\.\d/, "no small capitals");
+  assert.match(head, /font-size:calc\(12px\*var\(--ts\)\)/);
+  assert.match(html, /\n  body\.hide-wl \.rw-bar,/, "the bar goes with the cards' Win/loss bar");
+  assert.ok(doc.body.classList.contains("hide-wl"), "which is off by default");
+  runScript(win, 'cfg.cardHide = []; applyCompact()');
+  assert.ok(!doc.body.classList.contains("hide-wl"), "and back when it is switched on");
+});
+
+// On a phone the Filters button looked the same open and closed
+test("on a phone the Filters button shows when it is open", () => {
+  const win = bootApp(seededAccount()), doc = win.document;
+  const rule = html.match(/\.tools\.open>\.t-filters\{([^}]*)\}/)[1];
+  assert.match(rule, /color:var\(--teal-txt\)/, "in the accent, not a shade darker");
+  assert.match(rule, /border-color:color-mix\(in srgb,var\(--teal\)/);
+  doc.getElementById("tFilters").click();
+  assert.equal(doc.getElementById("tFilters").getAttribute("aria-expanded"), "true", "and says so to a screen reader");
+});
+
+// The sync key's hint ("Generate one, or paste the key…") was set in the typewriter face
+test("a masked field's hint is in the page's own type; only what is typed is monospace", () => {
+  assert.match(html, /\n  \.mask:placeholder-shown\{font-family:inherit;letter-spacing:normal\}/);
+  assert.ok(new JSDOM(pageHtml).window.document.querySelector("#sSyncToken.mask[placeholder]"), "the sync key is one");
+});
+
+// A goal at 0% drew an empty grey track that read as a divider line
+test("a goal at 0% still shows where its bar starts, in the goal's colour", () => {
+  const seed = seededAccount();
+  seed[0].goal = { tier: "CHALLENGER", division: null, lp: 0 };
+  seed[0].history = [];
+  const win = bootApp(seed);
+  const fill = win.document.querySelector(".card .goal-bar i");
+  assert.ok(fill, "the goal's bar");
+  assert.match(html, /\n  \.goal-bar i\{[^}]*min-width:4px/, "a start mark even at 0%");
+  assert.match(fill.getAttribute("style"), /background:/, "in the goal's colour");
+});
+
+// After the username was copied the button stayed on "Copy password" until the password was
+// copied or the page reloaded: the next day, the button you always press copied the password
+test("Copy password goes back to Copy username a minute after the username was copied", async () => {
+  const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [], login: "riotuser", password: "hunter22!", stats: null }]);
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { writeText: async () => {} } });
+  const main = () => win.document.querySelector('.card[data-id="L"] .a-login');
+  assert.equal(appGet(win, "LOGIN_SEQ_MS"), 60000, "a minute");
+  runScript(win, "LOGIN_SEQ_MS = 60");   // a minute, for the test, is 60ms
+  main().click();
+  await until(() => appGet(win, 'loginSeq.has("L")'), "the password is next");
+  await until(() => !appGet(win, 'loginSeq.has("L")'), "and then, untouched, it starts over", 3000);
+  await until(() => /^\s*Copy username$/.test(main().textContent), "the button says so, once its flash is over", 3000);
+  // copied in time, the password ends the round as before, and nothing resets it later
+  runScript(win, "LOGIN_SEQ_MS = 60000");
+  main().click();
+  await until(() => appGet(win, 'loginSeq.has("L")'), "the password is next again");
+  await until(() => /Copy password/.test(main().textContent), "on the button", 3000);
+  main().click();
+  await until(() => appGet(win, 'loginSeq.has("L")') === false, "the password copied");
+  assert.equal(appGet(win, 'loginSeqTimer.has("L")'), false, "and its minute is called off");
+});
+
+// "No backup yet · Back up now" lived inside the stats panel, which starts folded on a
+// phone: the warning against losing the vault was where nobody looked
+test("the backup reminder sits above the accounts, open stats or not", () => {
+  const seed = [{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 3, losses: 2, updatedAt: Date.now() } }];
+  const phone = w => { w.matchMedia = q => ({ matches: /max-width:\s*560px/.test(q), addListener() {}, removeListener() {} });
+    w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ setupHidden: true })); };
+  const win = bootApp(seed, phone), doc = win.document;
+  assert.equal(doc.getElementById("dash").innerHTML, "", "the stats are folded on a phone");
+  const note = doc.querySelector("#bkNote .bk-note");
+  assert.ok(note, "and the reminder shows anyway");
+  assert.match(note.textContent, /No backup yet\./);
+  assert.ok(note.querySelector("#bkNow"), "with its button");
+  assert.equal(doc.querySelector("#dash .bk-note"), null, "not inside the panel");
+  const order = [...doc.getElementById("appRoot").children].map(e => e.id).filter(Boolean);
+  assert.ok(order.indexOf("bkNote") < order.indexOf("grid") || doc.getElementById("bkNote").compareDocumentPosition(doc.getElementById("grid")) & 4, "above the accounts");
+  // Safari's seven-day warning, when it shows, carries the backup button itself
+  runScript(win, '$("iosBand").classList.remove("hidden"); renderBackupNote()');
+  assert.equal(doc.querySelector("#bkNote .bk-note"), null, "one Back up now at a time");
+});
+
+// At 1280px nine rank emblems sat beside the wordmark and Iron alone on a second line;
+// with Streamer mode's pill in the header it grew from 64px to 164px
+test("the header's rank emblems move as one group: beside the wordmark, or all on a row below it", () => {
+  const T = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND"];
+  const win = bootApp(T.map((t, i) => ({ id: "t" + i, region: "EUW", gameName: "T" + i, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: t, division: "II", lp: 5, wins: 3, losses: 2, updatedAt: Date.now() } })));
+  const doc = win.document, top = doc.querySelector(".top");
+  const group = doc.querySelector("#ribbon .rib-tiers");
+  assert.ok(group, "the emblems are one group");
+  assert.equal(group.querySelectorAll(".rib-t").length, 7, "every tier in it");
+  assert.equal(doc.querySelector("#ribbon .rib-states .rib-t"), null, "and the states apart from it");
+  assert.match(appCss, /\.rib-tiers\{[^}]*flex-wrap:nowrap/, "the group does not break up");
+  assert.match(appCss, /\.top\.rib-below>\.ribbon\{order:3;flex:1 1 100%/, "below, it takes a whole row under the wordmark and buttons");
+  // layout, which jsdom has not: a 1280px header, a 440px wordmark, 300px of buttons
+  const box = w => () => ({ width: w, height: 30, top: 0, left: 0, right: w, bottom: 30, x: 0, y: 0 });
+  Object.defineProperty(top, "clientWidth", { configurable: true, get: () => 1240 });
+  doc.querySelector(".top .brand").getBoundingClientRect = box(440);
+  doc.querySelector(".top .bar").getBoundingClientRect = box(300);
+  const fits = w => { doc.querySelector("#ribbon .rib-tiers").getBoundingClientRect = box(w); runScript(win, "fitRibbon()"); return !top.classList.contains("rib-below"); };
+  assert.equal(fits(420), true, "room for the emblems: they stay beside the wordmark");
+  assert.equal(fits(560), false, "no room: the whole row moves below, not just the last emblem");
+  assert.equal(fits(420), true, "and comes back when there is room again");
+  // a phone already gives the ribbon its own row, and lets the emblems wrap there
+  win.matchMedia = q => ({ matches: /max-width:\s*560px/.test(q), addListener() {}, removeListener() {} });
+  assert.equal(fits(900), true, "no rib-below on a phone");
+  assert.match(appCss, /\.rib-tiers\{flex-wrap:wrap\}/, "the phone's emblems may wrap within their row");
+});
+
+// The opened list row took the card's words but not its rules per state: a banned row's
+// Copy username stayed teal and a never-checked banned row still offered Check, a
+// not-found row had no way to fix its Riot ID, and a never-checked row had its Check
+// only on the hover-shown slot a phone hides
+test("an opened list row follows the card's rules per state: banned, not found, never checked", () => {
+  const L = { login: "u", password: "p", tags: [], history: [], region: "EUW", tagLine: "1" };
+  const win = bootApp([
+    { id: "ban", gameName: "Ban", status: "banned", stats: null, ...L },
+    { id: "nf", gameName: "Nf", status: "active", stats: { found: false, updatedAt: Date.now() }, ...L },
+    { id: "nc", gameName: "Nc", status: "active", stats: null, ...L },
+  ]);
+  const doc = listView(win);
+  const row = id => doc.querySelector(`.rw[data-id="${id}"]`);
+  const open = id => { row(id).querySelector(".rw-main").click(); return row(id).querySelector(".rw-open"); };
+  // banned: never checked, and still no Check, as on its card; its Copy username a plain button
+  assert.equal(row("ban").querySelector('[data-act="check"]'), null, "no Check on a banned row");
+  assert.equal(open("ban").querySelector('[data-act="check"]'), null, "nor once it is opened");
+  assert.ok(row("ban").querySelector(".rw-open .a-login"), "its Copy username is there");
+  assert.match(appCss, /\.card\.dead \.a-login,\.rw\.dead \.a-login\{[^}]*color:var\(--muted\)/, "muted, as on the card");
+  // not found: the card's amber line, with its Fix Riot ID
+  const fix = open("nf").querySelector(".c-miss .c-fix");
+  assert.ok(fix, "a not-found row says so and offers the fix");
+  assert.equal(fix.textContent.trim(), "Fix Riot ID");
+  assert.equal(fix.dataset.act, "edit", "which opens the account's form");
+  // never checked: one Check rank, never two
+  assert.equal(row("nc").querySelectorAll('[data-act="check"]').length, 1, "closed, the row's own Check");
+  const opened = open("nc");
+  const checks = row("nc").querySelectorAll('[data-act="check"]');
+  assert.equal(checks.length, 1, "opened, one Check rank and not a second beside it");
+  assert.ok(opened.contains(checks[0]), "the one under the row, in the card's words");
+  assert.match(checks[0].textContent, /Check rank/);
+  // the same lines as the cards draw
+  const rowNf = row("nf").querySelector(".c-miss").outerHTML, rowNc = checks[0].closest(".wl").outerHTML;
+  doc.querySelector('[data-density="cards"]').click();
+  assert.equal(doc.querySelector('.card[data-id="nf"] .c-miss').outerHTML, rowNf, "one Fix Riot ID line");
+  assert.equal(doc.querySelector('.card[data-id="nc"] .c-check').closest(".wl").outerHTML, rowNc, "one Check rank line");
+  assert.equal(doc.querySelector('.card[data-id="ban"] [data-act="check"]'), null, "and none on the banned card");
+});
+
+// Compare said "Last played 1 hour ago" of an account only checked an hour ago (a check
+// counted as a game), and drew "—" for what it didn't know, the last such dash in the app
+test("Compare says Last login, as the card does, and leaves what it doesn't know blank", () => {
+  const hour = 3600e3, now = Date.now();
+  const win = bootApp([
+    { id: "c1", region: "EUW", gameName: "Alpha", tagLine: "A", status: "active", lastLoginAt: now - 3 * 24 * hour,
+      stats: { found: true, tier: "GOLD", division: "II", lp: 20, wins: 10, losses: 8, level: 40, updatedAt: now - hour }, history: [], tags: [] },
+    { id: "c2", region: "KR", gameName: "Beta", tagLine: "B", status: "active", lastPlayedAt: now - 2 * hour,
+      stats: { found: true, tier: "UNRANKED", wins: 4, losses: null, updatedAt: now - hour }, history: [], tags: [] },
+  ]);
+  win.startCompare("c1");
+  win.startCompare("c2");
+  const rows = Object.fromEntries([...win.document.querySelectorAll("#cmpBody .cmp-row")].map(r =>
+    [r.querySelector(".k").textContent, [r.children[0].textContent, r.children[2].textContent]]));
+  assert.equal(rows["Last played"], undefined, "no Last played");
+  assert.deepEqual(rows["Last login"], ["3 days ago", ""], "the login stamp, and blank where Copy username was never used, not the check");
+  assert.deepEqual(rows["Record"], ["10W 8L", "4W"], "the half of a record that is known, no dash for the rest");
+  assert.deepEqual(rows["Win rate"], ["56%", ""]);
+  assert.deepEqual(rows["Level"], ["40", ""]);
+  assert.deepEqual(rows["Peak"], ["Gold II · 20 LP", ""]);
+  assert.deepEqual(rows["WR trend"], ["", ""]);
+  assert.doesNotMatch(win.document.getElementById("cmpBody").textContent, /—|never/, "no dash, no never");
+});
+
+// An archived card wore the amber "Updated 9 days ago" and a Refresh, and one never checked
+// its Check rank: nags about an account put away on purpose
+test("an archived account is not nagged: no out-of-date amber, no Refresh, no Check rank", () => {
+  const now = Date.now();
+  const mk = (id, extra) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [], ...extra });
+  const old = { found: true, tier: "SILVER", division: "II", lp: 4, wins: 3, losses: 2, updatedAt: now - 9 * 864e5 };
+  const win = bootApp([mk("arc", { archived: true, stats: old }), mk("arn", { archived: true, stats: null }),
+    mk("live", { stats: { ...old } }), mk("new", { stats: null })]);
+  const doc = win.document;
+  assert.equal(appGet(win, 'isStale(accounts.find(a => a.id === "arc"))'), false, "archived is never stale");
+  assert.equal(appGet(win, 'isStale(accounts.find(a => a.id === "live"))'), true, "the same reading, live, is");
+  const live = doc.querySelector('.card[data-id="live"]');
+  assert.ok(live.querySelector(".upd.stale") && live.querySelector(".c-ref"), "a live card: amber and its Refresh");
+  assert.ok(doc.querySelector('.card[data-id="new"] .c-check'), "a live card never checked: Check rank");
+  runScript(win, "ui.showArchived = true; render()");
+  const arc = doc.querySelector('.card[data-id="arc"]'), arn = doc.querySelector('.card[data-id="arn"]');
+  assert.ok(arc.querySelector(".upd"), "an archived card still says when it was read");
+  assert.equal(arc.querySelector(".upd.stale"), null, "without the amber");
+  assert.equal(arc.querySelector(".c-ref"), null, "or the Refresh");
+  assert.equal(arn.querySelector('[data-act="check"]'), null, "and one never checked has no Check rank");
+  // the list: no amber timestamp, no Check, open or closed
+  listView(win);
+  for (const id of ["arc", "arn"]) {
+    const row = doc.querySelector(`.rw[data-id="${id}"]`);
+    assert.equal(row.querySelector(".rw-up.stale"), null, id + ": no amber time");
+    row.querySelector(".rw-main").click();
+    assert.equal(doc.querySelector(`.rw[data-id="${id}"] [data-act="check"]`), null, id + ": no Check");
+  }
+  // still checkable on purpose, from its menu
+  const menu = cardMenu(win, "arc");
+  assert.ok(menu.querySelector('[data-act="check"]'), "Refresh rank stays in the ⋯ menu");
+});
+
+// Settings → Advanced drew its own chevron, and the two guides inside it the browser's ▼
+test("every fold in Settings wears the same drawn chevron, none the browser's triangle", () => {
+  const doc = new JSDOM(pageHtml).window.document;
+  const folds = [...doc.querySelectorAll("details")];
+  assert.ok(folds.length >= 3, "Advanced and its two guides");
+  for (const d of folds) assert.ok(d.matches(".adv-fold, .guide"), (d.id || "a fold") + " is one of the two styled kinds");
+  for (const k of ["adv-fold", "guide"]) {
+    assert.match(appCss, new RegExp(`\\.${k}>summary::-webkit-details-marker[,{]`), k + ": Safari's marker hidden");
+    assert.match(appCss, new RegExp(`\\.${k}>summary::after(,[^{]*)?\\{content:"";[^}]*border-width:0 1\\.5px 1\\.5px 0`), k + ": the drawn chevron");
+    assert.match(appCss, new RegExp(`\\.${k}\\[open\\]>summary::after[,{]`), k + ": turned when open");
+  }
+  assert.match(appCss, /\.guide>summary\{[^}]*list-style:none/, "and the guides' own triangle gone");
+  assert.doesNotMatch(appCss, /list-style-position:inside/, "no triangle placed inside the summary");
+});
+
+// The two required fields said it two ways: "Needed: the name before the #" and
+// "Needed for the lookup, the part after #"
+test("the Riot name and tag are asked for in the same words", () => {
+  const win = bootApp();
+  const doc = win.document;
+  doc.getElementById("bAdd").click();
+  doc.getElementById("fSave").click();
+  assert.equal(doc.getElementById("fNameMsg").textContent, "Needed: the name before the #");
+  assert.equal(doc.getElementById("fTagMsg").textContent, "Needed: the tag after the #");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
@@ -10954,7 +11319,7 @@ test("a levelling account's level is kept at each check, and its track says the 
 });
 
 // On a phone the filters and the stats were the whole first screen
-test("on a phone the filters fold behind one button that counts what is on, and the figures slide in one row", () => {
+test("on a phone the filters fold behind one button that counts what is on, and the figures stack two to a row", () => {
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
     stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 10, losses: 8, updatedAt: Date.now() } },
     { id: "b", gameName: "B", tagLine: "1", region: "NA", status: "active", tags: [], history: [], stats: null }]);
@@ -10977,7 +11342,13 @@ test("on a phone the filters fold behind one button that counts what is on, and 
   const phone = css.slice(css.indexOf(".t-filters{display:none}"));
   assert.match(phone, /\.tools:not\(\.open\)>:not\(input\[type=search\]\):not\(\.t-filters\)\{display:none!important\}/,
     "folded means everything but search, the inline-styled Select all too");
-  assert.match(phone, /#dash \.dash,#dash \.dash\[style\*="--cols"\]\{display:flex;overflow-x:auto/, "the figures in one sliding row");
+  // they slid sideways in one row, and a phone showed one and a half of five
+  assert.match(phone, /#dash \.dash,#dash \.dash\[style\*="--cols"\]\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/, "the figures two to a row");
+  assert.match(phone, /#dash \.dash>\.stat:last-child:nth-child\(odd\)\{grid-column:1\/-1\}/, "an odd last one across both");
+  assert.doesNotMatch(phone, /#dash \.dash[^{]*\{[^}]*overflow-x:auto/, "nothing off the edge");
+  const opened = bootApp(ladderSeed(), w => { w.matchMedia = q => ({ matches: /max-width:\s*560px/.test(q), addListener() {}, removeListener() {} });
+    w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ dashCollapsed: false })); });
+  assert.equal(opened.document.querySelector("#dash .dash").style.getPropertyValue("--cols"), "2", "two columns, laid out as such");
 });
 
 // After the first account the panel was 0W 0L, Best —, Group climb —: a wall of nothing
@@ -12312,8 +12683,9 @@ test("an empty vault opens on the app's own gem, over a sentence that breaks eve
 });
 
 // Copies stopped putting up a toast because the button says so; the list row's own
-// "Copy username, then password" button had no such flash, so it said nothing at all
-test("in the list, the login panel's one-button copy says it copied, as the card's does", async () => {
+// "Copy username, then password" button had no such flash, so it said nothing at all.
+// The row has the card's own Copy username now.
+test("in the list, the opened row's Copy username says it copied, as the card's does", async () => {
   const win = bootApp([{ id: "L", region: "EUW", gameName: "L", tagLine: "1", status: "active", tags: [], history: [],
     login: "riotuser", password: "hunter22!", stats: null }]);
   const copied = [];
@@ -12321,8 +12693,8 @@ test("in the list, the login panel's one-button copy says it copied, as the card
   const doc = win.document;
   doc.querySelector('[data-density="list"]').click();
   doc.querySelector('.rw[data-id="L"] .rw-main').click();   // the row opens
-  doc.querySelector('.rw[data-id="L"] .rw-open [data-act="login"]').click();
-  const seq = () => doc.querySelector('.rw[data-id="L"] .lseq');
+  const seq = () => doc.querySelector('.rw[data-id="L"] .rw-open .a-login');
+  assert.match(seq().textContent, /^\s*Copy username$/);
   seq().click();
   await until(() => copied[0] === "riotuser" && /Username copied/.test(seq().textContent), "the row to say it copied");
   assert.ok(seq().classList.contains("copied"));

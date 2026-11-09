@@ -99,6 +99,8 @@
      These are stored secrets in a local vault, not a login this page performs. */
   .mask{-webkit-text-security:disc;text-security:disc;
     font-family:ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:.06em}
+  /* an empty one shows its hint in the page's own type; only the key is set in mono */
+  .mask:placeholder-shown{font-family:inherit;letter-spacing:normal}
   ::selection{background:color-mix(in srgb,var(--gold) 32%,transparent);color:#fff}
 
   body{margin:0;position:relative;color:var(--text);
@@ -244,6 +246,9 @@
   .ribbon{flex:1 1 260px;min-width:0;max-width:760px;display:flex;align-items:center}
   .ribbon:empty{display:none}
   .rib-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px 2px}
+  .rib-tiers{display:inline-flex;align-items:center;gap:4px 2px;flex-wrap:nowrap}
+  /* not room for the emblems beside the wordmark: a row of their own under it (fitRibbon) */
+  .top.rib-below>.ribbon{order:3;flex:1 1 100%;max-width:none}
   .rib-i{height:30px;padding:0 8px;gap:6px;border-radius:var(--r-sm);background:none;border:1px solid transparent;
     color:var(--text);font-size:calc(13px*var(--ts));font-weight:500;font-variant-numeric:tabular-nums}
   .rib-i:hover{background:#ffffff10;border-color:transparent;color:var(--text)}
@@ -352,10 +357,14 @@
   .bar{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 
   /* ---- dropdown menu ---- */
-  #moreMenu button{width:100%;justify-content:flex-start;padding:8px 11px;border-radius:var(--r-sm);
-    background:none;border-color:transparent;box-shadow:none;color:var(--text);font-weight:450}
+  /* the card's ⋯ menu's look: a mark on every entry, one step down, teal on hover */
+  #moreMenu button{width:100%;justify-content:flex-start;gap:10px;padding:8px 11px;min-height:34px;border-radius:var(--r-sm);
+    background:none;border-color:transparent;box-shadow:none;color:var(--text);font-size:calc(13px*var(--ts));font-weight:500}
   #moreMenu button:hover{background:#ffffff0f;border-color:transparent;color:var(--text)}
+  #moreMenu .ico{width:15px;height:15px;flex-shrink:0;color:var(--muted);transition:color .14s ease}
+  #moreMenu button:hover .ico{color:var(--teal-txt)}
   #moreMenu button.b-danger{color:var(--danger)}
+  #moreMenu button.b-danger .ico{color:color-mix(in srgb,var(--danger) 70%,transparent)}
   #moreMenu button.b-danger:hover{background:color-mix(in srgb,var(--danger) 14%,transparent)}
 
   /* ---- native controls ---- */
@@ -657,6 +666,7 @@
   .fb-l{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
   .failbar button{font-size:calc(12px*var(--ts));padding:5px 10px}
   .fb-x{padding:5px 9px;background:none;border-color:transparent;box-shadow:none;color:var(--faint)}
+  .fb-x .ico{width:13px;height:13px}
   /* what the stats panel just filtered on — invisible filters make a short grid
      look like a bug */
   .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -664,7 +674,7 @@
   .fchip{font-size:calc(12px*var(--ts));font-weight:600;padding:4px 8px 4px 11px;gap:7px;border-radius:var(--r-xs);
     color:var(--gold-txt);border-color:color-mix(in srgb,var(--gold) 45%,transparent);
     background:color-mix(in srgb,var(--gold) 12%,transparent)}
-  .fchip span{opacity:.65;font-size:calc(12px*var(--ts))}
+  .fchip .ico{width:11px;height:11px;opacity:.65}
   .fchip:hover{color:var(--gold-txt);background:color-mix(in srgb,var(--gold) 22%,transparent);
     border-color:color-mix(in srgb,var(--gold) 70%,transparent)}
   .fchip-all{color:var(--faint);background:none;border-color:var(--edge);box-shadow:none;padding:4px 11px}
@@ -853,8 +863,9 @@
   .rw-main{display:grid;align-items:center;gap:var(--rw-gap);padding:11px 14px;cursor:pointer;
     grid-template-columns:var(--rw-cols);
     transition:background .14s ease}
+  /* sentence case, like every other label since the small capitals went */
   .rw-head{display:grid;grid-template-columns:var(--rw-cols);gap:var(--rw-gap);align-items:end;padding:2px 15px 8px;
-    font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+    font-size:calc(12px*var(--ts));font-weight:500;letter-spacing:0;color:var(--faint);white-space:nowrap}
   .rw-head .h-chk{width:15px}
   .rw-head .h-r{text-align:right}.rw-head .h-c{text-align:center}
   /* copy the login straight from the row, the way a password manager's list does */
@@ -942,9 +953,10 @@
   .card.dead .c-tint{opacity:.35}
   /* A banned account said so five times (rail, badge, strikethrough, a red border,
      its notes) while its Login was the brightest thing on the card. The badge and
-     the strikethrough say it; the rail is gone, and Login is a plain button. */
-  .card.dead .a-login{background-color:var(--panel2);border-color:var(--btn-edge);color:var(--muted);font-weight:600}
-  .card.dead .a-login:hover{color:var(--text)}
+     the strikethrough say it; the rail is gone, and Login is a plain button, on the
+     card and in an opened list row. */
+  .card.dead .a-login,.rw.dead .a-login{background-color:var(--panel2);border-color:var(--btn-edge);color:var(--muted);font-weight:600}
+  .card.dead .a-login:hover,.rw.dead .a-login:hover{color:var(--text)}
   /* the list's copy keys step back on a banned row the way the card's Login does:
      still there (a login is wanted for an appeal), no longer an invitation */
   .rw.dead .rw-key{color:var(--faint);opacity:.6}
@@ -1150,12 +1162,14 @@
   .panel-close{position:absolute;top:13px;right:13px;width:29px;height:29px;border-radius:var(--r-sm);
     color:var(--muted);z-index:2;font-size:calc(13px*var(--ts))}
   .panel-close:hover{color:var(--danger);background:color-mix(in srgb,var(--danger) 13%,transparent);border-color:transparent}
+  .panel-close .ico{width:15px;height:15px}
 
   /* A label, not an action, so it is not in the action colour: tinted with the
      secondary accent, every card carried a second chip of Login's colour right
      beside the star, and the one button meant to stand out had company. */
-  .regiontag{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:var(--r-xs);flex-shrink:0;
-    background:#ffffff0a;color:var(--muted);border:1px solid var(--line)}
+  /* Plain words, as in the list's Region column. A 28px framed box read as a button
+     that did nothing when clicked. */
+  .regiontag{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:.08em;flex-shrink:0;color:var(--muted)}
   /* the rank is why the card exists, so it gets the card's largest type */
   /* The tier as an emblem rather than only as a coloured word. It sits in the
      rank line itself rather than watermarked behind it: faint behind the type it
@@ -1259,6 +1273,8 @@
   .c-stats.n2,.c-stats.n4,.c-stats.n6{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 20px}
   /* Settings → On each card: a part left under Details is hidden on a closed card */
   body.hide-chart .card:not(.info-open) .lpc,body.hide-stats .card:not(.info-open) .c-stats,
+  /* the list's win-rate bar follows the cards' Win/loss bar setting: off unless asked for */
+  body.hide-wl .rw-bar,
   body.hide-wl .card:not(.info-open) .wrbar,body.hide-goal .card:not(.info-open) .goal,
   body.hide-goal .card:not(.info-open) .lvt,
   body.hide-tags .card:not(.info-open) .ctags,body.hide-notes .card:not(.info-open) .c-notes:not(.editing){display:none}
@@ -1286,14 +1302,6 @@
   .c-notes .none{color:var(--faint)}
   .c-notes textarea{width:100%;font-size:calc(13px*var(--ts));line-height:1.6;min-height:62px;display:block}
   .c-notes.editing{border-color:color-mix(in srgb,var(--teal) 34%,transparent);background:#ffffff0d}
-  /* An empty note is an invitation, not a panel. It still had a dashed box around
-     it, which on a vault where almost nothing is annotated makes it the most
-     repeated element on the page — fifty-one outlined rectangles, all empty.
-     One quiet line now; the box arrives with the note, or as soon as you click. */
-  .c-notes.blank{display:flex;align-items:center;gap:6px;padding:3px 5px;
-    background:none;border:0;color:var(--faint);font-size:calc(12px*var(--ts));opacity:.9}
-  .c-notes.blank:hover{background:#ffffff0d;border:0;color:var(--muted);opacity:1}
-  .c-notes.blank .ico{width:11px;height:11px;opacity:.8}
   /* ---- note fields on the card ----
      Honor, skins, Blue Essence and the rest, each in the same place on every
      card, so sixty accounts can be read down a column instead of one paragraph
@@ -1325,17 +1333,6 @@
   .ni-kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 10px;font-size:calc(12px*var(--ts));line-height:1.45}
   .ni-kv .k2{color:var(--muted)}
   .ni-kv .v2{color:var(--text);overflow-wrap:anywhere}
-  /* the second way in from an empty note, for when what you want to write down
-     is a field; shown on hover where there is hover, always where there isn't */
-  .c-notes.blank{gap:4px}
-  .c-notes.blank button{all:unset;display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:2px 4px;border-radius:var(--r-xs)}
-  .c-notes.blank button:focus-visible{outline:2px solid var(--teal-txt);outline-offset:1px}
-  .c-notes.blank .nf-link{margin-left:auto;color:var(--faint)}
-  .c-notes.blank .nf-link:hover{color:var(--gold-txt)}
-  @media (hover:hover){
-    .c-notes.blank .nf-link{opacity:0;transition:opacity .16s ease}
-    :is(.card,.rw):hover .c-notes.blank .nf-link,.c-notes.blank .nf-link:focus-visible{opacity:1}
-  }
   /* ---- note fields in the account form ---- */
   /* .fld is a column further down the sheet; this one row of it is a header */
   .fld.nf-head{flex-direction:row;align-items:center;gap:10px;padding-top:18px;border-top:1px solid var(--line)}
@@ -1347,8 +1344,12 @@
      a row of input, kind and button is wider than a phone's single column */
   .formgrid>*,.nf-grid>*{min-width:0}
   .nf-grid .fld.wide{grid-column:1/-1}
-  .nf-honor{width:100%}
+  .nf-honor{width:100%;max-width:340px}
+  /* seven choices with "Not set" in words: a row of its own, not a 150px column */
+  .nf-grid .fld.f-honor{grid-column:1/-1}
   .nf-honor button{flex:1;width:auto;min-width:0;height:36px;font-size:calc(13px*var(--ts));font-weight:600;color:var(--muted)}
+  /* the empty choice says "Not set" in words, not "—": it takes the room the words need */
+  .nf-honor button[data-v=""]{flex:0 0 auto;padding:0 11px;font-weight:500}
   .nf-cfg{border:1px solid var(--line);border-radius:var(--r-md);background:#00000026;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
   .nf-cfg .grp-h{color:var(--faint)}
   .nf-on{display:flex;flex-wrap:wrap;gap:8px 18px}
@@ -1448,19 +1449,21 @@
   .s-lead{margin:0 0 18px;font-size:calc(13px*var(--ts));color:var(--muted)}
   .adv-fold>summary{display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;cursor:pointer;list-style:none;
     font-size:calc(13px*var(--ts));font-weight:600;color:var(--text)}
-  .adv-fold>summary::-webkit-details-marker{display:none}
-  .adv-fold>summary::after{content:"";width:6px;height:6px;margin:-3px 0 0 2px;border:solid var(--muted);border-width:0 1.5px 1.5px 0;
+  /* One fold mark: the two guides inside this fold wore the browser's ▼ under its
+     drawn chevron. */
+  .adv-fold>summary::-webkit-details-marker,.guide>summary::-webkit-details-marker{display:none}
+  .adv-fold>summary::after,.guide>summary::after{content:"";flex-shrink:0;width:6px;height:6px;margin:-3px 0 0 2px;border:solid var(--muted);border-width:0 1.5px 1.5px 0;
     transform:rotate(45deg);transition:transform .16s ease}
-  .adv-fold[open]>summary::after{margin-top:3px;transform:rotate(225deg)}
+  .adv-fold[open]>summary::after,.guide[open]>summary::after{margin-top:3px;transform:rotate(225deg)}
   .adv-fold>.hint{margin:10px 0 14px}
-  @media (prefers-reduced-motion:reduce){.adv-fold>summary::after{transition:none}}
+  @media (prefers-reduced-motion:reduce){.adv-fold>summary::after,.guide>summary::after{transition:none}}
   /* Settings → the worker guide */
   .guide{margin-top:8px;border:1px solid var(--line);border-radius:var(--r-md);background:#ffffff05;font-size:calc(13px*var(--ts));color:var(--muted);line-height:1.55}
-  .guide summary{cursor:pointer;padding:10px 13px;font-weight:600;color:var(--text);list-style-position:inside}
+  .guide>summary{display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 13px;font-weight:600;color:var(--text);list-style:none}
   .adv-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px 16px;padding:4px 13px 13px}
   .adv-grid>.fld:first-child,.adv-grid>.hint{grid-column:1/-1}
   @media (max-width:560px){.adv-grid{grid-template-columns:1fr}}
-  .guide[open] summary{border-bottom:1px solid var(--line)}
+  .guide[open]>summary{border-bottom:1px solid var(--line)}
   .guide ol{margin:0;padding:10px 14px 4px 32px}
   .guide li{margin-bottom:9px}
   .guide li::marker{color:var(--gold-txt);font-weight:700}
@@ -1731,7 +1734,8 @@
   .goal-r{margin-left:auto;color:var(--faint);font-variant-numeric:tabular-nums;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .goal-bar{height:4px;border-radius:1px;background:#ffffff12;overflow:hidden}
-  .goal-bar i{display:block;height:100%;border-radius:1px;transition:width .5s cubic-bezier(.22,1,.36,1)}
+  /* never quite empty: at 0% an empty grey track read as a divider line, not a goal */
+  .goal-bar i{display:block;height:100%;min-width:4px;border-radius:1px;transition:width .5s cubic-bezier(.22,1,.36,1)}
   .goal.hit .goal-r{color:var(--good);font-weight:600}
   @media (prefers-reduced-motion:reduce){.goal-bar i{transition:none}}
   .flagmark{display:inline-flex;flex-shrink:0;color:var(--danger)}
@@ -1742,9 +1746,6 @@
   .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
   .lbtns button.copied,button.copied{color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,transparent);gap:4px}
   button.copied .ico{width:11px;height:11px;stroke-width:2.6}
-  .login .lseq{width:100%;font-size:calc(12px*var(--ts));font-weight:600;padding:8px 10px;color:var(--teal-txt);
-    border-color:color-mix(in srgb,var(--teal) 45%,transparent);background:color-mix(in srgb,var(--teal) 10%,transparent)}
-  .login .lseq:hover{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 18%,transparent);color:var(--teal-txt)}
   .c-foot{display:flex;flex-direction:column;align-items:stretch;gap:11px;
     border-top:1px solid var(--line);padding-top:12px;margin-top:auto}
   .c-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
@@ -1771,7 +1772,9 @@
   .acts button,.acts a{font-size:calc(12px*var(--ts));padding:7px 12px;min-height:32px;text-decoration:none}
   /* the login panel's eye, beside the main button: square, like the ⋯ */
   .c-lgn{min-width:36px;padding:7px 9px;color:var(--text)}
-  .c-lgn .ico{width:16px;height:16px}
+  /* one size across the row: Copy username's mark was 12px, the eye 16px and the ⋯ a
+     typed character at 16px type */
+  .c-lgn .ico,.acts>.a-login .ico,.c-more .ico{width:16px;height:16px}
   .c-lgn.on{background-color:var(--panel3);border-color:var(--line2)}
   .c-more{min-width:36px;padding:7px 10px;font-size:calc(16px*var(--ts));line-height:1;color:var(--text);
     letter-spacing:.08em}
@@ -1786,6 +1789,10 @@
   .c-foot .acts{gap:8px}
   .c-foot .acts>button:not(.c-more):not(.c-lgn){flex:1 1 0;min-width:0}
   .c-foot .acts>.c-more,.c-foot .acts>.c-lgn{flex:0 0 auto}
+  /* An opened list row has the card's three. The row is up to 1280px wide, so the
+     main button keeps a card's width rather than stretching across all of it. */
+  .rw-open .acts{gap:8px;flex-wrap:nowrap}   /* narrower first, never a ⋯ on a line of its own */
+  .rw-open .acts>.a-login{flex:0 1 260px;min-width:0}
 
   /* ---- the card's ⋯ menu: one fixed element, shared by every card ---- */
   .card-menu{position:fixed;z-index:70;width:232px;max-width:calc(100vw - 16px)}
@@ -2167,11 +2174,13 @@
   .acc-prev-card-h{display:flex;flex-wrap:wrap;align-items:center;gap:4px 7px;margin-bottom:6px}
   .acc-prev-nm{font-size:calc(13px*var(--ts));font-weight:600;color:var(--text);white-space:nowrap}
   .acc-prev-star{color:var(--star);font-size:calc(13px*var(--ts));line-height:1;margin-left:auto}
+  .acc-prev-star .ico,.acc-prev-tools button.on .ico{fill:currentColor}
   .acc-prev-rk{flex-basis:100%;font:700 calc(14px*var(--ts))/1.1 'Inter',system-ui,sans-serif;letter-spacing:-.01em;color:#7ea6f0}
   .acc-prev-rk small{font:600 calc(11px*var(--ts)) Inter,system-ui,sans-serif;text-transform:none;color:var(--muted);margin-left:4px}
   .acc-prev-wl{font-size:calc(12px*var(--ts));color:var(--muted);margin-bottom:8px}
   .acc-prev-card .bar{gap:6px}
   .acc-reset{width:27px;height:27px;padding:0;font-size:calc(13px*var(--ts));color:var(--muted)}
+  .acc-reset .ico{width:14px;height:14px}
   .acc-reset:hover{color:var(--text)}
   @media (max-width:620px){
     .acc-prev{flex-direction:column;width:min(340px,calc(100vw - 24px))}
@@ -2574,8 +2583,6 @@
   .chip:active{transform:scale(.95)}
   .c-portrait{transition:transform .24s cubic-bezier(.22,1,.36,1)}
   .card:hover .c-portrait{transform:scale(1.05)}
-  .regiontag{transition:background .2s,border-color .2s}
-  .card:hover .regiontag{color:var(--text);border-color:var(--line2)}
 
   /* ---- motion ---- */
   /* The lit border used to be a `background` transition between two gradients,
@@ -2692,7 +2699,6 @@
     .tools>.t-kbd{display:none}.tools>#tSearch:placeholder-shown{padding-right:12px}   /* no Ctrl on a touch screen */
     .pal-f{display:none}   /* nor arrow keys, Enter or Esc: Quick find's key hints mean nothing there */
     .rid{padding-block:5px;margin-block:-3px}
-    .c-notes.blank>button,.c-notes.blank .nf-link{min-height:30px} /* matches the all:unset rule it has to beat */
   }
   @media (max-width:760px){
     .top{align-items:flex-start;gap:16px}
@@ -2733,6 +2739,7 @@
     .top>.brand .brand-mark{display:none}
     .top>.bar{grid-column:2;grid-row:1;margin-left:0}
     .top>.ribbon{grid-column:1/-1;grid-row:2;max-width:none}
+    .rib-tiers{flex-wrap:wrap}   /* the ribbon has the full width here; ten emblems may still wrap */
     .top h1{font-size:calc(20px*var(--ts));white-space:nowrap}
   }
   @media (max-width:400px){.top h1{font-size:calc(18px*var(--ts))}}
@@ -2772,19 +2779,18 @@
     .tools>#tFav,.tools>#tArchived,.tools>#tSelectMode{order:2;flex:1 1 calc(33.3% - 6px);min-width:0;padding-inline:8px}
     .tools>label:has(#tSelectAll){order:3}
     body:not(.selecting) .tools>label:has(#tSelectAll){display:none!important}
-    .tools.open>.t-filters{background-color:var(--panel3);border-color:var(--line2)}
-    /* The figures wrapped two to a row, a third alone beneath them, and the champion
-       chips wrapped into a block of their own: together most of a screen. Each is
-       one row now that slides sideways, the next figure peeking in at the edge to
-       say there is more. */
-    #dash .dash,#dash .dash[style*="--cols"]{display:flex;overflow-x:auto;scroll-snap-type:x proximity;
-      overscroll-behavior-x:contain;scrollbar-width:none}
-    #dash .dash>.stat{flex:0 0 min(62%,220px);scroll-snap-align:start}
-    /* the edge fades, so a figure cut by it reads as "more this way", not as all there is */
-    #dash .dash{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent)}
+    /* open, it says so: a panel shade darker was all that changed, which nobody saw */
+    .tools.open>.t-filters{color:var(--teal-txt);background-color:color-mix(in srgb,var(--teal) 12%,var(--panel2));
+      border-color:color-mix(in srgb,var(--teal) 50%,transparent)}
+    /* The figures slid sideways in one row, and a phone showed one and a half of
+       five, with nothing but a faded edge to say the rest were there. They stack two
+       to a row now, an odd last one across both; the panel starts folded on a phone,
+       so its height is only spent when asked for. The champion chips still slide. */
+    #dash .dash,#dash .dash[style*="--cols"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+    #dash .dash>.stat:last-child:nth-child(odd){grid-column:1/-1}
     #dash .dist{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-right:20px}
     #dash .dist>*{flex-shrink:0}
-    #dash .dash::-webkit-scrollbar,#dash .dist::-webkit-scrollbar{display:none}
+    #dash .dist::-webkit-scrollbar{display:none}
   }
   @media (max-width:560px){.formgrid{grid-template-columns:1fr;padding:18px}.card{padding:15px}
     .c-drawer{margin:1px -15px -15px}

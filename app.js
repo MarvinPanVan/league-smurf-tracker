@@ -110,8 +110,15 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.28.1";
+const APP_VERSION="2.29.0";
 const APP_CHANGELOG=[
+  {v:"2.29.0",items:[
+    "An opened row in the list works like its card: Copy username, the eye for the saved login, ⋯ for the rest, and Fix Riot ID or Check rank when the account needs one",
+    "Copy password turns back into Copy username after a minute, and the person icon always means the username, the key the password",
+    "The \"No backup yet\" reminder shows above your accounts even with the stats closed, and on a phone the stats sit two to a row",
+    "The rank emblems at the top stay on one line, and move under the title together when there isn't room beside it",
+    "Archived accounts no longer ask to be refreshed, and Compare's Last login is when you last copied that account's login",
+  ]},
   {v:"2.28.1",items:[
     "The buttons at the top right are one set of icons, and Stats is a simple on/off switch",
   ]},
@@ -464,9 +471,11 @@ function isChecked(a){return !!(a.stats&&a.stats.updatedAt)}
    run, accounts whose Riot side is not set up yet and can only answer "not found"
    again. Those have their own tiles (Never checked, Needs attention) and their own
    way to be checked: filter to them and Check N shown. */
+/* Archived is out of the rotation the way banned is: an archived card wore the
+   amber "Updated 9 days ago" and a Refresh for an account put away on purpose. */
 function isStale(a){
   const s=a.stats;
-  return a.status!=="banned"&&isChecked(a)&&s.found!==false&&!!(s.tier||s.level!=null)&&Date.now()-s.updatedAt>STALE_MS;
+  return isLive(a)&&isChecked(a)&&s.found!==false&&!!(s.tier||s.level!=null)&&Date.now()-s.updatedAt>STALE_MS;
 }
 function isRanked(a){const t=a.stats&&a.stats.found!==false&&(a.stats.tier||"").toUpperCase();return !!(t&&t!=="UNRANKED")}
 /* An account with no rank yet. "Never checked" is right until a check has been
@@ -1086,6 +1095,16 @@ const ICON={
   clipboard:'<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
   star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
   chevron:'<polyline points="6 9 12 15 18 9"/>',
+  // close and remove: drawn, as ✕ was a typed character a size and weight of its own
+  x:'<line x1="6.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="6.5" y2="17.5"/>',
+  // Rank…: a rank's chevrons, so it no longer shares Account…'s pencil
+  rank:'<polyline points="6 13.5 12 8 18 13.5"/><polyline points="6 19 12 13.5 18 19"/><line x1="12" y1="3" x2="12" y2="5"/>',
+  // the header menu's files: out of the app, into it, and a link to share
+  download:'<path d="M12 4v11"/><polyline points="7.5 10.5 12 15 16.5 10.5"/><path d="M5 20h14"/>',
+  upload:'<path d="M12 20V9"/><polyline points="7.5 13.5 12 9 16.5 13.5"/><path d="M5 4h14"/>',
+  link:'<path d="M10 13.5a4.5 4.5 0 0 0 6.8.5l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.6 1.6"/><path d="M14 10.5a4.5 4.5 0 0 0-6.8-.5l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.6-1.6"/>',
+  // Settings, as the header's ⋯ menu draws it
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   /* The header's set, drawn on the same grid and stroke as the magnifier beside them:
      the stats switch, and ⋯ and ? which were typed characters, smaller than the
      drawn icon, at another height and in another weight. */
@@ -1123,6 +1142,11 @@ const ICON={
   trash:'<line x1="3.5" y1="6" x2="20.5" y2="6"/><path d="M18.5 6l-.9 13.1A2 2 0 0 1 15.6 21H8.4a2 2 0 0 1-2-1.9L5.5 6"/><line x1="10" y1="10.5" x2="10" y2="17"/><line x1="14" y1="10.5" x2="14" y2="17"/><path d="M9 6V4.2A1.2 1.2 0 0 1 10.2 3h3.6A1.2 1.2 0 0 1 15 4.2V6"/>'
 };
 function icon(name,cls){return `<svg class="ico${cls?" "+cls:""}" viewBox="0 0 24 24">${ICON[name]}</svg>`}
+/* The header's ⋯ menu marks every entry the way a card's ⋯ menu does. Settings had
+   the only mark, over ten lines of plain words: two menus, two styles. */
+function setMenuItem(b,ic,label){setHTML(b,icon(ic)+`<span>${esc(label)}</span>`)}
+const MORE_MENU_ICONS={bSettings:"gear",bBulkAdd:"plus",bShare:"link",bNewSeason:"reset",bStreamer:"eyeOff",
+  bExportEnc:"lock",bExport:"download",bExportCsv:"download",bImport:"upload",bImportCsv:"upload",bDeleteAll:"trash"};
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 // data-id and querySelector both need the id to be inert. esc() for attributes;
 // CSS.escape for selectors — a poisoned id in localStorage used to break out of
@@ -1973,6 +1997,16 @@ function flashCopied(btn){
 }
 let lastCopiedSecret=null;
 const loginSeq=new Set();   // cards whose username is copied and whose password is next
+/* ...for a minute. The step stayed until the password was copied or the page was
+   reloaded, and this app sits in a tab for days: the next day the button you
+   always press copied the password. A minute is time enough to switch to the
+   client, paste the name and come back. */
+let LOGIN_SEQ_MS=60000;
+const loginSeqTimer=new Map();
+function armLoginSeq(id){
+  clearTimeout(loginSeqTimer.get(id));
+  loginSeqTimer.set(id,setTimeout(()=>{loginSeqTimer.delete(id);if(loginSeq.delete(id))renderCard(id)},LOGIN_SEQ_MS));
+}
 const loginFlash=new Map(); // card id -> what its Login button just copied, for a moment
 function flashLogin(id,pw){
   const token={pw};loginFlash.set(id,token);renderCard(id);
@@ -1984,15 +2018,39 @@ function flashLogin(id,pw){
    had to be pressed for the copying, the thing you came for. The panel (to see the
    password, the email, the date of birth) is the eye beside it. With one of the
    two saved it copies that one; with neither it offers to add them. */
+/* One mark for one thing, everywhere: the person is the username and the key is the
+   password, on a card, in a list row and in Quick find. The card's main button wore
+   the key while it said "Copy username", the key a list row uses for the password. */
+const LOGIN_ICON={"Copy username":"user","Copy password":"key","Add login":"plus"};
 function loginButtonsHTML(a,open){
   const both=a.login&&a.password, next=both&&loginSeq.has(a.id), fl=loginFlash.get(a.id);
   const label=next||(!a.login&&a.password)?"Copy password":a.login?"Copy username":"Add login";
   const main=a.login||a.password
-    ?`<button data-act="copyseq" class="a-login${fl?" copied":""}" title="${both?"Copies the username, then the password":"Copies it to paste into the Riot client"}">${fl?icon("check")+(fl.pw?" Copied, clears in 30s":" Username copied"):icon("key")+" "+label}</button>`
-    :`<button data-act="addlogin" class="a-login" title="Save the username and password for this account">${icon("key")} ${label}</button>`;
+    ?`<button data-act="copyseq" class="a-login${fl?" copied":""}" title="${both?"Copies the username, then the password":"Copies it to paste into the Riot client"}">${fl?icon("check")+(fl.pw?" Copied, clears in 30s":" Username copied"):icon(LOGIN_ICON[label])+" "+label}</button>`
+    :`<button data-act="addlogin" class="a-login" title="Save the username and password for this account">${icon(LOGIN_ICON[label])} ${label}</button>`;
   const eye=a.login||a.password||a.email||a.birthdate
     ?`<button data-act="login" class="c-lgn${open?" on":""}" aria-pressed="${open}" title="${open?"Hide":"Show"} the saved login" aria-label="${open?"Hide":"Show"} the saved login">${icon(open?"eyeOff":"eye")}</button>`:"";
   return main+eye;
+}
+
+/* The saved login, unfolded by the eye beside Copy username: the same panel on a
+   card and in an opened list row. */
+function loginPanelHTML(a,rev){
+  return `<div class="login${rev||""}">
+      <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
+      <div class="lrow"><span class="val mono ${a.password?"":"none"}" style="font-family:${a.password?"":"inherit"}">${a.password?(shownPw.has(a.id)?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${shownPw.has(a.id)?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
+      ${pwWarnHTML(a)}
+      ${a.email?`<div class="lrow"><span class="val">${esc(a.email)}</span><span class="lbtns"><button data-act="copymail">Copy</button></span></div>`:""}
+      <!-- The two facts Riot asks for when an account has to be recovered, which is
+           exactly the moment you are looking at this panel. -->
+      ${a.birthdate?`<div class="lrow"><span class="val"><span class="lk">Date of birth</span>${esc(fmtDate(a.birthdate))}</span><span class="lbtns"><button data-act="copybirth">Copy</button></span></div>`:""}
+      ${a.createdOn?`<div class="lrow"><span class="val"><span class="lk">Created</span>${esc(fmtDate(a.createdOn))}<em class="lage">${esc(ageFrom(a.createdOn))}</em></span></div>`:""}
+    </div>`;
+}
+// The ⋯ that opens an account's menu, on a card and in an opened list row
+function moreButtonHTML(a){
+  const on=openMore.has(a.id);
+  return`<button data-act="more" class="c-more${on?" on":""}" aria-haspopup="menu" aria-expanded="${on}" title="More actions" aria-label="More actions">${icon("dots")}</button>`;
 }
 function uid(){return Date.now()+"-"+Math.random().toString(36).slice(2,7)}
 function cryptoInt(max){
@@ -3132,7 +3190,7 @@ function renderFailbar(){
   el.classList.remove("hidden");
   setHTML(el,`<span class="fb-n">${fails.length} account${fails.length===1?"":"s"} failed to refresh</span>`
     +`<span class="fb-l">${fails.slice(0,6).map(f=>esc(f.name)).join(", ")}${fails.length>6?" +"+(fails.length-6)+" more":""}</span>`
-    +`<button id="bShowFails">Show</button><button id="bRetryFails">Try again</button><button id="bDismissFails" class="fb-x" aria-label="Dismiss">✕</button>`);
+    +`<button id="bShowFails">Show</button><button id="bRetryFails">Try again</button><button id="bDismissFails" class="fb-x" aria-label="Dismiss">${icon("x")}</button>`);
 }
 let lastFails=null;
 /* With no connection Check all went through every account in turn and failed
@@ -3397,8 +3455,8 @@ function poolLpTrend(pool){
       +(i===coords.length-1?`<circle class="pool-dot" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.6"></circle>`:"");
   }).join("");
   const svg=`<svg class="pool-spark" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Average climb of counted accounts from ${esc(from)} to ${esc(to)}"><polyline fill="none" stroke="var(--teal)" stroke-width="1.5" points="${poly}"/>${dots}</svg>`;
-  const sign=delta>0?"↑ +":delta<0?"↓ ":"→ ";
-  const headline=sign+Math.abs(delta);
+  // signed the way This week beside it is, "+312": it alone had an arrow, "↑ +312"
+  const headline=(delta>0?"+":delta<0?"−":"")+fmtN(Math.abs(delta));
   const note=from+" → "+to+" · the average climb of counted accounts; one added later counts from its first check";
   // what fits under a tile: the window; the rest of the sentence is the tile's title
   const window_=from+" → "+to;
@@ -3485,13 +3543,16 @@ function renderCompare(){
       <div class="cmp-lp">${ranked&&s.lp!=null?esc(fmtN(s.lp)+" LP"):"&nbsp;"}</div>
     </div>`;
   };
+  /* What isn't known is left blank, as everywhere else: "—" was the one placeholder
+     still drawn. "Last played" took a game, a login or a rank check, whichever was
+     newest, so an account checked an hour ago was "played" an hour ago; the card's
+     "Last login" is the stamp its Copy username leaves, and so is this. */
   const facts=acc=>{
-    const s=acc.stats||{}, wl=winLoss(s), tr=wrTrend(acc);
-    const seen=acc.lastPlayedAt||acc.lastLoginAt||s.updatedAt||0;
+    const s=acc.stats||{}, wl=winLoss(s), tr=wrTrend(acc), seen=openedAt(acc);
     return {
-      record:wl.w!=null||wl.l!=null?(wl.w!=null?fmtN(wl.w)+"W":"—")+" "+(wl.l!=null?fmtN(wl.l)+"L":"—"):"—",
-      wr:wl.wr, peak:peakInfo(acc).peak||"—", trend:tr?(tr.d>0?"+":"")+tr.d+" pp":"—",
-      seen, level:s.level!=null?String(s.level):"—",
+      record:[wl.w!=null?fmtN(wl.w)+"W":"",wl.l!=null?fmtN(wl.l)+"L":""].filter(Boolean).join(" "),
+      wr:wl.wr, peak:peakInfo(acc).peak||"", trend:tr?(tr.d>0?"+":"")+tr.d+" pp":"",
+      login:seen?timeAgo(seen):"", level:s.level!=null?String(s.level):"",
     };
   };
   const fa=facts(a), fb=facts(b);
@@ -3499,7 +3560,7 @@ function renderCompare(){
   const cmp=(x,y)=>x==null||y==null||x===y?0:(x>y?-1:1);
   const row=(label,l,r,better)=>`<div class="cmp-row"><span class="${better<0?"win":""}">${esc(l)}</span>`
     +`<span class="k">${esc(label)}</span><span class="${better>0?"win":""}">${esc(r)}</span></div>`;
-  const pct=v=>v==null?"—":v+"%";
+  const pct=v=>v==null?"":v+"%";
   setHTML($("cmpBody"),`<div class="cmp">
     <div class="cmp-head">${side(a)}<div class="cmp-vs" aria-hidden="true"><span>VS</span></div>${side(b)}</div>
     <div class="cmp-rows">`
@@ -3508,7 +3569,7 @@ function renderCompare(){
       +row("Peak",fa.peak,fb.peak,0)
       +row("WR trend",fa.trend,fb.trend,0)
       +row("Level",fa.level,fb.level,0)
-      +row("Last played",fa.seen?timeAgo(fa.seen):"never",fb.seen?timeAgo(fb.seen):"never",0)
+      +row("Last login",fa.login,fb.login,0)
     +`</div></div>`);
   const modal=$("compareModal");
   if(!modal){compareIds=[];return}
@@ -4071,10 +4132,32 @@ function renderRibbon(){
   const missOn=ui.flag==="missing";
   const warn=missN?`<button class="rib-i rib-warn${missOn?" on":""}" data-flag="missing" aria-pressed="${missOn}" aria-label="Not found, ${missN}"`
     +` title="op.gg has no profile for these Riot IDs: not entered yet, renamed, or mistyped.">${icon("alert")}<span>${missN} not found</span><u>${missOn?"Shown":"Show"}</u></button>`:"";
-  setHTML(el,`<div class="rib-row" role="group" aria-label="Accounts by tier">${tiers.map(tierItem).join("")}`
+  setHTML(el,`<div class="rib-row" role="group" aria-label="Accounts by tier">${tiers.length?`<span class="rib-tiers">${tiers.map(tierItem).join("")}</span>`:""}`
     +(states.length?`<span class="rib-states">${states.join("")}</span>`:"")
     +warn+`</div>`);
+  fitRibbon();
 }
+/* The emblems are one group, never wrapped one at a time: at 1280px nine sat beside
+   the wordmark and Iron alone on a second line, and with Streamer mode on the
+   header grew from 64px to 164px. When the group does not fit between the wordmark
+   and the buttons, the whole ribbon takes a row of its own under both, the states
+   after the emblems. Measured, since only layout knows; a phone gives the ribbon a
+   row of its own already, and lets the emblems wrap there. */
+function fitRibbon(){
+  const top=document.querySelector(".top"), rib=$("ribbon");if(!top||!rib)return;
+  const tiers=rib.querySelector(".rib-tiers");
+  let below=false;
+  if(tiers&&!phoneLayout()){
+    const brand=top.querySelector(".brand"), bar=top.querySelector(".bar");
+    const gap=parseFloat(getComputedStyle(top).columnGap)||0;
+    const room=top.clientWidth-(brand?brand.getBoundingClientRect().width:0)-(bar?bar.getBoundingClientRect().width:0)-2*gap;
+    below=tiers.getBoundingClientRect().width>room;
+  }
+  top.classList.toggle("rib-below",below);
+}
+// the room changes with the window, and with the buttons: Streamer mode's pill, the Stats switch
+if("ResizeObserver"in window){const ro=new ResizeObserver(()=>fitRibbon());ro.observe(document.querySelector(".top"));ro.observe(document.querySelector(".top .bar"))}
+else addEventListener("resize",()=>fitRibbon());
 /* Collapsed until asked for on a phone: there the stats were the whole first
    screen, ahead of every account. A choice made with the toggle is kept on any
    screen; until then a phone starts closed and a wider screen open. */
@@ -4104,6 +4187,7 @@ function syncDashToggle(){
 }
 function renderDash(){
   applyRankTheme(); // a new best tier is news the dashboard already gets; the colours follow it
+  renderBackupNote();
   const el=$("dash");
   /* Chore counts use the same toolbar filters as the grid (region/tag/status/…),
      but not the search: that is a quick find, not a scope, and a panel that redrew
@@ -4136,12 +4220,6 @@ function renderDash(){
   const topChamps=mergeChampions(pool);
   const neverN=countPool.filter(neverChecked).length;
   const attentionN=countPool.filter(needsAttention).length;
-  let bk="";
-  if(hasStorage){
-    const remindDays=clampExportDays(cfg.exportRemindDays);
-    if(!cfg.lastExport)bk="No backup yet.";
-    else if(Date.now()-cfg.lastExport>remindDays*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago.";
-  }
   const dupN=countPool.filter(isDuplicate).length;
   const rotN=countPool.filter(needsRotation).length;
   const decayN=countPool.filter(decayRisk).length;
@@ -4156,7 +4234,7 @@ function renderDash(){
      with nothing behind it yet (0W 0L, a climb with one day of history) waits
      until it has something. */
   const cells=[
-    (W+L)>0&&`<div class="stat"><div class="k">Season W/L</div><div class="v nw">${fmtN(W)}<small>W</small> ${fmtN(L)}<small>L</small></div>
+    (W+L)>0&&`<div class="stat"><div class="k">Season W/L</div><div class="v nw">${esc(wlText(W,L))}</div>
       <div class="s-note">${wr} WR · ${pool.length} counted account${pool.length===1?"":"s"}</div></div>`,
     // "Never checked" is a word in the header line, which filters the same way, so
     // it has no tile here. Flagged is amber: a reminder you left, not an alarm.
@@ -4192,10 +4270,9 @@ function renderDash(){
       <div class="v spark-wrap">${poolTrend.svg}</div>
       <div class="s-note">per account · ${esc(poolTrend.span)}</div></div>`,
   ].filter(Boolean);
-  const bkNote=bk&&accounts.length&&!previewMode&&!(setupVisible()&&!cfg.lastExport)?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:"";
   // nothing to show: no panel, and no Hide stats button for an empty one
   $("bDashToggle").classList.toggle("hidden",!cells.length&&!topChamps.length);
-  if(!cells.length&&!topChamps.length){hideSparkTip();setHTML(el,bkNote);dashJustOpened=false;wireBkNow(el);return}
+  if(!cells.length&&!topChamps.length){hideSparkTip();setHTML(el,"");dashJustOpened=false;return}
   setHTML(el,`
   <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
   ${cells.length?`<div class="dash">${cells.join("")}</div>`:""}
@@ -4211,12 +4288,28 @@ function renderDash(){
       return`<option value="${f.v}"${curFloor===f.v?" selected":""}>${f.v?esc(f.label)+" ("+n+")":"all "+n+" ranked account"+(n===1?"":"s")}</option>`}).join("")}</select>
     ${handOutN||filterHint?`<span class="dash-ex">${[handOutN?handOutN+" left out in their account settings":"",filterHint?esc(filterHint):""].filter(Boolean).join(" · ")}</span>`:""}
   </div>`:""}
-  </div></div>
-  ${bkNote}`);
+  </div></div>`);
   dashJustOpened=false; // consumed by the render above
   bindSparkTip(el);
-  wireBkNow(el);
   balanceDash();
+}
+/* The reminder against losing the vault lived in the stats panel, and the panel
+   starts folded on a phone: the one warning that Safari deletes a vault after a
+   week away was where nobody looked. It has a place of its own above the accounts,
+   open stats or not. */
+function renderBackupNote(){
+  const el=$("bkNote");if(!el)return;
+  let bk="";
+  if(hasStorage){
+    const remindDays=clampExportDays(cfg.exportRemindDays);
+    if(!cfg.lastExport)bk="No backup yet.";
+    else if(Date.now()-cfg.lastExport>remindDays*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago.";
+  }
+  // ...unless Safari's seven-day warning is up, whose own Back up now says it louder
+  const iosBand=$("iosBand"), band=!!(iosBand&&!iosBand.classList.contains("hidden"));
+  const show=bk&&accounts.length&&!previewMode&&!band&&!(setupVisible()&&!cfg.lastExport);
+  setHTML(el,show?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:"");
+  wireBkNow(el);
 }
 /* The reminder said "hit Export" — and Export lives two clicks away, inside the
    ⋯ menu at the other end of the header. The way to act on it is now on it:
@@ -4240,9 +4333,8 @@ function balanceDash(){
   if(!d)return;
   const tiles=[...d.children];
   const narrow=!!(window.matchMedia&&matchMedia("(max-width:720px)").matches); // the .dash rule's own minimum there
-  // a phone lays the figures in one sliding row: one row, so only the first has no rule before it
-  const strip=phoneLayout();
-  const cols=strip?tiles.length:dashCols(tiles.length,d.clientWidth,narrow?140:158);
+  // a phone lays the figures two to a row
+  const cols=phoneLayout()?Math.min(2,tiles.length):dashCols(tiles.length,d.clientWidth,narrow?140:158);
   if(!cols){d.style.removeProperty("--cols");return}
   d.style.setProperty("--cols",cols);
   // the hairline between tiles belongs inside a row, not down the left edge of one
@@ -4293,8 +4385,8 @@ function renderChips(){
   if(ui.favOnly)out.push(["favOnly","Favorites"]);
   // no chip for the search: the box already says what is in it
   setHTML($("chips"),!out.length?"":out.map(([k,label])=>
-    `<button class="fchip" data-clear="${k}">${esc(label)}<span aria-hidden="true">✕</span></button>`).join("")
-    // two have a ✕ each; Clear all earns its room from three
+    `<button class="fchip" data-clear="${k}" aria-label="${esc(label)}, clear">${esc(label)}${icon("x")}</button>`).join("")
+    // two have an x each; Clear all earns its room from three
     +(out.length>2?`<button class="fchip fchip-all" data-clear="all">Clear all</button>`:""));
 }
 
@@ -5083,7 +5175,7 @@ function applyStreamer(){
   const on=streamerOn();
   document.body.classList.toggle("streamer",on);
   const pill=$("streamerPill");if(pill)pill.classList.toggle("hidden",!on);
-  const b=$("bStreamer");if(b)b.textContent=on?"Streamer mode: on":"Streamer mode";
+  const b=$("bStreamer");if(b)setMenuItem(b,"eyeOff",on?"Streamer mode: on":"Streamer mode");
 }
 function setStreamer(on){
   cfg.streamer=on?true:null;saveCfg();applyStreamer();render();
@@ -5304,7 +5396,7 @@ function noteFactsHTML(a,clickable,cap){
 }
 // Split out of cardHTML so opening the editor can swap this one block instead of
 // rebuilding the card around it — see syncNoteBlock.
-function noteBlockHTML(a,rev,blank){
+function noteBlockHTML(a,rev){
   // The fields stay in view above the text being written, but only the text
   // edits here: they open the account form, which a click inside an open editor
   // must not do — it would take the focus the editor saves on losing.
@@ -5316,25 +5408,23 @@ function noteBlockHTML(a,rev,blank){
   const cap=!openInfo.has(a.id), facts=noteFactsHTML(a,true,cap);
   if(a.notes||facts)return`<div class="c-notes${cap?" capped":""}" data-act="noteedit" title="Click to edit the note"><span class="k">Notes ${icon("pencil")}</span>${facts}${a.notes?`<div class="nt">${sens(esc(a.notes))}</div>`:""}</div>`;
   /* An empty note was two invitations, "Add a note" and "Honor, skins…", on nearly
-     every card: twenty cards, forty prompts. A card says nothing now (Add note is in
-     its ⋯ menu); an open list row, which is the detail view, still offers it. */
-  if(!blank)return"";
-  return`<div class="c-notes blank"><button type="button" data-act="noteedit" title="Click to write a note">${icon("pencil")} Add a note</button>`
-    +`<button type="button" class="nf-link" data-act="notefields" title="Honor, skins, Blue Essence and more">Honor, skins…</button></div>`;
+     every card: twenty cards, forty prompts. It says nothing now, on a card or in an
+     opened list row: Add note is in the ⋯ menu of both. */
+  return"";
 }
 // Replace only the note block, leaving the rest of the card's DOM alone. Going
 // through renderGrid meant every card on screen was thrown away and rebuilt just
 // to open one textarea, which is why the portrait, the select checkbox and the
 // rest of the card blinked out and came back.
 function syncNoteBlock(card,a){
-  const html=noteBlockHTML(a,"",!!card.closest(".row"));
+  const html=noteBlockHTML(a,"");
   const cur=card.querySelector(".c-notes");
   if(!html){if(cur)cur.remove();return}
   const tmp=document.createElement("div");
   tmp.innerHTML=html;
   const node=tmp.firstElementChild;
   if(cur)cur.replaceWith(node);
-  else{const foot=card.querySelector(".c-foot");foot?foot.before(node):card.appendChild(node)}
+  else{const foot=card.querySelector(".c-foot")||card.querySelector(".rw-open>.acts");foot?foot.before(node):card.appendChild(node)}
   focusNoteEditor(card);
 }
 function focusNoteEditor(root){
@@ -5536,36 +5626,30 @@ function rowHTML(a,i){
       <span class="rw-spark">${sparkline(thisSeason(a.history),col)
         // Nothing to plot yet, so the slot offers the one thing that would change
         // that. Sixty never-checked rows used to be sixty dead lines.
-        ||(!isChecked(a)&&!isChecking?`<button class="rw-check" data-act="check" title="Check this account's rank now">${icon("refresh")} Check</button>`:"")}</span>
+        // Not on a banned or archived row (the card skips those too), nor an opened
+        // one, whose Check rank is under it in the card's words: one button, one action.
+        ||(!isChecked(a)&&!isChecking&&!open&&isLive(a)?`<button class="rw-check" data-act="check" title="Check this account's rank now">${icon("refresh")} Check</button>`:"")}</span>
       <span class="rw-rank" style="color:${isRanked(a)?col:"var(--muted)"}"><b>${esc(rank)}</b>${lp?`<em>${esc(lp)}</em>`:""}</span>
       <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${fmtN(Math.abs(dv))}</span>`:""}</span>
       <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wlText(wins,losses)}</em>`
         :total>0?`<em>${wins!=null?fmtN(wins)+"W":fmtN(losses)+"L"}</em>`:""}</span>
       <span class="rw-rg">${esc(a.region)}</span>
-      <span class="rw-up${isStale(a)||!hasReading(s)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
+      <span class="rw-up${isStale(a)||(!hasReading(s)&&isLive(a))?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
       <span class="rw-keys">${a.login?`<button class="rw-key" data-act="copylogin" title="Copy username" aria-label="Copy username for ${esc(plainName(a))}">${icon("user")}</button>`:""}${a.password?`<button class="rw-key" data-act="copypw" title="Copy password" aria-label="Copy password for ${esc(plainName(a))}">${icon("key")}</button>`:""}</span>
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     ${open?`<div class="rw-open">
+      <!-- the card's line for a rank it cannot show: Fix Riot ID, or Check rank -->
+      ${isChecking?"":s&&s.found===false?fixIdHTML():!hasReading(s)?checkRankHTML(a):""}
       ${(()=>{const p=peakInfo(a),h=thisSeason(a.history);return rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,p.peakV,p.peak)})()}
       ${infoBlockHTML(a)||""}
-      ${noteBlockHTML(a,"",true)}
-      <div class="acts">
-        <button data-act="login" class="a-login">${icon("user")} ${openLogin.has(a.id)?"Hide login":"Login"}</button>
-        <a class="btn" href="https://op.gg/lol/summoners/${(REGIONS[a.region]||REGIONS.EUW).opgg}/${encodeURIComponent(a.gameName)}-${encodeURIComponent(a.tagLine)}" target="_blank" rel="noreferrer">OP.GG ↗</a>
-        <button data-act="check" ${isChecking?"disabled":""} style="color:var(--teal-txt)">${isChecking?"…":icon("refresh")+" Refresh"}</button>
-        <button data-act="rank">${icon("pencil")} Rank</button>
-        <button data-act="edit">Edit</button>
-        ${a.archived?'<button data-act="unarchive">Unarchive</button>':'<button data-act="archive">Archive</button>'}
-        <button data-act="del" class="b-danger">${armedDelete===a.id?"Sure?":"Delete"}</button>
-      </div>
-      ${openLogin.has(a.id)?`<div class="login">
-        ${a.login&&a.password?(()=>{const fl=loginFlash.get(a.id);   // copies say so on the button, here as on the card
-          return`<button class="lseq${fl?" copied":""}" data-act="copyseq">${fl?icon("check")+(fl.pw?" Copied, clears in 30s":" Username copied"):loginSeq.has(a.id)?icon("clipboard")+" Copy password":icon("clipboard")+" Copy username, then password"}</button>`})():""}
-      <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
-        <div class="lrow"><span class="val mono ${a.password?"":"none"}">${a.password?(shownPw.has(a.id)?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${shownPw.has(a.id)?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
-        ${pwWarnHTML(a)}
-      </div>`:""}
+      ${noteBlockHTML(a,"")}
+      <!-- The card's own words and controls. It was the app before every clean-up:
+           Login, OP.GG ↗, Refresh, Rank, Edit, Archive and Delete in a row of seven,
+           "Add a note" and "Honor, skins…" on every empty note, and a login panel
+           of its own. The ⋯ menu holds the rest, the same menu as a card's. -->
+      <div class="acts">${loginButtonsHTML(a,openLogin.has(a.id))}${moreButtonHTML(a)}</div>
+      ${openLogin.has(a.id)?loginPanelHTML(a,""):""}
     </div>`:""}
   </div></div>`;
 }
@@ -5597,6 +5681,18 @@ function tileHTML(a){
     <span class="t-rk" style="color:${isRanked(a)?col:"var(--muted)"}">${esc(rank)}</span>
     ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
   </div></div>`;
+}
+/* The card's lines for an account with no rank to show, shared with an opened list
+   row. Never checked: its Check rank, the one way to check it outside the ⋯ menu
+   (not on a banned or archived account, which are never checked, nor a failed
+   one, which has its Refresh). */
+function checkRankHTML(a){
+  return isLive(a)&&!isFailed(a)?`<div class="wl"><button type="button" class="c-check" data-act="check" title="Check this account's rank now">${icon("refresh")}Check rank</button></div>`:"";
+}
+// amber like the header's warning: a Riot ID op.gg doesn't know is usually one to
+// correct, so the line is the way to correct it, not only the advice to
+function fixIdHTML(){
+  return `<div class="wl c-miss">${icon("alert")}<span>Not found on op.gg</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;
 }
 function cardHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
@@ -5682,11 +5778,8 @@ function cardHTML(a,i){
   if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
   // A card never checked had no way to check it but the ⋯ menu, the one card that
   // most needs it. A failed one has its Refresh on the meta line; banned ones are skipped.
-  else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">${noRankLabel(a)}</div>`
-    +(!dead&&!isFailed(a)?`<div class="wl"><button type="button" class="c-check" data-act="check" title="Check this account's rank now">${icon("refresh")}Check rank</button></div>`:"");
-  // amber like the header's warning: a Riot ID op.gg doesn't know is usually one to
-  // correct, so the line is the way to correct it, not only the advice to
-  else if(s.found===false)rankBlock=`<div class="wl c-miss">${icon("alert")}<span>Not found on op.gg</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;
+  else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">${noRankLabel(a)}</div>`+checkRankHTML(a);
+  else if(s.found===false)rankBlock=fixIdHTML();
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
     ${s.level>=30?`<div class="wl"><span class="ready" title="Level 30 reached. Ranked also needs 20 champions owned, which the app cannot see.">Ready for ranked</span></div>`:""}`;
   else if(prevSeason)rankBlock=`<div class="rk c-unplaced">Not placed yet this season</div><div class="wl c-lastseason">${prevSeason}</div>`;
@@ -5726,7 +5819,7 @@ function cardHTML(a,i){
     if(s.mmr)microStats.push(["MMR est.",s.mmr]);
     if(s.avgRecent)microStats.push(["Recent avg",s.avgRecent]);
   }
-  const loginOpen=openLogin.has(a.id), pw=shownPw.has(a.id);
+  const loginOpen=openLogin.has(a.id);
   const rv=block=>reveal===a.id+":"+block?" reveal":"";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   // Active is the default state of almost every account, so railing it green just
@@ -5789,16 +5882,7 @@ function cardHTML(a,i){
     ${s&&s.note&&!isFailed(a)?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(()=>{const role=mainRole(a),tags=a.tags||[];
       return role||tags.length?`<div class="ctags">${role?`<span class="role-tag" title="Played in 3 or more of the last 5 ranked games">${esc(role)}</span>`:""}${tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""})()}
-    ${loginOpen?`<div class="login${rv("login")}">
-      <div class="lrow"><span class="val ${a.login?"":"none"}">${a.login?esc(a.login):"no username saved"}</span><span class="lbtns">${a.login?`<button data-act="copylogin">Copy</button>`:""}</span></div>
-      <div class="lrow"><span class="val mono ${a.password?"":"none"}" style="font-family:${a.password?"":"inherit"}">${a.password?(pw?esc(a.password):"••••••••••"):"no password saved"}</span><span class="lbtns">${a.password?`<button data-act="togglepw">${pw?"Hide":"Show"}</button><button data-act="copypw">Copy</button>`:""}</span></div>
-      ${pwWarnHTML(a)}
-      ${a.email?`<div class="lrow"><span class="val">${esc(a.email)}</span><span class="lbtns"><button data-act="copymail">Copy</button></span></div>`:""}
-      <!-- The two facts Riot asks for when an account has to be recovered, which is
-           exactly the moment you are looking at this panel. -->
-      ${a.birthdate?`<div class="lrow"><span class="val"><span class="lk">Date of birth</span>${esc(fmtDate(a.birthdate))}</span><span class="lbtns"><button data-act="copybirth">Copy</button></span></div>`:""}
-      ${a.createdOn?`<div class="lrow"><span class="val"><span class="lk">Created</span>${esc(fmtDate(a.createdOn))}<em class="lage">${esc(ageFrom(a.createdOn))}</em></span></div>`:""}
-    </div>`:""}
+    ${loginOpen?loginPanelHTML(a,rv("login")):""}
     ${noteBlockHTML(a,rv("note"))}
     <div class="c-foot">
       <!-- Where the numbers came from used to sit here as its own pill. It is
@@ -5812,7 +5896,7 @@ function cardHTML(a,i){
            covering the rest. */
         const old=!!(s&&s.updatedAt&&Date.now()-s.updatedAt>864e5), failed=isLive(a)&&isFailed(a);
         const parts=(old?`<span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt)}</span>`:"")
-          +((old||failed)&&a.status!=="banned"?`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`:"")
+          +((old||failed)&&isLive(a)?`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`:"")
           +(failed?`<span class="c-failed" title="${esc(failReason(s.note))}">${icon("alert")}Last check failed</span>`:"")
           +(a.lastLoginAt?`<span class="src" title="The last time you copied or looked at this account's login here">Last login ${esc(timeAgo(a.lastLoginAt))}</span>`:"");
         return parts?`<span class="c-meta">${parts}</span>`:"";
@@ -5826,7 +5910,7 @@ function cardHTML(a,i){
              app". Refresh moved up beside "Updated 2 h ago", the thing it changes;
              here it weighed nearly as much as Login, which is what a card is for. -->
         ${loginButtonsHTML(a,loginOpen)}
-        <button data-act="more" class="c-more${openMore.has(a.id)?" on":""}" aria-haspopup="menu" aria-expanded="${openMore.has(a.id)}" title="More actions" aria-label="More actions">⋯</button>
+        ${moreButtonHTML(a)}
       </div>
     </div>
     ${openInfo.has(a.id)&&(hasInfo(a)||canForm(a))?infoBlockHTML(a,rv("info")):""}
@@ -5871,9 +5955,9 @@ function cardMenuHTML(a){
     `<button data-act="${act}" role="menuitem"${extra||""}>${icon(ico)}<span>${esc(label)}</span></button>`;
   return `<div class="hx-in cm-in">`
     +grp("Edit")
-    +it("rank","pencil","Rank…")
-    +it("edit","user","Account…")
-    +it("noteedit","pencil",a.notes?"Edit note":"Add note")
+    +it("rank","rank","Rank…")
+    +it("edit","pencil","Account…")   // the person is the username's mark
+    +it("noteedit","note",a.notes?"Edit note":"Add note")
     +it("art","image","Card art…")
     // Both profile links together. op.gg used to sit in the footer while dpm.lol
     // sat in here, which split one kind of thing across two places.
@@ -6250,9 +6334,9 @@ function renderInfoFields(info,focusFirst){
     const v=nfValue(info,f), id="nf"+i, at=f.own?` data-label="${esc(f.label)}"`:"";
     if(f.kind==="honor"){
       const cur=v==null?"":String(v);
-      return`<div class="fld"><label id="${id}">Honor level</label><div class="seg nf-honor" role="radiogroup" aria-labelledby="${id}" data-nf="honor">`
+      return`<div class="fld f-honor"><label id="${id}">Honor level</label><div class="seg nf-honor" role="radiogroup" aria-labelledby="${id}" data-nf="honor">`
         +["",0,1,2,3,4,5].map(n=>`<button type="button" role="radio" data-v="${n}" aria-checked="${String(n)===cur}" tabindex="${String(n)===cur?0:-1}"`
-          +` class="${String(n)===cur?"on":""}" title="${n===""?"Not set":"Honor level "+n}">${n===""?"—":n}</button>`).join("")+`</div></div>`;
+          +` class="${String(n)===cur?"on":""}" title="${n===""?"Not set":"Honor level "+n}">${n===""?"Not set":n}</button>`).join("")+`</div></div>`;
     }
     if(f.kind==="bool"){
       const val=v===true?"1":v===false?"0":"";
@@ -6263,13 +6347,13 @@ function renderInfoFields(info,focusFirst){
     if(f.kind==="num"){
       const val=typeof v==="number"?String(v):"";
       return`<div class="fld"><label for="${id}">${esc(f.label)}</label><input id="${id}" type="number" inputmode="${f.own?"decimal":"numeric"}" data-nf="${f.k}"${at}`
-        +(f.own?' step="any"':` min="0" max="${f.max}" step="1"`)+` value="${esc(val)}" placeholder="—"></div>`;
+        +(f.own?' step="any"':` min="0" max="${f.max}" step="1"`)+` value="${esc(val)}"></div>`;
     }
     if(f.kind==="list")return`<div class="fld wide"><label for="${id}">${esc(f.label)}</label><input id="${id}" data-nf="skins" autocomplete="off"`
       +` value="${esc((v||[]).join(", "))}" placeholder="Comma-separated, e.g. Elementalist Lux, Spirit Blossom Yasuo"></div>`;
     const val=v==null?"":String(v);
     return`<div class="fld wide"><label for="${id}">${esc(f.label)}</label><input id="${id}" class="nf-sens" data-nf="${f.k}"${at} autocomplete="off" value="${esc(val)}"`
-      +` placeholder="${f.k==="penalty"?"e.g. 14-day chat restriction, ends 12 Oct":"—"}"></div>`;
+      +(f.k==="penalty"?` placeholder="e.g. 14-day chat restriction, ends 12 Oct"`:"")+`></div>`;
   }).join("");
   for(const el of box.querySelectorAll("[data-autofocus]"))el.removeAttribute("data-autofocus");
   if(focusFirst){const first=box.querySelector('[aria-checked="true"],input,select');if(first)first.setAttribute("data-autofocus","")}
@@ -6325,7 +6409,7 @@ function renderFieldsCfg(){
     +`<div class="grp-h">Your own</div><div class="nf-own">`
     +(own.length?own.map((c,i)=>`<div class="row"><input data-own-label="${i}" value="${esc(c.label)}" maxlength="32" aria-label="Field name">`
       +`<select data-own-kind="${i}" aria-label="Kind of field">${kinds(c.kind)}</select>`
-      +`<button type="button" data-own-del="${i}" title="Remove this field" aria-label="Remove ${esc(c.label)}">✕</button></div>`).join("")
+      +`<button type="button" data-own-del="${i}" title="Remove this field" aria-label="Remove ${esc(c.label)}">${icon("x")}</button></div>`).join("")
       :`<span class="none">Anything else you track on every account: where it came from, what it cost, the recovery question.</span>`)
     +(own.length<NF_MAX_OWN?`<div class="row"><input id="nfNewLabel" maxlength="32" placeholder="New field, e.g. Bought from" aria-label="New field name">`
       +`<select id="nfNewKind" aria-label="Kind of field">${kinds("text")}</select><button type="button" id="nfAdd">Add</button></div>`
@@ -6615,7 +6699,8 @@ function submitForm(){
   const gameName=$("fName").value.trim(), tagLine=$("fTag").value.trim().replace(/^#/,"");
   clearFormErrors();
   if(!gameName||!tagLine){
-    if(!tagLine)fieldError("fTag","Needed for the lookup, the part after #");
+    // said the same way under both fields; one read "Needed for the lookup, the part after #"
+    if(!tagLine)fieldError("fTag","Needed: the tag after the #");
     if(!gameName)fieldError("fName","Needed: the name before the #");
     $(gameName?"fTag":"fName").focus();
     return;
@@ -7741,6 +7826,7 @@ $("tFindKey").addEventListener("click",openPalette);
 if(/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||"")){$("tFindKey").textContent="⌘ K";$("bFind").title="Quick find (⌘K)"}
 $("bSettings").addEventListener("click",()=>$("settings").classList.contains("hidden")?openSettings():requestCloseSettings());
 $("bNewSeason").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");newSeasonAll()});
+for(const[id,ic]of Object.entries(MORE_MENU_ICONS)){const b=$(id);if(b)setMenuItem(b,ic,b.textContent.trim())}
 $("bStreamer").addEventListener("click",()=>{$("moreMenu").classList.add("hidden");setStreamer(!streamerOn())});
 $("streamerPill").addEventListener("click",()=>setStreamer(false));
 $("settings").querySelector(".stabs").addEventListener("click",e=>{const b=e.target.closest("[data-stab]");if(b)settingsTab(b.dataset.stab)});
@@ -8068,7 +8154,7 @@ $("bExport").addEventListener("click",doExport);
 $("iosBand").addEventListener("click",e=>{
   const b=e.target.closest("[data-ios]");if(!b)return;
   if(b.dataset.ios==="backup"){doExport();return}
-  cfg.iosHintSeen=true;saveCfg();renderIosBand();
+  cfg.iosHintSeen=true;saveCfg();renderIosBand();renderBackupNote();   // the quieter reminder takes over
 });
 $("sBackend").addEventListener("change",updateBackendStatus);
 $("sStorageProtect").addEventListener("click",async()=>{
@@ -8397,7 +8483,7 @@ function palCommands(){
       ui.density=order[(order.indexOf(ui.density)+1)%order.length];
       cfg.density=ui.density;saveCfg();openInfo.clear();render();fadeInGrid();
     }},
-    {k:"settings",n:"Settings",s:"Rank checks, alerts, security, appearance",i:"user",run:()=>openSettings()},
+    {k:"settings",n:"Settings",s:"Rank checks, alerts, security, appearance",i:"gear",run:()=>openSettings()},
     {k:"password check security reused weak leak pwned",n:"Password check-up",s:"Passwords used twice, weak, or in a data leak",i:"alert",run:()=>openSettings("security")},
     {k:"newseason",n:"New season",s:"Move every ranked account's rank into Past seasons",i:"refresh",run:()=>newSeasonAll()},
     {k:"streamer",n:"Streamer mode",s:"Hide Riot IDs, logins, emails and notes on screen (H)",i:"eye",run:()=>setStreamer(!streamerOn())},
@@ -8836,7 +8922,7 @@ async function onCardClick(e){
       // only a copy that worked moves on to the next step: a failed one (the toast
       // says so) left the button on "Copy password" with the username never copied
       if(!ok)return;
-      if(!pw){if(both)loginSeq.add(id)}else loginSeq.delete(id);
+      if(!pw){if(both){loginSeq.add(id);armLoginSeq(id)}}else{loginSeq.delete(id);clearTimeout(loginSeqTimer.get(id));loginSeqTimer.delete(id)}
       // copying the login is the closest thing to playing on it this app can see
       acc.lastLoginAt=Date.now();saveDB();
       flashLogin(id,pw);

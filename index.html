@@ -35,7 +35,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="app.css?v=2.28.1">
+<link rel="stylesheet" href="app.css?v=2.29.0">
 </head>
 <body data-atmosphere="spotlight">
 <!-- A shared snapshot opens here instead of the app: see openSnapshot -->
@@ -85,7 +85,7 @@
         <div id="moreMenu" class="hx teal hidden" style="position:absolute;right:0;top:calc(100% + 8px);z-index:20;min-width:206px"><div class="hx-in" style="padding:7px;display:flex;flex-direction:column;gap:1px">
           <!-- Settings first, the way every app's own menu opens; the safe export
                before the plaintext one; the one that deletes everything last. -->
-          <button id="bSettings" style="justify-content:flex-start;width:100%"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</button>
+          <button id="bSettings" style="justify-content:flex-start;width:100%">Settings</button>
           <div class="cm-g">Accounts</div>
           <button id="bBulkAdd" style="justify-content:flex-start;width:100%">Bulk add accounts…</button>
           <button id="bShare" style="justify-content:flex-start;width:100%" title="A read-only page of your ranks in one link. Logins are never in it.">Share a snapshot…</button>
@@ -127,7 +127,7 @@
   <div class="mdl narrow hx"><div class="hx-in mdl-in" style="position:relative">
     <div class="mdl-h">
       <span class="t" id="helpTitle">How this works</span>
-      <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+      <button class="panel-close" data-close-panel title="Close" aria-label="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="6.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="6.5" y2="17.5"/></svg></button>
     </div>
     <!-- One run-on block of ten bold-led paragraphs, read top to bottom or not at
          all. A label down the left lets someone find "search" or "keys" without
@@ -197,7 +197,7 @@
   <div class="mdl hx teal"><div class="hx-in mdl-in" style="position:relative">
     <div class="mdl-h">
       <span class="t" id="settingsTitle">Settings</span>
-      <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+      <button class="panel-close" data-close-panel title="Close" aria-label="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="6.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="6.5" y2="17.5"/></svg></button>
     </div>
     <!-- One section at a time. Seven groups in one scroll put the vault password
          four screens below the colour pickers; a tab row is one click to any of them. -->
@@ -222,12 +222,12 @@
           <div class="acc-swatch">
             <input type="color" id="sAccent" aria-label="Primary accent color">
             <span style="font-size:calc(12px*var(--ts));color:var(--muted);line-height:1.4">Primary<br><span style="color:var(--faint)">title, favorites, scrollbar</span></span>
-            <button id="sAccentReset1" class="acc-reset" type="button" title="Back to the default primary" aria-label="Reset the primary color">↺</button>
+            <button id="sAccentReset1" class="acc-reset" type="button" title="Back to the default primary" aria-label="Reset the primary color"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.9-6.4"/><polyline points="3 4 3 9.5 8.5 9.5"/></svg></button>
           </div>
           <div class="acc-swatch">
             <input type="color" id="sAccent2" aria-label="Secondary accent color">
             <span style="font-size:calc(12px*var(--ts));color:var(--muted);line-height:1.4">Secondary<br><span style="color:var(--faint)">Login and every main button, focus rings</span></span>
-            <button id="sAccentReset2" class="acc-reset" type="button" title="Back to the default secondary" aria-label="Reset the secondary color">↺</button>
+            <button id="sAccentReset2" class="acc-reset" type="button" title="Back to the default secondary" aria-label="Reset the secondary color"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.9-6.4"/><polyline points="3 4 3 9.5 8.5 9.5"/></svg></button>
           </div>
         </div>
         <div class="atm-block">
@@ -514,21 +514,21 @@
       </div>
       <div class="acc-prev-tools">
         <input type="search" value="search or filter…" tabindex="-1" readonly>
-        <button type="button" class="on" tabindex="-1">★</button>
-        <button type="button" tabindex="-1">?</button>
+        <button type="button" class="on" tabindex="-1"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Favorites</button>
       </div>
     </div>
     <div class="acc-prev-side">
       <div class="acc-prev-card">
         <div class="acc-prev-card-h">
           <span class="acc-prev-nm">Moonlit Mid</span>
-          <span class="acc-prev-star">★</span>
+          <span class="acc-prev-star"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
           <span class="acc-prev-rk">Diamond I<small>52 LP</small></span>
         </div>
         <div class="acc-prev-wl">190W 215L · 47% WR</div>
         <div class="bar">
-          <button class="a-login" type="button" tabindex="-1">Login</button>
-          <button type="button" tabindex="-1">Refresh</button>
+          <!-- the card's own words: it said Login and Refresh, two clean-ups ago -->
+          <button class="a-login" type="button" tabindex="-1"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-7A4.5 4.5 0 0 0 4 19.5V21"/><circle cx="12" cy="8" r="4"/></svg> Copy username</button>
+          <button type="button" tabindex="-1" aria-label="More actions"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.1"/><circle cx="12" cy="12" r="1.1"/><circle cx="19" cy="12" r="1.1"/></svg></button>
         </div>
       </div>
     </div>
@@ -544,7 +544,7 @@
   <div class="mdl narrow hx teal"><div class="hx-in mdl-in" style="position:relative">
     <div class="mdl-h">
       <span class="t" id="bulkAddTitle">Bulk add</span>
-      <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+      <button class="panel-close" data-close-panel title="Close" aria-label="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="6.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="6.5" y2="17.5"/></svg></button>
     </div>
     <div class="mdl-b">
     <p class="pv-note" id="baPreviewNote" hidden>You are looking at example data. Adding ends the preview and starts your own vault with these accounts.</p>
@@ -567,7 +567,7 @@
   <div class="mdl narrow hx gold"><div class="hx-in mdl-in">
     <div class="mdl-h">
       <span class="t" id="lockPromptTitle">Protect your saved passwords</span>
-      <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+      <button class="panel-close" data-close-panel title="Close" aria-label="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="6.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="6.5" y2="17.5"/></svg></button>
     </div>
     <div class="mdl-b"><div class="formgrid">
       <p class="fw lp-p">Your passwords are saved in this browser as plain text. Anyone who uses this browser, or a script running on this site, could read them.</p>
@@ -588,7 +588,7 @@
     <div class="mdl-h">
       <span class="t" id="formTitle">Add account</span>
       <span class="s" id="formSub"></span>
-      <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+      <button class="panel-close" data-close-panel title="Close" aria-label="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="6.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="6.5" y2="17.5"/></svg></button>
     </div>
     <div class="mdl-b">
     <p class="pv-note" id="fPreviewNote" hidden>You are looking at example data. Saving ends the preview and starts your own vault with this account.</p>
@@ -667,7 +667,7 @@
     <div class="mdl-h">
       <span class="t" id="rankTitle">Rank</span>
       <span class="s" id="rankSub"></span>
-      <button class="panel-close" data-close-panel title="Close" aria-label="Close">&#10005;</button>
+      <button class="panel-close" data-close-panel title="Close" aria-label="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="6.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="6.5" y2="17.5"/></svg></button>
     </div>
     <div class="mdl-b" id="rankBody"></div>
     <div class="mdl-f">
@@ -679,6 +679,8 @@
 
   <!-- dashboard -->
   <div id="dash"></div>
+  <!-- the backup reminder, open stats or not -->
+  <div id="bkNote"></div>
   <!-- first steps, until they are done or hidden -->
   <div id="setup"></div>
 
@@ -808,7 +810,7 @@
   <div id="compareModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Compare">
     <div class="mdl narrow hx teal"><div class="hx-in mdl-in">
       <div class="mdl-h"><span class="t">Compare</span>
-        <button class="panel-close" id="cmpClose" data-close-panel title="Close" aria-label="Close">✕</button>
+        <button class="panel-close" id="cmpClose" data-close-panel title="Close" aria-label="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="6.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="6.5" y2="17.5"/></svg></button>
       </div>
       <div class="mdl-b" id="cmpBody"></div>
       <div class="mdl-f"><button id="cmpClear" type="button">Done</button>
@@ -819,7 +821,7 @@
   <div id="artPicker" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="apTitle">
     <div class="mdl hx teal"><div class="hx-in mdl-in">
       <div class="mdl-h"><span class="t" id="apTitle">Card art</span><span class="s" id="apSub"></span>
-        <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+        <button class="panel-close" data-close-panel title="Close" aria-label="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="6.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="6.5" y2="17.5"/></svg></button>
       </div>
       <div class="ap-top">
         <div class="ap-hero" id="apHero"></div>
@@ -853,7 +855,7 @@
   <div id="shareModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="shTitle">
     <div class="mdl narrow hx teal"><div class="hx-in mdl-in">
       <div class="mdl-h"><span class="t" id="shTitle">Share a snapshot</span>
-        <button class="panel-close" data-close-panel title="Close" aria-label="Close">✕</button>
+        <button class="panel-close" data-close-panel title="Close" aria-label="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="6.5" y1="6.5" x2="17.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="6.5" y2="17.5"/></svg></button>
       </div>
       <div class="mdl-b"><div class="grp sh-body">
         <p class="sh-intro">A read-only page of your ranks, in one link. Nothing is uploaded: the page is stored in the link itself,
@@ -881,6 +883,6 @@
   <div id="srSay" class="sr-only" role="status" aria-live="polite"></div>
 </div>
 
-<script src="app.js?v=2.28.1"></script>
+<script src="app.js?v=2.29.0"></script>
 </body>
 </html>
