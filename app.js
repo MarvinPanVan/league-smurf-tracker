@@ -584,7 +584,7 @@ function levelTrackHTML(a){
     +`<div class="lvt-bar" role="img" aria-label="Level ${lv} of 30"><i style="width:${pct(lv)}"></i><b style="left:${pct(10)}"></b><b style="left:${pct(20)}"></b></div>`
     +`<div class="lvt-ax"><span>1</span><span style="left:${pct(10)}">10</span><span style="left:${pct(20)}">20</span><span>30</span></div></div>`;
 }
-function isReadyForRanked(a){const s=a.stats;return isLive(a)&&!!s&&s.found!==false&&!isRanked(a)&&Number(s.level)>=30}
+function isReadyForRanked(a){const s=a.stats;return isLive(a)&&!!s&&s.found!==false&&!isRanked(a)&&Number(s.level)>=30&&!lastSeasonRank(a)}
 // days are floored, so 0 is "less than one left" — "~0d" read as already gone
 function decayIn(d){return d<1?"<1d":"~"+d+"d"}
 function decayRisk(a){const d=decayDays(a);return isLive(a)&&d!==null&&d<=7}
@@ -658,6 +658,50 @@ function wrTrend(a){
    account without a rank, never-checked ones included. So "Unranked ×3" filtered the
    grid down to eight cards, and the two numbers sat one line apart. */
 function isUnrankedAnswer(a){return isChecked(a)&&a.stats.found!==false&&!isRanked(a)}
+/* ---- seasons ----
+   A season ends in an account's history one of two ways: a reading that comes back
+   unranked after a ranked one (New season here, or Riot's reset in January, when
+   every check comes back unranked), or season totals that go down (seasonBreak).
+   This season is what comes after the last such end; what is before it is last
+   season's, and the card, the chart and Peak leave it there. */
+function isRankedPoint(h){const t=h&&(h.tier||"").toUpperCase();return !!t&&t!=="UNRANKED"&&h.found!==false}
+function seasonStartIdx(hist){
+  let start=0,prevRanked=false,lastWL=null;
+  (hist||[]).forEach((h,i)=>{
+    const r=isRankedPoint(h), wl=h&&h.w!=null&&h.l!=null;
+    if((!r&&prevRanked)||(wl&&lastWL&&seasonBreak(lastWL,h)))start=i;
+    if(wl)lastWL=h;
+    prevRanked=r;
+  });
+  return start;
+}
+function thisSeason(hist){hist=hist||[];return hist.slice(seasonStartIdx(hist))}
+/* The rank an account finished an earlier season on: its last ranked reading before
+   this season began, or else the latest of its Past seasons (the one New season
+   files, or op.gg's list). */
+function lastSeasonRank(a){
+  const hist=(a&&a.history)||[], i=seasonStartIdx(hist);
+  for(let k=i-1;k>=0;k--)if(isRankedPoint(hist[k]))return{e:hist[k],label:"Last season"};
+  const past=normSeasons(a&&a.stats&&a.stats.seasons), solo=past?past.solo.filter(isRankedPoint):[];
+  if(!solo.length)return null;
+  const p=solo.find(e=>e.season==="prev")||solo.slice().sort((x,y)=>String(y.season).localeCompare(String(x.season)))[0];
+  return{e:p,label:p.season==="prev"?"Last season":"Last ranked in "+p.season};
+}
+/* Unranked this season after a rank in an earlier one: placements still to play.
+   After a reset that was every account in the vault, and each one looked like a
+   fresh smurf ("Level 1203 · Ready for ranked") under a Peak from last season. */
+function notPlaced(a){return isUnrankedAnswer(a)&&!!lastSeasonRank(a)}
+// the Unranked tier, its count and its filter: never had a rank to place from
+function unrankedTier(a){return isUnrankedAnswer(a)&&!notPlaced(a)}
+function lastSeasonText(a){
+  const r=lastSeasonRank(a);if(!r)return"";
+  return r.label+": "+tierLabel(r.e)+(r.e.lp!=null?" · "+fmtN(r.e.lp)+" LP":"");
+}
+// the same, with the rank in its tier's colour
+function lastSeasonHTML(a){
+  const r=lastSeasonRank(a);if(!r)return"";
+  return esc(r.label)+`: <span style="color:${tierColor(r.e.tier)}">${esc(tierLabel(r.e)+(r.e.lp!=null?" · "+fmtN(r.e.lp)+" LP":""))}</span>`;
+}
 /* Whether a check has ever brought a reading back. A check that fails before one
    has ever succeeded leaves a note behind on an otherwise empty stats object, and
    all three layouts asked "is there a stats object" instead — so the card claimed
@@ -1301,6 +1345,7 @@ function sparkline(hist,col){
 // apart from unranked: one is a fact about the account, the other about us.
 function listGroup(a){
   if(isRanked(a))return (a.stats.tier||"").toUpperCase();
+  if(notPlaced(a))return"UNPLACED";
   if(isUnrankedAnswer(a))return"UNRANKED";
   // A missing Riot ID is checked (found:false + updatedAt) but is not Unranked —
   // dumping it under that heading made the list disagree with the Unranked filter.
@@ -1310,12 +1355,13 @@ function listGroup(a){
 function groupLabel(k){
   if(k==="UNCHECKED")return "Never checked";
   if(k==="UNRANKED")return "Unranked";
+  if(k==="UNPLACED")return "Not placed yet";
   if(k==="MISSING")return "Not found";
   return k.charAt(0)+k.slice(1).toLowerCase();
 }
 function groupColor(k){
   if(k==="MISSING")return"var(--danger)";
-  if(k==="UNRANKED")return"var(--muted)"; // grey: in the unranked tier's blue it read as a link
+  if(k==="UNRANKED"||k==="UNPLACED")return"var(--muted)"; // grey: in the unranked tier's blue it read as a link
   return k==="UNCHECKED"?"#5d6577":tierColor(k);
 }
 // The old sparkline plotted LP with no scale at all: it showed the number moving
@@ -3200,7 +3246,10 @@ function seasonResetCore(a){
   if(s.tier&&s.tier!=="UNRANKED"){
     seasons.solo=[{season:"prev",tier:s.tier,division:s.division||null,lp:s.lp??0}].concat(seasons.solo).slice(0,20);
   }
-  if(s.peak&&s.peak.tier) a.peakManual=a.peakManual||{...s.peak};
+  /* The season peak was copied into the peak set by hand, so it carried on into the
+     new season: every card said "Peak Challenger" over a rank it no longer had. A
+     season's peak is that season's; its final rank is in Past seasons. */
+  delete a.peakManual;
   a.history=a.history||[];
   if(a.history.length){
     a.history.push({t:Date.now(),tier:"UNRANKED",division:null,lp:null,w:0,l:0});
@@ -3221,7 +3270,7 @@ async function newSeasonAll(){
   const list=accounts.filter(a=>!a.archived&&isRanked(a));
   if(!list.length){toast("No ranked accounts to start a new season for");return}
   if(!await ask({title:"Start a new season for "+list.length+" ranked account"+(list.length===1?"":"s")+"?",
-    body:"Each one's current rank moves into its Past seasons, and it shows as unranked until it is checked again.",ok:"Start new season"}))return;
+    body:"Each one's current rank moves into its Past seasons, and it shows as not placed yet until a check finds its new rank.",ok:"Start new season"}))return;
   const before=new Map(list.map(a=>[a.id,JSON.parse(JSON.stringify(a))]));
   for(const a of list)seasonResetCore(a);
   render();
@@ -3411,7 +3460,7 @@ function renderCompare(){
   const side=acc=>{
     const s=acc.stats||{}, url=iconUrl(s), ranked=isRanked(acc);
     const initial=(acc.label||acc.gameName||"?").trim().charAt(0).toUpperCase()||"?";
-    const rank=ranked?tierLabel(s):!hasReading(s)?"Never checked":s.found===false?"Not found":"Unranked";
+    const rank=ranked?tierLabel(s):!hasReading(s)?"Never checked":s.found===false?"Not found":notPlaced(acc)?"Not placed yet":"Unranked";
     return `<div class="cmp-side">
       <span class="cmp-pic"><b aria-hidden="true">${esc(initial)}</b>${url?`<img src="${esc(url)}" alt="" loading="lazy" data-ico>`:""}</span>
       <div class="cmp-nm" title="${esc(plainName(acc))}">${nameOf(acc)}</div>
@@ -3481,7 +3530,7 @@ function parseQuery(q){
     }
     if((m=/^(?:champ|c):(.+)$/.exec(tok))){out.champ.push(m[1].replace(/[^a-z0-9]/g,""));continue}
     if((m=/^is:(.+)$/.exec(tok))){
-      if(["stale","never","flagged","banned","fav","goal","decay","ready","leveling"].includes(m[1])){out.is.push(m[1]);continue}
+      if(["stale","never","flagged","banned","fav","goal","decay","ready","leveling","unplaced"].includes(m[1])){out.is.push(m[1]);continue}
     }
     if((m=/^(>=|>|<=|<)(.+)$/.exec(tok))){
       const t=TIER_ORDER.find(x=>x.toLowerCase().startsWith(m[2]));
@@ -3513,7 +3562,7 @@ function passesBaseFilters(a,Q,{forceActive=false}={}){
   if(ui.tag&&!(a.tags||[]).includes(ui.tag))return false;
   if(Q.tier){
     const t=(a.stats&&a.stats.found!==false&&a.stats.tier||"").toUpperCase();
-    if(Q.tier==="UNRANKED"?!isUnrankedAnswer(a):t!==Q.tier)return false;
+    if(Q.tier==="UNRANKED"?!unrankedTier(a):t!==Q.tier)return false;
   }
   if(Q.region&&a.region!==Q.region)return false;
   if(Q.min!=null||Q.max!=null){
@@ -3537,6 +3586,7 @@ function passesBaseFilters(a,Q,{forceActive=false}={}){
     if(f==="decay"&&!decayRisk(a))return false;
     if(f==="ready"&&!isReadyForRanked(a))return false;
     if(f==="leveling"&&!isLeveling(a))return false;
+    if(f==="unplaced"&&!notPlaced(a))return false;
   }
   if(Q.terms.length){
     // the Riot ID whole as well: "Lunar Echo#EUW", pasted from the client, found nothing
@@ -3596,9 +3646,10 @@ function filtered(){
     if(ui.flag==="dup"&&!isDuplicate(a))return false;
     if(ui.flag==="rotate"&&!needsRotation(a))return false;
     if(ui.flag==="decay"&&!decayRisk(a))return false;
+    if(ui.flag==="unplaced"&&!notPlaced(a))return false;
     if(ui.tier){
       const t=(a.stats&&a.stats.found!==false&&a.stats.tier||"").toUpperCase();
-      if(ui.tier==="UNRANKED"?!isUnrankedAnswer(a):t!==ui.tier)return false;
+      if(ui.tier==="UNRANKED"?!unrankedTier(a):t!==ui.tier)return false;
     }
     return true;
   });
@@ -3965,7 +4016,7 @@ function renderRibbon(){
   const pool=accounts.filter(a=>!a.archived);
   // Under two accounts there is no spread to show, only one emblem saying "1".
   if(pool.length<2){setHTML(el,"");return}
-  const dist={};let unN=0,neverN=0,missN=0,bannedN=0;
+  const dist={};let unN=0,placeN=0,neverN=0,missN=0,bannedN=0;
   for(const a of pool){
     /* Banned first, and out of the tier counts entirely. The dashboard's Rank
        spread asks the same question and has always answered it with isLive(),
@@ -3976,6 +4027,7 @@ function renderRibbon(){
     // Same predicate as the dash "Never checked" tile / filter.
     if(neverChecked(a)){neverN++;continue}
     if(isRanked(a)){const t=a.stats.tier.toUpperCase();dist[t]=(dist[t]||0)+1}
+    else if(notPlaced(a))placeN++;
     else if(isUnrankedAnswer(a))unN++;
     else if(a.stats&&a.stats.found===false)missN++;
   }
@@ -3984,7 +4036,7 @@ function renderRibbon(){
   // It sat in the toolbar beside Check all; with the others here, the header holds
   // what is wrong and the toolbar what to do about it.
   const staleN=pool.filter(a=>isLive(a)&&isStale(a)).length;
-  if(!tiers.length&&!unN&&!missN&&!neverN&&!bannedN&&!staleN){setHTML(el,"");return}
+  if(!tiers.length&&!unN&&!placeN&&!missN&&!neverN&&!bannedN&&!staleN){setHTML(el,"");return}
   const plural=n=>n===1?"":"s";
   const tierItem=t=>{const on=ui.tier===t, n=dist[t], name=groupLabel(t);
     return`<button class="rib-i rib-t${on?" on":""}" data-tier="${t}" aria-pressed="${on}"`
@@ -3992,7 +4044,9 @@ function renderRibbon(){
   const word=(attr,on,n,label,why)=>`<button class="rib-i rib-s${on?" on":""}" ${attr} aria-pressed="${on}" title="${esc(why)} Click to show them."`
     +` aria-label="${esc(label.charAt(0).toUpperCase()+label.slice(1))}, ${n}">${n} ${label}</button>`;
   const states=[
-    unN&&word('data-tier="UNRANKED"',ui.tier==="UNRANKED",unN,"unranked","Checked, and not ranked this season."),
+    // after a reset, the whole vault; "16 unranked" read as sixteen fresh accounts
+    placeN&&word('data-flag="unplaced"',ui.flag==="unplaced",placeN,"not placed yet","Ranked in an earlier season, with placements still to play in this one."),
+    unN&&word('data-tier="UNRANKED"',ui.tier==="UNRANKED",unN,"unranked","Checked, and never ranked."),
     neverN&&word('data-flag="unchecked"',ui.flag==="unchecked",neverN,"never checked","No rank read yet."),
     bannedN&&word('data-status="banned"',ui.status==="banned",bannedN,"banned","Marked banned."),
     staleN&&word('data-flag="stale"',ui.flag==="stale",staleN,staleN===1?"needs a refresh":"need a refresh","Last read over 3 days ago.")
@@ -4209,7 +4263,7 @@ function renderTagbar(){
 // A number in a dashboard always raises "which ones?", so the stats panel sets
 // these — and they have to be visible and removable, or the grid just looks
 // mysteriously short.
-const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Flagged",missing:"Not found",dup:"Duplicate IDs",rotate:"Idle 14+ days"};
+const FLAG_LABEL={stale:"Needs refresh",unchecked:"Never checked",failed:"Last check failed",attention:"Flagged",missing:"Not found",dup:"Duplicate IDs",rotate:"Idle 14+ days",unplaced:"Not placed yet"};
 function renderChips(){
   syncFilterCount();
   const out=[];
@@ -5400,16 +5454,21 @@ function winLoss(s){
   const total=(w||0)+(l||0);
   return{w,l,total,wr:(w!=null&&l!=null&&total>0)?Math.round(w/total*100):null};
 }
-/* Highest known ladder point — shared by the Peak microstat and the chart ceiling.
-   Sources: op.gg Top tier, check history, past Solo seasons, manual override, and
-   the current rank itself (season high is often where you are right now).
+/* Highest known ladder point this season — shared by the Peak microstat and the chart
+   ceiling. Sources: op.gg Top tier, this season's checks, a peak set by hand since
+   the season began, and the current rank itself (season high is often where you are
+   right now). Past seasons stay in Details: counted here, a card waiting on its
+   placements said "Peak Challenger" as if that were this season's.
    The microstat always names that high. The chart dashed line only draws when the
    peak sits *above* current — a ceiling on top of "you are here" is noise. */
 function peakInfo(a){
-  const s=a.stats, hist=a.history||[];
+  const s=a.stats, all=a.history||[], from=seasonStartIdx(all), hist=all.slice(from);
+  if(!isRanked(a))return{peak:null,peakV:null};
+  // one set by hand before this season began was last season's
+  const startT=from>0?(+all[from].t||0):0, pm=a.peakManual;
+  const pmNow=pm&&(!startT||(+pm.at||0)>=startT)?pm:null;
   let bestE=null,bestV=-1;
-  const seasons=((s&&s.seasons&&s.seasons.solo)||[]);
-  const cands=hist.concat(seasons,[s&&s.peak,a.peakManual,s].filter(Boolean));
+  const cands=hist.concat([s.peak,pmNow,s].filter(Boolean));
   for(const h of cands){
     if(!h||typeof h!=="object")continue;
     if(h.found===false)continue;
@@ -5436,7 +5495,7 @@ function rowHTML(a,i){
     rank=tierLabel(s);
     if(s.lp!=null)lp=fmtN(s.lp)+" LP";
   // as the card says it: a levelling account is its level, not "Unranked"
-  }else rank=s.level?"Level "+s.level:"Unranked";
+  }else rank=notPlaced(a)?"Not placed yet":s.level?"Level "+s.level:"Unranked";
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
   return `<div class="hx row${flashId===a.id?" flash":""}${open?" open":""}" data-id="${idAttr(a.id)}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
@@ -5454,7 +5513,7 @@ function rowHTML(a,i){
           `<span class="rw-failed" role="img" aria-label="Last check failed" title="${esc("Last check failed. "+failReason(s.note))}">${icon("alert")}<span class="rw-failed-t">Last check failed</span></span>`:""}</span>
         <span class="rw-sub"><span class="rw-tag sens">${esc(a.gameName)}#${esc(a.tagLine)}</span>${(a.tags||[]).length?`<span class="rw-tags">${a.tags.slice(0,3).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}</span>
       </span>
-      <span class="rw-spark">${sparkline(a.history,col)
+      <span class="rw-spark">${sparkline(thisSeason(a.history),col)
         // Nothing to plot yet, so the slot offers the one thing that would change
         // that. Sixty never-checked rows used to be sixty dead lines.
         ||(!isChecked(a)&&!isChecking?`<button class="rw-check" data-act="check" title="Check this account's rank now">${icon("refresh")} Check</button>`:"")}</span>
@@ -5468,7 +5527,7 @@ function rowHTML(a,i){
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     ${open?`<div class="rw-open">
-      ${(()=>{const p=peakInfo(a);return rankChart(a.history||[],cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(a.history||[]),a.id,p.peakV,p.peak)})()}
+      ${(()=>{const p=peakInfo(a),h=thisSeason(a.history);return rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,p.peakV,p.peak)})()}
       ${infoBlockHTML(a)||""}
       ${noteBlockHTML(a,"",true)}
       <div class="acts">
@@ -5507,7 +5566,7 @@ function tileHTML(a){
     rank=tierLabel(s);
     if(s.lp!=null)lp=fmtN(s.lp)+" LP";
   // as the card says it: a levelling account is its level, not "Unranked"
-  }else rank=s.level?"Level "+s.level:"Unranked";
+  }else rank=notPlaced(a)?"Not placed yet":s.level?"Level "+s.level:"Unranked";
   const st=STATUS[a.status]||STATUS.active;
   return `<div class="hx${flashId===a.id?" flash":""}" data-id="${idAttr(a.id)}"><div class="hx-in tile${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${checking.has(a.id)?" scanning":""}" data-id="${idAttr(a.id)}" data-act="zoom" role="button" tabindex="0" title="${esc(plainName(a)+" · "+rank+(lp?" · "+lp:""))}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
     ${isRanked(a)?`<span class="c-tint" style="--tier:${col}"></span>`:""}
@@ -5596,7 +5655,9 @@ function cardHTML(a,i){
   // On an account that isn't ranked yet the level is the whole story, so it gets
   // the headline slot. Printing "Unranked" in 26 px and tucking "Level 97" into a
   // 10 px caption underneath answered the question nobody asked, in the larger type.
-  const levelLed=!!(s&&s.found!==false&&!isRanked(a)&&s.level);
+  // ...unless it has had a rank: then it is waiting on placements, not levelling
+  const prevSeason=notPlaced(a)?lastSeasonHTML(a):"";
+  const levelLed=!!(s&&s.found!==false&&!isRanked(a)&&s.level&&!prevSeason);
   let rankBlock;
   if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
   // A card never checked had no way to check it but the ⋯ menu, the one card that
@@ -5608,6 +5669,7 @@ function cardHTML(a,i){
   else if(s.found===false)rankBlock=`<div class="wl c-miss">${icon("alert")}<span>Not found on op.gg</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
     ${s.level>=30?`<div class="wl"><span class="ready" title="Level 30 reached. Ranked also needs 20 champions owned, which the app cannot see.">Ready for ranked</span></div>`:""}`;
+  else if(prevSeason)rankBlock=`<div class="rk c-unplaced">Not placed yet this season</div><div class="wl c-lastseason">${prevSeason}</div>`;
   else if(!isRanked(a))rankBlock=`<div class="rk" style="color:${col}"><span class="rk-main"><span class="rk-t">Unranked</span></span></div>
     <div class="wl">${total>0?wlTxt+(wr!==null?` · <span class="wrv ${wr>=50?"wr-good":""}">${wr}% WR</span>${wrTr}`:""):"No ranked games found"}</div>`;
   else rankBlock=`<div class="rk" style="color:${col}">${crest(s.tier,"rk-crest")}<span class="rk-main"><span class="rk-t">${esc(tierTxt)}</span>${lpTxt?`<span class="rk-lp">${esc(lpTxt)}</span>`:""}</span></div>
@@ -5702,7 +5764,7 @@ function cardHTML(a,i){
         <div class="goal-bar"><i style="width:${pct}%;background:${gcol}"></i></div>
       </div>`;
     })()}
-    ${rankChart(hist,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(hist),a.id,peakV,peak)}
+    ${(h=>rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,peakV,peak))(thisSeason(hist))}
     ${microStats.length?`<div class="c-stats n${microStats.length}">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note&&!isFailed(a)?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(()=>{const role=mainRole(a),tags=a.tags||[];
@@ -5960,7 +6022,7 @@ function closeCardPanels(){
    accounts in five tiers came out as five headings for five rows. Headings are kept
    while the list averages two rows a tier, for every tier, so a lone row never
    looks like it belongs to the heading above it. */
-function groupRank(k){const i=TIER_ORDER.indexOf(k);return i>=0?100+i:({UNRANKED:3,MISSING:2,UNCHECKED:1})[k]||0}
+function groupRank(k){const i=TIER_ORDER.indexOf(k);return i>=0?100+i:({UNPLACED:4,UNRANKED:3,MISSING:2,UNCHECKED:1})[k]||0}
 function withGroups(list){
   const buckets=new Map();
   for(const a of list){const k=listGroup(a);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(a)}
@@ -8363,7 +8425,7 @@ function renderPalette(){
         +`${isRanked(a)?crest(s.tier):""}</span>`
         +`<span class="pal-t"><span class="pal-n">${nameOf(a)}</span>`
         +`<span class="pal-s">${sens(esc(a.gameName)+"#"+esc(a.tagLine))} · ${esc(a.region)}</span></span>`
-        +`<span class="pal-r${isRanked(a)?"":" q"}" style="color:${col}">${esc(isRanked(a)?shortRank(s)||"":isChecked(a)?"Unranked":"Never checked")}</span>`
+        +`<span class="pal-r${isRanked(a)?"":" q"}" style="color:${col}">${esc(isRanked(a)?shortRank(s)||"":isChecked(a)?(notPlaced(a)?"Not placed yet":"Unranked"):"Never checked")}</span>`
         +`</button>`;
     }else{
       const c=it.c;
@@ -8834,7 +8896,7 @@ async function onCardClick(e){
     if(g("ptier")){
       const ptier=g("ptier").value;
       if(ptier==="UNRANKED")delete acc.peakManual;
-      else acc.peakManual={tier:ptier,division:readDivision(ptier,g("pdiv")),lp:+g("plp").value||0};
+      else acc.peakManual={tier:ptier,division:readDivision(ptier,g("pdiv")),lp:+g("plp").value||0,at:Date.now()};
     }
     // A goal is a rank, not a rank and an LP figure: nobody sets out to reach
     // Diamond II with exactly 47 LP. The division is as fine as it gets.
