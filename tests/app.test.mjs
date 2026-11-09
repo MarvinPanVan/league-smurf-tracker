@@ -8955,7 +8955,7 @@ test("a banned card shows no movement and no Refresh; a live one with the same r
   assert.equal(card("ban").querySelector(".c-ref"), null, "nor get checked; checks skip it");
   assert.ok(card("ban").querySelector(".a-login"), "its login is still there");
   // ...but as a plain button, and with no red rail: the badge and the strikethrough say banned
-  assert.match(html, /\n  \.card\.dead \.a-login\{background-color:var\(--panel2\)/, "Login is not the brightest thing on a dead card");
+  assert.match(html, /\n  \.card\.dead \.a-login(,\.rw\.dead \.a-login)?\{background-color:var\(--panel2\)/, "Login is not the brightest thing on a dead card");
   const hx = id => win.document.querySelector(`.grid>.hx[data-id="${id}"]`);
   assert.doesNotMatch(hx("ban").getAttribute("style") || "", /--st/, "no status rail on the card");
   // and the list says the same: no "+82" on a closed account
@@ -11098,6 +11098,45 @@ test("the header's rank emblems move as one group: beside the wordmark, or all o
   win.matchMedia = q => ({ matches: /max-width:\s*560px/.test(q), addListener() {}, removeListener() {} });
   assert.equal(fits(900), true, "no rib-below on a phone");
   assert.match(appCss, /\.rib-tiers\{flex-wrap:wrap\}/, "the phone's emblems may wrap within their row");
+});
+
+// The opened list row took the card's words but not its rules per state: a banned row's
+// Copy username stayed teal and a never-checked banned row still offered Check, a
+// not-found row had no way to fix its Riot ID, and a never-checked row had its Check
+// only on the hover-shown slot a phone hides
+test("an opened list row follows the card's rules per state: banned, not found, never checked", () => {
+  const L = { login: "u", password: "p", tags: [], history: [], region: "EUW", tagLine: "1" };
+  const win = bootApp([
+    { id: "ban", gameName: "Ban", status: "banned", stats: null, ...L },
+    { id: "nf", gameName: "Nf", status: "active", stats: { found: false, updatedAt: Date.now() }, ...L },
+    { id: "nc", gameName: "Nc", status: "active", stats: null, ...L },
+  ]);
+  const doc = listView(win);
+  const row = id => doc.querySelector(`.rw[data-id="${id}"]`);
+  const open = id => { row(id).querySelector(".rw-main").click(); return row(id).querySelector(".rw-open"); };
+  // banned: never checked, and still no Check, as on its card; its Copy username a plain button
+  assert.equal(row("ban").querySelector('[data-act="check"]'), null, "no Check on a banned row");
+  assert.equal(open("ban").querySelector('[data-act="check"]'), null, "nor once it is opened");
+  assert.ok(row("ban").querySelector(".rw-open .a-login"), "its Copy username is there");
+  assert.match(appCss, /\.card\.dead \.a-login,\.rw\.dead \.a-login\{[^}]*color:var\(--muted\)/, "muted, as on the card");
+  // not found: the card's amber line, with its Fix Riot ID
+  const fix = open("nf").querySelector(".c-miss .c-fix");
+  assert.ok(fix, "a not-found row says so and offers the fix");
+  assert.equal(fix.textContent.trim(), "Fix Riot ID");
+  assert.equal(fix.dataset.act, "edit", "which opens the account's form");
+  // never checked: one Check rank, never two
+  assert.equal(row("nc").querySelectorAll('[data-act="check"]').length, 1, "closed, the row's own Check");
+  const opened = open("nc");
+  const checks = row("nc").querySelectorAll('[data-act="check"]');
+  assert.equal(checks.length, 1, "opened, one Check rank and not a second beside it");
+  assert.ok(opened.contains(checks[0]), "the one under the row, in the card's words");
+  assert.match(checks[0].textContent, /Check rank/);
+  // the same lines as the cards draw
+  const rowNf = row("nf").querySelector(".c-miss").outerHTML, rowNc = checks[0].closest(".wl").outerHTML;
+  doc.querySelector('[data-density="cards"]').click();
+  assert.equal(doc.querySelector('.card[data-id="nf"] .c-miss').outerHTML, rowNf, "one Fix Riot ID line");
+  assert.equal(doc.querySelector('.card[data-id="nc"] .c-check').closest(".wl").outerHTML, rowNc, "one Check rank line");
+  assert.equal(doc.querySelector('.card[data-id="ban"] [data-act="check"]'), null, "and none on the banned card");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

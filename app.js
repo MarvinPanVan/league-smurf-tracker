@@ -5614,7 +5614,9 @@ function rowHTML(a,i){
       <span class="rw-spark">${sparkline(thisSeason(a.history),col)
         // Nothing to plot yet, so the slot offers the one thing that would change
         // that. Sixty never-checked rows used to be sixty dead lines.
-        ||(!isChecked(a)&&!isChecking?`<button class="rw-check" data-act="check" title="Check this account's rank now">${icon("refresh")} Check</button>`:"")}</span>
+        // Not on a banned row (the card skips those too), nor an opened one, whose
+        // Check rank is under it in the card's words: one button for one action.
+        ||(!isChecked(a)&&!isChecking&&!open&&a.status!=="banned"?`<button class="rw-check" data-act="check" title="Check this account's rank now">${icon("refresh")} Check</button>`:"")}</span>
       <span class="rw-rank" style="color:${isRanked(a)?col:"var(--muted)"}"><b>${esc(rank)}</b>${lp?`<em>${esc(lp)}</em>`:""}</span>
       <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${fmtN(Math.abs(dv))}</span>`:""}</span>
       <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wlText(wins,losses)}</em>`
@@ -5625,6 +5627,8 @@ function rowHTML(a,i){
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     ${open?`<div class="rw-open">
+      <!-- the card's line for a rank it cannot show: Fix Riot ID, or Check rank -->
+      ${isChecking?"":s&&s.found===false?fixIdHTML():!hasReading(s)?checkRankHTML(a):""}
       ${(()=>{const p=peakInfo(a),h=thisSeason(a.history);return rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,p.peakV,p.peak)})()}
       ${infoBlockHTML(a)||""}
       ${noteBlockHTML(a,"")}
@@ -5665,6 +5669,17 @@ function tileHTML(a){
     <span class="t-rk" style="color:${isRanked(a)?col:"var(--muted)"}">${esc(rank)}</span>
     ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
   </div></div>`;
+}
+/* The card's lines for an account with no rank to show, shared with an opened list
+   row. Never checked: its Check rank, the one way to check it outside the ⋯ menu
+   (a banned account is never checked, and a failed one has its Refresh). */
+function checkRankHTML(a){
+  return a.status!=="banned"&&!isFailed(a)?`<div class="wl"><button type="button" class="c-check" data-act="check" title="Check this account's rank now">${icon("refresh")}Check rank</button></div>`:"";
+}
+// amber like the header's warning: a Riot ID op.gg doesn't know is usually one to
+// correct, so the line is the way to correct it, not only the advice to
+function fixIdHTML(){
+  return `<div class="wl c-miss">${icon("alert")}<span>Not found on op.gg</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;
 }
 function cardHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
@@ -5750,11 +5765,8 @@ function cardHTML(a,i){
   if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
   // A card never checked had no way to check it but the ⋯ menu, the one card that
   // most needs it. A failed one has its Refresh on the meta line; banned ones are skipped.
-  else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">${noRankLabel(a)}</div>`
-    +(!dead&&!isFailed(a)?`<div class="wl"><button type="button" class="c-check" data-act="check" title="Check this account's rank now">${icon("refresh")}Check rank</button></div>`:"");
-  // amber like the header's warning: a Riot ID op.gg doesn't know is usually one to
-  // correct, so the line is the way to correct it, not only the advice to
-  else if(s.found===false)rankBlock=`<div class="wl c-miss">${icon("alert")}<span>Not found on op.gg</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;
+  else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">${noRankLabel(a)}</div>`+checkRankHTML(a);
+  else if(s.found===false)rankBlock=fixIdHTML();
   else if(levelLed)rankBlock=`<div class="rk c-lvl">Level <span class="rk-lp">${esc(s.level)}</span></div>
     ${s.level>=30?`<div class="wl"><span class="ready" title="Level 30 reached. Ranked also needs 20 champions owned, which the app cannot see.">Ready for ranked</span></div>`:""}`;
   else if(prevSeason)rankBlock=`<div class="rk c-unplaced">Not placed yet this season</div><div class="wl c-lastseason">${prevSeason}</div>`;

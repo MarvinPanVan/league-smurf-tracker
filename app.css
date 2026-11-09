@@ -953,9 +953,10 @@
   .card.dead .c-tint{opacity:.35}
   /* A banned account said so five times (rail, badge, strikethrough, a red border,
      its notes) while its Login was the brightest thing on the card. The badge and
-     the strikethrough say it; the rail is gone, and Login is a plain button. */
-  .card.dead .a-login{background-color:var(--panel2);border-color:var(--btn-edge);color:var(--muted);font-weight:600}
-  .card.dead .a-login:hover{color:var(--text)}
+     the strikethrough say it; the rail is gone, and Login is a plain button, on the
+     card and in an opened list row. */
+  .card.dead .a-login,.rw.dead .a-login{background-color:var(--panel2);border-color:var(--btn-edge);color:var(--muted);font-weight:600}
+  .card.dead .a-login:hover,.rw.dead .a-login:hover{color:var(--text)}
   /* the list's copy keys step back on a banned row the way the card's Login does:
      still there (a login is wanted for an appeal), no longer an invitation */
   .rw.dead .rw-key{color:var(--faint);opacity:.6}
