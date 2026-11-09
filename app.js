@@ -6369,9 +6369,57 @@ function openForm(acc,focus){
   if(atNotes)requestAnimationFrame(()=>{const h=$("fNotesHead");if(h&&h.scrollIntoView)h.scrollIntoView({block:"start"})});
 }
 function setFormMore(on){
+  foldLand($("fGrid"));
   $("fGrid").classList.toggle("more",on);
+  setFormMoreBtn(on);
+}
+function setFormMoreBtn(on){
   const b=$("fMoreBtn");b.setAttribute("aria-expanded",String(on));
   b.firstChild.textContent=on?"Fewer details":"More details";
+}
+/* ---------- folds that open in place ----------
+   More details took the account form from about 400px to 800px in one frame, and
+   Settings' Advanced sections jumped the same way. They glide now, the way windows
+   do: the box's height runs from where it was to where it lands while what it
+   uncovers fades in, 220ms on the way out and quicker on the way back. Nothing
+   moves with reduced motion or effects off, or where the browser cannot animate. */
+const FOLD_EASE="cubic-bezier(.22,1,.36,1)";
+function foldMotion(){return typeof Element.prototype.animate==="function"&&!prefersReducedMotion()&&document.body.dataset.fx!=="off"}
+// set straight, by a window opening: whatever was in flight lands first, so its
+// last step cannot undo this
+function foldLand(box){if(box&&box._foldEnd)box._foldEnd()}
+// open or closed as last asked, even while it is still on its way there
+function foldWanted(box,now){return box._foldEnd?box._foldTo:now}
+function glideFold(box,on,set,parts){
+  if(box._foldEnd)box._foldEnd();   // a second press first lands the one in flight
+  if(!foldMotion()){set(on);return}
+  const from=box.getBoundingClientRect().height;
+  set(on);
+  const to=box.getBoundingClientRect().height, shown=parts();
+  // closing keeps everything in place until the height has run down to the closed one
+  if(!on)set(true);
+  const o={duration:on?220:160,easing:on?FOLD_EASE:"ease",fill:"forwards"};
+  box.style.overflow="hidden";
+  const anims=[box.animate([{height:from+"px"},{height:to+"px"}],o)]
+    .concat(shown.map(p=>p.animate(on?[{opacity:0},{opacity:1}]:[{opacity:1},{opacity:0}],o)));
+  for(const a of anims)a.finished.catch(()=>{});
+  const end=()=>{
+    if(box._foldEnd!==end)return;
+    box._foldEnd=null;
+    if(!on)set(false);
+    for(const a of anims)a.cancel();
+    box.style.overflow="";
+  };
+  box._foldEnd=end;box._foldTo=on;
+  anims[0].finished.then(end,()=>{});
+}
+for(const d of document.querySelectorAll("#settings details")){
+  const sum=d.querySelector(":scope>summary");
+  if(sum)sum.addEventListener("click",e=>{
+    if(!foldMotion()&&!d._foldEnd)return;   // the browser's own toggle
+    e.preventDefault();
+    glideFold(d,!foldWanted(d,d.open),v=>{d.open=v},()=>[...d.children].filter(c=>c!==sum));
+  });
 }
 /* Everything the form holds, to tell whether leaving it would lose something */
 let formBase="";
@@ -6450,9 +6498,12 @@ $("fName").addEventListener("input",()=>{
 $("fTag").addEventListener("input",()=>clearFieldError("fTag"));
 $("fRegion").addEventListener("change",()=>clearFieldError("fName"));   // a duplicate is per region
 $("fMoreBtn").addEventListener("click",()=>{
-  const on=!$("fGrid").classList.contains("more");
-  setFormMore(on);cfg.formMore=on;saveCfg();   // kept the way you leave it, for the next account
-  if(on)$("fLabel").focus();
+  const g=$("fGrid"), on=!foldWanted(g,g.classList.contains("more"));
+  setFormMoreBtn(on);
+  glideFold(g,on,v=>g.classList.toggle("more",v),()=>[...g.querySelectorAll(":scope>.f-x:not(.hidden)")]);
+  cfg.formMore=on;saveCfg();   // kept the way you leave it, for the next account
+  // not scrolled to: the box clips while it grows, and the field is just under the button
+  if(on)$("fLabel").focus({preventScroll:true});
 });
 $("fPassNote").addEventListener("click",async e=>{
   if(!e.target.closest("#fSetMaster"))return;
@@ -6548,7 +6599,7 @@ function openSettings(tab){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();renderPwCheck();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sChecksLead").textContent=checksLead();$("sChecksAdv").open=!!(cfg.backendUrl||cfg.apiKey);$("sDeployHelp").open=!cfg.backendUrl;$("sAdvanced").open=!!cfg.apiKey;$("settings").classList.remove("hidden");centreSettingsTab();settingsDirty(false)
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();renderPwCheck();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sChecksLead").textContent=checksLead();["sChecksAdv","sDeployHelp","sAdvanced"].forEach(id=>foldLand($(id)));$("sChecksAdv").open=!!(cfg.backendUrl||cfg.apiKey);$("sDeployHelp").open=!cfg.backendUrl;$("sAdvanced").open=!!cfg.apiKey;$("settings").classList.remove("hidden");centreSettingsTab();settingsDirty(false)
 }
 // Where ranks come from, in the order check() tries them
 function checksLead(){
