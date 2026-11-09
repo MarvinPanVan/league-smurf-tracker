@@ -10618,6 +10618,31 @@ test("a list row's and a wall tile's initial is drawn under the picture, so a de
   assert.doesNotMatch(appJs, /\$\{(icon0|url)\?`<img[^`]*data-ico>`:`?(<b>)?\$\{esc\(initial\)\}/, "no picture-or-letter left anywhere");
 });
 
+// + Add account did 0.1s of work before its window could show: every window's opening
+// puts a previewed text size back, and that refitted every card's tags, size changed
+// or not, measuring each card straight after changing it.
+test("opening a window does not refit the cards' tags, and fitting them measures after all the changes", async () => {
+  const tagged = id => Object.assign(seededAccount()[0], { id, tags: ["main", "adc", "duo"] });
+  const win = bootApp([tagged("a"), tagged("b"), tagged("c")]);
+  runScript(win, "window.__fits = 0; const f0 = fitTags; fitTags = (...a) => { window.__fits++; return f0(...a) }");
+  win.document.getElementById("bAdd").click();
+  await tick();
+  assert.equal(win.document.getElementById("form").classList.contains("hidden"), false);
+  assert.equal(win.__fits, 0, "the text size did not change, so nothing is refitted");
+  runScript(win, 'applyTextSize("large")');
+  assert.equal(win.__fits, 1, "a new size does refit them");
+  runScript(win, 'applyTextSize("default")');
+  // every change first, then every measure: one layout, not one a card
+  const log = [];
+  const proto = win.HTMLElement.prototype, hid = Object.getOwnPropertyDescriptor(proto, "hidden");
+  Object.defineProperty(proto, "hidden", { configurable: true, get: hid.get, set(v) { log.push("W"); hid.set.call(this, v) } });
+  const rect = proto.getBoundingClientRect;
+  proto.getBoundingClientRect = function () { log.push("R"); return { left: 0, right: this.classList.contains("ctags") ? 300 : 40, width: 40, top: 0, bottom: 10, height: 10 } };
+  try { runScript(win, "fitTags()") } finally { Object.defineProperty(proto, "hidden", hid); proto.getBoundingClientRect = rect }
+  assert.ok(log.includes("W") && log.includes("R"), "it changed and measured");
+  assert.equal(log.lastIndexOf("W") < log.indexOf("R"), true, "no change after the first measure when nothing overflows: " + log.join(""));
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

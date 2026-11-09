@@ -6693,9 +6693,12 @@ const EFFECTS=["full","subtle","off"];
 function syncOptSeg(id,v){const el=$(id);if(el)for(const b of el.querySelectorAll("[data-v]"))b.setAttribute("aria-checked",String(b.dataset.v===v))}
 const TEXT_SIZES=["small","default","large"];
 function applyTextSize(v){
-  const t=TEXT_SIZES.includes(v)?v:"default";
+  const t=TEXT_SIZES.includes(v)?v:"default", was=document.documentElement.dataset.ts||"default";
   if(t==="default")delete document.documentElement.dataset.ts;else document.documentElement.dataset.ts=t;
-  syncOptSeg("sTextSize",t);fitTags();return t;
+  // Every window's opening puts any previewed size back through here. Refitting
+  // every card's tags each time, size changed or not, was 0.1s of layout before
+  // + Add account could show at all.
+  syncOptSeg("sTextSize",t);if(t!==was)fitTags();return t;
 }
 /* A card's tags stay on one row, the way its note chips do: ten tags made a
    two-row block of chips on every card that had them. What does not fit hides
@@ -6704,18 +6707,26 @@ function applyTextSize(v){
    row to one line even before this runs. */
 let fitTagsRaf=0;
 addEventListener("resize",()=>{cancelAnimationFrame(fitTagsRaf);fitTagsRaf=requestAnimationFrame(()=>fitTags())});
+/* All the resetting first, then all the measuring: done a card at a time, each
+   card's measure came straight after a change and paid for a layout of the whole
+   page, forty of them on every render. Only the rows that overflow, usually none,
+   go on to the one-at-a-time fitting below. */
 function fitTags(root){
   const scope=root||$("grid");if(!scope)return;
-  const rows=scope.matches&&scope.matches(".ctags")?[scope]:scope.querySelectorAll(".card:not(.info-open) .ctags");
+  const rows=[...(scope.matches&&scope.matches(".ctags")?[scope]:scope.querySelectorAll(".card:not(.info-open) .ctags"))];
   for(const row of rows){
     for(const m of row.querySelectorAll(".ct-more"))m.remove();
-    const chips=[...row.children];
-    for(const c of chips)c.hidden=false;
+    for(const c of row.children)c.hidden=false;
+  }
+  const over=[];
+  for(const row of rows){
     const R=row.getBoundingClientRect();
     if(!R.width)continue;
+    const chips=[...row.children], cut=chips.findIndex(el=>el.getBoundingClientRect().right>R.right+.5);
+    if(cut>=0)over.push([row,chips,cut,R]);
+  }
+  for(const[row,chips,cut,R]of over){
     const out=el=>el.getBoundingClientRect().right>R.right+.5;
-    const cut=chips.findIndex(out);
-    if(cut<0)continue;
     const more=document.createElement("button");
     more.type="button";more.className="ct-more";more.dataset.act="info";more.title="Show every tag in Details";
     row.appendChild(more);
