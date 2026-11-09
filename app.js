@@ -464,9 +464,11 @@ function isChecked(a){return !!(a.stats&&a.stats.updatedAt)}
    run, accounts whose Riot side is not set up yet and can only answer "not found"
    again. Those have their own tiles (Never checked, Needs attention) and their own
    way to be checked: filter to them and Check N shown. */
+/* Archived is out of the rotation the way banned is: an archived card wore the
+   amber "Updated 9 days ago" and a Refresh for an account put away on purpose. */
 function isStale(a){
   const s=a.stats;
-  return a.status!=="banned"&&isChecked(a)&&s.found!==false&&!!(s.tier||s.level!=null)&&Date.now()-s.updatedAt>STALE_MS;
+  return isLive(a)&&isChecked(a)&&s.found!==false&&!!(s.tier||s.level!=null)&&Date.now()-s.updatedAt>STALE_MS;
 }
 function isRanked(a){const t=a.stats&&a.stats.found!==false&&(a.stats.tier||"").toUpperCase();return !!(t&&t!=="UNRANKED")}
 /* An account with no rank yet. "Never checked" is right until a check has been
@@ -5617,15 +5619,15 @@ function rowHTML(a,i){
       <span class="rw-spark">${sparkline(thisSeason(a.history),col)
         // Nothing to plot yet, so the slot offers the one thing that would change
         // that. Sixty never-checked rows used to be sixty dead lines.
-        // Not on a banned row (the card skips those too), nor an opened one, whose
-        // Check rank is under it in the card's words: one button for one action.
-        ||(!isChecked(a)&&!isChecking&&!open&&a.status!=="banned"?`<button class="rw-check" data-act="check" title="Check this account's rank now">${icon("refresh")} Check</button>`:"")}</span>
+        // Not on a banned or archived row (the card skips those too), nor an opened
+        // one, whose Check rank is under it in the card's words: one button, one action.
+        ||(!isChecked(a)&&!isChecking&&!open&&isLive(a)?`<button class="rw-check" data-act="check" title="Check this account's rank now">${icon("refresh")} Check</button>`:"")}</span>
       <span class="rw-rank" style="color:${isRanked(a)?col:"var(--muted)"}"><b>${esc(rank)}</b>${lp?`<em>${esc(lp)}</em>`:""}</span>
       <span class="rw-d">${dv?`<span class="delta ${dv>0?"d-up":"d-down"}">${dv>0?"▲ +":"▼ -"}${fmtN(Math.abs(dv))}</span>`:""}</span>
       <span class="rw-wr">${wr!==null?`<b class="${wr>=50?"wr-good":""}">${wr}%</b><span class="rw-bar"><i style="width:${wr}%;background:${col}"></i></span><em>${wlText(wins,losses)}</em>`
         :total>0?`<em>${wins!=null?fmtN(wins)+"W":fmtN(losses)+"L"}</em>`:""}</span>
       <span class="rw-rg">${esc(a.region)}</span>
-      <span class="rw-up${isStale(a)||!hasReading(s)?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
+      <span class="rw-up${isStale(a)||(!hasReading(s)&&isLive(a))?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
       <span class="rw-keys">${a.login?`<button class="rw-key" data-act="copylogin" title="Copy username" aria-label="Copy username for ${esc(plainName(a))}">${icon("user")}</button>`:""}${a.password?`<button class="rw-key" data-act="copypw" title="Copy password" aria-label="Copy password for ${esc(plainName(a))}">${icon("key")}</button>`:""}</span>
       <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
@@ -5675,9 +5677,10 @@ function tileHTML(a){
 }
 /* The card's lines for an account with no rank to show, shared with an opened list
    row. Never checked: its Check rank, the one way to check it outside the ⋯ menu
-   (a banned account is never checked, and a failed one has its Refresh). */
+   (not on a banned or archived account, which are never checked, nor a failed
+   one, which has its Refresh). */
 function checkRankHTML(a){
-  return a.status!=="banned"&&!isFailed(a)?`<div class="wl"><button type="button" class="c-check" data-act="check" title="Check this account's rank now">${icon("refresh")}Check rank</button></div>`:"";
+  return isLive(a)&&!isFailed(a)?`<div class="wl"><button type="button" class="c-check" data-act="check" title="Check this account's rank now">${icon("refresh")}Check rank</button></div>`:"";
 }
 // amber like the header's warning: a Riot ID op.gg doesn't know is usually one to
 // correct, so the line is the way to correct it, not only the advice to
@@ -5886,7 +5889,7 @@ function cardHTML(a,i){
            covering the rest. */
         const old=!!(s&&s.updatedAt&&Date.now()-s.updatedAt>864e5), failed=isLive(a)&&isFailed(a);
         const parts=(old?`<span class="upd${stale?" stale":""}"${s&&(s.asOf||s.source)?` title="Read from ${esc([s.asOf,s.source&&s.source!=="meta"?s.source:null].filter(Boolean).join(" · "))}"`:""}>${(stale?icon("alert"):"")+"Updated "+timeAgo(s.updatedAt)}</span>`:"")
-          +((old||failed)&&a.status!=="banned"?`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`:"")
+          +((old||failed)&&isLive(a)?`<button class="c-ref" data-act="check" ${isChecking?"disabled":""} title="Check this account's rank now" aria-label="Refresh rank">${isChecking?`<span class="spin">${icon("refresh")}</span>`:icon("refresh")}</button>`:"")
           +(failed?`<span class="c-failed" title="${esc(failReason(s.note))}">${icon("alert")}Last check failed</span>`:"")
           +(a.lastLoginAt?`<span class="src" title="The last time you copied or looked at this account's login here">Last login ${esc(timeAgo(a.lastLoginAt))}</span>`:"");
         return parts?`<span class="c-meta">${parts}</span>`:"";

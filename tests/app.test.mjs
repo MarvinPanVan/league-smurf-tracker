@@ -11163,6 +11163,39 @@ test("Compare says Last login, as the card does, and leaves what it doesn't know
   assert.doesNotMatch(win.document.getElementById("cmpBody").textContent, /—|never/, "no dash, no never");
 });
 
+// An archived card wore the amber "Updated 9 days ago" and a Refresh, and one never checked
+// its Check rank: nags about an account put away on purpose
+test("an archived account is not nagged: no out-of-date amber, no Refresh, no Check rank", () => {
+  const now = Date.now();
+  const mk = (id, extra) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [], ...extra });
+  const old = { found: true, tier: "SILVER", division: "II", lp: 4, wins: 3, losses: 2, updatedAt: now - 9 * 864e5 };
+  const win = bootApp([mk("arc", { archived: true, stats: old }), mk("arn", { archived: true, stats: null }),
+    mk("live", { stats: { ...old } }), mk("new", { stats: null })]);
+  const doc = win.document;
+  assert.equal(appGet(win, 'isStale(accounts.find(a => a.id === "arc"))'), false, "archived is never stale");
+  assert.equal(appGet(win, 'isStale(accounts.find(a => a.id === "live"))'), true, "the same reading, live, is");
+  const live = doc.querySelector('.card[data-id="live"]');
+  assert.ok(live.querySelector(".upd.stale") && live.querySelector(".c-ref"), "a live card: amber and its Refresh");
+  assert.ok(doc.querySelector('.card[data-id="new"] .c-check'), "a live card never checked: Check rank");
+  runScript(win, "ui.showArchived = true; render()");
+  const arc = doc.querySelector('.card[data-id="arc"]'), arn = doc.querySelector('.card[data-id="arn"]');
+  assert.ok(arc.querySelector(".upd"), "an archived card still says when it was read");
+  assert.equal(arc.querySelector(".upd.stale"), null, "without the amber");
+  assert.equal(arc.querySelector(".c-ref"), null, "or the Refresh");
+  assert.equal(arn.querySelector('[data-act="check"]'), null, "and one never checked has no Check rank");
+  // the list: no amber timestamp, no Check, open or closed
+  listView(win);
+  for (const id of ["arc", "arn"]) {
+    const row = doc.querySelector(`.rw[data-id="${id}"]`);
+    assert.equal(row.querySelector(".rw-up.stale"), null, id + ": no amber time");
+    row.querySelector(".rw-main").click();
+    assert.equal(doc.querySelector(`.rw[data-id="${id}"] [data-act="check"]`), null, id + ": no Check");
+  }
+  // still checkable on purpose, from its menu
+  const menu = cardMenu(win, "arc");
+  assert.ok(menu.querySelector('[data-act="check"]'), "Refresh rank stays in the ⋯ menu");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
