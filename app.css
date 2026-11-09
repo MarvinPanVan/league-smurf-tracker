@@ -2157,6 +2157,7 @@
   .acc-prev-card-h{display:flex;flex-wrap:wrap;align-items:center;gap:4px 7px;margin-bottom:6px}
   .acc-prev-nm{font-size:calc(13px*var(--ts));font-weight:600;color:var(--text);white-space:nowrap}
   .acc-prev-star{color:var(--star);font-size:calc(13px*var(--ts));line-height:1;margin-left:auto}
+  .acc-prev-star .ico,.acc-prev-tools button.on .ico{fill:currentColor}
   .acc-prev-rk{flex-basis:100%;font:700 calc(14px*var(--ts))/1.1 'Inter',system-ui,sans-serif;letter-spacing:-.01em;color:#7ea6f0}
   .acc-prev-rk small{font:600 calc(11px*var(--ts)) Inter,system-ui,sans-serif;text-transform:none;color:var(--muted);margin-left:4px}
   .acc-prev-wl{font-size:calc(12px*var(--ts));color:var(--muted);margin-bottom:8px}

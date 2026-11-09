@@ -10941,6 +10941,16 @@ test("no typed character stands in for an icon: ⋯, ✕ and ↺ are drawn, and 
   assert.equal(doc.querySelector('#fInfo [data-nf="honor"] [data-v=""]').textContent, "Not set");
 });
 
+// Settings' colour preview drew a card two clean-ups old: Login and Refresh, a typed ★ and ?
+test("Settings' colour preview draws the card as it is now", () => {
+  const doc = new JSDOM(pageHtml).window.document, prev = doc.getElementById("accPrev");
+  assert.doesNotMatch(prev.textContent, /\bLogin\b|\bRefresh\b|[★?⋯]/);
+  assert.equal(prev.querySelector(".acc-prev-card .a-login").textContent.trim(), "Copy username");
+  assert.ok(prev.querySelector(".acc-prev-card .a-login svg.ico"), "with the username's mark");
+  assert.ok(prev.querySelector('.acc-prev-card [aria-label="More actions"] svg.ico'), "and the drawn ⋯");
+  assert.ok(prev.querySelector(".acc-prev-star svg.ico") && prev.querySelector(".acc-prev-tools .on svg.ico"), "stars drawn, not typed");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
