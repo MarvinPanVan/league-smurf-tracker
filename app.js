@@ -3534,13 +3534,16 @@ function renderCompare(){
       <div class="cmp-lp">${ranked&&s.lp!=null?esc(fmtN(s.lp)+" LP"):"&nbsp;"}</div>
     </div>`;
   };
+  /* What isn't known is left blank, as everywhere else: "—" was the one placeholder
+     still drawn. "Last played" took a game, a login or a rank check, whichever was
+     newest, so an account checked an hour ago was "played" an hour ago; the card's
+     "Last login" is the stamp its Copy username leaves, and so is this. */
   const facts=acc=>{
-    const s=acc.stats||{}, wl=winLoss(s), tr=wrTrend(acc);
-    const seen=acc.lastPlayedAt||acc.lastLoginAt||s.updatedAt||0;
+    const s=acc.stats||{}, wl=winLoss(s), tr=wrTrend(acc), seen=openedAt(acc);
     return {
-      record:wl.w!=null||wl.l!=null?(wl.w!=null?fmtN(wl.w)+"W":"—")+" "+(wl.l!=null?fmtN(wl.l)+"L":"—"):"—",
-      wr:wl.wr, peak:peakInfo(acc).peak||"—", trend:tr?(tr.d>0?"+":"")+tr.d+" pp":"—",
-      seen, level:s.level!=null?String(s.level):"—",
+      record:[wl.w!=null?fmtN(wl.w)+"W":"",wl.l!=null?fmtN(wl.l)+"L":""].filter(Boolean).join(" "),
+      wr:wl.wr, peak:peakInfo(acc).peak||"", trend:tr?(tr.d>0?"+":"")+tr.d+" pp":"",
+      login:seen?timeAgo(seen):"", level:s.level!=null?String(s.level):"",
     };
   };
   const fa=facts(a), fb=facts(b);
@@ -3548,7 +3551,7 @@ function renderCompare(){
   const cmp=(x,y)=>x==null||y==null||x===y?0:(x>y?-1:1);
   const row=(label,l,r,better)=>`<div class="cmp-row"><span class="${better<0?"win":""}">${esc(l)}</span>`
     +`<span class="k">${esc(label)}</span><span class="${better>0?"win":""}">${esc(r)}</span></div>`;
-  const pct=v=>v==null?"—":v+"%";
+  const pct=v=>v==null?"":v+"%";
   setHTML($("cmpBody"),`<div class="cmp">
     <div class="cmp-head">${side(a)}<div class="cmp-vs" aria-hidden="true"><span>VS</span></div>${side(b)}</div>
     <div class="cmp-rows">`
@@ -3557,7 +3560,7 @@ function renderCompare(){
       +row("Peak",fa.peak,fb.peak,0)
       +row("WR trend",fa.trend,fb.trend,0)
       +row("Level",fa.level,fb.level,0)
-      +row("Last played",fa.seen?timeAgo(fa.seen):"never",fb.seen?timeAgo(fb.seen):"never",0)
+      +row("Last login",fa.login,fb.login,0)
     +`</div></div>`);
   const modal=$("compareModal");
   if(!modal){compareIds=[];return}

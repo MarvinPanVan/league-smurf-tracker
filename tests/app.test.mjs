@@ -7281,7 +7281,7 @@ test("compare is a versus screen: one row per fact, the better win rate lit", ()
   assert.equal(sides[1].querySelector(".cmp-lp").textContent, "5 LP");
   const rows = [...body.querySelectorAll(".cmp-row")];
   assert.deepEqual(rows.map(r => r.querySelector(".k").textContent),
-    ["Record", "Win rate", "Peak", "WR trend", "Level", "Last played"]);
+    ["Record", "Win rate", "Peak", "WR trend", "Level", "Last login"]);
   const wr = rows[1].children;
   assert.equal(wr[0].textContent, "56%");
   assert.equal(wr[2].textContent, "67%");
@@ -11137,6 +11137,30 @@ test("an opened list row follows the card's rules per state: banned, not found, 
   assert.equal(doc.querySelector('.card[data-id="nf"] .c-miss').outerHTML, rowNf, "one Fix Riot ID line");
   assert.equal(doc.querySelector('.card[data-id="nc"] .c-check').closest(".wl").outerHTML, rowNc, "one Check rank line");
   assert.equal(doc.querySelector('.card[data-id="ban"] [data-act="check"]'), null, "and none on the banned card");
+});
+
+// Compare said "Last played 1 hour ago" of an account only checked an hour ago (a check
+// counted as a game), and drew "—" for what it didn't know, the last such dash in the app
+test("Compare says Last login, as the card does, and leaves what it doesn't know blank", () => {
+  const hour = 3600e3, now = Date.now();
+  const win = bootApp([
+    { id: "c1", region: "EUW", gameName: "Alpha", tagLine: "A", status: "active", lastLoginAt: now - 3 * 24 * hour,
+      stats: { found: true, tier: "GOLD", division: "II", lp: 20, wins: 10, losses: 8, level: 40, updatedAt: now - hour }, history: [], tags: [] },
+    { id: "c2", region: "KR", gameName: "Beta", tagLine: "B", status: "active", lastPlayedAt: now - 2 * hour,
+      stats: { found: true, tier: "UNRANKED", wins: 4, losses: null, updatedAt: now - hour }, history: [], tags: [] },
+  ]);
+  win.startCompare("c1");
+  win.startCompare("c2");
+  const rows = Object.fromEntries([...win.document.querySelectorAll("#cmpBody .cmp-row")].map(r =>
+    [r.querySelector(".k").textContent, [r.children[0].textContent, r.children[2].textContent]]));
+  assert.equal(rows["Last played"], undefined, "no Last played");
+  assert.deepEqual(rows["Last login"], ["3 days ago", ""], "the login stamp, and blank where Copy username was never used, not the check");
+  assert.deepEqual(rows["Record"], ["10W 8L", "4W"], "the half of a record that is known, no dash for the rest");
+  assert.deepEqual(rows["Win rate"], ["56%", ""]);
+  assert.deepEqual(rows["Level"], ["40", ""]);
+  assert.deepEqual(rows["Peak"], ["Gold II · 20 LP", ""]);
+  assert.deepEqual(rows["WR trend"], ["", ""]);
+  assert.doesNotMatch(win.document.getElementById("cmpBody").textContent, /—|never/, "no dash, no never");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
