@@ -8709,6 +8709,13 @@ test("the account form starts with what it needs, folds the rest, and every labe
   assert.equal(doc.activeElement.id, "fLabel", "and the first of them is ready to type in");
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).formMore, true, "kept the way you leave it");
   more.click();
+  // A tap leaves the focus alone: on an iPad a field taking focus brings up the
+  // keyboard and the contact-autofill bar
+  more.focus();
+  more.dispatchEvent(new win.MouseEvent("click", { bubbles: true, detail: 1 }));
+  assert.ok(grid.classList.contains("more"));
+  assert.equal(doc.activeElement.id, "fMoreBtn", "a tap or a mouse click opens them and stays where it was");
+  more.click();
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).formMore, false);
   // editing an account that has some of the details opens with them showing; one without stays short
   doc.getElementById("fCancel").click();

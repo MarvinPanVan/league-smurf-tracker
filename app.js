@@ -6497,13 +6497,16 @@ $("fName").addEventListener("input",()=>{
 });
 $("fTag").addEventListener("input",()=>clearFieldError("fTag"));
 $("fRegion").addEventListener("change",()=>clearFieldError("fName"));   // a duplicate is per region
-$("fMoreBtn").addEventListener("click",()=>{
+$("fMoreBtn").addEventListener("click",e=>{
   const g=$("fGrid"), on=!foldWanted(g,g.classList.contains("more"));
   setFormMoreBtn(on);
   glideFold(g,on,v=>g.classList.toggle("more",v),()=>[...g.querySelectorAll(":scope>.f-x:not(.hidden)")]);
   cfg.formMore=on;saveCfg();   // kept the way you leave it, for the next account
-  // not scrolled to: the box clips while it grows, and the field is just under the button
-  if(on)$("fLabel").focus({preventScroll:true});
+  /* Ready to type in from the keyboard (Enter or Space: a click with no count). A
+     tap moved the focus too, and on an iPad a text field taking focus brings up the
+     keyboard and the contact-autofill bar over a form you only wanted to look at.
+     Not scrolled to: the box clips while it grows, and the field is just below. */
+  if(on&&e.detail===0)$("fLabel").focus({preventScroll:true});
 });
 $("fPassNote").addEventListener("click",async e=>{
   if(!e.target.closest("#fSetMaster"))return;
