@@ -110,8 +110,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.27.0";
+const APP_VERSION="2.27.1";
 const APP_CHANGELOG=[
+  {v:"2.27.1",items:[
+    "Windows open straight away: + Add account no longer waits a tenth of a second before it shows",
+    "Opening a window is smoother: the page behind is darkened instead of blurred",
+    "More details and Settings' Advanced sections glide open and closed, and a tap on More details no longer brings up the iPad keyboard",
+  ]},
   {v:"2.27.0",items:[
     "Play next is now Suggested game, and says why first: \"Decays in 3 days\", then the account",
     "On a phone, Check all ranks and + Add account share one row, and the status line no longer ends in a stray dot",
@@ -6369,9 +6374,57 @@ function openForm(acc,focus){
   if(atNotes)requestAnimationFrame(()=>{const h=$("fNotesHead");if(h&&h.scrollIntoView)h.scrollIntoView({block:"start"})});
 }
 function setFormMore(on){
+  foldLand($("fGrid"));
   $("fGrid").classList.toggle("more",on);
+  setFormMoreBtn(on);
+}
+function setFormMoreBtn(on){
   const b=$("fMoreBtn");b.setAttribute("aria-expanded",String(on));
   b.firstChild.textContent=on?"Fewer details":"More details";
+}
+/* ---------- folds that open in place ----------
+   More details took the account form from about 400px to 800px in one frame, and
+   Settings' Advanced sections jumped the same way. They glide now, the way windows
+   do: the box's height runs from where it was to where it lands while what it
+   uncovers fades in, 220ms on the way out and quicker on the way back. Nothing
+   moves with reduced motion or effects off, or where the browser cannot animate. */
+const FOLD_EASE="cubic-bezier(.22,1,.36,1)";
+function foldMotion(){return typeof Element.prototype.animate==="function"&&!prefersReducedMotion()&&document.body.dataset.fx!=="off"}
+// set straight, by a window opening: whatever was in flight lands first, so its
+// last step cannot undo this
+function foldLand(box){if(box&&box._foldEnd)box._foldEnd()}
+// open or closed as last asked, even while it is still on its way there
+function foldWanted(box,now){return box._foldEnd?box._foldTo:now}
+function glideFold(box,on,set,parts){
+  if(box._foldEnd)box._foldEnd();   // a second press first lands the one in flight
+  if(!foldMotion()){set(on);return}
+  const from=box.getBoundingClientRect().height;
+  set(on);
+  const to=box.getBoundingClientRect().height, shown=parts();
+  // closing keeps everything in place until the height has run down to the closed one
+  if(!on)set(true);
+  const o={duration:on?220:160,easing:on?FOLD_EASE:"ease",fill:"forwards"};
+  box.style.overflow="hidden";
+  const anims=[box.animate([{height:from+"px"},{height:to+"px"}],o)]
+    .concat(shown.map(p=>p.animate(on?[{opacity:0},{opacity:1}]:[{opacity:1},{opacity:0}],o)));
+  for(const a of anims)a.finished.catch(()=>{});
+  const end=()=>{
+    if(box._foldEnd!==end)return;
+    box._foldEnd=null;
+    if(!on)set(false);
+    for(const a of anims)a.cancel();
+    box.style.overflow="";
+  };
+  box._foldEnd=end;box._foldTo=on;
+  anims[0].finished.then(end,()=>{});
+}
+for(const d of document.querySelectorAll("#settings details")){
+  const sum=d.querySelector(":scope>summary");
+  if(sum)sum.addEventListener("click",e=>{
+    if(!foldMotion()&&!d._foldEnd)return;   // the browser's own toggle
+    e.preventDefault();
+    glideFold(d,!foldWanted(d,d.open),v=>{d.open=v},()=>[...d.children].filter(c=>c!==sum));
+  });
 }
 /* Everything the form holds, to tell whether leaving it would lose something */
 let formBase="";
@@ -6449,10 +6502,16 @@ $("fName").addEventListener("input",()=>{
 });
 $("fTag").addEventListener("input",()=>clearFieldError("fTag"));
 $("fRegion").addEventListener("change",()=>clearFieldError("fName"));   // a duplicate is per region
-$("fMoreBtn").addEventListener("click",()=>{
-  const on=!$("fGrid").classList.contains("more");
-  setFormMore(on);cfg.formMore=on;saveCfg();   // kept the way you leave it, for the next account
-  if(on)$("fLabel").focus();
+$("fMoreBtn").addEventListener("click",e=>{
+  const g=$("fGrid"), on=!foldWanted(g,g.classList.contains("more"));
+  setFormMoreBtn(on);
+  glideFold(g,on,v=>g.classList.toggle("more",v),()=>[...g.querySelectorAll(":scope>.f-x:not(.hidden)")]);
+  cfg.formMore=on;saveCfg();   // kept the way you leave it, for the next account
+  /* Ready to type in from the keyboard (Enter or Space: a click with no count). A
+     tap moved the focus too, and on an iPad a text field taking focus brings up the
+     keyboard and the contact-autofill bar over a form you only wanted to look at.
+     Not scrolled to: the box clips while it grows, and the field is just below. */
+  if(on&&e.detail===0)$("fLabel").focus({preventScroll:true});
 });
 $("fPassNote").addEventListener("click",async e=>{
   if(!e.target.closest("#fSetMaster"))return;
@@ -6548,7 +6607,7 @@ function openSettings(tab){
   if(cfg.notify&&"Notification"in window&&Notification.permission!=="granted"){
     cfg.notify=false;saveCfg();
   }
-  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();renderPwCheck();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sChecksLead").textContent=checksLead();$("sChecksAdv").open=!!(cfg.backendUrl||cfg.apiKey);$("sDeployHelp").open=!cfg.backendUrl;$("sAdvanced").open=!!cfg.apiKey;$("settings").classList.remove("hidden");centreSettingsTab();settingsDirty(false)
+  $("sKey").value=cfg.apiKey;$("sModel").value=cfg.model;$("sAuto").checked=!!cfg.autoCheck;$("sAutoEvery").value=String(coerceAutoEvery(cfg.autoEveryHours));$("sAutoRanked").checked=!!cfg.autoRankedOnly;$("sBackend").value=cfg.backendUrl||"";$("sNotify").checked=!!cfg.notify;$("sDiscord").value=cfg.discordWebhook||"";fillAutoLock($("sAutoLock"),cfg.autoLockMin||0);$("sAccent").value=cfg.accent||DEFAULT_ACCENT;$("sAccent2").value=cfg.accent2||DEFAULT_ACCENT2;pendingRankTheme=null;if(cfg.rankTheme){const c=rankThemeColours(bestTierNow());$("sAccent").value=c.a;$("sAccent2").value=c.b}renderThemes();syncAtmosphereUI(cfg.atmosphere||DEFAULT_ATMOSPHERE);applyEffects(cfg.effects);applyTextSize(cfg.textSize);$("sVaultPass").value="";if($("sExportDays"))$("sExportDays").value=String(clampExportDays(cfg.exportRemindDays));if($("sSyncToken"))$("sSyncToken").value=cfg.syncToken||"";pendingCardHide=null;renderCardParts();pendingChampArt=null;$("sChampArt").checked=champArtOn();updateVaultStatus();renderPwCheck();updateSyncStatus();updateStorageStatus();updateBackendStatus();$("sWatch").checked=!!cfg.watch;updateWatchStatus();$("sChecksLead").textContent=checksLead();["sChecksAdv","sDeployHelp","sAdvanced"].forEach(id=>foldLand($(id)));$("sChecksAdv").open=!!(cfg.backendUrl||cfg.apiKey);$("sDeployHelp").open=!cfg.backendUrl;$("sAdvanced").open=!!cfg.apiKey;$("settings").classList.remove("hidden");centreSettingsTab();settingsDirty(false)
 }
 // Where ranks come from, in the order check() tries them
 function checksLead(){
@@ -6693,9 +6752,12 @@ const EFFECTS=["full","subtle","off"];
 function syncOptSeg(id,v){const el=$(id);if(el)for(const b of el.querySelectorAll("[data-v]"))b.setAttribute("aria-checked",String(b.dataset.v===v))}
 const TEXT_SIZES=["small","default","large"];
 function applyTextSize(v){
-  const t=TEXT_SIZES.includes(v)?v:"default";
+  const t=TEXT_SIZES.includes(v)?v:"default", was=document.documentElement.dataset.ts||"default";
   if(t==="default")delete document.documentElement.dataset.ts;else document.documentElement.dataset.ts=t;
-  syncOptSeg("sTextSize",t);fitTags();return t;
+  // Every window's opening puts any previewed size back through here. Refitting
+  // every card's tags each time, size changed or not, was 0.1s of layout before
+  // + Add account could show at all.
+  syncOptSeg("sTextSize",t);if(t!==was)fitTags();return t;
 }
 /* A card's tags stay on one row, the way its note chips do: ten tags made a
    two-row block of chips on every card that had them. What does not fit hides
@@ -6704,18 +6766,26 @@ function applyTextSize(v){
    row to one line even before this runs. */
 let fitTagsRaf=0;
 addEventListener("resize",()=>{cancelAnimationFrame(fitTagsRaf);fitTagsRaf=requestAnimationFrame(()=>fitTags())});
+/* All the resetting first, then all the measuring: done a card at a time, each
+   card's measure came straight after a change and paid for a layout of the whole
+   page, forty of them on every render. Only the rows that overflow, usually none,
+   go on to the one-at-a-time fitting below. */
 function fitTags(root){
   const scope=root||$("grid");if(!scope)return;
-  const rows=scope.matches&&scope.matches(".ctags")?[scope]:scope.querySelectorAll(".card:not(.info-open) .ctags");
+  const rows=[...(scope.matches&&scope.matches(".ctags")?[scope]:scope.querySelectorAll(".card:not(.info-open) .ctags"))];
   for(const row of rows){
     for(const m of row.querySelectorAll(".ct-more"))m.remove();
-    const chips=[...row.children];
-    for(const c of chips)c.hidden=false;
+    for(const c of row.children)c.hidden=false;
+  }
+  const over=[];
+  for(const row of rows){
     const R=row.getBoundingClientRect();
     if(!R.width)continue;
+    const chips=[...row.children], cut=chips.findIndex(el=>el.getBoundingClientRect().right>R.right+.5);
+    if(cut>=0)over.push([row,chips,cut,R]);
+  }
+  for(const[row,chips,cut,R]of over){
     const out=el=>el.getBoundingClientRect().right>R.right+.5;
-    const cut=chips.findIndex(out);
-    if(cut<0)continue;
     const more=document.createElement("button");
     more.type="button";more.className="ct-more";more.dataset.act="info";more.title="Show every tag in Details";
     row.appendChild(more);

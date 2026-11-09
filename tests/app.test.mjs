@@ -8709,6 +8709,13 @@ test("the account form starts with what it needs, folds the rest, and every labe
   assert.equal(doc.activeElement.id, "fLabel", "and the first of them is ready to type in");
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).formMore, true, "kept the way you leave it");
   more.click();
+  // A tap leaves the focus alone: on an iPad a field taking focus brings up the
+  // keyboard and the contact-autofill bar
+  more.focus();
+  more.dispatchEvent(new win.MouseEvent("click", { bubbles: true, detail: 1 }));
+  assert.ok(grid.classList.contains("more"));
+  assert.equal(doc.activeElement.id, "fMoreBtn", "a tap or a mouse click opens them and stays where it was");
+  more.click();
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).formMore, false);
   // editing an account that has some of the details opens with them showing; one without stays short
   doc.getElementById("fCancel").click();
@@ -10616,6 +10623,110 @@ test("a list row's and a wall tile's initial is drawn under the picture, so a de
   assert.match(html, /\n  \.cmp-pic\{position:relative;/);
   // Quick find and Compare had the same either-or
   assert.doesNotMatch(appJs, /\$\{(icon0|url)\?`<img[^`]*data-ico>`:`?(<b>)?\$\{esc\(initial\)\}/, "no picture-or-letter left anywhere");
+});
+
+// + Add account did 0.1s of work before its window could show: every window's opening
+// puts a previewed text size back, and that refitted every card's tags, size changed
+// or not, measuring each card straight after changing it.
+test("opening a window does not refit the cards' tags, and fitting them measures after all the changes", async () => {
+  const tagged = id => Object.assign(seededAccount()[0], { id, tags: ["main", "adc", "duo"] });
+  const win = bootApp([tagged("a"), tagged("b"), tagged("c")]);
+  runScript(win, "window.__fits = 0; const f0 = fitTags; fitTags = (...a) => { window.__fits++; return f0(...a) }");
+  win.document.getElementById("bAdd").click();
+  await tick();
+  assert.equal(win.document.getElementById("form").classList.contains("hidden"), false);
+  assert.equal(win.__fits, 0, "the text size did not change, so nothing is refitted");
+  runScript(win, 'applyTextSize("large")');
+  assert.equal(win.__fits, 1, "a new size does refit them");
+  runScript(win, 'applyTextSize("default")');
+  // every change first, then every measure: one layout, not one a card
+  const log = [];
+  const proto = win.HTMLElement.prototype, hid = Object.getOwnPropertyDescriptor(proto, "hidden");
+  Object.defineProperty(proto, "hidden", { configurable: true, get: hid.get, set(v) { log.push("W"); hid.set.call(this, v) } });
+  const rect = proto.getBoundingClientRect;
+  proto.getBoundingClientRect = function () { log.push("R"); return { left: 0, right: this.classList.contains("ctags") ? 300 : 40, width: 40, top: 0, bottom: 10, height: 10 } };
+  try { runScript(win, "fitTags()") } finally { Object.defineProperty(proto, "hidden", hid); proto.getBoundingClientRect = rect }
+  assert.ok(log.includes("W") && log.includes("R"), "it changed and measured");
+  assert.equal(log.lastIndexOf("W") < log.indexOf("R"), true, "no change after the first measure when nothing overflows: " + log.join(""));
+});
+
+// The blur behind a window had to be redone on every frame of its way in: frames came
+// 48ms apart instead of 21ms while it opened
+test("a window's backdrop is a plain dark tint, not a blur", () => {
+  const rule = html.match(/\n  \.modal::before\{([^}]*)\}/)[1];
+  assert.doesNotMatch(rule, /backdrop-filter/, "no blur to recompute on every frame");
+  const alpha = parseInt(rule.match(/background:#05070b([0-9a-f]{2})/)[1], 16);
+  assert.ok(alpha >= 0xe6, "and darker than the 82% it was under the blur, so the page still recedes");
+  assert.match(rule, /animation:backIn \.22s ease both/, "it still fades in");
+});
+
+// More details took the form from about 400px to 800px in one frame, and Settings'
+// Advanced sections jumped the same way
+test("More details and Settings' Advanced glide open and closed, and not at all with motion reduced", async () => {
+  const fakeAnimate = win => {
+    const calls = [];
+    win.Element.prototype.animate = function (kf, o) {
+      let done; const a = { el: this, kf, o, finished: new Promise(r => { done = r }), cancel() { a.cancelled = true } };
+      a.done = () => done(a); calls.push(a); return a;
+    };
+    return calls;
+  };
+  const win = bootApp(), doc = win.document, grid = doc.getElementById("fGrid"), more = doc.getElementById("fMoreBtn");
+  const calls = fakeAnimate(win);
+  doc.getElementById("bAdd").click();
+  await tick();
+  more.click();
+  assert.ok(grid.classList.contains("more"), "opening shows the fields at once, under a box that grows");
+  assert.equal(calls[0].el, grid);
+  assert.deepEqual(Object.keys(calls[0].kf[0]), ["height"], "the box's height runs from one to the other");
+  assert.equal(calls[0].o.duration, 220);
+  assert.equal(calls[0].o.easing, "cubic-bezier(.22,1,.36,1)", "easing out");
+  assert.equal(grid.style.overflow, "hidden", "clipped while it grows");
+  const faded = calls.slice(1);
+  assert.ok(faded.length >= 5 && faded.every(a => a.el.classList.contains("f-x") && a.kf[0].opacity === 0 && a.kf[1].opacity === 1), "what it uncovers fades in");
+  calls[0].done(); await tick();
+  assert.equal(grid.style.overflow, "", "and lets go when it lands");
+  assert.ok(calls.every(a => a.cancelled), "leaving nothing held");
+  calls.length = 0;
+  more.click();
+  assert.equal(more.textContent.trim(), "More details", "the button answers at once");
+  assert.ok(grid.classList.contains("more"), "closing keeps the fields until the box has run down");
+  assert.equal(calls[0].o.duration, 160, "quicker than opening");
+  assert.ok(calls.slice(1).every(a => a.kf[0].opacity === 1 && a.kf[1].opacity === 0));
+  calls[0].done(); await tick();
+  assert.ok(!grid.classList.contains("more"), "then they go");
+  // a press while it is still moving turns it round from where it was asked to go
+  calls.length = 0;
+  more.click(); more.click();
+  assert.ok(calls.length && calls[0].cancelled, "the first glide lands");
+  assert.equal(more.textContent.trim(), "More details");
+  calls.at(-1 - doc.querySelectorAll("#fGrid > .f-x:not(.hidden)").length).done(); await tick();
+  assert.ok(!grid.classList.contains("more"));
+  // Settings' Advanced
+  doc.getElementById("fCancel").click();
+  runScript(win, 'openSettings("checks")');
+  const adv = doc.getElementById("sChecksAdv"), sum = adv.querySelector("summary");
+  calls.length = 0;
+  sum.click();
+  assert.equal(adv.open, true);
+  assert.equal(calls[0].el, adv);
+  calls[0].done(); await tick();
+  calls.length = 0;
+  sum.click();
+  assert.equal(adv.open, true, "it stays open while it closes");
+  assert.equal(calls[0].o.duration, 160);
+  calls[0].done(); await tick();
+  assert.equal(adv.open, false);
+  // with reduced motion nothing moves: it is open or closed at once
+  const calm = bootApp(undefined, w => { w.matchMedia = q => ({ matches: /reduce/.test(q), addListener() {}, removeListener() {}, addEventListener() {} }); });
+  const calmCalls = fakeAnimate(calm);
+  calm.document.getElementById("bAdd").click();
+  await tick();
+  calm.document.getElementById("fMoreBtn").click();
+  assert.ok(calm.document.getElementById("fGrid").classList.contains("more"));
+  calm.document.getElementById("fMoreBtn").click();
+  assert.ok(!calm.document.getElementById("fGrid").classList.contains("more"), "closed at once");
+  assert.equal(calmCalls.length, 0, "and nothing animated");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
