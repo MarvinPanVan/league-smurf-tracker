@@ -6386,9 +6386,12 @@ function setFormMoreBtn(on){
    More details took the account form from about 400px to 800px in one frame, and
    Settings' Advanced sections jumped the same way. They glide now, the way windows
    do: the box's height runs from where it was to where it lands while what it
-   uncovers fades in, 220ms on the way out and quicker on the way back. Nothing
+   uncovers fades in, 280ms on the way out and quicker on the way back. Nothing
    moves with reduced motion or effects off, or where the browser cannot animate. */
-const FOLD_EASE="cubic-bezier(.22,1,.36,1)";
+/* An ease-out cubic, not the quint the windows use: a fold travels hundreds of
+   pixels, and the quint put 56% of that into the first two frames (275, 487, 651
+   of 948px), which read as a jump. This one has about 31% there. */
+const FOLD_EASE="cubic-bezier(.33,1,.68,1)";
 function foldMotion(){return typeof Element.prototype.animate==="function"&&!prefersReducedMotion()&&document.body.dataset.fx!=="off"}
 // set straight, by a window opening: whatever was in flight lands first, so its
 // last step cannot undo this
@@ -6403,7 +6406,7 @@ function glideFold(box,on,set,parts){
   const to=box.getBoundingClientRect().height, shown=parts();
   // closing keeps everything in place until the height has run down to the closed one
   if(!on)set(true);
-  const o={duration:on?220:160,easing:on?FOLD_EASE:"ease",fill:"forwards"};
+  const o={duration:on?280:160,easing:on?FOLD_EASE:"ease",fill:"forwards"};
   box.style.overflow="hidden";
   const anims=[box.animate([{height:from+"px"},{height:to+"px"}],o)]
     .concat(shown.map(p=>p.animate(on?[{opacity:0},{opacity:1}]:[{opacity:1},{opacity:0}],o)));

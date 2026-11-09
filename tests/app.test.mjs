@@ -10679,8 +10679,10 @@ test("More details and Settings' Advanced glide open and closed, and not at all 
   assert.ok(grid.classList.contains("more"), "opening shows the fields at once, under a box that grows");
   assert.equal(calls[0].el, grid);
   assert.deepEqual(Object.keys(calls[0].kf[0]), ["height"], "the box's height runs from one to the other");
-  assert.equal(calls[0].o.duration, 220);
-  assert.equal(calls[0].o.easing, "cubic-bezier(.22,1,.36,1)", "easing out");
+  // a gentler ease-out than the windows' quint, which put 56% of a fold's travel
+  // into its first two frames
+  assert.equal(calls[0].o.duration, 280);
+  assert.equal(calls[0].o.easing, "cubic-bezier(.33,1,.68,1)", "easing out, gently");
   assert.equal(grid.style.overflow, "hidden", "clipped while it grows");
   const faded = calls.slice(1);
   assert.ok(faded.length >= 5 && faded.every(a => a.el.classList.contains("f-x") && a.kf[0].opacity === 0 && a.kf[1].opacity === 1), "what it uncovers fades in");
