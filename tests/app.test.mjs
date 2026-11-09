@@ -1024,11 +1024,15 @@ test("buttons are flat, of three kinds, and every control in a toolbar row is on
   assert.match(rule(".b-teal"), /color:var\(--teal-txt\)[^}]*background-color:var\(--panel2\)/, "outlined in the accent");
   const quiet = css.match(/\n  (\.b-quiet,[^{]*)\{([^}]*)\}/);
   assert.match(quiet[2], /background:none;border-color:transparent;color:var\(--text\)/, "quiet: no fill until hovered, and text you can read");
-  assert.ok(quiet[1].split(",").includes(".ghost-toggle"), "Hide stats is quiet");
+  assert.ok(quiet[1].split(",").includes(".ghost-toggle"), "the Stats switch is quiet");
   // the filter toggles sit beside boxed dropdowns: quiet, they read as plain text
   for (const who of [".tools>button", ".tag-handle", ".t-select"]) assert.ok(!quiet[1].split(",").includes(who), who + " is outlined, like the dropdowns");
   assert.match(rule("select"), /border-color:var\(--btn-edge\)/, "and the dropdowns wear the buttons' edge");
-  assert.match(rule("#bMore,#bHelp,#bFind"), /color:var\(--text\)/, "⋯, ? and Quick find are not greyed out");
+  // the header's four are one set: muted until pointed at, as drawn icons of one size
+  // (2.15.0 had ⋯ and ? at full text colour so the typed glyphs would not look off
+  // beside a grey "Hide stats"; drawn, and all four muted alike, they match)
+  assert.match(rule("#bMore,#bHelp,#bFind"), /color:var\(--muted\)/, "⋯, ? and Quick find are quiet");
+  assert.match(rule("#bMore:hover,#bHelp:hover,#bFind:hover"), /color:var\(--text\)/, "and brighter when pointed at");
   // one height, size and weight across a toolbar row
   assert.match(css, /--ctl-h:36px/);
   const row = css.match(/\n  (\.cmd>button,\.cmd \.seg,[^{]*)\{([^}]*)\}/);
@@ -5831,17 +5835,21 @@ test("the stats toggle lives in the header tray and survives a re-render", async
   const btn = win.document.querySelector(".bar #bDashToggle");
   assert.ok(btn, "it sits with the rest of the header chrome");
   assert.equal(win.document.querySelectorAll("#bDashToggle").length, 1, "and there is exactly one of it");
-  // the panel starts open, so the button offers the other direction
-  assert.match(btn.textContent, /Hide stats/);
+  // an on/off switch: "Stats", pressed while the panel is open
+  assert.equal(btn.textContent.trim(), "Stats");
+  assert.equal(btn.getAttribute("aria-pressed"), "true");
+  assert.ok(btn.classList.contains("on"));
   assert.ok(win.document.querySelectorAll(".dash .stat").length > 0);
 
   btn.click();
-  assert.match(win.document.querySelector("#bDashToggle").textContent, /Show stats/);
+  assert.equal(win.document.querySelector("#bDashToggle").getAttribute("aria-pressed"), "false");
+  assert.equal(btn.textContent.trim(), "Stats", "the same word either way");
   await until(() => win.document.querySelectorAll(".dash .stat").length === 0, "the panel closes");
 
   win.render();
   assert.equal(win.document.querySelector(".bar #bDashToggle"), btn, "the same button, not a rebuilt one");
-  assert.match(btn.textContent, /Show stats/, "and it still knows which way it is pointing");
+  assert.equal(btn.getAttribute("aria-pressed"), "false", "and it still knows whether it is on");
+  assert.ok(!btn.classList.contains("on"));
 });
 
 // ---- peak ceiling, dead accounts, and the console readout ----
@@ -8610,12 +8618,11 @@ test("on a phone the header is one app bar: the wordmark left, the tray right, t
   assert.match(r, /\.top>\.bar\{grid-column:2;grid-row:1/, "the tray beside the wordmark, not on a row of its own");
   assert.match(r, /\.top>\.ribbon\{grid-column:1\/-1;grid-row:2/);
   assert.match(r, /\.top>\.brand \.brand-mark\{display:none\}/);
-  assert.match(r, /#bDashToggle \.dt-v\{display:none\}/, "the toggle says just Stats");
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
     stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 3, losses: 2, updatedAt: Date.now() } }]);
   const b = win.document.getElementById("bDashToggle");
-  assert.equal(b.querySelector(".dt-v").textContent.trim(), "Hide");
-  assert.equal(b.querySelector(".dt-n").textContent, "stats");
+  assert.equal(b.querySelector(".dt-v"), null, "no Show or Hide to drop on a phone: it says Stats everywhere");
+  assert.equal(b.querySelector(".dt-n").textContent, "Stats");
 });
 
 // Every card carried a second chip in Login's colour beside the star
@@ -9033,7 +9040,7 @@ test("a phone starts with the stats folded away, and keeps them open once you op
   const phone = w => { w.matchMedia = q => ({ matches: /max-width:\s*560px/.test(q), addListener() {}, removeListener() {} }); };
   const win = bootApp(seed, phone);
   assert.equal(win.document.getElementById("dash").innerHTML, "", "folded on a phone");
-  assert.match(win.document.getElementById("bDashToggle").textContent, /Show/);
+  assert.equal(win.document.getElementById("bDashToggle").getAttribute("aria-pressed"), "false");
   win.document.getElementById("bDashToggle").click();
   assert.notEqual(win.document.getElementById("dash").innerHTML, "", "one tap opens them");
   assert.equal(appGet(win, "cfg.dashCollapsed"), false, "and the choice is kept");
@@ -9927,14 +9934,16 @@ test("a 320px phone gets cards that fit and a header that does not collide", () 
   const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
   assert.match(css, /\n  \.grid\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\(min\(335px,100%\),1fr\)\)/, "a column never wider than the room");
   const narrow = css.slice(css.indexOf("@media (max-width:380px){"));
-  assert.match(narrow.slice(0, narrow.indexOf("\n  }")), /#bDashToggle \.dt-v,#bDashToggle \.dt-n\{display:none\}/, "the toggle keeps only its arrow");
+  assert.match(narrow.slice(0, narrow.indexOf("\n  }")), /#bDashToggle \.dt-n\{display:none\}/, "the toggle keeps only its icon");
   assert.match(css, /@media \(max-width:340px\)\{\.top h1\{font-size:calc\(16px\*var\(--ts\)\)/, "and the wordmark steps down at the narrowest");
-  // with the word gone, the arrow still says what it does
+  // with the word gone, the icon still has its name, and its state
   const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
   const t = win.document.getElementById("bDashToggle");
-  assert.match(t.getAttribute("aria-label"), /^(Show|Hide) stats$/);
+  assert.equal(t.getAttribute("aria-label"), "Stats");
+  const was = t.getAttribute("aria-pressed");
   t.click();
-  assert.match(t.getAttribute("aria-label"), /^(Show|Hide) stats$/);
+  assert.equal(t.getAttribute("aria-label"), "Stats");
+  assert.notEqual(t.getAttribute("aria-pressed"), was);
 });
 
 // A phone held sideways (844 by 390) was laid out as a desktop: header, stats and two rows
@@ -10479,7 +10488,7 @@ test("the stats panel folds shut the way it opened, and goes at once with motion
   assert.ok(box(), "open to begin with");
   doc.getElementById("bDashToggle").click();
   assert.ok(box() && box().classList.contains("dash-out"), "it plays its way out");
-  assert.match(doc.getElementById("bDashToggle").getAttribute("aria-label"), /^Show stats$/, "the button already says what the next click does");
+  assert.equal(doc.getElementById("bDashToggle").getAttribute("aria-pressed"), "false", "the switch is already off");
   await until(() => !box(), "then the panel is gone");
   assert.match(html, /\.hx\.dash-out\{transform-origin:top center;animation:dashOut \.22s/);
   const calm = bootApp(seed, w => { w.matchMedia = q => ({ matches: /reduce/.test(q), addListener() {}, removeListener() {}, addEventListener() {} }); });
@@ -10823,6 +10832,29 @@ test("Riot's reset through a check: unranked after a ranked season reads as not 
   // a peak set by hand this season does count
   runScript(win, 'accounts[0].peakManual = { tier: "PLATINUM", division: "IV", lp: 0, at: Date.now() }; render()');
   assert.match(card().textContent, /Peak\s*Platinum IV/);
+});
+
+// The header's four mixed three kinds of symbol: a drawn 17px magnifier, a 13px
+// chevron, and ⋯ and ? typed in the font, smaller, higher and in another weight.
+// "Show stats" also put the button's gap between its two words.
+test("the header's four buttons are one set of drawn icons, and Stats is an on/off switch", () => {
+  const win = bootApp(ladderSeed()), doc = win.document;
+  for (const id of ["bDashToggle", "bFind", "bMore", "bHelp"]) {
+    const b = doc.getElementById(id), svg = b.querySelector("svg.ico");
+    assert.ok(svg, id + " is a drawn icon");
+    assert.equal(svg.getAttribute("viewBox"), "0 0 24 24", id + ": on the same grid");
+    assert.doesNotMatch(b.textContent, /[⋯?]/, id + ": no typed glyph");
+  }
+  assert.equal(doc.getElementById("bMore").getAttribute("aria-label"), "More");
+  assert.equal(doc.getElementById("bHelp").getAttribute("aria-label"), "Help");
+  assert.equal(doc.getElementById("bHelp").querySelectorAll("circle").length, 1, "the ? sits in a circle");
+  assert.equal(doc.getElementById("bMore").querySelectorAll("circle").length, 3, "three drawn dots");
+  assert.match(html, /\n  #bMore \.ico,#bHelp \.ico,#bFind \.ico,#bDashToggle \.ico\{width:18px;height:18px\}/, "one size");
+  const t = doc.getElementById("bDashToggle");
+  assert.equal(t.querySelector(".ico polyline"), null, "no chevron");
+  assert.equal(t.children.length, 2, "an icon and one word, so one gap");
+  assert.match(html, /\n  \.bar>#bDashToggle\{color:var\(--muted\)\}/);
+  assert.match(html, /\n  \.bar>#bDashToggle\.on\{color:var\(--text\);background:#ffffff10\}/, "on: a light tint, not other words");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
