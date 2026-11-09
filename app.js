@@ -110,8 +110,15 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.28.1";
+const APP_VERSION="2.29.0";
 const APP_CHANGELOG=[
+  {v:"2.29.0",items:[
+    "An opened row in the list works like its card: Copy username, the eye for the saved login, ⋯ for the rest, and Fix Riot ID or Check rank when the account needs one",
+    "Copy password turns back into Copy username after a minute, and the person icon always means the username, the key the password",
+    "The \"No backup yet\" reminder shows above your accounts even with the stats closed, and on a phone the stats sit two to a row",
+    "The rank emblems at the top stay on one line, and move under the title together when there isn't room beside it",
+    "Archived accounts no longer ask to be refreshed, and Compare's Last login is when you last copied that account's login",
+  ]},
   {v:"2.28.1",items:[
     "The buttons at the top right are one set of icons, and Stats is a simple on/off switch",
   ]},
