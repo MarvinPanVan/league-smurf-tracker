@@ -4387,6 +4387,10 @@ test("ranked-only skips accounts known to have no rank, but not ones never check
   setAutoCheck(win, { hours: 0.5, rankedOnly: true });
   assert.equal(win.autoCheckDue(acc("GOLD", 9)), true);
   assert.equal(win.autoCheckDue(acc("UNRANKED", 9)), false, "an unranked account answers the same every time");
+  // one that was ranked last season is waiting on placements: after a reset that is
+  // the whole vault, and skipping it meant its new rank was never found
+  const placing = Object.assign(acc("UNRANKED", 9), { history: [{ t: now - 30 * 864e5, tier: "GOLD", division: "I", lp: 50 }, { t: now - 9 * 3600e3, tier: "UNRANKED" }] });
+  assert.equal(win.autoCheckDue(placing), true, "an account waiting on placements is still checked");
   // a never-checked account has no rank *yet*; skipping it would leave it stuck
   // outside the filter permanently, with no way in
   assert.equal(win.autoCheckDue(acc(null, 0)), true, "it still needs its first check");
@@ -5601,7 +5605,7 @@ test("the rank-sorted list groups by tier, favourites first inside their own tie
   const kids = [...win.document.getElementById("grid").children];
   const gold = kids.findIndex(e => e.classList.contains("lgrp") && /Gold/.test(e.textContent));
   assert.equal(kids[gold + 1].dataset.id, "t3", "the favourite Gold account leads its tier");
-  assert.match(html.match(/function groupColor\(k\)\{[^}]*\}/)[0], /UNRANKED"\)return"var\(--muted\)"/, "Unranked is grey, not link blue");
+  assert.match(html.match(/function groupColor\(k\)\{[^}]*\}/)[0], /k==="UNRANKED"\|\|k==="UNPLACED"\)return"var\(--muted\)"/, "Unranked and Not placed yet are grey, not link blue");
   // one account a tier: no headings, the rows say their rank themselves
   const thin = bootApp(ladderSeed());
   thin.document.querySelector('[data-density="list"]').click();
@@ -6962,7 +6966,9 @@ test("rank panel draft survives a remorph while open", () => {
     "Refresh remorph must not wipe an unsaved Rank edit");
 });
 
-test("peakInfo prefers a higher past Solo season when Top tier is missing", () => {
+// Peak is the season peak, as the rank editor calls it: a higher past season is in
+// Details, and counted here it read as this season's
+test("peakInfo leaves a higher past Solo season to Details", () => {
   const win = bootApp();
   const a = {
     history: [{ t: 1, tier: "GOLD", division: "II", lp: 40 }],
@@ -6972,8 +6978,8 @@ test("peakInfo prefers a higher past Solo season when Top tier is missing", () =
     },
   };
   const p = win.peakInfo(a);
-  assert.equal(p.peak, "Platinum I · 20 LP");
-  assert.ok(p.peakV > win.ladderLP(a.stats));
+  assert.equal(p.peak, "Gold II · 40 LP", "this season's high is where it is now");
+  assert.equal(p.peakV, null, "so there is no peak above it to draw");
 });
 
 test("peakInfo names the current rank when that is the season high", () => {
@@ -9775,6 +9781,9 @@ test("exporting a spreadsheet with logins in it says so first, like the JSON bac
   win.document.getElementById("bExportCsv").click(); await tick();
   assert.match(asked.title, /spreadsheet with your logins/);
   assert.match(asked.body, /passwords and emails are in the file as plain text/);
+  // the LP history stays out of a one-row-an-account sheet, and the file kept as a copy
+  // said nothing about it
+  assert.match(asked.body, /LP history isn't included; use Export backup for a full copy\./);
   assert.equal(win.__saved, undefined, "and No exports nothing");
   win.ask = async () => "ok";
   win.document.getElementById("bExportCsv").click(); await tick();
@@ -9785,6 +9794,15 @@ test("exporting a spreadsheet with logins in it says so first, like the JSON bac
   catchSaves(bare);
   bare.document.getElementById("bExportCsv").click(); await tick();
   assert.equal(bareAsked, 0);
+  assert.match(bare.document.getElementById("toast").textContent, /CSV exported\. LP history isn't included; use Export backup for a full copy/,
+    "with nothing to ask, the note comes after");
+});
+
+// iPadOS offered "fill contact" on the Label field, the one text field in the form
+// without autocomplete off
+test("the account form's Label field is not a contact field to autofill", () => {
+  const doc = new JSDOM(pageHtml).window.document;
+  assert.equal(doc.getElementById("fLabel").getAttribute("autocomplete"), "off");
 });
 
 // Lock now showed "VAULT LOCKED" on the lock screen and a "Vault locked" message with it
@@ -10593,7 +10611,7 @@ test("Help's Search and More are short lines, not run-on sentences", () => {
   // nothing was lost on the way
   const search = dd("Search").textContent;
   for (const w of ["tier:diamond", "region:euw", "champ:yasuo", "role:mid", ">plat", "<gold", "<=gold", ">diamond is:stale"]) assert.ok(search.includes(w), w);
-  for (const w of ["stale", "never", "flagged", "banned", "fav", "goal", "decay", "ready", "leveling"]) assert.match(search, new RegExp("\\b" + w + "\\b"), w);
+  for (const w of ["stale", "never", "unplaced", "flagged", "banned", "fav", "goal", "decay", "ready", "leveling"]) assert.match(search, new RegExp("\\b" + w + "\\b"), w);
   const more = dd("More").textContent;
   for (const w of ["Bulk add accounts", "Import CSV", "New season", "Undo", "Share a snapshot", "Streamer mode", "Settings → Appearance"]) assert.ok(more.includes(w), w);
   assert.match(dd("More").querySelector(":scope > .help-lead").textContent, /^In the ⋯ menu at the top:$/, "where all of them are");
@@ -10729,6 +10747,82 @@ test("More details and Settings' Advanced glide open and closed, and not at all 
   calm.document.getElementById("fMoreBtn").click();
   assert.ok(!calm.document.getElementById("fGrid").classList.contains("more"), "closed at once");
   assert.equal(calmCalls.length, 0, "and nothing animated");
+});
+
+/* After New season every account looked like a fresh smurf: "Level 1203 · Ready for
+   ranked" on a Challenger main, "Peak Challenger" with no word that it was last
+   season's, a chart of last season, and "16 unranked" in the header. Riot's reset
+   in January does the same through a check that comes back unranked. */
+const seasonAcc = (id, extra) => Object.assign({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [] }, extra);
+const mainBeforeReset = () => seasonAcc("main", { label: "Main",
+  history: [3, 2, 1, 0].map(k => ({ t: Date.now() - (k * 4 + 1) * 86400000, tier: "CHALLENGER", division: null, lp: 1234 - k * 40, w: 300 - k, l: 250 })),
+  stats: { found: true, tier: "CHALLENGER", division: null, lp: 1234, wins: 300, losses: 250, level: 1203,
+    peak: { tier: "CHALLENGER", division: null, lp: 1301 }, updatedAt: Date.now() - 3600e3 } });
+test("after New season a card says it is not placed yet, with last season's rank, and nothing of last season as this one's", async () => {
+  const fresh = seasonAcc("fresh", { history: [], stats: { found: true, tier: "UNRANKED", division: null, lp: null, level: 31, updatedAt: Date.now() } });
+  const win = bootApp([mainBeforeReset(), seasonAcc("gold", { history: [{ t: Date.now() - 86400000, tier: "GOLD", division: "II", lp: 40, w: 9, l: 9 }],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 40, wins: 9, losses: 9, level: 90, updatedAt: Date.now() } }), fresh]);
+  const doc = win.document, card = id => doc.querySelector(`.card[data-id="${id}"]`);
+  runScript(win, 'accounts.find(a => a.id === "main").peakManual = { tier: "CHALLENGER", division: null, lp: 1301 }');
+  win.ask = async () => "ok";
+  doc.getElementById("bNewSeason").click();
+  await tick();
+  const main = card("main");
+  assert.equal(main.querySelector(".rk").textContent.trim(), "Not placed yet this season");
+  assert.equal(main.querySelector(".c-lastseason").textContent, "Last season: Challenger · 1,234 LP", "with the rank it finished on under it");
+  assert.equal(main.querySelector(".c-lvl"), null, "not the levelling view");
+  assert.equal(main.querySelector(".ready"), null, "and not Ready for ranked");
+  assert.ok(main.querySelector(".c-lvbadge"), "its level stays on the portrait");
+  assert.doesNotMatch(main.textContent, /Peak/, "no peak from last season");
+  assert.equal(main.querySelector(".lpc"), null, "and no chart of it");
+  assert.equal(appGet(win, 'accounts.find(a => a.id === "main").peakManual'), undefined, "a season's peak stays with that season");
+  // the header and its filter
+  const rib = doc.getElementById("ribbon");
+  const word = rib.querySelector('[data-flag="unplaced"]');
+  assert.equal(word.textContent, "2 not placed yet");
+  assert.equal(rib.querySelector('[data-tier="UNRANKED"]').textContent, "1 unranked", "the one that never had a rank");
+  word.click();
+  assert.deepEqual([...doc.querySelectorAll("#grid .card")].map(c => c.dataset.id).sort(), ["gold", "main"], "the word filters to them");
+  assert.ok(doc.getElementById("chips").textContent.includes("Not placed yet"));
+  word.click();
+  rib.querySelector('[data-tier="UNRANKED"]').click();
+  assert.deepEqual([...doc.querySelectorAll("#grid .card")].map(c => c.dataset.id), ["fresh"], "Unranked counts and filters the same one");
+  rib.querySelector('[data-tier="UNRANKED"]').click();
+  // Ready for ranked is a fresh account's, and so is the levelling view
+  assert.ok(card("fresh").querySelector(".ready"), "the level-31 account that never had a rank is still Ready for ranked");
+  assert.equal(appGet(win, 'filtered().filter(a => isReadyForRanked(a)).map(a => a.id).join()'), "fresh");
+  // search, the list and its groups say the same
+  runScript(win, 'ui.search = "is:unplaced"; render()');
+  assert.deepEqual([...doc.querySelectorAll("#grid .card")].map(c => c.dataset.id).sort(), ["gold", "main"]);
+  runScript(win, 'ui.search = ""; render()');
+  doc.querySelector('[data-density="list"]').click();
+  assert.equal(doc.querySelector('.rw[data-id="main"] .rw-rank').textContent, "Not placed yet");
+  assert.equal(appGet(win, 'groupLabel(listGroup(accounts.find(a => a.id === "main")))'), "Not placed yet");
+});
+
+test("Riot's reset through a check: unranked after a ranked season reads as not placed, and the new season starts its own chart and peak", () => {
+  const D = 86400000, now = Date.now();
+  const jan = seasonAcc("jan", { peakManual: { tier: "DIAMOND", division: "I", lp: 75 },
+    history: [{ t: now - 20 * D, tier: "DIAMOND", division: "II", lp: 30, w: 190, l: 170 }, { t: now - 9 * D, tier: "DIAMOND", division: "I", lp: 75, w: 200, l: 180 },
+      { t: now - 2 * D, tier: "UNRANKED", division: null, lp: null, w: 0, l: 0 }],
+    stats: { found: true, tier: "UNRANKED", division: null, lp: null, wins: 0, losses: 0, level: 640, updatedAt: now - 2 * D } });
+  const win = bootApp([jan]);
+  const card = () => win.document.querySelector('.card[data-id="jan"]');
+  assert.equal(card().querySelector(".rk").textContent.trim(), "Not placed yet this season");
+  assert.equal(card().querySelector(".c-lastseason").textContent, "Last season: Diamond I · 75 LP", "from its last ranked check, with nothing in Past seasons");
+  // placed: Gold now; the chart and Peak are this season's, not Diamond's
+  runScript(win, `const a = accounts[0];
+    a.history.push({ t: Date.now() - 3600e3, tier: "GOLD", division: "I", lp: 10, w: 6, l: 4 });
+    a.stats = { found: true, tier: "GOLD", division: "I", lp: 10, wins: 6, losses: 4, level: 641, updatedAt: Date.now() - 3600e3 };
+    render()`);
+  assert.match(card().querySelector(".rk").textContent, /Gold I/);
+  assert.equal(card().querySelector(".c-lastseason"), null);
+  assert.match(card().textContent, /One check so far/, "the chart starts again with this season's first reading");
+  assert.doesNotMatch(card().textContent, /Peak/, "a Diamond peak set by hand last season is not this season's");
+  assert.deepEqual(JSON.parse(appGet(win, 'JSON.stringify(thisSeason(accounts[0].history).map(h => h.tier))')), ["UNRANKED", "GOLD"]);
+  // a peak set by hand this season does count
+  runScript(win, 'accounts[0].peakManual = { tier: "PLATINUM", division: "IV", lp: 0, at: Date.now() }; render()');
+  assert.match(card().textContent, /Peak\s*Platinum IV/);
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

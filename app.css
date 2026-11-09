@@ -1231,6 +1231,8 @@
   .rk-lp{font-size:calc(13px*var(--ts));font-weight:600;letter-spacing:.04em;margin:0;
     font-variant-numeric:tabular-nums;color:var(--muted);opacity:1}
   .c-unchecked{font-size:calc(18px*var(--ts));color:var(--faint);letter-spacing:-.02em}
+  /* waiting on placements: a fact about this season, with last season's rank under it */
+  .c-unplaced{font-size:calc(18px*var(--ts));color:var(--muted);letter-spacing:-.02em}
   /* on an account with no rank yet, the level is the headline — it was set in
      10 px caps underneath a 23 px "Unranked" that answered nothing */
   .c-lvl{font-size:calc(16px*var(--ts));color:var(--faint);letter-spacing:.02em;font-weight:500;

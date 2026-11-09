@@ -35,7 +35,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="app.css?v=2.27.2">
+<link rel="stylesheet" href="app.css?v=2.28.0">
 </head>
 <body data-atmosphere="spotlight">
 <!-- A shared snapshot opens here instead of the app: see openSnapshot -->
@@ -160,7 +160,7 @@
         <li><code>champ:yasuo</code> finds accounts that played Yasuo this season or have Yasuo in their top mastery.</li>
         <li><code>role:mid</code> goes by the last five ranked games.</li>
         <li><code>&gt;plat</code> is Platinum and up. <code>&lt;gold</code> is below Gold, and <code>&lt;=gold</code> takes Gold with it.</li>
-        <li><code>is:</code> takes stale, never, flagged, banned, fav, goal, decay, ready or leveling.</li>
+        <li><code>is:</code> takes stale, never, unplaced, flagged, banned, fav, goal, decay, ready or leveling.</li>
         <li>They combine: <code>&gt;diamond is:stale</code> is one search.</li>
       </ul></dd>
       <dt>Quick find</dt>
@@ -181,7 +181,7 @@
       <dt>More</dt>
       <dd><p class="help-lead">In the <b>⋯</b> menu at the top:</p><ul class="help-ul">
         <li><b>Bulk add accounts</b> takes pasted Name#TAGs, an op.gg multi-search link or the lobby chat. <b>Import CSV</b> takes a spreadsheet.</li>
-        <li><b>New season</b> moves every rank into Past seasons at once. Undo puts them back.</li>
+        <li><b>New season</b> moves every rank into Past seasons at once. Each account shows as not placed yet until a check finds its new rank. Undo puts them back.</li>
         <li><b>Share a snapshot</b> makes one link to a read-only page of your ranks. Logins, emails and notes are never in it.</li>
         <li><b>Streamer mode</b> hides Riot IDs, logins, emails and notes. <kbd>H</kbd> turns it on too.</li>
         <li><b>Settings → Appearance</b> has themes, effects, text size and what each card shows.</li>
@@ -315,7 +315,7 @@
         </div>
         <div class="sub-fld">
           <input type="checkbox" id="sAutoRanked" style="width:auto">
-          <label for="sAutoRanked" style="font-size:calc(13px*var(--ts));color:var(--muted);max-width:560px">Ranked accounts only. Unranked and never-placed ones give the same answer every time, so they are skipped</label>
+          <label for="sAutoRanked" style="font-size:calc(13px*var(--ts));color:var(--muted);max-width:560px">Ranked accounts only. Accounts that never had a rank give the same answer every time, so they are skipped; ones waiting on placements are still checked</label>
         </div>
       </div>
 
@@ -621,7 +621,7 @@
         <button type="button" id="fMoreBtn" class="b-quiet f-more" aria-expanded="false" aria-controls="fGrid">More details<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
         <span class="hint" id="fMoreHint">Label, email, dates, tags, status and notes</span>
       </div>
-      <div class="fld f-x"><label for="fLabel">Label</label><input id="fLabel" placeholder="e.g. ADC smurf"></div>
+      <div class="fld f-x"><label for="fLabel">Label</label><input id="fLabel" placeholder="e.g. ADC smurf" autocomplete="off"></div>
       <div class="fld f-x"><label for="fEmail">Email on the account</label><input id="fEmail" placeholder="mail the account is registered to" autocomplete="off"></div>
       <!-- These two were being kept in the Notes box by hand ("birthdate 8/1/1987,
            created 4/2/2022"), which means they could not be searched, sorted or
@@ -881,6 +881,6 @@
   <div id="srSay" class="sr-only" role="status" aria-live="polite"></div>
 </div>
 
-<script src="app.js?v=2.27.2"></script>
+<script src="app.js?v=2.28.0"></script>
 </body>
 </html>
