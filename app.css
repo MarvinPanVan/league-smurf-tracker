@@ -858,8 +858,9 @@
   .rw-main{display:grid;align-items:center;gap:var(--rw-gap);padding:11px 14px;cursor:pointer;
     grid-template-columns:var(--rw-cols);
     transition:background .14s ease}
+  /* sentence case, like every other label since the small capitals went */
   .rw-head{display:grid;grid-template-columns:var(--rw-cols);gap:var(--rw-gap);align-items:end;padding:2px 15px 8px;
-    font-size:calc(11px*var(--ts));font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+    font-size:calc(12px*var(--ts));font-weight:500;letter-spacing:0;color:var(--faint);white-space:nowrap}
   .rw-head .h-chk{width:15px}
   .rw-head .h-r{text-align:right}.rw-head .h-c{text-align:center}
   /* copy the login straight from the row, the way a password manager's list does */
@@ -1266,6 +1267,8 @@
   .c-stats.n2,.c-stats.n4,.c-stats.n6{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 20px}
   /* Settings → On each card: a part left under Details is hidden on a closed card */
   body.hide-chart .card:not(.info-open) .lpc,body.hide-stats .card:not(.info-open) .c-stats,
+  /* the list's win-rate bar follows the cards' Win/loss bar setting: off unless asked for */
+  body.hide-wl .rw-bar,
   body.hide-wl .card:not(.info-open) .wrbar,body.hide-goal .card:not(.info-open) .goal,
   body.hide-goal .card:not(.info-open) .lvt,
   body.hide-tags .card:not(.info-open) .ctags,body.hide-notes .card:not(.info-open) .c-notes:not(.editing){display:none}

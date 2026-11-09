@@ -10988,6 +10988,19 @@ test("the stats panel writes wins, losses and a climb the way the rest of the ap
   assert.match(win.__t.headline, /^[+−]?[\d,]+$/, "signed, no arrow: " + win.__t.headline);
 });
 
+// The list kept two things the rest of the app had dropped: column headings in small
+// capitals, and the win-rate bar that cards hide unless asked for
+test("the list's headings are in sentence case, and its win-rate bar follows the cards' setting", () => {
+  const win = bootApp(seededAccount()), doc = win.document;
+  const head = html.match(/\n  \.rw-head\{([^}]*)\}/)[1];
+  assert.doesNotMatch(head, /uppercase|letter-spacing:\.\d/, "no small capitals");
+  assert.match(head, /font-size:calc\(12px\*var\(--ts\)\)/);
+  assert.match(html, /\n  body\.hide-wl \.rw-bar,/, "the bar goes with the cards' Win/loss bar");
+  assert.ok(doc.body.classList.contains("hide-wl"), "which is off by default");
+  runScript(win, 'cfg.cardHide = []; applyCompact()');
+  assert.ok(!doc.body.classList.contains("hide-wl"), "and back when it is switched on");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
