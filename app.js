@@ -110,8 +110,11 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.29.0";
+const APP_VERSION="2.29.1";
 const APP_CHANGELOG=[
+  {v:"2.29.1",items:[
+    "Compare only lists what at least one of the two accounts has, instead of rows with nothing on either side",
+  ]},
   {v:"2.29.0",items:[
     "An opened row in the list works like its card: Copy username, the eye for the saved login, ⋯ for the rest, and Fix Riot ID or Check rank when the account needs one",
     "Copy password turns back into Copy username after a minute, and the person icon always means the username, the key the password",
