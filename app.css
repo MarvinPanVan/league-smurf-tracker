@@ -1728,7 +1728,8 @@
   .goal-r{margin-left:auto;color:var(--faint);font-variant-numeric:tabular-nums;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .goal-bar{height:4px;border-radius:1px;background:#ffffff12;overflow:hidden}
-  .goal-bar i{display:block;height:100%;border-radius:1px;transition:width .5s cubic-bezier(.22,1,.36,1)}
+  /* never quite empty: at 0% an empty grey track read as a divider line, not a goal */
+  .goal-bar i{display:block;height:100%;min-width:4px;border-radius:1px;transition:width .5s cubic-bezier(.22,1,.36,1)}
   .goal.hit .goal-r{color:var(--good);font-weight:600}
   @media (prefers-reduced-motion:reduce){.goal-bar i{transition:none}}
   .flagmark{display:inline-flex;flex-shrink:0;color:var(--danger)}

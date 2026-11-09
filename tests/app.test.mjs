@@ -11017,6 +11017,18 @@ test("a masked field's hint is in the page's own type; only what is typed is mon
   assert.ok(new JSDOM(pageHtml).window.document.querySelector("#sSyncToken.mask[placeholder]"), "the sync key is one");
 });
 
+// A goal at 0% drew an empty grey track that read as a divider line
+test("a goal at 0% still shows where its bar starts, in the goal's colour", () => {
+  const seed = seededAccount();
+  seed[0].goal = { tier: "CHALLENGER", division: null, lp: 0 };
+  seed[0].history = [];
+  const win = bootApp(seed);
+  const fill = win.document.querySelector(".card .goal-bar i");
+  assert.ok(fill, "the goal's bar");
+  assert.match(html, /\n  \.goal-bar i\{[^}]*min-width:4px/, "a start mark even at 0%");
+  assert.match(fill.getAttribute("style"), /background:/, "in the goal's colour");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
