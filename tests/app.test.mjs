@@ -7281,7 +7281,7 @@ test("compare is a versus screen: one row per fact, the better win rate lit", ()
   assert.equal(sides[1].querySelector(".cmp-lp").textContent, "5 LP");
   const rows = [...body.querySelectorAll(".cmp-row")];
   assert.deepEqual(rows.map(r => r.querySelector(".k").textContent),
-    ["Record", "Win rate", "Peak", "WR trend", "Level", "Last login"]);
+    ["Record", "Win rate", "Peak", "Level"], "WR trend and Last login: neither has one");
   const wr = rows[1].children;
   assert.equal(wr[0].textContent, "56%");
   assert.equal(wr[2].textContent, "67%");
@@ -11159,7 +11159,7 @@ test("Compare says Last login, as the card does, and leaves what it doesn't know
   assert.deepEqual(rows["Win rate"], ["56%", ""]);
   assert.deepEqual(rows["Level"], ["40", ""]);
   assert.deepEqual(rows["Peak"], ["Gold II · 20 LP", ""]);
-  assert.deepEqual(rows["WR trend"], ["", ""]);
+  assert.equal(rows["WR trend"], undefined, "a fact neither has is no row at all");
   assert.doesNotMatch(win.document.getElementById("cmpBody").textContent, /—|never/, "no dash, no never");
 });
 
@@ -11220,6 +11220,23 @@ test("the Riot name and tag are asked for in the same words", () => {
   doc.getElementById("fSave").click();
   assert.equal(doc.getElementById("fNameMsg").textContent, "Needed: the name before the #");
   assert.equal(doc.getElementById("fTagMsg").textContent, "Needed: the tag after the #");
+});
+
+// "WR trend", and often "Last login", stood alone between two blanks: a row for a fact
+// neither account has
+test("Compare leaves out a row both accounts are blank on, and keeps one either side has", () => {
+  const mk = (id, extra) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [], stats: null, ...extra });
+  const win = bootApp([mk("n1"), mk("n2"), mk("lv", { stats: { found: true, tier: "UNRANKED", level: 22, updatedAt: Date.now() } })]);
+  const labels = () => [...win.document.querySelectorAll("#cmpBody .cmp-row .k")].map(k => k.textContent);
+  win.startCompare("n1");
+  win.startCompare("n2");
+  assert.deepEqual(labels(), [], "two accounts never checked: no rows");
+  assert.equal(win.document.querySelector("#cmpBody .cmp-rows"), null, "and no empty box under the two sides");
+  assert.equal(win.document.querySelectorAll("#cmpBody .cmp-side").length, 2, "the sides are still there");
+  win.closeCompare();
+  win.startCompare("n1");
+  win.startCompare("lv");
+  assert.deepEqual(labels(), ["Level"], "one side's level is a row, with the other side blank");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

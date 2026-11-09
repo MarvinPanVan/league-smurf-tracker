@@ -110,8 +110,11 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.29.0";
+const APP_VERSION="2.29.1";
 const APP_CHANGELOG=[
+  {v:"2.29.1",items:[
+    "Compare only lists what at least one of the two accounts has, instead of rows with nothing on either side",
+  ]},
   {v:"2.29.0",items:[
     "An opened row in the list works like its card: Copy username, the eye for the saved login, ⋯ for the rest, and Fix Riot ID or Check rank when the account needs one",
     "Copy password turns back into Copy username after a minute, and the person icon always means the username, the key the password",
@@ -3558,19 +3561,19 @@ function renderCompare(){
   const fa=facts(a), fb=facts(b);
   // -1 left is better, 1 right is, 0 neither (or nothing to compare)
   const cmp=(x,y)=>x==null||y==null||x===y?0:(x>y?-1:1);
-  const row=(label,l,r,better)=>`<div class="cmp-row"><span class="${better<0?"win":""}">${esc(l)}</span>`
+  // a fact neither account has is not a row: "WR trend" alone between two blanks said nothing
+  const row=(label,l,r,better)=>!l&&!r?"":`<div class="cmp-row"><span class="${better<0?"win":""}">${esc(l)}</span>`
     +`<span class="k">${esc(label)}</span><span class="${better>0?"win":""}">${esc(r)}</span></div>`;
   const pct=v=>v==null?"":v+"%";
+  const rows=row("Record",fa.record,fb.record,0)
+    +row("Win rate",pct(fa.wr),pct(fb.wr),cmp(fa.wr,fb.wr))
+    +row("Peak",fa.peak,fb.peak,0)
+    +row("WR trend",fa.trend,fb.trend,0)
+    +row("Level",fa.level,fb.level,0)
+    +row("Last login",fa.login,fb.login,0);
   setHTML($("cmpBody"),`<div class="cmp">
     <div class="cmp-head">${side(a)}<div class="cmp-vs" aria-hidden="true"><span>VS</span></div>${side(b)}</div>
-    <div class="cmp-rows">`
-      +row("Record",fa.record,fb.record,0)
-      +row("Win rate",pct(fa.wr),pct(fb.wr),cmp(fa.wr,fb.wr))
-      +row("Peak",fa.peak,fb.peak,0)
-      +row("WR trend",fa.trend,fb.trend,0)
-      +row("Level",fa.level,fb.level,0)
-      +row("Last login",fa.login,fb.login,0)
-    +`</div></div>`);
+    ${rows?`<div class="cmp-rows">${rows}</div>`:""}</div>`);
   const modal=$("compareModal");
   if(!modal){compareIds=[];return}
   modal.classList.remove("hidden");
