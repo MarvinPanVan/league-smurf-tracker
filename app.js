@@ -110,8 +110,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.27.0";
+const APP_VERSION="2.27.1";
 const APP_CHANGELOG=[
+  {v:"2.27.1",items:[
+    "Windows open straight away: + Add account no longer waits a tenth of a second before it shows",
+    "Opening a window is smoother: the page behind is darkened instead of blurred",
+    "More details and Settings' Advanced sections glide open and closed, and a tap on More details no longer brings up the iPad keyboard",
+  ]},
   {v:"2.27.0",items:[
     "Play next is now Suggested game, and says why first: \"Decays in 3 days\", then the account",
     "On a phone, Check all ranks and + Add account share one row, and the status line no longer ends in a stray dot",
