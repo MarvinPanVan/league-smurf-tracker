@@ -7124,8 +7124,12 @@ async function doExportCSV(){
   if(previewMode){toast("Exit preview before exporting. This is example data, not your vault");return}
   // The JSON backup warned that its passwords are readable; the spreadsheet, the file
   // most likely to be opened, shared or synced somewhere, said nothing.
-  if(accounts.some(a=>a.password||a.login||a.email)&&!await ask({title:"Export a spreadsheet with your logins in it?",
-    body:"Usernames, passwords and emails are in the file as plain text, readable by anyone who opens it.",ok:"Export"}))return;
+  /* It also leaves the LP history out, which a sheet of one row an account cannot
+     hold, and said nothing about that either: an export you might keep as your copy. */
+  const CSV_PART="LP history isn't included; use Export backup for a full copy.";
+  const asked=accounts.some(a=>a.password||a.login||a.email);
+  if(asked&&!await ask({title:"Export a spreadsheet with your logins in it?",
+    body:"Usernames, passwords and emails are in the file as plain text, readable by anyone who opens it. "+CSV_PART,ok:"Export"}))return;
   // The note fields go on the end, so every column a spreadsheet already reads by
   // position stays where it was.
   const nf=noteFields();
@@ -7148,7 +7152,7 @@ async function doExportCSV(){
   a.download="smurf-export-"+localDay()+".csv";
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),3000);
-  toast("CSV exported");
+  toast(asked?"CSV exported":"CSV exported. "+CSV_PART.replace(/\.$/,""));
 }
 function doImport(file){
   if(vaultLocked()){toast("Unlock the vault before importing");return}

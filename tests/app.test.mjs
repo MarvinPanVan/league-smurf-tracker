@@ -9781,6 +9781,9 @@ test("exporting a spreadsheet with logins in it says so first, like the JSON bac
   win.document.getElementById("bExportCsv").click(); await tick();
   assert.match(asked.title, /spreadsheet with your logins/);
   assert.match(asked.body, /passwords and emails are in the file as plain text/);
+  // the LP history stays out of a one-row-an-account sheet, and the file kept as a copy
+  // said nothing about it
+  assert.match(asked.body, /LP history isn't included; use Export backup for a full copy\./);
   assert.equal(win.__saved, undefined, "and No exports nothing");
   win.ask = async () => "ok";
   win.document.getElementById("bExportCsv").click(); await tick();
@@ -9791,6 +9794,8 @@ test("exporting a spreadsheet with logins in it says so first, like the JSON bac
   catchSaves(bare);
   bare.document.getElementById("bExportCsv").click(); await tick();
   assert.equal(bareAsked, 0);
+  assert.match(bare.document.getElementById("toast").textContent, /CSV exported\. LP history isn't included; use Export backup for a full copy/,
+    "with nothing to ask, the note comes after");
 });
 
 // Lock now showed "VAULT LOCKED" on the lock screen and a "Vault locked" message with it
