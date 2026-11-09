@@ -99,6 +99,8 @@
      These are stored secrets in a local vault, not a login this page performs. */
   .mask{-webkit-text-security:disc;text-security:disc;
     font-family:ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:.06em}
+  /* an empty one shows its hint in the page's own type; only the key is set in mono */
+  .mask:placeholder-shown{font-family:inherit;letter-spacing:normal}
   ::selection{background:color-mix(in srgb,var(--gold) 32%,transparent);color:#fff}
 
   body{margin:0;position:relative;color:var(--text);

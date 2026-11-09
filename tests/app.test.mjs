@@ -11011,6 +11011,12 @@ test("on a phone the Filters button shows when it is open", () => {
   assert.equal(doc.getElementById("tFilters").getAttribute("aria-expanded"), "true", "and says so to a screen reader");
 });
 
+// The sync key's hint ("Generate one, or paste the key…") was set in the typewriter face
+test("a masked field's hint is in the page's own type; only what is typed is monospace", () => {
+  assert.match(html, /\n  \.mask:placeholder-shown\{font-family:inherit;letter-spacing:normal\}/);
+  assert.ok(new JSDOM(pageHtml).window.document.querySelector("#sSyncToken.mask[placeholder]"), "the sync key is one");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
