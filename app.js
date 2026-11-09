@@ -110,8 +110,13 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.27.2";
+const APP_VERSION="2.28.0";
 const APP_CHANGELOG=[
+  {v:"2.28.0",items:[
+    "After a new season, accounts say \"Not placed yet this season\" with last season's rank under it, and the header counts them",
+    "The chart and Peak show this season only, and \"Ranked accounts only\" auto-check still checks accounts waiting on placements",
+    "CSV export says the LP history isn't in it, and the Label field no longer offers to fill in a contact",
+  ]},
   {v:"2.27.2",items:[
     "More details and Settings' Advanced sections open more gently, so they glide instead of jumping at the start",
   ]},
