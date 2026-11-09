@@ -8634,7 +8634,9 @@ test("a card's region is a neutral label, so Login is the one thing in the actio
   const rule = html.match(/\n  \.regiontag\{([^}]*)\}/)[1];
   assert.doesNotMatch(rule, /--teal|--gold/, "not the accent");
   assert.match(rule, /color:var\(--muted\)/);
-  assert.doesNotMatch(html.match(/\n  \.card:hover \.regiontag\{([^}]*)\}/)[1], /--teal|--gold/, "nor on hover");
+  // plain words, as in the list: a framed box read as a button that did nothing
+  assert.doesNotMatch(rule, /border|background|padding/, "no frame, no fill");
+  assert.doesNotMatch(html, /\.card:hover \.regiontag/, "and it does not light up under the pointer like a control");
 });
 
 // A vault left alone for a weekend lit the page red: "out of date" took the colour of a ban

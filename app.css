@@ -1156,8 +1156,9 @@
   /* A label, not an action, so it is not in the action colour: tinted with the
      secondary accent, every card carried a second chip of Login's colour right
      beside the star, and the one button meant to stand out had company. */
-  .regiontag{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:.1em;padding:4px 9px;border-radius:var(--r-xs);flex-shrink:0;
-    background:#ffffff0a;color:var(--muted);border:1px solid var(--line)}
+  /* Plain words, as in the list's Region column. A 28px framed box read as a button
+     that did nothing when clicked. */
+  .regiontag{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:.08em;flex-shrink:0;color:var(--muted)}
   /* the rank is why the card exists, so it gets the card's largest type */
   /* The tier as an emblem rather than only as a coloured word. It sits in the
      rank line itself rather than watermarked behind it: faint behind the type it
@@ -2566,8 +2567,6 @@
   .chip:active{transform:scale(.95)}
   .c-portrait{transition:transform .24s cubic-bezier(.22,1,.36,1)}
   .card:hover .c-portrait{transform:scale(1.05)}
-  .regiontag{transition:background .2s,border-color .2s}
-  .card:hover .regiontag{color:var(--text);border-color:var(--line2)}
 
   /* ---- motion ---- */
   /* The lit border used to be a `background` transition between two gradients,
