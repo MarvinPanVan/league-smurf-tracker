@@ -11051,6 +11051,27 @@ test("Copy password goes back to Copy username a minute after the username was c
   assert.equal(appGet(win, 'loginSeqTimer.has("L")'), false, "and its minute is called off");
 });
 
+// "No backup yet · Back up now" lived inside the stats panel, which starts folded on a
+// phone: the warning against losing the vault was where nobody looked
+test("the backup reminder sits above the accounts, open stats or not", () => {
+  const seed = [{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 3, losses: 2, updatedAt: Date.now() } }];
+  const phone = w => { w.matchMedia = q => ({ matches: /max-width:\s*560px/.test(q), addListener() {}, removeListener() {} });
+    w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ setupHidden: true })); };
+  const win = bootApp(seed, phone), doc = win.document;
+  assert.equal(doc.getElementById("dash").innerHTML, "", "the stats are folded on a phone");
+  const note = doc.querySelector("#bkNote .bk-note");
+  assert.ok(note, "and the reminder shows anyway");
+  assert.match(note.textContent, /No backup yet\./);
+  assert.ok(note.querySelector("#bkNow"), "with its button");
+  assert.equal(doc.querySelector("#dash .bk-note"), null, "not inside the panel");
+  const order = [...doc.getElementById("appRoot").children].map(e => e.id).filter(Boolean);
+  assert.ok(order.indexOf("bkNote") < order.indexOf("grid") || doc.getElementById("bkNote").compareDocumentPosition(doc.getElementById("grid")) & 4, "above the accounts");
+  // Safari's seven-day warning, when it shows, carries the backup button itself
+  runScript(win, '$("iosBand").classList.remove("hidden"); renderBackupNote()');
+  assert.equal(doc.querySelector("#bkNote .bk-note"), null, "one Back up now at a time");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

@@ -4153,6 +4153,7 @@ function syncDashToggle(){
 }
 function renderDash(){
   applyRankTheme(); // a new best tier is news the dashboard already gets; the colours follow it
+  renderBackupNote();
   const el=$("dash");
   /* Chore counts use the same toolbar filters as the grid (region/tag/status/…),
      but not the search: that is a quick find, not a scope, and a panel that redrew
@@ -4185,12 +4186,6 @@ function renderDash(){
   const topChamps=mergeChampions(pool);
   const neverN=countPool.filter(neverChecked).length;
   const attentionN=countPool.filter(needsAttention).length;
-  let bk="";
-  if(hasStorage){
-    const remindDays=clampExportDays(cfg.exportRemindDays);
-    if(!cfg.lastExport)bk="No backup yet.";
-    else if(Date.now()-cfg.lastExport>remindDays*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago.";
-  }
   const dupN=countPool.filter(isDuplicate).length;
   const rotN=countPool.filter(needsRotation).length;
   const decayN=countPool.filter(decayRisk).length;
@@ -4241,10 +4236,9 @@ function renderDash(){
       <div class="v spark-wrap">${poolTrend.svg}</div>
       <div class="s-note">per account · ${esc(poolTrend.span)}</div></div>`,
   ].filter(Boolean);
-  const bkNote=bk&&accounts.length&&!previewMode&&!(setupVisible()&&!cfg.lastExport)?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:"";
   // nothing to show: no panel, and no Hide stats button for an empty one
   $("bDashToggle").classList.toggle("hidden",!cells.length&&!topChamps.length);
-  if(!cells.length&&!topChamps.length){hideSparkTip();setHTML(el,bkNote);dashJustOpened=false;wireBkNow(el);return}
+  if(!cells.length&&!topChamps.length){hideSparkTip();setHTML(el,"");dashJustOpened=false;return}
   setHTML(el,`
   <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
   ${cells.length?`<div class="dash">${cells.join("")}</div>`:""}
@@ -4260,12 +4254,28 @@ function renderDash(){
       return`<option value="${f.v}"${curFloor===f.v?" selected":""}>${f.v?esc(f.label)+" ("+n+")":"all "+n+" ranked account"+(n===1?"":"s")}</option>`}).join("")}</select>
     ${handOutN||filterHint?`<span class="dash-ex">${[handOutN?handOutN+" left out in their account settings":"",filterHint?esc(filterHint):""].filter(Boolean).join(" · ")}</span>`:""}
   </div>`:""}
-  </div></div>
-  ${bkNote}`);
+  </div></div>`);
   dashJustOpened=false; // consumed by the render above
   bindSparkTip(el);
-  wireBkNow(el);
   balanceDash();
+}
+/* The reminder against losing the vault lived in the stats panel, and the panel
+   starts folded on a phone: the one warning that Safari deletes a vault after a
+   week away was where nobody looked. It has a place of its own above the accounts,
+   open stats or not. */
+function renderBackupNote(){
+  const el=$("bkNote");if(!el)return;
+  let bk="";
+  if(hasStorage){
+    const remindDays=clampExportDays(cfg.exportRemindDays);
+    if(!cfg.lastExport)bk="No backup yet.";
+    else if(Date.now()-cfg.lastExport>remindDays*24*3600*1000)bk="Last backup "+Math.floor((Date.now()-cfg.lastExport)/86400000)+" days ago.";
+  }
+  // ...unless Safari's seven-day warning is up, whose own Back up now says it louder
+  const iosBand=$("iosBand"), band=!!(iosBand&&!iosBand.classList.contains("hidden"));
+  const show=bk&&accounts.length&&!previewMode&&!band&&!(setupVisible()&&!cfg.lastExport);
+  setHTML(el,show?`<div class="bk-note">${icon("archive")}<span>${bk}</span><button type="button" id="bkNow">Back up now</button></div>`:"");
+  wireBkNow(el);
 }
 /* The reminder said "hit Export" — and Export lives two clicks away, inside the
    ⋯ menu at the other end of the header. The way to act on it is now on it:
@@ -8097,7 +8107,7 @@ $("bExport").addEventListener("click",doExport);
 $("iosBand").addEventListener("click",e=>{
   const b=e.target.closest("[data-ios]");if(!b)return;
   if(b.dataset.ios==="backup"){doExport();return}
-  cfg.iosHintSeen=true;saveCfg();renderIosBand();
+  cfg.iosHintSeen=true;saveCfg();renderIosBand();renderBackupNote();   // the quieter reminder takes over
 });
 $("sBackend").addEventListener("change",updateBackendStatus);
 $("sStorageProtect").addEventListener("click",async()=>{
