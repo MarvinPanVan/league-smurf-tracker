@@ -110,8 +110,11 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.28.0";
+const APP_VERSION="2.28.1";
 const APP_CHANGELOG=[
+  {v:"2.28.1",items:[
+    "The buttons at the top right are one set of icons, and Stats is a simple on/off switch",
+  ]},
   {v:"2.28.0",items:[
     "After a new season, accounts say \"Not placed yet this season\" with last season's rank under it, and the header counts them",
     "The chart and Peak show this season only, and \"Ranked accounts only\" auto-check still checks accounts waiting on placements",
@@ -1083,6 +1086,12 @@ const ICON={
   clipboard:'<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
   star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
   chevron:'<polyline points="6 9 12 15 18 9"/>',
+  /* The header's set, drawn on the same grid and stroke as the magnifier beside them:
+     the stats switch, and ⋯ and ? which were typed characters, smaller than the
+     drawn icon, at another height and in another weight. */
+  bars:'<line x1="4" y1="20" x2="20" y2="20"/><line x1="7.5" y1="16.5" x2="7.5" y2="11"/><line x1="12" y1="16.5" x2="12" y2="5.5"/><line x1="16.5" y1="16.5" x2="16.5" y2="13"/>',
+  dots:'<circle cx="5" cy="12" r="1.1"/><circle cx="12" cy="12" r="1.1"/><circle cx="19" cy="12" r="1.1"/>',
+  help:'<circle cx="12" cy="12" r="9.5"/><path d="M9.4 9.3a2.7 2.7 0 0 1 5.2.9c0 1.8-2.6 2.5-2.6 2.5"/><line x1="12" y1="16.8" x2="12.01" y2="16.8"/>',
   // a cloth on a pole: the pennant before it, small and red after a name, read as a "P"
   flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
   plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
@@ -4083,11 +4092,15 @@ function syncDashToggle(){
   const b=$("bDashToggle");
   const show=accounts.some(a=>!a.archived);
   b.classList.toggle("hidden",!show);
-  b.classList.toggle("open",!dashCollapsed());
-  // the verb is its own span so a phone, short of room, can say just "Stats"
-  setHTML(b,icon("chevron")+` <span class="dt-v">${dashCollapsed()?"Show":"Hide"} </span><span class="dt-n">stats</span>`);
-  // what it does, for when the narrowest phones show only the arrow
-  b.setAttribute("aria-label",(dashCollapsed()?"Show":"Hide")+" stats");
+  /* An on/off switch: "Stats", lit while the panel is open. It said "Show stats" or
+     "Hide stats" over a chevron, and the button's gap between the two words made
+     them read as two loose words. Pressed or not is for a screen reader to say. */
+  const on=!dashCollapsed();
+  b.classList.toggle("on",on);
+  b.setAttribute("aria-pressed",String(on));
+  setHTML(b,icon("bars")+`<span class="dt-n">Stats</span>`);
+  // its name, for when the narrowest phones show only the icon
+  b.setAttribute("aria-label","Stats");
 }
 function renderDash(){
   applyRankTheme(); // a new best tier is news the dashboard already gets; the colours follow it
