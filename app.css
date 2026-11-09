@@ -2001,8 +2001,10 @@
     border-top:env(safe-area-inset-top,0px) solid transparent;
     display:flex;align-items:flex-start;justify-content:center;
     padding:clamp(14px,5vh,60px) clamp(12px,4vw,32px)}
-  .modal::before{content:"";position:fixed;inset:0;background:#05070bd1;
-    backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+  /* A plain tint, darker than the 82% it was under a blur. Blurring the whole page
+     had to be redone on every frame of a window's way in: frames came 48ms apart
+     instead of 21ms, half the frame rate, and Safari on an iPad is slower at it. */
+  .modal::before{content:"";position:fixed;inset:0;background:#05070beb;
     animation:backIn .22s ease both}
   /* margin:auto centres it while short, and lets it grow past the viewport and
      scroll the overlay when the content is genuinely tall */

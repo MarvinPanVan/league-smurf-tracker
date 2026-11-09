@@ -10643,6 +10643,16 @@ test("opening a window does not refit the cards' tags, and fitting them measures
   assert.equal(log.lastIndexOf("W") < log.indexOf("R"), true, "no change after the first measure when nothing overflows: " + log.join(""));
 });
 
+// The blur behind a window had to be redone on every frame of its way in: frames came
+// 48ms apart instead of 21ms while it opened
+test("a window's backdrop is a plain dark tint, not a blur", () => {
+  const rule = html.match(/\n  \.modal::before\{([^}]*)\}/)[1];
+  assert.doesNotMatch(rule, /backdrop-filter/, "no blur to recompute on every frame");
+  const alpha = parseInt(rule.match(/background:#05070b([0-9a-f]{2})/)[1], 16);
+  assert.ok(alpha >= 0xe6, "and darker than the 82% it was under the blur, so the page still recedes");
+  assert.match(rule, /animation:backIn \.22s ease both/, "it still fades in");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
