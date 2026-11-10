@@ -458,9 +458,14 @@ function clampExportDays(v){const n=Math.round(Number(v));return Math.max(1,Math
 let cfg={apiKey:"",model:"claude-sonnet-5",autoCheck:false,backendUrl:"",exportRemindDays:30,syncToken:"",vaultRev:0,lastSyncAt:0};
 // Older releases stored retired model IDs; map them forward so a saved setting
 // doesn't keep sending a model the API no longer serves.
-const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"claude-sonnet-5","claude-3-5-sonnet":"claude-sonnet-5"};
+/* Haiku 4.5's earliest retirement date (15 Oct 2026) has passed; a setting saved
+   with it moves to Haiku 5.5, the current Haiku, at a tenth of its price. */
+const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"claude-sonnet-5","claude-3-5-sonnet":"claude-sonnet-5",
+  "claude-haiku-4-5":"claude-haiku-5-5","claude-haiku-4-5-20251001":"claude-haiku-5-5","claude-3-5-haiku":"claude-haiku-5-5"};
 // Only Sonnet 5 supports the newer dynamic-filtering web search; Haiku needs the basic one.
-const WEB_SEARCH_TOOL={"claude-sonnet-5":"web_search_20260209","claude-haiku-4-5":"web_search_20250305"};
+// The web search tool's docs list Haiku 5.5 for web search but name no Haiku for the
+// dynamic-filtering version, so it keeps the basic one every model takes.
+const WEB_SEARCH_TOOL={"claude-sonnet-5":"web_search_20260209","claude-haiku-5-5":"web_search_20250305"};
 let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArchived:false,
   flag:"",   // "" | "stale" | "unchecked" | "failed" | "attention" | "missing" | "dup" | "rotate" | "decay"
   tier:"",   // a single tier, or "UNRANKED"; set by clicking the rank spread
@@ -2964,7 +2969,11 @@ Rules: use null for any value you cannot find. If unranked this season, tier "UN
       "anthropic-version":"2023-06-01",
       "anthropic-dangerous-direct-browser-access":"true"
     },
-    body:JSON.stringify({model:cfg.model,max_tokens:1000,messages:[{role:"user",content:prompt}],tools:[{type:WEB_SEARCH_TOOL[cfg.model]||"web_search_20250305",name:"web_search"}]})
+    /* Haiku 5.5 thinks by default, and its thinking counts toward max_tokens: 1000 could
+       go on thinking before the JSON. More room, and low effort for a lookup and a copy.
+       The reply is read by block type, so thinking blocks ahead of the text are skipped. */
+    body:JSON.stringify(Object.assign({model:cfg.model,max_tokens:4000,messages:[{role:"user",content:prompt}],tools:[{type:WEB_SEARCH_TOOL[cfg.model]||"web_search_20250305",name:"web_search"}]},
+      cfg.model==="claude-haiku-5-5"?{output_config:{effort:"low"}}:{}))
   });
   const data=await res.json();
   if(data.error)throw new Error(data.error.message||"API error");

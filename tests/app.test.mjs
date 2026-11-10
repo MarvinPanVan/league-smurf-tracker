@@ -11869,6 +11869,33 @@ test("wall tiles are one height, and a banned tile's rank is struck through", ()
   assert.match(appCss, /\.tile\.dead \.t-rk\{text-decoration:line-through/, "struck through like the card");
 });
 
+// The Haiku choice used claude-haiku-4-5, past its earliest retirement date; and Settings
+// called two different rank sources "the most reliable" in two sentences
+test("the Haiku choice is Haiku 5.5, with room to think and the basic web search; a saved Haiku 4.5 moves to it", async () => {
+  const doc0 = new JSDOM(pageHtml).window.document;
+  const opts = [...doc0.querySelectorAll("#sModel option")].map(o => o.value);
+  assert.deepEqual(opts, ["claude-sonnet-5", "claude-haiku-5-5"]);
+  assert.equal((pageHtml.match(/the most reliable/g) || []).length, 1, "one source called the most reliable, not two");
+  // a setting saved with Haiku 4.5 opens on Haiku 5.5
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }],
+    w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, lastChangelog: "9.9.9", lockPromptOff: true, model: "claude-haiku-4-5", apiKey: "sk-ant-test" })));
+  assert.equal(appGet(win, "cfg.model"), "claude-haiku-5-5");
+  assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).model, "claude-haiku-5-5", "and is saved that way");
+  // the request
+  let body = null;
+  win.fetch = async (u, init) => { body = JSON.parse(init.body); return { ok: true, status: 200, json: async () => ({ content: [
+    { type: "thinking", thinking: "", signature: "x" },
+    { type: "text", text: '{"found":true,"tier":"GOLD","division":"II","lp":40,"wins":3,"losses":2,"level":100}' }] }) }; };
+  const s = await win.fetchViaClaude(appGet(win, "accounts[0]") && win.eval("accounts[0]"));
+  assert.equal(body.model, "claude-haiku-5-5");
+  assert.equal(body.tools[0].type, "web_search_20250305", "the web search every model takes");
+  assert.ok(body.max_tokens >= 4000, "room for its thinking before the JSON");
+  assert.deepEqual(body.output_config, { effort: "low" }, "a lookup and a copy: low effort");
+  assert.equal(body.temperature, undefined, "no sampling parameters, which Haiku 5.5 refuses");
+  assert.equal(s.tier, "GOLD", "a thinking block ahead of the answer is skipped");
+  assert.match(s.asOf, /AI \(Haiku\)/);
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
