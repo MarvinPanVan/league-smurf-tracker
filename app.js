@@ -1190,11 +1190,33 @@ function sanitizeAccount(a){
 }
 // Asked in three places now, and jsdom has no matchMedia unless a test supplies one
 function prefersReducedMotion(){return !!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)}
-function toast(msg,action,fn){const t=$("toast");t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");if(action)document.getElementById("toastBtn").onclick=()=>{dismissToast();fn()};t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.opacity="";t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>dismissToast(),action?6000:2200)}
+/* A message stays long enough to be read: 2.2 s was the time for "Saved" and also
+   for two lines about a master password. 50 ms more per character, at most 9 s, at
+   least 6 s with a button to press. It waits while the pointer is on it. Over an
+   open window it sits at the top: at the bottom it covered Save settings and Close. */
+function toastMs(msg,action){const ms=Math.min(9000,2200+50*String(msg||"").length);return action?Math.max(6000,ms):ms}
+function toast(msg,action,fn){
+  const t=$("toast");
+  t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");
+  if(action)document.getElementById("toastBtn").onclick=()=>{dismissToast();fn()};
+  t.classList.toggle("top",!!document.querySelector(".modal:not(.hidden)"));
+  t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.opacity="";t.style.display="block";
+  t._held=false;t._left=toastMs(msg,action);toastRun(t);
+  document.addEventListener("pointermove",toastHover,{passive:true});
+}
+function toastRun(t){clearTimeout(t._h);t._end=Date.now()+t._left;t._h=setTimeout(()=>dismissToast(),t._left)}
+// The toast lets clicks through to what is under it, so it cannot have a hover of its own
+function toastHover(e){
+  const t=$("toast");if(!t||t.style.display==="none")return;
+  const r=t.getBoundingClientRect(), on=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
+  if(on&&!t._held){t._held=true;clearTimeout(t._h);t._left=Math.max(0,t._end-Date.now())}
+  else if(!on&&t._held){t._held=false;t._left=Math.max(t._left,1500);toastRun(t)}
+}
 function dismissToast(){
   const t=$("toast");if(!t)return;
   // opacity first, so a browser that can hold display back fades it out (see #toast)
-  t.style.opacity="0";t.style.display="none";clearTimeout(t._h);
+  t.style.opacity="0";t.style.display="none";clearTimeout(t._h);t._held=false;
+  document.removeEventListener("pointermove",toastHover);
   const b=document.getElementById("toastBtn");if(b)b.onclick=null;
 }
 /* Both dates are stored as the plain "YYYY-MM-DD" the date input hands over, and

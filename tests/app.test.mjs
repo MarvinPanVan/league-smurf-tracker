@@ -11296,6 +11296,37 @@ test("an edited Riot ID is checked again, without the old account's puuid, games
   assert.ok(!win.__toasts.some(m => /Tier up|→/.test(m)), "Gold to Platinum across two accounts is no promotion");
 });
 
+// Every message without a button lasted 2.2 s, "Saved" and a two-line warning alike, and
+// in Settings it sat on top of Save settings and Close
+test("a message stays as long as it takes to read, waits under the pointer, and clears an open window's buttons", async () => {
+  const win = bootApp(seededAccount());
+  const doc = win.document, t = doc.getElementById("toast");
+  const ms = (m, a) => appGet(win, `toastMs(${JSON.stringify(m)}, ${a ? '"Undo"' : "null"})`);
+  assert.equal(ms("Saved"), 2200 + 50 * 5, "a word: a little over two seconds");
+  assert.equal(ms("x".repeat(100)), 7200, "a hundred characters: seven");
+  assert.equal(ms("x".repeat(400)), 9000, "never more than nine");
+  assert.equal(ms("Deleted", true), 6000, "with a button, at least six");
+  // waits while the pointer is on it
+  runScript(win, "toast('Vault password set. Remember it: there is no way to recover it if lost')");
+  t.getBoundingClientRect = () => ({ left: 10, right: 300, top: 500, bottom: 540, width: 290, height: 40 });
+  const move = (x, y) => doc.dispatchEvent(new win.MouseEvent("pointermove", { clientX: x, clientY: y }));
+  move(50, 520);
+  assert.equal(t._held, true, "held while the pointer is on it");
+  runScript(win, "toastMs = () => 30");   // a short message, for the test
+  runScript(win, "toast('short')");
+  move(50, 520);
+  await new Promise(r => setTimeout(r, 120));
+  assert.equal(t.style.display, "block", "still there after its time, while pointed at");
+  move(900, 100);
+  assert.equal(t._held, false, "let go when the pointer leaves");
+  // over an open window, at the top
+  runScript(win, "toast('on the page')");
+  assert.equal(t.classList.contains("top"), false, "on the page: bottom left");
+  runScript(win, "openSettings('backup'); toast('in Settings')");
+  assert.equal(t.classList.contains("top"), true, "with Settings open: at the top");
+  assert.match(appCss, /#toast\.top\{bottom:auto;top:/, "which is above, not over, its footer");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

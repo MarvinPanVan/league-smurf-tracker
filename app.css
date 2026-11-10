@@ -2229,6 +2229,8 @@
     background:color-mix(in srgb,var(--panel2) 95%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
     border:1px solid var(--line2);border-radius:var(--r-md);color:var(--text);
     padding:11px 20px;font-size:calc(13px*var(--ts));font-weight:500;box-shadow:var(--sh-3)}
+  /* over an open window: at the top, clear of its footer buttons */
+  #toast.top{bottom:auto;top:calc(clamp(14px,3vw,28px) + env(safe-area-inset-top,0px));left:0;right:0;margin-inline:auto}
 
   .spin{display:inline-block;animation:sp 1s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
