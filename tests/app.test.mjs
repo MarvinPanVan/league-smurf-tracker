@@ -4046,7 +4046,7 @@ test("the list view puts a whole account on one row, and unfolds it in place", (
   assert.ok(open.querySelector(".sec"), "so do the details");
   // the card's controls, not a row of seven of its own
   assert.deepEqual([...open.querySelectorAll(".rw-open > .acts > *")].map(b => b.dataset.act), ["addlogin", "more"], "Add login and the ⋯, as on the card");
-  assert.equal(open.querySelector(".rw-main").getAttribute("aria-expanded"), "true");
+  assert.equal(open.querySelector(".rw-tog").getAttribute("aria-expanded"), "true");
 
   // the layout choice outlives the session
   assert.equal(JSON.parse(win.localStorage.getItem("smurf-tracker-cfg")).density, "list");
@@ -4606,15 +4606,17 @@ test("the note editor closes after clicking away, in either layout", () => {
 
 // A list row is a <div> with role="button" — the browser gives it none of a
 // button's key handling, so it could be tabbed to and then not opened.
+// It opens from its toggle, a real <button>: Enter and Space are the browser's own there
+// (a role="button" row held other controls; see "the app is the page's main landmark")
 test("a list row opens from the keyboard", () => {
-  for (const key of ["Enter", " "]) {
-    const win = bootApp(seededAccount());
-    win.document.querySelector('[data-density="list"]').click();
-    const row = win.document.querySelector(".rw-main");
-    assert.equal(row.getAttribute("tabindex"), "0");
-    row.dispatchEvent(new win.KeyboardEvent("keydown", { key, bubbles: true }));
-    assert.ok(win.document.querySelector(".rw-open"), `${key} opens the row`);
-  }
+  const win = bootApp(seededAccount());
+  win.document.querySelector('[data-density="list"]').click();
+  const tog = win.document.querySelector(".rw-tog");
+  assert.equal(tog.tagName, "BUTTON", "a real button, so the keyboard reaches it and Enter or Space presses it");
+  assert.equal(tog.type, "button");
+  assert.equal(tog.disabled, false);
+  tog.click();   // what the browser does for Enter and Space on a button
+  assert.ok(win.document.querySelector(".rw-open"), "it opens the row");
 });
 
 /* The total was computed from a coerced 0 while the label printed the raw value, so a
@@ -11894,6 +11896,31 @@ test("the Haiku choice is Haiku 5.5, with room to think and the basic web search
   assert.equal(body.temperature, undefined, "no sampling parameters, which Haiku 5.5 refuses");
   assert.equal(s.tier, "GOLD", "a thinking block ahead of the answer is skipped");
   assert.match(s.asOf, /AI \(Haiku\)/);
+});
+
+// The app had no main landmark, and a list row was role="button" with a checkbox and
+// copy buttons inside it, a control inside a control (axe: nested-interactive)
+test("the app is the page's main landmark, and a list row opens from one real button", () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "Ann", tagLine: "1", status: "active", tags: [], history: [], login: "u", password: "p", stats: null }]);
+  const doc = listView(win);
+  assert.equal(doc.getElementById("appRoot").tagName, "MAIN");
+  assert.ok(doc.getElementById("grid").closest("main#appRoot"), "the accounts are inside it");
+  const main = doc.querySelector('.rw[data-id="a"] .rw-main');
+  assert.equal(main.getAttribute("role"), null, "the row is not a button");
+  assert.equal(main.getAttribute("tabindex"), null);
+  assert.equal(doc.querySelector('.rw [role="button"] button, .rw [role="button"] input'), null, "no control inside a control");
+  const tog = () => doc.querySelector('.rw[data-id="a"] .rw-tog');
+  assert.equal(tog().tagName, "BUTTON");
+  assert.equal(tog().getAttribute("aria-expanded"), "false");
+  assert.equal(tog().getAttribute("aria-label"), "Show details for Ann");
+  tog().click();
+  assert.ok(doc.querySelector('.rw[data-id="a"] .rw-open'), "the button opens it");
+  assert.equal(tog().getAttribute("aria-expanded"), "true");
+  assert.equal(tog().getAttribute("aria-label"), "Hide details for Ann");
+  doc.querySelector('.rw[data-id="a"] .rw-rank').click();
+  assert.equal(doc.querySelector('.rw[data-id="a"] .rw-open'), null, "and a click anywhere on the row still works");
+  // a phone has no column for it, but keeps it for the keyboard and a screen reader
+  assert.match(appCss, /\.grid\.list \.rw-tog\{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset\(50%\)/);
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

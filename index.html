@@ -57,7 +57,8 @@
     <button id="lockPk" type="button" class="lock-pk hidden" title="Or Windows Hello, a phone or a security key: whatever holds this vault's passkey">Unlock with Face ID / fingerprint</button>
   </div></div>
 
-  <div id="appRoot" class="hidden">
+  <!-- the app is the page's main landmark: a screen reader can jump straight to it -->
+  <main id="appRoot" class="hidden">
   <!-- Forty-seven Tab presses from the top of the page to the first account's Login:
        the header bar, the tray, the stats, the toolbar and every filter come first.
        One keystroke past all of it, visible only to the keyboard that reaches it. -->
@@ -778,7 +779,7 @@
   <button id="toTop" class="to-top hidden" title="Back to top" aria-label="Back to top">
     <svg class="ico" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
   </button>
-  </div>
+  </main>
   <!-- Sixty accounts is more than anyone scrolls to find one. Typing is the
        shortest path to every account and to most of what you would then do with
        it, so it gets its own window. -->

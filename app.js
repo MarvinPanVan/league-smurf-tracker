@@ -5777,7 +5777,10 @@ function rowHTML(a,i){
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
   return `<div class="hx row${flashId===a.id?" flash":""}${open?" open":""}" data-id="${idAttr(a.id)}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
-    <div class="rw-main" data-act="info" role="button" tabindex="0" aria-expanded="${open}">
+    <!-- A plain row a click anywhere opens, with one real button for it: as a
+         role="button" holding a checkbox and copy buttons it was a control inside a
+         control, which a screen reader cannot make sense of (axe: nested-interactive) -->
+    <div class="rw-main" data-act="info">
       <!-- No stopPropagation here: every click on a card is handled by one
            delegated listener on #grid, and closest("[data-act]") already stops at
            this checkbox rather than the row behind it. Blocking the bubble only
@@ -5804,7 +5807,7 @@ function rowHTML(a,i){
       <span class="rw-rg">${esc(a.region)}</span>
       <span class="rw-up${isStale(a)||(!hasReading(s)&&isLive(a))?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
       <span class="rw-keys">${a.login?`<button class="rw-key" data-act="copylogin" title="Copy username" aria-label="Copy username for ${esc(plainName(a))}">${icon("user")}</button>`:""}${a.password?`<button class="rw-key" data-act="copypw" title="Copy password" aria-label="Copy password for ${esc(plainName(a))}">${icon("key")}</button>`:""}</span>
-      <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      <button type="button" class="rw-tog" data-act="info" aria-expanded="${open}" aria-label="${open?"Hide":"Show"} details for ${esc(plainName(a))}"><svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
     </div>
     ${open?`<div class="rw-open">
       <!-- the card's line for a rank it cannot show: Fix Riot ID, or Check rank -->
@@ -9065,13 +9068,11 @@ document.addEventListener("pointerdown",e=>{
   if(editingNote&&!e.target.closest(".c-notes"))commitNote();
 },true);
 $("grid").addEventListener("keydown",e=>{
-  // A list row carries role="button" and tabindex="0" but is a <div>, so the
-  // browser gives it none of a button's key handling — it could be tabbed to and
-  // then not opened. Same for wall tiles. Only when the row/tile itself has focus:
-  // the checkbox inside a row has its own meaning for Space.
-  const row=e.target&&e.target.classList&&e.target.classList.contains("rw-main")?e.target:null;
+  // A wall tile carries role="button" and tabindex="0" but is a <div>, so the
+  // browser gives it none of a button's key handling. (A list row opens from its
+  // own button, rw-tog.)
   const tile=e.target&&e.target.classList&&e.target.classList.contains("tile")?e.target:null;
-  if((row||tile)&&(e.key==="Enter"||e.key===" ")){e.preventDefault();(row||tile).click();return}
+  if(tile&&(e.key==="Enter"||e.key===" ")){e.preventDefault();tile.click();return}
   // ArrowDown on a ⋯ goes into its menu — opening it first, if a click has not.
   if(e.key==="ArrowDown"&&e.target&&e.target.dataset&&e.target.dataset.act==="more"){
     const card=e.target.closest("[data-id]");if(!card)return;

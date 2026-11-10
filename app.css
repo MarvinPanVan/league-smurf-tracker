@@ -978,7 +978,10 @@
   .rw-up{font-size:calc(12px*var(--ts));color:var(--faint);text-align:right;white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis}
   .rw-up.stale{color:var(--warn-txt)}
-  .rw-chev{width:14px;height:14px;color:var(--faint);transition:transform .24s cubic-bezier(.22,1,.36,1)}
+  .rw-tog{display:inline-flex;align-items:center;justify-content:center;width:16px;height:28px;padding:0;
+    background:none;border:0;box-shadow:none;color:var(--faint);border-radius:var(--r-xs)}
+  .rw-tog:hover{background:none;color:var(--text)}
+  .rw-chev{width:14px;height:14px;color:inherit;transition:transform .24s cubic-bezier(.22,1,.36,1)}
   .hx.row.open .rw-chev{transform:rotate(180deg)}
   .rw-open{display:flex;flex-direction:column;gap:11px;padding:4px 13px 13px;
     border-top:1px solid var(--line);margin-top:1px;
@@ -1021,7 +1024,10 @@
     .grid.list .rw-rank{grid-area:rank;flex-direction:row;align-items:baseline;gap:6px;align-self:start}
     .grid.list .rw-keys{grid-area:keys;display:flex;gap:6px}
     .grid.list .rw-key{width:40px;height:40px}
-    .grid.list .rw-sub,.grid.list .rw-d,.grid.list .rw-chev{display:none}
+    .grid.list .rw-sub,.grid.list .rw-d{display:none}
+    /* no column for the chevron here, but the button stays for the keyboard and a screen reader */
+    .grid.list .rw-tog{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+    .grid.list .rw-tog:focus-visible{top:6px;right:6px;width:28px;height:28px;clip-path:none;z-index:3;background:var(--panel2)}
     body:not(.selecting) .bulkchk{display:none}
     .tools>.t-select{display:inline-flex}
     .rw-check{opacity:1} /* thumb-friendly: always show Refresh on phones */
