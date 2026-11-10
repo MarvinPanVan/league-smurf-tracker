@@ -7476,6 +7476,15 @@ function parseCSV(text){
   // and turns "label" into "﻿label" — so every lookup for the first column
   // missed and that column silently imported as empty.
   text=String(text).replace(/^﻿/,"");
+  /* German, French or Dutch Excel saves "CSV" with semicolons (the comma is their
+     decimal point), and some tools with tabs; the import read one long first column
+     and rejected the file. The header line says which: the separator it has most of,
+     outside quotes. */
+  const sep=(()=>{
+    const n={",":0,";":0,"\t":0};let q=false;
+    for(const c of text){if(c==='"')q=!q;else if(!q&&c in n)n[c]++;else if(!q&&c==="\n")break}
+    return Object.keys(n).reduce((x,y)=>n[y]>n[x]?y:x,",");
+  })();
   const rows=[];let row=[],field="",inQuotes=false;
   for(let i=0;i<text.length;i++){
     const c=text[i];
@@ -7484,7 +7493,7 @@ function parseCSV(text){
       else field+=c;
     }else{
       if(c==='"')inQuotes=true;
-      else if(c===','){row.push(field);field=""}
+      else if(c===sep){row.push(field);field=""}
       else if(c==='\r'){}
       else if(c==='\n'){row.push(field);rows.push(row);row=[];field=""}
       else field+=c;
@@ -7532,7 +7541,8 @@ function doImportCSV(file){
         if(!gameName||!tagLine)return null;
         /* As typed in a spreadsheet: "gold", "Gold 2", "ii". A division of "2" was
            stored as written, read by the chart as IV and shown as "Gold 2". */
-        const tier=get("tier").trim().toUpperCase();
+        // a tier the app knows, or none: "Plat" or "Gold-ish" became a rank nothing could chart
+        const t0=get("tier").trim().toUpperCase(), tier=TIER_ORDER.includes(t0)||t0==="UNRANKED"?t0:"";
         const dv=get("division").trim().toUpperCase(), div={"1":"I","2":"II","3":"III","4":"IV"}[dv]||(dv in DIV_ORDER?dv:null);
         return sanitizeAccount({
           id:uid(),tags:get("tags")?get("tags").split("|").filter(Boolean):[],history:[],

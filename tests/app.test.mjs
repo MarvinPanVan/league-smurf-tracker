@@ -11534,6 +11534,34 @@ test("numbers in a backup's text fields are read as text, on import and in a vau
   assert.equal(appGet(old, 'accounts.find(x => x.id === "e").password'), "and me", "an empty Riot ID keeps its saved login");
 });
 
+// German Excel saves CSV with semicolons and the import rejected the file; a tier typed as
+// "Plat" was stored as a rank nothing could chart
+test("CSV import reads semicolon and tab files, and keeps only a tier the app knows", async () => {
+  const run = async (csv, n) => {
+    const win = bootApp();
+    win.doImportCSV(new win.File([csv], "x.csv", { type: "text/csv" }));
+    await until(() => win.localStorage.getItem("smurf-tracker"), "the import to be written");
+    const stored = JSON.parse(win.localStorage.getItem("smurf-tracker"));
+    assert.equal(stored.length, n);
+    return stored;
+  };
+  // as German Excel writes it: semicolons, a comma inside a note, a decimal comma
+  let s = await run("﻿label;gameName;tagLine;region;tier;division;lp;notes\r\nHaupt;Müller Ölbaum;EUW;EUW;gold;2;40;\"Duo, abends\"\r\nZwei;Zweit;1234;EUW;Plat;;3,5;", 2);
+  assert.deepEqual([s[0].label, s[0].gameName, s[0].notes], ["Haupt", "Müller Ölbaum", "Duo, abends"]);
+  assert.equal(s[0].stats.tier, "GOLD");
+  assert.equal(s[0].stats.division, "II");
+  assert.equal(s[1].stats, null, "\"Plat\" is no tier the app knows: no made-up rank");
+  // tabs
+  s = await run("gameName\ttagLine\tregion\nTabbed\t77\tKR", 1);
+  assert.deepEqual([s[0].gameName, s[0].tagLine, s[0].region], ["Tabbed", "77", "KR"]);
+  // a comma file with a semicolon in a quoted header-free field stays a comma file
+  s = await run("gameName,tagLine,notes\r\nComma,1,\"a; b; c\"", 1);
+  assert.equal(s[0].notes, "a; b; c");
+  // Unranked is a known answer
+  s = await run("gameName,tagLine,tier\r\nNew,1,unranked", 1);
+  assert.equal(s[0].stats.tier, "UNRANKED");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
