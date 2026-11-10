@@ -1793,6 +1793,21 @@
      main button keeps a card's width rather than stretching across all of it. */
   .rw-open .acts{gap:8px;flex-wrap:nowrap}   /* narrower first, never a ⋯ on a line of its own */
   .rw-open .acts>.a-login{flex:0 1 260px;min-width:0}
+  /* An opened phone row starts with what its two-line row has no room for (rowSumHTML),
+     then its buttons, then the chart and Details; wider rows have those in columns */
+  .rw-sum,.rw-open>.goal{display:none}
+  .rw-sum{align-items:flex-start;gap:12px}
+  .rw-sum-l{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 auto;font-size:calc(13px*var(--ts))}
+  .rw-sum-id{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rw-sum-wl{color:var(--text);font-variant-numeric:tabular-nums}
+  .rw-sum .c-deltas{flex:0 0 auto}
+  @media (max-width:720px){
+    .rw-sum{display:flex}
+    .rw-open>.goal{display:flex;margin-top:0}
+    .rw-open>.wl{order:-4}
+    .rw-open>.rw-sum,.rw-open>.goal{order:-3}
+    .rw-open>.acts,.rw-open>.login:not(.info){order:-2}   /* the saved login, not Details (.login.info) */
+  }
 
   /* ---- the card's ⋯ menu: one fixed element, shared by every card ---- */
   .card-menu{position:fixed;z-index:70;width:232px;max-width:calc(100vw - 16px)}

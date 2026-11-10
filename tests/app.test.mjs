@@ -11418,6 +11418,33 @@ test("the LP chip says when the change was seen, with that check's games, and go
   assert.equal(doc.querySelector('.rw[data-id="old"] .rw-d').textContent.trim(), "", "no week-old change in the list either");
 });
 
+// The phone's list (its default view) showed no Riot ID, record, win rate, LP change or
+// goal, opened or not, and the opened row put the ⋯ 1,300 px down under every Details section
+test("an opened list row on a phone starts with the Riot ID, record, change and goal, then its buttons", () => {
+  const D = 864e5, now = Date.now();
+  const win = bootApp([{ id: "m", label: "Main", gameName: "Lunar Echo", tagLine: "EUW", region: "EUW", status: "active", tags: [], login: "u",
+    goal: { tier: "MASTER" },
+    history: [{ t: now - 5 * D, tier: "DIAMOND", division: "II", lp: 36, w: 139, l: 120 }, { t: now - 3600e3, tier: "DIAMOND", division: "II", lp: 54, w: 142, l: 121 }],
+    stats: { found: true, tier: "DIAMOND", division: "II", lp: 54, wins: 142, losses: 121, level: 412, updatedAt: now - 3600e3, flex: { tier: "EMERALD", division: "II", lp: 40 } } }]);
+  const doc = listView(win);
+  doc.querySelector('.rw[data-id="m"] .rw-main').click();
+  const open = doc.querySelector('.rw[data-id="m"] .rw-open'), sum = open.querySelector(":scope > .rw-sum");
+  assert.ok(sum, "a summary in the opened row");
+  assert.match(sum.querySelector(".rw-sum-id").textContent, /^Lunar Echo#EUW · EUW$/);
+  assert.equal(sum.querySelector(".rw-sum-wl").textContent, "142W 121L · 54% WR");
+  assert.match(sum.querySelector(".c-deltas .delta").textContent, /\+18 LP/, "the change, as on the card");
+  assert.match(sum.querySelector(".c-deltas .d-cap").textContent, /^3W 1L · /);
+  assert.ok(open.querySelector(":scope > .goal"), "and the goal rail");
+  // a phone shows it, and orders the buttons above the chart and Details; wider rows have columns for it
+  assert.match(appCss, /\n  \.rw-sum,\.rw-open>\.goal\{display:none\}/, "hidden where the row has columns for it");
+  const phone = appCss.slice(appCss.indexOf(".rw-open>.goal{order:-3}") - 300, appCss.indexOf(".rw-open>.goal{order:-3}") + 200);
+  assert.match(phone, /@media \(max-width:720px\)\{\s*\.rw-sum\{display:flex\}/);
+  assert.match(phone, /\.rw-open>\.acts,\.rw-open>\.login:not\(\.info\)\{order:-2\}/, "the buttons next, Details after them");
+  // the state line still comes first
+  const kids = [...open.children].map(e => e.className.split(" ")[0]);
+  assert.ok(kids.indexOf("rw-sum") < kids.indexOf("acts"), "summary before the buttons in the page too");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

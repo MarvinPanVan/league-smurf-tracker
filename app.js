@@ -5730,6 +5730,7 @@ function rowHTML(a,i){
     ${open?`<div class="rw-open">
       <!-- the card's line for a rank it cannot show: Fix Riot ID, or Check rank -->
       ${isChecking?"":s&&s.found===false?fixIdHTML():!hasReading(s)?checkRankHTML(a):""}
+      ${rowSumHTML(a)}
       ${(()=>{const p=peakInfo(a),h=thisSeason(a.history);return rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,p.peakV,p.peak)})()}
       ${infoBlockHTML(a)||""}
       ${noteBlockHTML(a,"")}
@@ -5783,6 +5784,55 @@ function checkRankHTML(a){
 function fixIdHTML(){
   return `<div class="wl c-miss">${icon("alert")}<span>Not found on op.gg</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;
 }
+/* The goal rail, on a card and in an opened list row on a phone. */
+function goalHTML(a){
+  // The goal rail. Only drawn once there is a goal — an account with nothing to
+  // climb towards should not be shown an empty progress bar.
+  const g=goalProgress(a);
+  if(!g)return "";
+  // Anchor at the start of the current climb window (after the last season
+  // break), not history[0] — otherwise a year-old Iron point makes Diamond
+  // look 95% done while you are still 400 LP away.
+  const hist=a.history||[];
+  let fromIdx=0;
+  for(let i=1;i<hist.length;i++)if(seasonBreak(hist[i-1],hist[i]))fromIdx=i;
+  const from=ladderLP(hist[fromIdx])??g.cur;
+  const span=Math.max(g.target-Math.min(from,g.cur),1);
+  const pct=g.done?100:Math.max(0,Math.min(100,Math.round((g.cur-Math.min(from,g.cur))/span*100)));
+  const gcol=tierColor(a.goal.tier);
+  return `<div class="goal${g.done?" hit":""}" title="Goal: ${esc(g.label)}">
+    <div class="goal-h"><span class="k">Goal</span><span class="goal-t" style="color:${gcol}">${esc(g.label)}</span>
+      <span class="goal-r">${g.done?"reached":fmtN(g.gap)+" LP to go"+(g.eta?" · "+esc(g.eta):"")}</span></div>
+    <div class="goal-bar"><i style="width:${pct}%;background:${gcol}"></i></div>
+  </div>`;
+}
+/* The LP change and when it was seen, on a card and in an opened list row on a phone.
+   "+87 LP" over what? Said under the chip, and when. "since last check" stayed true
+   only until the next check that found nothing new; the games played between the
+   two readings sit beside it, where the card's separate "Since last check · 5 games"
+   figure used to say them a second time. The pace ("+20 LP/day") is in the chart's
+   tip on the newest point (paceText). */
+function lpChangeHTML(a){
+  const hist=a.history||[], dv=freshDelta(a);
+  if(!dv)return "";
+  const last=hist[hist.length-1], g=gamesSince(hist), games=g&&g.to===last.t?wlText(g.w,g.l)+" · ":"";
+  const title="The change the last new reading found, "+fmtDate(isoDay(last.t));
+  return '<span class="delta '+(dv>0?"d-up":"d-down")+'" title="'+esc(title)+'">'+(dv>0?"▲ +":"▼ -")+fmtN(Math.abs(dv))+' LP</span>'
+    +`<span class="d-cap" title="${esc(title)}"><span>${esc(games+dayAgo(last.t))}</span></span>`;
+}
+/* A phone's list row is the name and the rank: the Riot ID, the record, the change
+   and the goal are columns it has no room for. Opened, it showed none of them
+   either, and the ⋯ was 1,300 px down, under the chart and every Details section.
+   The summary heads the opened row there, the buttons right under it (app.css). */
+function rowSumHTML(a){
+  const s=a.stats, {w,l,total,wr}=winLoss(s), dead=a.status==="banned";
+  const rec=total>0?[w!=null?fmtN(w)+"W":"",l!=null?fmtN(l)+"L":""].filter(Boolean).join(" "):"";
+  const ch=dead?"":lpChangeHTML(a);
+  return `<div class="rw-sum"><div class="rw-sum-l">
+      <span class="rw-sum-id"><span class="sens">${esc(a.gameName)}#${esc(a.tagLine)}</span> · ${esc(a.region)}</span>
+      ${rec?`<span class="rw-sum-wl">${esc(rec)}${wr!==null?` · <span class="wrv${wr>=50?" wr-good":""}">${wr}% WR</span>`:""}</span>`:""}
+    </div>${ch?`<div class="c-deltas">${ch}</div>`:""}</div>${goalHTML(a)}`;
+}
 function cardHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
   /* The header's "N need a refresh", its filter and the list all go by isStale.
@@ -5804,20 +5854,7 @@ function cardHTML(a,i){
   // Same rule as the list row: lastDelta() already knows about season breaks and
   // Unranked ends. Subtracting raw ladderLP() here invented crash chips the list
   // correctly suppressed.
-  {
-    const dv=dead?0:freshDelta(a);
-    if(dv){
-      const last=hist[hist.length-1], g=gamesSince(hist), games=g&&g.to===last.t?wlText(g.w,g.l)+" · ":"";
-      const title="The change the last new reading found, "+fmtDate(isoDay(last.t));
-      deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="'+esc(title)+'">'+(dv>0?"▲ +":"▼ -")+fmtN(Math.abs(dv))+' LP</span>';
-      /* "+87 LP" over what? Said under the chip, and when. "since last check" stayed
-         true only until the next check that found nothing new; the games played
-         between the two readings sit beside it, where the card's separate "Since
-         last check · 5 games" figure used to say them a second time. The pace
-         ("+20 LP/day") is in the chart's tip on the newest point (paceText). */
-      deltaChip+=`<span class="d-cap" title="${esc(title)}"><span>${esc(games+dayAgo(last.t))}</span></span>`;
-    }
-  }
+  if(!dead)deltaChip=lpChangeHTML(a);
   /* There was a flame "Climbing" chip here too (LP up three checks running). It was
      the fourth way the card said "going up", beside the +LP chip, the Climb figure
      and the chart's own line, and the only orange anywhere in the app. */
@@ -5944,27 +5981,7 @@ function cardHTML(a,i){
     </div>
     ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
     ${levelLed&&s.level<30?levelTrackHTML(a):""}
-    ${(()=>{
-      // The goal rail. Only drawn once there is a goal — an account with nothing to
-      // climb towards should not be shown an empty progress bar.
-      const g=goalProgress(a);
-      if(!g)return "";
-      // Anchor at the start of the current climb window (after the last season
-      // break), not history[0] — otherwise a year-old Iron point makes Diamond
-      // look 95% done while you are still 400 LP away.
-      const hist=a.history||[];
-      let fromIdx=0;
-      for(let i=1;i<hist.length;i++)if(seasonBreak(hist[i-1],hist[i]))fromIdx=i;
-      const from=ladderLP(hist[fromIdx])??g.cur;
-      const span=Math.max(g.target-Math.min(from,g.cur),1);
-      const pct=g.done?100:Math.max(0,Math.min(100,Math.round((g.cur-Math.min(from,g.cur))/span*100)));
-      const gcol=tierColor(a.goal.tier);
-      return `<div class="goal${g.done?" hit":""}" title="Goal: ${esc(g.label)}">
-        <div class="goal-h"><span class="k">Goal</span><span class="goal-t" style="color:${gcol}">${esc(g.label)}</span>
-          <span class="goal-r">${g.done?"reached":fmtN(g.gap)+" LP to go"+(g.eta?" · "+esc(g.eta):"")}</span></div>
-        <div class="goal-bar"><i style="width:${pct}%;background:${gcol}"></i></div>
-      </div>`;
-    })()}
+    ${goalHTML(a)}
     ${(h=>rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,peakV,peak))(thisSeason(hist))}
     ${microStats.length?`<div class="c-stats n${microStats.length}">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note&&!isFailed(a)?`<div class="meta">${esc(s.note)}</div>`:""}
