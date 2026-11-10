@@ -11735,6 +11735,38 @@ test("the role tag is left out when the account's own tags already say it", () =
   assert.deepEqual(tags("other"), ["Mid", "main"], "the role still shows where your tags don't say it");
 });
 
+// Back left the app from an open ⋯ menu or from Select, where on a phone it is how you
+// put them away
+test("back closes a card's ⋯ menu, the header's ⋯ menu and Select before it leaves the app", async () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const doc = win.document, shown = id => !doc.getElementById(id).classList.contains("hidden");
+  const entry = () => !!(win.history.state && win.history.state.smurfWindow);
+  const settle = () => new Promise(r => setTimeout(r, 30));
+  // a card's ⋯
+  cardMenu(win, "a");
+  await until(entry, "the open menu takes a back step");
+  win.history.back();
+  await until(() => !shown("cardMenu"), "back closes it");
+  await settle();
+  assert.equal(entry(), false, "and the step is gone with it");
+  // the header's ⋯
+  doc.getElementById("bMore").click();
+  await until(entry, "the header menu too");
+  win.history.back();
+  await until(() => !shown("moreMenu"), "closed by back");
+  // closed by a click instead: the step is given up, so the next back means back
+  doc.getElementById("bMore").click();
+  await until(entry, "open again");
+  doc.body.click();
+  await until(() => !entry(), "the step taken back out");
+  // Select
+  doc.getElementById("tSelectMode").click();
+  await until(entry, "Select takes a step");
+  win.history.back();
+  await until(() => !doc.body.classList.contains("selecting"), "back ends it");
+  assert.equal(appGet(win, "selected.size"), 0);
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

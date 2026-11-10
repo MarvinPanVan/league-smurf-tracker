@@ -4128,6 +4128,7 @@ function syncSelecting(){
   const on=!!ui.selecting||selected.size>0;
   document.body.classList.toggle("selecting",on);
   const b=$("tSelectMode");if(b){b.setAttribute("aria-pressed",String(on));b.textContent=on?"Done":"Select"}
+  syncBack();   // Back puts it away before it leaves the app
 }
 function renderBulkBar(shown){
   const n=selected.size;
@@ -6146,6 +6147,7 @@ function ensureCardMenu(){
   el.className="card-menu hx teal hidden";
   el.setAttribute("role","menu");
   document.body.appendChild(el);
+  backWatch(el);   // Back closes it (backWanted)
   // The same delegated handler the grid uses — the menu carries the account's
   // data-id, so every branch resolves exactly as it does from inside a card.
   el.addEventListener("click",onCardClick);
@@ -7895,21 +7897,40 @@ function syncBackStep(open){
   if(open&&!onWindowEntry()){try{history.pushState({smurfWindow:1},"")}catch(e){}}
   else if(!open&&onWindowEntry()){backSkip=true;try{history.back()}catch(e){backSkip=false}}
 }
+/* Back left the app from an open ⋯ menu or from Select, where on a phone it is the
+   way to put that away. They take the history entry a window does. Read off the
+   page, as the windows are: the menus open and close from a dozen places. */
+function backWanted(){
+  return openModals().length>0||cardMenuOpen()||!$("moreMenu").classList.contains("hidden")
+    ||!!ui.selecting||selected.size>0;
+}
+var backReady=false;   // a var: render() runs before this part of the file has
+function syncBack(){if(backReady)syncBackStep(backWanted())}
 addEventListener("popstate",()=>{
-  if(backSkip){backSkip=false;syncBackStep(openModals().length>0);return}
-  if(!openModals().length)return;
-  // the window in front goes first, as with Escape; whatever stays open behind it
-  // (or a form you chose to keep editing) takes a new entry through syncModals
-  if(askDone){askDone(false);return}
-  if(!$("palette").classList.contains("hidden")){closePalette();return}
-  requestClose();
+  if(backSkip){backSkip=false;syncBack();return}
+  if(openModals().length){
+    // the window in front goes first, as with Escape; whatever stays open behind it
+    // (or a form you chose to keep editing) takes a new entry through syncModals
+    if(askDone){askDone(false);return}
+    if(!$("palette").classList.contains("hidden")){closePalette();return}
+    requestClose();return;
+  }
+  if(cardMenuOpen()){closeCardMenu();syncBack();return}
+  if(!$("moreMenu").classList.contains("hidden")){$("moreMenu").classList.add("hidden");syncBack();return}
+  if(ui.selecting||selected.size){ui.selecting=false;cmpPick=false;selected.clear();lastSelectedId=null;render();return}
 });
+// the card menu is made the first time one opens (ensureCardMenu), and watched from then
+var backMO=null;
+function backWatch(el){if(backMO&&el)backMO.observe(el,{attributes:true,attributeFilter:["class"]})}
+function cardMenuOpen(){const m=$("cardMenu");return !!m&&!m.classList.contains("hidden")}
+if("MutationObserver"in window){backMO=new MutationObserver(()=>syncBack());backWatch($("moreMenu"));backWatch($("cardMenu"))}
+backReady=true;
 // a reload keeps the history entry a window had taken; with nothing open it is ours to clear
 try{if(onWindowEntry())history.replaceState(null,"")}catch(e){}
 function syncModals(){
   const open=openModals();
   document.body.classList.toggle("modal-open",open.length>0);
-  syncBackStep(open.length>0);
+  syncBack();
   if(open.length){
     if(!modalReturn){
       const a=document.activeElement;
