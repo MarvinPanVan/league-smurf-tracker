@@ -11722,6 +11722,18 @@ test("an open Details section drops its summary from its header, and KDA has one
   assert.match(sec().querySelector(".sec-p").textContent, /Lux/, "closed, the summary is back");
 });
 
+// A card read "Mid  main  mid": the role from the last games beside the same word in your tags
+test("the role tag is left out when the account's own tags already say it", () => {
+  const P = "q".repeat(78), now = Date.now(), H = 3600e3;
+  const recent = { at: now, games: [1, 2, 3, 4].map(i => ({ win: true, role: "Mid", at: now - i * H })) };
+  const mk = (id, tags) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags, history: [], puuid: P, recent,
+    stats: { found: true, tier: "GOLD", division: "I", lp: 1, updatedAt: now } });
+  const win = bootApp([mk("dup", ["main", "mid"]), mk("other", ["main"])]);
+  const tags = id => [...win.document.querySelectorAll(`.card[data-id="${id}"] .ctags span`)].map(s => s.textContent);
+  assert.deepEqual(tags("dup"), ["main", "mid"], "once, as you wrote it");
+  assert.deepEqual(tags("other"), ["Mid", "main"], "the role still shows where your tags don't say it");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

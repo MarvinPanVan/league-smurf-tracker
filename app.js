@@ -6036,7 +6036,9 @@ function cardHTML(a,i){
     ${(h=>missChart(a,h)?"":rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,peakV,peak))(thisSeason(hist))}
     ${microStats.length?`<div class="c-stats n${microStats.length}">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note&&!isFailed(a)?`<div class="meta">${esc(s.note)}</div>`:""}
-    ${(()=>{const role=mainRole(a),tags=a.tags||[];
+    ${(()=>{const tags=a.tags||[], r0=mainRole(a);
+      // "Mid main mid": not the role again when your own tags already say it
+      const role=r0&&!tags.some(t=>String(t).toLowerCase()===r0.toLowerCase())?r0:null;
       return role||tags.length?`<div class="ctags">${role?`<span class="role-tag" title="Played in 3 or more of the last 5 ranked games">${esc(role)}</span>`:""}${tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""})()}
     ${loginOpen?loginPanelHTML(a,rv("login")):""}
     ${noteBlockHTML(a,rv("note"))}
