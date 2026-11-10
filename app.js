@@ -1940,12 +1940,17 @@ async function pullVaultSync(force){
   }catch(e){toast("Download failed: "+(e.message||"network"))}
   finally{syncBusy=false;updateSyncStatus()}
 }
+/* "Tier up: GOLD → PLATINUM" named no account, in capitals the rest of the app does
+   not use, and under Check all it was on screen for 6 ms before the run's summary
+   replaced it. It names the account in the card's words now, and during a run it
+   goes into that summary (runNews). */
 function celebrate(id,acc){
   const prev=acc.history[acc.history.length-2]||{};
-  toast("Tier up: "+(prev.tier||"?")+" → "+acc.stats.tier);
+  const move=(prev.tier?tierLabel(prev):"?")+" → "+tierLabel(acc.stats);
+  runNews(plainName(acc)+" reached "+tierLabel(acc.stats),plainName(acc)+": "+move);
   // a system notification shows on screen like the page does, so streamer mode applies
-  notify("Tier up: "+plainName(acc),(prev.tier||"?")+" → "+acc.stats.tier);
-  postDiscord("🎉 **"+(acc.label||acc.gameName)+"** tiered up: "+(prev.tier||"?")+" → "+acc.stats.tier);
+  notify("Tier up: "+plainName(acc),move);
+  postDiscord("🎉 **"+(acc.label||acc.gameName)+"** tiered up: "+move);
   if(prefersReducedMotion())return;
   // The crest is now a different emblem than it was a second ago, which is the
   // most literal statement of what just happened this app can make. Worth half a
@@ -3130,12 +3135,15 @@ function takeIdentity(acc,s){
   if(r&&r.name&&r.tag&&(r.name!==acc.gameName||r.tag!==acc.tagLine)){
     const was=acc.gameName+"#"+acc.tagLine, same=was.toLowerCase()===(r.name+"#"+r.tag).toLowerCase();
     acc.gameName=r.name;acc.tagLine=r.tag;
-    if(!same)toast(streamerOn()?"Renamed on Riot: "+plainName(acc)+" follows its new Riot ID":"Renamed on Riot: "+was+" is now "+r.name+"#"+r.tag);
+    if(!same){
+      const said=streamerOn()?plainName(acc)+" follows its new Riot ID":was+" is now "+r.name+"#"+r.tag;
+      runNews(said,"Renamed on Riot: "+said);
+    }
   }
   // Once a session, not once per account: sixty toasts about one expired key help nobody.
   if(s.riotError==="key"&&!riotKeyWarned){
     riotKeyWarned=true;
-    toast("Your worker's Riot API key was refused, so this check used op.gg. Development keys expire after 24 hours.");
+    runNews("your worker's Riot API key was refused (op.gg was used)","Your worker's Riot API key was refused, so this check used op.gg. Development keys expire after 24 hours.");
   }
   if(s.mastery){acc.mastery=s.mastery;acc.masteryAt=Date.now()}
   delete s.puuid;delete s.riotId;delete s.riotError;delete s.mastery;
@@ -3254,7 +3262,7 @@ async function checkAll(ids){
   // a click listener, which passes an Event — truthy, and with no .map on it.
   const list=(Array.isArray(ids)?ids.map(id=>accounts.find(a=>a.id===id)).filter(Boolean):filtered()).filter(a=>a.status!=="banned");
   if(!list.length){toast("Nothing to refresh");return}
-  run={total:list.length,done:0,ok:0,missing:0,failed:[],current:null,stop:false,dirty:false};
+  run={total:list.length,done:0,ok:0,missing:0,failed:[],current:null,stop:false,dirty:false,news:[]};
   lastFails=null;renderFailbar();renderRun();syncCheckAll();
   const done=new Set();
   // Worker batch when a backend is set — chunks of 20, then sequential for misses.
@@ -3318,7 +3326,7 @@ async function checkAll(ids){
     if(run.stop)break;
     await new Promise(r=>setTimeout(r,cfg.backendUrl?200:800));
   }
-  const {done:nDone,ok,missing,failed,stop,dirty}=run;
+  const {done:nDone,ok,missing,failed,stop,dirty,news}=run;
   run=null;lastFails=failed.length?failed:null;
   if(dirty)saveDB();
   render(); // the sort order was deliberately left alone during the run
@@ -3334,9 +3342,19 @@ async function checkAll(ids){
     msg=parts.length?parts.join(", "):failed.length?"":"Nothing changed";
     if(failed.length)notifyMsg=parts.concat(failed.length+" failed").join(", ");
   }
+  // what happened to whom, after the counts: three at most, then how many more
+  if(news.length){
+    const said=news.slice(0,3).concat(news.length>3?["+"+(news.length-3)+" more"]:[]).join(" · ");
+    msg=msg?msg+" · "+said:said;
+    if(notifyMsg)notifyMsg+=" · "+said;
+  }
   if(msg)toast(msg);
   if(!stop)notify("Check all ranks finished",notifyMsg||msg);
 }
+/* During a run every check that ends calls toast(), and the run's own summary
+   replaced a "Renamed on Riot" after 77 ms. Its news is kept for that summary;
+   outside a run it is said as it happens. */
+function runNews(inRun,alone){if(run&&run.news)run.news.push(inRun);else toast(alone)}
 
 // LP moved since the check before last — what "who is climbing right now" means.
 // Across a season break there is no "moved": the account is on a new ladder, and

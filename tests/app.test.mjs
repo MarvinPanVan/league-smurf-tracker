@@ -11327,6 +11327,42 @@ test("a message stays as long as it takes to read, waits under the pointer, and 
   assert.match(appCss, /#toast\.top\{bottom:auto;top:/, "which is above, not over, its footer");
 });
 
+// In one Check all, "Tier up: GOLD → PLATINUM" was on screen for 6 ms and "Renamed on
+// Riot" for 77 ms before "9 refreshed, 1 not found" replaced them; the promotion named
+// no account
+test("Check all keeps its news for its summary, and a promotion names the account in the card's words", async () => {
+  const P = "p".repeat(78), now = Date.now(), D = 864e5;
+  const mk = (id, name, extra) => ({ id, region: "EUW", gameName: name, tagLine: "1", status: "active", tags: [], ...extra });
+  const gold = { found: true, tier: "GOLD", division: "I", lp: 90, wins: 5, losses: 5, updatedAt: now - D };
+  const win = bootApp([
+    mk("up", "Climber", { label: "Smurf 1", stats: gold, history: [{ t: now - D, tier: "GOLD", division: "I", lp: 90 }] }),
+    mk("rn", "Velvet Lane", { puuid: P, stats: { ...gold }, history: [] }),
+    mk("same", "Steady", { stats: { ...gold }, history: [] }),
+  ]);
+  runScript(win, "window.__toasts = []; const _t = toast; toast = (m, ...r) => { window.__toasts.push(m); return _t(m, ...r); };");
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev'");
+  const rows = { up: { tier: "PLATINUM", division: "IV", lp: 3 }, rn: { tier: "GOLD", division: "I", lp: 95, puuid: P, riotId: { name: "Velvet Lane Two", tag: "EUW2" } },
+    same: { tier: "GOLD", division: "I", lp: 90 } };
+  win.fetchViaBackendBatch = async chunk => new Map(chunk.map(a => [a.id, { ok: true, found: true, wins: 6, losses: 5, ...rows[a.id] }]));
+  await win.checkAll(["up", "rn", "same"]);
+  const said = win.__toasts;
+  assert.equal(said.length, 1, "one message for the run: " + JSON.stringify(said));
+  assert.equal(said[0], "3 refreshed · Smurf 1 reached Platinum IV · Velvet Lane#1 is now Velvet Lane Two#EUW2");
+  // more than three: the first three, then how many more
+  runScript(win, "window.__toasts = []; riotKeyWarned = false");
+  win.fetchViaBackendBatch = async chunk => new Map(chunk.map(a => [a.id, { ok: true, found: true, tier: "GOLD", division: "I", lp: 1,
+    riotId: { name: a.gameName + " X", tag: "9" }, riotError: "key" }]));
+  await win.checkAll(["up", "rn", "same"]);
+  assert.equal(win.__toasts.length, 1);
+  assert.match(win.__toasts[0], /^3 refreshed · Climber#1 is now Climber X#9 · your worker's Riot API key was refused \(op\.gg was used\) · Velvet Lane Two#EUW2 is now Velvet Lane Two X#9 · \+1 more$/);
+  // one Refresh on its own: said straight away, with the account's name and both ranks
+  rows.up = { tier: "EMERALD", division: "IV", lp: 1 };
+  win.fetchViaBackend = async () => ({ found: true, wins: 7, losses: 5, updatedAt: Date.now(), ...rows.up });
+  runScript(win, "window.__toasts = []");
+  await win.check("up");
+  assert.deepEqual([...win.__toasts], ["Smurf 1: Gold I → Emerald IV"]);
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
