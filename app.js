@@ -3337,6 +3337,9 @@ async function checkAll(ids){
   if(dirty)saveDB();
   render(); // the sort order was deliberately left alone during the run
   renderRun();renderFailbar();
+  // Opening the app after days away with auto-check on refreshed everything and said
+  // nothing: the band was built at start, before the check, and on a tab switch.
+  renderAwayBand();
   let msg, notifyMsg="";
   if(stop)msg="Stopped after "+nDone+" of "+list.length;
   else{

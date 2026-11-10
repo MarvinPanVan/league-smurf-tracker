@@ -11467,6 +11467,22 @@ test("a touch screen wider than a phone selects like a phone: a Select button, b
   assert.ok(!doc.body.classList.contains("selecting"), "Done puts them away");
 });
 
+// Opening the app after days away with auto-check on refreshed every account and said
+// nothing: "While you were away" was built at start, before the check, and on a tab switch
+test("While you were away appears once a check finishes, not only after switching tabs", async () => {
+  const D = 864e5, now = Date.now();
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [],
+    history: [{ t: now - 5 * D, tier: "GOLD", division: "II", lp: 10 }],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 10, updatedAt: now - 5 * D } }],
+    w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, lastChangelog: "9.9.9", lockPromptOff: true, lastSeenAt: now - 3 * D })));
+  const band = win.document.getElementById("awayBand");
+  assert.ok(band.classList.contains("hidden"), "nothing had moved when the app opened");
+  win.fetchViaProxy = async () => ({ found: true, tier: "GOLD", division: "I", lp: 40, updatedAt: Date.now() });
+  await win.checkAll(["a"]);
+  assert.equal(band.classList.contains("hidden"), false, "the check found a climb, and the band says so");
+  assert.match(band.textContent, /While you were away.*1 climbed/);
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
