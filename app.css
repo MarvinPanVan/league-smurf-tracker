@@ -2711,6 +2711,9 @@
        bar's segments 16px. Each is at least WCAG's 24px now — on touch screens
        only; with a mouse nothing changes size. */
     .bulkchk,#tSelectAll{width:24px;height:24px}
+    /* the toolbar's fields are held at 16px above; its buttons and labels were 13px
+       beside them, two sizes in one row */
+    .tools>button,.tools>.tagbar>button,.tools>label{font-size:max(16px,calc(16px*var(--ts)))}
     .lpc-range button{height:30px;padding:0 9px}
     .lpc-axis{height:32px}   /* room for them in the date row */
     .tools>.t-kbd{display:none}.tools>#tSearch:placeholder-shown{padding-right:12px}   /* no Ctrl on a touch screen */
@@ -2779,6 +2782,18 @@
     justify-content:center;font-size:calc(12px*var(--ts));font-weight:700;color:var(--teal-ink);background:var(--teal)}
   .t-filters .t-n[hidden]{display:none}
   .t-select{display:none}
+  /* A touch screen wider than a phone (an iPad) showed an empty box on every card,
+     a tap target for something nobody was doing, and "Select all shown" alone on a
+     toolbar row of its own. It has no hover to reveal them by either: the phone's
+     Select button there too, and the boxes once it is pressed. */
+  @media (hover:none){
+    body:not(.selecting) .bulkchk{display:none}
+    .tools>.t-select{display:inline-flex}
+    body:not(.selecting) .tools>label:has(#tSelectAll){display:none!important}
+  }
+  /* at 16px the filters and Select are a row's worth on their own: search takes the
+     first row, so the second is the filters together instead of one left over */
+  @media (hover:none) and (min-width:561px){.tools>input[type=search]{flex:1 1 100%}}
   @media (max-width:560px), (max-height:500px) and (orientation:landscape){
     .tools{display:flex;flex-wrap:wrap}
     /* search and Filters share the first row (search takes all but Filters' width,

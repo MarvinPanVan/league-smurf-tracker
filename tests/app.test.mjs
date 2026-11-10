@@ -11445,6 +11445,28 @@ test("an opened list row on a phone starts with the Riot ID, record, change and 
   assert.ok(kids.indexOf("rw-sum") < kids.indexOf("acts"), "summary before the buttons in the page too");
 });
 
+// An iPad showed an empty checkbox on every card, "Select all shown" alone on a toolbar
+// row of its own, and its toolbar in two text sizes (fields 16px, buttons 13px)
+test("a touch screen wider than a phone selects like a phone: a Select button, boxes only once it is pressed", () => {
+  const block = (q) => { const i = appCss.indexOf(q); assert.ok(i >= 0, q); return appCss.slice(i, appCss.indexOf("\n  }", i)); };
+  const touch = block("@media (hover:none){\n    body:not(.selecting) .bulkchk");
+  assert.match(touch, /body:not\(\.selecting\) \.bulkchk\{display:none\}/, "no empty box on every card");
+  assert.match(touch, /\.tools>\.t-select\{display:inline-flex\}/, "the Select button instead");
+  assert.match(touch, /body:not\(\.selecting\) \.tools>label:has\(#tSelectAll\)\{display:none!important\}/, "Select all only while selecting");
+  assert.match(appCss, /@media \(hover:none\) and \(min-width:561px\)\{\.tools>input\[type=search\]\{flex:1 1 100%\}\}/,
+    "search takes the first row, the filters the second, none left over on a row alone");
+  const coarse = block("@media (pointer:coarse){");
+  assert.match(coarse, /\.tools>button,\.tools>\.tagbar>button,\.tools>label\{font-size:max\(16px,calc\(16px\*var\(--ts\)\)\)\}/,
+    "the toolbar's buttons the size of its fields");
+  // and the button works there as on a phone
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const doc = win.document;
+  doc.getElementById("tSelectMode").click();
+  assert.ok(doc.body.classList.contains("selecting"), "Select shows the boxes");
+  doc.getElementById("tSelectMode").click();
+  assert.ok(!doc.body.classList.contains("selecting"), "Done puts them away");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
