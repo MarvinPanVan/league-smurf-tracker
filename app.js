@@ -3273,8 +3273,9 @@ function renderRun(){
   if(!run)return;
   const pct=run.total?Math.round(run.done/run.total*100):0;
   bar.querySelector(".run-fill").style.width=pct+"%";
-  bar.querySelector(".run-txt").textContent=
-    `${run.done} of ${run.total}${run.failed.length?" · "+run.failed.length+" failed":""}${run.current?" · "+run.current:""}`;
+  // "0 of 10 · batch 1–10" said nothing a person asked: how many, then how far
+  bar.querySelector(".run-txt").textContent=!run.done&&!run.failed.length?"Checking "+accountsN(run.total)+"…"
+    :`${run.done} of ${run.total}${run.failed.length?" · "+run.failed.length+" failed":""}${run.current&&!run.current.startsWith("batch ")?" · "+run.current:""}`;
 }
 function renderFailbar(){
   const el=$("failbar");
@@ -5723,7 +5724,8 @@ function rowHTML(a,i){
   // a banned account's rank will never move again: its last change is not news here either
   const dv=a.status==="banned"?0:freshDelta(a);
   let rank="—",lp="";
-  if(isChecking)rank="…";
+  // checking keeps what it had, dimmed under the sweep (app.css): "…" made every row jump
+  if(isChecking&&!hasReading(s))rank="…";
   else if(!hasReading(s))rank=noRankLabel(a);
   else if(s.found===false)rank="Not found";
   else if(isRanked(a)){
@@ -5789,7 +5791,7 @@ function tileHTML(a){
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
   let rank="Never checked",lp="";
-  if(checking.has(a.id))rank="…";
+  if(checking.has(a.id)&&!hasReading(s))rank="…";
   else if(!hasReading(s))rank=noRankLabel(a);
   else if(s.found===false)rank="Not found";
   else if(isRanked(a)){
@@ -5946,7 +5948,11 @@ function cardHTML(a,i){
   const prevSeason=notPlaced(a)?lastSeasonHTML(a):"";
   const levelLed=!!(s&&s.found!==false&&!isRanked(a)&&s.level&&!prevSeason);
   let rankBlock;
-  if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
+  /* Checking swapped the rank for "Checking rank…": every card in a Check all got
+     22 to 40 px shorter and then taller again. The rank stays, dimmed under the
+     sweep that already says a check is on (app.css); only a card with nothing to
+     show says it is checking. */
+  if(isChecking&&!hasReading(s))rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
   // A card never checked had no way to check it but the ⋯ menu, the one card that
   // most needs it. A failed one has its Refresh on the meta line; banned ones are skipped.
   else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">${noRankLabel(a)}</div>`+checkRankHTML(a);

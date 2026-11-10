@@ -652,8 +652,11 @@
   }
   /* A run over sixty accounts is minutes long. Where it has got to, which account
      it is on, and how to stop it all have to be on screen the whole time. */
-  .runbar{position:relative;height:26px;display:flex;align-items:center;
-    border-top:1px solid var(--line);background:#00000030;overflow:hidden}
+  .runbar{position:relative;height:30px;display:flex;align-items:center;flex:0 1 280px;min-width:0;
+    border:1px solid color-mix(in srgb,var(--gold) 32%,transparent);border-radius:var(--r-sm);background:#00000030;overflow:hidden}
+  .console.running .cmd-count{display:none}   /* the run bar is in its place */
+  /* a card being checked keeps its rank, dimmed under the sweep */
+  .hx-in.scanning :is(.c-rank,.rw-rank,.t-rk){opacity:.5;transition:opacity .2s ease}
   .run-fill{position:absolute;left:0;top:0;bottom:0;width:0;
     background:linear-gradient(90deg,color-mix(in srgb,var(--gold) 34%,transparent),color-mix(in srgb,var(--gold) 16%,transparent));
     transition:width .3s cubic-bezier(.22,1,.36,1)}

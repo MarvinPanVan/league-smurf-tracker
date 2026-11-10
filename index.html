@@ -693,14 +693,15 @@
     <!-- What narrowed the grid, beside the count it explains. They had a row of
          their own under the search, which appeared with the first filter and moved
          everything under it down 45px; in this row they take no new space. -->
-    <div class="cmd-r"><span id="count" class="cmd-count"></span><span id="chips" class="chips"></span>
+    <!-- A check's progress in the count's place while it runs: as a band of its own
+         it pushed everything under it down 26px, and back up when it ended. -->
+    <div class="cmd-r"><div id="runbar" class="runbar hidden"><div class="run-fill"></div><span class="run-txt"></span></div><span id="count" class="cmd-count"></span><span id="chips" class="chips"></span>
     <div id="density" class="seg" role="group" aria-label="Layout">
       <button data-density="cards" title="Cards" aria-label="Card view"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
       <button data-density="list" title="List" aria-label="List view"><svg class="ico" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
       <button data-density="wall" title="Wall: the whole vault on one screen" aria-label="Wall view"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="9.5" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16" y="9.5" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><rect x="9.5" y="16" width="5" height="5" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/></svg></button>
     </div></div>
   </div>
-  <div id="runbar" class="runbar hidden"><div class="run-fill"></div><span class="run-txt"></span></div>
   <div id="failbar" class="failbar hidden"></div>
   <div class="tools">
     <input type="search" id="tSearch" placeholder="Search accounts…" aria-label="Search accounts">

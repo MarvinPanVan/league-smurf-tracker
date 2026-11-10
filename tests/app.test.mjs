@@ -11667,6 +11667,39 @@ test("a not-found card says the Riot ID was not found, without a one-point chart
   assert.doesNotMatch(win.document.querySelector(".rib-warn").title, /op\.gg/, "nor in the header's warning");
 });
 
+// Checking swapped every card's rank for "Checking rank…" (22 to 40 px shorter, then back),
+// the run bar pushed the page down 26 px, and it read "0 of 10 · batch 1–10"
+test("checking keeps each card's rank and the page where it is, and says how many it is checking", async () => {
+  const now = Date.now();
+  const win = bootApp(["GOLD", "SILVER"].map((t, i) => ({ id: "a" + i, region: "EUW", gameName: "A" + i, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: t, division: "II", lp: 40, updatedAt: now - 3600e3 } })).concat([
+    { id: "new", region: "EUW", gameName: "New", tagLine: "1", status: "active", tags: [], history: [], stats: null }]));
+  const doc = win.document;
+  let release; const gate = new Promise(r => release = r);
+  win.fetchViaProxy = async () => { await gate; return { found: true, tier: "GOLD", division: "I", lp: 50, updatedAt: Date.now() }; };
+  const p = win.checkAll();
+  await until(() => doc.querySelector('.card[data-id="a0"]').classList.contains("scanning"), "the first card checking");
+  const card = doc.querySelector('.card[data-id="a0"]');
+  assert.match(card.querySelector(".c-rank").textContent, /Gold II/, "its rank stays while it is checked");
+  assert.doesNotMatch(card.textContent, /Checking rank/);
+  assert.match(appCss, /\.hx-in\.scanning :is\(\.c-rank,\.rw-rank,\.t-rk\)\{opacity:\.5/, "dimmed under the sweep");
+  // the run bar is in the command row, where the count is
+  const bar = doc.getElementById("runbar");
+  assert.ok(bar.closest(".cmd-r"), "in the command row, taking no height of its own");
+  assert.equal(bar.classList.contains("hidden"), false);
+  assert.match(appCss, /\.console\.running \.cmd-count\{display:none\}/, "in place of the count");
+  assert.equal(doc.querySelector(".run-txt").textContent, "Checking 3 accounts…");
+  release();
+  await p;
+  // an account with nothing to show still says it is being checked
+  let rel2; const g2 = new Promise(r => rel2 = r);
+  win.fetchViaProxy = async () => { await g2; return { found: true, tier: "GOLD", division: "I", lp: 50, updatedAt: Date.now() }; };
+  runScript(win, 'accounts.find(a => a.id === "new").stats = null');
+  const p2 = win.check("new");
+  await until(() => /Checking rank/.test(doc.querySelector('.card[data-id="new"]').textContent), "the never-checked card says so");
+  rel2(); await p2;
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
