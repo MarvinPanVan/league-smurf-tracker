@@ -11239,6 +11239,63 @@ test("Compare leaves out a row both accounts are blank on, and keeps one either 
   assert.deepEqual(labels(), ["Level"], "one side's level is a row, with the other side blank");
 });
 
+// After "Fix Riot ID" and Save the card still said "Not found" until somebody pressed
+// Refresh. With a Riot key, the stored puuid still pointed at the old account: Refresh
+// read it again and renamed the card back, and Check all showed its rank under the new name
+test("an edited Riot ID is checked again, without the old account's puuid, games or mastery", async () => {
+  const P1 = "a".repeat(78), P2 = "b".repeat(78), D = 864e5, now = Date.now();
+  const hist = [{ t: now - 3 * D, tier: "GOLD", division: "II", lp: 10 }, { t: now - D, tier: "GOLD", division: "I", lp: 90 }];
+  const mk = (id, extra) => ({ id, region: "EUW", tagLine: "1", status: "active", tags: [], history: [], stats: null, ...extra });
+  const win = bootApp([
+    mk("nf", { gameName: "Typo", tagLine: "OK1", stats: { found: false, updatedAt: now - D } }),
+    mk("p", { gameName: "Same Guy", puuid: P1, mastery: [{ c: "Ahri", p: 1 }], masteryAt: now, recent: { at: now, games: [] },
+      history: hist.map(h => ({ ...h })), stats: { found: true, tier: "GOLD", division: "I", lp: 90, wins: 9, losses: 9, updatedAt: now - D,
+        seasons: [{ s: "S2025", tier: "SILVER", division: "I", lp: 1 }] } }),
+    mk("q", { gameName: "Other Guy", puuid: P1, history: hist.map(h => ({ ...h })),
+      stats: { found: true, tier: "GOLD", division: "I", lp: 90, updatedAt: now - D, seasons: [{ s: "S2025", tier: "GOLD", division: "I", lp: 1 }] } }),
+  ]);
+  const doc = win.document, $ = id => doc.getElementById(id);
+  const asked = [];
+  runScript(win, "window.__toasts = []; const _t = toast; toast = (m, ...r) => { window.__toasts.push(m); return _t(m, ...r); };");
+  const edit = (id, f) => { cardMenu(win, id).querySelector('[data-act="edit"]').click(); f(); $("fSave").click(); };
+  // 1. not found, fixed: checked straight away, by op.gg here
+  win.fetchViaProxy = async a => { asked.push(a.gameName + "#" + a.tagLine); return { found: true, tier: "SILVER", division: "II", lp: 5, updatedAt: Date.now() }; };
+  edit("nf", () => { $("fName").value = "Right Name"; });
+  await until(() => appGet(win, 'accounts.find(a => a.id === "nf").stats.found') === true, "the corrected ID is read");
+  assert.deepEqual(asked, ["Right Name#OK1"]);
+  assert.match(doc.querySelector('.card[data-id="nf"]').textContent, /Silver II/, "and the card says what it found");
+  // 2. a letter-case change is the same Riot ID: nothing forgotten, nothing checked
+  edit("p", () => { $("fName").value = "same guy"; });
+  await tick();
+  assert.equal(asked.length, 1, "no check for a change of case");
+  assert.equal(appGet(win, 'accounts.find(a => a.id === "p").puuid'), P1);
+  // 3. with a worker: the old puuid is not sent, and the same account renamed keeps its history
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev'");
+  const reply = obj => ({ ok: true, status: 200, text: async () => JSON.stringify(obj), json: async () => obj });
+  let answer = null;
+  win.fetch = async u => { asked.push(String(u)); return reply(answer); };
+  answer = { found: true, tier: "GOLD", division: "I", lp: 95, wins: 10, losses: 9, puuid: P1, riotId: { name: "New Same", tag: "1" } };
+  edit("p", () => { $("fName").value = "New Same"; });
+  const P = () => win.eval('accounts.find(a => a.id === "p")');
+  assert.equal(P().puuid, undefined, "the old puuid is dropped on save");
+  assert.equal(P().mastery, undefined, "with the old account's mastery");
+  assert.equal(P().recent, undefined, "and its last games");
+  await until(() => P().stats.lp === 95, "read again");
+  assert.doesNotMatch(asked[asked.length - 1], /puuid=/, "looked up by the new name, not the old puuid");
+  assert.equal(P().gameName, "New Same", "no rename back");
+  assert.ok(!win.__toasts.some(m => /Renamed on Riot/.test(m)), "and no rename reported");
+  assert.equal(P().puuid, P1, "the same account: its puuid back");
+  assert.equal(P().history.length, 3, "and its chart runs on");
+  // 4. a different account behind the new ID starts fresh, with no tier-up across the change
+  answer = { found: true, tier: "PLATINUM", division: "IV", lp: 3, wins: 1, losses: 0, puuid: P2, riotId: { name: "Iron Two", tag: "1" } };
+  edit("q", () => { $("fName").value = "Iron Two"; });
+  const Q = () => win.eval('accounts.find(a => a.id === "q")');
+  await until(() => Q().puuid === P2, "the new account read");
+  assert.equal(Q().history.length, 1, "its chart starts from this reading");
+  assert.equal(Q().stats.seasons, null, "no seasons carried over from the other account");
+  assert.ok(!win.__toasts.some(m => /Tier up|→/.test(m)), "Gold to Platinum across two accounts is no promotion");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

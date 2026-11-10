@@ -3084,6 +3084,23 @@ function rollNumber(el,from,to,suffix){
 const PUUID_RE=/^[A-Za-z0-9_-]{30,100}$/;
 function validPuuid(p){return typeof p==="string"&&PUUID_RE.test(p)}
 let riotKeyWarned=false;
+/* A Riot ID typed in by hand replaces the identity a check found. The stored puuid
+   still pointed at the old account: Refresh read that account again and "followed
+   its rename" back to the old name, and Check all showed the old account's rank
+   under the new one. Its last games and champion mastery were the old account's too.
+   The puuid it had is kept for this session, to tell after the next check whether
+   the new ID is the same account renamed or another account (freshStart). */
+const editedFrom=new Map();
+function forgetIdentity(a){
+  if(validPuuid(a.puuid))editedFrom.set(a.id,a.puuid);
+  delete a.puuid;delete a.mastery;delete a.masteryAt;delete a.recent;
+  formCache.delete(a.id);
+}
+/* Another account under the old card: its chart, peak, seasons, champions and level
+   track were the other account's, so they start again rather than run on. */
+function freshStart(acc){
+  acc.history=[];delete acc.lvls;delete acc.peakManual;acc.stats=null;
+}
 function takeIdentity(acc,s){
   if(!s)return;
   if(validPuuid(s.puuid))acc.puuid=s.puuid;
@@ -3102,6 +3119,13 @@ function takeIdentity(acc,s){
   delete s.puuid;delete s.riotId;delete s.riotError;delete s.mastery;
 }
 function commitStats(id,acc,s){
+  {
+    const was=editedFrom.get(id);
+    if(was&&s&&s.found!==false){
+      editedFrom.delete(id);
+      if(validPuuid(s.puuid)&&s.puuid!==was)freshStart(acc);
+    }
+  }
   takeIdentity(acc,s);
   if(cfg.watch&&s&&DECAY_RULES[String(s.tier||"").toUpperCase()])syncWatchSoon();
   // a fresh read may mean fresh games — an open drawer fetches them again
@@ -6728,8 +6752,16 @@ function submitForm(){
     createdOn:$("fCreated").value||"",birthdate:$("fBirth").value||"",
     tags:parseTags($("fTags").value),notes:$("fNotes").value.trim(),info:readInfoFields(formInfoBase),
     excludeStats:$("fExStats").checked};
+  let movedId=null;
   if(editingId){
-    const a=accounts.find(x=>x.id===editingId);if(a){Object.assign(a,data);if(!a.info)delete a.info;if(!a.excludeStats)delete a.excludeStats}
+    const a=accounts.find(x=>x.id===editingId);if(a){
+      // a new Riot ID (letter case aside) or region is another lookup: what the card
+      // knew about the old one goes, and it is read again below
+      if(a.gameName.toLowerCase()!==gameName.toLowerCase()||a.tagLine.toLowerCase()!==tagLine.toLowerCase()||a.region!==data.region){
+        forgetIdentity(a);movedId=a.id;
+      }
+      Object.assign(a,data);if(!a.info)delete a.info;if(!a.excludeStats)delete a.excludeStats;
+    }
   }else{
     const a=Object.assign({id:uid(),fav:false,stats:null},data);if(!a.info)delete a.info;if(!a.excludeStats)delete a.excludeStats;
     accounts.push(a);
@@ -6742,7 +6774,10 @@ function submitForm(){
      read straight away now, the same check its own Refresh runs. Not in the
      preview (nothing there is real), not for a banned one (checks skip those),
      and not under a Check all run that is already going through the vault. */
-  if(newId&&!previewMode&&!run&&data.status!=="banned")check(newId);
+  /* An edited Riot ID the same way: after Fix Riot ID and Save the card said "Not
+     found" until somebody pressed Refresh. */
+  const recheck=newId||movedId;
+  if(recheck&&!previewMode&&!run&&data.status!=="banned")check(recheck);
   if(data.password)maybeLockPrompt();
 }
 
