@@ -4253,7 +4253,7 @@ function renderRibbon(){
   ].filter(Boolean);
   const missOn=ui.flag==="missing";
   const warn=missN?`<button class="rib-i rib-warn${missOn?" on":""}" data-flag="missing" aria-pressed="${missOn}" aria-label="Not found, ${missN}"`
-    +` title="op.gg has no profile for these Riot IDs: not entered yet, renamed, or mistyped.">${icon("alert")}<span>${missN} not found</span><u>${missOn?"Shown":"Show"}</u></button>`:"";
+    +` title="No profile was found for these Riot IDs: not entered yet, renamed, or mistyped.">${icon("alert")}<span>${missN} not found</span><u>${missOn?"Shown":"Show"}</u></button>`:"";
   setHTML(el,`<div class="rib-row" role="group" aria-label="Accounts by tier">${tiers.length?`<span class="rib-tiers">${tiers.map(tierItem).join("")}</span>`:""}`
     +(states.length?`<span class="rib-states">${states.join("")}</span>`:"")
     +warn+`</div>`);
@@ -5767,7 +5767,7 @@ function rowHTML(a,i){
       <!-- the card's line for a rank it cannot show: Fix Riot ID, or Check rank -->
       ${isChecking?"":s&&s.found===false?fixIdHTML():!hasReading(s)?checkRankHTML(a):""}
       ${rowSumHTML(a)}
-      ${(()=>{const p=peakInfo(a),h=thisSeason(a.history);return rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,p.peakV,p.peak)})()}
+      ${(()=>{const p=peakInfo(a),h=thisSeason(a.history);return missChart(a,h)?"":rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,p.peakV,p.peak)})()}
       ${infoBlockHTML(a)||""}
       ${noteBlockHTML(a,"")}
       <!-- The card's own words and controls. It was the app before every clean-up:
@@ -5817,8 +5817,13 @@ function checkRankHTML(a){
 }
 // amber like the header's warning: a Riot ID op.gg doesn't know is usually one to
 // correct, so the line is the way to correct it, not only the advice to
+/* Under "Riot ID not found" the chart said "One check so far. The chart starts
+   after the next one": no next check will find the ID until it is fixed. A chart
+   of two readings or more from before it went missing still stands. */
+function missChart(a,h){return !!(a.stats&&a.stats.found===false&&(h||[]).length<2)}
 function fixIdHTML(){
-  return `<div class="wl c-miss">${icon("alert")}<span>Not found on op.gg</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;
+  // "on op.gg" was wrong whenever a worker had asked Riot itself
+  return `<div class="wl c-miss">${icon("alert")}<span>Riot ID not found</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;
 }
 /* The goal rail, on a card and in an opened list row on a phone. */
 function goalHTML(a){
@@ -6018,7 +6023,7 @@ function cardHTML(a,i){
     ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
     ${levelLed&&s.level<30?levelTrackHTML(a):""}
     ${goalHTML(a)}
-    ${(h=>rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,peakV,peak))(thisSeason(hist))}
+    ${(h=>missChart(a,h)?"":rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,peakV,peak))(thisSeason(hist))}
     ${microStats.length?`<div class="c-stats n${microStats.length}">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note&&!isFailed(a)?`<div class="meta">${esc(s.note)}</div>`:""}
     ${(()=>{const role=mainRole(a),tags=a.tags||[];

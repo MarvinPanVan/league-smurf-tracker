@@ -11650,6 +11650,23 @@ test("a levelling account never ranked does not ask the worker for ranked games"
   assert.equal(can("nolvl"), true, "a level not known is not a reason to skip");
 });
 
+// A not-found card said "on op.gg" when the worker had asked Riot, and under it "One check
+// so far. The chart starts after the next one", which no check will do until it is fixed
+test("a not-found card says the Riot ID was not found, without a one-point chart promise", () => {
+  const now = Date.now(), D = 864e5;
+  const win = bootApp([
+    { id: "nf", region: "EUW", gameName: "Typo", tagLine: "OK1", status: "active", tags: [], history: [{ t: now - D, tier: "GOLD", division: "I", lp: 4 }],
+      stats: { found: false, updatedAt: now } },
+    { id: "was", region: "EUW", gameName: "Gone", tagLine: "1", status: "active", tags: [],
+      history: [{ t: now - 3 * D, tier: "GOLD", division: "I", lp: 4 }, { t: now - D, tier: "GOLD", division: "I", lp: 30 }], stats: { found: false, updatedAt: now } },
+  ]);
+  const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
+  assert.equal(card("nf").querySelector(".c-miss span").textContent, "Riot ID not found");
+  assert.doesNotMatch(card("nf").textContent, /op\.gg|One check so far/);
+  assert.ok(card("was").querySelector(".lpc"), "a chart from before it went missing still stands");
+  assert.doesNotMatch(win.document.querySelector(".rib-warn").title, /op\.gg/, "nor in the header's warning");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
