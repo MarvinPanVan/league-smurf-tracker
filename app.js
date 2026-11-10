@@ -4531,7 +4531,10 @@ function infoParts(a){
    test. Fetched when an account's Details open, never in a batch: each costs six
    Riot calls, against a personal key's hundred per two minutes. */
 const formCache=new Map(), FORM_TTL=5*60*1000;
-function canForm(a){return !!(a&&cfg.backendUrl&&validPuuid(a.puuid))}
+/* Not for an account that cannot have played a ranked game: under level 30 and
+   never ranked. Its Details opened to one line, "No ranked games yet this season",
+   after a request to the worker to find that out. */
+function canForm(a){return !!(a&&cfg.backendUrl&&validPuuid(a.puuid)&&!(unrankedTier(a)&&a.stats.level!=null&&Number(a.stats.level)<30))}
 async function loadForm(id){
   const acc=accounts.find(a=>a.id===id);
   if(!acc||!canForm(acc))return;

@@ -11635,6 +11635,21 @@ test("Delete all and Replace everything come with an Undo that puts the vault ba
   assert.equal(appGet(win, "accounts.length"), 0, "no Undo into a locked vault");
 });
 
+// A levelling account's Details opened to "No ranked games yet this season", after asking
+// the worker for games it cannot have played
+test("a levelling account never ranked does not ask the worker for ranked games", () => {
+  const P = "q".repeat(78), now = Date.now();
+  const mk = (id, stats) => ({ id, region: "EUW", gameName: id, tagLine: "1", status: "active", tags: [], history: [], puuid: P, stats: { found: true, updatedAt: now, ...stats } });
+  const win = bootApp([mk("lvl", { tier: "UNRANKED", level: 22 }), mk("ready", { tier: "UNRANKED", level: 31 }),
+    mk("gold", { tier: "GOLD", division: "I", lp: 3, level: 120 }), mk("nolvl", { tier: "UNRANKED", level: null })]);
+  runScript(win, "cfg.backendUrl = 'https://w.example.workers.dev'");
+  const can = id => appGet(win, `canForm(accounts.find(a => a.id === "${id}"))`);
+  assert.equal(can("lvl"), false, "level 22, never ranked: nothing to fetch");
+  assert.equal(can("ready"), true, "level 31 may have played ranked");
+  assert.equal(can("gold"), true);
+  assert.equal(can("nolvl"), true, "a level not known is not a reason to skip");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
