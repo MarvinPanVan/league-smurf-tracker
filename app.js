@@ -110,8 +110,15 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.29.1";
+const APP_VERSION="2.30.0";
 const APP_CHANGELOG=[
+  {v:"2.30.0",items:[
+    "Fixing a Riot ID checks the account again straight away, and if the new ID is a different account its chart starts fresh",
+    "Check all ends by saying what happened to whom (\"Smurf 1 reached Platinum IV\"), and messages stay up long enough to read",
+    "Sync asks before an upload would replace changes made on another device, and a failed save stays on screen until saving works again",
+    "The LP change says when it happened (\"3W 2L · yesterday\") and goes after a week; favorites lead the list, and on a phone an opened row starts with the Riot ID, record and buttons",
+    "Delete all and Replace everything can be undone, and backups and CSV files from Excel in any language import cleanly",
+  ]},
   {v:"2.29.1",items:[
     "Compare only lists what at least one of the two accounts has, instead of rows with nothing on either side",
   ]},
@@ -458,9 +465,14 @@ function clampExportDays(v){const n=Math.round(Number(v));return Math.max(1,Math
 let cfg={apiKey:"",model:"claude-sonnet-5",autoCheck:false,backendUrl:"",exportRemindDays:30,syncToken:"",vaultRev:0,lastSyncAt:0};
 // Older releases stored retired model IDs; map them forward so a saved setting
 // doesn't keep sending a model the API no longer serves.
-const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"claude-sonnet-5","claude-3-5-sonnet":"claude-sonnet-5"};
+/* Haiku 4.5's earliest retirement date (15 Oct 2026) has passed; a setting saved
+   with it moves to Haiku 5.5, the current Haiku, at a tenth of its price. */
+const MODEL_ALIASES={"claude-sonnet-4-6":"claude-sonnet-5","claude-sonnet-4-5":"claude-sonnet-5","claude-3-5-sonnet":"claude-sonnet-5",
+  "claude-haiku-4-5":"claude-haiku-5-5","claude-haiku-4-5-20251001":"claude-haiku-5-5","claude-3-5-haiku":"claude-haiku-5-5"};
 // Only Sonnet 5 supports the newer dynamic-filtering web search; Haiku needs the basic one.
-const WEB_SEARCH_TOOL={"claude-sonnet-5":"web_search_20260209","claude-haiku-4-5":"web_search_20250305"};
+// The web search tool's docs list Haiku 5.5 for web search but name no Haiku for the
+// dynamic-filtering version, so it keeps the basic one every model takes.
+const WEB_SEARCH_TOOL={"claude-sonnet-5":"web_search_20260209","claude-haiku-5-5":"web_search_20250305"};
 let ui={search:"",region:"",tag:null,favOnly:false,sort:"rank",status:"",showArchived:false,
   flag:"",   // "" | "stale" | "unchecked" | "failed" | "attention" | "missing" | "dup" | "rotate" | "decay"
   tier:"",   // a single tier, or "UNRANKED"; set by clicking the rank spread
@@ -887,8 +899,8 @@ function saveDB(opts){invalidateDupCache();
   // either: this stays written by the time it returns, the way the rest of the app
   // has always been able to assume of an unencrypted vault.
   if(!vaultPassword){
-    try{localStorage.setItem(DB_KEY,JSON.stringify(accounts));stampRev();return Promise.resolve(true)}
-    catch(e){toast("Saving failed (storage error)");return Promise.resolve(false)}
+    try{localStorage.setItem(DB_KEY,JSON.stringify(accounts));stampRev();savedAgain();return Promise.resolve(true)}
+    catch(e){saveFailed();return Promise.resolve(false)}
   }
   saveChain=saveChain.then(async()=>{
     if(seq!==saveSeq)return true; // superseded while queued; the newer one is next
@@ -899,12 +911,29 @@ function saveDB(opts){invalidateDupCache();
       if(vaultLocked()||seq!==saveSeq)return true;
       localStorage.setItem(DB_KEY,JSON.stringify(envelope));
       currentEnvelope=envelope;
-      stampRev();
+      stampRev();savedAgain();
       return true;
-    }catch(e){toast("Saving failed (storage error)");return false}
+    }catch(e){saveFailed();return false}
   });
   return saveChain;
 }
+/* A failed save was one 2-second message, and then the app looked saved: every
+   change after it was gone at the next reload. The banner stays at the top until a
+   save goes through again, with the way to keep what is on screen. */
+function saveFailed(){
+  toast("Saving failed (storage error)");
+  const b=$("banner");if(b.dataset.kind==="save")return;
+  b.dataset.kind="save";
+  setHTML(b,"Changes are not being saved: this browser's storage is full or blocked. "
+    +'<button type="button" id="bannerExport" class="b-danger">Export a backup now</button>');
+  b.classList.add("show");
+}
+function savedAgain(){
+  const b=$("banner");if(b.dataset.kind!=="save")return;
+  delete b.dataset.kind;b.classList.remove("show");b.textContent="";
+}
+// (this runs before $ is defined further down)
+document.getElementById("banner").addEventListener("click",e=>{if(e.target.closest("#bannerExport"))doExport()});
 /* Report a change only once it is actually on disk. saveDB() answers, and it
    toasts its own "Saving failed (storage error)" — but a caller that fires its
    own "Archived" into the same toast a line later paints straight over that
@@ -1164,11 +1193,24 @@ function safeAccountId(id){return typeof id==="string"&&/^[A-Za-z0-9._:-]+$/.tes
 /* Boot, unlock and import all used to trust tags/history were arrays. A corrupt
    backup with those fields as objects survived into migrateStats / render and
    threw mid-grid. Same normalisation everywhere an account enters memory. */
+// "1 account", "2 accounts": the import said "Backup imported (1 accounts)"
+function accountsN(n){return n+" account"+(n===1?"":"s")}
 function sanitizeAccount(a){
   if(!a||typeof a!=="object")return null;
   a.id=safeAccountId(a.id);
-  if(typeof a.gameName==="string")a.gameName=a.gameName.trim();
-  if(typeof a.tagLine==="string")a.tagLine=a.tagLine.trim();
+  /* A backup with "tagLine": 1111 (a number, as a spreadsheet writes it) was saved
+     as one: every render called .trim() on it and failed, so the import said it
+     failed and every reload after it showed an empty grid for the whole vault. The
+     text fields are text; a number or a true/false becomes its text, anything else
+     goes. A Riot ID left empty stays an empty one here, not a dropped account: on
+     load that would throw away the login saved with it (the import drops them). */
+  for(const k of ["gameName","tagLine","label","login","password","email","notes","region"]){
+    const v=a[k];
+    if(v==null||typeof v==="string")continue;
+    if(typeof v==="number"&&Number.isFinite(v)||typeof v==="boolean")a[k]=String(v);else delete a[k];
+  }
+  a.gameName=typeof a.gameName==="string"?a.gameName.trim():"";
+  a.tagLine=typeof a.tagLine==="string"?a.tagLine.trim():"";
   if(!Array.isArray(a.tags))a.tags=[];
   if(!Array.isArray(a.history))a.history=[];
   if(a.puuid!=null&&!validPuuid(a.puuid))delete a.puuid;
@@ -1190,11 +1232,33 @@ function sanitizeAccount(a){
 }
 // Asked in three places now, and jsdom has no matchMedia unless a test supplies one
 function prefersReducedMotion(){return !!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)}
-function toast(msg,action,fn){const t=$("toast");t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");if(action)document.getElementById("toastBtn").onclick=()=>{dismissToast();fn()};t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.opacity="";t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>dismissToast(),action?6000:2200)}
+/* A message stays long enough to be read: 2.2 s was the time for "Saved" and also
+   for two lines about a master password. 50 ms more per character, at most 9 s, at
+   least 6 s with a button to press. It waits while the pointer is on it. Over an
+   open window it sits at the top: at the bottom it covered Save settings and Close. */
+function toastMs(msg,action){const ms=Math.min(9000,2200+50*String(msg||"").length);return action?Math.max(6000,ms):ms}
+function toast(msg,action,fn){
+  const t=$("toast");
+  t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");
+  if(action)document.getElementById("toastBtn").onclick=()=>{dismissToast();fn()};
+  t.classList.toggle("top",!!document.querySelector(".modal:not(.hidden)"));
+  t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.opacity="";t.style.display="block";
+  t._held=false;t._left=toastMs(msg,action);toastRun(t);
+  document.addEventListener("pointermove",toastHover,{passive:true});
+}
+function toastRun(t){clearTimeout(t._h);t._end=Date.now()+t._left;t._h=setTimeout(()=>dismissToast(),t._left)}
+// The toast lets clicks through to what is under it, so it cannot have a hover of its own
+function toastHover(e){
+  const t=$("toast");if(!t||t.style.display==="none")return;
+  const r=t.getBoundingClientRect(), on=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
+  if(on&&!t._held){t._held=true;clearTimeout(t._h);t._left=Math.max(0,t._end-Date.now())}
+  else if(!on&&t._held){t._held=false;t._left=Math.max(t._left,1500);toastRun(t)}
+}
 function dismissToast(){
   const t=$("toast");if(!t)return;
   // opacity first, so a browser that can hold display back fades it out (see #toast)
-  t.style.opacity="0";t.style.display="none";clearTimeout(t._h);
+  t.style.opacity="0";t.style.display="none";clearTimeout(t._h);t._held=false;
+  document.removeEventListener("pointermove",toastHover);
   const b=document.getElementById("toastBtn");if(b)b.onclick=null;
 }
 /* Both dates are stored as the plain "YYYY-MM-DD" the date input hands over, and
@@ -1396,6 +1460,7 @@ function listGroup(a){
   return"UNCHECKED";
 }
 function groupLabel(k){
+  if(k==="FAV")return "Favorites";
   if(k==="UNCHECKED")return "Never checked";
   if(k==="UNRANKED")return "Unranked";
   if(k==="UNPLACED")return "Not placed yet";
@@ -1403,6 +1468,7 @@ function groupLabel(k){
   return k.charAt(0)+k.slice(1).toLowerCase();
 }
 function groupColor(k){
+  if(k==="FAV")return"var(--star)";
   if(k==="MISSING")return"var(--danger)";
   if(k==="UNRANKED"||k==="UNPLACED")return"var(--muted)"; // grey: in the unranked tier's blue it read as a link
   return k==="UNCHECKED"?"#5d6577":tierColor(k);
@@ -1785,7 +1851,7 @@ function updateSyncStatus(){
     :"Ready.";
   setHTML(el,need+(cfg.lastSyncAt?" Last synced "+esc(timeAgo(cfg.lastSyncAt))+".":""));
 }
-async function pushVaultSync(){
+async function pushVaultSync(force){
   if(syncBusy){toast("Sync already in progress");return}
   const token=($("sSyncToken")&&$("sSyncToken").value.trim())||cfg.syncToken||"";
   if(token)cfg.syncToken=token;
@@ -1800,18 +1866,24 @@ async function pushVaultSync(){
     // a newer cloud vault because "now" always beat the remote timestamp.
     if(!(Number(cfg.vaultRev)>0))touchVaultRev();
     const updatedAt=Number(cfg.vaultRev);
-    // GET-before-PUT: catch a newer cloud copy before encrypt+upload (and before
-    // the worker's 409), so two devices racing don't burn a round-trip for nothing.
-    try{
+    /* GET-before-PUT. It used to stop only when the cloud's revision was newer than
+       this vault's, and a device that had been edited after the other one uploaded
+       always had the newer one: its upload replaced the other device's changes
+       without a word. What matters is whether the cloud holds a revision this
+       device has never seen, synced from or uploaded; then the choice is the
+       person's, and the dialog says what each way loses. */
+    if(force!==true)try{
       const peek=await fetch(url,{headers:{"Authorization":"Bearer "+cfg.syncToken}});
       if(peek.ok){
         let remote=null; try{remote=await peek.json()}catch(e){}
         const remoteAt=Number(remote&&remote.updatedAt)||0;
-        if(remoteAt>updatedAt){
-          toast("The synced copy is newer. Download it first, or upload again once you have sorted it out","Download…",()=>{
-            ask({title:"Replace this device's vault with the newer synced copy?",body:"Changes made here since your last sync may be lost.",ok:"Download and replace",danger:true})
-              .then(ok=>{if(ok)pullVaultSync(true)});
-          });
+        if(remoteAt>0&&remoteAt!==(Number(cfg.syncedRev)||0)&&remoteAt!==updatedAt){
+          syncBusy=false;
+          const v=await ask({title:"The synced copy was changed on another device",
+            body:"It changed since this device last synced. Uploading replaces those changes; downloading replaces the changes made here instead. Export a backup first if you need both.",
+            ok:"Download the synced copy",alt:"Upload anyway",altDanger:true});
+          if(v==="ok")await pullVaultSync(true);
+          else if(v==="alt")await pushVaultSync(true);
           return;
         }
       }
@@ -1914,16 +1986,21 @@ async function pullVaultSync(force){
     if(!ok){toast("Downloaded, but could not save it in this browser");render();updateSyncStatus();return}
     render();
     updateSyncStatus();
-    toast("Vault downloaded ("+accounts.length+" accounts)");
+    toast("Vault downloaded ("+accountsN(accounts.length)+")");
   }catch(e){toast("Download failed: "+(e.message||"network"))}
   finally{syncBusy=false;updateSyncStatus()}
 }
+/* "Tier up: GOLD → PLATINUM" named no account, in capitals the rest of the app does
+   not use, and under Check all it was on screen for 6 ms before the run's summary
+   replaced it. It names the account in the card's words now, and during a run it
+   goes into that summary (runNews). */
 function celebrate(id,acc){
   const prev=acc.history[acc.history.length-2]||{};
-  toast("Tier up: "+(prev.tier||"?")+" → "+acc.stats.tier);
+  const move=(prev.tier?tierLabel(prev):"?")+" → "+tierLabel(acc.stats);
+  runNews(plainName(acc)+" reached "+tierLabel(acc.stats),plainName(acc)+": "+move);
   // a system notification shows on screen like the page does, so streamer mode applies
-  notify("Tier up: "+plainName(acc),(prev.tier||"?")+" → "+acc.stats.tier);
-  postDiscord("🎉 **"+(acc.label||acc.gameName)+"** tiered up: "+(prev.tier||"?")+" → "+acc.stats.tier);
+  notify("Tier up: "+plainName(acc),move);
+  postDiscord("🎉 **"+(acc.label||acc.gameName)+"** tiered up: "+move);
   if(prefersReducedMotion())return;
   // The crest is now a different emblem than it was a second ago, which is the
   // most literal statement of what just happened this app can make. Worth half a
@@ -2899,7 +2976,11 @@ Rules: use null for any value you cannot find. If unranked this season, tier "UN
       "anthropic-version":"2023-06-01",
       "anthropic-dangerous-direct-browser-access":"true"
     },
-    body:JSON.stringify({model:cfg.model,max_tokens:1000,messages:[{role:"user",content:prompt}],tools:[{type:WEB_SEARCH_TOOL[cfg.model]||"web_search_20250305",name:"web_search"}]})
+    /* Haiku 5.5 thinks by default, and its thinking counts toward max_tokens: 1000 could
+       go on thinking before the JSON. More room, and low effort for a lookup and a copy.
+       The reply is read by block type, so thinking blocks ahead of the text are skipped. */
+    body:JSON.stringify(Object.assign({model:cfg.model,max_tokens:4000,messages:[{role:"user",content:prompt}],tools:[{type:WEB_SEARCH_TOOL[cfg.model]||"web_search_20250305",name:"web_search"}]},
+      cfg.model==="claude-haiku-5-5"?{output_config:{effort:"low"}}:{}))
   });
   const data=await res.json();
   if(data.error)throw new Error(data.error.message||"API error");
@@ -3084,6 +3165,23 @@ function rollNumber(el,from,to,suffix){
 const PUUID_RE=/^[A-Za-z0-9_-]{30,100}$/;
 function validPuuid(p){return typeof p==="string"&&PUUID_RE.test(p)}
 let riotKeyWarned=false;
+/* A Riot ID typed in by hand replaces the identity a check found. The stored puuid
+   still pointed at the old account: Refresh read that account again and "followed
+   its rename" back to the old name, and Check all showed the old account's rank
+   under the new one. Its last games and champion mastery were the old account's too.
+   The puuid it had is kept for this session, to tell after the next check whether
+   the new ID is the same account renamed or another account (freshStart). */
+const editedFrom=new Map();
+function forgetIdentity(a){
+  if(validPuuid(a.puuid))editedFrom.set(a.id,a.puuid);
+  delete a.puuid;delete a.mastery;delete a.masteryAt;delete a.recent;
+  formCache.delete(a.id);
+}
+/* Another account under the old card: its chart, peak, seasons, champions and level
+   track were the other account's, so they start again rather than run on. */
+function freshStart(acc){
+  acc.history=[];delete acc.lvls;delete acc.peakManual;acc.stats=null;
+}
 function takeIdentity(acc,s){
   if(!s)return;
   if(validPuuid(s.puuid))acc.puuid=s.puuid;
@@ -3091,17 +3189,27 @@ function takeIdentity(acc,s){
   if(r&&r.name&&r.tag&&(r.name!==acc.gameName||r.tag!==acc.tagLine)){
     const was=acc.gameName+"#"+acc.tagLine, same=was.toLowerCase()===(r.name+"#"+r.tag).toLowerCase();
     acc.gameName=r.name;acc.tagLine=r.tag;
-    if(!same)toast(streamerOn()?"Renamed on Riot: "+plainName(acc)+" follows its new Riot ID":"Renamed on Riot: "+was+" is now "+r.name+"#"+r.tag);
+    if(!same){
+      const said=streamerOn()?plainName(acc)+" follows its new Riot ID":was+" is now "+r.name+"#"+r.tag;
+      runNews(said,"Renamed on Riot: "+said);
+    }
   }
   // Once a session, not once per account: sixty toasts about one expired key help nobody.
   if(s.riotError==="key"&&!riotKeyWarned){
     riotKeyWarned=true;
-    toast("Your worker's Riot API key was refused, so this check used op.gg. Development keys expire after 24 hours.");
+    runNews("your worker's Riot API key was refused (op.gg was used)","Your worker's Riot API key was refused, so this check used op.gg. Development keys expire after 24 hours.");
   }
   if(s.mastery){acc.mastery=s.mastery;acc.masteryAt=Date.now()}
   delete s.puuid;delete s.riotId;delete s.riotError;delete s.mastery;
 }
 function commitStats(id,acc,s){
+  {
+    const was=editedFrom.get(id);
+    if(was&&s&&s.found!==false){
+      editedFrom.delete(id);
+      if(validPuuid(s.puuid)&&s.puuid!==was)freshStart(acc);
+    }
+  }
   takeIdentity(acc,s);
   if(cfg.watch&&s&&DECAY_RULES[String(s.tier||"").toUpperCase()])syncWatchSoon();
   // a fresh read may mean fresh games — an open drawer fetches them again
@@ -3183,8 +3291,9 @@ function renderRun(){
   if(!run)return;
   const pct=run.total?Math.round(run.done/run.total*100):0;
   bar.querySelector(".run-fill").style.width=pct+"%";
-  bar.querySelector(".run-txt").textContent=
-    `${run.done} of ${run.total}${run.failed.length?" · "+run.failed.length+" failed":""}${run.current?" · "+run.current:""}`;
+  // "0 of 10 · batch 1–10" said nothing a person asked: how many, then how far
+  bar.querySelector(".run-txt").textContent=!run.done&&!run.failed.length?"Checking "+accountsN(run.total)+"…"
+    :`${run.done} of ${run.total}${run.failed.length?" · "+run.failed.length+" failed":""}${run.current&&!run.current.startsWith("batch ")?" · "+run.current:""}`;
 }
 function renderFailbar(){
   const el=$("failbar");
@@ -3208,7 +3317,7 @@ async function checkAll(ids){
   // a click listener, which passes an Event — truthy, and with no .map on it.
   const list=(Array.isArray(ids)?ids.map(id=>accounts.find(a=>a.id===id)).filter(Boolean):filtered()).filter(a=>a.status!=="banned");
   if(!list.length){toast("Nothing to refresh");return}
-  run={total:list.length,done:0,ok:0,missing:0,failed:[],current:null,stop:false,dirty:false};
+  run={total:list.length,done:0,ok:0,missing:0,failed:[],current:null,stop:false,dirty:false,news:[]};
   lastFails=null;renderFailbar();renderRun();syncCheckAll();
   const done=new Set();
   // Worker batch when a backend is set — chunks of 20, then sequential for misses.
@@ -3272,11 +3381,14 @@ async function checkAll(ids){
     if(run.stop)break;
     await new Promise(r=>setTimeout(r,cfg.backendUrl?200:800));
   }
-  const {done:nDone,ok,missing,failed,stop,dirty}=run;
+  const {done:nDone,ok,missing,failed,stop,dirty,news}=run;
   run=null;lastFails=failed.length?failed:null;
   if(dirty)saveDB();
   render(); // the sort order was deliberately left alone during the run
   renderRun();renderFailbar();
+  // Opening the app after days away with auto-check on refreshed everything and said
+  // nothing: the band was built at start, before the check, and on a tab switch.
+  renderAwayBand();
   let msg, notifyMsg="";
   if(stop)msg="Stopped after "+nDone+" of "+list.length;
   else{
@@ -3288,9 +3400,19 @@ async function checkAll(ids){
     msg=parts.length?parts.join(", "):failed.length?"":"Nothing changed";
     if(failed.length)notifyMsg=parts.concat(failed.length+" failed").join(", ");
   }
+  // what happened to whom, after the counts: three at most, then how many more
+  if(news.length){
+    const said=news.slice(0,3).concat(news.length>3?["+"+(news.length-3)+" more"]:[]).join(" · ");
+    msg=msg?msg+" · "+said:said;
+    if(notifyMsg)notifyMsg+=" · "+said;
+  }
   if(msg)toast(msg);
   if(!stop)notify("Check all ranks finished",notifyMsg||msg);
 }
+/* During a run every check that ends calls toast(), and the run's own summary
+   replaced a "Renamed on Riot" after 77 ms. Its news is kept for that summary;
+   outside a run it is said as it happens. */
+function runNews(inRun,alone){if(run&&run.news)run.news.push(inRun);else toast(alone)}
 
 // LP moved since the check before last — what "who is climbing right now" means.
 // Across a season break there is no "moved": the account is on a new ladder, and
@@ -3303,6 +3425,22 @@ function lastDelta(a){
   const now=ladderLP(cur), before=ladderLP(prev);
   return now===null||before===null?0:now-before;
 }
+/* The change, while it is news. lastDelta() is the gap between the last two
+   different readings, and a card wore "+27 LP since last check" through a week of
+   checks that found nothing new. Past seven days (as a streak) it is history, on
+   the chart. */
+const DELTA_FOR=7*864e5;
+function freshDelta(a){
+  const h=a.history||[], last=h[h.length-1];
+  return last&&Date.now()-(+last.t||0)<=DELTA_FOR?lastDelta(a):0;
+}
+// "today", "yesterday", "5 days ago": by calendar day, which is how a player counts
+function dayAgo(t){
+  const day=x=>{const d=new Date(+x);return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()};
+  const n=Math.round((day(Date.now())-day(t))/864e5);
+  return n<=0?"today":n===1?"yesterday":n+" days ago";
+}
+function isoDay(t){const d=new Date(+t),p=v=>String(v).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())}
 function markPlayed(id){
   const a=accounts.find(x=>x.id===id); if(!a)return;
   openMore.delete(id);
@@ -3742,7 +3880,7 @@ function filtered(){
     opened:(x,y)=>openedAt(y)-openedAt(x),
     // the only number that matters on an account that isn't ranked yet
     level:(x,y)=>((y.stats&&y.stats.level)||0)-((x.stats&&x.stats.level)||0),
-    change:(x,y)=>lastDelta(y)-lastDelta(x),
+    change:(x,y)=>freshDelta(y)-freshDelta(x),
     // "Sort by movement" on the away band — the away window's delta, not the
     // last two checks. Falls back to lastDelta once that map has been cleared.
     away:(x,y)=>(awayDelta.get(y.id)||0)-(awayDelta.get(x.id)||0),
@@ -4006,6 +4144,7 @@ function syncSelecting(){
   const on=!!ui.selecting||selected.size>0;
   document.body.classList.toggle("selecting",on);
   const b=$("tSelectMode");if(b){b.setAttribute("aria-pressed",String(on));b.textContent=on?"Done":"Select"}
+  syncBack();   // Back puts it away before it leaves the app
 }
 function renderBulkBar(shown){
   const n=selected.size;
@@ -4134,7 +4273,7 @@ function renderRibbon(){
   ].filter(Boolean);
   const missOn=ui.flag==="missing";
   const warn=missN?`<button class="rib-i rib-warn${missOn?" on":""}" data-flag="missing" aria-pressed="${missOn}" aria-label="Not found, ${missN}"`
-    +` title="op.gg has no profile for these Riot IDs: not entered yet, renamed, or mistyped.">${icon("alert")}<span>${missN} not found</span><u>${missOn?"Shown":"Show"}</u></button>`:"";
+    +` title="No profile was found for these Riot IDs: not entered yet, renamed, or mistyped.">${icon("alert")}<span>${missN} not found</span><u>${missOn?"Shown":"Show"}</u></button>`:"";
   setHTML(el,`<div class="rib-row" role="group" aria-label="Accounts by tier">${tiers.length?`<span class="rib-tiers">${tiers.map(tierItem).join("")}</span>`:""}`
     +(states.length?`<span class="rib-states">${states.join("")}</span>`:"")
     +warn+`</div>`);
@@ -4150,6 +4289,19 @@ function fitRibbon(){
   const top=document.querySelector(".top"), rib=$("ribbon");if(!top||!rib)return;
   const tiers=rib.querySelector(".rib-tiers");
   let below=false;
+  /* A phone lets the emblems wrap in their own row, and seven came out six and one.
+     Where they wrap is measured, then the lines evened out: seven as four and three. */
+  if(tiers){
+    tiers.classList.remove("bal");tiers.style.removeProperty("--rib-cols");
+    if(phoneLayout()){
+      const items=[...tiers.children], top0=items.length?items[0].getBoundingClientRect().top:0;
+      const perLine=items.filter(e=>Math.abs(e.getBoundingClientRect().top-top0)<2).length;
+      if(perLine&&perLine<items.length){
+        const lines=Math.ceil(items.length/perLine);
+        tiers.style.setProperty("--rib-cols",String(Math.ceil(items.length/lines)));tiers.classList.add("bal");
+      }
+    }
+  }
   if(tiers&&!phoneLayout()){
     const brand=top.querySelector(".brand"), bar=top.querySelector(".bar");
     const gap=parseFloat(getComputedStyle(top).columnGap)||0;
@@ -4279,7 +4431,7 @@ function renderDash(){
   setHTML(el,`
   <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
   ${cells.length?`<div class="dash">${cells.join("")}</div>`:""}
-  ${topChamps.length?`<div class="dist"${cells.length||ranked.length?' style="border-top:1px solid var(--line)"':""}><span class="k">Most played</span>${
+  ${topChamps.length?`<div class="dist champs-row"${cells.length||ranked.length?' style="border-top:1px solid var(--line)"':""}><span class="k">Most played</span>${
     // Sorted by games, so "Best" was the wrong word: a 44% champion sat in it.
     // And 4-4 is not a good record yet; green waits for ten games.
     topChamps.map(c=>`<span class="gem cmb" title="${esc(c.games)} games across ${esc(c.accs)} account${c.accs===1?"":"s"}">`
@@ -4294,7 +4446,7 @@ function renderDash(){
   </div></div>`);
   dashJustOpened=false; // consumed by the render above
   bindSparkTip(el);
-  balanceDash();
+  balanceDash();fitChamps();
 }
 /* The reminder against losing the vault lived in the stats panel, and the panel
    starts folded on a phone: the one warning that Safari deletes a vault after a
@@ -4343,8 +4495,20 @@ function balanceDash(){
   // the hairline between tiles belongs inside a row, not down the left edge of one
   tiles.forEach((t,i)=>t.classList.toggle("rs",i%cols===0));
 }
-if("ResizeObserver"in window)new ResizeObserver(()=>balanceDash()).observe($("dash"));
-else window.addEventListener("resize",balanceDash);
+/* Most played wrapped onto a second row, two chips left under eight: one row of
+   whole chips now, the most played first, as many as fit. A phone keeps its row
+   sliding sideways, where one whole chip would be all there was room for. */
+function fitChamps(){
+  const row=document.querySelector("#dash .champs-row");if(!row)return;
+  const chips=[...row.querySelectorAll(".cmb")];
+  for(const c of chips)c.style.display="";
+  if(phoneLayout())return;
+  const r=row.getBoundingClientRect(), edge=r.right-(parseFloat(getComputedStyle(row).paddingRight)||0);
+  let cut=false;
+  for(const c of chips){if(!cut&&c.getBoundingClientRect().right>edge+.5)cut=true;if(cut)c.style.display="none"}
+}
+if("ResizeObserver"in window)new ResizeObserver(()=>{balanceDash();fitChamps()}).observe($("dash"));
+else window.addEventListener("resize",()=>{balanceDash();fitChamps()});
 
 /* Every tag in the vault, as a row of chips above the grid. On a vault with one
    tag on one account that is a single word floating in its own band, and on a
@@ -4412,7 +4576,10 @@ function infoParts(a){
    test. Fetched when an account's Details open, never in a batch: each costs six
    Riot calls, against a personal key's hundred per two minutes. */
 const formCache=new Map(), FORM_TTL=5*60*1000;
-function canForm(a){return !!(a&&cfg.backendUrl&&validPuuid(a.puuid))}
+/* Not for an account that cannot have played a ranked game: under level 30 and
+   never ranked. Its Details opened to one line, "No ranked games yet this season",
+   after a request to the worker to find that out. */
+function canForm(a){return !!(a&&cfg.backendUrl&&validPuuid(a.puuid)&&!(unrankedTier(a)&&a.stats.level!=null&&Number(a.stats.level)<30))}
 async function loadForm(id){
   const acc=accounts.find(a=>a.id===id);
   if(!acc||!canForm(acc))return;
@@ -4457,7 +4624,7 @@ function formHTML(a){
       +`<span class="c-nm"><b class="fm-res${g.win?" w":""}">${g.win?"W":"L"}</b>${esc(g.champ)}</span>`
       +`<span class="c-kd">${esc(g.kda)}</span>`
       +`<span class="c-gm">${g.min!=null?esc(g.min)+" min":""}</span>`
-      +`<span class="c-gm">${g.at?esc(timeAgo(g.at)):""}</span></div>`).join(""));
+      +`<span class="c-gm">${g.at?esc(timeAgo(g.at)):""}</span></div>`).join(""),true);
 }
 /* ---- champion art ----
    From Riot's Data Dragon, which serves splash art by champion id ("MonkeyKing",
@@ -5210,12 +5377,16 @@ function highestOf(list){let best=null,v=-1;for(const e of list){const x=ladderL
    Rank panel's start folded and remember being opened (openSec). */
 const DRAWER_SECS=new Set(["form","solo","flexhist","champs","mastery"]);
 function secOn(id,key){const k=id+"|"+key;return DRAWER_SECS.has(key)?!shutSec.has(k):openSec.has(k)}
-function secHTML(a,key,label,n,peek,body){
+// "3.0", not "3" in a column of "2.4" and "3.1"; nothing where there is no KDA, not a dash
+function kdaText(v){if(v==null||v==="")return"";const n=Number(v);return Number.isFinite(n)?n.toFixed(1):String(v)}
+function secHTML(a,key,label,n,peek,body,keepPeek){
   const on=secOn(a.id,key);
   return `<div class="sec${on?" on":""}" data-k="sec-${key}">`
     +`<button class="sec-h" data-act="sec" data-s="${key}" aria-expanded="${on}">`
       +`<span class="sec-n">${esc(label)}${n===""||n==null?"":`<i>${n}</i>`}</span>`
-      +`<span class="sec-p">${peek}</span>`
+      // the peek is the closed section's summary; open, it repeated the first row under it
+      // (a season, a champion). The last games' record and pips sum up, so they stay.
+      +`<span class="sec-p">${on&&!keepPeek?"":peek}</span>`
       +`<svg class="ico" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>`
     +`</button>`
     +(on?`<div class="sec-b">${body}</div>`:"")
@@ -5251,7 +5422,7 @@ function infoBlockHTML(a,rev){
       +champs.map(c=>row("",`<span class="c-nm">${esc(c.name)}</span>`
         +`<span class="c-gm">${c.wins!=null&&c.losses!=null?esc(wlText(c.wins,c.losses)):esc(c.games)+"G"}</span>`
         +`<span class="c-wr${c.wr>=50?" wr-good":""}">${esc(c.wr)}%</span>`
-        +(kdaCol?`<span class="c-kd">${c.kda!=null?esc(c.kda):"—"}</span>`:""))).join(""));
+        +(kdaCol?`<span class="c-kd">${esc(kdaText(c.kda))}</span>`:""))).join(""));
   }
   if(mastery.length){
     const top=mastery[0];
@@ -5599,9 +5770,10 @@ function rowHTML(a,i){
   const open=openInfo.has(a.id);
   const {w:wins,l:losses,total,wr}=winLoss(s);
   // a banned account's rank will never move again: its last change is not news here either
-  const dv=a.status==="banned"?0:lastDelta(a);
+  const dv=a.status==="banned"?0:freshDelta(a);
   let rank="—",lp="";
-  if(isChecking)rank="…";
+  // checking keeps what it had, dimmed under the sweep (app.css): "…" made every row jump
+  if(isChecking&&!hasReading(s))rank="…";
   else if(!hasReading(s))rank=noRankLabel(a);
   else if(s.found===false)rank="Not found";
   else if(isRanked(a)){
@@ -5612,7 +5784,10 @@ function rowHTML(a,i){
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
   return `<div class="hx row${flashId===a.id?" flash":""}${open?" open":""}" data-id="${idAttr(a.id)}"><div class="hx-in rw${isRanked(a)?"":" rw-quiet"}${a.status==="banned"?" dead":""}${isChecking?" scanning":""}" data-id="${idAttr(a.id)}"${a.status&&a.status!=="active"&&a.status!=="banned"?` style="--st:${st.color}"`:""}>
-    <div class="rw-main" data-act="info" role="button" tabindex="0" aria-expanded="${open}">
+    <!-- A plain row a click anywhere opens, with one real button for it: as a
+         role="button" holding a checkbox and copy buttons it was a control inside a
+         control, which a screen reader cannot make sense of (axe: nested-interactive) -->
+    <div class="rw-main" data-act="info">
       <!-- No stopPropagation here: every click on a card is handled by one
            delegated listener on #grid, and closest("[data-act]") already stops at
            this checkbox rather than the row behind it. Blocking the bubble only
@@ -5639,12 +5814,13 @@ function rowHTML(a,i){
       <span class="rw-rg">${esc(a.region)}</span>
       <span class="rw-up${isStale(a)||(!hasReading(s)&&isLive(a))?" stale":""}">${s&&s.updatedAt?timeAgo(s.updatedAt):"never"}</span>
       <span class="rw-keys">${a.login?`<button class="rw-key" data-act="copylogin" title="Copy username" aria-label="Copy username for ${esc(plainName(a))}">${icon("user")}</button>`:""}${a.password?`<button class="rw-key" data-act="copypw" title="Copy password" aria-label="Copy password for ${esc(plainName(a))}">${icon("key")}</button>`:""}</span>
-      <svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      <button type="button" class="rw-tog" data-act="info" aria-expanded="${open}" aria-label="${open?"Hide":"Show"} details for ${esc(plainName(a))}"><svg class="ico rw-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
     </div>
     ${open?`<div class="rw-open">
       <!-- the card's line for a rank it cannot show: Fix Riot ID, or Check rank -->
       ${isChecking?"":s&&s.found===false?fixIdHTML():!hasReading(s)?checkRankHTML(a):""}
-      ${(()=>{const p=peakInfo(a),h=thisSeason(a.history);return rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,p.peakV,p.peak)})()}
+      ${rowSumHTML(a)}
+      ${(()=>{const p=peakInfo(a),h=thisSeason(a.history);return missChart(a,h)?"":rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,p.peakV,p.peak)})()}
       ${infoBlockHTML(a)||""}
       ${noteBlockHTML(a,"")}
       <!-- The card's own words and controls. It was the app before every clean-up:
@@ -5666,7 +5842,7 @@ function tileHTML(a){
   const initial=(a.label||a.gameName||"?").trim().charAt(0).toUpperCase()||"?";
   const icon0=iconUrl(s);
   let rank="Never checked",lp="";
-  if(checking.has(a.id))rank="…";
+  if(checking.has(a.id)&&!hasReading(s))rank="…";
   else if(!hasReading(s))rank=noRankLabel(a);
   else if(s.found===false)rank="Not found";
   else if(isRanked(a)){
@@ -5682,7 +5858,9 @@ function tileHTML(a){
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
     <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?flagMark():""}</span>
     <span class="t-rk" style="color:${isRanked(a)?col:"var(--muted)"}">${esc(rank)}</span>
-    ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
+    <!-- the LP line, blank where there is no LP: without it an unranked tile was
+         24px shorter than the ranked one beside it -->
+    <span class="t-lp"${lp?"":' aria-hidden="true"'}>${lp?esc(lp):"&nbsp;"}</span>
   </div></div>`;
 }
 /* The card's lines for an account with no rank to show, shared with an opened list
@@ -5694,8 +5872,62 @@ function checkRankHTML(a){
 }
 // amber like the header's warning: a Riot ID op.gg doesn't know is usually one to
 // correct, so the line is the way to correct it, not only the advice to
+/* Under "Riot ID not found" the chart said "One check so far. The chart starts
+   after the next one": no next check will find the ID until it is fixed. A chart
+   of two readings or more from before it went missing still stands. */
+function missChart(a,h){return !!(a.stats&&a.stats.found===false&&(h||[]).length<2)}
 function fixIdHTML(){
-  return `<div class="wl c-miss">${icon("alert")}<span>Not found on op.gg</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;
+  // "on op.gg" was wrong whenever a worker had asked Riot itself
+  return `<div class="wl c-miss">${icon("alert")}<span>Riot ID not found</span><button type="button" class="c-fix" data-act="edit">Fix Riot ID</button></div>`;
+}
+/* The goal rail, on a card and in an opened list row on a phone. */
+function goalHTML(a){
+  // The goal rail. Only drawn once there is a goal — an account with nothing to
+  // climb towards should not be shown an empty progress bar.
+  const g=goalProgress(a);
+  if(!g)return "";
+  // Anchor at the start of the current climb window (after the last season
+  // break), not history[0] — otherwise a year-old Iron point makes Diamond
+  // look 95% done while you are still 400 LP away.
+  const hist=a.history||[];
+  let fromIdx=0;
+  for(let i=1;i<hist.length;i++)if(seasonBreak(hist[i-1],hist[i]))fromIdx=i;
+  const from=ladderLP(hist[fromIdx])??g.cur;
+  const span=Math.max(g.target-Math.min(from,g.cur),1);
+  const pct=g.done?100:Math.max(0,Math.min(100,Math.round((g.cur-Math.min(from,g.cur))/span*100)));
+  const gcol=tierColor(a.goal.tier);
+  return `<div class="goal${g.done?" hit":""}" title="Goal: ${esc(g.label)}">
+    <div class="goal-h"><span class="k">Goal</span><span class="goal-t" style="color:${gcol}">${esc(g.label)}</span>
+      <span class="goal-r">${g.done?"reached":fmtN(g.gap)+" LP to go"+(g.eta?" · "+esc(g.eta):"")}</span></div>
+    <div class="goal-bar"><i style="width:${pct}%;background:${gcol}"></i></div>
+  </div>`;
+}
+/* The LP change and when it was seen, on a card and in an opened list row on a phone.
+   "+87 LP" over what? Said under the chip, and when. "since last check" stayed true
+   only until the next check that found nothing new; the games played between the
+   two readings sit beside it, where the card's separate "Since last check · 5 games"
+   figure used to say them a second time. The pace ("+20 LP/day") is in the chart's
+   tip on the newest point (paceText). */
+function lpChangeHTML(a){
+  const hist=a.history||[], dv=freshDelta(a);
+  if(!dv)return "";
+  const last=hist[hist.length-1], g=gamesSince(hist), games=g&&g.to===last.t?wlText(g.w,g.l)+" · ":"";
+  const title="The change the last new reading found, "+fmtDate(isoDay(last.t));
+  return '<span class="delta '+(dv>0?"d-up":"d-down")+'" title="'+esc(title)+'">'+(dv>0?"▲ +":"▼ -")+fmtN(Math.abs(dv))+' LP</span>'
+    +`<span class="d-cap" title="${esc(title)}"><span>${esc(games+dayAgo(last.t))}</span></span>`;
+}
+/* A phone's list row is the name and the rank: the Riot ID, the record, the change
+   and the goal are columns it has no room for. Opened, it showed none of them
+   either, and the ⋯ was 1,300 px down, under the chart and every Details section.
+   The summary heads the opened row there, the buttons right under it (app.css). */
+function rowSumHTML(a){
+  const s=a.stats, {w,l,total,wr}=winLoss(s), dead=a.status==="banned";
+  const rec=total>0?[w!=null?fmtN(w)+"W":"",l!=null?fmtN(l)+"L":""].filter(Boolean).join(" "):"";
+  const ch=dead?"":lpChangeHTML(a);
+  return `<div class="rw-sum"><div class="rw-sum-l">
+      <span class="rw-sum-id"><span class="sens">${esc(a.gameName)}#${esc(a.tagLine)}</span> · ${esc(a.region)}</span>
+      ${rec?`<span class="rw-sum-wl">${esc(rec)}${wr!==null?` · <span class="wrv${wr>=50?" wr-good":""}">${wr}% WR</span>`:""}</span>`:""}
+    </div>${ch?`<div class="c-deltas">${ch}</div>`:""}</div>${goalHTML(a)}`;
 }
 function cardHTML(a,i){
   const s=a.stats, col=tierColor(s&&s.tier), isChecking=checking.has(a.id);
@@ -5718,16 +5950,7 @@ function cardHTML(a,i){
   // Same rule as the list row: lastDelta() already knows about season breaks and
   // Unranked ends. Subtracting raw ladderLP() here invented crash chips the list
   // correctly suppressed.
-  {
-    const dv=lastDelta(a);
-    if(dv&&!dead)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+fmtN(Math.abs(dv))+' LP</span>';
-    /* "+87 LP" over what? Said under the chip now, with the pace beside it: the
-       pace had a whole row of the card to itself ("Climb · +21 LP/day"), and
-       without "since last check" the two numbers read as a contradiction. */
-    // The pace ("+20 LP/day") was a fourth way of saying "going up", beside this chip,
-    // the chart and the goal: it is in the chart's tip on the newest point now (paceText).
-    if(dv&&!dead)deltaChip+=`<span class="d-cap" title="Since previous check"><span>since last check</span></span>`;
-  }
+  if(!dead)deltaChip=lpChangeHTML(a);
   /* There was a flame "Climbing" chip here too (LP up three checks running). It was
      the fourth way the card said "going up", beside the +LP chip, the Climb figure
      and the chart's own line, and the only orange anywhere in the app. */
@@ -5778,7 +6001,11 @@ function cardHTML(a,i){
   const prevSeason=notPlaced(a)?lastSeasonHTML(a):"";
   const levelLed=!!(s&&s.found!==false&&!isRanked(a)&&s.level&&!prevSeason);
   let rankBlock;
-  if(isChecking)rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
+  /* Checking swapped the rank for "Checking rank…": every card in a Check all got
+     22 to 40 px shorter and then taller again. The rank stays, dimmed under the
+     sweep that already says a check is on (app.css); only a card with nothing to
+     show says it is checking. */
+  if(isChecking&&!hasReading(s))rankBlock=`<div class="wl"><span class="spin">${icon("refresh")}</span> Checking rank…</div>`;
   // A card never checked had no way to check it but the ⋯ menu, the one card that
   // most needs it. A failed one has its Refresh on the meta line; banned ones are skipped.
   else if(!hasReading(s))rankBlock=`<div class="rk c-unchecked">${noRankLabel(a)}</div>`+checkRankHTML(a);
@@ -5813,11 +6040,6 @@ function cardHTML(a,i){
         else if(cut.chall!=null&&lp<cut.chall)microStats.push(["To Challenger",fmtN(cut.chall-lp)+" LP to go"]);
         else if(cut.chall!=null)microStats.push(["Above","the Challenger cutoff"]);
       }
-    }
-    {
-      const g=gamesSince(hist);
-      if(g)microStats.push(["Since last check",fmtN(g.n)+(g.n===1?" game · ":" games · ")+wlText(g.w,g.l)]);
-      // the pace ("Climb") sits under the LP chip now, beside "since last check"
     }
     if(s.mmr)microStats.push(["MMR est.",s.mmr]);
     if(s.avgRecent)microStats.push(["Recent avg",s.avgRecent]);
@@ -5859,31 +6081,13 @@ function cardHTML(a,i){
     </div>
     ${wr!==null&&s&&s.found!==false?`<div class="wrbar"><i style="width:${wr}%;background:${col}"></i></div>`:""}
     ${levelLed&&s.level<30?levelTrackHTML(a):""}
-    ${(()=>{
-      // The goal rail. Only drawn once there is a goal — an account with nothing to
-      // climb towards should not be shown an empty progress bar.
-      const g=goalProgress(a);
-      if(!g)return "";
-      // Anchor at the start of the current climb window (after the last season
-      // break), not history[0] — otherwise a year-old Iron point makes Diamond
-      // look 95% done while you are still 400 LP away.
-      const hist=a.history||[];
-      let fromIdx=0;
-      for(let i=1;i<hist.length;i++)if(seasonBreak(hist[i-1],hist[i]))fromIdx=i;
-      const from=ladderLP(hist[fromIdx])??g.cur;
-      const span=Math.max(g.target-Math.min(from,g.cur),1);
-      const pct=g.done?100:Math.max(0,Math.min(100,Math.round((g.cur-Math.min(from,g.cur))/span*100)));
-      const gcol=tierColor(a.goal.tier);
-      return `<div class="goal${g.done?" hit":""}" title="Goal: ${esc(g.label)}">
-        <div class="goal-h"><span class="k">Goal</span><span class="goal-t" style="color:${gcol}">${esc(g.label)}</span>
-          <span class="goal-r">${g.done?"reached":fmtN(g.gap)+" LP to go"+(g.eta?" · "+esc(g.eta):"")}</span></div>
-        <div class="goal-bar"><i style="width:${pct}%;background:${gcol}"></i></div>
-      </div>`;
-    })()}
-    ${(h=>rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,peakV,peak))(thisSeason(hist))}
+    ${goalHTML(a)}
+    ${(h=>missChart(a,h)?"":rankChart(h,cutoffsFor(a.region),chartRange.get(a.id)||defaultRange(h),a.id,peakV,peak))(thisSeason(hist))}
     ${microStats.length?`<div class="c-stats n${microStats.length}">${microStats.map(([k,v])=>`<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:""}
     ${s&&s.note&&!isFailed(a)?`<div class="meta">${esc(s.note)}</div>`:""}
-    ${(()=>{const role=mainRole(a),tags=a.tags||[];
+    ${(()=>{const tags=a.tags||[], r0=mainRole(a);
+      // "Mid main mid": not the role again when your own tags already say it
+      const role=r0&&!tags.some(t=>String(t).toLowerCase()===r0.toLowerCase())?r0:null;
       return role||tags.length?`<div class="ctags">${role?`<span class="role-tag" title="Played in 3 or more of the last 5 ranked games">${esc(role)}</span>`:""}${tags.map(t=>`<span>${esc(t)}</span>`).join("")}</div>`:""})()}
     ${loginOpen?loginPanelHTML(a,rv("login")):""}
     ${noteBlockHTML(a,rv("note"))}
@@ -5989,6 +6193,7 @@ function ensureCardMenu(){
   el.className="card-menu hx teal hidden";
   el.setAttribute("role","menu");
   document.body.appendChild(el);
+  backWatch(el);   // Back closes it (backWanted)
   // The same delegated handler the grid uses — the menu carries the account's
   // data-id, so every branch resolves exactly as it does from inside a card.
   el.addEventListener("click",onCardClick);
@@ -6121,23 +6326,26 @@ function closeCardPanels(){
 /* The rank-sorted list as a flat sequence with a heading before each new tier.
    Sixty rows of identical grey is a wall you scroll past; the headings are what
    turn the same sixty rows into a ladder you can read down.
-   Favourites used to have a band of their own at the top, which pulled a favourite
-   Platinum account out of Platinum: with one Platinum account there was then no
-   Platinum heading at all, and the grouping stopped saying what it said. They sit
-   at the top of their own tier now, with the star on the row.
+   Favourites head the list, a group of their own when it is grouped. They once sat
+   at the top of their own tier instead, so that a favourite Platinum account kept
+   its Platinum heading; but the star "pins a favourite to the top" everywhere else
+   (cards, the wall), the list is the phone's first view, and the row still shows
+   its own tier.
    And a heading is only worth its line when tiers hold more than one account: five
    accounts in five tiers came out as five headings for five rows. Headings are kept
    while the list averages two rows a tier, for every tier, so a lone row never
    looks like it belongs to the heading above it. */
 function groupRank(k){const i=TIER_ORDER.indexOf(k);return i>=0?100+i:({UNPLACED:4,UNRANKED:3,MISSING:2,UNCHECKED:1})[k]||0}
 function withGroups(list){
-  const buckets=new Map();
-  for(const a of list){const k=listGroup(a);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(a)}
+  const favs=list.filter(a=>a.fav), buckets=new Map();
+  for(const a of list){if(a.fav)continue;const k=listGroup(a);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(a)}
   const keys=[...buckets.keys()].sort((x,y)=>groupRank(y)-groupRank(x));
-  const headed=list.length>=2*keys.length;
+  // headings or not by the ladder's own shape, favourites counted in their tiers
+  const headed=list.length>=2*new Set(list.map(listGroup)).size;
+  if(favs.length){keys.unshift("FAV");buckets.set("FAV",favs)}
   const out=[];
   for(const k of keys){
-    const rows=buckets.get(k).sort((x,y)=>(y.fav?1:0)-(x.fav?1:0)); // stable: favourites first, then rank order
+    const rows=buckets.get(k);
     if(headed)out.push({id:"grp:"+k,group:k,n:rows.length});
     out.push(...rows);
   }
@@ -6151,6 +6359,7 @@ function listHeadHTML(){
 function groupHTML(g){
   const c=groupColor(g.group);
   const mark=CRESTS[g.group]?crest(g.group,"lgrp-crest")
+    :g.group==="FAV"?`<span class="lgrp-star" style="color:${c}">${icon("star")}</span>`
     :`<span class="lgrp-dot" style="background:${c}"></span>`;
   return `<div class="lgrp" data-id="${idAttr(g.id)}" role="presentation">${mark}`
     +`<span class="lgrp-n" style="color:${c}">${esc(groupLabel(g.group))}</span>`
@@ -6728,8 +6937,16 @@ function submitForm(){
     createdOn:$("fCreated").value||"",birthdate:$("fBirth").value||"",
     tags:parseTags($("fTags").value),notes:$("fNotes").value.trim(),info:readInfoFields(formInfoBase),
     excludeStats:$("fExStats").checked};
+  let movedId=null;
   if(editingId){
-    const a=accounts.find(x=>x.id===editingId);if(a){Object.assign(a,data);if(!a.info)delete a.info;if(!a.excludeStats)delete a.excludeStats}
+    const a=accounts.find(x=>x.id===editingId);if(a){
+      // a new Riot ID (letter case aside) or region is another lookup: what the card
+      // knew about the old one goes, and it is read again below
+      if(a.gameName.toLowerCase()!==gameName.toLowerCase()||a.tagLine.toLowerCase()!==tagLine.toLowerCase()||a.region!==data.region){
+        forgetIdentity(a);movedId=a.id;
+      }
+      Object.assign(a,data);if(!a.info)delete a.info;if(!a.excludeStats)delete a.excludeStats;
+    }
   }else{
     const a=Object.assign({id:uid(),fav:false,stats:null},data);if(!a.info)delete a.info;if(!a.excludeStats)delete a.excludeStats;
     accounts.push(a);
@@ -6742,7 +6959,10 @@ function submitForm(){
      read straight away now, the same check its own Refresh runs. Not in the
      preview (nothing there is real), not for a banned one (checks skip those),
      and not under a Check all run that is already going through the vault. */
-  if(newId&&!previewMode&&!run&&data.status!=="banned")check(newId);
+  /* An edited Riot ID the same way: after Fix Riot ID and Save the card said "Not
+     found" until somebody pressed Refresh. */
+  const recheck=newId||movedId;
+  if(recheck&&!previewMode&&!run&&data.status!=="banned")check(recheck);
   if(data.password)maybeLockPrompt();
 }
 
@@ -6762,6 +6982,7 @@ function settingsTab(tab,focus){
     if(on&&focus)b.focus();
   }
   const body=m.querySelector(".mdl-b");if(body)body.scrollTop=0;
+  if(tab==="backup")updateSyncStatus();
   centreSettingsTab();
 }
 // A phone showed four of the tabs in one sliding row; one chosen from elsewhere
@@ -6831,7 +7052,9 @@ function updateVaultStatus(){
   $("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted.";
   $("sVaultRemove").classList.toggle("hidden",!vaultPassword);
   $("sVaultSet").textContent=vaultPassword?"Change password":"Set password";
-  updatePkStatus();renderSetup();
+  // Sync's line says what it still needs, a master password among them: right after
+  // one was set it still asked for one
+  updatePkStatus();renderSetup();updateSyncStatus();
 }
 function updatePkStatus(){
   const r=pkRecord(), ok=pkAvailable();
@@ -7251,7 +7474,9 @@ async function doExportCSV(){
       a.fav?"yes":"no",s.updatedAt?new Date(s.updatedAt).toISOString():"",...extra
     ].map(csvCell).join(",");
   });
-  const csv=[cols.join(","),...rows].join("\r\n");
+  // A byte-order mark first: without one Excel reads the file as the PC's old code
+  // page and "Müller" or a Korean name comes out as garbage (parseCSV strips it)
+  const csv="\uFEFF"+[cols.join(","),...rows].join("\r\n");
   const blob=new Blob([csv],{type:"text/csv"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
@@ -7297,9 +7522,12 @@ function doImport(file){
             {id:uid(),region:normRegion(a.region),status:normStatus(a.status)});
           return sanitizeAccount(row);
         })
+        .filter(a=>a&&a.gameName&&a.tagLine)   // empty once read as text: nothing to look up
         // Same Riot ID twice in one file used to land as two rows with different
         // ids — merge and replace both treated them as distinct.
         .filter(a=>{const k=key(a);if(fileSeen.has(k))return false;fileSeen.add(k);return true});
+      // An empty one offered "Replace everything", which would have emptied this vault
+      if(!cleaned.length){toast("That backup has no accounts in it");return}
       const how=accounts.length>0?await askMergeOrReplace("backup",cleaned.length):"replace";
       if(!how)return;
       const merge=how==="merge";
@@ -7311,9 +7539,12 @@ function doImport(file){
         render();
         toast(add.length+" added, "+(cleaned.length-add.length)+" duplicates skipped");
       }else{
+        const was=accounts;
         accounts=cleaned;
         if(!await saveDB()){toast("Import saved in memory but could not write to storage");render();return}
-        render();toast("Backup imported ("+cleaned.length+" accounts)");
+        render();
+        if(was.length)toast("Backup imported ("+accountsN(cleaned.length)+")","Undo",()=>undoVault(was));
+        else toast("Backup imported ("+accountsN(cleaned.length)+")");
       }
     }catch(e){toast("Import failed: not a valid backup file")}
   };
@@ -7328,6 +7559,15 @@ function parseCSV(text){
   // and turns "label" into "﻿label" — so every lookup for the first column
   // missed and that column silently imported as empty.
   text=String(text).replace(/^﻿/,"");
+  /* German, French or Dutch Excel saves "CSV" with semicolons (the comma is their
+     decimal point), and some tools with tabs; the import read one long first column
+     and rejected the file. The header line says which: the separator it has most of,
+     outside quotes. */
+  const sep=(()=>{
+    const n={",":0,";":0,"\t":0};let q=false;
+    for(const c of text){if(c==='"')q=!q;else if(!q&&c in n)n[c]++;else if(!q&&c==="\n")break}
+    return Object.keys(n).reduce((x,y)=>n[y]>n[x]?y:x,",");
+  })();
   const rows=[];let row=[],field="",inQuotes=false;
   for(let i=0;i<text.length;i++){
     const c=text[i];
@@ -7336,7 +7576,7 @@ function parseCSV(text){
       else field+=c;
     }else{
       if(c==='"')inQuotes=true;
-      else if(c===','){row.push(field);field=""}
+      else if(c===sep){row.push(field);field=""}
       else if(c==='\r'){}
       else if(c==='\n'){row.push(field);rows.push(row);row=[];field=""}
       else field+=c;
@@ -7367,6 +7607,7 @@ function doImportCSV(file){
   rd.onload=async()=>{
     try{
       const rows=parseCSV(rd.result);
+      if(rows.length===1){toast("That file has no accounts in it");return}   // a header and nothing under it
       if(rows.length<2)throw new Error("empty");
       const header=rows[0];
       // Only un-escape the apostrophe csvCell() adds when this is one of our own exports —
@@ -7384,7 +7625,8 @@ function doImportCSV(file){
         if(!gameName||!tagLine)return null;
         /* As typed in a spreadsheet: "gold", "Gold 2", "ii". A division of "2" was
            stored as written, read by the chart as IV and shown as "Gold 2". */
-        const tier=get("tier").trim().toUpperCase();
+        // a tier the app knows, or none: "Plat" or "Gold-ish" became a rank nothing could chart
+        const t0=get("tier").trim().toUpperCase(), tier=TIER_ORDER.includes(t0)||t0==="UNRANKED"?t0:"";
         const dv=get("division").trim().toUpperCase(), div={"1":"I","2":"II","3":"III","4":"IV"}[dv]||(dv in DIV_ORDER?dv:null);
         return sanitizeAccount({
           id:uid(),tags:get("tags")?get("tags").split("|").filter(Boolean):[],history:[],
@@ -7396,7 +7638,7 @@ function doImportCSV(file){
         });
       }).filter(Boolean)
         .filter(a=>{const k=key(a);if(fileSeen.has(k))return false;fileSeen.add(k);return true});
-      if(!list.length)throw new Error("no rows");
+      if(!list.length){toast("That file has no accounts in it");return}
       const how=accounts.length>0?await askMergeOrReplace("file",list.length):"replace";
       if(!how)return;
       const merge=how==="merge";
@@ -7408,9 +7650,12 @@ function doImportCSV(file){
         render();
         toast(add.length+" added, "+(list.length-add.length)+" duplicates skipped");
       }else{
+        const was=accounts;
         accounts=list;
         if(!await saveDB()){toast("Import saved in memory but could not write to storage");render();return}
-        render();toast("CSV imported ("+list.length+" accounts)");
+        render();
+        if(was.length)toast("CSV imported ("+accountsN(list.length)+")","Undo",()=>undoVault(was));
+        else toast("CSV imported ("+accountsN(list.length)+")");
       }
     }catch(e){toast("CSV import failed: not a valid export file")}
   };
@@ -7530,9 +7775,12 @@ document.addEventListener("keydown",e=>{
     $("palette").classList.contains("hidden")?openPalette():closePalette();
     return;
   }
-  if(e.key==="/"&&!typing){e.preventDefault();$("tSearch").focus()}
-  if(e.key==="n"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();openForm(null)}
-  if(e.key==="f"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$("tFav").click()}
+  // none with Alt held: Alt+N and Alt+F are other programs' keys (and on a Mac, Alt
+  // types a letter), and they opened the form or filtered to favorites
+  const bare=!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey;
+  if(e.key==="/"&&bare){e.preventDefault();$("tSearch").focus()}
+  if(e.key==="n"&&bare){e.preventDefault();openForm(null)}
+  if(e.key==="f"&&bare){e.preventDefault();$("tFav").click()}
   // H only ever hides: turning streamer mode off is the pill's job, never a stray key
   if((e.key==="h"||e.key==="H")&&!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();if(!streamerOn())setStreamer(true);else toast("Streamer mode is on. Click its pill in the header to turn it off")}
   if(e.key==="Escape"){
@@ -7545,6 +7793,8 @@ document.addEventListener("keydown",e=>{
     // and hunting down the button that opened each panel was the complaint.
     // Only once the cards are tidy does Escape mean "close the page's panels".
     if(closeCardPanels())return;
+    // then a selection, as the bar's Clear and Done do
+    if(ui.selecting||selected.size){ui.selecting=false;cmpPick=false;selected.clear();lastSelectedId=null;render();return}
     closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}
   }
 });
@@ -7648,10 +7898,17 @@ function ask(o){
 // An import into a vault that already has accounts: add the new ones, or replace
 // everything. The browser's box could only say "OK = MERGE, Cancel = replace",
 // so there was no way to back out, and replacing took a second box after it.
+/* Replace everything and Delete all had no way back, where deleting one account has
+   an Undo. The vault as it was is held by the Undo, never after it. */
+function undoVault(was){
+  if(vaultLocked())return;   // as with one account: no passwords back into a locked page
+  accounts=was;selected.clear();lastSelectedId=null;render();
+  saveThen(accountsN(was.length)+" back");
+}
 function askMergeOrReplace(what,n){
   return ask({title:"Add this "+what+" to the vault, or replace it?",
     body:"This vault has "+accounts.length+" account"+(accounts.length===1?"":"s")+" and the "+what+" "+n+". "
-      +"Adding keeps everything here and adds the accounts that are new. Replacing leaves only the "+what+"'s, with no undo.",
+      +"Adding keeps everything here and adds the accounts that are new. Replacing leaves only the "+what+"'s, with an Undo for a few seconds afterwards.",
     ok:"Add the new ones",alt:"Replace everything",altDanger:true})
     .then(v=>v==="ok"?"merge":v==="alt"?"replace":false);
 }
@@ -7691,21 +7948,40 @@ function syncBackStep(open){
   if(open&&!onWindowEntry()){try{history.pushState({smurfWindow:1},"")}catch(e){}}
   else if(!open&&onWindowEntry()){backSkip=true;try{history.back()}catch(e){backSkip=false}}
 }
+/* Back left the app from an open ⋯ menu or from Select, where on a phone it is the
+   way to put that away. They take the history entry a window does. Read off the
+   page, as the windows are: the menus open and close from a dozen places. */
+function backWanted(){
+  return openModals().length>0||cardMenuOpen()||!$("moreMenu").classList.contains("hidden")
+    ||!!ui.selecting||selected.size>0;
+}
+var backReady=false;   // a var: render() runs before this part of the file has
+function syncBack(){if(backReady)syncBackStep(backWanted())}
 addEventListener("popstate",()=>{
-  if(backSkip){backSkip=false;syncBackStep(openModals().length>0);return}
-  if(!openModals().length)return;
-  // the window in front goes first, as with Escape; whatever stays open behind it
-  // (or a form you chose to keep editing) takes a new entry through syncModals
-  if(askDone){askDone(false);return}
-  if(!$("palette").classList.contains("hidden")){closePalette();return}
-  requestClose();
+  if(backSkip){backSkip=false;syncBack();return}
+  if(openModals().length){
+    // the window in front goes first, as with Escape; whatever stays open behind it
+    // (or a form you chose to keep editing) takes a new entry through syncModals
+    if(askDone){askDone(false);return}
+    if(!$("palette").classList.contains("hidden")){closePalette();return}
+    requestClose();return;
+  }
+  if(cardMenuOpen()){closeCardMenu();syncBack();return}
+  if(!$("moreMenu").classList.contains("hidden")){$("moreMenu").classList.add("hidden");syncBack();return}
+  if(ui.selecting||selected.size){ui.selecting=false;cmpPick=false;selected.clear();lastSelectedId=null;render();return}
 });
+// the card menu is made the first time one opens (ensureCardMenu), and watched from then
+var backMO=null;
+function backWatch(el){if(backMO&&el)backMO.observe(el,{attributes:true,attributeFilter:["class"]})}
+function cardMenuOpen(){const m=$("cardMenu");return !!m&&!m.classList.contains("hidden")}
+if("MutationObserver"in window){backMO=new MutationObserver(()=>syncBack());backWatch($("moreMenu"));backWatch($("cardMenu"))}
+backReady=true;
 // a reload keeps the history entry a window had taken; with nothing open it is ours to clear
 try{if(onWindowEntry())history.replaceState(null,"")}catch(e){}
 function syncModals(){
   const open=openModals();
   document.body.classList.toggle("modal-open",open.length>0);
-  syncBackStep(open.length>0);
+  syncBack();
   if(open.length){
     if(!modalReturn){
       const a=document.activeElement;
@@ -8171,10 +8447,12 @@ $("bExportCsv").addEventListener("click",doExportCSV);
 $("bImport").addEventListener("click",()=>$("fileIn").click());
 $("bDeleteAll").addEventListener("click",async()=>{
   if(accounts.length===0)return;
-  if(!await ask({title:"Delete all "+accounts.length+" account"+(accounts.length===1?"":"s")+" in this vault?",
-    body:"This can't be undone, so export a backup first if you're not sure.",ok:"Delete all",danger:true}))return;
+  if(!await ask({title:"Delete all "+accountsN(accounts.length)+" in this vault?",
+    body:"There's an Undo for a few seconds afterwards. After that it is gone, so export a backup first if you're not sure.",ok:"Delete all",danger:true}))return;
+  // the whole vault, kept until the Undo goes, as one deleted account is
+  const was=accounts;
   accounts=[];selected.clear();lastSelectedId=null;render();
-  saveThen("Vault cleared");
+  saveThen("Vault cleared","Undo",()=>undoVault(was));
 });
 $("bExitPreview").addEventListener("click",()=>{previewMode=false;accounts=[];render()});
 $("fileIn").addEventListener("change",e=>{if(e.target.files[0])doImport(e.target.files[0]);e.target.value=""});
@@ -8797,13 +9075,11 @@ document.addEventListener("pointerdown",e=>{
   if(editingNote&&!e.target.closest(".c-notes"))commitNote();
 },true);
 $("grid").addEventListener("keydown",e=>{
-  // A list row carries role="button" and tabindex="0" but is a <div>, so the
-  // browser gives it none of a button's key handling — it could be tabbed to and
-  // then not opened. Same for wall tiles. Only when the row/tile itself has focus:
-  // the checkbox inside a row has its own meaning for Space.
-  const row=e.target&&e.target.classList&&e.target.classList.contains("rw-main")?e.target:null;
+  // A wall tile carries role="button" and tabindex="0" but is a <div>, so the
+  // browser gives it none of a button's key handling. (A list row opens from its
+  // own button, rw-tog.)
   const tile=e.target&&e.target.classList&&e.target.classList.contains("tile")?e.target:null;
-  if((row||tile)&&(e.key==="Enter"||e.key===" ")){e.preventDefault();(row||tile).click();return}
+  if(tile&&(e.key==="Enter"||e.key===" ")){e.preventDefault();tile.click();return}
   // ArrowDown on a ⋯ goes into its menu — opening it first, if a click has not.
   if(e.key==="ArrowDown"&&e.target&&e.target.dataset&&e.target.dataset.act==="more"){
     const card=e.target.closest("[data-id]");if(!card)return;

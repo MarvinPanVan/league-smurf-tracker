@@ -81,7 +81,7 @@ A personal key allows 100 requests every 2 minutes, roughly 40 accounts. A bigge
 
 1. Set a **master password**; only the encrypted vault is ever uploaded.
 2. With the Backend URL saved, **Generate** a sync key in **Settings → Backup & sync**.
-3. On each device, use the **same key and the same master password**, then **Upload this vault** and **Download the synced copy**. The newest upload wins, and you are warned if the synced copy is newer.
+3. On each device, use the **same key and the same master password**, then **Upload this vault** and **Download the synced copy**. The newest upload wins, and before an upload would replace changes made on another device, you are asked.
 
 Keep every synced device on the latest version: since 2.1 the vault uses stronger encryption, which older versions cannot open. Reloading the page updates it.
 
