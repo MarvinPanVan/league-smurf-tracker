@@ -1424,6 +1424,14 @@
     animation:sectionIn .22s cubic-bezier(.22,1,.36,1) both}
   /* one fact, one line — folding it would cost a click to reveal nothing extra */
   .sec.flat{display:flex;align-items:center;gap:11px;padding:11px 13px}
+  /* An opened list row is the width of the page: each section ran 1,300 px from a
+     champion's name to its record. There they stand side by side, 320px and up,
+     each drawing its divider on its own top and left edge (the box clips the outer ones). */
+  @media (min-width:721px){
+    .rw-open>.login.info{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+    .rw-open>.login.info>.sec{border-top:0;box-shadow:-1px 0 0 #ffffff17,0 -1px 0 #ffffff17}
+    .rw-open>.login.info>.sec.flat{align-items:flex-start}   /* level with the other headings */
+  }
   .chp-h{font-size:calc(12px*var(--ts));font-weight:600;letter-spacing:0;text-transform:none;
     color:var(--faint);padding-bottom:5px;border-bottom:1px solid #ffffff12;margin-bottom:2px}
   .chp-h span:not(:first-child){text-align:right}

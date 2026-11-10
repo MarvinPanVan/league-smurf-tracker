@@ -11787,6 +11787,26 @@ test("n and f do nothing with Alt held, and Escape clears a selection", () => {
   assert.ok(doc.getElementById("bulkbar").classList.contains("hidden"), "and the bar goes with it");
 });
 
+// An opened list row on a desktop ran each Details section the page's width, a champion's
+// name 1,300 px from its record
+test("an opened list row on a wide screen sets its Details sections side by side", () => {
+  const i = appCss.indexOf("@media (min-width:721px){\n    .rw-open>.login.info{");
+  assert.ok(i >= 0, "a rule for wide rows");
+  const block = appCss.slice(i, appCss.indexOf("\n  }", i));
+  assert.match(block, /\.rw-open>\.login\.info\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\(320px,1fr\)\)\}/, "columns of 320px and up");
+  assert.match(block, /\.rw-open>\.login\.info>\.sec\{border-top:0;box-shadow:-1px 0 0 #ffffff17,0 -1px 0 #ffffff17\}/, "dividers between them");
+  assert.match(appCss, /\.login\.info\{[^}]*overflow:hidden/, "the outer edges' dividers clipped");
+  // the Details block is the one these rules reach in an opened row
+  const now = Date.now();
+  const win = bootApp([{ id: "m", region: "EUW", gameName: "M", tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "I", lp: 4, updatedAt: now, flex: { tier: "SILVER", division: "I", lp: 2 },
+      champs: [{ name: "Ahri", games: 4, wins: 2, losses: 2, wr: 50, kda: 3 }] } }]);
+  const doc = listView(win);
+  doc.querySelector('.rw[data-id="m"] .rw-main').click();
+  const info = doc.querySelector('.rw[data-id="m"] .rw-open > .login.info');
+  assert.ok(info && info.querySelectorAll(":scope > .sec").length >= 2, "sections straight under it");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
