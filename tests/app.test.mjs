@@ -11767,6 +11767,26 @@ test("back closes a card's ⋯ menu, the header's ⋯ menu and Select before it 
   assert.equal(appGet(win, "selected.size"), 0);
 });
 
+// Alt+N opened the Add form and Alt+F filtered to favorites (h already ignored Alt); and
+// Escape left a selection standing
+test("n and f do nothing with Alt held, and Escape clears a selection", () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  const doc = win.document, key = (k, o = {}) => doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: k, bubbles: true, ...o }));
+  key("n", { altKey: true });
+  assert.ok(doc.getElementById("form").classList.contains("hidden"), "Alt+N: no form");
+  key("f", { altKey: true });
+  assert.equal(appGet(win, "ui.favOnly"), false, "Alt+F: no favorites filter");
+  key("n");
+  assert.equal(doc.getElementById("form").classList.contains("hidden"), false, "plain n still opens it");
+  runScript(win, "closeForm()");
+  // Escape and a selection
+  doc.querySelector('.card[data-id="a"] .bulkchk').click();
+  assert.equal(appGet(win, "selected.size"), 1);
+  key("Escape");
+  assert.equal(appGet(win, "selected.size"), 0, "Escape clears it");
+  assert.ok(doc.getElementById("bulkbar").classList.contains("hidden"), "and the bar goes with it");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

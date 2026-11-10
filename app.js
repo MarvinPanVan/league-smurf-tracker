@@ -7729,9 +7729,12 @@ document.addEventListener("keydown",e=>{
     $("palette").classList.contains("hidden")?openPalette():closePalette();
     return;
   }
-  if(e.key==="/"&&!typing){e.preventDefault();$("tSearch").focus()}
-  if(e.key==="n"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();openForm(null)}
-  if(e.key==="f"&&!typing&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$("tFav").click()}
+  // none with Alt held: Alt+N and Alt+F are other programs' keys (and on a Mac, Alt
+  // types a letter), and they opened the form or filtered to favorites
+  const bare=!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey;
+  if(e.key==="/"&&bare){e.preventDefault();$("tSearch").focus()}
+  if(e.key==="n"&&bare){e.preventDefault();openForm(null)}
+  if(e.key==="f"&&bare){e.preventDefault();$("tFav").click()}
   // H only ever hides: turning streamer mode off is the pill's job, never a stray key
   if((e.key==="h"||e.key==="H")&&!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();if(!streamerOn())setStreamer(true);else toast("Streamer mode is on. Click its pill in the header to turn it off")}
   if(e.key==="Escape"){
@@ -7744,6 +7747,8 @@ document.addEventListener("keydown",e=>{
     // and hunting down the button that opened each panel was the complaint.
     // Only once the cards are tidy does Escape mean "close the page's panels".
     if(closeCardPanels())return;
+    // then a selection, as the bar's Clear and Done do
+    if(ui.selecting||selected.size){ui.selecting=false;cmpPick=false;selected.clear();lastSelectedId=null;render();return}
     closeAllPanels();editingId=null;if(armedDelete){armedDelete=null;renderGrid()}
   }
 });
