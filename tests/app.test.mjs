@@ -11513,6 +11513,27 @@ test("a failed save stays said at the top, with Export, until a save goes throug
   assert.ok(banner.classList.contains("show") && /could not be read/.test(banner.textContent), "a save does not clear someone else's banner");
 });
 
+// A backup with "gameName": 12345 or "tagLine": 1111 was saved as numbers; every render
+// then failed on .trim(), the import said it failed, and every reload showed an empty grid
+test("numbers in a backup's text fields are read as text, on import and in a vault already stored", async () => {
+  const win = bootApp();
+  win.doImport(new win.Blob([JSON.stringify({ accounts: [
+    { gameName: 12345, tagLine: 1111, region: "EUW", label: 7, login: 42, password: 2024, notes: true },
+    { gameName: "Fine", tagLine: "EUW" },
+    { gameName: "No tag", tagLine: "   " },
+    { gameName: { x: 1 }, tagLine: "1" },
+  ] })], { type: "application/json" }));
+  await until(() => win.document.querySelectorAll(".card").length === 2, "the two usable accounts to render");
+  const a = win.eval("accounts.find(x => x.gameName === '12345')");
+  assert.deepEqual([a.gameName, a.tagLine, a.label, a.login, a.password, a.notes], ["12345", "1111", "7", "42", "2024", "true"]);
+  assert.doesNotMatch(win.document.getElementById("toast").textContent, /failed/i, "and the import says it worked");
+  // a vault saved with numbers before this opens with every account in it
+  const old = bootApp([{ id: "n", region: "EUW", gameName: 12345, tagLine: 1111, status: "active", tags: [], history: [], stats: null, login: "keep me" },
+    { id: "e", region: "EUW", gameName: null, tagLine: "1", status: "active", tags: [], history: [], stats: null, password: "and me" }]);
+  assert.equal(old.document.querySelectorAll(".card").length, 2, "no empty grid, and no account dropped on load");
+  assert.equal(appGet(old, 'accounts.find(x => x.id === "e").password'), "and me", "an empty Riot ID keeps its saved login");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

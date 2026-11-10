@@ -1184,8 +1184,19 @@ function safeAccountId(id){return typeof id==="string"&&/^[A-Za-z0-9._:-]+$/.tes
 function sanitizeAccount(a){
   if(!a||typeof a!=="object")return null;
   a.id=safeAccountId(a.id);
-  if(typeof a.gameName==="string")a.gameName=a.gameName.trim();
-  if(typeof a.tagLine==="string")a.tagLine=a.tagLine.trim();
+  /* A backup with "tagLine": 1111 (a number, as a spreadsheet writes it) was saved
+     as one: every render called .trim() on it and failed, so the import said it
+     failed and every reload after it showed an empty grid for the whole vault. The
+     text fields are text; a number or a true/false becomes its text, anything else
+     goes. A Riot ID left empty stays an empty one here, not a dropped account: on
+     load that would throw away the login saved with it (the import drops them). */
+  for(const k of ["gameName","tagLine","label","login","password","email","notes","region"]){
+    const v=a[k];
+    if(v==null||typeof v==="string")continue;
+    if(typeof v==="number"&&Number.isFinite(v)||typeof v==="boolean")a[k]=String(v);else delete a[k];
+  }
+  a.gameName=typeof a.gameName==="string"?a.gameName.trim():"";
+  a.tagLine=typeof a.tagLine==="string"?a.tagLine.trim():"";
   if(!Array.isArray(a.tags))a.tags=[];
   if(!Array.isArray(a.history))a.history=[];
   if(a.puuid!=null&&!validPuuid(a.puuid))delete a.puuid;
@@ -7433,6 +7444,7 @@ function doImport(file){
             {id:uid(),region:normRegion(a.region),status:normStatus(a.status)});
           return sanitizeAccount(row);
         })
+        .filter(a=>a&&a.gameName&&a.tagLine)   // empty once read as text: nothing to look up
         // Same Riot ID twice in one file used to land as two rows with different
         // ids — merge and replace both treated them as distinct.
         .filter(a=>{const k=key(a);if(fileSeen.has(k))return false;fileSeen.add(k);return true});
