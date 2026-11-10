@@ -1448,6 +1448,7 @@ function listGroup(a){
   return"UNCHECKED";
 }
 function groupLabel(k){
+  if(k==="FAV")return "Favorites";
   if(k==="UNCHECKED")return "Never checked";
   if(k==="UNRANKED")return "Unranked";
   if(k==="UNPLACED")return "Not placed yet";
@@ -1455,6 +1456,7 @@ function groupLabel(k){
   return k.charAt(0)+k.slice(1).toLowerCase();
 }
 function groupColor(k){
+  if(k==="FAV")return"var(--star)";
   if(k==="MISSING")return"var(--danger)";
   if(k==="UNRANKED"||k==="UNPLACED")return"var(--muted)"; // grey: in the unranked tier's blue it read as a link
   return k==="UNCHECKED"?"#5d6577":tierColor(k);
@@ -6276,23 +6278,26 @@ function closeCardPanels(){
 /* The rank-sorted list as a flat sequence with a heading before each new tier.
    Sixty rows of identical grey is a wall you scroll past; the headings are what
    turn the same sixty rows into a ladder you can read down.
-   Favourites used to have a band of their own at the top, which pulled a favourite
-   Platinum account out of Platinum: with one Platinum account there was then no
-   Platinum heading at all, and the grouping stopped saying what it said. They sit
-   at the top of their own tier now, with the star on the row.
+   Favourites head the list, a group of their own when it is grouped. They once sat
+   at the top of their own tier instead, so that a favourite Platinum account kept
+   its Platinum heading; but the star "pins a favourite to the top" everywhere else
+   (cards, the wall), the list is the phone's first view, and the row still shows
+   its own tier.
    And a heading is only worth its line when tiers hold more than one account: five
    accounts in five tiers came out as five headings for five rows. Headings are kept
    while the list averages two rows a tier, for every tier, so a lone row never
    looks like it belongs to the heading above it. */
 function groupRank(k){const i=TIER_ORDER.indexOf(k);return i>=0?100+i:({UNPLACED:4,UNRANKED:3,MISSING:2,UNCHECKED:1})[k]||0}
 function withGroups(list){
-  const buckets=new Map();
-  for(const a of list){const k=listGroup(a);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(a)}
+  const favs=list.filter(a=>a.fav), buckets=new Map();
+  for(const a of list){if(a.fav)continue;const k=listGroup(a);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(a)}
   const keys=[...buckets.keys()].sort((x,y)=>groupRank(y)-groupRank(x));
-  const headed=list.length>=2*keys.length;
+  // headings or not by the ladder's own shape, favourites counted in their tiers
+  const headed=list.length>=2*new Set(list.map(listGroup)).size;
+  if(favs.length){keys.unshift("FAV");buckets.set("FAV",favs)}
   const out=[];
   for(const k of keys){
-    const rows=buckets.get(k).sort((x,y)=>(y.fav?1:0)-(x.fav?1:0)); // stable: favourites first, then rank order
+    const rows=buckets.get(k);
     if(headed)out.push({id:"grp:"+k,group:k,n:rows.length});
     out.push(...rows);
   }
@@ -6306,6 +6311,7 @@ function listHeadHTML(){
 function groupHTML(g){
   const c=groupColor(g.group);
   const mark=CRESTS[g.group]?crest(g.group,"lgrp-crest")
+    :g.group==="FAV"?`<span class="lgrp-star" style="color:${c}">${icon("star")}</span>`
     :`<span class="lgrp-dot" style="background:${c}"></span>`;
   return `<div class="lgrp" data-id="${idAttr(g.id)}" role="presentation">${mark}`
     +`<span class="lgrp-n" style="color:${c}">${esc(groupLabel(g.group))}</span>`

@@ -5591,33 +5591,34 @@ test("list rows draw a sparkline only when there is a shape to draw", () => {
 // Two accounts a tier, so every heading has rows to head
 const ladderSeed2 = () => [...ladderSeed(), ...ladderSeed().map(a => ({ ...a, id: a.id + "b", gameName: a.gameName + "Two", fav: false }))];
 
-// Favourites had a band of their own at the top, which pulled a favourite out of its
-// tier (no Gold heading at all with one Gold account); and five accounts in five
-// tiers came out as five headings for five rows
-test("the rank-sorted list groups by tier, favourites first inside their own tier, headings only when worth it", () => {
+// Favourites sat at the top of their own tier in the list, while the star "pins a
+// favorite to the top" on cards and the wall; and five accounts in five tiers came out
+// as five headings for five rows
+test("the rank-sorted list groups by tier, favourites first as a group of their own, headings only when worth it", () => {
   const win = bootApp(ladderSeed2());
   win.document.querySelector('[data-density="list"]').click();
   const heads = [...win.document.querySelectorAll(".lgrp")];
   const labels = heads.map(h => h.querySelector(".lgrp-n").textContent);
-  assert.ok(!labels.includes("Favorites"), "no band of their own");
-  assert.equal(labels[0], "Challenger", "the ladder, top down");
+  assert.equal(labels[0], "Favorites", "favourites first");
+  assert.ok(heads[0].querySelector(".lgrp-star .ico"), "marked with the star");
+  assert.equal(labels[1], "Challenger", "then the ladder, top down");
   assert.equal(labels[labels.length - 1], "Never checked");
-  assert.ok(labels.includes("Gold"), "the favourite's tier keeps its heading");
   assert.equal(new Set(labels).size, labels.length, "no band is named twice");
   const ids = heads.map(h => h.dataset.id);
   assert.equal(new Set(ids).size, ids.length, "no two headings share a data-id");
   const counted = heads.reduce((n, h) => n + Number(h.querySelector(".lgrp-k").textContent), 0);
-  assert.equal(counted, win.document.querySelectorAll(".rw").length, "the counts add up");
-  // inside Gold, the favourite comes first
-  const kids = [...win.document.getElementById("grid").children];
+  assert.equal(counted, win.document.querySelectorAll(".rw").length, "the counts add up, each account counted once");
+  const kids = [...win.document.getElementById("grid").children].filter(e => e.dataset.id !== "rw:head");
+  assert.equal(kids[1].dataset.id, "t3", "the favourite Gold account leads the list");
   const gold = kids.findIndex(e => e.classList.contains("lgrp") && /Gold/.test(e.textContent));
-  assert.equal(kids[gold + 1].dataset.id, "t3", "the favourite Gold account leads its tier");
+  assert.notEqual(kids[gold + 1].dataset.id, "t3", "and is not in Gold a second time");
   assert.match(html.match(/function groupColor\(k\)\{[^}]*\}/)[0], /k==="UNRANKED"\|\|k==="UNPLACED"\)return"var\(--muted\)"/, "Unranked and Not placed yet are grey, not link blue");
-  // one account a tier: no headings, the rows say their rank themselves
+  // one account a tier: no headings, the rows say their rank themselves, the favourite still first
   const thin = bootApp(ladderSeed());
   thin.document.querySelector('[data-density="list"]').click();
   assert.equal(thin.document.querySelectorAll(".lgrp").length, 0, "twelve tiers of one: no headings");
   assert.equal(thin.document.querySelectorAll(".rw").length, 12);
+  assert.equal(thin.document.querySelector(".rw").dataset.id, "t3", "the favourite first without headings too");
 });
 
 test("grouping is dropped when the list is not in rank order", () => {
