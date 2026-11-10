@@ -9625,7 +9625,7 @@ test("every confirmation is the app's own window, and answering it leaves the wi
   $("bDeleteAll").click();
   assert.ok(open("askModal") && open("settings"), "the question opens over Settings");
   assert.equal($("askTitle").textContent, "Delete all 1 account in this vault?");
-  assert.match($("askBody").textContent, /can't be undone/);
+  assert.match($("askBody").textContent, /There's an Undo for a few seconds afterwards/);
   assert.equal($("askOk").textContent, "Delete all");
   assert.equal($("askOk").className, "b-danger", "a destructive answer is red");
   assert.equal($("askAlt").hidden, true, "one way forward, one button");
@@ -11603,6 +11603,36 @@ test("an empty backup says so and changes nothing; one account is one account", 
   await until(() => /imported/.test(one.document.getElementById("toast").textContent), "imported");
   assert.equal(one.document.getElementById("toast").textContent, "Backup imported (1 account)");
   assert.equal(appGet(one, "accountsN(2)"), "2 accounts");
+});
+
+// Deleting one account has an Undo; "Replace everything" and "Delete all" had none
+test("Delete all and Replace everything come with an Undo that puts the vault back", async () => {
+  const mk = n => ({ id: n, region: "EUW", gameName: n, tagLine: "1", status: "active", tags: [], history: [], stats: null, password: "pw-" + n });
+  const win = bootApp([mk("a"), mk("b")]);
+  const doc = win.document, t = doc.getElementById("toast");
+  const stored = () => JSON.parse(win.localStorage.getItem("smurf-tracker") || "[]").map(a => a.id).join(",");
+  win.saveDB(); await tick();
+  doc.getElementById("bDeleteAll").click();
+  await until(() => appGet(win, "accounts.length") === 0, "deleted");
+  await until(() => doc.getElementById("toastBtn"), "the Undo");
+  assert.match(t.textContent, /^Vault cleared/);
+  assert.equal(doc.getElementById("toastBtn").textContent, "Undo");
+  doc.getElementById("toastBtn").click();
+  await until(() => stored() === "a,b", "both back, on disk too");
+  assert.equal(appGet(win, 'accounts.find(x => x.id === "b").password'), "pw-b", "with their logins");
+  // Replace everything from a backup
+  win.ask = async () => "alt";   // "Replace everything"
+  win.doImport(new win.Blob([JSON.stringify({ accounts: [{ gameName: "Other", tagLine: "9", region: "EUW" }] })], { type: "application/json" }));
+  await until(() => appGet(win, "accounts.length") === 1, "replaced");
+  await until(() => doc.getElementById("toastBtn"), "the Undo");
+  assert.match(t.textContent, /^Backup imported \(1 account\)/);
+  doc.getElementById("toastBtn").click();
+  await until(() => stored() === "a,b", "the vault as it was");
+  // not after a lock
+  doc.getElementById("bDeleteAll").click();
+  await until(() => doc.getElementById("toastBtn"), "the Undo again");
+  runScript(win, "const _l = vaultLocked; vaultLocked = () => true; undoVault([{id:'x'}]); vaultLocked = _l");
+  assert.equal(appGet(win, "accounts.length"), 0, "no Undo into a locked vault");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons

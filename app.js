@@ -7465,9 +7465,12 @@ function doImport(file){
         render();
         toast(add.length+" added, "+(cleaned.length-add.length)+" duplicates skipped");
       }else{
+        const was=accounts;
         accounts=cleaned;
         if(!await saveDB()){toast("Import saved in memory but could not write to storage");render();return}
-        render();toast("Backup imported ("+accountsN(cleaned.length)+")");
+        render();
+        if(was.length)toast("Backup imported ("+accountsN(cleaned.length)+")","Undo",()=>undoVault(was));
+        else toast("Backup imported ("+accountsN(cleaned.length)+")");
       }
     }catch(e){toast("Import failed: not a valid backup file")}
   };
@@ -7573,9 +7576,12 @@ function doImportCSV(file){
         render();
         toast(add.length+" added, "+(list.length-add.length)+" duplicates skipped");
       }else{
+        const was=accounts;
         accounts=list;
         if(!await saveDB()){toast("Import saved in memory but could not write to storage");render();return}
-        render();toast("CSV imported ("+accountsN(list.length)+")");
+        render();
+        if(was.length)toast("CSV imported ("+accountsN(list.length)+")","Undo",()=>undoVault(was));
+        else toast("CSV imported ("+accountsN(list.length)+")");
       }
     }catch(e){toast("CSV import failed: not a valid export file")}
   };
@@ -7813,10 +7819,17 @@ function ask(o){
 // An import into a vault that already has accounts: add the new ones, or replace
 // everything. The browser's box could only say "OK = MERGE, Cancel = replace",
 // so there was no way to back out, and replacing took a second box after it.
+/* Replace everything and Delete all had no way back, where deleting one account has
+   an Undo. The vault as it was is held by the Undo, never after it. */
+function undoVault(was){
+  if(vaultLocked())return;   // as with one account: no passwords back into a locked page
+  accounts=was;selected.clear();lastSelectedId=null;render();
+  saveThen(accountsN(was.length)+" back");
+}
 function askMergeOrReplace(what,n){
   return ask({title:"Add this "+what+" to the vault, or replace it?",
     body:"This vault has "+accounts.length+" account"+(accounts.length===1?"":"s")+" and the "+what+" "+n+". "
-      +"Adding keeps everything here and adds the accounts that are new. Replacing leaves only the "+what+"'s, with no undo.",
+      +"Adding keeps everything here and adds the accounts that are new. Replacing leaves only the "+what+"'s, with an Undo for a few seconds afterwards.",
     ok:"Add the new ones",alt:"Replace everything",altDanger:true})
     .then(v=>v==="ok"?"merge":v==="alt"?"replace":false);
 }
@@ -8336,10 +8349,12 @@ $("bExportCsv").addEventListener("click",doExportCSV);
 $("bImport").addEventListener("click",()=>$("fileIn").click());
 $("bDeleteAll").addEventListener("click",async()=>{
   if(accounts.length===0)return;
-  if(!await ask({title:"Delete all "+accounts.length+" account"+(accounts.length===1?"":"s")+" in this vault?",
-    body:"This can't be undone, so export a backup first if you're not sure.",ok:"Delete all",danger:true}))return;
+  if(!await ask({title:"Delete all "+accountsN(accounts.length)+" in this vault?",
+    body:"There's an Undo for a few seconds afterwards. After that it is gone, so export a backup first if you're not sure.",ok:"Delete all",danger:true}))return;
+  // the whole vault, kept until the Undo goes, as one deleted account is
+  const was=accounts;
   accounts=[];selected.clear();lastSelectedId=null;render();
-  saveThen("Vault cleared");
+  saveThen("Vault cleared","Undo",()=>undoVault(was));
 });
 $("bExitPreview").addEventListener("click",()=>{previewMode=false;accounts=[];render()});
 $("fileIn").addEventListener("change",e=>{if(e.target.files[0])doImport(e.target.files[0]);e.target.value=""});
