@@ -110,8 +110,15 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.29.1";
+const APP_VERSION="2.30.0";
 const APP_CHANGELOG=[
+  {v:"2.30.0",items:[
+    "Fixing a Riot ID checks the account again straight away, and if the new ID is a different account its chart starts fresh",
+    "Check all ends by saying what happened to whom (\"Smurf 1 reached Platinum IV\"), and messages stay up long enough to read",
+    "Sync asks before an upload would replace changes made on another device, and a failed save stays on screen until saving works again",
+    "The LP change says when it happened (\"3W 2L · yesterday\") and goes after a week; favorites lead the list, and on a phone an opened row starts with the Riot ID, record and buttons",
+    "Delete all and Replace everything can be undone, and backups and CSV files from Excel in any language import cleanly",
+  ]},
   {v:"2.29.1",items:[
     "Compare only lists what at least one of the two accounts has, instead of rows with nothing on either side",
   ]},
