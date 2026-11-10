@@ -2773,6 +2773,7 @@
     .top>.bar{grid-column:2;grid-row:1;margin-left:0}
     .top>.ribbon{grid-column:1/-1;grid-row:2;max-width:none}
     .rib-tiers{flex-wrap:wrap}   /* the ribbon has the full width here; ten emblems may still wrap */
+    .rib-tiers.bal{display:grid;grid-template-columns:repeat(var(--rib-cols),max-content)}   /* in even lines (fitRibbon) */
     .top h1{font-size:calc(20px*var(--ts));white-space:nowrap}
   }
   @media (max-width:400px){.top h1{font-size:calc(18px*var(--ts))}}

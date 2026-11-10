@@ -4273,6 +4273,19 @@ function fitRibbon(){
   const top=document.querySelector(".top"), rib=$("ribbon");if(!top||!rib)return;
   const tiers=rib.querySelector(".rib-tiers");
   let below=false;
+  /* A phone lets the emblems wrap in their own row, and seven came out six and one.
+     Where they wrap is measured, then the lines evened out: seven as four and three. */
+  if(tiers){
+    tiers.classList.remove("bal");tiers.style.removeProperty("--rib-cols");
+    if(phoneLayout()){
+      const items=[...tiers.children], top0=items.length?items[0].getBoundingClientRect().top:0;
+      const perLine=items.filter(e=>Math.abs(e.getBoundingClientRect().top-top0)<2).length;
+      if(perLine&&perLine<items.length){
+        const lines=Math.ceil(items.length/perLine);
+        tiers.style.setProperty("--rib-cols",String(Math.ceil(items.length/lines)));tiers.classList.add("bal");
+      }
+    }
+  }
   if(tiers&&!phoneLayout()){
     const brand=top.querySelector(".brand"), bar=top.querySelector(".bar");
     const gap=parseFloat(getComputedStyle(top).columnGap)||0;

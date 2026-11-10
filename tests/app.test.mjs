@@ -11807,6 +11807,25 @@ test("an opened list row on a wide screen sets its Details sections side by side
   assert.ok(info && info.querySelectorAll(":scope > .sec").length >= 2, "sections straight under it");
 });
 
+// On a phone seven emblems wrapped six and one
+test("on a phone the header's emblems wrap in even lines: seven as four and three", () => {
+  const T = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND"];
+  const win = bootApp(T.map((t, i) => ({ id: "t" + i, region: "EUW", gameName: "T" + i, tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: t, division: "II", lp: 5, updatedAt: Date.now() } })),
+    w => { w.matchMedia = q => ({ matches: /max-width:\s*560px/.test(q), addListener() {}, removeListener() {} }); });
+  const tiers = win.document.querySelector("#ribbon .rib-tiers");
+  // as a 390px phone lays them out: six on the first line, one on the second
+  [...tiers.children].forEach((e, i) => { e.getBoundingClientRect = () => ({ top: i < 6 ? 100 : 140, left: 0, width: 50, height: 30, right: 50, bottom: 0 }); });
+  runScript(win, "fitRibbon()");
+  assert.ok(tiers.classList.contains("bal"), "evened out");
+  assert.equal(tiers.style.getPropertyValue("--rib-cols"), "4", "four a line, so four and three");
+  assert.match(appCss, /\.rib-tiers\.bal\{display:grid;grid-template-columns:repeat\(var\(--rib-cols\),max-content\)\}/);
+  // all on one line: left alone
+  [...tiers.children].forEach(e => { e.getBoundingClientRect = () => ({ top: 100, left: 0, width: 40, height: 30, right: 40, bottom: 0 }); });
+  runScript(win, "fitRibbon()");
+  assert.equal(tiers.classList.contains("bal"), false, "one line needs no evening out");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
