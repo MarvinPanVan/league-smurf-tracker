@@ -5839,7 +5839,9 @@ function tileHTML(a){
       ${isRanked(a)?`<span class="t-crest">${crest(s.tier)}</span>`:""}</span>
     <span class="t-nm">${a.fav?`<span class="rw-star">${icon("star")}</span>`:""}<span class="nm-t">${nameOf(a)}</span>${a.flagged?flagMark():""}</span>
     <span class="t-rk" style="color:${isRanked(a)?col:"var(--muted)"}">${esc(rank)}</span>
-    ${lp?`<span class="t-lp">${esc(lp)}</span>`:""}
+    <!-- the LP line, blank where there is no LP: without it an unranked tile was
+         24px shorter than the ranked one beside it -->
+    <span class="t-lp"${lp?"":' aria-hidden="true"'}>${lp?esc(lp):"&nbsp;"}</span>
   </div></div>`;
 }
 /* The card's lines for an account with no rank to show, shared with an opened list

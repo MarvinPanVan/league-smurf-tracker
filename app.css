@@ -969,7 +969,7 @@
   .rw.dead .rw-key{color:var(--faint);opacity:.6}
   .rw.dead .rw-key:hover{color:var(--text);opacity:1}
   .card.dead .rk-crest,.rw.dead .rw-crest{filter:grayscale(.9);opacity:.55}
-  .card.dead .rk .rk-t,.rw.dead .rw-rank b{text-decoration:line-through;
+  .card.dead .rk .rk-t,.rw.dead .rw-rank b,.tile.dead .t-rk{text-decoration:line-through;
     text-decoration-thickness:1.5px;text-decoration-color:currentColor;opacity:.62}
   /* a banned account's chart in grey, like its struck-through rank: this aimed at
      .lpc-wrap, which the chart stopped being wrapped in, and quietly did nothing */

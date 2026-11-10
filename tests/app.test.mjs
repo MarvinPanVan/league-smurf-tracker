@@ -11849,6 +11849,26 @@ test("Most played keeps to one row of whole chips, the most played first", () =>
   assert.equal(shown().length, 8, "a phone slides through them all");
 });
 
+// On the wall an unranked tile was 24px shorter than a ranked one beside it, and a banned
+// account's rank was not struck through as on its card
+test("wall tiles are one height, and a banned tile's rank is struck through", () => {
+  const now = Date.now();
+  const win = bootApp([
+    { id: "gold", stats: { found: true, tier: "GOLD", division: "II", lp: 40, updatedAt: now } },
+    { id: "unr", stats: { found: true, tier: "UNRANKED", level: 60, updatedAt: now } },
+    { id: "ban", status: "banned", stats: { found: true, tier: "PLATINUM", division: "II", lp: 4, updatedAt: now } },
+  ].map(a => ({ region: "EUW", gameName: a.id, tagLine: "1", status: "active", tags: [], history: [], ...a })),
+    w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, lastChangelog: "9.9.9", lockPromptOff: true, density: "wall" })));
+  const tile = id => win.document.querySelector(`.tile[data-id="${id}"]`);
+  assert.equal(tile("gold").querySelector(".t-lp").textContent, "40 LP");
+  const blank = tile("unr").querySelector(".t-lp");
+  assert.ok(blank, "an unranked tile keeps the LP line");
+  assert.equal(blank.textContent.trim(), "", "blank");
+  assert.equal(blank.getAttribute("aria-hidden"), "true", "and not read out");
+  assert.ok(tile("ban").classList.contains("dead"));
+  assert.match(appCss, /\.tile\.dead \.t-rk\{text-decoration:line-through/, "struck through like the card");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
