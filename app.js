@@ -887,8 +887,8 @@ function saveDB(opts){invalidateDupCache();
   // either: this stays written by the time it returns, the way the rest of the app
   // has always been able to assume of an unencrypted vault.
   if(!vaultPassword){
-    try{localStorage.setItem(DB_KEY,JSON.stringify(accounts));stampRev();return Promise.resolve(true)}
-    catch(e){toast("Saving failed (storage error)");return Promise.resolve(false)}
+    try{localStorage.setItem(DB_KEY,JSON.stringify(accounts));stampRev();savedAgain();return Promise.resolve(true)}
+    catch(e){saveFailed();return Promise.resolve(false)}
   }
   saveChain=saveChain.then(async()=>{
     if(seq!==saveSeq)return true; // superseded while queued; the newer one is next
@@ -899,12 +899,29 @@ function saveDB(opts){invalidateDupCache();
       if(vaultLocked()||seq!==saveSeq)return true;
       localStorage.setItem(DB_KEY,JSON.stringify(envelope));
       currentEnvelope=envelope;
-      stampRev();
+      stampRev();savedAgain();
       return true;
-    }catch(e){toast("Saving failed (storage error)");return false}
+    }catch(e){saveFailed();return false}
   });
   return saveChain;
 }
+/* A failed save was one 2-second message, and then the app looked saved: every
+   change after it was gone at the next reload. The banner stays at the top until a
+   save goes through again, with the way to keep what is on screen. */
+function saveFailed(){
+  toast("Saving failed (storage error)");
+  const b=$("banner");if(b.dataset.kind==="save")return;
+  b.dataset.kind="save";
+  setHTML(b,"Changes are not being saved: this browser's storage is full or blocked. "
+    +'<button type="button" id="bannerExport" class="b-danger">Export a backup now</button>');
+  b.classList.add("show");
+}
+function savedAgain(){
+  const b=$("banner");if(b.dataset.kind!=="save")return;
+  delete b.dataset.kind;b.classList.remove("show");b.textContent="";
+}
+// (this runs before $ is defined further down)
+document.getElementById("banner").addEventListener("click",e=>{if(e.target.closest("#bannerExport"))doExport()});
 /* Report a change only once it is actually on disk. saveDB() answers, and it
    toasts its own "Saving failed (storage error)" — but a caller that fires its
    own "Archived" into the same toast a line later paints straight over that

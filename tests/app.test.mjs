@@ -11483,6 +11483,36 @@ test("While you were away appears once a check finishes, not only after switchin
   assert.match(band.textContent, /While you were away.*1 climbed/);
 });
 
+// A failed save was one 2-second message; the app then looked saved and lost the change
+// on reload
+test("a failed save stays said at the top, with Export, until a save goes through again", () => {
+  const win = bootApp([{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [], stats: null }], w => {
+    const real = w.Storage.prototype.setItem;
+    w.Storage.prototype.setItem = function (k, v) {
+      if (w.__full && k === "smurf-tracker") { const e = new Error("quota"); e.name = "QuotaExceededError"; throw e }
+      return real.call(this, k, v);
+    };
+  });
+  const doc = win.document, banner = doc.getElementById("banner");
+  win.__full = true;
+  runScript(win, "saveDB()");
+  assert.ok(banner.classList.contains("show"), "the banner is up");
+  assert.match(banner.textContent, /^Changes are not being saved: this browser's storage is full or blocked\./);
+  const exp = banner.querySelector("#bannerExport");
+  assert.equal(exp.textContent, "Export a backup now");
+  runScript(win, "doExport = () => { window.__exp = (window.__exp || 0) + 1 }");
+  exp.click();
+  assert.equal(win.__exp, 1, "the button exports");
+  runScript(win, "saveDB()");
+  assert.ok(banner.classList.contains("show"), "still up while saves keep failing");
+  win.__full = false;
+  runScript(win, "saveDB()");
+  assert.equal(banner.classList.contains("show"), false, "gone once a save works again");
+  // another banner's message is left alone
+  runScript(win, `$("banner").textContent = "The saved vault could not be read"; $("banner").classList.add("show"); saveDB()`);
+  assert.ok(banner.classList.contains("show") && /could not be read/.test(banner.textContent), "a save does not clear someone else's banner");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
