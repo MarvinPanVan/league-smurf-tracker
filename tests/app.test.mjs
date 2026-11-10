@@ -11583,6 +11583,28 @@ test("the CSV export starts with a byte-order mark, and reads back the same", as
   assert.equal(stored[0].gameName, "Müller 한국");
 });
 
+// A backup with no accounts offered "Replace everything", which would have emptied the
+// vault, and one account was "Backup imported (1 accounts)"
+test("an empty backup says so and changes nothing; one account is one account", async () => {
+  const win = bootApp([{ id: "keep", region: "EUW", gameName: "Keep", tagLine: "1", status: "active", tags: [], history: [], stats: null }]);
+  win.ask = win.__ask;   // the real window: none should open
+  const askM = win.document.getElementById("askModal"), t = win.document.getElementById("toast");
+  win.doImport(new win.Blob([JSON.stringify({ app: "smurf-tracker", version: 2, accounts: [] })], { type: "application/json" }));
+  await until(() => /no accounts/.test(t.textContent), "the message");
+  assert.equal(t.textContent, "That backup has no accounts in it");
+  assert.equal(askM.classList.contains("hidden"), true, "no Add or Replace question");
+  assert.equal(appGet(win, "accounts.length"), 1, "the vault untouched");
+  win.doImportCSV(new win.File(["gameName,tagLine,region\r\n"], "e.csv", { type: "text/csv" }));
+  await until(() => t.textContent === "That file has no accounts in it", "the same for a CSV with only its header");
+  assert.equal(askM.classList.contains("hidden"), true);
+  // one account
+  const one = bootApp();
+  one.doImport(new one.Blob([JSON.stringify({ accounts: [{ gameName: "Solo", tagLine: "1", region: "EUW" }] })], { type: "application/json" }));
+  await until(() => /imported/.test(one.document.getElementById("toast").textContent), "imported");
+  assert.equal(one.document.getElementById("toast").textContent, "Backup imported (1 account)");
+  assert.equal(appGet(one, "accountsN(2)"), "2 accounts");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();

@@ -1181,6 +1181,8 @@ function safeAccountId(id){return typeof id==="string"&&/^[A-Za-z0-9._:-]+$/.tes
 /* Boot, unlock and import all used to trust tags/history were arrays. A corrupt
    backup with those fields as objects survived into migrateStats / render and
    threw mid-grid. Same normalisation everywhere an account enters memory. */
+// "1 account", "2 accounts": the import said "Backup imported (1 accounts)"
+function accountsN(n){return n+" account"+(n===1?"":"s")}
 function sanitizeAccount(a){
   if(!a||typeof a!=="object")return null;
   a.id=safeAccountId(a.id);
@@ -1970,7 +1972,7 @@ async function pullVaultSync(force){
     if(!ok){toast("Downloaded, but could not save it in this browser");render();updateSyncStatus();return}
     render();
     updateSyncStatus();
-    toast("Vault downloaded ("+accounts.length+" accounts)");
+    toast("Vault downloaded ("+accountsN(accounts.length)+")");
   }catch(e){toast("Download failed: "+(e.message||"network"))}
   finally{syncBusy=false;updateSyncStatus()}
 }
@@ -7450,6 +7452,8 @@ function doImport(file){
         // Same Riot ID twice in one file used to land as two rows with different
         // ids — merge and replace both treated them as distinct.
         .filter(a=>{const k=key(a);if(fileSeen.has(k))return false;fileSeen.add(k);return true});
+      // An empty one offered "Replace everything", which would have emptied this vault
+      if(!cleaned.length){toast("That backup has no accounts in it");return}
       const how=accounts.length>0?await askMergeOrReplace("backup",cleaned.length):"replace";
       if(!how)return;
       const merge=how==="merge";
@@ -7463,7 +7467,7 @@ function doImport(file){
       }else{
         accounts=cleaned;
         if(!await saveDB()){toast("Import saved in memory but could not write to storage");render();return}
-        render();toast("Backup imported ("+cleaned.length+" accounts)");
+        render();toast("Backup imported ("+accountsN(cleaned.length)+")");
       }
     }catch(e){toast("Import failed: not a valid backup file")}
   };
@@ -7526,6 +7530,7 @@ function doImportCSV(file){
   rd.onload=async()=>{
     try{
       const rows=parseCSV(rd.result);
+      if(rows.length===1){toast("That file has no accounts in it");return}   // a header and nothing under it
       if(rows.length<2)throw new Error("empty");
       const header=rows[0];
       // Only un-escape the apostrophe csvCell() adds when this is one of our own exports —
@@ -7556,7 +7561,7 @@ function doImportCSV(file){
         });
       }).filter(Boolean)
         .filter(a=>{const k=key(a);if(fileSeen.has(k))return false;fileSeen.add(k);return true});
-      if(!list.length)throw new Error("no rows");
+      if(!list.length){toast("That file has no accounts in it");return}
       const how=accounts.length>0?await askMergeOrReplace("file",list.length):"replace";
       if(!how)return;
       const merge=how==="merge";
@@ -7570,7 +7575,7 @@ function doImportCSV(file){
       }else{
         accounts=list;
         if(!await saveDB()){toast("Import saved in memory but could not write to storage");render();return}
-        render();toast("CSV imported ("+list.length+" accounts)");
+        render();toast("CSV imported ("+accountsN(list.length)+")");
       }
     }catch(e){toast("CSV import failed: not a valid export file")}
   };
