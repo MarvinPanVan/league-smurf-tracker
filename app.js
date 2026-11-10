@@ -3373,6 +3373,22 @@ function lastDelta(a){
   const now=ladderLP(cur), before=ladderLP(prev);
   return now===null||before===null?0:now-before;
 }
+/* The change, while it is news. lastDelta() is the gap between the last two
+   different readings, and a card wore "+27 LP since last check" through a week of
+   checks that found nothing new. Past seven days (as a streak) it is history, on
+   the chart. */
+const DELTA_FOR=7*864e5;
+function freshDelta(a){
+  const h=a.history||[], last=h[h.length-1];
+  return last&&Date.now()-(+last.t||0)<=DELTA_FOR?lastDelta(a):0;
+}
+// "today", "yesterday", "5 days ago": by calendar day, which is how a player counts
+function dayAgo(t){
+  const day=x=>{const d=new Date(+x);return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()};
+  const n=Math.round((day(Date.now())-day(t))/864e5);
+  return n<=0?"today":n===1?"yesterday":n+" days ago";
+}
+function isoDay(t){const d=new Date(+t),p=v=>String(v).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())}
 function markPlayed(id){
   const a=accounts.find(x=>x.id===id); if(!a)return;
   openMore.delete(id);
@@ -3812,7 +3828,7 @@ function filtered(){
     opened:(x,y)=>openedAt(y)-openedAt(x),
     // the only number that matters on an account that isn't ranked yet
     level:(x,y)=>((y.stats&&y.stats.level)||0)-((x.stats&&x.stats.level)||0),
-    change:(x,y)=>lastDelta(y)-lastDelta(x),
+    change:(x,y)=>freshDelta(y)-freshDelta(x),
     // "Sort by movement" on the away band — the away window's delta, not the
     // last two checks. Falls back to lastDelta once that map has been cleared.
     away:(x,y)=>(awayDelta.get(y.id)||0)-(awayDelta.get(x.id)||0),
@@ -5669,7 +5685,7 @@ function rowHTML(a,i){
   const open=openInfo.has(a.id);
   const {w:wins,l:losses,total,wr}=winLoss(s);
   // a banned account's rank will never move again: its last change is not news here either
-  const dv=a.status==="banned"?0:lastDelta(a);
+  const dv=a.status==="banned"?0:freshDelta(a);
   let rank="—",lp="";
   if(isChecking)rank="…";
   else if(!hasReading(s))rank=noRankLabel(a);
@@ -5789,14 +5805,18 @@ function cardHTML(a,i){
   // Unranked ends. Subtracting raw ladderLP() here invented crash chips the list
   // correctly suppressed.
   {
-    const dv=lastDelta(a);
-    if(dv&&!dead)deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="Since previous check">'+(dv>0?"▲ +":"▼ -")+fmtN(Math.abs(dv))+' LP</span>';
-    /* "+87 LP" over what? Said under the chip now, with the pace beside it: the
-       pace had a whole row of the card to itself ("Climb · +21 LP/day"), and
-       without "since last check" the two numbers read as a contradiction. */
-    // The pace ("+20 LP/day") was a fourth way of saying "going up", beside this chip,
-    // the chart and the goal: it is in the chart's tip on the newest point now (paceText).
-    if(dv&&!dead)deltaChip+=`<span class="d-cap" title="Since previous check"><span>since last check</span></span>`;
+    const dv=dead?0:freshDelta(a);
+    if(dv){
+      const last=hist[hist.length-1], g=gamesSince(hist), games=g&&g.to===last.t?wlText(g.w,g.l)+" · ":"";
+      const title="The change the last new reading found, "+fmtDate(isoDay(last.t));
+      deltaChip='<span class="delta '+(dv>0?"d-up":"d-down")+'" title="'+esc(title)+'">'+(dv>0?"▲ +":"▼ -")+fmtN(Math.abs(dv))+' LP</span>';
+      /* "+87 LP" over what? Said under the chip, and when. "since last check" stayed
+         true only until the next check that found nothing new; the games played
+         between the two readings sit beside it, where the card's separate "Since
+         last check · 5 games" figure used to say them a second time. The pace
+         ("+20 LP/day") is in the chart's tip on the newest point (paceText). */
+      deltaChip+=`<span class="d-cap" title="${esc(title)}"><span>${esc(games+dayAgo(last.t))}</span></span>`;
+    }
   }
   /* There was a flame "Climbing" chip here too (LP up three checks running). It was
      the fourth way the card said "going up", beside the +LP chip, the Climb figure
@@ -5883,11 +5903,6 @@ function cardHTML(a,i){
         else if(cut.chall!=null&&lp<cut.chall)microStats.push(["To Challenger",fmtN(cut.chall-lp)+" LP to go"]);
         else if(cut.chall!=null)microStats.push(["Above","the Challenger cutoff"]);
       }
-    }
-    {
-      const g=gamesSince(hist);
-      if(g)microStats.push(["Since last check",fmtN(g.n)+(g.n===1?" game · ":" games · ")+wlText(g.w,g.l)]);
-      // the pace ("Climb") sits under the LP chip now, beside "since last check"
     }
     if(s.mmr)microStats.push(["MMR est.",s.mmr]);
     if(s.avgRecent)microStats.push(["Recent avg",s.avgRecent]);

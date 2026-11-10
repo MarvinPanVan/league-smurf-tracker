@@ -9107,14 +9107,14 @@ test("on a phone a list row copies its login, and checkboxes come with Select", 
 });
 
 // "+87 LP" didn't say over what, and the pace took a row of its own ("Climb · +21 LP/day")
-test("the LP chip says it is since the last check; the pace is in the chart's newest tip, not on the card", () => {
+test("the LP chip says when it changed; the pace is in the chart's newest tip, not on the card", () => {
   const D = 864e5, now = Date.now();
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [],
     history: [{ t: now - 20 * D, tier: "GOLD", division: "I", lp: 0 }, { t: now - 5 * D, tier: "PLATINUM", division: "III", lp: 74 }, { t: now - 3600000, tier: "PLATINUM", division: "II", lp: 61 }],
     stats: { found: true, tier: "PLATINUM", division: "II", lp: 61, wins: 38, losses: 29, updatedAt: now - 3600000 } }]);
   const card = win.document.querySelector('.card[data-id="a"]');
   assert.match(card.querySelector(".c-deltas .delta").textContent, /\+87 LP/);
-  assert.equal(card.querySelector(".c-deltas .d-cap").textContent, "since last check",
+  assert.equal(card.querySelector(".c-deltas .d-cap").textContent, appGet(win, `dayAgo(${now - 3600000})`),
     "the pace was a fourth way of saying going up, beside the chip, the chart and the goal");
   const tips = [...card.querySelectorAll(".lpc-pt .lpc-tip")];
   assert.match(tips.at(-1).textContent, /\+\d+ LP\/day lately$/, "it answers on the newest point instead");
@@ -11391,6 +11391,33 @@ test("Check all keeps its news for its summary, and a promotion names the accoun
   assert.deepEqual([...win.__toasts], ["Smurf 1: Gold I → Emerald IV"]);
 });
 
+// Checked seconds ago, nothing had changed since 9 Nov, and the card still said
+// "+27 LP since last check"; the list kept a week-old change in its Change column
+test("the LP chip says when the change was seen, with that check's games, and goes once it is a week old", () => {
+  const D = 864e5, now = Date.now();
+  const mk = (id, lastAgo, extra) => ({ id, gameName: id, tagLine: "1", region: "EUW", status: "active", tags: [],
+    history: [{ t: now - 12 * D, tier: "EMERALD", division: "III", lp: 20, w: 30, l: 28 }, { t: now - lastAgo, tier: "EMERALD", division: "III", lp: 47, w: 33, l: 30 }],
+    stats: { found: true, tier: "EMERALD", division: "III", lp: 47, wins: 33, losses: 30, updatedAt: now - 60e3 }, ...extra });
+  const win = bootApp([mk("fresh", 2 * D), mk("old", 9 * D)]);
+  const doc = win.document, card = id => doc.querySelector(`.card[data-id="${id}"]`);
+  const cap = card("fresh").querySelector(".c-deltas .d-cap").textContent;
+  assert.equal(cap, "3W 2L · " + appGet(win, `dayAgo(${now - 2 * D})`), "the games, and the day the change was seen");
+  assert.match(cap, /days ago$|yesterday$/);
+  assert.doesNotMatch(card("fresh").textContent, /since last check/i, "not 'since last check', which the next quiet check makes untrue");
+  assert.doesNotMatch(card("fresh").querySelector(".c-stats")?.textContent || "", /Since last check/, "and no second figure saying the games again");
+  assert.equal(card("old").querySelector(".c-deltas .delta"), null, "a change nine days old is history: no chip");
+  // the day words
+  assert.equal(appGet(win, `dayAgo(${now})`), "today");
+  const y = new Date(); y.setDate(y.getDate() - 1); y.setHours(12);
+  assert.equal(appGet(win, `dayAgo(${y.getTime()})`), "yesterday");
+  const f = new Date(); f.setDate(f.getDate() - 5); f.setHours(12);
+  assert.equal(appGet(win, `dayAgo(${f.getTime()})`), "5 days ago");
+  // the list's Change column: the same seven days
+  listView(win);
+  assert.match(doc.querySelector('.rw[data-id="fresh"] .rw-d').textContent, /\+27/);
+  assert.equal(doc.querySelector('.rw[data-id="old"] .rw-d').textContent.trim(), "", "no week-old change in the list either");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
@@ -11720,12 +11747,15 @@ test("a card's micro-stats pair up two by two when there are four of them", () =
   // (the preview no longer carries those, so the account is built here)
   const D = 86400000, now = Date.now();
   const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [],
-    // (the climb's pace moved under the LP chip; games since the last check is the fourth)
-    history: [{ t: now - 10 * D, tier: "GOLD", division: "III", lp: 40, w: 15, l: 15 }, { t: now - 3600000, tier: "GOLD", division: "II", lp: 40, w: 20, l: 18 }],
-    stats: { found: true, tier: "GOLD", division: "II", lp: 40, wins: 20, losses: 18, updatedAt: now - 3600000,
-      peak: { tier: "PLATINUM", division: "IV", lp: 12 }, mmr: "~1700", avgRecent: "Gold I" } },
+    // (the climb's pace moved under the LP chip, and the games since a change beside it:
+    // a Master account's distance to Grandmaster is the fourth)
+    history: [{ t: now - 10 * D, tier: "MASTER", division: null, lp: 40, w: 15, l: 15 }, { t: now - 3600000, tier: "MASTER", division: null, lp: 60, w: 20, l: 18 }],
+    stats: { found: true, tier: "MASTER", division: null, lp: 60, wins: 20, losses: 18, updatedAt: now - 3600000,
+      peak: { tier: "GRANDMASTER", division: null, lp: 300 }, mmr: "~2700", avgRecent: "Master" } },
     { id: "b", gameName: "B", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
-      stats: { found: true, tier: "GOLD", division: "II", lp: 40, wins: 20, losses: 18, updatedAt: now - 3600000, mmr: "~1700" } }]);
+      stats: { found: true, tier: "GOLD", division: "II", lp: 40, wins: 20, losses: 18, updatedAt: now - 3600000, mmr: "~1700" } }],
+    w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, lastChangelog: "9.9.9", lockPromptOff: true,
+      cutoffs: { euw: { gm: 500, chall: 900 } } })));
   const sets = [...win.document.querySelectorAll(".card .c-stats")];
   const four = sets.find(s => s.children.length === 4);
   assert.ok(four, "a card with four: " + sets.map(s => s.textContent).join(" | "));
