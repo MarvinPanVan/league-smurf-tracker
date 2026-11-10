@@ -4415,7 +4415,7 @@ function renderDash(){
   setHTML(el,`
   <div class="hx${dashJustOpened?" dash-in":""}" style="margin-bottom:16px"><div class="hx-in">
   ${cells.length?`<div class="dash">${cells.join("")}</div>`:""}
-  ${topChamps.length?`<div class="dist"${cells.length||ranked.length?' style="border-top:1px solid var(--line)"':""}><span class="k">Most played</span>${
+  ${topChamps.length?`<div class="dist champs-row"${cells.length||ranked.length?' style="border-top:1px solid var(--line)"':""}><span class="k">Most played</span>${
     // Sorted by games, so "Best" was the wrong word: a 44% champion sat in it.
     // And 4-4 is not a good record yet; green waits for ten games.
     topChamps.map(c=>`<span class="gem cmb" title="${esc(c.games)} games across ${esc(c.accs)} account${c.accs===1?"":"s"}">`
@@ -4430,7 +4430,7 @@ function renderDash(){
   </div></div>`);
   dashJustOpened=false; // consumed by the render above
   bindSparkTip(el);
-  balanceDash();
+  balanceDash();fitChamps();
 }
 /* The reminder against losing the vault lived in the stats panel, and the panel
    starts folded on a phone: the one warning that Safari deletes a vault after a
@@ -4479,8 +4479,20 @@ function balanceDash(){
   // the hairline between tiles belongs inside a row, not down the left edge of one
   tiles.forEach((t,i)=>t.classList.toggle("rs",i%cols===0));
 }
-if("ResizeObserver"in window)new ResizeObserver(()=>balanceDash()).observe($("dash"));
-else window.addEventListener("resize",balanceDash);
+/* Most played wrapped onto a second row, two chips left under eight: one row of
+   whole chips now, the most played first, as many as fit. A phone keeps its row
+   sliding sideways, where one whole chip would be all there was room for. */
+function fitChamps(){
+  const row=document.querySelector("#dash .champs-row");if(!row)return;
+  const chips=[...row.querySelectorAll(".cmb")];
+  for(const c of chips)c.style.display="";
+  if(phoneLayout())return;
+  const r=row.getBoundingClientRect(), edge=r.right-(parseFloat(getComputedStyle(row).paddingRight)||0);
+  let cut=false;
+  for(const c of chips){if(!cut&&c.getBoundingClientRect().right>edge+.5)cut=true;if(cut)c.style.display="none"}
+}
+if("ResizeObserver"in window)new ResizeObserver(()=>{balanceDash();fitChamps()}).observe($("dash"));
+else window.addEventListener("resize",()=>{balanceDash();fitChamps()});
 
 /* Every tag in the vault, as a row of chips above the grid. On a vault with one
    tag on one account that is a single word floating in its own band, and on a

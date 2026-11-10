@@ -4445,7 +4445,7 @@ test("the stats say which accounts they are from, as a footnote whose choices gi
   const sel = () => win.document.getElementById("dashMin");
   const opts = () => [...sel().options].map(o => o.textContent);
   assert.equal(win.document.querySelector("#dash .dash-head"), null, "nothing heads the panel");
-  assert.equal(scope().previousElementSibling.className, "dist", "it closes the panel, under Most played");
+  assert.ok(scope().previousElementSibling.classList.contains("champs-row"), "it closes the panel, under Most played");
   assert.match(scope().textContent, /^Figures from/);
   assert.equal(sel().selectedOptions[0].textContent, "all 3 ranked accounts", "the banned one is not counted");
   assert.deepEqual(opts(), ["all 3 ranked accounts", "Gold and above (2)", "Platinum and above (1)"],
@@ -11824,6 +11824,29 @@ test("on a phone the header's emblems wrap in even lines: seven as four and thre
   [...tiers.children].forEach(e => { e.getBoundingClientRect = () => ({ top: 100, left: 0, width: 40, height: 30, right: 40, bottom: 0 }); });
   runScript(win, "fitRibbon()");
   assert.equal(tiers.classList.contains("bal"), false, "one line needs no evening out");
+});
+
+// Most played wrapped onto a second row, two chips left under the first six
+test("Most played keeps to one row of whole chips, the most played first", () => {
+  const names = ["Ahri", "Syndra", "Orianna", "LeBlanc", "Viktor", "Azir", "Zed", "Akali"];
+  const seed = [{ id: "a", region: "EUW", gameName: "A", tagLine: "1", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 4, wins: 50, losses: 40, updatedAt: Date.now(),
+      champs: names.map((n, k) => ({ name: n, games: 40 - k, wins: 20, losses: 20 - k, wr: 50 })) } }];
+  const open = w => w.localStorage.setItem("smurf-tracker-cfg", JSON.stringify({ seenHelp: true, lastChangelog: "9.9.9", lockPromptOff: true, dashCollapsed: false }));
+  const win = bootApp(seed, open);
+  const row = win.document.querySelector("#dash .champs-row");
+  assert.ok(row, "the row");
+  assert.match(appCss, /\.dist\.champs-row\{flex-wrap:nowrap;overflow:hidden\}/, "never a second line");
+  const chips = [...row.querySelectorAll(".cmb")];
+  row.getBoundingClientRect = () => ({ left: 0, right: 600, top: 0, bottom: 40, width: 600, height: 40 });
+  chips.forEach((c, i) => { c.getBoundingClientRect = () => ({ left: 100 + i * 150, right: 240 + i * 150, top: 10, bottom: 30, width: 140, height: 20 }); });
+  runScript(win, "fitChamps()");
+  const shown = () => chips.filter(c => c.style.display !== "none").map(c => c.querySelector(".n").textContent);
+  assert.deepEqual(shown(), ["Ahri", "Syndra", "Orianna"], "the ones that fit whole, most played first; the rest, not half of one");
+  // a phone keeps the row sliding, all of them in it
+  win.matchMedia = q => ({ matches: /max-width:\s*560px/.test(q), addListener() {}, removeListener() {} });
+  runScript(win, "fitChamps()");
+  assert.equal(shown().length, 8, "a phone slides through them all");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
