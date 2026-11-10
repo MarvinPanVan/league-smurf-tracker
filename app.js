@@ -7398,7 +7398,9 @@ async function doExportCSV(){
       a.fav?"yes":"no",s.updatedAt?new Date(s.updatedAt).toISOString():"",...extra
     ].map(csvCell).join(",");
   });
-  const csv=[cols.join(","),...rows].join("\r\n");
+  // A byte-order mark first: without one Excel reads the file as the PC's old code
+  // page and "Müller" or a Korean name comes out as garbage (parseCSV strips it)
+  const csv="\uFEFF"+[cols.join(","),...rows].join("\r\n");
   const blob=new Blob([csv],{type:"text/csv"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);

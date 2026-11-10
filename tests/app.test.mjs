@@ -11562,6 +11562,27 @@ test("CSV import reads semicolon and tab files, and keeps only a tier the app kn
   assert.equal(s[0].stats.tier, "UNRANKED");
 });
 
+// The CSV export had no byte-order mark, so Excel opens it in the PC's old code page
+// and garbles ä, ö, ü and Korean names
+test("the CSV export starts with a byte-order mark, and reads back the same", async () => {
+  const win = bootApp([{ id: "a", region: "KR", gameName: "Müller 한국", tagLine: "Ö1", status: "active", tags: [], history: [], stats: null }]);
+  let blob = null;
+  win.URL.createObjectURL = b => { blob = b; return "blob:x" };
+  await win.doExportCSV();
+  assert.ok(blob, "a file was made");
+  const bytes = await new Promise(r => { const fr = new win.FileReader(); fr.onload = () => r(new Uint8Array(fr.result)); fr.readAsArrayBuffer(blob); });
+  assert.deepEqual([...bytes.slice(0, 3)], [0xEF, 0xBB, 0xBF], "the UTF-8 mark first, as bytes (a text read strips it)");
+  const text = new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes);
+  assert.match(text, /Müller 한국/);
+  // and it imports as it was
+  const back = bootApp();
+  back.doImportCSV(new back.File([text], "x.csv", { type: "text/csv" }));
+  await until(() => back.localStorage.getItem("smurf-tracker"), "the import");
+  const stored = JSON.parse(back.localStorage.getItem("smurf-tracker"));
+  assert.equal(stored[0].label, "", "the first column is read by its name, mark or not");
+  assert.equal(stored[0].gameName, "Müller 한국");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
