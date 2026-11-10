@@ -4580,7 +4580,7 @@ function formHTML(a){
       +`<span class="c-nm"><b class="fm-res${g.win?" w":""}">${g.win?"W":"L"}</b>${esc(g.champ)}</span>`
       +`<span class="c-kd">${esc(g.kda)}</span>`
       +`<span class="c-gm">${g.min!=null?esc(g.min)+" min":""}</span>`
-      +`<span class="c-gm">${g.at?esc(timeAgo(g.at)):""}</span></div>`).join(""));
+      +`<span class="c-gm">${g.at?esc(timeAgo(g.at)):""}</span></div>`).join(""),true);
 }
 /* ---- champion art ----
    From Riot's Data Dragon, which serves splash art by champion id ("MonkeyKing",
@@ -5333,12 +5333,16 @@ function highestOf(list){let best=null,v=-1;for(const e of list){const x=ladderL
    Rank panel's start folded and remember being opened (openSec). */
 const DRAWER_SECS=new Set(["form","solo","flexhist","champs","mastery"]);
 function secOn(id,key){const k=id+"|"+key;return DRAWER_SECS.has(key)?!shutSec.has(k):openSec.has(k)}
-function secHTML(a,key,label,n,peek,body){
+// "3.0", not "3" in a column of "2.4" and "3.1"; nothing where there is no KDA, not a dash
+function kdaText(v){if(v==null||v==="")return"";const n=Number(v);return Number.isFinite(n)?n.toFixed(1):String(v)}
+function secHTML(a,key,label,n,peek,body,keepPeek){
   const on=secOn(a.id,key);
   return `<div class="sec${on?" on":""}" data-k="sec-${key}">`
     +`<button class="sec-h" data-act="sec" data-s="${key}" aria-expanded="${on}">`
       +`<span class="sec-n">${esc(label)}${n===""||n==null?"":`<i>${n}</i>`}</span>`
-      +`<span class="sec-p">${peek}</span>`
+      // the peek is the closed section's summary; open, it repeated the first row under it
+      // (a season, a champion). The last games' record and pips sum up, so they stay.
+      +`<span class="sec-p">${on&&!keepPeek?"":peek}</span>`
       +`<svg class="ico" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>`
     +`</button>`
     +(on?`<div class="sec-b">${body}</div>`:"")
@@ -5374,7 +5378,7 @@ function infoBlockHTML(a,rev){
       +champs.map(c=>row("",`<span class="c-nm">${esc(c.name)}</span>`
         +`<span class="c-gm">${c.wins!=null&&c.losses!=null?esc(wlText(c.wins,c.losses)):esc(c.games)+"G"}</span>`
         +`<span class="c-wr${c.wr>=50?" wr-good":""}">${esc(c.wr)}%</span>`
-        +(kdaCol?`<span class="c-kd">${c.kda!=null?esc(c.kda):"—"}</span>`:""))).join(""));
+        +(kdaCol?`<span class="c-kd">${esc(kdaText(c.kda))}</span>`:""))).join(""));
   }
   if(mastery.length){
     const top=mastery[0];

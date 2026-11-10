@@ -2730,7 +2730,7 @@ test("Mastery: asked for every three days, kept on the account, shown under Deta
   // Details shows it
   const card = id => win.document.querySelector(`.card[data-id="${id}"]`);
   card("due").querySelector('[data-act="info"]').click();
-  assert.match(card("due").querySelector('[data-k="sec-mastery"]').textContent, /Mastery\s*2\s*Yasuo · M7/);
+  assert.match(card("due").querySelector('[data-k="sec-mastery"]').textContent, /^Mastery\s*2\s*Yasuo\s*M7/, "open: the rows, not their summary over them");
   assert.match(card("due").querySelector('[data-k="sec-mastery"]').textContent, /Yasuo\s*M7\s*1\.2M pts/, "open, no second click");
   // and champ: finds it, by mastery or by this season's champions
   const shown = q => { runScript(win, `ui.search = ${JSON.stringify(q)}; renderGrid()`); return [...win.document.querySelectorAll("#grid .card")].map(c => c.dataset.id).sort(); };
@@ -11698,6 +11698,28 @@ test("checking keeps each card's rank and the page where it is, and says how man
   const p2 = win.check("new");
   await until(() => /Checking rank/.test(doc.querySelector('.card[data-id="new"]').textContent), "the never-checked card says so");
   rel2(); await p2;
+});
+
+// An open Details section repeated its first row in its header ("Past seasons · Solo 4 ·
+// Diamond IV · 23 LP" over a first row "S2025 · Diamond IV · 23 LP"), and KDA read "3" in
+// a column of "2.4" and "3.1"
+test("an open Details section drops its summary from its header, and KDA has one decimal", async () => {
+  const now = Date.now();
+  const win = bootApp([{ id: "a", gameName: "A", tagLine: "1", region: "EUW", status: "active", tags: [], history: [],
+    stats: { found: true, tier: "GOLD", division: "II", lp: 5, wins: 10, losses: 9, updatedAt: now,
+      champs: [{ name: "Lux", games: 24, wins: 15, losses: 9, wr: 63, kda: 3 }, { name: "Ahri", games: 5, wins: 2, losses: 3, wr: 40, kda: 2.456 },
+        { name: "Zed", games: 2, wins: 1, losses: 1, wr: 50 }] } }]);
+  const doc = win.document, card = () => doc.querySelector('.card[data-id="a"]');
+  card().querySelector('[data-act="info"]').click();
+  await tick();
+  const sec = () => card().querySelector('[data-k="sec-champs"]');
+  assert.ok(sec().classList.contains("on"), "open");
+  assert.equal(sec().querySelector(".sec-p").textContent, "", "no summary over the rows it summarises");
+  const kd = [...sec().querySelectorAll(".chp:not(.chp-h) .c-kd")].map(e => e.textContent);
+  assert.deepEqual(kd, ["3.0", "2.5", ""], "one decimal, and blank (not a dash) where there is none");
+  sec().querySelector('[data-act="sec"]').click();
+  await tick();
+  assert.match(sec().querySelector(".sec-p").textContent, /Lux/, "closed, the summary is back");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
