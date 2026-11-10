@@ -7926,6 +7926,7 @@ test("pushVaultSync sends content vaultRev, not a fresh Date.now stamp", async (
     cfg.backendUrl = "https://example.workers.dev";
     cfg.syncToken = "sync-token-abcdef12";
     cfg.vaultRev = 1234567890000;
+    cfg.syncedRev = 1;   // the cloud's revision is the one this device last synced
   `);
   let body = null;
   let puts = 0;
@@ -7948,27 +7949,54 @@ test("pushVaultSync sends content vaultRev, not a fresh Date.now stamp", async (
   assert.match(win.document.getElementById("toast").textContent, /uploaded/i);
 });
 
-test("pushVaultSync aborts when GET sees a newer remote vault", async () => {
+// Device B uploads; device A, edited later without downloading first, has the higher
+// revision, so its upload used to replace B's changes without a word
+test("pushVaultSync asks before replacing a synced revision this device has never seen", async () => {
   const win = bootApp([{ id: "a1", region: "EUW", gameName: "A", tagLine: "1", status: "active",
     tags: [], history: [], stats: null }]);
   runScript(win, `
     vaultPassword = "test-pass-1234";
     cfg.backendUrl = "https://example.workers.dev";
     cfg.syncToken = "sync-token-abcdef12";
-    cfg.vaultRev = 100;
+    cfg.syncedRev = 100;   // last synced at 100
+    cfg.vaultRev = 300;    // edited here since
   `);
-  let puts = 0;
+  let puts = 0, gets = 0, remoteAt = 200;   // device B uploaded 200 in between
   win.fetch = async (url, opts = {}) => {
     const method = (opts.method || "GET").toUpperCase();
-    if (method === "GET") {
-      return new Response(JSON.stringify({ updatedAt: 999, envelope: { __enc: true } }), { status: 200 });
-    }
+    if (method === "GET") { gets++; return new Response(JSON.stringify({ updatedAt: remoteAt, envelope: { __enc: true } }), { status: 200 }); }
     puts++;
-    return new Response("{}", { status: 200 });
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
   };
+  const doc = win.document, askM = doc.getElementById("askModal");
+  win.ask = win.__ask;   // the real window, not the suite's automatic yes
+  let p = win.pushVaultSync();
+  await until(() => !askM.classList.contains("hidden"), "a question, not an upload");
+  assert.equal(doc.getElementById("askTitle").textContent, "The synced copy was changed on another device");
+  assert.match(doc.getElementById("askBody").textContent, /Uploading replaces those changes; downloading replaces the changes made here/);
+  assert.equal(doc.getElementById("askOk").textContent, "Download the synced copy");
+  assert.equal(doc.getElementById("askAlt").textContent, "Upload anyway");
+  assert.equal(doc.getElementById("askAlt").className, "b-danger");
+  doc.getElementById("askCancel").click();
+  await p;
+  assert.equal(puts, 0, "cancelled: nothing uploaded");
+  // Upload anyway: uploaded, and that revision is now this device's
+  p = win.pushVaultSync();
+  await until(() => !askM.classList.contains("hidden"), "asked again");
+  doc.getElementById("askAlt").click();
+  await p;
+  assert.equal(puts, 1, "uploaded on purpose");
+  assert.equal(appGet(win, "cfg.syncedRev"), 300);
+  // the cloud now holds what this device uploaded: no question next time
+  remoteAt = 300; runScript(win, "cfg.vaultRev = 400");
   await win.pushVaultSync();
-  assert.equal(puts, 0, "must not PUT over a newer cloud vault");
-  assert.match(win.document.getElementById("toast").textContent, /newer/i);
+  assert.equal(puts, 2, "a revision this device made is no conflict");
+  assert.equal(askM.classList.contains("hidden"), true);
+  // and the line under Sync stops asking for a password the moment one is set
+  runScript(win, "vaultPassword = null; updateSyncStatus()");
+  assert.match(doc.getElementById("sSyncStatus").textContent, /needs a master password/);
+  runScript(win, "vaultPassword = 'test-pass-1234'; updateVaultStatus()");
+  assert.doesNotMatch(doc.getElementById("sSyncStatus").textContent, /needs a master password/);
 });
 
 test("pullVaultSync is a no-op when vaultRev already matches", async () => {

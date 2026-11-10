@@ -1807,7 +1807,7 @@ function updateSyncStatus(){
     :"Ready.";
   setHTML(el,need+(cfg.lastSyncAt?" Last synced "+esc(timeAgo(cfg.lastSyncAt))+".":""));
 }
-async function pushVaultSync(){
+async function pushVaultSync(force){
   if(syncBusy){toast("Sync already in progress");return}
   const token=($("sSyncToken")&&$("sSyncToken").value.trim())||cfg.syncToken||"";
   if(token)cfg.syncToken=token;
@@ -1822,18 +1822,24 @@ async function pushVaultSync(){
     // a newer cloud vault because "now" always beat the remote timestamp.
     if(!(Number(cfg.vaultRev)>0))touchVaultRev();
     const updatedAt=Number(cfg.vaultRev);
-    // GET-before-PUT: catch a newer cloud copy before encrypt+upload (and before
-    // the worker's 409), so two devices racing don't burn a round-trip for nothing.
-    try{
+    /* GET-before-PUT. It used to stop only when the cloud's revision was newer than
+       this vault's, and a device that had been edited after the other one uploaded
+       always had the newer one: its upload replaced the other device's changes
+       without a word. What matters is whether the cloud holds a revision this
+       device has never seen, synced from or uploaded; then the choice is the
+       person's, and the dialog says what each way loses. */
+    if(force!==true)try{
       const peek=await fetch(url,{headers:{"Authorization":"Bearer "+cfg.syncToken}});
       if(peek.ok){
         let remote=null; try{remote=await peek.json()}catch(e){}
         const remoteAt=Number(remote&&remote.updatedAt)||0;
-        if(remoteAt>updatedAt){
-          toast("The synced copy is newer. Download it first, or upload again once you have sorted it out","Download…",()=>{
-            ask({title:"Replace this device's vault with the newer synced copy?",body:"Changes made here since your last sync may be lost.",ok:"Download and replace",danger:true})
-              .then(ok=>{if(ok)pullVaultSync(true)});
-          });
+        if(remoteAt>0&&remoteAt!==(Number(cfg.syncedRev)||0)&&remoteAt!==updatedAt){
+          syncBusy=false;
+          const v=await ask({title:"The synced copy was changed on another device",
+            body:"It changed since this device last synced. Uploading replaces those changes; downloading replaces the changes made here instead. Export a backup first if you need both.",
+            ok:"Download the synced copy",alt:"Upload anyway",altDanger:true});
+          if(v==="ok")await pullVaultSync(true);
+          else if(v==="alt")await pushVaultSync(true);
           return;
         }
       }
@@ -6837,6 +6843,7 @@ function settingsTab(tab,focus){
     if(on&&focus)b.focus();
   }
   const body=m.querySelector(".mdl-b");if(body)body.scrollTop=0;
+  if(tab==="backup")updateSyncStatus();
   centreSettingsTab();
 }
 // A phone showed four of the tabs in one sliding row; one chosen from elsewhere
@@ -6906,7 +6913,9 @@ function updateVaultStatus(){
   $("sVaultStatus").textContent=vaultPassword?"Vault is currently encrypted with a master password.":"Vault is currently unencrypted.";
   $("sVaultRemove").classList.toggle("hidden",!vaultPassword);
   $("sVaultSet").textContent=vaultPassword?"Change password":"Set password";
-  updatePkStatus();renderSetup();
+  // Sync's line says what it still needs, a master password among them: right after
+  // one was set it still asked for one
+  updatePkStatus();renderSetup();updateSyncStatus();
 }
 function updatePkStatus(){
   const r=pkRecord(), ok=pkAvailable();
