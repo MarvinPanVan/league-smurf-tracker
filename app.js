@@ -1235,13 +1235,16 @@ function prefersReducedMotion(){return !!(window.matchMedia&&matchMedia("(prefer
 /* A message stays long enough to be read: 2.2 s was the time for "Saved" and also
    for two lines about a master password. 50 ms more per character, at most 9 s, at
    least 6 s with a button to press. It waits while the pointer is on it. Over an
-   open window it sits at the top: at the bottom it covered Save settings and Close. */
+   open window it sits at the top: at the bottom it covered Save settings and Close.
+   It moves when a window opens or closes while it shows (the observer by syncModals):
+   one shown in Settings stayed at the top of the page after Settings closed. */
 function toastMs(msg,action){const ms=Math.min(9000,2200+50*String(msg||"").length);return action?Math.max(6000,ms):ms}
+function toastPlace(){const t=document.getElementById("toast");if(t)t.classList.toggle("top",!!document.querySelector(".modal:not(.hidden)"))}
 function toast(msg,action,fn){
   const t=$("toast");
   t.innerHTML=esc(msg)+(action?' <button id="toastBtn">'+esc(action)+"</button>":"");
   if(action)document.getElementById("toastBtn").onclick=()=>{dismissToast();fn()};
-  t.classList.toggle("top",!!document.querySelector(".modal:not(.hidden)"));
+  toastPlace();
   t.style.animation="none";void t.offsetWidth;t.style.animation="";t.style.opacity="";t.style.display="block";
   t._held=false;t._left=toastMs(msg,action);toastRun(t);
   document.addEventListener("pointermove",toastHover,{passive:true});
@@ -8030,6 +8033,9 @@ function syncModals(){
       if(downOnBack&&e.target===el){if(id==="askModal"){if(askDone)askDone(false)}else requestClose()}
       downOnBack=false});
   }
+  // every window, the vault prompt too, moves a toast that is showing out of its way
+  const place=new MutationObserver(toastPlace);
+  for(const el of document.querySelectorAll(".modal"))place.observe(el,{attributes:true,attributeFilter:["class"]});
 }
 document.addEventListener("keydown",e=>{
   if(e.key!=="Tab")return;

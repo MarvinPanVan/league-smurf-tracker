@@ -12051,6 +12051,29 @@ test("a wrong address gets a short not-found page that goes to the app, and the 
     "the path the app had on GitHub Pages, with or without anything after it, goes to the app");
 });
 
+// A toast shown in Settings kept its place at the top after Settings closed, and one
+// shown on the page stayed at the bottom, over Save and Close, when a window opened
+test("a toast that is showing moves to the top when a window opens and back when it closes", async () => {
+  const win = bootApp(seededAccount());
+  const t = win.document.getElementById("toast");
+  runScript(win, "toast('in Settings', 'Undo', () => {})");
+  assert.equal(t.classList.contains("top"), false, "on the page: at the bottom");
+  runScript(win, "openSettings('backup')");
+  await tick();
+  assert.equal(t.classList.contains("top"), true, "a window opened under it: to the top, off its footer");
+  runScript(win, "closeSettings()");
+  await tick();
+  assert.equal(t.style.display, "block", "still showing");
+  assert.equal(t.classList.contains("top"), false, "the window closed: back to the bottom");
+  runScript(win, "openSettings('backup'); toast('saved')");
+  runScript(win, "closeSettings()");
+  await tick();
+  assert.equal(t.classList.contains("top"), false, "shown in Settings, and Settings closed: at the bottom");
+  runScript(win, "document.getElementById('lockPrompt').classList.remove('hidden')");
+  await tick();
+  assert.equal(t.classList.contains("top"), true, "the vault prompt counts as a window too");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
