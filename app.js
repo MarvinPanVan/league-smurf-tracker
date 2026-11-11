@@ -110,8 +110,12 @@ const STATUS={active:{label:"Active",short:"Active",color:"#3ddc84"},resting:{la
 
 // ---------- state ----------
 let accounts=[];
-const APP_VERSION="2.30.0";
+const APP_VERSION="2.30.1";
 const APP_CHANGELOG=[
+  {v:"2.30.1",items:[
+    "The installed app opens offline again on smurf-tracker.pages.dev",
+    "A mistyped address shows a short not-found page and goes on to the app, and a message on screen moves out of the way when a window opens or closes",
+  ]},
   {v:"2.30.0",items:[
     "Fixing a Riot ID checks the account again straight away, and if the new ID is a different account its chart starts fresh",
     "Check all ends by saying what happened to whom (\"Smurf 1 reached Platinum IV\"), and messages stay up long enough to read",
