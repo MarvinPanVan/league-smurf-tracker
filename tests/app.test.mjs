@@ -1442,7 +1442,8 @@ test("a new vault gets four set-up steps, each a button, until they are done or 
 
 test("app icon shortcuts: the manifest offers Check all and Add account, and the page does each once", async () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "manifest.json"), "utf8"));
-  assert.deepEqual(manifest.shortcuts.map(s => s.url), ["./index.html?action=checkall", "./index.html?action=add"]);
+  assert.deepEqual(manifest.shortcuts.map(s => s.url), ["./?action=checkall", "./?action=add"], "the address Pages serves the page at, with no redirect on the way");
+  assert.equal(manifest.start_url, "./");
   for (const s of manifest.shortcuts) assert.ok(fs.existsSync(path.join(__dirname, "..", s.icons[0].src)), s.icons[0].src);
   const add = bootApp(null, w => w.history.replaceState(null, "", "/index.html?action=add"));
   await until(() => !add.document.getElementById("form").classList.contains("hidden"), "the Add form to open");
@@ -9288,7 +9289,7 @@ test("index.html is markup only, and loads this version's app.css and app.js", (
   for (const f of ["app.css", "app.js"])
     assert.ok(pageHtml.includes(`${f}?v=${win.__v}`), `${f} is asked for as this version, so no browser pairs a new page with an old ${f}`);
   const sw = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
-  for (const f of ["./index.html", "./app.css", "./app.js"]) assert.ok(sw.includes(`"${f}"`), "kept for offline: " + f);
+  for (const f of ["./", "./app.css", "./app.js"]) assert.ok(sw.includes(`"${f}"`), "kept for offline: " + f);
   assert.match(sw, /cache: "reload"/, "fetched fresh when a new version installs");
   assert.match(sw, /ignoreSearch: true/, "and found offline whatever ?v= the page asks for");
   assert.ok(appJs.startsWith('"use strict";'), "the script is still strict from its first line");
@@ -11921,6 +11922,110 @@ test("the app is the page's main landmark, and a list row opens from one real bu
   assert.equal(doc.querySelector('.rw[data-id="a"] .rw-open'), null, "and a click anywhere on the row still works");
   // a phone has no column for it, but keeps it for the keyboard and a screen reader
   assert.match(appCss, /\.grid\.list \.rw-tog\{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset\(50%\)/);
+});
+
+// The service worker run as the browser would, against a server that behaves like
+// Cloudflare Pages: /index.html is answered with a 308 to /. A redirected response
+// stored in the cache and later handed to a page load makes the browser fail the
+// load (ERR_FAILED), which is how offline broke on the live site.
+test("offline on Cloudflare Pages: no redirected response is ever cached, and a page load offline gets the shell", async () => {
+  const BASE = "https://smurf-tracker.pages.dev/";
+  const SHELL = "<!doctype html><title>Smurf Tracker</title>";
+  const href = k => new URL(typeof k === "string" ? k : k.url, BASE).href;
+  const bare = u => u.split("?")[0];
+  // a response that came through a redirect, and stays one when cloned
+  const viaRedirect = r => {
+    Object.defineProperty(r, "redirected", { value: true });
+    const clone = r.clone;
+    r.clone = function () { return viaRedirect(clone.call(this)); };
+    return r;
+  };
+  let online = true;
+  const asked = [];
+  const net = async req => {
+    if (!online) throw new TypeError("Failed to fetch");
+    const url = href(req), path = new URL(url).pathname;
+    asked.push(path);
+    if (path === "/index.html") {
+      // a page load follows the redirect itself; anything else gets the end of it
+      if (req.mode === "navigate") return { ok: false, status: 0, type: "opaqueredirect", redirected: false, clone() { return this; } };
+      return viaRedirect(new Response(SHELL, { headers: { "content-type": "text/html" } }));
+    }
+    if (path === "/") return new Response(SHELL, { headers: { "content-type": "text/html" } });
+    if (path === "/missing.js") return new Response("not here", { status: 404 });
+    return new Response("file " + path);
+  };
+  const stores = new Map(), puts = [];
+  const caches = {
+    async open(name) {
+      if (!stores.has(name)) stores.set(name, new Map());
+      const m = stores.get(name);
+      const put = async (k, r) => { puts.push({ key: href(k), redirected: !!r.redirected }); m.set(href(k), r); };
+      // what a browser's cache.add does: fetch, and store whatever came back if it was ok
+      return { put, async add(k) { const r = await net(k); if (!r.ok) throw new TypeError("bad response"); await put(k, r); } };
+    },
+    async match(k, o = {}) {
+      const want = href(k);
+      for (const m of stores.values()) for (const [u, r] of m)
+        if (u === want || (o.ignoreSearch && bare(u) === bare(want))) return r.clone();
+    },
+    async keys() { return [...stores.keys()]; },
+    async delete(n) { return stores.delete(n); },
+  };
+  const handlers = {};
+  const self = { location: new URL("sw.js", BASE), addEventListener: (t, f) => (handlers[t] = handlers[t] || []).push(f),
+    skipWaiting() {}, clients: { claim() {} } };
+  class RelRequest extends Request { constructor(u, o) { super(typeof u === "string" ? new URL(u, BASE).href : u, o); } }
+  const vm = await import("node:vm");
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, "sw.js"), "utf8"), { self, caches, fetch: net, Request: RelRequest, Response, URL, console });
+  const fire = async (type, props) => {
+    const waits = [];
+    let answer;
+    const e = Object.assign({ waitUntil: p => waits.push(p), respondWith: p => { answer = Promise.resolve(p); } }, props);
+    for (const h of handlers[type] || []) h(e);
+    let res, err;
+    if (answer) await answer.then(r => { res = r; }, x => { err = x; });
+    for (let i = 0; i < waits.length; i++) await waits[i];
+    return { res, err, answered: !!answer };
+  };
+  const page = u => ({ request: { url: new URL(u, BASE).href, method: "GET", mode: "navigate", redirect: "manual" } });
+  const file = u => ({ request: new RelRequest(u) });
+
+  await fire("install", {});
+  await fire("activate", {});
+  assert.ok(puts.some(p => p.key === BASE), "the shell is kept under ./, the address Pages serves it at");
+  assert.ok(!asked.includes("/index.html"), "and the install never asks for ./index.html, so it never meets the redirect");
+  // offline straight after installing, before any page load has been cached
+  const offlinePages = async when => {
+    for (const u of ["./", "./index.html", "./?action=add", "./?action=checkall"]) {
+      const { res, err } = await fire("fetch", page(u));
+      assert.ok(res && !err, when + ": offline, a page load of " + u + " is answered");
+      assert.equal(res.redirected, false, u + ": never with a redirected response, which the browser would refuse");
+      assert.equal(await res.text(), SHELL, when + ": " + u + " gets the shell");
+    }
+  };
+  online = false;
+  await offlinePages("just installed");
+  online = true;
+
+  // online: a page load, a redirected fetch of ./index.html, a file with ?v=
+  for (const ev of [page("./?action=add"), page("./index.html"), file("./index.html"), file("./app.js?v=9.9.9")]) {
+    const { res } = await fire("fetch", ev);
+    assert.ok(res, "answered from the network: " + ev.request.url);
+  }
+  assert.ok(puts.length > 0);
+  assert.deepEqual(puts.filter(p => p.redirected).map(p => p.key), [], "nothing that came through a redirect is stored as one");
+  const kept = await caches.match(BASE + "index.html");
+  assert.equal(kept && await kept.text(), SHELL, "the redirected fetch is kept as a plain copy of the page");
+
+  online = false;
+  await offlinePages("after those visits");
+  const js = await fire("fetch", file("./app.js?v=2.30.1"));
+  assert.equal(await js.res.text(), "file /app.js", "a file asked for under another ?v= still comes from the cache");
+  const miss = await fire("fetch", file("./missing.js"));
+  assert.ok(miss.err && !miss.res, "a file that was never cached fails, rather than getting the page in its place");
+  const other = await fire("fetch", { request: new RelRequest("https://example.com/x") });
+  assert.equal(other.answered, false, "other sites are left to the network");
 });
 
 // The header carried two names and a slogan badge beside the rank emblems and buttons
