@@ -53,12 +53,16 @@ self.addEventListener("activate", e => {
   self.clients.claim();
 });
 
-// Offline: the stored copy, then the same file under any ?v=, and for a page load
-// (the app at ./, ./index.html, ./?action=add) the shell.
+// Offline: the stored copy, then the same file under any ?v=, and for a page load of
+// the app (./, ./index.html, ./?action=add) the shell. At any other address the shell
+// would come up without its styles and script, which it asks for relative to the
+// address, so there the browser shows its own offline page.
+const HOME = new URL("./", self.location).pathname;
+const isApp = req => req.mode === "navigate" && [HOME, HOME + "index.html"].includes(new URL(req.url).pathname);
 function offline(req) {
   return caches.match(req)
     .then(hit => hit || caches.match(req, { ignoreSearch: true }))
-    .then(hit => hit || (req.mode === "navigate" ? caches.match("./") : undefined))
+    .then(hit => hit || (isApp(req) ? caches.match("./") : undefined))
     .then(hit => hit || Promise.reject(new Error("offline and not cached")));
 }
 

@@ -12024,6 +12024,8 @@ test("offline on Cloudflare Pages: no redirected response is ever cached, and a 
   assert.equal(await js.res.text(), "file /app.js", "a file asked for under another ?v= still comes from the cache");
   const miss = await fire("fetch", file("./missing.js"));
   assert.ok(miss.err && !miss.res, "a file that was never cached fails, rather than getting the page in its place");
+  const deep = await fire("fetch", page("./nope/deeper"));
+  assert.ok(deep.err && !deep.res, "a page load at another address fails offline: the shell there would load without its files");
   const other = await fire("fetch", { request: new RelRequest("https://example.com/x") });
   assert.equal(other.answered, false, "other sites are left to the network");
 });
