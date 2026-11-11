@@ -2,7 +2,7 @@
   "name": "Smurf Tracker",
   "short_name": "Smurf Tracker",
   "description": "Tracker for League of Legends smurf accounts: logins, ranks and notes, kept in your browser.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#090c10",
@@ -32,7 +32,7 @@
       "name": "Check all ranks",
       "short_name": "Check all",
       "description": "Open Smurf Tracker and check every account's rank",
-      "url": "./index.html?action=checkall",
+      "url": "./?action=checkall",
       "icons": [
         {
           "src": "icons/icon-192.png",
@@ -45,7 +45,7 @@
       "name": "Add account",
       "short_name": "Add account",
       "description": "Open Smurf Tracker on a new account",
-      "url": "./index.html?action=add",
+      "url": "./?action=add",
       "icons": [
         {
           "src": "icons/icon-192.png",
