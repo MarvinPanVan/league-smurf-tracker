@@ -1,0 +1,4 @@
+# Cloudflare Pages reads this file. Until 2.14 the app lived at
+# marvinpanvan.github.io/league-smurf-tracker/; that path typed on this host goes to the app.
+/league-smurf-tracker / 301
+/league-smurf-tracker/* / 301

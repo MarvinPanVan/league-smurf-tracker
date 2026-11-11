@@ -12028,6 +12028,29 @@ test("offline on Cloudflare Pages: no redirected response is ever cached, and a 
   assert.equal(other.answered, false, "other sites are left to the network");
 });
 
+// Without a 404.html, Cloudflare Pages answers every address with the app's page, so
+// a wrong one (/x/y) showed the app with its relative links broken: no styles, no
+// script. With one, a wrong address gets a short page that goes to the app.
+test("a wrong address gets a short not-found page that goes to the app, and the old GitHub path redirects", () => {
+  const page = fs.readFileSync(path.join(ROOT, "404.html"), "utf8");
+  const win = bootApp();
+  runScript(win, "window.__home = APP_HOME");
+  const home = win.__home;
+  const d = new JSDOM(page).window.document;
+  assert.equal(d.querySelector("h1").textContent, "This page doesn't exist");
+  assert.equal(d.querySelector('meta[http-equiv="refresh"]').getAttribute("content"), "0; url=" + home, "straight on to the app");
+  assert.equal(d.querySelector("a").getAttribute("href"), home, "and a link to it where a refresh is turned off");
+  assert.equal(d.querySelectorAll("script").length, 0, "no script");
+  assert.equal(d.querySelectorAll('link[rel="stylesheet"]').length, 0, "its styles are in the page, so a broken path can't lose them");
+  const csp = fs.readFileSync(path.join(ROOT, "_headers"), "utf8").match(/Content-Security-Policy: (.+)/)[1];
+  assert.match(csp, /style-src 'self' 'unsafe-inline'/, "which the site's policy allows");
+  assert.doesNotMatch(page, /[\r\0]/, "LF and no NUL bytes");
+  const rules = fs.readFileSync(path.join(ROOT, "_redirects"), "utf8").split("\n")
+    .filter(l => l.trim() && !l.startsWith("#")).map(l => l.trim().split(/\s+/));
+  assert.deepEqual(rules, [["/league-smurf-tracker", "/", "301"], ["/league-smurf-tracker/*", "/", "301"]],
+    "the path the app had on GitHub Pages, with or without anything after it, goes to the app");
+});
+
 // The header carried two names and a slogan badge beside the rank emblems and buttons
 test("the header has one name, the wordmark, and no slogan badge", () => {
   const win = bootApp();
